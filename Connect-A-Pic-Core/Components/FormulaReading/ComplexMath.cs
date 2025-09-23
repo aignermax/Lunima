@@ -1,5 +1,6 @@
-﻿using CAP_Core.Components.ComponentHelpers;
+using CAP_Core.Components.ComponentHelpers;
 using NCalc;
+using NCalc.Handlers;
 using System.Numerics;
 
 namespace CAP_Core.Grid.FormulaReading
