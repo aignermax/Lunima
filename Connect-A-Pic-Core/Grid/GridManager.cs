@@ -1,3 +1,4 @@
+using CAP_Core.Components;
 using CAP_Core.Tiles;
 using System.ComponentModel;
 using Component = CAP_Core.Components.Component;
@@ -13,6 +14,8 @@ namespace CAP_Core.Grid
         public IComponentRotator ComponentRotator { get; }
         public IComponentRelationshipManager ComponentRelationshipManager { get; }
         public LightManager LightManager { get; }
+        public WaveguideConnectionManager WaveguideConnections { get; }
+        public bool UsePhysicalCoordinates { get; set; } = false;
 
         public GridManager(
             ITileManager tileManager,
@@ -37,6 +40,7 @@ namespace CAP_Core.Grid
             ComponentRotator = new ComponentRotator(TileManager,ComponentMover);
             ComponentRelationshipManager = new ComponentRelationshipManager(TileManager);
             LightManager = new LightManager();
+            WaveguideConnections = new WaveguideConnectionManager();
         }
 
     }

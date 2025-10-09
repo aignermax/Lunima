@@ -1,25 +1,26 @@
 using CAP_Contracts.Logger;
 using CAP_Core.Components;
 using CAP_Core.Components.Creation;
+using CAP_Core.Grid;
+using CAP_Core.LightCalculation;
+using CAP_Core.Tiles;
 using CAP_DataAccess;
 using CAP_DataAccess.Components.ComponentDraftMapper;
-using Chickensoft.AutoInject;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
+using Chickensoft.AutoInject;
 using ConnectAPIC.LayoutWindow.View;
 using ConnectAPIC.LayoutWindow.ViewModel;
-using ConnectAPIC.Scenes.ToolBox;
 using ConnectAPIC.Scenes.InGameConsole;
+using ConnectAPIC.Scenes.ToolBox;
 using ConnectAPIC.Scripts.Helpers;
 using ConnectAPIC.Scripts.View.ComponentFactory;
+using ConnectAPIC.Scripts.ViewModel;
 using Godot;
 using SuperNodes.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using CAP_Core.Grid;
-using CAP_Core.LightCalculation;
-using ConnectAPIC.Scripts.ViewModel;
 
 namespace ConnectAPic.LayoutWindow
 {
@@ -66,7 +67,7 @@ namespace ConnectAPic.LayoutWindow
         public GridViewModel GridViewModel { get; private set; }
         public ComponentFactory ComponentModelFactory { get; set; }
         public const string ComponentFolderPath = "res://Scenes/Components";
-
+        public static PhysicalToScreenAdapter ScreenAdapter { get; private set; }
         public override void _EnterTree()
         {
             base._EnterTree();
@@ -77,6 +78,10 @@ namespace ConnectAPic.LayoutWindow
                 ComponentModelFactory = new ComponentFactory();
                 InitializeGridAndGridView(ComponentModelFactory);
                 PCKLoader = new(ComponentFolderPath, Logger);
+                ScreenAdapter = new PhysicalToScreenAdapter
+                {
+                    MicrometerToPixelScale = TilePixelSize / Tile.GridToMicrometerScale
+                };
 
             }
             catch (Exception ex)
@@ -85,6 +90,7 @@ namespace ConnectAPic.LayoutWindow
                 GD.PrintErr(ex);
                 InitializationLogs.Add((ex.Message, true));
             }
+            
         }
         
         public override void _Ready()

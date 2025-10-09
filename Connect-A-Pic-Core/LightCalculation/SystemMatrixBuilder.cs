@@ -19,9 +19,26 @@ namespace CAP_Core.LightCalculation
         public SMatrix GetSystemSMatrix(int LaserWaveLengthInNm)
         {
             var allComponentsSMatrices = GetAllComponentsSMatrices(LaserWaveLengthInNm);
-            SMatrix allConnectionsSMatrix = CreateInterComponentsConnectionsMatrix();
+            SMatrix allConnectionsSMatrix = Grid.UsePhysicalCoordinates
+               ? CreatePhysicalConnectionsMatrix()
+               : CreateInterComponentsConnectionsMatrix();
             allComponentsSMatrices.Add(allConnectionsSMatrix);
             return SMatrix.CreateSystemSMatrix(allComponentsSMatrices);
+        }
+        private SMatrix CreatePhysicalConnectionsMatrix()
+        {
+            var connections = Grid.WaveguideConnections.GetConnectionTransfers();
+            var allUsedPinIDs = connections.SelectMany(c => new[] { c.Key.Item1, c.Key.Item2 })
+                .Distinct().ToList();
+
+            foreach (var input in Grid.ExternalPortManager.GetUsedExternalInputs())
+            {
+                allUsedPinIDs.Add(input.AttachedComponentPinId);
+            }
+
+            var connectionsSMatrix = new SMatrix(allUsedPinIDs, new());
+            connectionsSMatrix.SetValues(connections);
+            return connectionsSMatrix;
         }
 
         private SMatrix CreateInterComponentsConnectionsMatrix()

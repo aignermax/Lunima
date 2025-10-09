@@ -1,22 +1,38 @@
 using CAP_Core.Components;
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Helpers;
+using System;
 using System.Globalization;
 
 namespace CAP_Core.Tiles
 {
-
     public class Tile
     {
         private const string PythonFunctionIndention = "        ";
         public Component? Component { get; set; }
+        public readonly static double GridToMicrometerScale = 250.0;
         public int GridX { get; private set; }
         public int GridY { get; private set; }
 
-        public Tile(int X, int Y)
+        public double PhysicalX { get; private set; }
+        public double PhysicalY { get; private set; }
+        public Tile(int gridX, int gridY)
         {
-            GridX = X;
-            GridY = Y;
+            GridX = gridX;
+            GridY = gridY;
+            UpdatePhysicalCoordinates();
+        }
+        public Tile(double physicalX, double physicalY)
+        {
+            PhysicalX = physicalX;
+            PhysicalY = physicalY;
+            GridX = (int)(physicalX / GridToMicrometerScale);
+            GridY = (int)(physicalY / GridToMicrometerScale);
+        }
+        private void UpdatePhysicalCoordinates()
+        {
+            PhysicalX = GridX * GridToMicrometerScale;
+            PhysicalY = GridY * GridToMicrometerScale;
         }
         public string GetComponentCellName()
         {
@@ -32,6 +48,21 @@ namespace CAP_Core.Tiles
             var parentTileEdgeSide = GetParentTileTouchingEdgeSide(parentTile);
             var parentPinName = parentTile.GetPinAt(parentTileEdgeSide)?.Name ?? "";
             return ExportToNazcaExtended(new IntVector(parentTile.GridX, parentTile.GridY), parentCellName, parentPinName);
+        }
+        public string ExportToNazcaPhysical()
+        {
+            if (Component == null) return "";
+            var cellName = GetComponentCellName();
+            var parameters = Component.NazcaFunctionParameters;
+
+            // Direkt µm-Koordinaten verwenden (keine Grid-Multiplikation mehr!)
+            var posX = PhysicalX + Component.PhysicalOffsetX;
+            var posY = PhysicalY + Component.PhysicalOffsetY;
+            var rotation = Component.RotationDegrees;
+
+            return $"{PythonFunctionIndention}{cellName} = " +
+                   $"{Resources.NazcaPDKName}.{Component.NazcaFunctionName}({parameters})" +
+                   $".put({posX}, {posY}, {rotation})\n";
         }
         public string ExportToNazcaExtended(IntVector parentGridPos, string parentCellName, string parentPinName)
         {
