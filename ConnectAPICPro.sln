@@ -1,0 +1,58 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CAP_Contracts", "CAP_Contracts\CAP_Contracts.csproj", "{FC851753-3C6F-491B-BC0B-16CDAE34B7B7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CAP-Core", "Connect-A-Pic-Core\CAP-Core.csproj", "{A17C1408-41B8-4E51-9F12-C9BE8DC8C786}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CAP-DataAccess", "CAP-DataAccess\CAP-DataAccess.csproj", "{96E7EB8B-C78D-4BE3-BC89-B7D053C4F8A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CAP.Avalonia", "CAP.Avalonia\CAP.Avalonia.csproj", "{FCFE0BB3-A3AB-4868-B44C-2EBBB5DFB15A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CAP.Desktop", "CAP.Desktop\CAP.Desktop.csproj", "{D8D74C8B-AF5F-4F99-B653-2AC9BD0AC7F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CAP.Browser", "CAP.Browser\CAP.Browser.csproj", "{E1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{B2A3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FC851753-3C6F-491B-BC0B-16CDAE34B7B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC851753-3C6F-491B-BC0B-16CDAE34B7B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC851753-3C6F-491B-BC0B-16CDAE34B7B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC851753-3C6F-491B-BC0B-16CDAE34B7B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A17C1408-41B8-4E51-9F12-C9BE8DC8C786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A17C1408-41B8-4E51-9F12-C9BE8DC8C786}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A17C1408-41B8-4E51-9F12-C9BE8DC8C786}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A17C1408-41B8-4E51-9F12-C9BE8DC8C786}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96E7EB8B-C78D-4BE3-BC89-B7D053C4F8A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96E7EB8B-C78D-4BE3-BC89-B7D053C4F8A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96E7EB8B-C78D-4BE3-BC89-B7D053C4F8A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96E7EB8B-C78D-4BE3-BC89-B7D053C4F8A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCFE0BB3-A3AB-4868-B44C-2EBBB5DFB15A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCFE0BB3-A3AB-4868-B44C-2EBBB5DFB15A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCFE0BB3-A3AB-4868-B44C-2EBBB5DFB15A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCFE0BB3-A3AB-4868-B44C-2EBBB5DFB15A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8D74C8B-AF5F-4F99-B653-2AC9BD0AC7F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8D74C8B-AF5F-4F99-B653-2AC9BD0AC7F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8D74C8B-AF5F-4F99-B653-2AC9BD0AC7F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8D74C8B-AF5F-4F99-B653-2AC9BD0AC7F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2A3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2A3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2A3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2A3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

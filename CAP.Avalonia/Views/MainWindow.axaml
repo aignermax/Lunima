@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        x:Class="CAP.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Connect-A-PIC Pro"
+        Width="1400" Height="900">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#2d2d2d" Height="40">
+            <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
+            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
+            <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
+            <Separator Width="1" Background="Gray" Margin="10,5"/>
+            <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
+                       VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
+            <TextBlock Text="{Binding StatusText}"
+                       VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+        </Border>
+
+        <!-- Left Panel - Component Library (placeholder) -->
+        <Border DockPanel.Dock="Left" Width="200" Background="#252526">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Components"
+                           FontWeight="Bold" Margin="10" Foreground="White"/>
+                <ListBox Background="Transparent" Foreground="White">
+                    <ListBoxItem Content="1x2 Splitter"/>
+                    <ListBoxItem Content="2x2 Coupler"/>
+                    <ListBoxItem Content="Phase Shifter"/>
+                    <ListBoxItem Content="Grating Coupler"/>
+                    <ListBoxItem Content="Detector"/>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Right Panel - Properties (placeholder) -->
+        <Border DockPanel.Dock="Right" Width="250" Background="#252526">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Properties"
+                           FontWeight="Bold" Margin="10" Foreground="White"/>
+                <StackPanel Margin="10">
+                    <TextBlock Text="Select a component to view properties"
+                               Foreground="Gray" TextWrapping="Wrap"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Canvas -->
+        <controls:DesignCanvas ViewModel="{Binding Canvas}"
+                               Zoom="{Binding ZoomLevel}"/>
+    </DockPanel>
+</Window>

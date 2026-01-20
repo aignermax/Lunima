@@ -1,154 +1,130 @@
-# Connect-A-PIC
-![image](badges/line_coverage.svg)
-![image](badges/branch_coverage.svg)
+# Connect-A-PIC Pro
 
-Gamification of PIC Design (PIC = Photonic integrated circuit)
+Professional fork of [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) - a PIC (Photonic Integrated Circuit) design tool.
 
-## Current Version
+## Key Differences from Connect-A-PIC
 
-Version: <!--version-->0.1.3<!--version-->
-[![image](https://github.com/Akhetonics/Connect-A-PIC/assets/18228325/f9357590-9a9b-48b4-80ff-cff0dce72aa8)](https://github.com/Akhetonics/Connect-A-PIC/releases)
+Connect-A-PIC Pro extends the educational version with professional features:
 
-## [DOWNLOAD](https://github.com/Akhetonics/Connect-A-PIC/releases)
- 
-## [JOIN OUR DISCORD](https://discord.gg/YgU63bjn64)
-# About Connect a PIC
+- **Physical Coordinate System**: Components positioned in micrometers (µm) instead of fixed grid tiles
+- **Explicit Waveguide Routing**: Automatic routing with S-bends, straight segments, and manhattan routing
+- **Dynamic Loss Calculation**: Transmission coefficients calculated from actual path geometry (propagation loss + bend loss)
+- **Cross-Platform UI**: Avalonia-based frontend supporting Desktop and WebAssembly (browser)
+- **Decoupled from Godot**: No game engine dependency - pure .NET solution
 
-This software aims to simplify the design of optical circuits on a chip, which can then be printed using our Nazca-Python export function.
-The designer, developed in C# using Godot 4, consists of three distinct projects
+## Architecture
 
-* The "CAP-Core" project (the model) has all the knowledge of where in the field components are placed,         
-    * it takes care of the Grid [i,j] and it has a function to calculate a Scattered Matrix. 
-    * This S-Matrix can calculate the light-distribution of all light that goes through all the components. 
-    * Each component has a smaller S-Matrix that tells the engine how exactly the light goes from each pin of the component to each other pin - like if the phase shifts or if the light's intensity gets less through the path from one pin to the other pin inside of the component. 
-    * The Model also has functions to export the whole game-grid to a python script that then can be used to actually manufacture the chip by sending it to a manufacturer. 
-* Then there is the view and the integrationtests of the Model - the view has no unit tests as I didn't really find a testing suite for godot 4 - this was also one reason to separate the core functionality from the godot 4 engine. 
-* There also is a shader for mixing the light colors properly together that uses phase calculations based on blue and red spheres
-
-# Target Audience
-Our Target Audience is students and scientists that are interested in photonics.
-
-# Setup Dependencies and Editor
-* Install Visual Studio 
-* Download the Visual Studio components: "Game Development with Unity" just in case
-* Install Godot Engine and add a System Variable called "GODOT" to the Path to the godot mono exe file like so:
-    * open your command prompt (WINDOWS+R, type 'cmd' and press enter)
-```shell
-setx GODOT "C:\Program Files\Godot_v4.1\Godot_v4.1.exe" /M
 ```
-* Clone this project into a nice folder
-* Setup Launch Profile for visual Studio where 
-    * "Path to the executable to run" is the Path to your godot_v4.0-beta_mono_win64.exe 
-    * Command Line Arguments is `--path . --verbose`
-    * Working Directory is '.'
-* git clone this project
-Install submodules by executing 'git submodule init', followed by 'git submodule update --recursive --remote'.
- * [Create two external Tools in Visual studio](https://github.com/Akhetonics/Connect-A-PIC/blob/feature/ComponentPackaging/GodotTestVSIntegration.md) to be able to manually run the GoDotTest - Unit tests for Godot via a popup menu.
-* Coverlet is a tool for code-coverage reports - install it like using powershell like this:
-```shell
-dotnet tool install --global coverlet.console
-dotnet tool update --global coverlet.console
-dotnet tool install --global dotnet-reportgenerator-globaltool
-dotnet tool update --global dotnet-reportgenerator-globaltool
+Connect-A-PIC-Pro/
+├── CAP_Contracts/        # Shared interfaces
+├── Connect-A-Pic-Core/   # Core simulation engine
+│   ├── Components/       # Component models, pins, S-Matrix
+│   ├── Routing/          # Waveguide routing (WaveguideRouter, PathSegments)
+│   └── LightCalculation/ # S-Matrix light propagation
+├── CAP-DataAccess/       # JSON loading, component draft conversion
+├── CAP.Avalonia/         # Shared Avalonia UI (views, viewmodels, controls)
+├── CAP.Desktop/          # Desktop application entry point
+├── CAP.Browser/          # WebAssembly browser entry point (planned)
+└── UnitTests/            # xUnit tests
 ```
 
-# Install Nazca 
-Connect-A-PIC can export the whole circuit that one has built into python code that uses the photonic design library "Nazca".
-In order to be able to compile the exported Nazca code, you want to have Nazca installed properly
-https://nazca-design.org/installation/
-you will also need to start visual studio code or your preferred editor through anaconda and then compile the exported python code - for now the components in the PDK are but examples as the exact PDK may depend on the fab you are using, but you can open the GDS files and edit the Nazca code or the GDS files as you wish.
+## Physical Coordinate System
 
-# Tools we use
-In this project we are using GodotTestDriver, GoDotTest, Shouldly, Coverlet, XUnit
-Chickensoft has some approach for unit testing: https://github.com/chickensoft-games/GoDotTest
+Components have physical dimensions and positions:
 
-# Components
-We are using component files that one can create using the GODOT Editor and then compile to a *.PCK file.
-PCK files will be loaded into the Connect-A-PIC toolbox as soon as they are located in the Scenes/Components - folder of the project at compile time
-Each PCK file consists of a folderstructure that has to match exactly the Godot folder structure of the main program which is "Scenes/Components/[ComponentName]/".
-You can see example components in the other Github project ["CAP- Standard Components"](https://github.com/Akhetonics/Connect-A-PIC_StandardComponents)
-## JSON file
-There is a JSON file that describes the exact behavior of the component and it resides within the Scenes/Components/[ComponentName] folder.
-It does not matter what the name of this file is as long as there is no other JSON file with the *.JSON extension in that folder.
-just have a look at one of those JSON files there. Keep in mind, that if you want to define a non-linear-connection between two pins in that JSON file, you can only do it only like so:
-``` JSON
-// ...
-"sMatrices": [
-    {
-    "waveLength" : 1550,
-    "connections": [
-        {
-        "fromPinNr": 0,
-        "toPinNr": 1,
-        "magnitude": 0.5,
-        "phase": 1.2161003820350373,
-        "nonLinearFormula" : "Div(1,Add(PIN1,PIN2))"
-        },
-    ]
-    }
-    ]
-// ...
+```csharp
+component.WidthMicrometers = 250.0;   // Physical width in µm
+component.HeightMicrometers = 250.0;  // Physical height in µm
+component.PhysicalX = 1000.0;         // X position in µm
+component.PhysicalY = 500.0;          // Y position in µm
+component.RotationDegrees = 45.0;     // Rotation angle
 ```
-You don't have to use "magnitude" and "phase", but can use "real" and "imaginary" instead.
-the nonLinearFormula only supports the functions Add, Sub, Div and Mul for now and those are case sensitive with the first letter being capital and the others are small. 
 
-# github actions
-there are several github actions for release, spell check, XUnit tests (for all non-Godot functions) and GoDotTest tests (for all Nodes and for integration tests).
-## spellcheck
-After every commit, github scans all files for spelling errors. If you want to add a word to the dictionary, you can add it to the "cspell.json" file or you can exclude whole extensions from being spell checked.
+Physical pins define optical ports with µm offsets:
 
-## release on Github
-To release this software on github, you simply have to update the version using the github action "version change" to a higher number as before in the SemVer format.
-It will then update the software version in the solution file and if all tests are passing it will be compiled, zipped and uploaded to the github's release section.
+```csharp
+var pin = new PhysicalPin
+{
+    Name = "output",
+    OffsetXMicrometers = 250.0,  // Position relative to component origin
+    OffsetYMicrometers = 125.0,
+    AngleDegrees = 0.0           // Pin direction (0 = pointing right)
+};
+```
 
-# SubProjects
-This tool consists of five sub projects mainly:
+## Waveguide Routing
 
-## CAP_Contracts
-Here you can add all interfaces that are needed in the other projects as well.
-## CAP-Core
-All business logic is being calculated here - this makes it easy to move the project to another frontend like Unity or even Blazor so that one can use Connect-A-PIC via the browser.
-Mainly the light distribution is being calculated here, the Nazca export, and the grid management. Everything model/business related is here.
-## CAP-DataAccess (Layer)
-Godot for example uses their own file storage structure so we should not simply assume that the harddrive is our main target to store and read data using the File namespace directly. 
-This project handles all data access, finds JSON and PCK files in (virtual) folders, it validates the JSON files and has Data Transfer Objects (DTOs) for all parts of the JSON structure that is used to load the components from disk. It can also convert a ComponentDraft (the Json - structure) into a real Component.
-## Connect-A-PIC
-The Entry point of this software is the Main.cs in the Main.tscn scene file that only destinguishes if you want to run the GodotTest unit tests or to run the PICEditor.tscn editor scene instead.
-If you are starting the software without parameters it starts the PICEditor.tscn and initializes everything in the GameManager.cs class.
-It will load all PCK files, import them into godot, then search for all JSON files in the GODOT-Filesystem, read them, load all Components into the ComponentViewFactory and into the ComponentFactory.
-The Model can instantiate new components and the View listenes to event registered by the "ViewModel" that the model is firing up whenever there are new Components or when they rotate or when they get deleted.
+Connections are automatically routed between physical pins:
 
-## UnitTests
-All tests for the Model or "CAP-Core" can be found here, simply use Visual Studio and start them. We use XUnit to test all business logic and [GoDotTest](https://github.com/chickensoft-games/GoDotTest) to test some features of the frontend, that "View" - mostly if the shaders are visible correctly.
+```csharp
+var connection = new WaveguideConnection
+{
+    StartPin = componentA.PhysicalPins[0],
+    EndPin = componentB.PhysicalPins[1],
+    PropagationLossDbPerCm = 2.0,    // Loss parameter
+    BendLossDbPer90Deg = 0.05,       // Bend loss parameter
+    BendRadiusMicrometers = 10.0     // Minimum bend radius
+};
 
+// Calculate actual routed path and transmission coefficient
+connection.RecalculateTransmission();
 
-# How to Contribute
+// Access results
+double pathLength = connection.PathLengthMicrometers;
+double bendCount = connection.BendCount;
+double totalLoss = connection.TotalLossDb;
+Complex transmission = connection.TransmissionCoefficient;
+```
 
-We welcome contributions to this project. If you're interested in helping, you can [contribute in the following ways](https://github.com/Akhetonics/Connect-A-PIC/wiki/CONTRIBUTING):
+The router supports three strategies:
+1. **Straight**: Direct line when pins are aligned
+2. **S-Bend**: Two opposing bends for parallel offset pins
+3. **Manhattan**: Rounded corners for perpendicular pin orientations
 
-1. **Pull Requests:** 
-    - For any changes or improvements, please submit a pull r**equest. 
-    - Ensure that each pull request addresses a specific issue or feature. Avoid combining multiple changes into a single request to facilitate review and integration.
-    - Please provide a clear and detailed description of your changes and the purpose behind them.
+## Building
 
-2. **Reporting Issues:**
-    - If you find bugs or have suggestions for improvements, feel free to open an issue in the project's issue tracker.
+### Prerequisites
+- .NET 8.0 SDK
+- (Optional) Nazca Python for GDS export
 
-3. **Code Guidelines:**
-    - Please ensure your code adheres to the project's [coding conventions](https://github.com/Akhetonics/Connect-A-PIC/wiki/CONTRIBUTING#architecture-and-coding-standards) for consistency.
+### Build Commands
 
-4. **Testing:**
-    - Include unit tests for new features to maintain the project's stability and reliability.
+```bash
+# Build all projects
+dotnet build
 
-Your contributions are greatly appreciated and will help to further develop this innovative project!
+# Build desktop app
+dotnet build CAP.Desktop/CAP.Desktop.csproj
 
-5. **Join our Discord Channel**
-   - [Click here](https://discord.gg/EyKhcM3) to join our Developer Discord for professional discussion, fun and support within the community
-      
-     
-# License
+# Run desktop app
+dotnet run --project CAP.Desktop/CAP.Desktop.csproj
+
+# Run tests
+dotnet test UnitTests/UnitTests.csproj
+```
+
+## S-Matrix Simulation
+
+The core S-Matrix light propagation simulation remains compatible with the original Connect-A-PIC:
+
+- Components define wavelength-specific S-matrices
+- Light propagates through the system based on matrix multiplication
+- Waveguide connections contribute transmission coefficients to the system matrix
+- Supports non-linear formulas with slider parameters
+
+## Nazca Export
+
+Export designs to Nazca Python for fabrication:
+
+```csharp
+string nazcaCode = connection.ExportToNazca();
+// Generates: ic.cobra_p2p(pin1=cell_0_0.pin['output'], pin2=cell_1_0.pin['input']).put()
+```
+
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-![Akhetonics and Cornerstone Logo combined centered](https://github.com/Akhetonics/Connect-A-PIC/assets/18228325/2467e9f7-6c78-4fd5-974d-95a8f4ecd2d2)
+## Original Project
 
+Based on [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) by Akhetonics.

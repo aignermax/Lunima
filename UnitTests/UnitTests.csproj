@@ -26,10 +26,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Shouldly" Version="4.2.1" />
+    <PackageReference Include="JetBrains.Annotations" Version="2024.2.0" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Connect-A-PIC.csproj" />
+    <ProjectReference Include="..\Connect-A-Pic-Core\CAP-Core.csproj" />
+    <ProjectReference Include="..\CAP-DataAccess\CAP-DataAccess.csproj" />
+    <ProjectReference Include="..\CAP_Contracts\CAP_Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

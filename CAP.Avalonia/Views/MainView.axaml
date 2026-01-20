@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             x:Class="CAP.Avalonia.Views.MainView"
+             x:DataType="vm:MainViewModel">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#2d2d2d" Height="40">
+            <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
+            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
+            <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
+            <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
+                       VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
+            <TextBlock Text="{Binding StatusText}"
+                       VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+        </Border>
+
+        <!-- Main Canvas -->
+        <controls:DesignCanvas ViewModel="{Binding Canvas}"
+                               Zoom="{Binding ZoomLevel}"/>
+    </DockPanel>
+</UserControl>
