@@ -37,6 +37,19 @@ public class WaveguideConnectionManager
             c.EndPin.ParentComponent == component);
     }
 
+    public void RemoveConnection(WaveguideConnection connection)
+    {
+        Connections.Remove(connection);
+    }
+
+    public void AddExistingConnection(WaveguideConnection connection)
+    {
+        if (!Connections.Contains(connection))
+        {
+            Connections.Add(connection);
+        }
+    }
+
     public void Clear()
     {
         Connections.Clear();

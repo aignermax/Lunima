@@ -1,0 +1,35 @@
+using CAP.Avalonia.ViewModels;
+
+namespace CAP.Avalonia.Commands;
+
+/// <summary>
+/// Command for deleting a waveguide connection.
+/// </summary>
+public class DeleteConnectionCommand : IUndoableCommand
+{
+    private readonly DesignCanvasViewModel _canvas;
+    private readonly WaveguideConnectionViewModel _connectionVm;
+    private readonly CAP_Core.Components.WaveguideConnection _connection;
+
+    public DeleteConnectionCommand(DesignCanvasViewModel canvas, WaveguideConnectionViewModel connectionVm)
+    {
+        _canvas = canvas;
+        _connectionVm = connectionVm;
+        _connection = connectionVm.Connection;
+    }
+
+    public string Description => "Delete connection";
+
+    public void Execute()
+    {
+        _canvas.Connections.Remove(_connectionVm);
+        _canvas.ConnectionManager.RemoveConnection(_connection);
+    }
+
+    public void Undo()
+    {
+        // Re-add the connection
+        _canvas.ConnectionManager.AddExistingConnection(_connection);
+        _canvas.Connections.Add(_connectionVm);
+    }
+}

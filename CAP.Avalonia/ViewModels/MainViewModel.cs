@@ -188,7 +188,7 @@ public partial class MainViewModel : ObservableObject
 
     private void DeleteAt(double x, double y)
     {
-        // Find component at position
+        // First check for component at position
         var component = Canvas.Components
             .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
             .LastOrDefault();
@@ -200,7 +200,58 @@ public partial class MainViewModel : ObservableObject
             CommandManager.ExecuteCommand(cmd);
             SelectedComponent = null;
             StatusText = $"Deleted: {name}";
+            return;
         }
+
+        // Check for connection at position
+        var connection = FindConnectionAt(x, y);
+        if (connection != null)
+        {
+            var cmd = new DeleteConnectionCommand(Canvas, connection);
+            CommandManager.ExecuteCommand(cmd);
+            StatusText = "Deleted connection";
+        }
+    }
+
+    private WaveguideConnectionViewModel? FindConnectionAt(double x, double y)
+    {
+        const double hitTolerance = 10.0; // micrometers
+
+        foreach (var conn in Canvas.Connections)
+        {
+            // Simple line-to-point distance check
+            var startX = conn.StartX;
+            var startY = conn.StartY;
+            var endX = conn.EndX;
+            var endY = conn.EndY;
+
+            var distance = PointToLineDistance(x, y, startX, startY, endX, endY);
+            if (distance <= hitTolerance)
+            {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    private static double PointToLineDistance(double px, double py, double x1, double y1, double x2, double y2)
+    {
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        var lengthSq = dx * dx + dy * dy;
+
+        if (lengthSq < 0.0001)
+        {
+            // Start and end are same point
+            return Math.Sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+        }
+
+        // Project point onto line segment
+        var t = Math.Max(0, Math.Min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
+        var projX = x1 + t * dx;
+        var projY = y1 + t * dy;
+
+        return Math.Sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
     }
 
     /// <summary>
@@ -421,7 +472,8 @@ public partial class MainViewModel : ObservableObject
                     TemplateName = c.TemplateName ?? c.Name,
                     X = c.X,
                     Y = c.Y,
-                    Identifier = c.Component.Identifier
+                    Identifier = c.Component.Identifier,
+                    Rotation = (int)c.Component.Rotation90CounterClock
                 }).ToList(),
                 Connections = Canvas.Connections.Select(c => new ConnectionData
                 {
@@ -487,6 +539,13 @@ public partial class MainViewModel : ObservableObject
                     if (template != null)
                     {
                         var component = ComponentTemplates.CreateFromTemplate(template, compData.X, compData.Y);
+
+                        // Apply rotation
+                        for (int i = 0; i < compData.Rotation; i++)
+                        {
+                            ApplyRotationToComponent(component);
+                        }
+
                         Canvas.AddComponent(component, template.Name);
                     }
                 }
@@ -522,6 +581,32 @@ public partial class MainViewModel : ObservableObject
             }
         }
     }
+
+    /// <summary>
+    /// Applies a 90° counter-clockwise rotation to a component (same logic as RotateComponentCommand).
+    /// </summary>
+    private static void ApplyRotationToComponent(Component comp)
+    {
+        var width = comp.WidthMicrometers;
+        var height = comp.HeightMicrometers;
+
+        foreach (var pin in comp.PhysicalPins)
+        {
+            var cx = width / 2;
+            var cy = height / 2;
+            var x = pin.OffsetXMicrometers - cx;
+            var y = pin.OffsetYMicrometers - cy;
+            var newX = -y;
+            var newY = x;
+            pin.OffsetXMicrometers = newX + cy;
+            pin.OffsetYMicrometers = newY + cx;
+            pin.AngleDegrees = (pin.AngleDegrees + 90) % 360;
+        }
+
+        comp.WidthMicrometers = height;
+        comp.HeightMicrometers = width;
+        comp.RotateBy90CounterClockwise();
+    }
 }
 
 // Data classes for serialization
@@ -537,6 +622,7 @@ public class ComponentData
     public double X { get; set; }
     public double Y { get; set; }
     public string Identifier { get; set; } = "";
+    public int Rotation { get; set; } // 0, 1, 2, 3 for R0, R90, R180, R270
 }
 
 public class ConnectionData
