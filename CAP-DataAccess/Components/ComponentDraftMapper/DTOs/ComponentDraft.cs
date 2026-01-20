@@ -31,5 +31,12 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public List<Overlay> Overlays { get; set; }
         [JsonPropertyName("sliders")]
         public List<SliderDraft>? Sliders { get; set; }
+
+        /// <summary>
+        /// Physical pin definitions with µm coordinates for direct waveguide connections.
+        /// Optional - when not provided, physical pins can be auto-generated from logical pins.
+        /// </summary>
+        [JsonPropertyName("physicalPins")]
+        public List<PhysicalPinDraft>? PhysicalPins { get; set; }
     }
 }

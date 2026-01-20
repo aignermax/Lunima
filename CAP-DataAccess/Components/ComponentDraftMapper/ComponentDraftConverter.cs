@@ -37,7 +37,8 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 var parts = CreatePartsFromDraft(draft);
                 var allSliders = CreateSliderMap(draft);
                 var wavelengthToMatrixMap = CreateWaveLengthSpecificSMatricesFromDrafts(allSliders, draft, parts);
-                return new Component(wavelengthToMatrixMap, allSliders, draft.NazcaFunctionName, draft.NazcaFunctionParameters, parts, typeNumber, draft.Identifier, DiscreteRotation.R0);
+                var physicalPins = CreatePhysicalPinsFromDraft(draft, parts);
+                return new Component(wavelengthToMatrixMap, allSliders, draft.NazcaFunctionName, draft.NazcaFunctionParameters, parts, typeNumber, draft.Identifier, DiscreteRotation.R0, physicalPins);
             }
             catch (Exception ex)
             {
@@ -157,6 +158,47 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
             return sliderIdToValueMap;
         }
+
+        private List<PhysicalPin> CreatePhysicalPinsFromDraft(ComponentDraft draft, Part[,] parts)
+        {
+            var physicalPins = new List<PhysicalPin>();
+            if (draft?.PhysicalPins == null || draft.PhysicalPins.Count == 0)
+            {
+                return physicalPins;
+            }
+
+            var pinNumberToModelMap = CreatePinNumberToModelMap(draft, parts);
+
+            foreach (var physicalPinDraft in draft.PhysicalPins)
+            {
+                var physicalPin = new PhysicalPin
+                {
+                    Name = physicalPinDraft.Name,
+                    OffsetXMicrometers = physicalPinDraft.OffsetXMicrometers,
+                    OffsetYMicrometers = physicalPinDraft.OffsetYMicrometers,
+                    AngleDegrees = physicalPinDraft.AngleDegrees,
+                    PinId = Guid.NewGuid()
+                };
+
+                // Link to logical pin if specified
+                if (physicalPinDraft.LogicalPinNumber.HasValue)
+                {
+                    if (pinNumberToModelMap.TryGetValue(physicalPinDraft.LogicalPinNumber.Value, out var logicalPin))
+                    {
+                        physicalPin.LogicalPin = logicalPin;
+                    }
+                    else
+                    {
+                        Logger.PrintErr($"Physical pin '{physicalPinDraft.Name}' references non-existent logical pin number {physicalPinDraft.LogicalPinNumber.Value}");
+                    }
+                }
+
+                physicalPins.Add(physicalPin);
+            }
+
+            return physicalPins;
+        }
+
         private static Pin FindModelPin(Part[,] parts, PinDraft pinDraft)
         {
             return parts[pinDraft.PartX, pinDraft.PartY].Pins.Single(p => p.Side == pinDraft.Side && p.MatterType == pinDraft.MatterType);

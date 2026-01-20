@@ -36,6 +36,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
         public static readonly string ErrorSliderLabelNameNotDefined = "Err_22";
         public static readonly string ErrorSliderNameNotDefined = "Err_23";
         public static readonly string ErrorSliderStepHasToBeGreaterThanNull = "Err_24";
+        public static readonly string ErrorPhysicalPinNameNotDefined = "Err_25";
+        public static readonly string ErrorPhysicalPinNameDuplicated = "Err_26";
+        public static readonly string ErrorPhysicalPinLogicalPinNotFound = "Err_27";
 
         public IResourcePathChecker ResourcePathChecker { get; }
 
@@ -101,6 +104,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
             errorMsg += ValidateAllOverlays(draft);
             errorMsg += ValidateAllSliders(draft);
+            errorMsg += ValidateAllPhysicalPins(draft);
             errorMsg += ValidatePinNumbersAreUnique(draft.Pins);
             if (draft?.Pins != null)
             {
@@ -160,6 +164,54 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
 
             return sliderErrorMsg;
+        }
+
+        private static string ValidateAllPhysicalPins(ComponentDraft draft)
+        {
+            string errorMsg = "";
+            if (draft?.PhysicalPins == null || draft.PhysicalPins.Count == 0)
+            {
+                // Physical pins are optional
+                return errorMsg;
+            }
+
+            var pinNumbers = draft.Pins?.Select(p => p.Number).ToHashSet() ?? new HashSet<int>();
+
+            foreach (var physicalPin in draft.PhysicalPins)
+            {
+                if (string.IsNullOrWhiteSpace(physicalPin.Name))
+                {
+                    errorMsg += ErrorPhysicalPinNameNotDefined + " Physical pin name cannot be blank\n";
+                }
+
+                // Validate logical pin reference if specified
+                if (physicalPin.LogicalPinNumber.HasValue && !pinNumbers.Contains(physicalPin.LogicalPinNumber.Value))
+                {
+                    errorMsg += ErrorPhysicalPinLogicalPinNotFound + $" Physical pin '{physicalPin.Name}' references logical pin number {physicalPin.LogicalPinNumber.Value} which does not exist\n";
+                }
+            }
+
+            // Validate physical pin names are unique
+            errorMsg += ValidatePhysicalPinNamesAreUnique(draft.PhysicalPins);
+
+            return errorMsg;
+        }
+
+        private static string ValidatePhysicalPinNamesAreUnique(List<PhysicalPinDraft> physicalPins)
+        {
+            var duplicateNames = physicalPins
+                .Where(p => !string.IsNullOrWhiteSpace(p.Name))
+                .GroupBy(p => p.Name)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicateNames.Any())
+            {
+                string names = string.Join(", ", duplicateNames);
+                return $"{ErrorPhysicalPinNameDuplicated} Each physical pin must have a unique name, but '{names}' has been used more than once.\n";
+            }
+            return "";
         }
 
         private string ValidateAllOverlays(ComponentDraft draft)

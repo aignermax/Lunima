@@ -1,21 +1,52 @@
 namespace CAP_Core.Components
 {
-    public class PhysicalPin
+    /// <summary>
+    /// Represents a physical optical port on a component with µm coordinates.
+    /// Used for direct waveguide connections (non-grid mode) and Nazca export.
+    /// </summary>
+    public class PhysicalPin : ICloneable
     {
         public string Name { get; set; }
-        public double OffsetXMicrometers { get; set; }  // µm vom Component-Origin
-        public double OffsetYMicrometers { get; set; }  // µm vom Component-Origin
-        public double AngleDegrees { get; set; }        // Ausgangsrichtung
-        public Guid PinId { get; set; }
+        public double OffsetXMicrometers { get; set; }
+        public double OffsetYMicrometers { get; set; }
+        public double AngleDegrees { get; set; }
+        public Guid PinId { get; set; } = Guid.NewGuid();
         public Component ParentComponent { get; set; }
 
-        // Absolute Position berechnen
+        /// <summary>
+        /// Reference to the logical Pin for S-Matrix simulation integration.
+        /// When set, waveguide connections through this physical pin will
+        /// use the logical pin's IDInFlow/IDOutFlow for light propagation.
+        /// </summary>
+        public Pin LogicalPin { get; set; }
+
         public (double x, double y) GetAbsolutePosition()
         {
             return (
                 ParentComponent.PhysicalX + OffsetXMicrometers,
                 ParentComponent.PhysicalY + OffsetYMicrometers
             );
+        }
+
+        /// <summary>
+        /// Gets the absolute angle considering component rotation.
+        /// </summary>
+        public double GetAbsoluteAngle()
+        {
+            return (AngleDegrees + ParentComponent.RotationDegrees) % 360;
+        }
+
+        public object Clone()
+        {
+            return new PhysicalPin
+            {
+                Name = Name,
+                OffsetXMicrometers = OffsetXMicrometers,
+                OffsetYMicrometers = OffsetYMicrometers,
+                AngleDegrees = AngleDegrees,
+                PinId = Guid.NewGuid(),
+                // ParentComponent and LogicalPin are set after cloning by the Component
+            };
         }
     }
 }

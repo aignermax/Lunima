@@ -28,6 +28,7 @@ public class Component : ICloneable
     public double RotationDegrees { get; set; }
 
     public Part[,] Parts { get; protected set; }
+    public List<PhysicalPin> PhysicalPins { get; protected set; } = new();
     public Dictionary<int, SMatrix> WaveLengthToSMatrixMap { get; set; }
     private Dictionary<int, Slider> SliderMap { get; set; } // where int is the sliderNumber
     public event EventHandler SliderValueChanged;
@@ -46,7 +47,7 @@ public class Component : ICloneable
             }
         }
     }
-    public Component(Dictionary<int,SMatrix> laserWaveLengthToSMatrixMap , List<Slider> sliders, string nazcaFunctionName, string nazcaFunctionParams, Part[,] parts, int typeNumber, string identifier, DiscreteRotation rotationCounterClock)
+    public Component(Dictionary<int,SMatrix> laserWaveLengthToSMatrixMap , List<Slider> sliders, string nazcaFunctionName, string nazcaFunctionParams, Part[,] parts, int typeNumber, string identifier, DiscreteRotation rotationCounterClock, List<PhysicalPin> physicalPins = null)
     {
         Parts = parts;
         TypeNumber = typeNumber;
@@ -57,13 +58,20 @@ public class Component : ICloneable
         sliders.ForEach(s => {
             AddSlider(s.Number, s);
             // initialize the SliderValues with two different values to ensure the Observers (Matrix Updater) are being called
-            s.Value = 0; 
+            s.Value = 0;
             s.Value = (s.MinValue + s.MaxValue) / 2;
         });
         IsPlacedInGrid = false;
         NazcaFunctionName = nazcaFunctionName;
         var firstSlider = sliders.FirstOrDefault();
         NazcaFunctionParameters = InsertSliderValue(NazcaFunctionParameters ?? "");
+
+        // Initialize physical pins and set parent references
+        PhysicalPins = physicalPins ?? new List<PhysicalPin>();
+        foreach (var physicalPin in PhysicalPins)
+        {
+            physicalPin.ParentComponent = this;
+        }
     }
     public string InsertSliderValue(string nazcaFunctionParameterString)
     {
@@ -263,7 +271,7 @@ public class Component : ICloneable
         foreach (var laserAndMatrix in WaveLengthToSMatrixMap)
         {
             var oldMatrix = laserAndMatrix.Value;
-            
+
             var newMat = new SMatrix(allClonedPinIDs , allClonedSliderIDs);
             // assign the linear connections
             var newConnections = CreateConnectionsWithUpdatedPins(oldToNewPinIds, oldMatrix);
@@ -282,7 +290,42 @@ public class Component : ICloneable
             clonedLaserSMatrixMap.Add(laserAndMatrix.Key, newMat);
         }
 
-        return new Component(clonedLaserSMatrixMap, clonedSliderMap.Values.ToList(), NazcaFunctionName, NazcaFunctionParameters, clonedParts, TypeNumber, Identifier, Rotation90CounterClock);
+        // Clone physical pins
+        var clonedPhysicalPins = ClonePhysicalPins(clonedPins);
+
+        return new Component(clonedLaserSMatrixMap, clonedSliderMap.Values.ToList(), NazcaFunctionName, NazcaFunctionParameters, clonedParts, TypeNumber, Identifier, Rotation90CounterClock, clonedPhysicalPins);
+    }
+
+    private List<PhysicalPin> ClonePhysicalPins(List<Pin> clonedLogicalPins)
+    {
+        var clonedPhysicalPins = new List<PhysicalPin>();
+        foreach (var physicalPin in PhysicalPins)
+        {
+            var cloned = (PhysicalPin)physicalPin.Clone();
+            // Re-link to the corresponding cloned logical pin if it exists
+            if (physicalPin.LogicalPin != null)
+            {
+                cloned.LogicalPin = clonedLogicalPins.FirstOrDefault(p => p.Name == physicalPin.LogicalPin.Name);
+            }
+            clonedPhysicalPins.Add(cloned);
+        }
+        return clonedPhysicalPins;
+    }
+
+    /// <summary>
+    /// Gets a physical pin by name.
+    /// </summary>
+    public PhysicalPin GetPhysicalPin(string name)
+    {
+        return PhysicalPins.FirstOrDefault(p => p.Name == name);
+    }
+
+    /// <summary>
+    /// Gets all physical pins that have a linked logical pin.
+    /// </summary>
+    public List<PhysicalPin> GetPhysicalPinsWithLogicalLink()
+    {
+        return PhysicalPins.Where(p => p.LogicalPin != null).ToList();
     }
 
     private Dictionary<int, Slider> CloneSliders()
