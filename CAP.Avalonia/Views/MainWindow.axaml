@@ -14,49 +14,146 @@
     <DockPanel>
         <!-- Toolbar -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#2d2d2d" Height="40">
+            <!-- Mode Buttons -->
+            <TextBlock Text="Mode:" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="White"/>
+            <Button Content="[S] Select" Command="{Binding SetSelectModeCommand}"
+                    Width="80" Margin="2" Background="#3d3d3d" Foreground="LightBlue"/>
+            <Button Content="[C] Connect" Command="{Binding SetConnectModeCommand}"
+                    Width="85" Margin="2" Background="#3d3d3d" Foreground="Orange"/>
+            <Button Content="[D] Delete" Command="{Binding SetDeleteModeCommand}"
+                    Width="80" Margin="2" Background="#3d3d3d" Foreground="Red"/>
+
+            <Separator Width="1" Background="Gray" Margin="10,5"/>
+
+            <!-- Zoom Controls -->
             <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
             <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
             <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
-            <Separator Width="1" Background="Gray" Margin="10,5"/>
             <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
                        VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
+
+            <Separator Width="1" Background="Gray" Margin="10,5"/>
+
+            <!-- Undo/Redo -->
+            <Button Content="↶ Undo" Command="{Binding UndoCommand}"
+                    Width="65" Margin="2" Background="#3d3d3d" ToolTip.Tip="Ctrl+Z"/>
+            <Button Content="↷ Redo" Command="{Binding RedoCommand}"
+                    Width="65" Margin="2" Background="#3d3d3d" ToolTip.Tip="Ctrl+Y"/>
+
+            <Separator Width="1" Background="Gray" Margin="10,5"/>
+
+            <!-- Actions -->
+            <Button Content="Delete Selected" Command="{Binding DeleteSelectedCommand}"
+                    Width="100" Margin="5" Background="#4d3d3d"/>
+
+            <Separator Width="1" Background="Gray" Margin="10,5"/>
+
+            <!-- File Operations -->
+            <Button Content="📂 Load" Command="{Binding LoadDesignCommand}"
+                    Width="60" Margin="2" Background="#3d3d3d" ToolTip.Tip="Load design"/>
+            <Button Content="💾 Save" Command="{Binding SaveDesignCommand}"
+                    Width="60" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design (Ctrl+S)"/>
+            <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
+                    Width="70" Margin="2" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
         </StackPanel>
 
         <!-- Status Bar -->
         <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
-            <TextBlock Text="{Binding StatusText}"
-                       VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding StatusText}"
+                           VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+                <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
+                    <Run Text="Shortcuts: S=Select, C=Connect, D=Delete, R=Rotate, Del=Remove, Ctrl+Z=Undo, Ctrl+Y=Redo"/>
+                </TextBlock>
+            </StackPanel>
         </Border>
 
-        <!-- Left Panel - Component Library (placeholder) -->
+        <!-- Left Panel - Component Library -->
         <Border DockPanel.Dock="Left" Width="200" Background="#252526">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Components"
+                <TextBlock DockPanel.Dock="Top" Text="Component Library"
                            FontWeight="Bold" Margin="10" Foreground="White"/>
-                <ListBox Background="Transparent" Foreground="White">
-                    <ListBoxItem Content="1x2 Splitter"/>
-                    <ListBoxItem Content="2x2 Coupler"/>
-                    <ListBoxItem Content="Phase Shifter"/>
-                    <ListBoxItem Content="Grating Coupler"/>
-                    <ListBoxItem Content="Detector"/>
+                <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
+                           FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
+                <ListBox ItemsSource="{Binding ComponentLibrary}"
+                         SelectedItem="{Binding SelectedTemplate}"
+                         Background="Transparent" Foreground="White"
+                         Margin="5">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ComponentTemplate">
+                            <StackPanel Margin="5">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="Gray"/>
+                                <TextBlock FontSize="9" Foreground="DimGray">
+                                    <Run Text="{Binding WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                    <Run Text="x"/>
+                                    <Run Text="{Binding HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                    <Run Text="um"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
                 </ListBox>
             </DockPanel>
         </Border>
 
-        <!-- Right Panel - Properties (placeholder) -->
+        <!-- Right Panel - Properties -->
         <Border DockPanel.Dock="Right" Width="250" Background="#252526">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="Properties"
                            FontWeight="Bold" Margin="10" Foreground="White"/>
                 <StackPanel Margin="10">
-                    <TextBlock Text="Select a component to view properties"
-                               Foreground="Gray" TextWrapping="Wrap"/>
+                    <TextBlock Text="Selected Component:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding SelectedComponent.Name, FallbackValue='None'}"
+                               Foreground="White" FontWeight="SemiBold"/>
+
+                    <TextBlock Text="Position:" Foreground="Gray" Margin="0,15,0,5"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="X: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"
+                                   Foreground="White"/>
+                        <TextBlock Text=" um" Foreground="Gray"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Y: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"
+                                   Foreground="White"/>
+                        <TextBlock Text=" um" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Dimensions:" Foreground="Gray" Margin="0,15,0,5"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"
+                                   Foreground="White"/>
+                        <TextBlock Text=" x " Foreground="Gray"/>
+                        <TextBlock Text="{Binding SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"
+                                   Foreground="White"/>
+                        <TextBlock Text=" um" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+
+                    <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding CurrentMode}" Foreground="Cyan" FontWeight="Bold"/>
+
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+
+                    <TextBlock Text="Statistics:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Components: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding Canvas.Components.Count}" Foreground="White"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Connections: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding Canvas.Connections.Count}" Foreground="White"/>
+                    </StackPanel>
                 </StackPanel>
             </DockPanel>
         </Border>
 
         <!-- Main Canvas -->
         <controls:DesignCanvas ViewModel="{Binding Canvas}"
-                               Zoom="{Binding ZoomLevel}"/>
+                               Zoom="{Binding ZoomLevel}"
+                               MainViewModel="{Binding}"/>
     </DockPanel>
 </Window>

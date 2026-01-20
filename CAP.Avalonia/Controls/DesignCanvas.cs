@@ -2,12 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Platform;
-using Avalonia.Rendering.SceneGraph;
-using Avalonia.Skia;
 using CAP.Avalonia.ViewModels;
+using CAP_Core.Components;
 using CAP_Core.Routing;
-using SkiaSharp;
 
 namespace CAP.Avalonia.Controls;
 
@@ -18,6 +15,9 @@ public class DesignCanvas : Control
 
     public static readonly StyledProperty<double> ZoomProperty =
         AvaloniaProperty.Register<DesignCanvas, double>(nameof(Zoom), 1.0);
+
+    public static readonly StyledProperty<MainViewModel?> MainViewModelProperty =
+        AvaloniaProperty.Register<DesignCanvas, MainViewModel?>(nameof(MainViewModel));
 
     public DesignCanvasViewModel? ViewModel
     {
@@ -31,19 +31,47 @@ public class DesignCanvas : Control
         set => SetValue(ZoomProperty, value);
     }
 
+    public MainViewModel? MainViewModel
+    {
+        get => GetValue(MainViewModelProperty);
+        set => SetValue(MainViewModelProperty, value);
+    }
+
     private Point _lastPointerPosition;
     private ComponentViewModel? _draggingComponent;
     private bool _isPanning;
+    private const double PinHitRadius = 15; // Hit test radius for pins
 
     static DesignCanvas()
     {
         AffectsRender<DesignCanvas>(ViewModelProperty, ZoomProperty);
+        MainViewModelProperty.Changed.AddClassHandler<DesignCanvas>((canvas, e) => canvas.OnMainViewModelChanged(e));
     }
 
     public DesignCanvas()
     {
         ClipToBounds = true;
         Focusable = true;
+    }
+
+    private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
+    {
+        // Unsubscribe from old
+        if (e.OldValue is MainViewModel oldVm)
+        {
+            oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
+        }
+
+        // Subscribe to new
+        if (e.NewValue is MainViewModel newVm)
+        {
+            newVm.CommandManager.StateChanged += OnCommandStateChanged;
+        }
+    }
+
+    private void OnCommandStateChanged(object? sender, EventArgs e)
+    {
+        InvalidateVisual();
     }
 
     public override void Render(DrawingContext context)
@@ -76,6 +104,9 @@ public class DesignCanvas : Control
                 DrawComponent(context, comp);
             }
         }
+
+        // Draw mode indicator
+        DrawModeIndicator(context, bounds);
 
         // Draw status info
         DrawStatusInfo(context, bounds);
@@ -131,16 +162,40 @@ public class DesignCanvas : Control
         context.DrawRectangle(borderPen, rect);
 
         // Draw physical pins
+        var mainVm = MainViewModel;
+        bool isConnectMode = mainVm?.CurrentMode == InteractionMode.Connect;
+
         foreach (var pin in comp.Component.PhysicalPins)
         {
             var (pinX, pinY) = pin.GetAbsolutePosition();
-            var pinRect = new Rect(pinX - 5, pinY - 5, 10, 10);
 
-            var pinBrush = pin.LogicalPin != null
-                ? new SolidColorBrush(Color.FromRgb(100, 200, 100))  // Linked pin - green
-                : new SolidColorBrush(Color.FromRgb(200, 100, 100)); // Unlinked - red
+            // Draw pin based on connection mode
+            IBrush pinBrush;
+            double pinSize = isConnectMode ? 8 : 5;
 
+            if (isConnectMode)
+            {
+                pinBrush = new SolidColorBrush(Color.FromRgb(255, 200, 0)); // Yellow in connect mode
+            }
+            else if (pin.LogicalPin != null)
+            {
+                pinBrush = new SolidColorBrush(Color.FromRgb(100, 200, 100)); // Linked pin - green
+            }
+            else
+            {
+                pinBrush = new SolidColorBrush(Color.FromRgb(200, 100, 100)); // Unlinked - red
+            }
+
+            var pinRect = new Rect(pinX - pinSize, pinY - pinSize, pinSize * 2, pinSize * 2);
             context.FillRectangle(pinBrush, pinRect);
+
+            // Draw pin direction indicator
+            var dirPen = new Pen(Brushes.White, 1);
+            double angle = pin.AngleDegrees * Math.PI / 180;
+            double dirLength = 15;
+            context.DrawLine(dirPen,
+                new Point(pinX, pinY),
+                new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength));
         }
 
         // Component name
@@ -183,7 +238,6 @@ public class DesignCanvas : Control
             }
             else if (segment is BendSegment bend)
             {
-                // Draw arc using polyline approximation
                 DrawArc(context, waveguidePen, bend);
             }
         }
@@ -204,7 +258,6 @@ public class DesignCanvas : Control
 
     private void DrawArc(DrawingContext context, Pen pen, BendSegment bend)
     {
-        // Approximate arc with line segments
         int numSegments = Math.Max(8, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
         var points = new List<Point>();
 
@@ -216,18 +269,50 @@ public class DesignCanvas : Control
             double t = i / (double)numSegments;
             double angle = startRad + sweepRad * t;
 
-            // Calculate point on arc (perpendicular to tangent direction)
             double perpAngle = angle - Math.PI / 2 * Math.Sign(bend.SweepAngleDegrees);
             double x = bend.Center.X + bend.RadiusMicrometers * Math.Cos(perpAngle);
             double y = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(perpAngle);
             points.Add(new Point(x, y));
         }
 
-        // Draw polyline
         for (int i = 0; i < points.Count - 1; i++)
         {
             context.DrawLine(pen, points[i], points[i + 1]);
         }
+    }
+
+    private void DrawModeIndicator(DrawingContext context, Rect bounds)
+    {
+        var mainVm = MainViewModel;
+        if (mainVm == null) return;
+
+        string modeText = mainVm.CurrentMode switch
+        {
+            InteractionMode.Select => "[S] Select",
+            InteractionMode.PlaceComponent => "[P] Place",
+            InteractionMode.Connect => "[C] Connect",
+            InteractionMode.Delete => "[D] Delete",
+            _ => ""
+        };
+
+        var brush = mainVm.CurrentMode switch
+        {
+            InteractionMode.Select => Brushes.LightBlue,
+            InteractionMode.PlaceComponent => Brushes.LightGreen,
+            InteractionMode.Connect => Brushes.Orange,
+            InteractionMode.Delete => Brushes.Red,
+            _ => Brushes.White
+        };
+
+        var text = new FormattedText(
+            modeText,
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial", FontStyle.Normal, FontWeight.Bold),
+            14,
+            brush);
+
+        context.DrawText(text, new Point(bounds.Width - 100, 10));
     }
 
     private void DrawStatusInfo(DrawingContext context, Rect bounds)
@@ -254,24 +339,69 @@ public class DesignCanvas : Control
         _lastPointerPosition = point;
 
         var vm = ViewModel;
+        var mainVm = MainViewModel;
         if (vm == null) return;
 
-        // Transform point to canvas coordinates
         var canvasPoint = ScreenToCanvas(point);
 
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            // Check if clicking on a component
+            // Check if in connect mode and clicking on a pin
+            if (mainVm?.CurrentMode == InteractionMode.Connect)
+            {
+                var pin = HitTestPin(canvasPoint);
+                if (pin != null)
+                {
+                    mainVm.PinClicked(pin);
+                    InvalidateVisual();
+                    e.Handled = true;
+                    Focus();
+                    return;
+                }
+            }
+
+            // Check if in place mode - place component
+            if (mainVm?.CurrentMode == InteractionMode.PlaceComponent)
+            {
+                mainVm.CanvasClicked(canvasPoint.X, canvasPoint.Y);
+                InvalidateVisual();
+                e.Handled = true;
+                Focus();
+                return;
+            }
+
+            // Check if in delete mode
+            if (mainVm?.CurrentMode == InteractionMode.Delete)
+            {
+                mainVm.CanvasClicked(canvasPoint.X, canvasPoint.Y);
+                InvalidateVisual();
+                e.Handled = true;
+                Focus();
+                return;
+            }
+
+            // Select mode - check if clicking on a component
             _draggingComponent = HitTestComponent(canvasPoint);
             if (_draggingComponent != null)
             {
-                // Select the component
                 foreach (var c in vm.Components) c.IsSelected = false;
                 _draggingComponent.IsSelected = true;
+                vm.SelectedComponent = _draggingComponent;
+                mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
+                // Start tracking for undo
+                mainVm?.StartMoveComponent(_draggingComponent);
+                InvalidateVisual();
+            }
+            else
+            {
+                // Deselect all
+                foreach (var c in vm.Components) c.IsSelected = false;
+                vm.SelectedComponent = null;
                 InvalidateVisual();
             }
         }
-        else if (e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
+        else if (e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed ||
+                 e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
         {
             _isPanning = true;
         }
@@ -290,9 +420,8 @@ public class DesignCanvas : Control
         var vm = ViewModel;
         if (vm == null) return;
 
-        if (_draggingComponent != null)
+        if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
         {
-            // Move the component
             vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
             InvalidateVisual();
         }
@@ -310,6 +439,12 @@ public class DesignCanvas : Control
     {
         base.OnPointerReleased(e);
 
+        // End move tracking for undo
+        if (_draggingComponent != null)
+        {
+            MainViewModel?.EndMoveComponent();
+        }
+
         _draggingComponent = null;
         _isPanning = false;
     }
@@ -321,7 +456,6 @@ public class DesignCanvas : Control
         var delta = e.Delta.Y > 0 ? 1.1 : 0.9;
         var newZoom = Math.Clamp(Zoom * delta, 0.1, 10.0);
 
-        // Zoom toward pointer position
         var point = e.GetPosition(this);
         var vm = ViewModel;
         if (vm != null)
@@ -336,6 +470,57 @@ public class DesignCanvas : Control
         else
         {
             Zoom = newZoom;
+        }
+
+        InvalidateVisual();
+        e.Handled = true;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        var mainVm = MainViewModel;
+        if (mainVm == null) return;
+
+        // Check for Ctrl modifiers
+        bool ctrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+
+        switch (e.Key)
+        {
+            case Key.S:
+                if (ctrlPressed)
+                    mainVm.SaveDesignCommand.Execute(null);
+                else
+                    mainVm.SetSelectModeCommand.Execute(null);
+                break;
+            case Key.C:
+                if (!ctrlPressed)
+                    mainVm.SetConnectModeCommand.Execute(null);
+                break;
+            case Key.D:
+                if (!ctrlPressed)
+                    mainVm.SetDeleteModeCommand.Execute(null);
+                break;
+            case Key.Delete:
+            case Key.Back:
+                mainVm.DeleteSelectedCommand.Execute(null);
+                break;
+            case Key.Escape:
+                mainVm.SetSelectModeCommand.Execute(null);
+                break;
+            case Key.Z:
+                if (ctrlPressed)
+                    mainVm.UndoCommand.Execute(null);
+                break;
+            case Key.Y:
+                if (ctrlPressed)
+                    mainVm.RedoCommand.Execute(null);
+                break;
+            case Key.R:
+                if (!ctrlPressed)
+                    mainVm.RotateSelectedCommand.Execute(null);
+                break;
         }
 
         InvalidateVisual();
@@ -357,7 +542,6 @@ public class DesignCanvas : Control
         var vm = ViewModel;
         if (vm == null) return null;
 
-        // Check in reverse order (top-most first)
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
@@ -365,6 +549,27 @@ public class DesignCanvas : Control
             if (rect.Contains(canvasPoint))
             {
                 return comp;
+            }
+        }
+
+        return null;
+    }
+
+    private PhysicalPin? HitTestPin(Point canvasPoint)
+    {
+        var vm = ViewModel;
+        if (vm == null) return null;
+
+        foreach (var comp in vm.Components)
+        {
+            foreach (var pin in comp.Component.PhysicalPins)
+            {
+                var (pinX, pinY) = pin.GetAbsolutePosition();
+                var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
+                if (distance <= PinHitRadius)
+                {
+                    return pin;
+                }
             }
         }
 

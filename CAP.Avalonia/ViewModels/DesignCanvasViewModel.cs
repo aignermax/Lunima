@@ -43,9 +43,11 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
     }
 
-    public void AddComponent(Component component)
+    public ComponentViewModel AddComponent(Component component, string? templateName = null)
     {
-        Components.Add(new ComponentViewModel(component));
+        var vm = new ComponentViewModel(component, templateName);
+        Components.Add(vm);
+        return vm;
     }
 
     public void RemoveComponent(ComponentViewModel component)
@@ -79,6 +81,12 @@ public partial class ComponentViewModel : ObservableObject
 {
     public Component Component { get; }
 
+    /// <summary>
+    /// The name of the template used to create this component.
+    /// Used for save/load to recreate the component from the correct template.
+    /// </summary>
+    public string? TemplateName { get; set; }
+
     [ObservableProperty]
     private double _x;
 
@@ -92,11 +100,18 @@ public partial class ComponentViewModel : ObservableObject
     public double Height => Component.HeightMicrometers;
     public string Name => Component.Identifier;
 
-    public ComponentViewModel(Component component)
+    public ComponentViewModel(Component component, string? templateName = null)
     {
         Component = component;
+        TemplateName = templateName;
         _x = component.PhysicalX;
         _y = component.PhysicalY;
+    }
+
+    public void NotifyDimensionsChanged()
+    {
+        OnPropertyChanged(nameof(Width));
+        OnPropertyChanged(nameof(Height));
     }
 }
 

@@ -37,6 +37,11 @@ public class WaveguideConnectionManager
             c.EndPin.ParentComponent == component);
     }
 
+    public void Clear()
+    {
+        Connections.Clear();
+    }
+
     /// <summary>
     /// Recalculates transmission for all connections.
     /// Call this after any component has been moved.
