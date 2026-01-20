@@ -29,6 +29,8 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             return componentDrafts.Select((draft, index) => ConvertDraftToComponent(draft, index)).ToList();
         }
 
+        private const double DefaultTileSizeMicrometers = 250.0;
+
         private Component ConvertDraftToComponent(ComponentDraft draft, int typeNumber)
         {
             if (draft == null) throw new InvalidOperationException($"The parameter {nameof(draft)} cannot be null");
@@ -38,7 +40,13 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 var allSliders = CreateSliderMap(draft);
                 var wavelengthToMatrixMap = CreateWaveLengthSpecificSMatricesFromDrafts(allSliders, draft, parts);
                 var physicalPins = CreatePhysicalPinsFromDraft(draft, parts);
-                return new Component(wavelengthToMatrixMap, allSliders, draft.NazcaFunctionName, draft.NazcaFunctionParameters, parts, typeNumber, draft.Identifier, DiscreteRotation.R0, physicalPins);
+                var component = new Component(wavelengthToMatrixMap, allSliders, draft.NazcaFunctionName, draft.NazcaFunctionParameters, parts, typeNumber, draft.Identifier, DiscreteRotation.R0, physicalPins);
+
+                // Set physical dimensions - use explicit values or default to tile-based calculation
+                component.WidthMicrometers = draft.WidthMicrometers ?? draft.WidthInTiles * DefaultTileSizeMicrometers;
+                component.HeightMicrometers = draft.HeightMicrometers ?? draft.HeightInTiles * DefaultTileSizeMicrometers;
+
+                return component;
             }
             catch (Exception ex)
             {

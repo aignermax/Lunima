@@ -293,7 +293,18 @@ public class Component : ICloneable
         // Clone physical pins
         var clonedPhysicalPins = ClonePhysicalPins(clonedPins);
 
-        return new Component(clonedLaserSMatrixMap, clonedSliderMap.Values.ToList(), NazcaFunctionName, NazcaFunctionParameters, clonedParts, TypeNumber, Identifier, Rotation90CounterClock, clonedPhysicalPins);
+        var clonedComponent = new Component(clonedLaserSMatrixMap, clonedSliderMap.Values.ToList(), NazcaFunctionName, NazcaFunctionParameters, clonedParts, TypeNumber, Identifier, Rotation90CounterClock, clonedPhysicalPins);
+
+        // Copy physical dimensions and position
+        clonedComponent.WidthMicrometers = WidthMicrometers;
+        clonedComponent.HeightMicrometers = HeightMicrometers;
+        clonedComponent.PhysicalX = PhysicalX;
+        clonedComponent.PhysicalY = PhysicalY;
+        clonedComponent.PhysicalOffsetX = PhysicalOffsetX;
+        clonedComponent.PhysicalOffsetY = PhysicalOffsetY;
+        clonedComponent.RotationDegrees = RotationDegrees;
+
+        return clonedComponent;
     }
 
     private List<PhysicalPin> ClonePhysicalPins(List<Pin> clonedLogicalPins)

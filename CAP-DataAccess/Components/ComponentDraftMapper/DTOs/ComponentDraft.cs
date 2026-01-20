@@ -23,6 +23,21 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public int WidthInTiles { get; set; }
         [JsonPropertyName("heightInTiles")]
         public int HeightInTiles { get; set; }
+
+        /// <summary>
+        /// Physical width of the component in micrometers.
+        /// Optional - when not provided, defaults to WidthInTiles * 250 µm.
+        /// </summary>
+        [JsonPropertyName("widthMicrometers")]
+        public double? WidthMicrometers { get; set; }
+
+        /// <summary>
+        /// Physical height of the component in micrometers.
+        /// Optional - when not provided, defaults to HeightInTiles * 250 µm.
+        /// </summary>
+        [JsonPropertyName("heightMicrometers")]
+        public double? HeightMicrometers { get; set; }
+
         [JsonPropertyName("pins")]
         public List<PinDraft> Pins { get; set; }
         [JsonPropertyName("sMatrices")]
