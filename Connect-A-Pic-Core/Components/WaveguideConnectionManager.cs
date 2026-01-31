@@ -1,4 +1,5 @@
 using System.Numerics;
+using CAP_Core.Routing;
 
 namespace CAP_Core.Components;
 
@@ -16,6 +17,18 @@ public class WaveguideConnectionManager
     /// </summary>
     public double DefaultBendLossDbPer90Deg { get; set; } = 0.05;
 
+    /// <summary>
+    /// Whether to use sequential routing with waveguide collision avoidance.
+    /// When enabled, already-routed waveguides are marked as obstacles for subsequent routes.
+    /// </summary>
+    public bool UseSequentialRouting { get; set; } = true;
+
+    /// <summary>
+    /// Waveguide width for collision detection (in micrometers).
+    /// This should include clearance between waveguides (typically 2-5µm minimum spacing).
+    /// </summary>
+    public double WaveguideWidthMicrometers { get; set; } = 10.0;
+
     public WaveguideConnection AddConnection(PhysicalPin startPin, PhysicalPin endPin)
     {
         var connection = new WaveguideConnection
@@ -25,21 +38,59 @@ public class WaveguideConnectionManager
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
             BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
         };
-        connection.RecalculateTransmission();
         Connections.Add(connection);
+
+        // Recalculate ALL connections sequentially so the new one avoids existing waveguides
+        // and existing ones are properly registered in the grid
+        RecalculateAllTransmissions();
+
         return connection;
     }
 
     public void RemoveConnectionsForComponent(Component component)
     {
+        var router = WaveguideConnection.SharedRouter;
+        var connectionsToRemove = Connections
+            .Where(c => c.StartPin.ParentComponent == component ||
+                        c.EndPin.ParentComponent == component)
+            .ToList();
+
+        // Remove waveguide obstacles for removed connections
+        if (router.PathfindingGrid != null)
+        {
+            foreach (var conn in connectionsToRemove)
+            {
+                router.PathfindingGrid.RemoveWaveguideObstacle(conn.Id);
+            }
+        }
+
         Connections.RemoveAll(c =>
             c.StartPin.ParentComponent == component ||
             c.EndPin.ParentComponent == component);
+
+        // Recalculate remaining connections - they might find better routes now
+        if (Connections.Count > 0)
+        {
+            RecalculateAllTransmissions();
+        }
     }
 
     public void RemoveConnection(WaveguideConnection connection)
     {
+        // Remove waveguide obstacle from pathfinding grid
+        var router = WaveguideConnection.SharedRouter;
+        if (router.PathfindingGrid != null)
+        {
+            router.PathfindingGrid.RemoveWaveguideObstacle(connection.Id);
+        }
+
         Connections.Remove(connection);
+
+        // Recalculate remaining connections - they might find better routes now
+        if (Connections.Count > 0)
+        {
+            RecalculateAllTransmissions();
+        }
     }
 
     public void AddExistingConnection(WaveguideConnection connection)
@@ -57,28 +108,68 @@ public class WaveguideConnectionManager
 
     /// <summary>
     /// Recalculates transmission for all connections.
-    /// Call this after any component has been moved.
+    /// When UseSequentialRouting is enabled, routes connections sequentially
+    /// to avoid waveguide collisions.
     /// </summary>
     public void RecalculateAllTransmissions()
     {
-        foreach (var connection in Connections)
+        var router = WaveguideConnection.SharedRouter;
+
+        if (UseSequentialRouting && router.PathfindingGrid != null)
         {
-            connection.RecalculateTransmission();
+            // Clear all waveguide obstacles from previous routing
+            router.PathfindingGrid.ClearAllWaveguideObstacles();
+
+            // Route each connection sequentially
+            foreach (var connection in Connections)
+            {
+                connection.RecalculateTransmission();
+
+                // If routing succeeded, mark this waveguide as an obstacle
+                if (connection.IsPathValid && connection.RoutedPath != null)
+                {
+                    router.PathfindingGrid.AddWaveguideObstacle(
+                        connection.Id,
+                        connection.RoutedPath.Segments,
+                        WaveguideWidthMicrometers);
+                }
+            }
+        }
+        else
+        {
+            // Simple routing without collision avoidance
+            foreach (var connection in Connections)
+            {
+                connection.RecalculateTransmission();
+            }
         }
     }
 
     /// <summary>
     /// Recalculates transmission for connections involving a specific component.
-    /// Call this after a single component has been moved.
+    /// When UseSequentialRouting is enabled, this triggers a full recalculation
+    /// to ensure proper collision avoidance.
     /// </summary>
     public void RecalculateTransmissionsForComponent(Component component)
     {
-        foreach (var connection in Connections)
+        var router = WaveguideConnection.SharedRouter;
+
+        if (UseSequentialRouting && router.PathfindingGrid != null)
         {
-            if (connection.StartPin.ParentComponent == component ||
-                connection.EndPin.ParentComponent == component)
+            // With sequential routing, we need to recalculate all connections
+            // because moving one component might free up space for better routes
+            RecalculateAllTransmissions();
+        }
+        else
+        {
+            // Simple routing: only recalculate affected connections
+            foreach (var connection in Connections)
             {
-                connection.RecalculateTransmission();
+                if (connection.StartPin.ParentComponent == component ||
+                    connection.EndPin.ParentComponent == component)
+                {
+                    connection.RecalculateTransmission();
+                }
             }
         }
     }

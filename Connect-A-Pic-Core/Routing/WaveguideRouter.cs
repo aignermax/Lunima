@@ -1,6 +1,24 @@
 using CAP_Core.Components;
+using CAP_Core.Routing.AStarPathfinder;
 
 namespace CAP_Core.Routing;
+
+/// <summary>
+/// Routing strategy for waveguide connections.
+/// </summary>
+public enum RoutingStrategy
+{
+    /// <summary>Try strategies in order: Straight, S-Bend, A*, Manhattan</summary>
+    Auto,
+    /// <summary>Direct line (only works if pins are aligned)</summary>
+    Straight,
+    /// <summary>Two opposing bends (works for parallel offset pins)</summary>
+    SBend,
+    /// <summary>Simple manhattan routing with bends (always works)</summary>
+    Manhattan,
+    /// <summary>A* pathfinding with obstacle avoidance</summary>
+    AStar
+}
 
 /// <summary>
 /// Routes waveguides between physical pins, generating path segments.
@@ -23,6 +41,81 @@ public class WaveguideRouter
     public List<RoutingObstacle> Obstacles { get; } = new();
 
     /// <summary>
+    /// Current routing strategy.
+    /// </summary>
+    public RoutingStrategy Strategy { get; set; } = RoutingStrategy.Auto;
+
+    /// <summary>
+    /// The pathfinding grid for A* routing. Must be initialized before using AStar strategy.
+    /// </summary>
+    public PathfindingGrid? PathfindingGrid { get; private set; }
+
+    /// <summary>
+    /// Cost calculator for A* routing.
+    /// </summary>
+    public RoutingCostCalculator CostCalculator { get; } = new();
+
+    /// <summary>
+    /// Grid cell size in micrometers for A* pathfinding.
+    /// Larger values = faster routing but less precise paths.
+    /// Should be smaller than MinBendRadiusMicrometers for smooth curves.
+    /// </summary>
+    public double AStarCellSize { get; set; } = 5.0;
+
+    /// <summary>
+    /// Clearance padding around components in micrometers.
+    /// Waveguides will maintain at least this distance from component edges.
+    /// </summary>
+    public double ObstaclePaddingMicrometers { get; set; } = 5.0;
+
+    /// <summary>
+    /// Initializes the pathfinding grid for A* routing.
+    /// Call this before routing if using AStar strategy.
+    /// </summary>
+    /// <param name="minX">Minimum X bound in micrometers</param>
+    /// <param name="minY">Minimum Y bound in micrometers</param>
+    /// <param name="maxX">Maximum X bound in micrometers</param>
+    /// <param name="maxY">Maximum Y bound in micrometers</param>
+    /// <param name="components">Components to mark as obstacles</param>
+    /// <param name="cellSize">Optional cell size override</param>
+    public void InitializePathfindingGrid(double minX, double minY, double maxX, double maxY,
+                                           IEnumerable<Component> components,
+                                           double? cellSize = null)
+    {
+        double size = cellSize ?? AStarCellSize;
+        PathfindingGrid = new PathfindingGrid(minX, minY, maxX, maxY, size, ObstaclePaddingMicrometers);
+        PathfindingGrid.RebuildFromComponents(components);
+
+        CostCalculator.CellSizeMicrometers = size;
+        CostCalculator.MinBendRadiusMicrometers = MinBendRadiusMicrometers;
+        CostCalculator.MinStraightRunCells = (int)Math.Ceiling(MinBendRadiusMicrometers * 2 / size);
+    }
+
+    /// <summary>
+    /// Updates obstacle for a single component (after move).
+    /// </summary>
+    public void UpdateComponentObstacle(Component component)
+    {
+        PathfindingGrid?.UpdateComponentObstacle(component);
+    }
+
+    /// <summary>
+    /// Removes obstacle for a deleted component.
+    /// </summary>
+    public void RemoveComponentObstacle(Component component)
+    {
+        PathfindingGrid?.RemoveComponentObstacle(component);
+    }
+
+    /// <summary>
+    /// Adds obstacle for a new component.
+    /// </summary>
+    public void AddComponentObstacle(Component component)
+    {
+        PathfindingGrid?.AddComponentObstacle(component);
+    }
+
+    /// <summary>
     /// Routes a waveguide between two pins.
     /// </summary>
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin)
@@ -37,19 +130,50 @@ public class WaveguideRouter
 
         var path = new RoutedPath();
 
-        // Try different routing strategies in order of preference
-        if (TryRouteStraight(startX, startY, startAngle, endX, endY, endInputAngle, path))
+        // Determine which strategies to try based on current setting
+        var strategies = Strategy == RoutingStrategy.Auto
+            ? new[] { RoutingStrategy.Straight, RoutingStrategy.SBend, RoutingStrategy.AStar, RoutingStrategy.Manhattan }
+            : new[] { Strategy };
+
+        foreach (var strategy in strategies)
         {
-            return path;
+            path = new RoutedPath();
+
+            bool success = false;
+            switch (strategy)
+            {
+                case RoutingStrategy.Straight:
+                    success = TryRouteStraight(startX, startY, startAngle, endX, endY, endInputAngle, path);
+                    break;
+                case RoutingStrategy.SBend:
+                    success = TryRouteSBend(startX, startY, startAngle, endX, endY, endInputAngle, path);
+                    break;
+                case RoutingStrategy.AStar:
+                    success = TryRouteAStar(startX, startY, startAngle, endX, endY, endInputAngle, path, startPin, endPin);
+                    break;
+                case RoutingStrategy.Manhattan:
+                    RouteManhattan(startX, startY, startAngle, endX, endY, endInputAngle, path);
+                    // Check if manhattan route is blocked
+                    success = !IsPathBlocked(path.Segments);
+                    break;
+            }
+
+            if (success && path.IsValid)
+            {
+                return path;
+            }
         }
 
-        if (TryRouteSBend(startX, startY, startAngle, endX, endY, endInputAngle, path))
+        // Final fallback - try A* one more time (it should have been tried already, but just in case)
+        // If A* fails, use manhattan even if it goes through obstacles (user will see the issue)
+        path = new RoutedPath();
+        if (!TryRouteAStar(startX, startY, startAngle, endX, endY, endInputAngle, path, startPin, endPin))
         {
-            return path;
+            // A* failed - use manhattan as absolute last resort
+            // Mark this path as a blocked fallback so it can be displayed differently
+            path = new RoutedPath { IsBlockedFallback = true };
+            RouteManhattan(startX, startY, startAngle, endX, endY, endInputAngle, path);
         }
-
-        // Fall back to manhattan routing with bends
-        RouteManhattan(startX, startY, startAngle, endX, endY, endInputAngle, path);
         return path;
     }
 
@@ -72,9 +196,51 @@ public class WaveguideRouter
         // Allow small tolerance for "straight" routing
         if (startDiff < 5 && endDiff < 5)
         {
+            // Check if path is blocked by obstacles
+            if (IsLineBlocked(startX, startY, endX, endY))
+            {
+                return false;
+            }
+
             double length = Math.Sqrt(dx * dx + dy * dy);
             path.Segments.Add(new StraightSegment(startX, startY, endX, endY, startAngle));
             return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a straight line between two points passes through any blocked cells.
+    /// </summary>
+    private bool IsLineBlocked(double x1, double y1, double x2, double y2)
+    {
+        if (PathfindingGrid == null)
+            return false; // No grid, assume not blocked
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+
+        if (length < 0.001)
+            return false;
+
+        // Normalize direction
+        dx /= length;
+        dy /= length;
+
+        // Sample points along the line, checking each for blocked cells
+        double stepSize = PathfindingGrid.CellSizeMicrometers;
+        for (double t = stepSize; t < length - stepSize; t += stepSize)
+        {
+            double px = x1 + dx * t;
+            double py = y1 + dy * t;
+
+            var (gx, gy) = PathfindingGrid.PhysicalToGrid(px, py);
+            if (PathfindingGrid.IsBlocked(gx, gy))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -173,7 +339,77 @@ public class WaveguideRouter
                                                    endX, endY, startAngle));
         }
 
+        // Check if the path goes through any obstacles
+        if (IsPathBlocked(path.Segments))
+        {
+            path.Segments.Clear();
+            return false;
+        }
+
         return true;
+    }
+
+    /// <summary>
+    /// Checks if any segment in a path passes through blocked cells.
+    /// </summary>
+    private bool IsPathBlocked(IEnumerable<PathSegment> segments)
+    {
+        if (PathfindingGrid == null)
+            return false;
+
+        foreach (var segment in segments)
+        {
+            if (segment is StraightSegment)
+            {
+                if (IsLineBlocked(segment.StartPoint.X, segment.StartPoint.Y,
+                                  segment.EndPoint.X, segment.EndPoint.Y))
+                {
+                    return true;
+                }
+            }
+            else if (segment is BendSegment bend)
+            {
+                // Check points along the arc
+                if (IsArcBlocked(bend))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if an arc segment passes through blocked cells.
+    /// </summary>
+    private bool IsArcBlocked(BendSegment bend)
+    {
+        if (PathfindingGrid == null)
+            return false;
+
+        double startRad = bend.StartAngleDegrees * Math.PI / 180;
+        double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
+        int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
+
+        for (int i = 1; i < numSamples; i++) // Skip start and end points
+        {
+            double t = (double)i / numSamples;
+            double angle = startRad + sweepRad * t;
+
+            double sign = Math.Sign(bend.SweepAngleDegrees);
+            if (sign == 0) sign = 1;
+
+            double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
+            double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
+
+            var (gx, gy) = PathfindingGrid.PhysicalToGrid(px, py);
+            if (PathfindingGrid.IsBlocked(gx, gy))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private double CalculateSBendSweep(double forward, double lateral, double radius)
@@ -183,6 +419,58 @@ public class WaveguideRouter
         double cosValue = 1 - lateral / (2 * radius);
         if (cosValue < -1 || cosValue > 1) return double.NaN;
         return Math.Acos(cosValue) * 180 / Math.PI;
+    }
+
+    /// <summary>
+    /// Attempts to route using A* pathfinding with obstacle avoidance.
+    /// </summary>
+    private bool TryRouteAStar(double startX, double startY, double startAngle,
+                                double endX, double endY, double endInputAngle,
+                                RoutedPath path, PhysicalPin startPin, PhysicalPin endPin)
+    {
+        if (PathfindingGrid == null)
+            return false;
+
+        // Clear corridors at pin locations to ensure path can start/end
+        // even if pins are close to component edges
+        // Only clears component obstacles, not waveguide obstacles
+        double corridorLength = MinBendRadiusMicrometers * 3;
+        double corridorWidth = MinWaveguideSpacingMicrometers * 2;
+
+        var clearedStart = PathfindingGrid.ClearPinCorridor(startX, startY, startAngle, corridorLength, corridorWidth);
+        var clearedEnd = PathfindingGrid.ClearPinCorridor(endX, endY, endInputAngle, corridorLength, corridorWidth);
+
+        try
+        {
+            // Convert physical coordinates to grid
+            var (gridStartX, gridStartY) = PathfindingGrid.PhysicalToGrid(startX, startY);
+            var (gridEndX, gridEndY) = PathfindingGrid.PhysicalToGrid(endX, endY);
+
+            // Convert angles to grid directions
+            var startDir = GridDirectionExtensions.FromAngle(startAngle);
+            var endDir = GridDirectionExtensions.FromAngle(endInputAngle);
+
+            // Run A* pathfinding
+            var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
+            var gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
+                                                gridEndX, gridEndY, endDir);
+
+            if (gridPath == null || gridPath.Count < 2)
+                return false;
+
+            // Convert grid path to smooth segments
+            var smoother = new PathSmoother(PathfindingGrid, MinBendRadiusMicrometers);
+            var smoothedPath = smoother.ConvertToSegments(gridPath, startPin, endPin);
+
+            path.Segments.AddRange(smoothedPath.Segments);
+            return path.Segments.Count > 0;
+        }
+        finally
+        {
+            // Restore cleared cells to their original state
+            PathfindingGrid.RestoreCells(clearedStart);
+            PathfindingGrid.RestoreCells(clearedEnd);
+        }
     }
 
     /// <summary>
@@ -298,6 +586,12 @@ public class WaveguideRouter
 public class RoutedPath
 {
     public List<PathSegment> Segments { get; } = new();
+
+    /// <summary>
+    /// Indicates if this path was created as a fallback because no valid path could be found.
+    /// When true, the path may pass through obstacles and should be displayed differently (e.g., red/dashed).
+    /// </summary>
+    public bool IsBlockedFallback { get; set; } = false;
 
     /// <summary>
     /// Total length of the path in micrometers.

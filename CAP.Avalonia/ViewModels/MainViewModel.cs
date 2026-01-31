@@ -88,12 +88,13 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnCurrentModeChanged(InteractionMode value)
     {
+        _connectionStartPin = null; // Reset connection state when mode changes
         StatusText = value switch
         {
             InteractionMode.Select => "Select mode: Click to select, drag to move",
             InteractionMode.PlaceComponent when SelectedTemplate != null => $"Place mode: Click to place {SelectedTemplate.Name}",
             InteractionMode.PlaceComponent => "Place mode: Select a component from the library",
-            InteractionMode.Connect => "Connect mode: Click on a pin to start, then click another pin to connect",
+            InteractionMode.Connect => "Connect mode: Drag from a pin to another pin to connect",
             InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
             _ => "Ready"
         };
@@ -151,9 +152,18 @@ public partial class MainViewModel : ObservableObject
     {
         if (SelectedTemplate == null) return;
 
-        var cmd = new PlaceComponentCommand(Canvas, SelectedTemplate, x, y);
-        CommandManager.ExecuteCommand(cmd);
+        // Center the component at the click position
+        double centeredX = x - SelectedTemplate.WidthMicrometers / 2;
+        double centeredY = y - SelectedTemplate.HeightMicrometers / 2;
 
+        var cmd = PlaceComponentCommand.TryCreate(Canvas, SelectedTemplate, centeredX, centeredY);
+        if (cmd == null)
+        {
+            StatusText = "No space available on chip for this component";
+            return;
+        }
+
+        CommandManager.ExecuteCommand(cmd);
         StatusText = $"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm";
     }
 
@@ -264,6 +274,9 @@ public partial class MainViewModel : ObservableObject
         _movingComponent = component;
         _moveStartX = component.X;
         _moveStartY = component.Y;
+
+        // Notify canvas to optimize during drag
+        Canvas.BeginDragComponent(component);
     }
 
     /// <summary>
@@ -271,18 +284,23 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void EndMoveComponent()
     {
-        if (_movingComponent != null &&
-            (Math.Abs(_movingComponent.X - _moveStartX) > 0.001 ||
-             Math.Abs(_movingComponent.Y - _moveStartY) > 0.001))
+        if (_movingComponent != null)
         {
-            var cmd = new MoveComponentCommand(
-                Canvas,
-                _movingComponent,
-                _moveStartX,
-                _moveStartY,
-                _movingComponent.X,
-                _movingComponent.Y);
-            CommandManager.ExecuteCommand(cmd);
+            // Notify canvas to do final route recalculation
+            Canvas.EndDragComponent(_movingComponent);
+
+            if (Math.Abs(_movingComponent.X - _moveStartX) > 0.001 ||
+                Math.Abs(_movingComponent.Y - _moveStartY) > 0.001)
+            {
+                var cmd = new MoveComponentCommand(
+                    Canvas,
+                    _movingComponent,
+                    _moveStartX,
+                    _moveStartY,
+                    _movingComponent.X,
+                    _movingComponent.Y);
+                CommandManager.ExecuteCommand(cmd);
+            }
         }
         _movingComponent = null;
     }

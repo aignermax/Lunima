@@ -15,21 +15,9 @@ public static class ComponentTemplates
 
     public static List<ComponentTemplate> GetAllTemplates()
     {
+        // Note: Waveguide routing is now automatic - no need for manual waveguide/bend components
         return new List<ComponentTemplate>
         {
-            new ComponentTemplate
-            {
-                Name = "Straight Waveguide",
-                Category = "Basic",
-                WidthMicrometers = 250,
-                HeightMicrometers = 250,
-                PinDefinitions = new[]
-                {
-                    new PinDefinition("in", 0, 125, 180),
-                    new PinDefinition("out", 250, 125, 0)
-                },
-                CreateSMatrix = pins => CreatePassThroughMatrix(pins, 0.98) // 2% loss
-            },
             new ComponentTemplate
             {
                 Name = "1x2 Splitter",
@@ -112,20 +100,8 @@ public static class ComponentTemplates
                     new PinDefinition("out2", 400, 300, 0)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
-            },
-            new ComponentTemplate
-            {
-                Name = "Bend 90°",
-                Category = "Basic",
-                WidthMicrometers = 250,
-                HeightMicrometers = 250,
-                PinDefinitions = new[]
-                {
-                    new PinDefinition("in", 0, 125, 180),
-                    new PinDefinition("out", 125, 250, 90)
-                },
-                CreateSMatrix = pins => CreatePassThroughMatrix(pins, 0.99) // 1% bend loss
             }
+            // Note: Bend 90° removed - waveguide bends are now automatically routed
         };
     }
 

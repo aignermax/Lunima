@@ -42,6 +42,15 @@ public class DesignCanvas : Control
     private bool _isPanning;
     private const double PinHitRadius = 15; // Hit test radius for pins
 
+    // Waveguide connection drag & drop state
+    private PhysicalPin? _connectionDragStartPin;
+    private Point _connectionDragCurrentPoint;
+
+    // Component placement preview state
+    private bool _showPlacementPreview;
+    private ComponentTemplate? _placementPreviewTemplate;
+    private Point _placementPreviewPosition;
+
     static DesignCanvas()
     {
         AffectsRender<DesignCanvas>(ViewModelProperty, ZoomProperty);
@@ -92,6 +101,15 @@ public class DesignCanvas : Control
         using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
         using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
         {
+            // Draw chip boundary
+            DrawChipBoundary(context, vm);
+
+            // Draw pathfinding grid overlay (if enabled)
+            if (vm.ShowGridOverlay)
+            {
+                DrawPathfindingGridOverlay(context, vm);
+            }
+
             // Draw connections first (behind components)
             foreach (var conn in vm.Connections)
             {
@@ -102,6 +120,18 @@ public class DesignCanvas : Control
             foreach (var comp in vm.Components)
             {
                 DrawComponent(context, comp);
+            }
+
+            // Draw component placement preview
+            if (_showPlacementPreview && _placementPreviewTemplate != null)
+            {
+                DrawPlacementPreview(context, vm);
+            }
+
+            // Draw connection drag preview
+            if (_connectionDragStartPin != null)
+            {
+                DrawConnectionPreview(context);
             }
         }
 
@@ -143,6 +173,88 @@ public class DesignCanvas : Control
         {
             context.DrawLine(majorGridPen, new Point(0, y), new Point(bounds.Width, y));
         }
+    }
+
+    /// <summary>
+    /// Draws the pathfinding grid overlay showing blocked cells.
+    /// Red = blocked by component, Blue = blocked by waveguide.
+    /// </summary>
+    private void DrawPathfindingGridOverlay(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        var grid = vm.Router.PathfindingGrid;
+        if (grid == null) return;
+
+        // Semi-transparent brushes for overlay
+        var componentBlockedBrush = new SolidColorBrush(Color.FromArgb(80, 255, 50, 50)); // Red
+        var waveguideBlockedBrush = new SolidColorBrush(Color.FromArgb(80, 50, 100, 255)); // Blue
+        var freeBrush = new SolidColorBrush(Color.FromArgb(15, 0, 255, 0)); // Very faint green
+
+        double cellSize = grid.CellSizeMicrometers;
+
+        // Only draw visible cells (optimization)
+        // Calculate visible bounds in physical coordinates
+        double viewMinX = -vm.PanX / Zoom;
+        double viewMinY = -vm.PanY / Zoom;
+        double viewMaxX = viewMinX + Bounds.Width / Zoom;
+        double viewMaxY = viewMinY + Bounds.Height / Zoom;
+
+        // Convert to grid coordinates
+        var (gridMinX, gridMinY) = grid.PhysicalToGrid(Math.Max(viewMinX, grid.MinX), Math.Max(viewMinY, grid.MinY));
+        var (gridMaxX, gridMaxY) = grid.PhysicalToGrid(Math.Min(viewMaxX, grid.MaxX), Math.Min(viewMaxY, grid.MaxY));
+
+        // Clamp to grid bounds
+        gridMinX = Math.Max(0, gridMinX);
+        gridMinY = Math.Max(0, gridMinY);
+        gridMaxX = Math.Min(grid.Width - 1, gridMaxX);
+        gridMaxY = Math.Min(grid.Height - 1, gridMaxY);
+
+        // Limit the number of cells we draw (for performance)
+        int maxCellsToDraw = 10000;
+        int step = 1;
+        int totalCells = (gridMaxX - gridMinX + 1) * (gridMaxY - gridMinY + 1);
+        if (totalCells > maxCellsToDraw)
+        {
+            step = (int)Math.Ceiling(Math.Sqrt((double)totalCells / maxCellsToDraw));
+        }
+
+        for (int gx = gridMinX; gx <= gridMaxX; gx += step)
+        {
+            for (int gy = gridMinY; gy <= gridMaxY; gy += step)
+            {
+                var (physX, physY) = grid.GridToPhysical(gx, gy);
+                var cellRect = new Rect(
+                    physX - cellSize * step / 2,
+                    physY - cellSize * step / 2,
+                    cellSize * step,
+                    cellSize * step);
+
+                byte cellState = grid.GetCellState(gx, gy);
+
+                IBrush? brush = cellState switch
+                {
+                    1 => componentBlockedBrush, // Component obstacle
+                    2 => waveguideBlockedBrush, // Waveguide obstacle
+                    _ => null // Free cell - don't draw anything for performance
+                };
+
+                if (brush != null)
+                {
+                    context.FillRectangle(brush, cellRect);
+                }
+            }
+        }
+
+        // Draw grid info text
+        var infoText = new FormattedText(
+            $"Grid: {grid.Width}x{grid.Height} cells, {grid.CellSizeMicrometers}µm/cell, {grid.GetBlockedCellCount()} blocked",
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial"),
+            10,
+            Brushes.Yellow);
+
+        // Draw at top-left of visible area
+        context.DrawText(infoText, new Point(grid.MinX + 10, grid.MinY + 10));
     }
 
     private void DrawComponent(DrawingContext context, ComponentViewModel comp)
@@ -210,17 +322,160 @@ public class DesignCanvas : Control
         context.DrawText(text, new Point(comp.X + 5, comp.Y + 5));
     }
 
+    private void DrawChipBoundary(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        // Draw chip area with subtle fill
+        var chipRect = new global::Avalonia.Rect(vm.ChipMinX, vm.ChipMinY,
+            vm.ChipMaxX - vm.ChipMinX, vm.ChipMaxY - vm.ChipMinY);
+
+        // Subtle chip background
+        var chipFill = new SolidColorBrush(Color.FromArgb(20, 100, 150, 255));
+        context.FillRectangle(chipFill, chipRect);
+
+        // Chip border
+        var chipBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(150, 100, 150, 255)), 2);
+        context.DrawRectangle(null, chipBorderPen, chipRect);
+
+        // Corner markers
+        var cornerSize = 30.0;
+        var cornerPen = new Pen(new SolidColorBrush(Color.FromArgb(200, 100, 150, 255)), 3);
+
+        // Top-left corner
+        context.DrawLine(cornerPen, new Point(vm.ChipMinX, vm.ChipMinY + cornerSize), new Point(vm.ChipMinX, vm.ChipMinY));
+        context.DrawLine(cornerPen, new Point(vm.ChipMinX, vm.ChipMinY), new Point(vm.ChipMinX + cornerSize, vm.ChipMinY));
+
+        // Top-right corner
+        context.DrawLine(cornerPen, new Point(vm.ChipMaxX - cornerSize, vm.ChipMinY), new Point(vm.ChipMaxX, vm.ChipMinY));
+        context.DrawLine(cornerPen, new Point(vm.ChipMaxX, vm.ChipMinY), new Point(vm.ChipMaxX, vm.ChipMinY + cornerSize));
+
+        // Bottom-left corner
+        context.DrawLine(cornerPen, new Point(vm.ChipMinX, vm.ChipMaxY - cornerSize), new Point(vm.ChipMinX, vm.ChipMaxY));
+        context.DrawLine(cornerPen, new Point(vm.ChipMinX, vm.ChipMaxY), new Point(vm.ChipMinX + cornerSize, vm.ChipMaxY));
+
+        // Bottom-right corner
+        context.DrawLine(cornerPen, new Point(vm.ChipMaxX - cornerSize, vm.ChipMaxY), new Point(vm.ChipMaxX, vm.ChipMaxY));
+        context.DrawLine(cornerPen, new Point(vm.ChipMaxX, vm.ChipMaxY), new Point(vm.ChipMaxX, vm.ChipMaxY - cornerSize));
+
+        // Chip dimensions label
+        var dimText = new FormattedText(
+            $"{vm.ChipMaxX - vm.ChipMinX}µm × {vm.ChipMaxY - vm.ChipMinY}µm",
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial"),
+            12,
+            new SolidColorBrush(Color.FromArgb(150, 100, 150, 255)));
+
+        context.DrawText(dimText, new Point(vm.ChipMinX + 5, vm.ChipMaxY + 5));
+    }
+
+    private void DrawPlacementPreview(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        if (_placementPreviewTemplate == null) return;
+
+        double width = _placementPreviewTemplate.WidthMicrometers;
+        double height = _placementPreviewTemplate.HeightMicrometers;
+        double x = _placementPreviewPosition.X - width / 2;
+        double y = _placementPreviewPosition.Y - height / 2;
+
+        // Check if placement would be valid
+        bool canPlace = vm.CanPlaceComponent(x, y, width, height);
+
+        // Draw preview rectangle
+        var fillColor = canPlace
+            ? Color.FromArgb(50, 100, 255, 100)  // Green tint for valid
+            : Color.FromArgb(50, 255, 100, 100); // Red tint for invalid
+
+        var borderColor = canPlace
+            ? Color.FromArgb(200, 100, 255, 100)
+            : Color.FromArgb(200, 255, 100, 100);
+
+        var previewRect = new global::Avalonia.Rect(x, y, width, height);
+        context.FillRectangle(new SolidColorBrush(fillColor), previewRect);
+        context.DrawRectangle(null, new Pen(new SolidColorBrush(borderColor), 2), previewRect);
+
+        // Draw component name
+        var nameText = new FormattedText(
+            _placementPreviewTemplate.Name,
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial"),
+            10,
+            new SolidColorBrush(borderColor));
+
+        context.DrawText(nameText, new Point(x + 5, y + 5));
+    }
+
+    private void DrawConnectionPreview(DrawingContext context)
+    {
+        if (_connectionDragStartPin == null) return;
+
+        var (startX, startY) = _connectionDragStartPin.GetAbsolutePosition();
+
+        // Check if hovering over a valid target pin
+        var targetPin = HitTestPin(_connectionDragCurrentPoint);
+        bool isValidTarget = targetPin != null && targetPin != _connectionDragStartPin &&
+                             targetPin.ParentComponent != _connectionDragStartPin.ParentComponent;
+
+        // Use green for valid, gray dashed for dragging
+        var previewPen = isValidTarget
+            ? new Pen(Brushes.LimeGreen, 2)
+            : new Pen(Brushes.Gray, 2) { DashStyle = new DashStyle(new double[] { 5, 3 }, 0) };
+
+        var endPoint = isValidTarget
+            ? new Point(targetPin!.GetAbsolutePosition().x, targetPin.GetAbsolutePosition().y)
+            : _connectionDragCurrentPoint;
+
+        context.DrawLine(previewPen, new Point(startX, startY), endPoint);
+
+        // Draw circle at start point
+        context.DrawEllipse(Brushes.LimeGreen, null, new Point(startX, startY), 5, 5);
+
+        // Draw circle at end if valid target
+        if (isValidTarget)
+        {
+            context.DrawEllipse(Brushes.LimeGreen, null, endPoint, 5, 5);
+        }
+    }
+
     private void DrawWaveguideConnection(DrawingContext context, WaveguideConnectionViewModel conn)
     {
         var segments = conn.Connection.GetPathSegments();
 
-        var waveguidePen = conn.IsSelected
-            ? new Pen(Brushes.Yellow, 3)
-            : new Pen(Brushes.Orange, 2);
-
-        if (segments.Count == 0)
+        // Choose pen based on selection and blocked fallback state
+        Pen waveguidePen;
+        if (conn.IsSelected)
         {
-            // Fallback: draw simple line if no path calculated
+            waveguidePen = new Pen(Brushes.Yellow, 3);
+        }
+        else if (conn.IsBlockedFallback)
+        {
+            // Red dashed line for blocked/invalid paths
+            waveguidePen = new Pen(Brushes.Red, 2)
+            {
+                DashStyle = new DashStyle(new double[] { 5, 3 }, 0)
+            };
+        }
+        else
+        {
+            waveguidePen = new Pen(Brushes.Orange, 2);
+        }
+
+        // Check if path segments are still valid (endpoints match current pin positions)
+        bool pathIsStale = false;
+        if (segments.Count > 0)
+        {
+            var firstSeg = segments[0];
+            var lastSeg = segments[^1];
+            double startDist = Math.Sqrt(Math.Pow(firstSeg.StartPoint.X - conn.StartX, 2) +
+                                         Math.Pow(firstSeg.StartPoint.Y - conn.StartY, 2));
+            double endDist = Math.Sqrt(Math.Pow(lastSeg.EndPoint.X - conn.EndX, 2) +
+                                       Math.Pow(lastSeg.EndPoint.Y - conn.EndY, 2));
+            pathIsStale = startDist > 1.0 || endDist > 1.0; // More than 1µm mismatch
+        }
+
+        if (segments.Count == 0 || pathIsStale)
+        {
+            // Fallback: draw simple line if no path calculated or path is stale (during drag)
             context.DrawLine(waveguidePen,
                 new Point(conn.StartX, conn.StartY),
                 new Point(conn.EndX, conn.EndY));
@@ -258,23 +513,42 @@ public class DesignCanvas : Control
 
     private void DrawArc(DrawingContext context, Pen pen, BendSegment bend)
     {
+        // Use the pre-calculated start and end points from the BendSegment
+        // to ensure continuity with adjacent straight segments
         int numSegments = Math.Max(8, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
+
+        if (numSegments == 0 || Math.Abs(bend.SweepAngleDegrees) < 0.1)
+        {
+            // Degenerate case - just draw a line
+            context.DrawLine(pen,
+                new Point(bend.StartPoint.X, bend.StartPoint.Y),
+                new Point(bend.EndPoint.X, bend.EndPoint.Y));
+            return;
+        }
+
         var points = new List<Point>();
 
-        double startRad = bend.StartAngleDegrees * Math.PI / 180;
-        double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
-
+        // Interpolate points along the arc using the known start and end points
         for (int i = 0; i <= numSegments; i++)
         {
             double t = i / (double)numSegments;
+
+            // Calculate angle along the arc
+            double startRad = bend.StartAngleDegrees * Math.PI / 180;
+            double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
             double angle = startRad + sweepRad * t;
 
-            double perpAngle = angle - Math.PI / 2 * Math.Sign(bend.SweepAngleDegrees);
+            // Calculate perpendicular angle (points away from center for arc on outside of turn)
+            double sign = Math.Sign(bend.SweepAngleDegrees);
+            if (sign == 0) sign = 1;
+            double perpAngle = angle - Math.PI / 2 * sign;
+
             double x = bend.Center.X + bend.RadiusMicrometers * Math.Cos(perpAngle);
             double y = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(perpAngle);
             points.Add(new Point(x, y));
         }
 
+        // Draw the arc as line segments
         for (int i = 0; i < points.Count - 1; i++)
         {
             context.DrawLine(pen, points[i], points[i + 1]);
@@ -320,8 +594,10 @@ public class DesignCanvas : Control
         var vm = ViewModel;
         if (vm == null) return;
 
+        string gridInfo = vm.ShowGridOverlay ? " | [G] Grid: ON" : " | [G] Grid: OFF";
+
         var statusText = new FormattedText(
-            $"Zoom: {Zoom:P0} | Components: {vm.Components.Count} | Connections: {vm.Connections.Count}",
+            $"Zoom: {Zoom:P0} | Components: {vm.Components.Count} | Connections: {vm.Connections.Count}{gridInfo}",
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),
@@ -346,13 +622,16 @@ public class DesignCanvas : Control
 
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            // Check if in connect mode and clicking on a pin
+            // Check if in connect mode and clicking on a pin - start drag for connection
             if (mainVm?.CurrentMode == InteractionMode.Connect)
             {
                 var pin = HitTestPin(canvasPoint);
                 if (pin != null)
                 {
-                    mainVm.PinClicked(pin);
+                    // Start dragging a connection from this pin
+                    _connectionDragStartPin = pin;
+                    _connectionDragCurrentPoint = canvasPoint;
+                    mainVm.StatusText = $"Drag to another pin to connect from {pin.Name}...";
                     InvalidateVisual();
                     e.Handled = true;
                     Focus();
@@ -420,7 +699,46 @@ public class DesignCanvas : Control
         var vm = ViewModel;
         if (vm == null) return;
 
-        if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
+        var canvasPoint = ScreenToCanvas(point);
+
+        // Update component placement preview
+        if (MainViewModel?.CurrentMode == InteractionMode.PlaceComponent &&
+            MainViewModel?.SelectedTemplate != null)
+        {
+            _showPlacementPreview = true;
+            _placementPreviewTemplate = MainViewModel.SelectedTemplate;
+            _placementPreviewPosition = canvasPoint;
+            InvalidateVisual();
+        }
+        else
+        {
+            if (_showPlacementPreview)
+            {
+                _showPlacementPreview = false;
+                InvalidateVisual();
+            }
+        }
+
+        // Update connection drag preview
+        if (_connectionDragStartPin != null)
+        {
+            _connectionDragCurrentPoint = canvasPoint;
+
+            // Check if hovering over a valid target pin
+            var targetPin = HitTestPin(_connectionDragCurrentPoint);
+            if (targetPin != null && targetPin != _connectionDragStartPin &&
+                targetPin.ParentComponent != _connectionDragStartPin.ParentComponent)
+            {
+                MainViewModel!.StatusText = $"Release to connect {_connectionDragStartPin.Name} to {targetPin.Name}";
+            }
+            else
+            {
+                MainViewModel!.StatusText = $"Drag to another pin to connect from {_connectionDragStartPin.Name}...";
+            }
+
+            InvalidateVisual();
+        }
+        else if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
         {
             vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
             InvalidateVisual();
@@ -438,6 +756,30 @@ public class DesignCanvas : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+
+        // Complete connection drag & drop
+        if (_connectionDragStartPin != null)
+        {
+            var point = e.GetPosition(this);
+            var canvasPoint = ScreenToCanvas(point);
+            var targetPin = HitTestPin(canvasPoint);
+
+            if (targetPin != null && targetPin != _connectionDragStartPin &&
+                targetPin.ParentComponent != _connectionDragStartPin.ParentComponent)
+            {
+                // Create the connection via command
+                var cmd = new Commands.CreateConnectionCommand(ViewModel!, _connectionDragStartPin, targetPin);
+                MainViewModel?.CommandManager.ExecuteCommand(cmd);
+                MainViewModel!.StatusText = $"Connected {_connectionDragStartPin.Name} to {targetPin.Name}";
+            }
+            else
+            {
+                MainViewModel!.StatusText = "Connect mode: Drag from a pin to another pin to connect";
+            }
+
+            _connectionDragStartPin = null;
+            InvalidateVisual();
+        }
 
         // End move tracking for undo
         if (_draggingComponent != null)
@@ -520,6 +862,17 @@ public class DesignCanvas : Control
             case Key.R:
                 if (!ctrlPressed)
                     mainVm.RotateSelectedCommand.Execute(null);
+                break;
+            case Key.G:
+                // Toggle grid overlay
+                if (!ctrlPressed)
+                {
+                    var vm = ViewModel;
+                    if (vm != null)
+                    {
+                        vm.ShowGridOverlay = !vm.ShowGridOverlay;
+                    }
+                }
                 break;
         }
 

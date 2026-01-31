@@ -56,8 +56,9 @@ namespace CAP_Core.Components
 
         /// <summary>
         /// Shared router instance for all connections.
+        /// Public to allow initialization of A* pathfinding grid.
         /// </summary>
-        private static readonly WaveguideRouter SharedRouter = new();
+        public static WaveguideRouter SharedRouter { get; } = new();
 
         // Nazca-Export
         public string ExportToNazca()
@@ -128,5 +129,11 @@ namespace CAP_Core.Components
         /// Checks if the routed path is valid.
         /// </summary>
         public bool IsPathValid => RoutedPath?.IsValid ?? false;
+
+        /// <summary>
+        /// Indicates if this connection uses a fallback path that goes through obstacles.
+        /// When true, the path should be displayed differently (e.g., red/dashed).
+        /// </summary>
+        public bool IsBlockedFallback => RoutedPath?.IsBlockedFallback ?? false;
     }
 }

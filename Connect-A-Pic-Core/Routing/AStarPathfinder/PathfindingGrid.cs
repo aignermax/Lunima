@@ -1,0 +1,464 @@
+using CAP_Core.Components;
+
+namespace CAP_Core.Routing.AStarPathfinder;
+
+/// <summary>
+/// Manages the pathfinding grid for A* waveguide routing.
+/// Handles coordinate conversion between physical micrometers and grid cells,
+/// and tracks which cells are blocked by component obstacles.
+/// </summary>
+public class PathfindingGrid
+{
+    /// <summary>
+    /// Grid resolution in micrometers per cell.
+    /// Default: 1.0 µm provides good balance of precision and performance.
+    /// </summary>
+    public double CellSizeMicrometers { get; }
+
+    /// <summary>
+    /// Padding around obstacles in micrometers (typically MinWaveguideSpacing / 2).
+    /// </summary>
+    public double ObstaclePaddingMicrometers { get; set; }
+
+    // Grid bounds in micrometers
+    public double MinX { get; private set; }
+    public double MinY { get; private set; }
+    public double MaxX { get; private set; }
+    public double MaxY { get; private set; }
+
+    // Grid dimensions in cells
+    public int Width { get; private set; }
+    public int Height { get; private set; }
+
+    // Cell states: 0 = free, 1 = blocked by component, 2 = blocked by waveguide
+    private byte[,] _cells;
+
+    // Track which components own which cells (for selective invalidation)
+    private readonly Dictionary<Component, HashSet<(int x, int y)>> _componentCells = new();
+
+    // Track waveguide path cells (keyed by connection ID)
+    private readonly Dictionary<Guid, HashSet<(int x, int y)>> _waveguideCells = new();
+
+    /// <summary>
+    /// Creates a grid covering the specified area.
+    /// </summary>
+    /// <param name="minX">Minimum X bound in micrometers</param>
+    /// <param name="minY">Minimum Y bound in micrometers</param>
+    /// <param name="maxX">Maximum X bound in micrometers</param>
+    /// <param name="maxY">Maximum Y bound in micrometers</param>
+    /// <param name="cellSize">Cell size in micrometers (default 1.0)</param>
+    /// <param name="padding">Obstacle padding in micrometers (default 1.0)</param>
+    public PathfindingGrid(double minX, double minY, double maxX, double maxY,
+                           double cellSize = 1.0, double padding = 1.0)
+    {
+        CellSizeMicrometers = cellSize;
+        ObstaclePaddingMicrometers = padding;
+        MinX = minX;
+        MinY = minY;
+        MaxX = maxX;
+        MaxY = maxY;
+
+        Width = (int)Math.Ceiling((maxX - minX) / cellSize);
+        Height = (int)Math.Ceiling((maxY - minY) / cellSize);
+
+        // Ensure minimum grid size
+        Width = Math.Max(Width, 1);
+        Height = Math.Max(Height, 1);
+
+        _cells = new byte[Width, Height];
+    }
+
+    /// <summary>
+    /// Converts physical micrometers to grid cell coordinates.
+    /// </summary>
+    public (int gridX, int gridY) PhysicalToGrid(double physicalX, double physicalY)
+    {
+        int gridX = (int)Math.Floor((physicalX - MinX) / CellSizeMicrometers);
+        int gridY = (int)Math.Floor((physicalY - MinY) / CellSizeMicrometers);
+        return (Math.Clamp(gridX, 0, Width - 1), Math.Clamp(gridY, 0, Height - 1));
+    }
+
+    /// <summary>
+    /// Converts grid cell to physical micrometers (center of cell).
+    /// </summary>
+    public (double x, double y) GridToPhysical(int gridX, int gridY)
+    {
+        double x = MinX + (gridX + 0.5) * CellSizeMicrometers;
+        double y = MinY + (gridY + 0.5) * CellSizeMicrometers;
+        return (x, y);
+    }
+
+    /// <summary>
+    /// Marks cells blocked by a component's bounding box (with padding).
+    /// Leaves corridors open at pin positions so waveguides can connect.
+    /// </summary>
+    public void AddComponentObstacle(Component component)
+    {
+        double padding = ObstaclePaddingMicrometers;
+        double x1 = component.PhysicalX - padding;
+        double y1 = component.PhysicalY - padding;
+        double x2 = component.PhysicalX + component.WidthMicrometers + padding;
+        double y2 = component.PhysicalY + component.HeightMicrometers + padding;
+
+        var (gx1, gy1) = PhysicalToGrid(x1, y1);
+        var (gx2, gy2) = PhysicalToGrid(x2, y2);
+
+        // Collect pin corridor cells that should remain open
+        var pinCorridorCells = new HashSet<(int, int)>();
+        double corridorLength = 15.0; // Length of corridor from pin into component
+        double corridorWidth = 8.0;   // Width of corridor
+
+        foreach (var pin in component.PhysicalPins)
+        {
+            var (pinX, pinY) = pin.GetAbsolutePosition();
+            double pinAngle = pin.GetAbsoluteAngle();
+
+            // Calculate corridor going INTO the component (opposite of pin direction)
+            double inwardAngle = pinAngle + 180;
+            double angleRad = inwardAngle * Math.PI / 180.0;
+            double dx = Math.Cos(angleRad);
+            double dy = Math.Sin(angleRad);
+            double perpX = -dy;
+            double perpY = dx;
+
+            // Mark corridor cells
+            for (double dist = -5; dist <= corridorLength; dist += CellSizeMicrometers)
+            {
+                double centerX = pinX + dx * dist;
+                double centerY = pinY + dy * dist;
+
+                for (double offset = -corridorWidth / 2; offset <= corridorWidth / 2; offset += CellSizeMicrometers)
+                {
+                    double cellX = centerX + perpX * offset;
+                    double cellY = centerY + perpY * offset;
+                    var (gx, gy) = PhysicalToGrid(cellX, cellY);
+                    pinCorridorCells.Add((gx, gy));
+                }
+            }
+        }
+
+        var cells = new HashSet<(int, int)>();
+        for (int gx = gx1; gx <= gx2; gx++)
+        {
+            for (int gy = gy1; gy <= gy2; gy++)
+            {
+                if (IsInBounds(gx, gy) && !pinCorridorCells.Contains((gx, gy)))
+                {
+                    _cells[gx, gy] = 1; // Blocked by obstacle
+                    cells.Add((gx, gy));
+                }
+            }
+        }
+        _componentCells[component] = cells;
+    }
+
+    /// <summary>
+    /// Removes obstacle cells for a component (when deleted or moved).
+    /// </summary>
+    public void RemoveComponentObstacle(Component component)
+    {
+        if (_componentCells.TryGetValue(component, out var cells))
+        {
+            foreach (var (gx, gy) in cells)
+            {
+                if (IsInBounds(gx, gy))
+                {
+                    _cells[gx, gy] = 0;
+                }
+            }
+            _componentCells.Remove(component);
+        }
+    }
+
+    /// <summary>
+    /// Updates component obstacle (for moves). Removes old cells and adds new ones.
+    /// </summary>
+    public void UpdateComponentObstacle(Component component)
+    {
+        RemoveComponentObstacle(component);
+        AddComponentObstacle(component);
+    }
+
+    /// <summary>
+    /// Temporarily clears cells in a rectangular area.
+    /// Used to ensure pins can be reached even if inside component bounds.
+    /// Returns the cells that were cleared so they can be restored (with their original state).
+    /// </summary>
+    public Dictionary<(int x, int y), byte> ClearArea(double physX, double physY, double width, double height)
+    {
+        var clearedCells = new Dictionary<(int, int), byte>();
+
+        var (gx1, gy1) = PhysicalToGrid(physX, physY);
+        var (gx2, gy2) = PhysicalToGrid(physX + width, physY + height);
+
+        for (int gx = gx1; gx <= gx2; gx++)
+        {
+            for (int gy = gy1; gy <= gy2; gy++)
+            {
+                if (IsInBounds(gx, gy) && _cells[gx, gy] != 0)
+                {
+                    clearedCells[(gx, gy)] = _cells[gx, gy]; // Store original state
+                    _cells[gx, gy] = 0;
+                }
+            }
+        }
+
+        return clearedCells;
+    }
+
+    /// <summary>
+    /// Restores previously cleared cells to their original state.
+    /// </summary>
+    public void RestoreCells(Dictionary<(int x, int y), byte> cells)
+    {
+        foreach (var ((gx, gy), state) in cells)
+        {
+            if (IsInBounds(gx, gy))
+            {
+                _cells[gx, gy] = state; // Restore original state (1 or 2)
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clears a corridor from a pin position in its direction.
+    /// This ensures the pathfinder can start/end at the pin even if it's
+    /// close to component edges.
+    /// Only clears component obstacles (state=1), NOT waveguide obstacles (state=2).
+    /// </summary>
+    public Dictionary<(int x, int y), byte> ClearPinCorridor(double pinX, double pinY, double angleDegrees, double corridorLength, double corridorWidth)
+    {
+        var clearedCells = new Dictionary<(int, int), byte>();
+
+        double angleRad = angleDegrees * Math.PI / 180.0;
+        double dx = Math.Cos(angleRad);
+        double dy = Math.Sin(angleRad);
+
+        // Perpendicular direction for corridor width
+        double perpX = -dy;
+        double perpY = dx;
+
+        // Clear cells along the corridor - only component obstacles, not waveguides
+        for (double dist = 0; dist <= corridorLength; dist += CellSizeMicrometers)
+        {
+            double centerX = pinX + dx * dist;
+            double centerY = pinY + dy * dist;
+
+            // Clear across the corridor width
+            for (double offset = -corridorWidth / 2; offset <= corridorWidth / 2; offset += CellSizeMicrometers)
+            {
+                double cellX = centerX + perpX * offset;
+                double cellY = centerY + perpY * offset;
+
+                var (gx, gy) = PhysicalToGrid(cellX, cellY);
+                // Only clear component obstacles (1), NOT waveguide obstacles (2)
+                if (IsInBounds(gx, gy) && _cells[gx, gy] == 1)
+                {
+                    clearedCells[(gx, gy)] = _cells[gx, gy];
+                    _cells[gx, gy] = 0;
+                }
+            }
+        }
+
+        return clearedCells;
+    }
+
+    /// <summary>
+    /// Checks if a cell is blocked.
+    /// </summary>
+    public bool IsBlocked(int gridX, int gridY)
+    {
+        return !IsInBounds(gridX, gridY) || _cells[gridX, gridY] != 0;
+    }
+
+    /// <summary>
+    /// Gets the state of a cell.
+    /// Returns: 0 = free, 1 = blocked by component, 2 = blocked by waveguide
+    /// </summary>
+    public byte GetCellState(int gridX, int gridY)
+    {
+        if (!IsInBounds(gridX, gridY))
+            return 1; // Out of bounds = blocked
+        return _cells[gridX, gridY];
+    }
+
+    /// <summary>
+    /// Checks if coordinates are within grid bounds.
+    /// </summary>
+    public bool IsInBounds(int gridX, int gridY)
+    {
+        return gridX >= 0 && gridX < Width && gridY >= 0 && gridY < Height;
+    }
+
+    /// <summary>
+    /// Rebuilds the entire grid from a list of components.
+    /// Use for initial setup or full invalidation.
+    /// </summary>
+    public void RebuildFromComponents(IEnumerable<Component> components)
+    {
+        Array.Clear(_cells);
+        _componentCells.Clear();
+
+        foreach (var component in components)
+        {
+            AddComponentObstacle(component);
+        }
+    }
+
+    /// <summary>
+    /// Gets the number of blocked cells (for debugging/statistics).
+    /// </summary>
+    public int GetBlockedCellCount()
+    {
+        int count = 0;
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                if (_cells[x, y] != 0) count++;
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Marks cells along a waveguide path as blocked.
+    /// Used for sequential routing to avoid collisions with already-routed waveguides.
+    /// </summary>
+    /// <param name="connectionId">Unique ID of the waveguide connection</param>
+    /// <param name="segments">Path segments to mark as obstacles</param>
+    /// <param name="waveguideWidth">Width of the waveguide in micrometers</param>
+    public void AddWaveguideObstacle(Guid connectionId, IEnumerable<PathSegment> segments, double waveguideWidth)
+    {
+        // First remove any existing obstacle for this connection
+        RemoveWaveguideObstacle(connectionId);
+
+        var cells = new HashSet<(int, int)>();
+        double halfWidth = waveguideWidth / 2 + ObstaclePaddingMicrometers;
+
+        foreach (var segment in segments)
+        {
+            if (segment is StraightSegment)
+            {
+                // Mark cells along straight segment
+                MarkLineAsCells(segment.StartPoint.X, segment.StartPoint.Y,
+                               segment.EndPoint.X, segment.EndPoint.Y,
+                               halfWidth, cells);
+            }
+            else if (segment is BendSegment bend)
+            {
+                // Mark cells along arc - sample points along the arc
+                double startRad = bend.StartAngleDegrees * Math.PI / 180;
+                double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
+                int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
+
+                for (int i = 0; i <= numSamples; i++)
+                {
+                    double t = (double)i / numSamples;
+                    double angle = startRad + sweepRad * t;
+
+                    // Point on arc (perpendicular to tangent direction)
+                    double sign = Math.Sign(bend.SweepAngleDegrees);
+                    if (sign == 0) sign = 1;
+
+                    double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
+                    double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
+
+                    // Mark area around this point
+                    MarkCircleAsCells(px, py, halfWidth, cells);
+                }
+            }
+        }
+
+        // Apply cells to grid
+        foreach (var (gx, gy) in cells)
+        {
+            if (IsInBounds(gx, gy) && _cells[gx, gy] == 0)
+            {
+                _cells[gx, gy] = 2; // Blocked by waveguide
+            }
+        }
+
+        _waveguideCells[connectionId] = cells;
+    }
+
+    /// <summary>
+    /// Removes a waveguide obstacle from the grid.
+    /// </summary>
+    public void RemoveWaveguideObstacle(Guid connectionId)
+    {
+        if (_waveguideCells.TryGetValue(connectionId, out var cells))
+        {
+            foreach (var (gx, gy) in cells)
+            {
+                if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
+                {
+                    _cells[gx, gy] = 0;
+                }
+            }
+            _waveguideCells.Remove(connectionId);
+        }
+    }
+
+    /// <summary>
+    /// Clears all waveguide obstacles from the grid.
+    /// </summary>
+    public void ClearAllWaveguideObstacles()
+    {
+        foreach (var connectionId in _waveguideCells.Keys.ToList())
+        {
+            RemoveWaveguideObstacle(connectionId);
+        }
+    }
+
+    /// <summary>
+    /// Marks cells along a line with given half-width.
+    /// </summary>
+    private void MarkLineAsCells(double x1, double y1, double x2, double y2, double halfWidth, HashSet<(int, int)> cells)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+
+        if (length < 0.001) return;
+
+        // Normalize direction
+        dx /= length;
+        dy /= length;
+
+        // Sample points along the line
+        double step = CellSizeMicrometers * 0.5;
+        for (double t = 0; t <= length; t += step)
+        {
+            double px = x1 + dx * t;
+            double py = y1 + dy * t;
+            MarkCircleAsCells(px, py, halfWidth, cells);
+        }
+    }
+
+    /// <summary>
+    /// Marks cells in a circle around a point.
+    /// </summary>
+    private void MarkCircleAsCells(double cx, double cy, double radius, HashSet<(int, int)> cells)
+    {
+        var (gcx, gcy) = PhysicalToGrid(cx, cy);
+        int gridRadius = (int)Math.Ceiling(radius / CellSizeMicrometers);
+
+        for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)
+        {
+            for (int gy = gcy - gridRadius; gy <= gcy + gridRadius; gy++)
+            {
+                if (IsInBounds(gx, gy))
+                {
+                    // Check if cell center is within radius
+                    var (px, py) = GridToPhysical(gx, gy);
+                    double dist = Math.Sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
+                    if (dist <= radius)
+                    {
+                        cells.Add((gx, gy));
+                    }
+                }
+            }
+        }
+    }
+}
