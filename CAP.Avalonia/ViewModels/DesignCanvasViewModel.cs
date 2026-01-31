@@ -9,8 +9,20 @@ public partial class DesignCanvasViewModel : ObservableObject
 {
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<WaveguideConnectionViewModel> Connections { get; } = new();
+    public ObservableCollection<PinViewModel> AllPins { get; } = new();
 
     public WaveguideConnectionManager ConnectionManager { get; } = new();
+
+    /// <summary>
+    /// The currently highlighted pin (when mouse is near in Connect mode).
+    /// </summary>
+    [ObservableProperty]
+    private PinViewModel? _highlightedPin;
+
+    /// <summary>
+    /// Distance threshold for pin highlighting (in micrometers).
+    /// </summary>
+    public double PinHighlightDistance { get; set; } = 15.0;
 
     /// <summary>
     /// Gets the shared waveguide router for A* pathfinding configuration.
@@ -29,6 +41,21 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _showGridOverlay = false;
+
+    /// <summary>
+    /// Minimum bend radius for waveguides in micrometers.
+    /// Depends on the fabrication process - typical values: 5-20µm for silicon photonics.
+    /// Default: 10µm (conservative value for most foundries).
+    /// </summary>
+    [ObservableProperty]
+    private double _minBendRadiusMicrometers = 10.0;
+
+    partial void OnMinBendRadiusMicrometersChanged(double value)
+    {
+        Router.MinBendRadiusMicrometers = value;
+        // Recalculate all waveguide routes with new bend radius
+        ConnectionManager.RecalculateAllTransmissions();
+    }
 
     /// <summary>
     /// Chip boundary in micrometers. Components can only be placed within this area.
@@ -213,6 +240,12 @@ public partial class DesignCanvasViewModel : ObservableObject
         // Add obstacle to A* pathfinding grid
         Router.AddComponentObstacle(component);
 
+        // Add pin ViewModels for this component
+        foreach (var pin in component.PhysicalPins)
+        {
+            AllPins.Add(new PinViewModel(pin, vm));
+        }
+
         return vm;
     }
 
@@ -222,6 +255,13 @@ public partial class DesignCanvasViewModel : ObservableObject
         Router.RemoveComponentObstacle(component.Component);
 
         ConnectionManager.RemoveConnectionsForComponent(component.Component);
+
+        // Remove pin ViewModels for this component
+        var pinsToRemove = AllPins.Where(p => p.ParentComponentViewModel == component).ToList();
+        foreach (var pin in pinsToRemove)
+        {
+            AllPins.Remove(pin);
+        }
 
         // Remove connection view models
         var connectionsToRemove = Connections
@@ -285,6 +325,88 @@ public partial class DesignCanvasViewModel : ObservableObject
     {
         return Connections.FirstOrDefault(c =>
             c.Connection.StartPin == pin || c.Connection.EndPin == pin);
+    }
+
+    /// <summary>
+    /// Finds and highlights the nearest pin to the given position.
+    /// Called when mouse moves in Connect mode.
+    /// </summary>
+    /// <param name="x">Mouse X position in micrometers</param>
+    /// <param name="y">Mouse Y position in micrometers</param>
+    /// <param name="excludePin">Optional pin to exclude (e.g., the connection start pin)</param>
+    /// <returns>The nearest pin if within highlight distance, otherwise null</returns>
+    public PinViewModel? UpdatePinHighlight(double x, double y, PhysicalPin? excludePin = null)
+    {
+        // Clear previous highlight
+        if (HighlightedPin != null)
+        {
+            HighlightedPin.SetHighlighted(false);
+            HighlightedPin = null;
+        }
+
+        // Find nearest pin
+        PinViewModel? nearest = null;
+        double nearestDistance = double.MaxValue;
+
+        foreach (var pinVm in AllPins)
+        {
+            // Skip excluded pin (and pins on the same component as excludePin)
+            if (excludePin != null)
+            {
+                if (pinVm.Pin == excludePin) continue;
+                if (pinVm.Pin.ParentComponent == excludePin.ParentComponent) continue;
+            }
+
+            var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
+            double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
+
+            if (dist < nearestDistance && dist <= PinHighlightDistance)
+            {
+                nearest = pinVm;
+                nearestDistance = dist;
+            }
+        }
+
+        // Highlight the nearest pin
+        if (nearest != null)
+        {
+            nearest.SetHighlighted(true);
+            // Update whether this pin has a connection
+            nearest.HasConnection = GetConnectionForPin(nearest.Pin) != null;
+            HighlightedPin = nearest;
+        }
+
+        return nearest;
+    }
+
+    /// <summary>
+    /// Clears all pin highlighting.
+    /// </summary>
+    public void ClearPinHighlight()
+    {
+        if (HighlightedPin != null)
+        {
+            HighlightedPin.SetHighlighted(false);
+            HighlightedPin = null;
+        }
+    }
+
+    /// <summary>
+    /// Gets the pin at or near the given position.
+    /// </summary>
+    public PhysicalPin? GetPinAt(double x, double y, double tolerance = 15.0)
+    {
+        foreach (var pinVm in AllPins)
+        {
+            var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
+            double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
+
+            if (dist <= tolerance)
+            {
+                return pinVm.Pin;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -460,5 +582,52 @@ public partial class WaveguideConnectionViewModel : ObservableObject
         OnPropertyChanged(nameof(PathLength));
         OnPropertyChanged(nameof(LossDb));
         OnPropertyChanged(nameof(IsBlockedFallback));
+    }
+}
+
+/// <summary>
+/// ViewModel for a physical pin with highlighting support.
+/// </summary>
+public partial class PinViewModel : ObservableObject
+{
+    public PhysicalPin Pin { get; }
+    public ComponentViewModel ParentComponentViewModel { get; }
+
+    [ObservableProperty]
+    private bool _isHighlighted;
+
+    /// <summary>
+    /// Scale factor for visual size (1.0 = normal, 1.5 = highlighted).
+    /// </summary>
+    [ObservableProperty]
+    private double _scale = 1.0;
+
+    public double X => Pin.GetAbsolutePosition().x;
+    public double Y => Pin.GetAbsolutePosition().y;
+    public double Angle => Pin.GetAbsoluteAngle();
+    public string Name => Pin.Name;
+
+    /// <summary>
+    /// Whether this pin already has a connection.
+    /// </summary>
+    public bool HasConnection { get; set; }
+
+    public PinViewModel(PhysicalPin pin, ComponentViewModel parentVm)
+    {
+        Pin = pin;
+        ParentComponentViewModel = parentVm;
+    }
+
+    public void SetHighlighted(bool highlighted)
+    {
+        IsHighlighted = highlighted;
+        Scale = highlighted ? 1.5 : 1.0;
+    }
+
+    public void NotifyPositionChanged()
+    {
+        OnPropertyChanged(nameof(X));
+        OnPropertyChanged(nameof(Y));
+        OnPropertyChanged(nameof(Angle));
     }
 }

@@ -59,8 +59,9 @@ public class WaveguideRouter
     /// Grid cell size in micrometers for A* pathfinding.
     /// Larger values = faster routing but less precise paths.
     /// Should be smaller than MinBendRadiusMicrometers for smooth curves.
+    /// With realistic component sizes (pins 5-10µm apart), use 2µm for precision.
     /// </summary>
-    public double AStarCellSize { get; set; } = 5.0;
+    public double AStarCellSize { get; set; } = 2.0;
 
     /// <summary>
     /// Clearance padding around components in micrometers.

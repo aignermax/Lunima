@@ -161,6 +161,9 @@ public class Component : ICloneable
         {
             part.Rotation90 = _discreteRotation;
         }
+
+        // Update the continuous rotation angle (used for Nazca export and absolute pin angles)
+        RotationDegrees = (RotationDegrees + 90) % 360;
     }
     public Part? GetPartAtGridXY(int gridX, int gridY)
     {

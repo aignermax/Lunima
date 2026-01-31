@@ -89,12 +89,14 @@ public partial class MainViewModel : ObservableObject
     partial void OnCurrentModeChanged(InteractionMode value)
     {
         _connectionStartPin = null; // Reset connection state when mode changes
+        Canvas.ClearPinHighlight(); // Clear pin highlighting when mode changes
+
         StatusText = value switch
         {
             InteractionMode.Select => "Select mode: Click to select, drag to move",
             InteractionMode.PlaceComponent when SelectedTemplate != null => $"Place mode: Click to place {SelectedTemplate.Name}",
             InteractionMode.PlaceComponent => "Place mode: Select a component from the library",
-            InteractionMode.Connect => "Connect mode: Drag from a pin to another pin to connect",
+            InteractionMode.Connect => "Connect mode: Move near a pin to start connection",
             InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
             _ => "Ready"
         };
@@ -110,6 +112,14 @@ public partial class MainViewModel : ObservableObject
             case InteractionMode.Select:
                 SelectAt(canvasX, canvasY);
                 break;
+            case InteractionMode.Connect:
+                // Use the highlighted pin if available, otherwise find pin at position
+                var pin = Canvas.HighlightedPin?.Pin ?? Canvas.GetPinAt(canvasX, canvasY);
+                if (pin != null)
+                {
+                    HandlePinClickForConnection(pin);
+                }
+                break;
             case InteractionMode.Delete:
                 DeleteAt(canvasX, canvasY);
                 break;
@@ -121,6 +131,47 @@ public partial class MainViewModel : ObservableObject
         if (CurrentMode == InteractionMode.Connect)
         {
             HandlePinClickForConnection(pin);
+        }
+    }
+
+    /// <summary>
+    /// Called when mouse moves on the canvas. Used for pin highlighting in Connect mode.
+    /// </summary>
+    public void CanvasMouseMove(double canvasX, double canvasY)
+    {
+        if (CurrentMode == InteractionMode.Connect)
+        {
+            // Highlight pin near mouse position
+            var nearPin = Canvas.UpdatePinHighlight(canvasX, canvasY, _connectionStartPin);
+
+            // Update status text
+            if (nearPin != null)
+            {
+                var pinName = nearPin.Name;
+                var compName = nearPin.ParentComponentViewModel.Name;
+
+                if (_connectionStartPin != null)
+                {
+                    StatusText = $"Click to connect to {pinName} on {compName}";
+                }
+                else
+                {
+                    StatusText = $"Click {pinName} on {compName} to start connection";
+                }
+            }
+            else if (_connectionStartPin != null)
+            {
+                StatusText = $"Connection started from {_connectionStartPin.Name}. Move near a pin to connect.";
+            }
+            else
+            {
+                StatusText = "Connect mode: Move near a pin to start connection";
+            }
+        }
+        else
+        {
+            // Clear any highlighting when not in Connect mode
+            Canvas.ClearPinHighlight();
         }
     }
 
@@ -674,12 +725,14 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Applies a 90° counter-clockwise rotation to a component (same logic as RotateComponentCommand).
+    /// Pin angles are stored relative to the component - GetAbsoluteAngle() adds RotationDegrees.
     /// </summary>
     private static void ApplyRotationToComponent(Component comp)
     {
         var width = comp.WidthMicrometers;
         var height = comp.HeightMicrometers;
 
+        // Rotate pin offsets around component center
         foreach (var pin in comp.PhysicalPins)
         {
             var cx = width / 2;
@@ -690,12 +743,13 @@ public partial class MainViewModel : ObservableObject
             var newY = x;
             pin.OffsetXMicrometers = newX + cy;
             pin.OffsetYMicrometers = newY + cx;
-            pin.AngleDegrees = (pin.AngleDegrees + 90) % 360;
+            // NOTE: Pin angles stay relative to component.
+            // GetAbsoluteAngle() adds component.RotationDegrees.
         }
 
         comp.WidthMicrometers = height;
         comp.HeightMicrometers = width;
-        comp.RotateBy90CounterClockwise();
+        comp.RotateBy90CounterClockwise(); // This updates RotationDegrees
     }
 }
 

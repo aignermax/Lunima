@@ -25,9 +25,10 @@ public class WaveguideConnectionManager
 
     /// <summary>
     /// Waveguide width for collision detection (in micrometers).
-    /// This should include clearance between waveguides (typically 2-5µm minimum spacing).
+    /// This is the waveguide core width plus minimum spacing on each side.
+    /// Typical: 0.5µm core + 2µm clearance on each side = ~4.5µm total.
     /// </summary>
-    public double WaveguideWidthMicrometers { get; set; } = 10.0;
+    public double WaveguideWidthMicrometers { get; set; } = 4.0;
 
     public WaveguideConnection AddConnection(PhysicalPin startPin, PhysicalPin endPin)
     {

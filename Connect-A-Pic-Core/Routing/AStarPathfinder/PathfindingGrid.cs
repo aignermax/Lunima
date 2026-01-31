@@ -1,4 +1,5 @@
 using CAP_Core.Components;
+using System.Linq;
 
 namespace CAP_Core.Routing.AStarPathfinder;
 
@@ -104,25 +105,25 @@ public class PathfindingGrid
         var (gx2, gy2) = PhysicalToGrid(x2, y2);
 
         // Collect pin corridor cells that should remain open
+        // Only clear a small area OUTSIDE the component where the waveguide approaches
         var pinCorridorCells = new HashSet<(int, int)>();
-        double corridorLength = 15.0; // Length of corridor from pin into component
-        double corridorWidth = 8.0;   // Width of corridor
+        double corridorLength = 10.0; // Length of corridor OUTWARD from pin (not into component)
+        double corridorWidth = 4.0;   // Narrow corridor width (just enough for waveguide)
 
         foreach (var pin in component.PhysicalPins)
         {
             var (pinX, pinY) = pin.GetAbsolutePosition();
             double pinAngle = pin.GetAbsoluteAngle();
 
-            // Calculate corridor going INTO the component (opposite of pin direction)
-            double inwardAngle = pinAngle + 180;
-            double angleRad = inwardAngle * Math.PI / 180.0;
+            // Calculate corridor going OUTWARD from the component (same direction as pin points)
+            double angleRad = pinAngle * Math.PI / 180.0;
             double dx = Math.Cos(angleRad);
             double dy = Math.Sin(angleRad);
             double perpX = -dy;
             double perpY = dx;
 
-            // Mark corridor cells
-            for (double dist = -5; dist <= corridorLength; dist += CellSizeMicrometers)
+            // Mark corridor cells - only going outward from the pin
+            for (double dist = 0; dist <= corridorLength; dist += CellSizeMicrometers)
             {
                 double centerX = pinX + dx * dist;
                 double centerY = pinY + dy * dist;
@@ -324,6 +325,7 @@ public class PathfindingGrid
     /// <summary>
     /// Marks cells along a waveguide path as blocked.
     /// Used for sequential routing to avoid collisions with already-routed waveguides.
+    /// Excludes the first and last portions of the path near pins to allow other waveguides to connect.
     /// </summary>
     /// <param name="connectionId">Unique ID of the waveguide connection</param>
     /// <param name="segments">Path segments to mark as obstacles</param>
@@ -333,21 +335,59 @@ public class PathfindingGrid
         // First remove any existing obstacle for this connection
         RemoveWaveguideObstacle(connectionId);
 
-        var cells = new HashSet<(int, int)>();
-        double halfWidth = waveguideWidth / 2 + ObstaclePaddingMicrometers;
+        var segmentList = segments.ToList();
+        if (segmentList.Count == 0) return;
 
-        foreach (var segment in segments)
+        var cells = new HashSet<(int, int)>();
+        // For waveguides, don't add the component padding - just use the waveguide width directly
+        // The waveguideWidth parameter already includes the desired clearance
+        double halfWidth = waveguideWidth / 2;
+
+        // Calculate total path length to determine exclusion zones
+        double totalLength = segmentList.Sum(s => s.LengthMicrometers);
+
+        // Exclusion zone at start and end - don't mark cells within this distance of pins
+        // This allows other waveguides from nearby pins to start without being blocked
+        double exclusionDistance = 15.0; // µm from each end
+
+        double accumulatedLength = 0;
+
+        foreach (var segment in segmentList)
         {
-            if (segment is StraightSegment)
+            double segmentStart = accumulatedLength;
+            double segmentEnd = accumulatedLength + segment.LengthMicrometers;
+            accumulatedLength = segmentEnd;
+
+            // Calculate how much of this segment is within the "active" zone (not excluded)
+            double activeStart = Math.Max(segmentStart, exclusionDistance);
+            double activeEnd = Math.Min(segmentEnd, totalLength - exclusionDistance);
+
+            // Skip if this segment is entirely within exclusion zones
+            if (activeStart >= activeEnd) continue;
+
+            // Calculate the fraction of the segment that's in the active zone
+            double segmentLength = segment.LengthMicrometers;
+            if (segmentLength < 0.001) continue;
+
+            double startFraction = Math.Max(0, (activeStart - segmentStart) / segmentLength);
+            double endFraction = Math.Min(1, (activeEnd - segmentStart) / segmentLength);
+
+            if (segment is StraightSegment straight)
             {
-                // Mark cells along straight segment
-                MarkLineAsCells(segment.StartPoint.X, segment.StartPoint.Y,
-                               segment.EndPoint.X, segment.EndPoint.Y,
-                               halfWidth, cells);
+                // Interpolate start and end points for the active portion
+                double dx = straight.EndPoint.X - straight.StartPoint.X;
+                double dy = straight.EndPoint.Y - straight.StartPoint.Y;
+
+                double activeStartX = straight.StartPoint.X + dx * startFraction;
+                double activeStartY = straight.StartPoint.Y + dy * startFraction;
+                double activeEndX = straight.StartPoint.X + dx * endFraction;
+                double activeEndY = straight.StartPoint.Y + dy * endFraction;
+
+                MarkLineAsCells(activeStartX, activeStartY, activeEndX, activeEndY, halfWidth, cells);
             }
             else if (segment is BendSegment bend)
             {
-                // Mark cells along arc - sample points along the arc
+                // Mark cells along arc - sample points along the arc (only active portion)
                 double startRad = bend.StartAngleDegrees * Math.PI / 180;
                 double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
                 int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
@@ -355,6 +395,10 @@ public class PathfindingGrid
                 for (int i = 0; i <= numSamples; i++)
                 {
                     double t = (double)i / numSamples;
+
+                    // Only mark if this sample is within the active zone
+                    if (t < startFraction || t > endFraction) continue;
+
                     double angle = startRad + sweepRad * t;
 
                     // Point on arc (perpendicular to tangent direction)
@@ -364,7 +408,6 @@ public class PathfindingGrid
                     double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
                     double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
 
-                    // Mark area around this point
                     MarkCircleAsCells(px, py, halfWidth, cells);
                 }
             }

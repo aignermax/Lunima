@@ -56,10 +56,109 @@ public class PathSmoother
             physicalPoints = new List<(double x, double y)> { (startX, startY), (endX, endY) };
         }
 
-        // Step 4: Generate segments with bends at corners
+        // Step 4: Ensure minimum straight run at start and end (for pin alignment)
+        // Waveguides must exit/enter pins perpendicular - ensure enough space for bends
+        EnsureMinimumStraightRuns(physicalPoints, startPin, endPin);
+
+        // Step 5: Ensure minimum spacing between corner points for proper bends
+        // Each bend needs space on both sides, so consecutive corners need 2x bend radius
+        EnsureMinimumCornerSpacing(physicalPoints);
+
+        // Step 6: Generate segments with bends at corners
         GenerateSegments(routedPath, physicalPoints);
 
         return routedPath;
+    }
+
+    /// <summary>
+    /// Ensures there's enough straight distance at start and end for proper bends.
+    /// </summary>
+    private void EnsureMinimumStraightRuns(List<(double x, double y)> points,
+                                            PhysicalPin startPin, PhysicalPin endPin)
+    {
+        if (points.Count < 2) return;
+
+        double minStraightRun = _minBendRadius * 2; // Need 2x bend radius for proper geometry
+
+        // Check start: if first segment is too short, extend the second point outward
+        if (points.Count >= 3)
+        {
+            var (p0x, p0y) = points[0];
+            var (p1x, p1y) = points[1];
+            double dist01 = Math.Sqrt(Math.Pow(p1x - p0x, 2) + Math.Pow(p1y - p0y, 2));
+
+            if (dist01 < minStraightRun && dist01 > 0.1)
+            {
+                // Extend along the start pin direction
+                double startAngle = startPin.GetAbsoluteAngle();
+                double rad = startAngle * Math.PI / 180;
+                double newX = p0x + Math.Cos(rad) * minStraightRun;
+                double newY = p0y + Math.Sin(rad) * minStraightRun;
+                points[1] = (newX, newY);
+            }
+        }
+
+        // Check end: if last segment is too short, adjust second-to-last point
+        if (points.Count >= 3)
+        {
+            var (pnx, pny) = points[^1];
+            var (pn1x, pn1y) = points[^2];
+            double distN = Math.Sqrt(Math.Pow(pnx - pn1x, 2) + Math.Pow(pny - pn1y, 2));
+
+            if (distN < minStraightRun && distN > 0.1)
+            {
+                // Extend backward along the end pin's input direction
+                double endAngle = endPin.GetAbsoluteAngle() + 180; // Input direction (opposite of pin direction)
+                double rad = NormalizeAngle(endAngle) * Math.PI / 180;
+                double newX = pnx + Math.Cos(rad) * minStraightRun;
+                double newY = pny + Math.Sin(rad) * minStraightRun;
+                points[^2] = (newX, newY);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ensures minimum spacing between consecutive corner points.
+    /// When two corners are too close, they can't both have proper bends.
+    /// This method adjusts or removes intermediate points to ensure proper spacing.
+    /// </summary>
+    private void EnsureMinimumCornerSpacing(List<(double x, double y)> points)
+    {
+        if (points.Count < 3) return;
+
+        // Minimum distance between corners: each bend needs radius on both sides
+        // So two consecutive bends need at least 2x bend radius between their corner points
+        double minCornerSpacing = _minBendRadius * 2;
+
+        // We may need multiple passes to handle cascading issues
+        bool changed = true;
+        int maxIterations = 10;
+        int iteration = 0;
+
+        while (changed && iteration < maxIterations)
+        {
+            changed = false;
+            iteration++;
+
+            // Check spacing between consecutive interior points (not start/end)
+            for (int i = 1; i < points.Count - 2; i++)
+            {
+                var (x1, y1) = points[i];
+                var (x2, y2) = points[i + 1];
+                double dist = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+
+                if (dist < minCornerSpacing && dist > 0.1)
+                {
+                    // Points are too close - merge them by removing the second one
+                    // and adjusting the segment to go through the midpoint direction
+                    // For simplicity, we'll just remove the second point
+                    // The path will still work, just with one less corner
+                    points.RemoveAt(i + 1);
+                    changed = true;
+                    break; // Restart the loop after modification
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -151,15 +250,12 @@ public class PathSmoother
             if (needsBend)
             {
                 // We need a bend at the corner (targetX, targetY)
-                // The bend needs _minBendRadius of space on each side
+                // Calculate available space for the bend
+                // Use at least half the segment length for the bend, but not more than _minBendRadius
+                double availableBendSpace = Math.Min(_minBendRadius, segmentLength / 2);
+                double shortenedLength = segmentLength - availableBendSpace;
 
-                // How much space do we need to leave for the bend?
-                double bendSpace = _minBendRadius;
-
-                // Shorten this segment to leave room for bend entry
-                double shortenedLength = segmentLength - bendSpace;
-
-                if (shortenedLength > 0.1)
+                if (shortenedLength > 0.1 && availableBendSpace > 1.0)
                 {
                     // Normalize direction
                     double dirX = dx / segmentLength;
@@ -172,8 +268,8 @@ public class PathSmoother
                     path.Segments.Add(new StraightSegment(currentX, currentY,
                         shortenedX, shortenedY, segmentAngle));
 
-                    // Add bend
-                    AddBendSegment(path, shortenedX, shortenedY, segmentAngle, nextAngle);
+                    // Add bend with available radius (may be smaller than _minBendRadius if tight)
+                    AddBendSegmentWithRadius(path, shortenedX, shortenedY, segmentAngle, nextAngle, availableBendSpace);
 
                     // Update current position to bend end
                     var lastSegment = path.Segments.LastOrDefault();
@@ -185,11 +281,17 @@ public class PathSmoother
                 }
                 else
                 {
-                    // Not enough room for proper bend - just add a sharp corner
-                    path.Segments.Add(new StraightSegment(currentX, currentY,
-                        targetX, targetY, segmentAngle));
-                    currentX = targetX;
-                    currentY = targetY;
+                    // Very short segment - create a tight bend at the corner point
+                    // Still better than a sharp corner for waveguide routing
+                    double tightRadius = Math.Max(segmentLength * 0.4, 2.0); // At least 2µm radius
+                    AddBendSegmentWithRadius(path, currentX, currentY, segmentAngle, nextAngle, tightRadius);
+
+                    var lastSegment = path.Segments.LastOrDefault();
+                    if (lastSegment != null)
+                    {
+                        currentX = lastSegment.EndPoint.X;
+                        currentY = lastSegment.EndPoint.Y;
+                    }
                 }
             }
             else
@@ -226,10 +328,20 @@ public class PathSmoother
     }
 
     /// <summary>
-    /// Adds a 90-degree bend segment at a corner.
+    /// Adds a 90-degree bend segment at a corner using the default minimum bend radius.
     /// </summary>
     private void AddBendSegment(RoutedPath path, double x, double y,
                                  double startAngle, double endAngle)
+    {
+        AddBendSegmentWithRadius(path, x, y, startAngle, endAngle, _minBendRadius);
+    }
+
+    /// <summary>
+    /// Adds a bend segment at a corner with a specified radius.
+    /// This allows for tighter bends when space is limited.
+    /// </summary>
+    private void AddBendSegmentWithRadius(RoutedPath path, double x, double y,
+                                           double startAngle, double endAngle, double radius)
     {
         double sweepAngle = NormalizeAngle(endAngle - startAngle);
 
@@ -247,10 +359,10 @@ public class PathSmoother
         double perpX = -Math.Sin(startRad) * bendDirection;
         double perpY = Math.Cos(startRad) * bendDirection;
 
-        double centerX = x + perpX * _minBendRadius;
-        double centerY = y + perpY * _minBendRadius;
+        double centerX = x + perpX * radius;
+        double centerY = y + perpY * radius;
 
-        var bend = new BendSegment(centerX, centerY, _minBendRadius, startAngle, sweepAngle);
+        var bend = new BendSegment(centerX, centerY, radius, startAngle, sweepAngle);
         path.Segments.Add(bend);
     }
 

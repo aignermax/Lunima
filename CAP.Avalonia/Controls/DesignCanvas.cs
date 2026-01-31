@@ -276,16 +276,26 @@ public class DesignCanvas : Control
         // Draw physical pins
         var mainVm = MainViewModel;
         bool isConnectMode = mainVm?.CurrentMode == InteractionMode.Connect;
+        var highlightedPin = ViewModel?.HighlightedPin?.Pin;
 
         foreach (var pin in comp.Component.PhysicalPins)
         {
             var (pinX, pinY) = pin.GetAbsolutePosition();
 
-            // Draw pin based on connection mode
+            // Check if this is the highlighted pin
+            bool isHighlighted = pin == highlightedPin;
+
+            // Draw pin based on connection mode and highlight state
             IBrush pinBrush;
             double pinSize = isConnectMode ? 8 : 5;
 
-            if (isConnectMode)
+            if (isHighlighted)
+            {
+                // Highlighted pin - bright cyan, larger
+                pinBrush = new SolidColorBrush(Color.FromRgb(0, 255, 255));
+                pinSize = 12; // Larger size for highlighted pin
+            }
+            else if (isConnectMode)
             {
                 pinBrush = new SolidColorBrush(Color.FromRgb(255, 200, 0)); // Yellow in connect mode
             }
@@ -298,16 +308,37 @@ public class DesignCanvas : Control
                 pinBrush = new SolidColorBrush(Color.FromRgb(200, 100, 100)); // Unlinked - red
             }
 
+            // Draw glow effect for highlighted pin
+            if (isHighlighted)
+            {
+                var glowBrush = new SolidColorBrush(Color.FromArgb(100, 0, 255, 255));
+                var glowRect = new Rect(pinX - pinSize * 1.5, pinY - pinSize * 1.5, pinSize * 3, pinSize * 3);
+                context.FillRectangle(glowBrush, glowRect);
+            }
+
             var pinRect = new Rect(pinX - pinSize, pinY - pinSize, pinSize * 2, pinSize * 2);
             context.FillRectangle(pinBrush, pinRect);
 
-            // Draw pin direction indicator
-            var dirPen = new Pen(Brushes.White, 1);
-            double angle = pin.AngleDegrees * Math.PI / 180;
-            double dirLength = 15;
+            // Draw pin direction indicator (using absolute angle which includes component rotation)
+            var dirPen = new Pen(isHighlighted ? Brushes.Cyan : Brushes.White, isHighlighted ? 2 : 1);
+            double angle = pin.GetAbsoluteAngle() * Math.PI / 180;
+            double dirLength = isHighlighted ? 20 : 15;
             context.DrawLine(dirPen,
                 new Point(pinX, pinY),
                 new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength));
+
+            // Draw pin name for highlighted pin
+            if (isHighlighted)
+            {
+                var pinText = new FormattedText(
+                    pin.Name,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    new Typeface("Arial"),
+                    10,
+                    Brushes.Cyan);
+                context.DrawText(pinText, new Point(pinX + 15, pinY - 15));
+            }
         }
 
         // Component name
@@ -717,6 +748,13 @@ public class DesignCanvas : Control
                 _showPlacementPreview = false;
                 InvalidateVisual();
             }
+        }
+
+        // Update pin highlighting in Connect mode
+        if (MainViewModel?.CurrentMode == InteractionMode.Connect)
+        {
+            MainViewModel.CanvasMouseMove(canvasPoint.X, canvasPoint.Y);
+            InvalidateVisual(); // Redraw to show highlighting
         }
 
         // Update connection drag preview

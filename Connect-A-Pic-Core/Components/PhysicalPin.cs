@@ -29,11 +29,17 @@ namespace CAP_Core.Components
         }
 
         /// <summary>
-        /// Gets the absolute angle considering component rotation.
+        /// Gets the absolute angle of the pin in world-space.
+        /// Pin angles are stored relative to the component's local coordinate system.
+        /// This method adds the component's rotation to get the world-space angle.
         /// </summary>
         public double GetAbsoluteAngle()
         {
-            return (AngleDegrees + ParentComponent.RotationDegrees) % 360;
+            double absoluteAngle = AngleDegrees + ParentComponent.RotationDegrees;
+            // Normalize to 0-360 range
+            while (absoluteAngle < 0) absoluteAngle += 360;
+            while (absoluteAngle >= 360) absoluteAngle -= 360;
+            return absoluteAngle;
         }
 
         public object Clone()

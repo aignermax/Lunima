@@ -39,6 +39,7 @@ public class RotateComponentCommand : IUndoableCommand
         var height = comp.HeightMicrometers;
 
         // Rotate each physical pin's offset around the component center
+        // Pin angles stay relative to the component - GetAbsoluteAngle() adds RotationDegrees
         foreach (var pin in comp.PhysicalPins)
         {
             // Rotate offset 90° counter-clockwise around center
@@ -58,15 +59,16 @@ public class RotateComponentCommand : IUndoableCommand
             pin.OffsetXMicrometers = newX + cy; // cy becomes new cx
             pin.OffsetYMicrometers = newY + cx; // cx becomes new cy
 
-            // Rotate the angle
-            pin.AngleDegrees = (pin.AngleDegrees + 90) % 360;
+            // NOTE: Pin angles are stored relative to the component.
+            // GetAbsoluteAngle() adds component.RotationDegrees to get world-space angle.
+            // Do NOT modify pin.AngleDegrees here.
         }
 
         // Swap dimensions
         comp.WidthMicrometers = height;
         comp.HeightMicrometers = width;
 
-        // Update the component's discrete rotation
+        // Update the component's discrete rotation and RotationDegrees
         comp.RotateBy90CounterClockwise();
 
         // Notify the view model of dimension changes
