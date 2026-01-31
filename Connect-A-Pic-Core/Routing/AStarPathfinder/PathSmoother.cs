@@ -71,7 +71,8 @@ public class PathSmoother
     }
 
     /// <summary>
-    /// Ensures there's enough straight distance at start and end for proper bends.
+    /// Ensures there's enough straight distance at start and end for proper bends,
+    /// AND that the first/last segments go in the correct pin direction.
     /// </summary>
     private void EnsureMinimumStraightRuns(List<(double x, double y)> points,
                                             PhysicalPin startPin, PhysicalPin endPin)
@@ -80,39 +81,76 @@ public class PathSmoother
 
         double minStraightRun = _minBendRadius * 2; // Need 2x bend radius for proper geometry
 
-        // Check start: if first segment is too short, extend the second point outward
-        if (points.Count >= 3)
-        {
-            var (p0x, p0y) = points[0];
-            var (p1x, p1y) = points[1];
-            double dist01 = Math.Sqrt(Math.Pow(p1x - p0x, 2) + Math.Pow(p1y - p0y, 2));
+        // Get pin angles
+        double startAngle = startPin.GetAbsoluteAngle();
+        double endInputAngle = NormalizeAngle(endPin.GetAbsoluteAngle() + 180); // Direction waveguide approaches end pin
 
-            if (dist01 < minStraightRun && dist01 > 0.1)
+        var (startX, startY) = points[0];
+        var (endX, endY) = points[^1];
+
+        // ALWAYS ensure the first segment goes in the start pin's direction
+        // Insert a waypoint along the pin direction if needed
+        if (points.Count >= 2)
+        {
+            var (p1x, p1y) = points[1];
+            double dx = p1x - startX;
+            double dy = p1y - startY;
+            double actualAngle = Math.Atan2(dy, dx) * 180 / Math.PI;
+            double angleDiff = Math.Abs(NormalizeAngle(actualAngle - startAngle));
+
+            // If second point is not in the pin's direction, insert a waypoint
+            if (angleDiff > 30) // More than 30 degrees off
             {
-                // Extend along the start pin direction
-                double startAngle = startPin.GetAbsoluteAngle();
                 double rad = startAngle * Math.PI / 180;
-                double newX = p0x + Math.Cos(rad) * minStraightRun;
-                double newY = p0y + Math.Sin(rad) * minStraightRun;
-                points[1] = (newX, newY);
+                double waypointX = startX + Math.Cos(rad) * minStraightRun;
+                double waypointY = startY + Math.Sin(rad) * minStraightRun;
+                points.Insert(1, (waypointX, waypointY));
+            }
+            else
+            {
+                // Check if the distance is sufficient
+                double dist01 = Math.Sqrt(dx * dx + dy * dy);
+                if (dist01 < minStraightRun && dist01 > 0.1)
+                {
+                    // Extend along the start pin direction
+                    double rad = startAngle * Math.PI / 180;
+                    double newX = startX + Math.Cos(rad) * minStraightRun;
+                    double newY = startY + Math.Sin(rad) * minStraightRun;
+                    points[1] = (newX, newY);
+                }
             }
         }
 
-        // Check end: if last segment is too short, adjust second-to-last point
-        if (points.Count >= 3)
+        // ALWAYS ensure the last segment approaches from the correct direction
+        // Insert a waypoint if needed
+        if (points.Count >= 2)
         {
-            var (pnx, pny) = points[^1];
             var (pn1x, pn1y) = points[^2];
-            double distN = Math.Sqrt(Math.Pow(pnx - pn1x, 2) + Math.Pow(pny - pn1y, 2));
+            double dx = endX - pn1x;
+            double dy = endY - pn1y;
+            double actualAngle = Math.Atan2(dy, dx) * 180 / Math.PI;
+            double angleDiff = Math.Abs(NormalizeAngle(actualAngle - endInputAngle));
 
-            if (distN < minStraightRun && distN > 0.1)
+            // If approach angle is wrong, insert a waypoint
+            if (angleDiff > 30) // More than 30 degrees off
             {
-                // Extend backward along the end pin's input direction
-                double endAngle = endPin.GetAbsoluteAngle() + 180; // Input direction (opposite of pin direction)
-                double rad = NormalizeAngle(endAngle) * Math.PI / 180;
-                double newX = pnx + Math.Cos(rad) * minStraightRun;
-                double newY = pny + Math.Sin(rad) * minStraightRun;
-                points[^2] = (newX, newY);
+                double rad = endInputAngle * Math.PI / 180;
+                double waypointX = endX - Math.Cos(rad) * minStraightRun;
+                double waypointY = endY - Math.Sin(rad) * minStraightRun;
+                points.Insert(points.Count - 1, (waypointX, waypointY));
+            }
+            else
+            {
+                // Check if the distance is sufficient
+                double distN = Math.Sqrt(dx * dx + dy * dy);
+                if (distN < minStraightRun && distN > 0.1)
+                {
+                    // Extend backward along the end pin's input direction
+                    double rad = endInputAngle * Math.PI / 180;
+                    double newX = endX - Math.Cos(rad) * minStraightRun;
+                    double newY = endY - Math.Sin(rad) * minStraightRun;
+                    points[^2] = (newX, newY);
+                }
             }
         }
     }

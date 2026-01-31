@@ -656,7 +656,8 @@ public class DesignCanvas : Control
             // Check if in connect mode and clicking on a pin - start drag for connection
             if (mainVm?.CurrentMode == InteractionMode.Connect)
             {
-                var pin = HitTestPin(canvasPoint);
+                // Use the highlighted pin (from hover) if available, otherwise hit test
+                var pin = vm.HighlightedPin?.Pin ?? HitTestPin(canvasPoint);
                 if (pin != null)
                 {
                     // Start dragging a connection from this pin
@@ -800,7 +801,8 @@ public class DesignCanvas : Control
         {
             var point = e.GetPosition(this);
             var canvasPoint = ScreenToCanvas(point);
-            var targetPin = HitTestPin(canvasPoint);
+            // Use the highlighted pin (from hover) if available, otherwise hit test
+            var targetPin = ViewModel?.HighlightedPin?.Pin ?? HitTestPin(canvasPoint);
 
             if (targetPin != null && targetPin != _connectionDragStartPin &&
                 targetPin.ParentComponent != _connectionDragStartPin.ParentComponent)
