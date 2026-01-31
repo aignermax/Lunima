@@ -32,11 +32,12 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     /// <summary>
     /// Chip boundary in micrometers. Components can only be placed within this area.
+    /// Default: 5mm × 5mm (typical MPW chip size)
     /// </summary>
     public double ChipMinX { get; set; } = 0;
     public double ChipMinY { get; set; } = 0;
-    public double ChipMaxX { get; set; } = 2000;
-    public double ChipMaxY { get; set; } = 2000;
+    public double ChipMaxX { get; set; } = 5000;
+    public double ChipMaxY { get; set; } = 5000;
 
     /// <summary>
     /// Default canvas bounds for A* pathfinding grid (in micrometers).
@@ -44,8 +45,8 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// </summary>
     private const double DefaultGridMinX = -100;
     private const double DefaultGridMinY = -100;
-    private const double DefaultGridMaxX = 2100;
-    private const double DefaultGridMaxY = 2100;
+    private const double DefaultGridMaxX = 5100;
+    private const double DefaultGridMaxY = 5100;
 
     /// <summary>
     /// Minimum clearance between waveguides and components (in micrometers).

@@ -15,48 +15,72 @@ public static class ComponentTemplates
 
     public static List<ComponentTemplate> GetAllTemplates()
     {
-        // Note: Waveguide routing is now automatic - no need for manual waveguide/bend components
+        // Realistic component sizes based on typical silicon photonics foundry PDKs
+        // Waveguide routing is automatic - no need for manual waveguide/bend components
         return new List<ComponentTemplate>
         {
             new ComponentTemplate
             {
-                Name = "1x2 Splitter",
+                // 1x2 MMI Splitter: typical length 5-15µm, width ~6µm for the MMI section
+                // Total footprint including tapers: ~20×15µm
+                Name = "1x2 MMI Splitter",
                 Category = "Splitters",
-                WidthMicrometers = 250,
-                HeightMicrometers = 500,
+                WidthMicrometers = 20,
+                HeightMicrometers = 15,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 250, 180),
-                    new PinDefinition("out1", 250, 125, 0),
-                    new PinDefinition("out2", 250, 375, 0)
+                    new PinDefinition("in", 0, 7.5, 180),
+                    new PinDefinition("out1", 20, 4, 0),
+                    new PinDefinition("out2", 20, 11, 0)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
             },
             new ComponentTemplate
             {
-                Name = "2x2 Coupler",
+                // 2x2 MMI Coupler: typical length 30-50µm, width ~6µm
+                // Total footprint: ~50×20µm
+                Name = "2x2 MMI Coupler",
                 Category = "Couplers",
-                WidthMicrometers = 500,
-                HeightMicrometers = 500,
+                WidthMicrometers = 50,
+                HeightMicrometers = 20,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in1", 0, 125, 180),
-                    new PinDefinition("in2", 0, 375, 180),
-                    new PinDefinition("out1", 500, 125, 0),
-                    new PinDefinition("out2", 500, 375, 0)
+                    new PinDefinition("in1", 0, 5, 180),
+                    new PinDefinition("in2", 0, 15, 180),
+                    new PinDefinition("out1", 50, 5, 0),
+                    new PinDefinition("out2", 50, 15, 0)
                 },
                 CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5) // 50/50 coupling
             },
             new ComponentTemplate
             {
-                Name = "Phase Shifter",
-                Category = "Modulators",
-                WidthMicrometers = 500,
-                HeightMicrometers = 250,
+                // Directional Coupler: more compact than MMI
+                // Typical: 10-20µm coupling length, ~10µm total width
+                Name = "Directional Coupler",
+                Category = "Couplers",
+                WidthMicrometers = 30,
+                HeightMicrometers = 12,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 125, 180),
-                    new PinDefinition("out", 500, 125, 0)
+                    new PinDefinition("in1", 0, 3, 180),
+                    new PinDefinition("in2", 0, 9, 180),
+                    new PinDefinition("out1", 30, 3, 0),
+                    new PinDefinition("out2", 30, 9, 0)
+                },
+                CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5)
+            },
+            new ComponentTemplate
+            {
+                // Thermo-optic Phase Shifter: 100-300µm heater length, ~5µm wide
+                // Total footprint: ~200×10µm
+                Name = "Phase Shifter",
+                Category = "Modulators",
+                WidthMicrometers = 200,
+                HeightMicrometers = 10,
+                PinDefinitions = new[]
+                {
+                    new PinDefinition("in", 0, 5, 180),
+                    new PinDefinition("out", 200, 5, 0)
                 },
                 HasSlider = true,
                 SliderMin = 0,
@@ -65,43 +89,78 @@ public static class ComponentTemplates
             },
             new ComponentTemplate
             {
+                // Grating Coupler: ~15×15µm grating area + taper
+                // Total footprint: ~30×20µm
                 Name = "Grating Coupler",
                 Category = "I/O",
-                WidthMicrometers = 250,
-                HeightMicrometers = 250,
+                WidthMicrometers = 30,
+                HeightMicrometers = 20,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("waveguide", 250, 125, 0)
+                    new PinDefinition("waveguide", 30, 10, 0)
                 },
-                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.3) // 30% coupling efficiency
+                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.3) // ~30% coupling efficiency
             },
             new ComponentTemplate
             {
+                // Ge Photodetector: 10-50µm length, ~5µm wide
+                // Total footprint: ~40×15µm
                 Name = "Photodetector",
                 Category = "I/O",
-                WidthMicrometers = 250,
-                HeightMicrometers = 250,
+                WidthMicrometers = 40,
+                HeightMicrometers = 15,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 125, 180)
+                    new PinDefinition("in", 0, 7.5, 180)
                 },
-                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.9) // 90% absorption
+                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.9) // ~90% absorption
             },
             new ComponentTemplate
             {
+                // Y-Junction: compact alternative to MMI
+                // Typical: ~5×10µm
                 Name = "Y-Junction",
                 Category = "Splitters",
-                WidthMicrometers = 400,
-                HeightMicrometers = 400,
+                WidthMicrometers = 10,
+                HeightMicrometers = 12,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 200, 180),
-                    new PinDefinition("out1", 400, 100, 0),
-                    new PinDefinition("out2", 400, 300, 0)
+                    new PinDefinition("in", 0, 6, 180),
+                    new PinDefinition("out1", 10, 3, 0),
+                    new PinDefinition("out2", 10, 9, 0)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
+            },
+            new ComponentTemplate
+            {
+                // Ring Resonator: radius ~5-10µm, coupling region
+                // Total footprint: ~30×25µm
+                Name = "Ring Resonator",
+                Category = "Filters",
+                WidthMicrometers = 30,
+                HeightMicrometers = 25,
+                PinDefinitions = new[]
+                {
+                    new PinDefinition("in", 0, 5, 180),
+                    new PinDefinition("through", 30, 5, 0),
+                    new PinDefinition("drop", 30, 20, 0)
+                },
+                CreateSMatrix = pins => CreateRingResonatorMatrix(pins)
+            },
+            new ComponentTemplate
+            {
+                // Edge Coupler for fiber coupling
+                // Taper length: 100-300µm
+                Name = "Edge Coupler",
+                Category = "I/O",
+                WidthMicrometers = 150,
+                HeightMicrometers = 15,
+                PinDefinitions = new[]
+                {
+                    new PinDefinition("waveguide", 150, 7.5, 0)
+                },
+                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.5) // ~50% coupling
             }
-            // Note: Bend 90° removed - waveguide bends are now automatically routed
         };
     }
 
@@ -235,6 +294,29 @@ public static class ComponentTemplates
         var connections = new List<(Guid, double)>();
 
         // Terminal component (grating coupler, detector)
+        return new SMatrix(pinIds, connections);
+    }
+
+    private static SMatrix CreateRingResonatorMatrix(List<Pin> pins)
+    {
+        // Ring resonator with through and drop ports
+        // At resonance: input -> drop, off-resonance: input -> through
+        // Simplified model: 70% through, 25% drop, 5% loss
+        var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+        var connections = new List<(Guid, double)>();
+
+        if (pins.Count >= 3)
+        {
+            var inPin = pins[0];
+            var throughPin = pins[1];
+            var dropPin = pins[2];
+
+            // Through port (off-resonance)
+            connections.Add((throughPin.IDInFlow, 0.7));
+            // Drop port (at resonance)
+            connections.Add((dropPin.IDInFlow, 0.25));
+        }
+
         return new SMatrix(pinIds, connections);
     }
 }
