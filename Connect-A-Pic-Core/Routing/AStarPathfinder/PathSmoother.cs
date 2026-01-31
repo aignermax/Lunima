@@ -95,7 +95,9 @@ public class PathSmoother
         EnsureMinimumCornerSpacing(physicalPoints);
 
         // Step 6: Generate segments with bends at corners
-        GenerateSegments(routedPath, physicalPoints);
+        // Pass the required end approach angle for mathematically correct final segment
+        double endInputAngle = NormalizeAngle(endPin.GetAbsoluteAngle() + 180);
+        GenerateSegments(routedPath, physicalPoints, endInputAngle);
 
         return routedPath;
     }
@@ -255,7 +257,10 @@ public class PathSmoother
     /// <summary>
     /// Generates straight and bend segments connecting the corner points.
     /// </summary>
-    private void GenerateSegments(RoutedPath path, List<(double x, double y)> points)
+    /// <param name="path">The path to add segments to</param>
+    /// <param name="points">Corner points to connect</param>
+    /// <param name="endInputAngle">Required approach angle to end pin (for mathematically correct final segment)</param>
+    private void GenerateSegments(RoutedPath path, List<(double x, double y)> points, double endInputAngle)
     {
         if (points.Count < 2)
             return;
@@ -372,7 +377,7 @@ public class PathSmoother
             }
         }
 
-        // Ensure the path ends at the actual last point
+        // Ensure the path ends at the actual last point with correct approach angle
         var finalPoint = points[^1];
         if (path.Segments.Count > 0)
         {
@@ -381,16 +386,60 @@ public class PathSmoother
                 Math.Pow(lastSeg.EndPoint.X - finalPoint.x, 2) +
                 Math.Pow(lastSeg.EndPoint.Y - finalPoint.y, 2));
 
-            if (endDist > 1.0)
+            if (endDist > 0.5)
             {
-                // Add final segment to reach the actual end point
-                double finalDx = finalPoint.x - lastSeg.EndPoint.X;
-                double finalDy = finalPoint.y - lastSeg.EndPoint.Y;
-                double finalAngle = Math.Atan2(finalDy, finalDx) * 180 / Math.PI;
+                // Need to connect to the end point - do it mathematically correct
+                // Calculate the current approach angle
+                double currentAngle = lastSeg.EndAngleDegrees;
+                double angleDiff = Math.Abs(NormalizeAngle(endInputAngle - currentAngle));
 
-                path.Segments.Add(new StraightSegment(
-                    lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
-                    finalPoint.x, finalPoint.y, finalAngle));
+                if (angleDiff > 10) // Need to turn to approach correctly
+                {
+                    // Add a bend to align with the end approach direction
+                    double bendRadius = SelectBendRadiusForSpace(_minBendRadius);
+
+                    // Calculate where to start the bend
+                    // We need enough space for the bend and final straight
+                    double straightToEnd = endDist - bendRadius;
+
+                    if (straightToEnd > 0.5)
+                    {
+                        // Add bend first, then straight to end
+                        AddBendSegmentWithRadius(path, lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
+                            currentAngle, endInputAngle, bendRadius);
+
+                        var bendEnd = path.Segments[^1];
+                        path.Segments.Add(new StraightSegment(
+                            bendEnd.EndPoint.X, bendEnd.EndPoint.Y,
+                            finalPoint.x, finalPoint.y, endInputAngle));
+                    }
+                    else
+                    {
+                        // Not enough space for proper bend - use tighter radius
+                        double tightRadius = Math.Max(endDist * 0.4, 2.0);
+                        AddBendSegmentWithRadius(path, lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
+                            currentAngle, endInputAngle, tightRadius);
+
+                        // Final connection if needed
+                        var bendEnd = path.Segments[^1];
+                        double remainingDist = Math.Sqrt(
+                            Math.Pow(bendEnd.EndPoint.X - finalPoint.x, 2) +
+                            Math.Pow(bendEnd.EndPoint.Y - finalPoint.y, 2));
+                        if (remainingDist > 0.5)
+                        {
+                            path.Segments.Add(new StraightSegment(
+                                bendEnd.EndPoint.X, bendEnd.EndPoint.Y,
+                                finalPoint.x, finalPoint.y, endInputAngle));
+                        }
+                    }
+                }
+                else
+                {
+                    // Already aligned - just add straight segment
+                    path.Segments.Add(new StraightSegment(
+                        lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
+                        finalPoint.x, finalPoint.y, currentAngle));
+                }
             }
         }
     }
