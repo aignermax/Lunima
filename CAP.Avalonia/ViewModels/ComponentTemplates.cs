@@ -185,11 +185,16 @@ public static class ComponentTemplates
             });
         }
 
+        // Use explicit NazcaFunctionName if set, otherwise generate from name
+        var nazcaFunction = template.NazcaFunctionName
+            ?? $"nazca_{template.Name.ToLower().Replace(" ", "_")}";
+        var nazcaParams = template.NazcaParameters ?? "";
+
         var component = new Component(
             wavelengthMap,
             sliders,
-            $"nazca_{template.Name.ToLower().Replace(" ", "_")}",
-            "",
+            nazcaFunction,
+            nazcaParams,
             parts,
             0,
             instanceName,
@@ -269,6 +274,17 @@ public class ComponentTemplate
     public double SliderMin { get; set; }
     public double SliderMax { get; set; }
     public Func<List<Pin>, SMatrix> CreateSMatrix { get; set; } = _ => null!;
+
+    /// <summary>
+    /// Nazca function name for export (e.g., "pdk.mmi2x2").
+    /// If not set, uses a default based on the Name.
+    /// </summary>
+    public string? NazcaFunctionName { get; set; }
+
+    /// <summary>
+    /// Optional Nazca function parameters (e.g., "length=50").
+    /// </summary>
+    public string? NazcaParameters { get; set; }
 }
 
 public class PinDefinition

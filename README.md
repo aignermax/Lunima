@@ -137,7 +137,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Keyboard shortcuts (S/C/D/R, Ctrl+Z/Y, Ctrl+S)
 
 ### High Priority
-- [ ] **PDK Import** - Load real foundry component libraries (JSON/YAML format)
+- [ ] **PDK JSON Format** - Define JSON schema for PDK component libraries with physical pins
+- [ ] **PDK Loader** - Load PDK JSON files and add components to UI library
 - [ ] **Auto-Routing** - Manhattan routing with bend segments around obstacles
 - [ ] **Grid Snapping** - Optional snap-to-grid for cleaner layouts
 - [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
@@ -156,6 +157,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Design Rule Checking** - Min bend radius, spacing violations
 - [ ] **Better Component Graphics** - Icons/symbols instead of rectangles
 - [ ] **Browser Version** - WebAssembly deployment
+
+### Future / Separate Projects
+- [ ] **Python PDK Extractor** - Tool to convert Nazca Python PDKs to JSON format
+- [ ] **Embedded Python** - Run exported Nazca code directly in app
 
 ## Original Project
 

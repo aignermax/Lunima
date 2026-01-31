@@ -5,6 +5,8 @@ using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
+using CAP_DataAccess.Components.ComponentDraftMapper;
+using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -383,6 +385,76 @@ public partial class MainViewModel : ObservableObject
     {
         Canvas.PanX = 0;
         Canvas.PanY = 0;
+    }
+
+    [RelayCommand]
+    private async Task LoadPdk()
+    {
+        if (FileDialogService == null) return;
+
+        var filePath = await FileDialogService.ShowOpenFileDialogAsync(
+            "Open PDK",
+            "PDK Files (*.json)|*.json|All Files (*.*)|*.*");
+
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        try
+        {
+            var loader = new PdkLoader();
+            var pdk = loader.LoadFromFile(filePath);
+
+            // Convert PDK components to templates and add to library
+            int addedCount = 0;
+            foreach (var pdkComp in pdk.Components)
+            {
+                var template = ConvertPdkComponentToTemplate(pdkComp);
+                ComponentLibrary.Add(template);
+                addedCount++;
+            }
+
+            StatusText = $"Loaded PDK '{pdk.Name}' with {addedCount} components";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to load PDK: {ex.Message}";
+        }
+    }
+
+    private ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp)
+    {
+        var pinDefs = pdkComp.Pins.Select(p => new PinDefinition(
+            p.Name,
+            p.OffsetXMicrometers,
+            p.OffsetYMicrometers,
+            p.AngleDegrees
+        )).ToArray();
+
+        return new ComponentTemplate
+        {
+            Name = pdkComp.Name,
+            Category = pdkComp.Category,
+            WidthMicrometers = pdkComp.WidthMicrometers,
+            HeightMicrometers = pdkComp.HeightMicrometers,
+            PinDefinitions = pinDefs,
+            NazcaFunctionName = pdkComp.NazcaFunction,
+            NazcaParameters = pdkComp.NazcaParameters,
+            HasSlider = pdkComp.Sliders?.Any() ?? false,
+            SliderMin = pdkComp.Sliders?.FirstOrDefault()?.MinVal ?? 0,
+            SliderMax = pdkComp.Sliders?.FirstOrDefault()?.MaxVal ?? 100,
+            CreateSMatrix = pins => CreateSMatrixFromPdk(pins, pdkComp.SMatrix)
+        };
+    }
+
+    private static CAP_Core.LightCalculation.SMatrix CreateSMatrixFromPdk(
+        List<Pin> pins,
+        PdkSMatrixDraft? sMatrixDraft)
+    {
+        var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+        var connections = new List<(Guid, double)>();
+
+        // For now, create empty S-Matrix - full S-Matrix conversion would require
+        // mapping pin names to Pin objects and setting up proper connections
+        return new CAP_Core.LightCalculation.SMatrix(pinIds, connections);
     }
 
     [RelayCommand]

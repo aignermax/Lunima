@@ -1,0 +1,142 @@
+{
+  "fileFormatVersion": 1,
+  "name": "Demo PDK",
+  "description": "Example PDK for testing Connect-A-PIC Pro",
+  "foundry": "Demo Foundry",
+  "version": "1.0.0",
+  "defaultWavelengthNm": 1550,
+  "nazcaModuleName": "demo_pdk",
+  "components": [
+    {
+      "name": "MMI 1x2",
+      "category": "Splitters",
+      "nazcaFunction": "demo_pdk.mmi1x2",
+      "widthMicrometers": 100,
+      "heightMicrometers": 40,
+      "pins": [
+        { "name": "in", "offsetXMicrometers": 0, "offsetYMicrometers": 20, "angleDegrees": 180 },
+        { "name": "out1", "offsetXMicrometers": 100, "offsetYMicrometers": 10, "angleDegrees": 0 },
+        { "name": "out2", "offsetXMicrometers": 100, "offsetYMicrometers": 30, "angleDegrees": 0 }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          { "fromPin": "in", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 0 },
+          { "fromPin": "in", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 0 }
+        ]
+      }
+    },
+    {
+      "name": "MMI 2x2",
+      "category": "Couplers",
+      "nazcaFunction": "demo_pdk.mmi2x2",
+      "widthMicrometers": 120,
+      "heightMicrometers": 50,
+      "pins": [
+        { "name": "a0", "offsetXMicrometers": 0, "offsetYMicrometers": 12.5, "angleDegrees": 180 },
+        { "name": "a1", "offsetXMicrometers": 0, "offsetYMicrometers": 37.5, "angleDegrees": 180 },
+        { "name": "b0", "offsetXMicrometers": 120, "offsetYMicrometers": 12.5, "angleDegrees": 0 },
+        { "name": "b1", "offsetXMicrometers": 120, "offsetYMicrometers": 37.5, "angleDegrees": 0 }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          { "fromPin": "a0", "toPin": "b0", "magnitude": 0.707, "phaseDegrees": 0 },
+          { "fromPin": "a0", "toPin": "b1", "magnitude": 0.707, "phaseDegrees": 90 },
+          { "fromPin": "a1", "toPin": "b0", "magnitude": 0.707, "phaseDegrees": 90 },
+          { "fromPin": "a1", "toPin": "b1", "magnitude": 0.707, "phaseDegrees": 0 }
+        ]
+      }
+    },
+    {
+      "name": "Phase Shifter",
+      "category": "Modulators",
+      "nazcaFunction": "demo_pdk.phase_shifter",
+      "nazcaParameters": "length=200",
+      "widthMicrometers": 200,
+      "heightMicrometers": 20,
+      "pins": [
+        { "name": "in", "offsetXMicrometers": 0, "offsetYMicrometers": 10, "angleDegrees": 180 },
+        { "name": "out", "offsetXMicrometers": 200, "offsetYMicrometers": 10, "angleDegrees": 0 }
+      ],
+      "sliders": [
+        {
+          "guid": "00000000-0000-0000-0000-000000000001",
+          "formulaIndex": 0,
+          "defaultValue": 0,
+          "maxValue": 360,
+          "minValue": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          { "fromPin": "in", "toPin": "out", "magnitude": 0.99, "phaseDegrees": 0 }
+        ]
+      }
+    },
+    {
+      "name": "Grating Coupler",
+      "category": "I/O",
+      "nazcaFunction": "demo_pdk.grating_coupler",
+      "widthMicrometers": 50,
+      "heightMicrometers": 30,
+      "pins": [
+        { "name": "opt", "offsetXMicrometers": 50, "offsetYMicrometers": 15, "angleDegrees": 0 }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": []
+      }
+    },
+    {
+      "name": "Photodetector",
+      "category": "I/O",
+      "nazcaFunction": "demo_pdk.photodetector",
+      "widthMicrometers": 40,
+      "heightMicrometers": 25,
+      "pins": [
+        { "name": "in", "offsetXMicrometers": 0, "offsetYMicrometers": 12.5, "angleDegrees": 180 }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": []
+      }
+    },
+    {
+      "name": "Straight Waveguide 100µm",
+      "category": "Waveguides",
+      "nazcaFunction": "demo_pdk.straight",
+      "nazcaParameters": "length=100",
+      "widthMicrometers": 100,
+      "heightMicrometers": 10,
+      "pins": [
+        { "name": "a0", "offsetXMicrometers": 0, "offsetYMicrometers": 5, "angleDegrees": 180 },
+        { "name": "b0", "offsetXMicrometers": 100, "offsetYMicrometers": 5, "angleDegrees": 0 }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          { "fromPin": "a0", "toPin": "b0", "magnitude": 0.99, "phaseDegrees": 0 }
+        ]
+      }
+    },
+    {
+      "name": "90° Bend",
+      "category": "Waveguides",
+      "nazcaFunction": "demo_pdk.bend90",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        { "name": "a0", "offsetXMicrometers": 0, "offsetYMicrometers": 5, "angleDegrees": 180 },
+        { "name": "b0", "offsetXMicrometers": 25, "offsetYMicrometers": 30, "angleDegrees": 90 }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          { "fromPin": "a0", "toPin": "b0", "magnitude": 0.98, "phaseDegrees": 0 }
+        ]
+      }
+    }
+  ]
+}
