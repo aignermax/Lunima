@@ -325,7 +325,7 @@ public class PathfindingGrid
     /// <summary>
     /// Marks cells along a waveguide path as blocked.
     /// Used for sequential routing to avoid collisions with already-routed waveguides.
-    /// Excludes the first and last portions of the path near pins to allow other waveguides to connect.
+    /// Blocks the ENTIRE path including near pins - ClearPinCorridor handles new connections.
     /// </summary>
     /// <param name="connectionId">Unique ID of the waveguide connection</param>
     /// <param name="segments">Path segments to mark as obstacles</param>
@@ -343,51 +343,19 @@ public class PathfindingGrid
         // The waveguideWidth parameter already includes the desired clearance
         double halfWidth = waveguideWidth / 2;
 
-        // Calculate total path length to determine exclusion zones
-        double totalLength = segmentList.Sum(s => s.LengthMicrometers);
-
-        // Exclusion zone at start and end - don't mark cells within this distance of pins
-        // This allows other waveguides from nearby pins to start without being blocked
-        double exclusionDistance = 15.0; // µm from each end
-
-        double accumulatedLength = 0;
-
+        // Block the ENTIRE waveguide path - no exclusion zones
+        // When routing new waveguides, ClearPinCorridor() temporarily clears the area
+        // around pins to allow new connections to start
         foreach (var segment in segmentList)
         {
-            double segmentStart = accumulatedLength;
-            double segmentEnd = accumulatedLength + segment.LengthMicrometers;
-            accumulatedLength = segmentEnd;
-
-            // Calculate how much of this segment is within the "active" zone (not excluded)
-            double activeStart = Math.Max(segmentStart, exclusionDistance);
-            double activeEnd = Math.Min(segmentEnd, totalLength - exclusionDistance);
-
-            // Skip if this segment is entirely within exclusion zones
-            if (activeStart >= activeEnd) continue;
-
-            // Calculate the fraction of the segment that's in the active zone
-            double segmentLength = segment.LengthMicrometers;
-            if (segmentLength < 0.001) continue;
-
-            double startFraction = Math.Max(0, (activeStart - segmentStart) / segmentLength);
-            double endFraction = Math.Min(1, (activeEnd - segmentStart) / segmentLength);
-
             if (segment is StraightSegment straight)
             {
-                // Interpolate start and end points for the active portion
-                double dx = straight.EndPoint.X - straight.StartPoint.X;
-                double dy = straight.EndPoint.Y - straight.StartPoint.Y;
-
-                double activeStartX = straight.StartPoint.X + dx * startFraction;
-                double activeStartY = straight.StartPoint.Y + dy * startFraction;
-                double activeEndX = straight.StartPoint.X + dx * endFraction;
-                double activeEndY = straight.StartPoint.Y + dy * endFraction;
-
-                MarkLineAsCells(activeStartX, activeStartY, activeEndX, activeEndY, halfWidth, cells);
+                MarkLineAsCells(straight.StartPoint.X, straight.StartPoint.Y,
+                    straight.EndPoint.X, straight.EndPoint.Y, halfWidth, cells);
             }
             else if (segment is BendSegment bend)
             {
-                // Mark cells along arc - sample points along the arc (only active portion)
+                // Mark cells along arc - sample points along the arc
                 double startRad = bend.StartAngleDegrees * Math.PI / 180;
                 double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
                 int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
@@ -395,10 +363,6 @@ public class PathfindingGrid
                 for (int i = 0; i <= numSamples; i++)
                 {
                     double t = (double)i / numSamples;
-
-                    // Only mark if this sample is within the active zone
-                    if (t < startFraction || t > endFraction) continue;
-
                     double angle = startRad + sweepRad * t;
 
                     // Point on arc (perpendicular to tangent direction)
