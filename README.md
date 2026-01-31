@@ -125,6 +125,38 @@ string nazcaCode = connection.ExportToNazca();
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Backlog / Roadmap
+
+### Done
+- [x] Physical coordinate system (µm positioning)
+- [x] Avalonia UI with component placement, connections, rotation
+- [x] Undo/Redo system (Command pattern)
+- [x] Save/Load designs (.cappro JSON format)
+- [x] Nazca Python export
+- [x] Delete components and connections
+- [x] Keyboard shortcuts (S/C/D/R, Ctrl+Z/Y, Ctrl+S)
+
+### High Priority
+- [ ] **PDK Import** - Load real foundry component libraries (JSON/YAML format)
+- [ ] **Auto-Routing** - Manhattan routing with bend segments around obstacles
+- [ ] **Grid Snapping** - Optional snap-to-grid for cleaner layouts
+- [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
+
+### Medium Priority
+- [ ] **Multi-Select** - Box select or Ctrl+click multiple components
+- [ ] **Copy/Paste** - Duplicate components or selections
+- [ ] **Component Properties Panel** - Edit parameters (coupling ratio, phase, etc.)
+- [ ] **Zoom to Fit** - Auto-fit design in viewport
+- [ ] **Light Simulation Visualization** - Show power levels at pins/connections
+
+### Nice to Have
+- [ ] **Hierarchical Designs** - Sub-circuits as reusable blocks
+- [ ] **Direct GDS Export** - Without Nazca intermediate step
+- [ ] **Wavelength Sweep** - Plot response vs wavelength
+- [ ] **Design Rule Checking** - Min bend radius, spacing violations
+- [ ] **Better Component Graphics** - Icons/symbols instead of rectangles
+- [ ] **Browser Version** - WebAssembly deployment
+
 ## Original Project
 
 Based on [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) by Akhetonics.
