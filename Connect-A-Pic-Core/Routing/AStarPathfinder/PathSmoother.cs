@@ -95,9 +95,10 @@ public class PathSmoother
         EnsureMinimumCornerSpacing(physicalPoints);
 
         // Step 6: Generate segments with bends at corners
-        // Pass the required end approach angle for mathematically correct final segment
+        // Pass pin angles for mathematically correct start and end segments
+        double startAngle = startPin.GetAbsoluteAngle();
         double endInputAngle = NormalizeAngle(endPin.GetAbsoluteAngle() + 180);
-        GenerateSegments(routedPath, physicalPoints, endInputAngle);
+        GenerateSegments(routedPath, physicalPoints, startAngle, endInputAngle);
 
         return routedPath;
     }
@@ -259,8 +260,10 @@ public class PathSmoother
     /// </summary>
     /// <param name="path">The path to add segments to</param>
     /// <param name="points">Corner points to connect</param>
-    /// <param name="endInputAngle">Required approach angle to end pin (for mathematically correct final segment)</param>
-    private void GenerateSegments(RoutedPath path, List<(double x, double y)> points, double endInputAngle)
+    /// <param name="startOutputAngle">Required output angle from start pin</param>
+    /// <param name="endInputAngle">Required approach angle to end pin</param>
+    private void GenerateSegments(RoutedPath path, List<(double x, double y)> points,
+                                   double startOutputAngle, double endInputAngle)
     {
         if (points.Count < 2)
             return;
@@ -270,8 +273,8 @@ public class PathSmoother
         {
             var (x1, y1) = points[0];
             var (x2, y2) = points[1];
-            double angle = Math.Atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-            path.Segments.Add(new StraightSegment(x1, y1, x2, y2, angle));
+            // Use the start pin's output angle for the segment
+            path.Segments.Add(new StraightSegment(x1, y1, x2, y2, startOutputAngle));
             return;
         }
 
@@ -283,12 +286,13 @@ public class PathSmoother
 
         double currentX = points[0].x;
         double currentY = points[0].y;
+        double currentAngle = startOutputAngle; // Start with the pin's output angle
 
         for (int i = 0; i < points.Count - 1; i++)
         {
             var (targetX, targetY) = points[i + 1];
 
-            // Calculate angle of this segment
+            // Calculate angle of this segment based on point positions
             double dx = targetX - currentX;
             double dy = targetY - currentY;
             double segmentLength = Math.Sqrt(dx * dx + dy * dy);
@@ -297,6 +301,50 @@ public class PathSmoother
             {
                 // Skip degenerate segments
                 continue;
+            }
+
+            double targetAngle = Math.Atan2(dy, dx) * 180 / Math.PI;
+
+            // For the first segment, check if we need to add a bend to transition
+            // from the start pin's direction to the path direction
+            if (i == 0)
+            {
+                double startAngleDiff = Math.Abs(NormalizeAngle(targetAngle - startOutputAngle));
+                if (startAngleDiff > 10) // Need to turn from pin direction
+                {
+                    // Add a bend at the start to transition from pin direction to path direction
+                    double bendRadius = SelectBendRadiusForSpace(_minBendRadius);
+                    double availableForBend = segmentLength / 2;
+
+                    if (availableForBend >= bendRadius * 0.5)
+                    {
+                        // First go straight in pin direction, then bend
+                        double straightLength = Math.Min(bendRadius, segmentLength / 3);
+                        double rad = startOutputAngle * Math.PI / 180;
+                        double straightEndX = currentX + Math.Cos(rad) * straightLength;
+                        double straightEndY = currentY + Math.Sin(rad) * straightLength;
+
+                        path.Segments.Add(new StraightSegment(currentX, currentY,
+                            straightEndX, straightEndY, startOutputAngle));
+
+                        // Add bend to transition to target direction
+                        AddBendSegmentWithRadius(path, straightEndX, straightEndY,
+                            startOutputAngle, targetAngle, bendRadius);
+
+                        var lastSeg = path.Segments[^1];
+                        currentX = lastSeg.EndPoint.X;
+                        currentY = lastSeg.EndPoint.Y;
+                        currentAngle = lastSeg.EndAngleDegrees;
+
+                        // Recalculate remaining distance to target
+                        dx = targetX - currentX;
+                        dy = targetY - currentY;
+                        segmentLength = Math.Sqrt(dx * dx + dy * dy);
+
+                        if (segmentLength < 0.1)
+                            continue;
+                    }
+                }
             }
 
             double segmentAngle = Math.Atan2(dy, dx) * 180 / Math.PI;
@@ -390,8 +438,8 @@ public class PathSmoother
             {
                 // Need to connect to the end point - do it mathematically correct
                 // Calculate the current approach angle
-                double currentAngle = lastSeg.EndAngleDegrees;
-                double angleDiff = Math.Abs(NormalizeAngle(endInputAngle - currentAngle));
+                double finalApproachAngle = lastSeg.EndAngleDegrees;
+                double angleDiff = Math.Abs(NormalizeAngle(endInputAngle - finalApproachAngle));
 
                 if (angleDiff > 10) // Need to turn to approach correctly
                 {
@@ -406,7 +454,7 @@ public class PathSmoother
                     {
                         // Add bend first, then straight to end
                         AddBendSegmentWithRadius(path, lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
-                            currentAngle, endInputAngle, bendRadius);
+                            finalApproachAngle, endInputAngle, bendRadius);
 
                         var bendEnd = path.Segments[^1];
                         path.Segments.Add(new StraightSegment(
@@ -418,7 +466,7 @@ public class PathSmoother
                         // Not enough space for proper bend - use tighter radius
                         double tightRadius = Math.Max(endDist * 0.4, 2.0);
                         AddBendSegmentWithRadius(path, lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
-                            currentAngle, endInputAngle, tightRadius);
+                            finalApproachAngle, endInputAngle, tightRadius);
 
                         // Final connection if needed
                         var bendEnd = path.Segments[^1];
@@ -438,7 +486,7 @@ public class PathSmoother
                     // Already aligned - just add straight segment
                     path.Segments.Add(new StraightSegment(
                         lastSeg.EndPoint.X, lastSeg.EndPoint.Y,
-                        finalPoint.x, finalPoint.y, currentAngle));
+                        finalPoint.x, finalPoint.y, finalApproachAngle));
                 }
             }
         }
