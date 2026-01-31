@@ -1,6 +1,8 @@
 # Connect-A-PIC Pro
 
-Professional fork of [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) - a PIC (Photonic Integrated Circuit) design tool.
+> **An architecture-level photonic design tool for fast concept validation and system exploration.**
+
+Professional fork of [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) - optimized for **thinking**, not tape-out. See [PHILOSOPHY.md](PHILOSOPHY.md) for positioning.
 
 ## Key Differences from Connect-A-PIC
 

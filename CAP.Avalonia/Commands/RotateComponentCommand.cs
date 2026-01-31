@@ -74,7 +74,14 @@ public class RotateComponentCommand : IUndoableCommand
         // Notify the view model of dimension changes
         _component.NotifyDimensionsChanged();
 
-        // Update any connected waveguides
+        // Update obstacle in pathfinding grid
+        var router = CAP_Core.Components.WaveguideConnection.SharedRouter;
+        router.UpdateComponentObstacle(comp);
+
+        // Recalculate paths for any connected waveguides
+        // This is important because pin angles change with rotation!
+        _canvas.ConnectionManager.RecalculateTransmissionsForComponent(comp);
+
         foreach (var conn in _canvas.Connections)
         {
             if (conn.Connection.StartPin.ParentComponent == comp ||
