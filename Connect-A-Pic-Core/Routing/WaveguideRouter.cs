@@ -31,6 +31,14 @@ public class WaveguideRouter
     public double MinBendRadiusMicrometers { get; set; } = 10.0;
 
     /// <summary>
+    /// Allowed bend radii in micrometers (foundry-style discrete values).
+    /// If empty, any radius >= MinBendRadiusMicrometers is allowed.
+    /// When set, bends will snap to the smallest allowed radius that fits.
+    /// Example: [5, 10, 20, 50] means only these four radii are used.
+    /// </summary>
+    public List<double> AllowedBendRadii { get; set; } = new() { 5, 10, 20, 50 };
+
+    /// <summary>
     /// Minimum spacing between waveguides in micrometers.
     /// </summary>
     public double MinWaveguideSpacingMicrometers { get; set; } = 2.0;
@@ -459,8 +467,8 @@ public class WaveguideRouter
             if (gridPath == null || gridPath.Count < 2)
                 return false;
 
-            // Convert grid path to smooth segments
-            var smoother = new PathSmoother(PathfindingGrid, MinBendRadiusMicrometers);
+            // Convert grid path to smooth segments (with foundry-allowed bend radii)
+            var smoother = new PathSmoother(PathfindingGrid, MinBendRadiusMicrometers, AllowedBendRadii);
             var smoothedPath = smoother.ConvertToSegments(gridPath, startPin, endPin);
 
             path.Segments.AddRange(smoothedPath.Segments);

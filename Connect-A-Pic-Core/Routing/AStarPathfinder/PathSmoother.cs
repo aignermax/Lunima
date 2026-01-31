@@ -10,11 +10,41 @@ public class PathSmoother
 {
     private readonly PathfindingGrid _grid;
     private readonly double _minBendRadius;
+    private readonly List<double> _allowedRadii;
 
-    public PathSmoother(PathfindingGrid grid, double minBendRadius)
+    public PathSmoother(PathfindingGrid grid, double minBendRadius, List<double>? allowedRadii = null)
     {
         _grid = grid;
         _minBendRadius = minBendRadius;
+        // Sort allowed radii ascending for easy selection
+        _allowedRadii = allowedRadii?.OrderBy(r => r).ToList() ?? new List<double>();
+    }
+
+    /// <summary>
+    /// Selects the appropriate bend radius from allowed values.
+    /// Returns the smallest allowed radius that is >= requiredRadius.
+    /// If no allowed radii are configured, returns the required radius.
+    /// </summary>
+    private double SelectBendRadius(double requiredRadius)
+    {
+        if (_allowedRadii.Count == 0)
+        {
+            // No constraints - use the required radius (but at least minBendRadius)
+            return Math.Max(requiredRadius, _minBendRadius);
+        }
+
+        // Find the smallest allowed radius that fits
+        foreach (var radius in _allowedRadii)
+        {
+            if (radius >= requiredRadius)
+            {
+                return radius;
+            }
+        }
+
+        // If required radius is larger than all allowed, use the largest allowed
+        // (this may cause issues, but it's better than nothing)
+        return _allowedRadii[^1];
     }
 
     /// <summary>
@@ -375,11 +405,11 @@ public class PathSmoother
     }
 
     /// <summary>
-    /// Adds a bend segment at a corner with a specified radius.
-    /// This allows for tighter bends when space is limited.
+    /// Adds a bend segment at a corner with a specified available space.
+    /// The actual radius used will be selected from allowed radii (foundry-style).
     /// </summary>
     private void AddBendSegmentWithRadius(RoutedPath path, double x, double y,
-                                           double startAngle, double endAngle, double radius)
+                                           double startAngle, double endAngle, double availableSpace)
     {
         double sweepAngle = NormalizeAngle(endAngle - startAngle);
 
@@ -388,6 +418,10 @@ public class PathSmoother
         {
             sweepAngle = Math.Sign(sweepAngle) * 90;
         }
+
+        // Select the appropriate bend radius from allowed values
+        // We need a radius that fits in the available space
+        double radius = SelectBendRadiusForSpace(availableSpace);
 
         double bendDirection = Math.Sign(sweepAngle);
         if (bendDirection == 0) bendDirection = 1;
@@ -402,6 +436,34 @@ public class PathSmoother
 
         var bend = new BendSegment(centerX, centerY, radius, startAngle, sweepAngle);
         path.Segments.Add(bend);
+    }
+
+    /// <summary>
+    /// Selects the largest allowed radius that fits in the available space.
+    /// </summary>
+    private double SelectBendRadiusForSpace(double availableSpace)
+    {
+        if (_allowedRadii.Count == 0)
+        {
+            // No constraints - use available space but at least minBendRadius
+            return Math.Max(availableSpace, _minBendRadius);
+        }
+
+        // Find the largest allowed radius that fits
+        double selected = _allowedRadii[0]; // Start with smallest
+        foreach (var radius in _allowedRadii)
+        {
+            if (radius <= availableSpace)
+            {
+                selected = radius;
+            }
+            else
+            {
+                break; // Radii are sorted, so we can stop here
+            }
+        }
+
+        return selected;
     }
 
     private static double NormalizeAngle(double angle)

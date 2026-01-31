@@ -108,9 +108,14 @@ public class WaveguideConnectionManager
     }
 
     /// <summary>
+    /// Maximum number of ordering permutations to try when routing fails.
+    /// </summary>
+    public int MaxRoutingAttempts { get; set; } = 6;
+
+    /// <summary>
     /// Recalculates transmission for all connections.
     /// When UseSequentialRouting is enabled, routes connections sequentially
-    /// to avoid waveguide collisions.
+    /// to avoid waveguide collisions. If routing fails, tries different orderings.
     /// </summary>
     public void RecalculateAllTransmissions()
     {
@@ -118,22 +123,45 @@ public class WaveguideConnectionManager
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
-            // Clear all waveguide obstacles from previous routing
-            router.PathfindingGrid.ClearAllWaveguideObstacles();
+            // Try the current ordering first
+            var result = TryRouteInOrder(Connections.ToList(), router);
 
-            // Route each connection sequentially
-            foreach (var connection in Connections)
+            // If all paths are valid, we're done
+            if (result.allValid)
             {
-                connection.RecalculateTransmission();
+                return;
+            }
 
-                // If routing succeeded, mark this waveguide as an obstacle
-                if (connection.IsPathValid && connection.RoutedPath != null)
+            // Some paths failed - try different orderings
+            var bestOrder = Connections.ToList();
+            int bestFailedCount = result.failedCount;
+
+            // Generate different orderings to try
+            var orderings = GenerateOrderings(Connections.ToList(), MaxRoutingAttempts - 1);
+
+            foreach (var ordering in orderings)
+            {
+                result = TryRouteInOrder(ordering, router);
+
+                if (result.allValid)
                 {
-                    router.PathfindingGrid.AddWaveguideObstacle(
-                        connection.Id,
-                        connection.RoutedPath.Segments,
-                        WaveguideWidthMicrometers);
+                    // Found a perfect ordering - use it
+                    ReorderConnections(ordering);
+                    return;
                 }
+
+                if (result.failedCount < bestFailedCount)
+                {
+                    bestFailedCount = result.failedCount;
+                    bestOrder = ordering;
+                }
+            }
+
+            // Use the best ordering we found
+            if (bestOrder != Connections.ToList())
+            {
+                ReorderConnections(bestOrder);
+                TryRouteInOrder(bestOrder, router);
             }
         }
         else
@@ -143,6 +171,122 @@ public class WaveguideConnectionManager
             {
                 connection.RecalculateTransmission();
             }
+        }
+    }
+
+    /// <summary>
+    /// Tries to route all connections in the given order.
+    /// </summary>
+    private (bool allValid, int failedCount) TryRouteInOrder(List<WaveguideConnection> orderedConnections, WaveguideRouter router)
+    {
+        // Clear all waveguide obstacles from previous routing
+        router.PathfindingGrid!.ClearAllWaveguideObstacles();
+
+        int failedCount = 0;
+
+        // Route each connection sequentially
+        foreach (var connection in orderedConnections)
+        {
+            connection.RecalculateTransmission();
+
+            // If routing succeeded, mark this waveguide as an obstacle
+            if (connection.IsPathValid && connection.RoutedPath != null)
+            {
+                router.PathfindingGrid.AddWaveguideObstacle(
+                    connection.Id,
+                    connection.RoutedPath.Segments,
+                    WaveguideWidthMicrometers);
+            }
+            else
+            {
+                failedCount++;
+            }
+        }
+
+        return (failedCount == 0, failedCount);
+    }
+
+    /// <summary>
+    /// Generates different orderings to try.
+    /// Prioritizes connections by complexity (longer paths first, or paths involving blocked pins).
+    /// </summary>
+    private List<List<WaveguideConnection>> GenerateOrderings(List<WaveguideConnection> connections, int maxOrderings)
+    {
+        var orderings = new List<List<WaveguideConnection>>();
+
+        if (connections.Count <= 1)
+            return orderings;
+
+        // Strategy 1: Reverse order
+        var reversed = connections.ToList();
+        reversed.Reverse();
+        orderings.Add(reversed);
+
+        // Strategy 2: Sort by estimated path length (longer first - they need more space)
+        var byLength = connections.OrderByDescending(c =>
+        {
+            var (x1, y1) = c.StartPin.GetAbsolutePosition();
+            var (x2, y2) = c.EndPin.GetAbsolutePosition();
+            return Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+        }).ToList();
+        orderings.Add(byLength);
+
+        // Strategy 3: Sort by estimated path length (shorter first - they block less)
+        var byLengthAsc = connections.OrderBy(c =>
+        {
+            var (x1, y1) = c.StartPin.GetAbsolutePosition();
+            var (x2, y2) = c.EndPin.GetAbsolutePosition();
+            return Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+        }).ToList();
+        orderings.Add(byLengthAsc);
+
+        // Strategy 4: Shuffle randomly (simple randomization)
+        if (connections.Count >= 3 && orderings.Count < maxOrderings)
+        {
+            var random = new Random(42); // Fixed seed for reproducibility
+            var shuffled = connections.OrderBy(_ => random.Next()).ToList();
+            orderings.Add(shuffled);
+        }
+
+        // Strategy 5: Another random shuffle
+        if (connections.Count >= 3 && orderings.Count < maxOrderings)
+        {
+            var random = new Random(123);
+            var shuffled = connections.OrderBy(_ => random.Next()).ToList();
+            orderings.Add(shuffled);
+        }
+
+        // Remove duplicates and limit to maxOrderings
+        return orderings
+            .Where(o => !o.SequenceEqual(connections)) // Remove if same as original
+            .Distinct(new ListComparer<WaveguideConnection>())
+            .Take(maxOrderings)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Reorders the internal Connections list to match the given order.
+    /// </summary>
+    private void ReorderConnections(List<WaveguideConnection> newOrder)
+    {
+        Connections.Clear();
+        Connections.AddRange(newOrder);
+    }
+
+    /// <summary>
+    /// Helper class for comparing lists.
+    /// </summary>
+    private class ListComparer<T> : IEqualityComparer<List<T>>
+    {
+        public bool Equals(List<T>? x, List<T>? y)
+        {
+            if (x == null || y == null) return x == y;
+            return x.SequenceEqual(y);
+        }
+
+        public int GetHashCode(List<T> obj)
+        {
+            return obj.Aggregate(0, (hash, item) => hash ^ (item?.GetHashCode() ?? 0));
         }
     }
 

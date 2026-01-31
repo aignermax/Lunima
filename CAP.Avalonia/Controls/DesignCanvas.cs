@@ -814,7 +814,19 @@ public class DesignCanvas : Control
             }
             else
             {
-                MainViewModel!.StatusText = "Connect mode: Drag from a pin to another pin to connect";
+                // Dropped into empty space - check if start pin has existing connection to delete
+                var existingConnection = ViewModel?.GetConnectionForPin(_connectionDragStartPin);
+                if (existingConnection != null)
+                {
+                    // Delete the existing connection (drag-to-delete)
+                    var deleteCmd = new Commands.DeleteConnectionCommand(ViewModel!, existingConnection);
+                    MainViewModel?.CommandManager.ExecuteCommand(deleteCmd);
+                    MainViewModel!.StatusText = $"Deleted connection from {_connectionDragStartPin.Name}";
+                }
+                else
+                {
+                    MainViewModel!.StatusText = "Connect mode: Drag from a pin to another pin to connect";
+                }
             }
 
             _connectionDragStartPin = null;
