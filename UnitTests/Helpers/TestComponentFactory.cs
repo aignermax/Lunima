@@ -1,30 +1,17 @@
 using CAP_Core;
 using CAP_Core.Components;
 using CAP_Core.Components.ComponentHelpers;
-using CAP_Core.Components.Creation;
-using CAP_Core.Grid;
 using CAP_Core.Tiles;
-using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
-using CAP_DataAccess.Components.ComponentDraftMapper;
 using System.Numerics;
-using System.Reflection;
-using System.Resources;
 using CAP_Core.LightCalculation;
-using UnitTests.Grid;
 
 namespace UnitTests
 {
+    /// <summary>
+    /// Factory for creating test components without external dependencies.
+    /// </summary>
     public class TestComponentFactory
     {
-        public static string MMI3x3 => GetResourceContent("MMI3x3");
-        public static string StraightWGJson => GetResourceContent("StraightWG");
-        public static string DirectionalCouplerJSON => GetResourceContent("DirectionalCouplerDraft");
-        public static string GetResourceContent(string resourcePath)
-        {
-            var resourceManager = new ResourceManager( "UnitTests.Properties.Resources", Assembly.GetExecutingAssembly());
-            var content = resourceManager.GetString(resourcePath);
-            return content;
-        }
         public static Component CreateStraightWaveGuide()
         {
             int widthInTiles = 1;
@@ -105,29 +92,5 @@ namespace UnitTests
             };
             return new Component(connections, new(), "placeCell_DirectionalCoupler", "", parts, 0, "DirectionalCoupler", DiscreteRotation.R0);
         }
-
-        public static Component CreateComponent(string componentJson)
-        {
-            var dummyJsonDataAccessor = new DummyDataAccessor(componentJson);
-            var componentDraft = new ComponentDraftFileReader(dummyJsonDataAccessor).TryReadJson("").draft;
-            if (componentDraft == null)
-            {
-                throw new Exception("JSON could not be parsed");
-            }
-            var drafts = new List<ComponentDraft>() { componentDraft };
-            var validator = new ComponentDraftValidator(dummyJsonDataAccessor);
-            string draftErrors = "";
-            foreach (var item in drafts.Select(d => validator.Validate(d)).ToList())
-            {
-                draftErrors += item.errorMsg;
-            };
-            if (String.IsNullOrEmpty(draftErrors) == false)
-                throw new Exception(draftErrors);
-
-            var draftConverter = new ComponentDraftConverter(new Logger());
-            var componentDrafts = draftConverter.ToComponentModels(drafts);
-            return componentDrafts.First();
-        }
-
     }
 }

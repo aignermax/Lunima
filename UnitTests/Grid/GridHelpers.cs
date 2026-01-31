@@ -9,9 +9,9 @@ namespace UnitTests.Grid
         public static GridManager InitializeGridWithComponents(int width = 10, int height = 10)
         {
             var grid = new GridManager(width, height);
-            grid.ComponentMover.PlaceComponent(1, 1, TestComponentFactory.CreateComponent(TestComponentFactory.StraightWGJson));
-            grid.ComponentMover.PlaceComponent(2, 2, TestComponentFactory.CreateComponent(TestComponentFactory.StraightWGJson));
-            grid.ComponentMover.PlaceComponent(3, 3, TestComponentFactory.CreateComponent(TestComponentFactory.DirectionalCouplerJSON));
+            grid.ComponentMover.PlaceComponent(1, 1, TestComponentFactory.CreateStraightWaveGuide());
+            grid.ComponentMover.PlaceComponent(2, 2, TestComponentFactory.CreateStraightWaveGuide());
+            grid.ComponentMover.PlaceComponent(3, 3, TestComponentFactory.CreateDirectionalCoupler());
             return grid;
         }
     }

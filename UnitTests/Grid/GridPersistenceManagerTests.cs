@@ -4,8 +4,6 @@ using CAP_Core.Components;
 using CAP_Core.Components.Creation;
 using CAP_Core.Grid;
 using CAP_Core.Helpers;
-using CAP_DataAccess.Components.ComponentDraftMapper;
-using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using Shouldly;
 
 namespace UnitTests.Grid
@@ -47,7 +45,7 @@ namespace UnitTests.Grid
             GridPersistenceManager gridPersistenceManager = new(grid, new FileDataAccessor());
             var inputs = grid.ExternalPortManager.GetAllExternalInputs();
             int inputHeight = inputs.FirstOrDefault()?.TilePositionY ?? throw new Exception("there is no StandardInput defined");
-            var firstComponent = TestComponentFactory.CreateComponent(TestComponentFactory.StraightWGJson);
+            var firstComponent = TestComponentFactory.CreateStraightWaveGuide();
             var firstSlider = new Slider(Guid.NewGuid(), 1, 0.1337, 1, 0.1);
             firstComponent.AddSlider(1, firstSlider);
             var sliderCountBeforeSaving = firstComponent.GetAllSliders().Count;
@@ -55,7 +53,7 @@ namespace UnitTests.Grid
             var secondComponent = ExportNazcaTests.PlaceAndConcatenateComponent(grid, firstComponent);
             var thirdComponent = ExportNazcaTests.PlaceAndConcatenateComponent(grid, secondComponent);
             var fourthComponent = ExportNazcaTests.PlaceAndConcatenateComponent(grid, thirdComponent);
-            var orphan = TestComponentFactory.CreateComponent(TestComponentFactory.StraightWGJson);
+            var orphan = TestComponentFactory.CreateStraightWaveGuide();
             var orphanPos = new IntVector(10, 5);
             grid.ComponentMover.PlaceComponent(orphanPos.X, orphanPos.Y, orphan);
 
@@ -81,7 +79,7 @@ namespace UnitTests.Grid
 
         private static ComponentFactory InitializeComponentFactory()
         {
-            var componentDrafts = new List<Component>() { TestComponentFactory.CreateComponent(TestComponentFactory.StraightWGJson) };
+            var componentDrafts = new List<Component>() { TestComponentFactory.CreateStraightWaveGuide() };
             var componentFactory = new ComponentFactory();
             componentFactory.InitializeComponentDrafts(componentDrafts);
             return componentFactory;
