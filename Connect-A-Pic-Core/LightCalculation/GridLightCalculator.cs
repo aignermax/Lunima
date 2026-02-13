@@ -1,6 +1,7 @@
 using CAP_Core.ExternalPorts;
 using CAP_Core.Grid;
 using CAP_Core.Helpers;
+using CAP_Core.LightCalculation.Validation;
 using System.Collections.Concurrent;
 using System.Numerics;
 namespace CAP_Core.LightCalculation
@@ -15,17 +16,31 @@ namespace CAP_Core.LightCalculation
         public readonly GridManager Grid;
         public SMatrix? SystemSMatrix { get; private set; }
         public ISystemMatrixBuilder SystemMatrixBuilder { get; }
+        private readonly ISMatrixValidator? _validator;
 
-        public GridLightCalculator(ISystemMatrixBuilder systemMatrixBuilder, GridManager grid)
+        /// <summary>
+        /// The most recent validation result from the last simulation run.
+        /// Null if no validator is configured or no simulation has run yet.
+        /// </summary>
+        public SMatrixValidationResult? LastValidationResult { get; private set; }
+
+        public GridLightCalculator(ISystemMatrixBuilder systemMatrixBuilder, GridManager grid, ISMatrixValidator? validator = null)
         {
             SystemMatrixBuilder = systemMatrixBuilder;
             Grid = grid;
+            _validator = validator;
         }
 
         // calculates the light intensity and phase at a given PIN-ID for both light-flow-directions "in" and "out" for a given period of steps
         public async Task<Dictionary<Guid, Complex>> CalculateFieldPropagationAsync(CancellationTokenSource cancelToken, int LaserWaveLengthInNm)
         {
             SystemSMatrix = SystemMatrixBuilder.GetSystemSMatrix(LaserWaveLengthInNm);
+
+            if (_validator != null)
+            {
+                LastValidationResult = _validator.Validate(SystemSMatrix);
+            }
+
             var stepCount = SystemSMatrix.PinReference.Count() * 2;
             ConcurrentBag<UsedInput> usedInputs = Grid.ExternalPortManager.GetUsedExternalInputs()
                                  .Where(i => i.Input.LaserType.WaveLengthInNm == LaserWaveLengthInNm)
