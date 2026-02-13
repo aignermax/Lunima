@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace CAP_Core.LightCalculation.Validation
 {
     /// <summary>
@@ -59,6 +61,46 @@ namespace CAP_Core.LightCalculation.Validation
         public void AddError(string message)
         {
             _entries.Add(new SMatrixValidationEntry(SMatrixValidationSeverity.Error, message));
+        }
+
+        /// <summary>
+        /// Serializes this validation result to a JSON string.
+        /// </summary>
+        /// <param name="wavelengthNm">Optional wavelength in nm to include.</param>
+        /// <returns>An indented JSON string of the validation report.</returns>
+        public string ToJson(int? wavelengthNm = null)
+        {
+            var dto = ToReportDto(wavelengthNm);
+            return JsonSerializer.Serialize(dto, ValidationJsonOptions.Default);
+        }
+
+        /// <summary>
+        /// Converts this result to a <see cref="ValidationReportDto"/>.
+        /// </summary>
+        /// <param name="wavelengthNm">Optional wavelength in nm to include.</param>
+        /// <returns>A DTO suitable for serialization.</returns>
+        public ValidationReportDto ToReportDto(int? wavelengthNm = null)
+        {
+            return new ValidationReportDto
+            {
+                Timestamp = DateTime.UtcNow.ToString("o"),
+                WavelengthNm = wavelengthNm,
+                IsValid = IsValid,
+                HasWarnings = HasWarnings,
+                ErrorCount = Errors.Count(),
+                WarningCount = Warnings.Count(),
+                Errors = Errors.Select(MapEntry).ToList(),
+                Warnings = Warnings.Select(MapEntry).ToList(),
+            };
+        }
+
+        private static ValidationEntryDto MapEntry(SMatrixValidationEntry entry)
+        {
+            return new ValidationEntryDto
+            {
+                Severity = entry.Severity.ToString(),
+                Message = entry.Message,
+            };
         }
     }
 }
