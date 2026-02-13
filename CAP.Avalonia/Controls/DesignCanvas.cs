@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.Visualization;
 using CAP_Core.Components;
 using CAP_Core.Routing;
 
@@ -50,6 +51,10 @@ public class DesignCanvas : Control
     private bool _showPlacementPreview;
     private ComponentTemplate? _placementPreviewTemplate;
     private Point _placementPreviewPosition;
+
+    // Power flow hover state
+    private WaveguideConnectionViewModel? _hoveredConnection;
+    private Point _lastCanvasPosition;
 
     static DesignCanvas()
     {
@@ -113,7 +118,13 @@ public class DesignCanvas : Control
             // Draw connections first (behind components)
             foreach (var conn in vm.Connections)
             {
-                DrawWaveguideConnection(context, conn);
+                DrawWaveguideConnection(context, conn, vm);
+            }
+
+            // Draw power label on hovered connection
+            if (vm.ShowPowerFlow && _hoveredConnection != null)
+            {
+                DrawPowerHoverLabel(context, _hoveredConnection, vm);
             }
 
             // Draw components
@@ -499,15 +510,25 @@ public class DesignCanvas : Control
         }
     }
 
-    private void DrawWaveguideConnection(DrawingContext context, WaveguideConnectionViewModel conn)
+    private void DrawWaveguideConnection(
+        DrawingContext context,
+        WaveguideConnectionViewModel conn,
+        DesignCanvasViewModel vm)
     {
         var segments = conn.Connection.GetPathSegments();
 
-        // Choose pen based on selection and blocked fallback state
+        // Choose pen based on power flow overlay, selection, and blocked state
         Pen waveguidePen;
         if (conn.IsSelected)
         {
             waveguidePen = new Pen(Brushes.Yellow, 3);
+        }
+        else if (vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null)
+        {
+            var flow = vm.PowerFlowVisualizer.GetFlowForConnection(conn.Connection.Id);
+            waveguidePen = flow != null
+                ? PowerFlowRenderer.CreatePowerPen(flow, vm.PowerFlowVisualizer.FadeThresholdDb)
+                : new Pen(new SolidColorBrush(Color.FromArgb(40, 80, 80, 120)), 1);
         }
         else if (conn.IsBlockedFallback)
         {
@@ -571,6 +592,19 @@ public class DesignCanvas : Control
             Brushes.LightGray);
 
         context.DrawText(infoText, new Point(midX, midY - 15));
+    }
+
+    private void DrawPowerHoverLabel(
+        DrawingContext context,
+        WaveguideConnectionViewModel conn,
+        DesignCanvasViewModel vm)
+    {
+        var flow = vm.PowerFlowVisualizer.GetFlowForConnection(conn.Connection.Id);
+        if (flow == null) return;
+
+        var midX = (conn.StartX + conn.EndX) / 2;
+        var midY = (conn.StartY + conn.EndY) / 2;
+        PowerFlowRenderer.DrawPowerLabel(context, flow, new Point(midX, midY - 25));
     }
 
     private void DrawArc(DrawingContext context, Pen pen, BendSegment bend)
@@ -657,9 +691,10 @@ public class DesignCanvas : Control
         if (vm == null) return;
 
         string gridInfo = vm.ShowGridOverlay ? " | [G] Grid: ON" : " | [G] Grid: OFF";
+        string powerInfo = vm.ShowPowerFlow ? " | [P] Power: ON" : " | [P] Power: OFF";
 
         var statusText = new FormattedText(
-            $"Zoom: {Zoom:P0} | Components: {vm.Components.Count} | Connections: {vm.Connections.Count}{gridInfo}",
+            $"Zoom: {Zoom:P0} | Components: {vm.Components.Count} | Connections: {vm.Connections.Count}{gridInfo}{powerInfo}",
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),
@@ -787,6 +822,22 @@ public class DesignCanvas : Control
         {
             MainViewModel.CanvasMouseMove(canvasPoint.X, canvasPoint.Y);
             InvalidateVisual(); // Redraw to show highlighting
+        }
+
+        // Update power flow hover detection
+        if (vm.ShowPowerFlow)
+        {
+            _lastCanvasPosition = canvasPoint;
+            var previousHover = _hoveredConnection;
+            _hoveredConnection = HitTestConnection(canvasPoint);
+            if (_hoveredConnection != previousHover)
+            {
+                InvalidateVisual();
+            }
+        }
+        else if (_hoveredConnection != null)
+        {
+            _hoveredConnection = null;
         }
 
         // Update connection drag preview
@@ -957,6 +1008,24 @@ public class DesignCanvas : Control
                     }
                 }
                 break;
+            case Key.P:
+                // Toggle power flow overlay
+                if (!ctrlPressed)
+                {
+                    var canvasVm = ViewModel;
+                    if (canvasVm != null)
+                    {
+                        canvasVm.ShowPowerFlow = !canvasVm.ShowPowerFlow;
+                        canvasVm.PowerFlowVisualizer.IsEnabled = canvasVm.ShowPowerFlow;
+                        if (mainVm != null)
+                        {
+                            mainVm.StatusText = canvasVm.ShowPowerFlow
+                                ? "Power flow overlay: ON"
+                                : "Power flow overlay: OFF";
+                        }
+                    }
+                }
+                break;
         }
 
         InvalidateVisual();
@@ -989,6 +1058,46 @@ public class DesignCanvas : Control
         }
 
         return null;
+    }
+
+    private WaveguideConnectionViewModel? HitTestConnection(Point canvasPoint)
+    {
+        var vm = ViewModel;
+        if (vm == null) return null;
+
+        const double hitTolerance = 10.0;
+
+        foreach (var conn in vm.Connections)
+        {
+            double distance = PointToSegmentDistance(
+                canvasPoint.X, canvasPoint.Y,
+                conn.StartX, conn.StartY,
+                conn.EndX, conn.EndY);
+
+            if (distance <= hitTolerance)
+                return conn;
+        }
+
+        return null;
+    }
+
+    private static double PointToSegmentDistance(
+        double px, double py,
+        double x1, double y1,
+        double x2, double y2)
+    {
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        var lengthSq = dx * dx + dy * dy;
+
+        if (lengthSq < 0.0001)
+            return Math.Sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+
+        var t = Math.Max(0, Math.Min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
+        var projX = x1 + t * dx;
+        var projY = y1 + t * dy;
+
+        return Math.Sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
     }
 
     private PhysicalPin? HitTestPin(Point canvasPoint)
