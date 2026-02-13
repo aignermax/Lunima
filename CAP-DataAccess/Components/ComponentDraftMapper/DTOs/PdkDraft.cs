@@ -122,6 +122,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
 
     /// <summary>
     /// Simplified S-Matrix definition for PDK components.
+    /// Supports both fixed-value and parametric formula-based connections.
     /// </summary>
     public class PdkSMatrixDraft
     {
@@ -137,29 +138,68 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         /// </summary>
         [JsonPropertyName("connections")]
         public List<SMatrixConnection> Connections { get; set; } = new();
+
+        /// <summary>
+        /// Optional parameter definitions for parametric S-Matrix formulas.
+        /// When present, connections may use formula strings referencing these parameters.
+        /// </summary>
+        [JsonPropertyName("parameters")]
+        public List<ParameterDefinitionDraft>? Parameters { get; set; }
     }
 
     /// <summary>
     /// A single S-Matrix connection entry.
+    /// Supports fixed values (magnitude/phaseDegrees) or formula strings
+    /// (magnitudeFormula/phaseDegreesFormula) referencing named parameters.
     /// </summary>
     public class SMatrixConnection
     {
+        /// <summary>
+        /// Source pin name.
+        /// </summary>
         [JsonPropertyName("fromPin")]
         public string FromPin { get; set; }
 
+        /// <summary>
+        /// Destination pin name.
+        /// </summary>
         [JsonPropertyName("toPin")]
         public string ToPin { get; set; }
 
         /// <summary>
         /// Transmission amplitude (0-1). For a 50/50 splitter, use ~0.707 (sqrt(0.5)).
+        /// Used for fixed-value connections. Ignored when magnitudeFormula is set.
         /// </summary>
         [JsonPropertyName("magnitude")]
         public double Magnitude { get; set; }
 
         /// <summary>
         /// Phase shift in degrees.
+        /// Used for fixed-value connections. Ignored when phaseDegreesFormula is set.
         /// </summary>
         [JsonPropertyName("phaseDegrees")]
         public double PhaseDegrees { get; set; }
+
+        /// <summary>
+        /// Formula expression for magnitude (e.g., "sqrt(coupling_ratio)").
+        /// When set, this overrides the fixed magnitude value.
+        /// </summary>
+        [JsonPropertyName("magnitudeFormula")]
+        public string? MagnitudeFormula { get; set; }
+
+        /// <summary>
+        /// Formula expression for phase in degrees (e.g., "phase_shift").
+        /// When set, this overrides the fixed phaseDegrees value.
+        /// </summary>
+        [JsonPropertyName("phaseDegreesFormula")]
+        public string? PhaseDegreesFormula { get; set; }
+
+        /// <summary>
+        /// Returns true if this connection uses formula expressions.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsParametric =>
+            !string.IsNullOrWhiteSpace(MagnitudeFormula) ||
+            !string.IsNullOrWhiteSpace(PhaseDegreesFormula);
     }
 }
