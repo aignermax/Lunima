@@ -456,6 +456,37 @@ public partial class MainViewModel : ObservableObject
         Canvas.PanY = 0;
     }
 
+    /// <summary>
+    /// Adjusts zoom and pan to fit all components in the viewport.
+    /// Applies 10% padding around the design. Does nothing on empty canvas.
+    /// </summary>
+    /// <param name="viewportWidth">Viewport width in screen pixels.</param>
+    /// <param name="viewportHeight">Viewport height in screen pixels.</param>
+    public void ZoomToFit(double viewportWidth, double viewportHeight)
+    {
+        if (viewportWidth <= 0 || viewportHeight <= 0) return;
+
+        var bounds = BoundingBoxCalculator.Calculate(Canvas.Components);
+        if (bounds == null)
+        {
+            StatusText = "No components to fit";
+            return;
+        }
+
+        var padded = BoundingBoxCalculator.WithPadding(
+            bounds.Value, BoundingBoxCalculator.DefaultPaddingFraction);
+
+        if (padded.IsEmpty) return;
+
+        var (zoom, panX, panY) = BoundingBoxCalculator.CalculateZoomToFit(
+            padded, viewportWidth, viewportHeight);
+
+        ZoomLevel = zoom;
+        Canvas.PanX = panX;
+        Canvas.PanY = panY;
+        StatusText = $"Zoom to fit: {zoom:P0}";
+    }
+
     [RelayCommand]
     private async Task LoadPdk()
     {

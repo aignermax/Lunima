@@ -957,6 +957,12 @@ public class DesignCanvas : Control
                     }
                 }
                 break;
+            case Key.F:
+                if (!ctrlPressed)
+                {
+                    mainVm.ZoomToFit(Bounds.Width, Bounds.Height);
+                }
+                break;
         }
 
         InvalidateVisual();
