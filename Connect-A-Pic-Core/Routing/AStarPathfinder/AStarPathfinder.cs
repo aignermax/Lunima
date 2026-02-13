@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace CAP_Core.Routing.AStarPathfinder;
 
 /// <summary>
@@ -23,6 +25,11 @@ public class AStarPathfinder
     public int GoalTolerance { get; set; } = 3;
 
     /// <summary>
+    /// Statistics from the most recent FindPath call.
+    /// </summary>
+    public AStarSearchStats? LastSearchStats { get; private set; }
+
+    /// <summary>
     /// Tracks total distance traveled from start (for pin escape enforcement).
     /// </summary>
     private Dictionary<(int, int, GridDirection), int> _distanceFromStart = new();
@@ -46,6 +53,7 @@ public class AStarPathfinder
     public List<AStarNode>? FindPath(int startX, int startY, GridDirection startDirection,
                                       int endX, int endY, GridDirection endDirection)
     {
+        var stopwatch = Stopwatch.StartNew();
         var openSet = new PriorityQueue<AStarNode, double>();
         var visited = new Dictionary<(int, int, GridDirection), AStarNode>();
         _distanceFromStart = new Dictionary<(int, int, GridDirection), int>();
@@ -75,6 +83,10 @@ public class AStarPathfinder
             // Check if we reached the goal
             if (IsGoalReached(current, endX, endY, endDirection))
             {
+                stopwatch.Stop();
+                LastSearchStats = CreateStats(
+                    nodesExpanded, stopwatch.Elapsed.TotalMilliseconds, true,
+                    startX, startY, startDirection, endX, endY, endDirection);
                 return ReconstructPath(current);
             }
 
@@ -96,7 +108,32 @@ public class AStarPathfinder
         }
 
         // No path found
+        stopwatch.Stop();
+        LastSearchStats = CreateStats(
+            nodesExpanded, stopwatch.Elapsed.TotalMilliseconds, false,
+            startX, startY, startDirection, endX, endY, endDirection);
         return null;
+    }
+
+    /// <summary>
+    /// Creates search stats from the current search state.
+    /// </summary>
+    private AStarSearchStats CreateStats(
+        int nodesExpanded, double elapsedMs, bool pathFound,
+        int startX, int startY, GridDirection startDir,
+        int endX, int endY, GridDirection endDir)
+    {
+        return new AStarSearchStats
+        {
+            NodesExpanded = nodesExpanded,
+            MaxNodesAllowed = MaxNodesExpanded,
+            ElapsedMilliseconds = elapsedMs,
+            PathFound = pathFound,
+            StartGrid = (startX, startY),
+            EndGrid = (endX, endY),
+            StartDirection = startDir,
+            EndDirection = endDir
+        };
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using CAP_Core.Components;
 using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.Diagnostics;
 
 namespace CAP_Core.Routing;
 
@@ -76,6 +77,12 @@ public class WaveguideRouter
     /// Waveguides will maintain at least this distance from component edges.
     /// </summary>
     public double ObstaclePaddingMicrometers { get; set; } = 5.0;
+
+    /// <summary>
+    /// Diagnostics collector for recording routing failures.
+    /// Auto-exports to .routing-diag.json when a route fails.
+    /// </summary>
+    public RoutingDiagnosticsCollector Diagnostics { get; } = new();
 
     /// <summary>
     /// Initializes the pathfinding grid for A* routing.
