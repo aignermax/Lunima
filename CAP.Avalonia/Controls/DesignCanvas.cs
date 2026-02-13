@@ -104,6 +104,12 @@ public class DesignCanvas : Control
             // Draw chip boundary
             DrawChipBoundary(context, vm);
 
+            // Draw snap grid overlay (if enabled)
+            if (vm.GridSnap.IsEnabled)
+            {
+                DrawSnapGridOverlay(context, vm);
+            }
+
             // Draw pathfinding grid overlay (if enabled)
             if (vm.ShowGridOverlay)
             {
@@ -172,6 +178,50 @@ public class DesignCanvas : Control
         for (double y = offsetY % majorGridSize; y < bounds.Height; y += majorGridSize)
         {
             context.DrawLine(majorGridPen, new Point(0, y), new Point(bounds.Width, y));
+        }
+    }
+
+    /// <summary>
+    /// Draws a snap grid overlay showing snap points within the visible chip area.
+    /// Rendered in canvas coordinates (inside zoom/pan transform).
+    /// </summary>
+    private void DrawSnapGridOverlay(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        double gridSize = vm.GridSnap.GridSizeMicrometers;
+        if (gridSize <= 0) return;
+
+        var dotBrush = new SolidColorBrush(Color.FromArgb(100, 0, 200, 255));
+        double dotRadius = 1.5;
+
+        // Calculate visible bounds in physical coordinates
+        double viewMinX = -vm.PanX / Zoom;
+        double viewMinY = -vm.PanY / Zoom;
+        double viewMaxX = viewMinX + Bounds.Width / Zoom;
+        double viewMaxY = viewMinY + Bounds.Height / Zoom;
+
+        // Clamp to chip boundaries
+        double startX = Math.Max(vm.ChipMinX, Math.Floor(viewMinX / gridSize) * gridSize);
+        double startY = Math.Max(vm.ChipMinY, Math.Floor(viewMinY / gridSize) * gridSize);
+        double endX = Math.Min(vm.ChipMaxX, viewMaxX);
+        double endY = Math.Min(vm.ChipMaxY, viewMaxY);
+
+        // Limit number of dots for performance
+        const int MaxDotsPerAxis = 200;
+        double stepX = gridSize;
+        double stepY = gridSize;
+        int countX = (int)((endX - startX) / gridSize) + 1;
+        int countY = (int)((endY - startY) / gridSize) + 1;
+        if (countX > MaxDotsPerAxis)
+            stepX = (endX - startX) / MaxDotsPerAxis;
+        if (countY > MaxDotsPerAxis)
+            stepY = (endY - startY) / MaxDotsPerAxis;
+
+        for (double x = startX; x <= endX; x += stepX)
+        {
+            for (double y = startY; y <= endY; y += stepY)
+            {
+                context.DrawEllipse(dotBrush, null, new Point(x, y), dotRadius, dotRadius);
+            }
         }
     }
 
@@ -656,10 +706,13 @@ public class DesignCanvas : Control
         var vm = ViewModel;
         if (vm == null) return;
 
-        string gridInfo = vm.ShowGridOverlay ? " | [G] Grid: ON" : " | [G] Grid: OFF";
+        string snapInfo = vm.GridSnap.IsEnabled
+            ? $" | [G] Snap: {vm.GridSnap.GridSizeMicrometers}µm"
+            : " | [G] Snap: OFF";
+        string gridInfo = vm.ShowGridOverlay ? " | [Shift+G] Grid: ON" : "";
 
         var statusText = new FormattedText(
-            $"Zoom: {Zoom:P0} | Components: {vm.Components.Count} | Connections: {vm.Connections.Count}{gridInfo}",
+            $"Zoom: {Zoom:P0} | Components: {vm.Components.Count} | Connections: {vm.Connections.Count}{snapInfo}{gridInfo}",
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),
@@ -770,7 +823,9 @@ public class DesignCanvas : Control
         {
             _showPlacementPreview = true;
             _placementPreviewTemplate = MainViewModel.SelectedTemplate;
-            _placementPreviewPosition = canvasPoint;
+            var snapSettings = vm.GridSnap;
+            var (sx, sy) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+            _placementPreviewPosition = new Point(sx, sy);
             InvalidateVisual();
         }
         else
@@ -810,7 +865,24 @@ public class DesignCanvas : Control
         }
         else if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
         {
-            vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
+            var snapSettings = vm.GridSnap;
+            if (snapSettings.IsEnabled)
+            {
+                // Snap: compute desired position and snap it
+                double newX = _draggingComponent.X + delta.X / Zoom;
+                double newY = _draggingComponent.Y + delta.Y / Zoom;
+                var (snappedX, snappedY) = snapSettings.Snap(newX, newY);
+                double snapDeltaX = snappedX - _draggingComponent.X;
+                double snapDeltaY = snappedY - _draggingComponent.Y;
+                if (Math.Abs(snapDeltaX) > 0.001 || Math.Abs(snapDeltaY) > 0.001)
+                {
+                    vm.MoveComponent(_draggingComponent, snapDeltaX, snapDeltaY);
+                }
+            }
+            else
+            {
+                vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
+            }
             InvalidateVisual();
         }
         else if (_isPanning)
@@ -947,13 +1019,25 @@ public class DesignCanvas : Control
                     mainVm.RotateSelectedCommand.Execute(null);
                 break;
             case Key.G:
-                // Toggle grid overlay
                 if (!ctrlPressed)
                 {
                     var vm = ViewModel;
                     if (vm != null)
                     {
-                        vm.ShowGridOverlay = !vm.ShowGridOverlay;
+                        bool shiftPressed = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+                        if (shiftPressed)
+                        {
+                            // Shift+G: toggle pathfinding grid overlay
+                            vm.ShowGridOverlay = !vm.ShowGridOverlay;
+                        }
+                        else
+                        {
+                            // G: toggle grid snap
+                            vm.GridSnap.Toggle();
+                            mainVm.StatusText = vm.GridSnap.IsEnabled
+                                ? $"Grid snap ON ({vm.GridSnap.GridSizeMicrometers}µm)"
+                                : "Grid snap OFF";
+                        }
                     }
                 }
                 break;

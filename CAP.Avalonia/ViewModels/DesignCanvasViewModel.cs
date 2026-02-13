@@ -43,6 +43,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     private bool _showGridOverlay = false;
 
     /// <summary>
+    /// Settings for optional grid snapping during component placement and drag.
+    /// </summary>
+    public GridSnapSettings GridSnap { get; } = new();
+
+    /// <summary>
     /// Minimum bend radius for waveguides in micrometers.
     /// Depends on the fabrication process - typical values: 5-20µm for silicon photonics.
     /// Default: 10µm (conservative value for most foundries).
