@@ -12,8 +12,9 @@ public class AStarPathfinder
     /// <summary>
     /// Maximum nodes to expand before giving up (prevents infinite search on large grids).
     /// Lower values = faster but may miss longer paths.
+    /// Increased to 200000 to handle complex layouts with many obstacles.
     /// </summary>
-    public int MaxNodesExpanded { get; set; } = 50000;
+    public int MaxNodesExpanded { get; set; } = 200000;
 
     /// <summary>
     /// Distance tolerance for reaching the goal (in grid cells).
