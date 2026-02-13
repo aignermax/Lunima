@@ -29,9 +29,9 @@ public static class ComponentTemplates
                 HeightMicrometers = 15,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 7.5, 180),
-                    new PinDefinition("out1", 20, 4, 0),
-                    new PinDefinition("out2", 20, 11, 0)
+                    new PinDefinition("in", 0, 7.5, 180),  // Left side, pin points west (away from center)
+                    new PinDefinition("out1", 20, 4, 0),   // Right side, pin points east (away from center)
+                    new PinDefinition("out2", 20, 11, 0)   // Right side, pin points east (away from center)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
             },
@@ -45,10 +45,10 @@ public static class ComponentTemplates
                 HeightMicrometers = 20,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in1", 0, 5, 180),
-                    new PinDefinition("in2", 0, 15, 180),
-                    new PinDefinition("out1", 50, 5, 0),
-                    new PinDefinition("out2", 50, 15, 0)
+                    new PinDefinition("in1", 0, 5, 180),    // Left side, pin points west (away from center)
+                    new PinDefinition("in2", 0, 15, 180),   // Left side, pin points west (away from center)
+                    new PinDefinition("out1", 50, 5, 0),    // Right side, pin points east (away from center)
+                    new PinDefinition("out2", 50, 15, 0)    // Right side, pin points east (away from center)
                 },
                 CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5) // 50/50 coupling
             },
@@ -62,10 +62,10 @@ public static class ComponentTemplates
                 HeightMicrometers = 12,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in1", 0, 3, 180),
-                    new PinDefinition("in2", 0, 9, 180),
-                    new PinDefinition("out1", 30, 3, 0),
-                    new PinDefinition("out2", 30, 9, 0)
+                    new PinDefinition("in1", 0, 3, 180),  // Left side, pin points west (away from center)
+                    new PinDefinition("in2", 0, 9, 180),  // Left side, pin points west (away from center)
+                    new PinDefinition("out1", 30, 3, 0),  // Right side, pin points east (away from center)
+                    new PinDefinition("out2", 30, 9, 0)   // Right side, pin points east (away from center)
                 },
                 CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5)
             },
@@ -79,8 +79,8 @@ public static class ComponentTemplates
                 HeightMicrometers = 10,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 5, 180),
-                    new PinDefinition("out", 200, 5, 0)
+                    new PinDefinition("in", 0, 5, 180),   // Left side, pin points west (away from center)
+                    new PinDefinition("out", 200, 5, 0)   // Right side, pin points east (away from center)
                 },
                 HasSlider = true,
                 SliderMin = 0,
@@ -125,9 +125,9 @@ public static class ComponentTemplates
                 HeightMicrometers = 12,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 6, 180),
-                    new PinDefinition("out1", 10, 3, 0),
-                    new PinDefinition("out2", 10, 9, 0)
+                    new PinDefinition("in", 0, 6, 180),  // Left side, pin points west (away from center)
+                    new PinDefinition("out1", 10, 3, 0), // Right side, pin points east (away from center)
+                    new PinDefinition("out2", 10, 9, 0)  // Right side, pin points east (away from center)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
             },
@@ -141,9 +141,9 @@ public static class ComponentTemplates
                 HeightMicrometers = 25,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 5, 180),
-                    new PinDefinition("through", 30, 5, 0),
-                    new PinDefinition("drop", 30, 20, 0)
+                    new PinDefinition("in", 0, 5, 180),      // Left side, pin points west (away from center)
+                    new PinDefinition("through", 30, 5, 0),  // Right side, pin points east (away from center)
+                    new PinDefinition("drop", 30, 20, 0)     // Right side, pin points east (away from center)
                 },
                 CreateSMatrix = pins => CreateRingResonatorMatrix(pins)
             },

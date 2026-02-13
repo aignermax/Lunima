@@ -92,17 +92,23 @@ The router supports three strategies:
 ### Build Commands
 
 ```bash
+# Quick start (recommended)
+make run
+# or
+./run.sh
+
 # Build all projects
 dotnet build
+# or
+make build
 
-# Build desktop app
-dotnet build CAP.Desktop/CAP.Desktop.csproj
-
-# Run desktop app
+# Run desktop app (explicit)
 dotnet run --project CAP.Desktop/CAP.Desktop.csproj
 
 # Run tests
 dotnet test UnitTests/UnitTests.csproj
+# or
+make test
 ```
 
 ## S-Matrix Simulation

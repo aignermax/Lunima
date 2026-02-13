@@ -705,10 +705,25 @@ public class WaveguideRouter
             var startDir = GridDirectionExtensions.FromAngle(startAngle);
             var endDir = GridDirectionExtensions.FromAngle(endInputAngle);
 
-            // Run A* pathfinding
+            // Run A* pathfinding with adaptive pin escape distance
+            // Try with full escape distance first, then fallback to reduced if blocked
             var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
-            var gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
+
+            int originalEscapeCells = CostCalculator.MinPinEscapeCells;
+            List<AStarPathfinder.AStarNode>? gridPath = null;
+
+            // Attempt 1: Full escape distance (clean exit)
+            gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
+                                            gridEndX, gridEndY, endDir);
+
+            // Attempt 2: If failed, try with reduced escape distance (tight spaces)
+            if (gridPath == null || gridPath.Count < 2)
+            {
+                CostCalculator.MinPinEscapeCells = Math.Max(5, originalEscapeCells / 3); // 15 -> 5 cells
+                gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
                                                 gridEndX, gridEndY, endDir);
+                CostCalculator.MinPinEscapeCells = originalEscapeCells; // Restore
+            }
 
             if (gridPath == null || gridPath.Count < 2)
                 return false;
@@ -718,6 +733,10 @@ public class WaveguideRouter
             var smoothedPath = smoother.ConvertToSegments(gridPath, startPin, endPin);
 
             path.Segments.AddRange(smoothedPath.Segments);
+
+            // Store debug grid path for visualization
+            path.DebugGridPath = gridPath;
+
             return path.Segments.Count > 0;
         }
         finally
@@ -1709,6 +1728,12 @@ public class RoutedPath
     /// When true, the path may pass through obstacles and should be displayed differently (e.g., red/dashed).
     /// </summary>
     public bool IsBlockedFallback { get; set; } = false;
+
+    /// <summary>
+    /// Debug information: The raw A* grid path (list of grid nodes) used to generate this path.
+    /// Only populated when A* routing is used. Null for other routing strategies.
+    /// </summary>
+    public List<AStarPathfinder.AStarNode>? DebugGridPath { get; set; } = null;
 
     /// <summary>
     /// Total length of the path in micrometers.

@@ -244,9 +244,40 @@ public class DesignCanvas : Control
             }
         }
 
+        // Draw A* paths for all connections (if available)
+        var astarPathBrush = new SolidColorBrush(Color.FromArgb(150, 255, 165, 0)); // Orange
+        foreach (var conn in vm.Connections)
+        {
+            var gridPath = conn.Connection.RoutedPath?.DebugGridPath;
+            if (gridPath != null && gridPath.Count > 0)
+            {
+                // Draw each grid cell in the A* path
+                foreach (var node in gridPath)
+                {
+                    var (physX, physY) = grid.GridToPhysical(node.X, node.Y);
+                    var cellRect = new Rect(
+                        physX - cellSize / 2,
+                        physY - cellSize / 2,
+                        cellSize,
+                        cellSize);
+                    context.FillRectangle(astarPathBrush, cellRect);
+                }
+
+                // Optionally draw path direction arrows (commented out for performance)
+                // for (int i = 0; i < gridPath.Count - 1; i++)
+                // {
+                //     var (x1, y1) = grid.GridToPhysical(gridPath[i].X, gridPath[i].Y);
+                //     var (x2, y2) = grid.GridToPhysical(gridPath[i + 1].X, gridPath[i + 1].Y);
+                //     var pen = new Pen(Brushes.Yellow, 1);
+                //     context.DrawLine(pen, new Point(x1, y1), new Point(x2, y2));
+                // }
+            }
+        }
+
         // Draw grid info text
+        int totalAstarPaths = vm.Connections.Count(c => c.Connection.RoutedPath?.DebugGridPath != null);
         var infoText = new FormattedText(
-            $"Grid: {grid.Width}x{grid.Height} cells, {grid.CellSizeMicrometers}µm/cell, {grid.GetBlockedCellCount()} blocked",
+            $"Grid: {grid.Width}x{grid.Height} cells, {grid.CellSizeMicrometers}µm/cell, {grid.GetBlockedCellCount()} blocked | A* paths: {totalAstarPaths}",
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),

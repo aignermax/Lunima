@@ -32,9 +32,32 @@ public class RoutingCostCalculator
     public int MinStraightRunCells { get; set; } = 20;
 
     /// <summary>
+    /// Minimum "escape distance" from start pin before allowing turns.
+    /// This forces waveguides to exit components in the pin direction
+    /// before routing toward the destination.
+    /// Typically 3-5x bend radius to ensure clean exit.
+    /// REDUCED to 15 to avoid blocking in tight spaces.
+    /// </summary>
+    public int MinPinEscapeCells { get; set; } = 15;
+
+    /// <summary>
     /// Grid cell size for cost calculations.
     /// </summary>
     public double CellSizeMicrometers { get; set; } = 1.0;
+
+    /// <summary>
+    /// Minimum safe spacing from other waveguides to prevent evanescent coupling.
+    /// Typical values: 5-15 µm depending on waveguide design.
+    /// Default: 10 µm (safe for most silicon photonics)
+    /// </summary>
+    public double MinSafeSpacingMicrometers { get; set; } = 10.0;
+
+    /// <summary>
+    /// Cost penalty multiplier for cells within the safe spacing zone.
+    /// Higher values make A* prefer paths farther from obstacles.
+    /// Default: 100 (makes proximity almost as expensive as a turn)
+    /// </summary>
+    public double ProximityCostMultiplier { get; set; } = 100.0;
 
     /// <summary>
     /// Calculates the cost to move from one node to an adjacent cell.
@@ -113,6 +136,60 @@ public class RoutingCostCalculator
     }
 
     /// <summary>
+    /// Calculates proximity cost for a cell based on distance to nearest waveguide obstacle.
+    /// Returns higher cost for cells within MinSafeSpacingMicrometers of other waveguides.
+    /// This helps prevent evanescent coupling between adjacent waveguides.
+    /// </summary>
+    /// <param name="grid">The pathfinding grid</param>
+    /// <param name="x">Cell X coordinate</param>
+    /// <param name="y">Cell Y coordinate</param>
+    /// <returns>Additional cost penalty (0 if far from obstacles)</returns>
+    public double CalculateProximityCost(PathfindingGrid grid, int x, int y)
+    {
+        // Calculate search radius in cells
+        int searchRadiusCells = (int)Math.Ceiling(MinSafeSpacingMicrometers / CellSizeMicrometers);
+
+        // Find minimum distance to any waveguide obstacle (state = 2)
+        double minDistance = double.MaxValue;
+        bool foundWaveguide = false;
+
+        for (int dx = -searchRadiusCells; dx <= searchRadiusCells; dx++)
+        {
+            for (int dy = -searchRadiusCells; dy <= searchRadiusCells; dy++)
+            {
+                if (dx == 0 && dy == 0) continue; // Skip self
+
+                int checkX = x + dx;
+                int checkY = y + dy;
+
+                byte cellState = grid.GetCellState(checkX, checkY);
+
+                // Only consider waveguide obstacles (state = 2)
+                // Component obstacles (state = 1) are hard boundaries
+                if (cellState == 2)
+                {
+                    double distance = Math.Sqrt(dx * dx + dy * dy) * CellSizeMicrometers;
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        foundWaveguide = true;
+                    }
+                }
+            }
+        }
+
+        if (!foundWaveguide || minDistance >= MinSafeSpacingMicrometers)
+        {
+            return 0; // No penalty if far enough away
+        }
+
+        // Linear penalty: closer = more expensive
+        // At distance 0: full penalty, at MinSafeSpacing: no penalty
+        double proximityRatio = 1.0 - (minDistance / MinSafeSpacingMicrometers);
+        return proximityRatio * ProximityCostMultiplier;
+    }
+
+    /// <summary>
     /// Creates a cost calculator with settings derived from routing parameters.
     /// </summary>
     public static RoutingCostCalculator FromRoutingParameters(
@@ -122,7 +199,8 @@ public class RoutingCostCalculator
         {
             CellSizeMicrometers = cellSize,
             MinBendRadiusMicrometers = minBendRadius,
-            MinStraightRunCells = (int)Math.Ceiling(minBendRadius * 2 / cellSize)
+            MinStraightRunCells = (int)Math.Ceiling(minBendRadius * 2 / cellSize),
+            MinSafeSpacingMicrometers = Math.Max(10.0, minSpacing * 2) // At least 10µm or 2x component spacing
         };
     }
 }

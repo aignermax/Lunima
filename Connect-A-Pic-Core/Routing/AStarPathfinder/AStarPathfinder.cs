@@ -21,6 +21,11 @@ public class AStarPathfinder
     /// </summary>
     public int GoalTolerance { get; set; } = 3;
 
+    /// <summary>
+    /// Tracks total distance traveled from start (for pin escape enforcement).
+    /// </summary>
+    private Dictionary<(int, int, GridDirection), int> _distanceFromStart = new();
+
     public AStarPathfinder(PathfindingGrid grid, RoutingCostCalculator costCalculator)
     {
         _grid = grid;
@@ -42,6 +47,7 @@ public class AStarPathfinder
     {
         var openSet = new PriorityQueue<AStarNode, double>();
         var visited = new Dictionary<(int, int, GridDirection), AStarNode>();
+        _distanceFromStart = new Dictionary<(int, int, GridDirection), int>();
 
         // Create start node
         // StraightRunLength = 0 forces the path to go straight first before turning
@@ -56,6 +62,7 @@ public class AStarPathfinder
 
         openSet.Enqueue(startNode, startNode.FCost);
         visited[startNode.GetKey()] = startNode;
+        _distanceFromStart[startNode.GetKey()] = 0;
 
         int nodesExpanded = 0;
 
@@ -134,6 +141,9 @@ public class AStarPathfinder
     private IEnumerable<AStarNode> GetNeighbors(AStarNode current,
                                                   int goalX, int goalY, GridDirection goalDir)
     {
+        // Get distance from start for pin escape enforcement
+        int distanceFromStart = _distanceFromStart.GetValueOrDefault(current.GetKey(), 0);
+
         foreach (var dir in GridDirectionExtensions.GetAllDirections())
         {
             var (dx, dy) = dir.GetDelta();
@@ -144,6 +154,25 @@ public class AStarPathfinder
             if (_grid.IsBlocked(newX, newY))
                 continue;
 
+            // CRITICAL: Force pin escape - must travel minimum distance in start direction
+            // before allowing ANY turn. This ensures waveguides exit components cleanly.
+            if (distanceFromStart < _costCalculator.MinPinEscapeCells)
+            {
+                // Only allow movement in the original start direction
+                if (dir != current.Direction)
+                    continue;
+            }
+
+            // CRITICAL: Force pin arrival - must approach goal in the correct direction
+            // for the last N cells. This ensures clean arrival at the end pin.
+            int distanceToGoal = Math.Abs(newX - goalX) + Math.Abs(newY - goalY);
+            if (distanceToGoal <= _costCalculator.MinPinEscapeCells)
+            {
+                // Only allow movement in the goal direction when near the end
+                if (dir != goalDir)
+                    continue;
+            }
+
             // Check if turn is valid (minimum straight run)
             if (!_costCalculator.IsTurnValid(current, dir))
                 continue;
@@ -152,9 +181,10 @@ public class AStarPathfinder
             if (current.Direction != GridDirection.None && dir == current.Direction.GetOpposite())
                 continue;
 
-            // Calculate costs
+            // Calculate costs (including proximity penalty for being near other waveguides)
             double moveCost = _costCalculator.CalculateMoveCost(current, newX, newY, dir);
-            double newGCost = current.GCost + moveCost;
+            double proximityCost = _costCalculator.CalculateProximityCost(_grid, newX, newY);
+            double newGCost = current.GCost + moveCost + proximityCost;
             double newHCost = _costCalculator.CalculateHeuristic(
                 newX, newY, dir, goalX, goalY, goalDir);
 
@@ -167,6 +197,9 @@ public class AStarPathfinder
                     ? current.StraightRunLength + 1
                     : 1
             };
+
+            // Track distance from start for this neighbor
+            _distanceFromStart[neighbor.GetKey()] = distanceFromStart + 1;
 
             yield return neighbor;
         }
