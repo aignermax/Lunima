@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:views="using:CAP.Avalonia.Views"
+        x:Class="CAP.Avalonia.Views.ComparisonWindow"
+        x:DataType="vm:ComparisonViewModel"
+        Title="Connect-A-PIC Pro — Design Comparison"
+        Width="1200" Height="700">
+
+    <Design.DataContext>
+        <vm:ComparisonViewModel />
+    </Design.DataContext>
+
+    <views:ComparisonView />
+</Window>

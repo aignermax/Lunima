@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:cmp="using:CAP_Core.Comparison"
+             x:Class="CAP.Avalonia.Views.ComparisonView"
+             x:DataType="vm:ComparisonViewModel">
+
+    <Design.DataContext>
+        <vm:ComparisonViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                    Background="#2d2d2d" Height="40">
+            <Button Content="Load Design A" Command="{Binding LoadDesignACommand}"
+                    Width="120" Margin="5" Background="#3d5d3d"/>
+            <Button Content="Load Design B" Command="{Binding LoadDesignBCommand}"
+                    Width="120" Margin="5" Background="#3d3d5d"/>
+            <Separator Width="1" Background="Gray" Margin="10,5"/>
+            <Button Content="Export Report" Command="{Binding ExportReportCommand}"
+                    Width="100" Margin="5" Background="#5d5d3d"
+                    IsEnabled="{Binding HasReport}"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
+            <TextBlock Text="{Binding StatusText}"
+                       VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid ColumnDefinitions="*,Auto,*">
+            <!-- Design A Panel -->
+            <Border Grid.Column="0" Background="#1e1e1e" Margin="4">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Foreground="LightGreen"
+                               Margin="10,8" FontSize="14"
+                               Text="{Binding DesignA.Name, FallbackValue='Design A (not loaded)',
+                                      StringFormat='A: {0}'}"/>
+                    <ListBox ItemsSource="{Binding ComponentsA}"
+                             Background="Transparent" Foreground="White" Margin="5">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="cmp:SnapshotComponent">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+                                    <TextBlock Text="{Binding TemplateName}" FontWeight="SemiBold"
+                                               Width="140"/>
+                                    <TextBlock Foreground="Gray" Margin="8,0,0,0">
+                                        <Run Text="("/>
+                                        <Run Text="{Binding X, StringFormat={}{0:F0}}"/>
+                                        <Run Text=","/>
+                                        <Run Text="{Binding Y, StringFormat={}{0:F0}}"/>
+                                        <Run Text=")"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- Center: Metrics + Differences -->
+            <Border Grid.Column="1" Width="340" Background="#252526" Margin="2">
+                <ScrollViewer>
+                    <StackPanel Margin="10">
+                        <!-- Metrics Table -->
+                        <TextBlock Text="Metrics Comparison" FontWeight="Bold"
+                                   Foreground="White" Margin="0,0,0,8" FontSize="14"/>
+                        <ItemsControl ItemsSource="{Binding MetricsRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MetricsRow">
+                                    <Grid ColumnDefinitions="110,60,60,60" Margin="0,2">
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                   Foreground="Gray"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ValueA, StringFormat={}{0:F2}}"
+                                                   Foreground="LightGreen" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding ValueB, StringFormat={}{0:F2}}"
+                                                   Foreground="LightBlue" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding DeltaFormatted}"
+                                                   Foreground="Yellow" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator Margin="0,15,0,10" Background="#3d3d3d"/>
+
+                        <!-- Differences List -->
+                        <TextBlock Text="Topology Differences" FontWeight="Bold"
+                                   Foreground="White" Margin="0,0,0,8" FontSize="14"/>
+
+                        <TextBlock Text="No differences found."
+                                   Foreground="Gray" Margin="0,4"
+                                   IsVisible="{Binding !Differences.Count}"/>
+
+                        <ItemsControl ItemsSource="{Binding Differences}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="cmp:TopologyDifference">
+                                    <Border Background="#333" CornerRadius="3" Margin="0,2"
+                                            Padding="6,4">
+                                        <TextBlock Text="{Binding Description}"
+                                                   Foreground="Orange" TextWrapping="Wrap"
+                                                   FontSize="12"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Design B Panel -->
+            <Border Grid.Column="2" Background="#1e1e1e" Margin="4">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Foreground="LightBlue"
+                               Margin="10,8" FontSize="14"
+                               Text="{Binding DesignB.Name, FallbackValue='Design B (not loaded)',
+                                      StringFormat='B: {0}'}"/>
+                    <ListBox ItemsSource="{Binding ComponentsB}"
+                             Background="Transparent" Foreground="White" Margin="5">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="cmp:SnapshotComponent">
+                                <StackPanel Orientation="Horizontal" Margin="2">
+                                    <TextBlock Text="{Binding TemplateName}" FontWeight="SemiBold"
+                                               Width="140"/>
+                                    <TextBlock Foreground="Gray" Margin="8,0,0,0">
+                                        <Run Text="("/>
+                                        <Run Text="{Binding X, StringFormat={}{0:F0}}"/>
+                                        <Run Text=","/>
+                                        <Run Text="{Binding Y, StringFormat={}{0:F0}}"/>
+                                        <Run Text=")"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>
