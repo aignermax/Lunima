@@ -35,6 +35,7 @@
     <ProjectReference Include="..\Connect-A-Pic-Core\CAP-Core.csproj" />
     <ProjectReference Include="..\CAP-DataAccess\CAP-DataAccess.csproj" />
     <ProjectReference Include="..\CAP_Contracts\CAP_Contracts.csproj" />
+    <ProjectReference Include="..\CAP.Avalonia\CAP.Avalonia.csproj" />
   </ItemGroup>
 
   <ItemGroup>
