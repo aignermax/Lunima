@@ -69,7 +69,7 @@
                 <TextBlock Text="{Binding StatusText}"
                            VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
                 <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
-                    <Run Text="Shortcuts: S=Select, C=Connect, D=Delete, R=Rotate, Del=Remove, Ctrl+Z=Undo, Ctrl+Y=Redo"/>
+                    <Run Text="Shortcuts: S=Select, C=Connect, D=Delete, R=Rotate, G=Grid Snap, Del=Remove, Ctrl+Z=Undo, Ctrl+Y=Redo"/>
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -141,6 +141,21 @@
 
                     <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
                     <TextBlock Text="{Binding CurrentMode}" Foreground="Cyan" FontWeight="Bold"/>
+
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+
+                    <TextBlock Text="Grid Snap [G Key]:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <CheckBox Content="Enable Grid Snapping"
+                              IsChecked="{Binding Canvas.GridSnap.IsEnabled}"
+                              Foreground="White" Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Grid Size: " Foreground="Gray" VerticalAlignment="Center" Width="70"/>
+                        <NumericUpDown Value="{Binding Canvas.GridSnap.GridSizeMicrometers}"
+                                       Minimum="1" Maximum="1000" Increment="10"
+                                       Width="100" Margin="5,0,5,0"
+                                       FormatString="F0"/>
+                        <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center"/>
+                    </StackPanel>
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
