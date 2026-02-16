@@ -827,8 +827,12 @@ public class DesignCanvas : Control
             _showPlacementPreview = true;
             _placementPreviewTemplate = MainViewModel.SelectedTemplate;
             var snapSettings = vm.GridSnap;
-            var (sx, sy) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
-            _placementPreviewPosition = new Point(sx, sy);
+
+            // Snap the center point (consistent with placement and drag behavior)
+            var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+
+            // Store center position for preview rendering
+            _placementPreviewPosition = new Point(snappedCenterX, snappedCenterY);
             InvalidateVisual();
         }
         else
@@ -931,18 +935,25 @@ public class DesignCanvas : Control
             var snapSettings = ViewModel?.GridSnap;
             if (snapSettings != null && snapSettings.IsEnabled)
             {
-                var currentX = _draggingComponent.X;
-                var currentY = _draggingComponent.Y;
-                var (snappedX, snappedY) = snapSettings.Snap(currentX, currentY);
+                // Snap the CENTER of the component (consistent with placement behavior)
+                double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
+                double centerY = _draggingComponent.Y + _draggingComponent.Height / 2.0;
+
+                var (snappedCenterX, snappedCenterY) = snapSettings.Snap(centerX, centerY);
+
+                // Calculate new top-left position
+                double snappedX = snappedCenterX - _draggingComponent.Width / 2.0;
+                double snappedY = snappedCenterY - _draggingComponent.Height / 2.0;
+
+                // Calculate delta from current position
+                double deltaX = snappedX - _draggingComponent.X;
+                double deltaY = snappedY - _draggingComponent.Y;
 
                 // Only snap if position actually changes
-                double deltaX = snappedX - currentX;
-                double deltaY = snappedY - currentY;
                 if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
                 {
-                    // Set position directly for immediate visual update
-                    _draggingComponent.X = snappedX;
-                    _draggingComponent.Y = snappedY;
+                    // Use MoveComponent to update pins and connections properly
+                    ViewModel?.MoveComponent(_draggingComponent, deltaX, deltaY);
                     InvalidateVisual();
                 }
             }
