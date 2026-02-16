@@ -865,24 +865,9 @@ public class DesignCanvas : Control
         }
         else if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
         {
-            var snapSettings = vm.GridSnap;
-            if (snapSettings.IsEnabled)
-            {
-                // Snap: compute desired position and snap it
-                double newX = _draggingComponent.X + delta.X / Zoom;
-                double newY = _draggingComponent.Y + delta.Y / Zoom;
-                var (snappedX, snappedY) = snapSettings.Snap(newX, newY);
-                double snapDeltaX = snappedX - _draggingComponent.X;
-                double snapDeltaY = snappedY - _draggingComponent.Y;
-                if (Math.Abs(snapDeltaX) > 0.001 || Math.Abs(snapDeltaY) > 0.001)
-                {
-                    vm.MoveComponent(_draggingComponent, snapDeltaX, snapDeltaY);
-                }
-            }
-            else
-            {
-                vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
-            }
+            // Always move smoothly during drag (no snapping)
+            // Snapping will be applied on mouse release
+            vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
             InvalidateVisual();
         }
         else if (_isPanning)
@@ -939,6 +924,23 @@ public class DesignCanvas : Control
         // End move tracking for undo
         if (_draggingComponent != null)
         {
+            // Apply grid snap to final position if enabled
+            var snapSettings = ViewModel?.GridSnap;
+            if (snapSettings != null && snapSettings.IsEnabled)
+            {
+                var currentX = _draggingComponent.X;
+                var currentY = _draggingComponent.Y;
+                var (snappedX, snappedY) = snapSettings.Snap(currentX, currentY);
+
+                // Only snap if position actually changes
+                double deltaX = snappedX - currentX;
+                double deltaY = snappedY - currentY;
+                if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+                {
+                    ViewModel?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                }
+            }
+
             MainViewModel?.EndMoveComponent();
         }
 
