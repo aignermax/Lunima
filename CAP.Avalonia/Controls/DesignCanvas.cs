@@ -758,7 +758,10 @@ public class DesignCanvas : Control
             // Check if in place mode - place component
             if (mainVm?.CurrentMode == InteractionMode.PlaceComponent)
             {
-                mainVm.CanvasClicked(canvasPoint.X, canvasPoint.Y);
+                // Apply grid snap to placement position if enabled
+                var snapSettings = vm.GridSnap;
+                var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+                mainVm.CanvasClicked(placementX, placementY);
                 InvalidateVisual();
                 e.Handled = true;
                 Focus();
@@ -937,7 +940,10 @@ public class DesignCanvas : Control
                 double deltaY = snappedY - currentY;
                 if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
                 {
-                    ViewModel?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                    // Set position directly for immediate visual update
+                    _draggingComponent.X = snappedX;
+                    _draggingComponent.Y = snappedY;
+                    InvalidateVisual();
                 }
             }
 
