@@ -17,6 +17,8 @@
             <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
             <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
                        VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
+            <Border Width="1" Background="#555" Margin="5,5"/>
+            <Button Content="Simulate (L)" Command="{Binding RunSimulationCommand}" Width="100" Margin="5"/>
         </StackPanel>
 
         <!-- Status Bar -->

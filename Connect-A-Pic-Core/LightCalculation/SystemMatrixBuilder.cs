@@ -28,15 +28,15 @@ namespace CAP_Core.LightCalculation
         private SMatrix CreatePhysicalConnectionsMatrix()
         {
             var connections = Grid.WaveguideConnections.GetConnectionTransfers();
-            var allUsedPinIDs = connections.SelectMany(c => new[] { c.Key.Item1, c.Key.Item2 })
-                .Distinct().ToList();
+            var pinIdSet = new HashSet<Guid>(
+                connections.SelectMany(c => new[] { c.Key.Item1, c.Key.Item2 }));
 
             foreach (var input in Grid.ExternalPortManager.GetUsedExternalInputs())
             {
-                allUsedPinIDs.Add(input.AttachedComponentPinId);
+                pinIdSet.Add(input.AttachedComponentPinId);
             }
 
-            var connectionsSMatrix = new SMatrix(allUsedPinIDs, new());
+            var connectionsSMatrix = new SMatrix(pinIdSet.ToList(), new());
             connectionsSMatrix.SetValues(connections);
             return connectionsSMatrix;
         }

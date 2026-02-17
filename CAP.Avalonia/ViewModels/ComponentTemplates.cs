@@ -247,77 +247,143 @@ public static class ComponentTemplates
     private static SMatrix CreatePassThroughMatrix(List<Pin> pins, double transmission)
     {
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new SMatrix(pinIds, new());
 
         if (pins.Count >= 2)
         {
-            // Simple pass-through: in -> out with given transmission
-            var amplitude = Math.Sqrt(transmission);
-            // Connect inflow of pin0 to outflow of pin1
-            // This is simplified - real S-matrix would be more complex
+            var amplitude = new Complex(Math.Sqrt(transmission), 0);
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                { (pins[0].IDInFlow, pins[1].IDOutFlow), amplitude },
+                { (pins[1].IDInFlow, pins[0].IDOutFlow), amplitude }
+            };
+            sMatrix.SetValues(transfers);
         }
 
-        return new SMatrix(pinIds, connections);
+        return sMatrix;
     }
 
     private static SMatrix CreateSplitterMatrix(List<Pin> pins)
     {
+        // pins: [in, out1, out2]
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new SMatrix(pinIds, new());
 
-        // 1x2 splitter: input splits equally to both outputs
-        // For simplicity, just create the ID list
-        return new SMatrix(pinIds, connections);
+        if (pins.Count >= 3)
+        {
+            // 1x2 splitter: 50/50 split (3dB per arm), reciprocal
+            var amplitude = new Complex(Math.Sqrt(0.5), 0);
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                // Forward: in -> out1, out2
+                { (pins[0].IDInFlow, pins[1].IDOutFlow), amplitude },
+                { (pins[0].IDInFlow, pins[2].IDOutFlow), amplitude },
+                // Reverse: out1, out2 -> in (reciprocal)
+                { (pins[1].IDInFlow, pins[0].IDOutFlow), amplitude },
+                { (pins[2].IDInFlow, pins[0].IDOutFlow), amplitude }
+            };
+            sMatrix.SetValues(transfers);
+        }
+
+        return sMatrix;
     }
 
     private static SMatrix CreateCouplerMatrix(List<Pin> pins, double coupling)
     {
+        // pins: [in1, in2, out1, out2]
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new SMatrix(pinIds, new());
 
-        // 2x2 coupler matrix - for now simplified
-        return new SMatrix(pinIds, connections);
+        if (pins.Count >= 4)
+        {
+            // Standard 2x2 coupler: through = sqrt(1-κ), cross = j*sqrt(κ)
+            var through = new Complex(Math.Sqrt(1 - coupling), 0);
+            var cross = new Complex(0, Math.Sqrt(coupling)); // 90° phase shift on cross port
+
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                // Forward
+                { (pins[0].IDInFlow, pins[2].IDOutFlow), through }, // in1 -> out1 (through)
+                { (pins[0].IDInFlow, pins[3].IDOutFlow), cross },   // in1 -> out2 (cross)
+                { (pins[1].IDInFlow, pins[2].IDOutFlow), cross },   // in2 -> out1 (cross)
+                { (pins[1].IDInFlow, pins[3].IDOutFlow), through }, // in2 -> out2 (through)
+                // Reverse (reciprocal)
+                { (pins[2].IDInFlow, pins[0].IDOutFlow), through },
+                { (pins[2].IDInFlow, pins[1].IDOutFlow), cross },
+                { (pins[3].IDInFlow, pins[0].IDOutFlow), cross },
+                { (pins[3].IDInFlow, pins[1].IDOutFlow), through }
+            };
+            sMatrix.SetValues(transfers);
+        }
+
+        return sMatrix;
     }
 
     private static SMatrix CreatePhaseShifterMatrix(List<Pin> pins)
     {
+        // pins: [in, out] - lossless pass-through (phase handled by slider/nonlinear)
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new SMatrix(pinIds, new());
 
-        // Phase shifter - transmission with adjustable phase
-        return new SMatrix(pinIds, connections);
+        if (pins.Count >= 2)
+        {
+            var unity = new Complex(1.0, 0);
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                { (pins[0].IDInFlow, pins[1].IDOutFlow), unity },
+                { (pins[1].IDInFlow, pins[0].IDOutFlow), unity }
+            };
+            sMatrix.SetValues(transfers);
+        }
+
+        return sMatrix;
     }
 
     private static SMatrix CreateTerminalMatrix(List<Pin> pins, double efficiency)
     {
+        // Terminal component (grating coupler, detector) - single pin
+        // Light entering IDInFlow exits through IDOutFlow with coupling efficiency
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new SMatrix(pinIds, new());
 
-        // Terminal component (grating coupler, detector)
-        return new SMatrix(pinIds, connections);
+        if (pins.Count >= 1)
+        {
+            var amplitude = new Complex(Math.Sqrt(efficiency), 0);
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                { (pins[0].IDInFlow, pins[0].IDOutFlow), amplitude }
+            };
+            sMatrix.SetValues(transfers);
+        }
+
+        return sMatrix;
     }
 
     private static SMatrix CreateRingResonatorMatrix(List<Pin> pins)
     {
-        // Ring resonator with through and drop ports
-        // At resonance: input -> drop, off-resonance: input -> through
+        // pins: [in, through, drop]
         // Simplified model: 70% through, 25% drop, 5% loss
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new SMatrix(pinIds, new());
 
         if (pins.Count >= 3)
         {
-            var inPin = pins[0];
-            var throughPin = pins[1];
-            var dropPin = pins[2];
+            var throughAmp = new Complex(Math.Sqrt(0.7), 0);
+            var dropAmp = new Complex(Math.Sqrt(0.25), 0);
 
-            // Through port (off-resonance)
-            connections.Add((throughPin.IDInFlow, 0.7));
-            // Drop port (at resonance)
-            connections.Add((dropPin.IDInFlow, 0.25));
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                // Forward
+                { (pins[0].IDInFlow, pins[1].IDOutFlow), throughAmp },
+                { (pins[0].IDInFlow, pins[2].IDOutFlow), dropAmp },
+                // Reverse (reciprocal)
+                { (pins[1].IDInFlow, pins[0].IDOutFlow), throughAmp },
+                { (pins[2].IDInFlow, pins[0].IDOutFlow), dropAmp }
+            };
+            sMatrix.SetValues(transfers);
         }
 
-        return new SMatrix(pinIds, connections);
+        return sMatrix;
     }
 }
 

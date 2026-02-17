@@ -322,6 +322,7 @@ public class WaveguideConnectionManager
     /// <summary>
     /// Converts waveguide connections to S-Matrix compatible dictionary.
     /// Uses the LogicalPin IDOutFlow/IDInFlow for proper S-Matrix integration.
+    /// Connections are bidirectional: light can flow in either direction through a waveguide.
     /// Physical pins without linked logical pins are skipped (they don't participate in light simulation).
     /// </summary>
     public Dictionary<(Guid PinIdInflow, Guid PinIdOutflow), Complex> GetConnectionTransfers()
@@ -335,11 +336,16 @@ public class WaveguideConnectionManager
                 continue;
             }
 
-            // Light flows from StartPin's LogicalPin OutFlow to EndPin's LogicalPin InFlow
-            // This maps the physical waveguide connection to the S-Matrix port IDs
+            // Forward: light flows from StartPin OutFlow to EndPin InFlow
             var startPinOutFlow = conn.StartPin.LogicalPin.IDOutFlow;
             var endPinInFlow = conn.EndPin.LogicalPin.IDInFlow;
             transfers[(startPinOutFlow, endPinInFlow)] = conn.TransmissionCoefficient;
+
+            // Reverse: light flows from EndPin OutFlow to StartPin InFlow
+            // Waveguide connections are inherently bidirectional
+            var endPinOutFlow = conn.EndPin.LogicalPin.IDOutFlow;
+            var startPinInFlow = conn.StartPin.LogicalPin.IDInFlow;
+            transfers[(endPinOutFlow, startPinInFlow)] = conn.TransmissionCoefficient;
         }
         return transfers;
     }

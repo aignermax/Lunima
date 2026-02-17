@@ -14,8 +14,24 @@ namespace CAP_Core.Grid
         public IComponentRotator ComponentRotator { get; }
         public IComponentRelationshipManager ComponentRelationshipManager { get; }
         public LightManager LightManager { get; }
-        public WaveguideConnectionManager WaveguideConnections { get; }
+        public WaveguideConnectionManager WaveguideConnections { get; set; }
         public bool UsePhysicalCoordinates { get; set; } = false;
+
+        /// <summary>
+        /// Creates a GridManager for physical-coordinate simulation.
+        /// Only requires the components, connections, and light sources needed for S-Matrix computation.
+        /// </summary>
+        public static GridManager CreateForSimulation(
+            ComponentListTileManager tileManager,
+            WaveguideConnectionManager waveguideConnections,
+            PhysicalExternalPortManager externalPortManager)
+        {
+            return new GridManager(tileManager, null!, externalPortManager, null!, null!, new LightManager())
+            {
+                WaveguideConnections = waveguideConnections,
+                UsePhysicalCoordinates = true
+            };
+        }
 
         public GridManager(
             ITileManager tileManager,

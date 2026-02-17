@@ -26,6 +26,16 @@ public partial class DesignCanvasViewModel : ObservableObject
     private bool _showPowerFlow;
 
     /// <summary>
+    /// Clears cached simulation results when the circuit changes.
+    /// The next P press will trigger a fresh simulation.
+    /// </summary>
+    public void InvalidateSimulation()
+    {
+        PowerFlowVisualizer.Clear();
+        ShowPowerFlow = false;
+    }
+
+    /// <summary>
     /// The currently highlighted pin (when mouse is near in Connect mode).
     /// </summary>
     [ObservableProperty]
@@ -198,6 +208,8 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             conn.NotifyPathChanged();
         }
+
+        InvalidateSimulation();
     }
 
     /// <summary>
@@ -300,6 +312,7 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
 
         Components.Remove(component);
+        InvalidateSimulation();
     }
 
     public WaveguideConnectionViewModel? ConnectPins(PhysicalPin startPin, PhysicalPin endPin)
@@ -318,6 +331,7 @@ public partial class DesignCanvasViewModel : ObservableObject
             conn.NotifyPathChanged();
         }
 
+        InvalidateSimulation();
         return vm;
     }
 
@@ -341,6 +355,9 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             conn.NotifyPathChanged();
         }
+
+        if (connectionsToRemove.Count > 0)
+            InvalidateSimulation();
     }
 
     /// <summary>

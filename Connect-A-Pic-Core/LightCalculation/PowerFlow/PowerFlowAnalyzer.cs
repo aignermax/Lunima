@@ -11,9 +11,9 @@ public class PowerFlowAnalyzer
 {
     /// <summary>
     /// Threshold in dB below maximum power for fading out connections.
-    /// Default: -20 dB.
+    /// Default: -40 dB (shows most connections, only extremely weak signals are faded).
     /// </summary>
-    public double FadeThresholdDb { get; set; } = -20.0;
+    public double FadeThresholdDb { get; set; } = -40.0;
 
     /// <summary>
     /// Calculates power flow through all connections based on simulation field results.
@@ -40,11 +40,23 @@ public class PowerFlowAnalyzer
         WaveguideConnection connection,
         IReadOnlyDictionary<Guid, Complex> fieldResults)
     {
-        var inputAmplitude = GetPinOutputAmplitude(
-            connection.StartPin, fieldResults);
+        // Check both directions: waveguide connections are bidirectional.
+        // Forward: light exits StartPin → enters EndPin
+        var forwardInput = GetPinOutputAmplitude(connection.StartPin, fieldResults);
+        var forwardOutput = GetPinInputAmplitude(connection.EndPin, fieldResults);
 
-        var outputAmplitude = GetPinInputAmplitude(
-            connection.EndPin, fieldResults);
+        // Reverse: light exits EndPin → enters StartPin
+        var reverseInput = GetPinOutputAmplitude(connection.EndPin, fieldResults);
+        var reverseOutput = GetPinInputAmplitude(connection.StartPin, fieldResults);
+
+        // Use the direction with higher power
+        var forwardPower = forwardInput.Magnitude * forwardInput.Magnitude
+                         + forwardOutput.Magnitude * forwardOutput.Magnitude;
+        var reversePower = reverseInput.Magnitude * reverseInput.Magnitude
+                         + reverseOutput.Magnitude * reverseOutput.Magnitude;
+
+        var inputAmplitude = forwardPower >= reversePower ? forwardInput : reverseInput;
+        var outputAmplitude = forwardPower >= reversePower ? forwardOutput : reverseOutput;
 
         return new ConnectionPowerFlow(
             connection.Id, inputAmplitude, outputAmplitude);

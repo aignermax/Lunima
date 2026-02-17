@@ -42,11 +42,13 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<string> Categories { get; } = new();
 
     public Commands.CommandManager CommandManager { get; } = new();
+    public SimulationService Simulation { get; } = new();
 
     public IFileDialogService? FileDialogService { get; set; }
 
     private PhysicalPin? _connectionStartPin;
     private string? _currentFilePath;
+    private bool _isSimulating;
 
     // For tracking move operations
     private double _moveStartX;
@@ -402,6 +404,37 @@ public partial class MainViewModel : ObservableObject
             var cmd = new RotateComponentCommand(Canvas, SelectedComponent);
             CommandManager.ExecuteCommand(cmd);
             StatusText = $"Rotated: {SelectedComponent.Name}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task RunSimulation()
+    {
+        if (_isSimulating) return;
+        _isSimulating = true;
+
+        try
+        {
+            StatusText = "Running simulation...";
+            var result = await Simulation.RunAsync(Canvas);
+
+            if (result.Success)
+            {
+                StatusText = $"Simulation complete: {result.LightSourceCount} source(s), " +
+                             $"{result.ConnectionCount} connections @ {result.WavelengthNm}nm";
+            }
+            else
+            {
+                StatusText = result.ErrorMessage ?? "Simulation failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Simulation error: {ex.Message}";
+        }
+        finally
+        {
+            _isSimulating = false;
         }
     }
 

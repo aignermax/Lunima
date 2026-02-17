@@ -67,6 +67,7 @@ public class DesignCanvas : Control
     {
         AffectsRender<DesignCanvas>(ViewModelProperty, ZoomProperty);
         MainViewModelProperty.Changed.AddClassHandler<DesignCanvas>((canvas, e) => canvas.OnMainViewModelChanged(e));
+        ViewModelProperty.Changed.AddClassHandler<DesignCanvas>((canvas, e) => canvas.OnViewModelChanged(e));
     }
 
     public DesignCanvas()
@@ -87,6 +88,28 @@ public class DesignCanvas : Control
         if (e.NewValue is MainViewModel newVm)
         {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
+        }
+    }
+
+    private void OnViewModelChanged(AvaloniaPropertyChangedEventArgs e)
+    {
+        // Subscribe to DesignCanvasViewModel property changes for simulation redraw
+        if (e.OldValue is DesignCanvasViewModel oldCanvas)
+        {
+            oldCanvas.PropertyChanged -= OnCanvasViewModelPropertyChanged;
+        }
+
+        if (e.NewValue is DesignCanvasViewModel newCanvas)
+        {
+            newCanvas.PropertyChanged += OnCanvasViewModelPropertyChanged;
+        }
+    }
+
+    private void OnCanvasViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesignCanvasViewModel.ShowPowerFlow))
+        {
+            InvalidateVisual();
         }
     }
 
@@ -665,16 +688,40 @@ public class DesignCanvas : Control
             }
         }
 
-        // Draw connection info
+        // Draw connection info - show power data when simulation is active
         var midX = (conn.StartX + conn.EndX) / 2;
         var midY = (conn.StartY + conn.EndY) / 2;
+        string labelText;
+        IBrush labelBrush;
+
+        if (vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null)
+        {
+            var flow = vm.PowerFlowVisualizer.GetFlowForConnection(conn.Connection.Id);
+            if (flow != null && flow.AveragePower > 0)
+            {
+                labelText = $"{flow.NormalizedPowerDb:F1}dB ({flow.NormalizedPowerFraction * 100:F0}%)";
+                var fraction = Math.Clamp(flow.NormalizedPowerFraction, 0, 1);
+                labelBrush = new SolidColorBrush(PowerFlowRenderer.InterpolatePowerColor(fraction));
+            }
+            else
+            {
+                labelText = "no signal";
+                labelBrush = new SolidColorBrush(Color.FromArgb(120, 150, 150, 150));
+            }
+        }
+        else
+        {
+            labelText = $"{conn.PathLength:F0}µm, {conn.LossDb:F2}dB";
+            labelBrush = Brushes.LightGray;
+        }
+
         var infoText = new FormattedText(
-            $"{conn.PathLength:F0}µm, {conn.LossDb:F2}dB",
+            labelText,
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),
             10,
-            Brushes.LightGray);
+            labelBrush);
 
         context.DrawText(infoText, new Point(midX, midY - 15));
     }
@@ -1185,21 +1232,37 @@ public class DesignCanvas : Control
                 }
                 break;
             case Key.P:
-                // Toggle power flow overlay
+                // Toggle power flow overlay - run simulation first if no data
                 if (!ctrlPressed)
                 {
                     var canvasVm = ViewModel;
                     if (canvasVm != null)
                     {
-                        canvasVm.ShowPowerFlow = !canvasVm.ShowPowerFlow;
-                        canvasVm.PowerFlowVisualizer.IsEnabled = canvasVm.ShowPowerFlow;
-                        if (mainVm != null)
+                        if (canvasVm.PowerFlowVisualizer.CurrentResult == null && !canvasVm.ShowPowerFlow)
                         {
-                            mainVm.StatusText = canvasVm.ShowPowerFlow
-                                ? "Power flow overlay: ON"
-                                : "Power flow overlay: OFF";
+                            // No data yet - run simulation first
+                            mainVm?.RunSimulationCommand.Execute(null);
+                        }
+                        else
+                        {
+                            // Toggle visibility
+                            canvasVm.ShowPowerFlow = !canvasVm.ShowPowerFlow;
+                            canvasVm.PowerFlowVisualizer.IsEnabled = canvasVm.ShowPowerFlow;
+                            if (mainVm != null)
+                            {
+                                mainVm.StatusText = canvasVm.ShowPowerFlow
+                                    ? "Power flow overlay: ON"
+                                    : "Power flow overlay: OFF";
+                            }
                         }
                     }
+                }
+                break;
+            case Key.L:
+                // Run light simulation
+                if (!ctrlPressed)
+                {
+                    mainVm?.RunSimulationCommand.Execute(null);
                 }
                 break;
         }
