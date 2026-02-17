@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
@@ -21,12 +22,29 @@ public partial class MainWindow : Window
         };
     }
 
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled) return;
+
+        // Global keyboard shortcuts that work regardless of focus
+        switch (e.Key)
+        {
+            case Key.F:
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
+                    e.Handled = true;
+                }
+                break;
+        }
+    }
+
     private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel vm)
         {
-            var canvas = DesignCanvasControl;
-            vm.ZoomToFit(canvas.Bounds.Width, canvas.Bounds.Height);
+            vm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
         }
     }
 }
