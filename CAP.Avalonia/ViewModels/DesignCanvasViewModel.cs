@@ -188,15 +188,23 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Checks if a component can be placed at the given position without overlapping others.
+    /// </summary>
+    public bool CanMoveComponentTo(ComponentViewModel component, double x, double y)
+    {
+        return CanPlaceComponent(x, y, component.Width, component.Height, excludeComponent: component);
+    }
+
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
     {
         double newX = component.X + deltaX;
         double newY = component.Y + deltaY;
 
-        // Check for overlap with other components
-        if (!CanPlaceComponent(newX, newY, component.Width, component.Height, excludeComponent: component))
+        // During drag: allow free movement (collision checked on drop)
+        // Otherwise: check for overlap
+        if (!_isDragging && !CanPlaceComponent(newX, newY, component.Width, component.Height, excludeComponent: component))
         {
-            // Position would overlap - don't move
             return;
         }
 

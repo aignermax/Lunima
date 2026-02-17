@@ -51,6 +51,13 @@ public class DesignCanvas : Control
     private ComponentTemplate? _placementPreviewTemplate;
     private Point _placementPreviewPosition;
 
+    // Drag preview state (shows snap target + collision feedback)
+    private double _dragStartX;
+    private double _dragStartY;
+    private bool _showDragPreview;
+    private Point _dragPreviewPosition; // top-left of snapped target
+    private bool _dragPreviewValid;
+
     static DesignCanvas()
     {
         AffectsRender<DesignCanvas>(ViewModelProperty, ZoomProperty);
@@ -132,6 +139,12 @@ public class DesignCanvas : Control
             if (_showPlacementPreview && _placementPreviewTemplate != null)
             {
                 DrawPlacementPreview(context, vm);
+            }
+
+            // Draw drag preview (snap target + collision feedback)
+            if (_showDragPreview && _draggingComponent != null)
+            {
+                DrawDragPreview(context);
             }
 
             // Draw connection drag preview
@@ -517,6 +530,28 @@ public class DesignCanvas : Control
         context.DrawText(nameText, new Point(x + 5, y + 5));
     }
 
+    private void DrawDragPreview(DrawingContext context)
+    {
+        if (_draggingComponent == null) return;
+
+        double width = _draggingComponent.Width;
+        double height = _draggingComponent.Height;
+        double x = _dragPreviewPosition.X;
+        double y = _dragPreviewPosition.Y;
+
+        var fillColor = _dragPreviewValid
+            ? Color.FromArgb(50, 100, 255, 100)   // Green tint for valid
+            : Color.FromArgb(50, 255, 100, 100);  // Red tint for invalid
+
+        var borderColor = _dragPreviewValid
+            ? Color.FromArgb(200, 100, 255, 100)
+            : Color.FromArgb(200, 255, 100, 100);
+
+        var previewRect = new global::Avalonia.Rect(x, y, width, height);
+        context.FillRectangle(new SolidColorBrush(fillColor), previewRect);
+        context.DrawRectangle(null, new Pen(new SolidColorBrush(borderColor), 2), previewRect);
+    }
+
     private void DrawConnectionPreview(DrawingContext context)
     {
         if (_connectionDragStartPin == null) return;
@@ -788,6 +823,8 @@ public class DesignCanvas : Control
                 mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
                 // Start tracking for undo
                 mainVm?.StartMoveComponent(_draggingComponent);
+                _dragStartX = _draggingComponent.X;
+                _dragStartY = _draggingComponent.Y;
                 InvalidateVisual();
             }
             else
@@ -872,9 +909,21 @@ public class DesignCanvas : Control
         }
         else if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
         {
-            // Always move smoothly during drag (no snapping)
-            // Snapping will be applied on mouse release
+            // Move smoothly during drag (snap + collision checked on release)
             vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
+
+            // Calculate drag preview (shows where component will land on release)
+            var snapSettings = vm.GridSnap;
+            double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
+            double centerY = _draggingComponent.Y + _draggingComponent.Height / 2.0;
+            var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
+            double previewX = snappedCX - _draggingComponent.Width / 2.0;
+            double previewY = snappedCY - _draggingComponent.Height / 2.0;
+            _dragPreviewPosition = new Point(previewX, previewY);
+            _dragPreviewValid = vm.CanMoveComponentTo(_draggingComponent, previewX, previewY);
+            // Show preview when grid snap is on (snap target differs) or position is invalid (red warning)
+            _showDragPreview = snapSettings.IsEnabled || !_dragPreviewValid;
+
             InvalidateVisual();
         }
         else if (_isPanning)
@@ -931,34 +980,52 @@ public class DesignCanvas : Control
         // End move tracking for undo
         if (_draggingComponent != null)
         {
-            // Apply grid snap to final position if enabled
-            var snapSettings = ViewModel?.GridSnap;
+            var vm = ViewModel;
+
+            // Calculate final position (with grid snap if enabled)
+            double finalX = _draggingComponent.X;
+            double finalY = _draggingComponent.Y;
+
+            var snapSettings = vm?.GridSnap;
             if (snapSettings != null && snapSettings.IsEnabled)
             {
                 // Snap the CENTER of the component (consistent with placement behavior)
                 double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
                 double centerY = _draggingComponent.Y + _draggingComponent.Height / 2.0;
-
-                var (snappedCenterX, snappedCenterY) = snapSettings.Snap(centerX, centerY);
-
-                // Calculate new top-left position
-                double snappedX = snappedCenterX - _draggingComponent.Width / 2.0;
-                double snappedY = snappedCenterY - _draggingComponent.Height / 2.0;
-
-                // Calculate delta from current position
-                double deltaX = snappedX - _draggingComponent.X;
-                double deltaY = snappedY - _draggingComponent.Y;
-
-                // Only snap if position actually changes
-                if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
-                {
-                    // Use MoveComponent to update pins and connections properly
-                    ViewModel?.MoveComponent(_draggingComponent, deltaX, deltaY);
-                    InvalidateVisual();
-                }
+                var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
+                finalX = snappedCX - _draggingComponent.Width / 2.0;
+                finalY = snappedCY - _draggingComponent.Height / 2.0;
             }
 
+            // Check collision at final position
+            bool canPlace = vm?.CanMoveComponentTo(_draggingComponent, finalX, finalY) ?? true;
+
+            if (canPlace)
+            {
+                // Move to final (possibly snapped) position
+                double deltaX = finalX - _draggingComponent.X;
+                double deltaY = finalY - _draggingComponent.Y;
+                if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+                {
+                    vm?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                }
+            }
+            else
+            {
+                // Revert to start position - drop is invalid
+                double deltaX = _dragStartX - _draggingComponent.X;
+                double deltaY = _dragStartY - _draggingComponent.Y;
+                if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+                {
+                    vm?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                }
+                if (MainViewModel != null)
+                    MainViewModel.StatusText = "Cannot place here - overlaps with another component";
+            }
+
+            _showDragPreview = false;
             MainViewModel?.EndMoveComponent();
+            InvalidateVisual();
         }
 
         _draggingComponent = null;
