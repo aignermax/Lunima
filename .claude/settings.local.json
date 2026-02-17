@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for pr in {18..32})",
+      "Bash(do echo \"=== PR #$pr ===\")",
+      "Bash(gh pr view:*)",
+      "Bash(done)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(dotnet build:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr close:*)",
+      "Bash(dotnet run:*)",
+      "Bash(git push:*)",
+      "Bash(taskkill:*)"
+    ]
+  }
+}
