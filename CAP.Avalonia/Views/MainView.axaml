@@ -11,15 +11,21 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#2d2d2d" Height="40">
-            <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
-            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
-            <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
-            <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
-                       VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
-            <Border Width="1" Background="#555" Margin="5,5"/>
-            <Button Content="Simulate (L)" Command="{Binding RunSimulationCommand}" Width="100" Margin="5"/>
-        </StackPanel>
+        <ScrollViewer DockPanel.Dock="Top"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      Background="#2d2d2d"
+                      Height="40">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
+                <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
+                <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
+                <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
+                           VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
+                <Border Width="1" Background="#555" Margin="5,5"/>
+                <Button Content="Simulate (L)" Command="{Binding RunSimulationCommand}" Width="100" Margin="5"/>
+            </StackPanel>
+        </ScrollViewer>
 
         <!-- Status Bar -->
         <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
