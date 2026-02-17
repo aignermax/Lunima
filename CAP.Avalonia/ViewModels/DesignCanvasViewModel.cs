@@ -553,6 +553,15 @@ public partial class DesignCanvasViewModel : ObservableObject
 
 public partial class ComponentViewModel : ObservableObject
 {
+    /// <summary>
+    /// Template names treated as light input sources.
+    /// </summary>
+    private static readonly HashSet<string> LightSourceNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Grating Coupler",
+        "Edge Coupler"
+    };
+
     public Component Component { get; }
 
     /// <summary>
@@ -570,6 +579,16 @@ public partial class ComponentViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    /// <summary>
+    /// Laser configuration for light source components (null for non-sources).
+    /// </summary>
+    public LaserConfig? LaserConfig { get; }
+
+    /// <summary>
+    /// Whether this component is a light source (Grating/Edge Coupler).
+    /// </summary>
+    public bool IsLightSource => LaserConfig != null;
+
     public double Width => Component.WidthMicrometers;
     public double Height => Component.HeightMicrometers;
     public string Name => Component.Identifier;
@@ -580,12 +599,22 @@ public partial class ComponentViewModel : ObservableObject
         TemplateName = templateName;
         _x = component.PhysicalX;
         _y = component.PhysicalY;
+
+        if (IsLightSourceTemplate(templateName))
+        {
+            LaserConfig = new LaserConfig();
+        }
     }
 
     public void NotifyDimensionsChanged()
     {
         OnPropertyChanged(nameof(Width));
         OnPropertyChanged(nameof(Height));
+    }
+
+    private static bool IsLightSourceTemplate(string? templateName)
+    {
+        return templateName != null && LightSourceNames.Contains(templateName);
     }
 }
 

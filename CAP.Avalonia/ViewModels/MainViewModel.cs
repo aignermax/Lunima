@@ -41,6 +41,11 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ComponentTemplate> ComponentLibrary { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
 
+    /// <summary>
+    /// Available wavelength options for the laser configuration dropdown.
+    /// </summary>
+    public IReadOnlyList<WavelengthOption> WavelengthOptions { get; } = WavelengthOption.All;
+
     public Commands.CommandManager CommandManager { get; } = new();
     public SimulationService Simulation { get; } = new();
 
@@ -102,6 +107,15 @@ public partial class MainViewModel : ObservableObject
             InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
             _ => "Ready"
         };
+    }
+
+    partial void OnSelectedComponentChanged(ComponentViewModel? value)
+    {
+        if (value?.IsLightSource == true)
+        {
+            var cfg = value.LaserConfig!;
+            StatusText = $"Selected: {value.Name} [{cfg.WavelengthLabel}, Power={cfg.InputPower:F2}]";
+        }
     }
 
     public void CanvasClicked(double canvasX, double canvasY)
@@ -421,7 +435,7 @@ public partial class MainViewModel : ObservableObject
             if (result.Success)
             {
                 StatusText = $"Simulation complete: {result.LightSourceCount} source(s), " +
-                             $"{result.ConnectionCount} connections @ {result.WavelengthNm}nm";
+                             $"{result.ConnectionCount} connections @ {result.WavelengthSummary}";
             }
             else
             {
