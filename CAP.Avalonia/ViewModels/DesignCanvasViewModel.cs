@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CAP_Core.Components;
 using CAP_Core.Routing;
+using CAP.Avalonia.Visualization;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -12,6 +13,17 @@ public partial class DesignCanvasViewModel : ObservableObject
     public ObservableCollection<PinViewModel> AllPins { get; } = new();
 
     public WaveguideConnectionManager ConnectionManager { get; } = new();
+
+    /// <summary>
+    /// Manages power flow visualization state and data.
+    /// </summary>
+    public PowerFlowVisualizer PowerFlowVisualizer { get; } = new();
+
+    /// <summary>
+    /// Whether power flow overlay is currently visible.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showPowerFlow;
 
     /// <summary>
     /// The currently highlighted pin (when mouse is near in Connect mode).

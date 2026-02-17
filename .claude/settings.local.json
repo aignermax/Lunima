@@ -17,7 +17,13 @@
       "Bash(gh pr close:*)",
       "Bash(dotnet run:*)",
       "Bash(git push:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(export PATH=\"$HOME/.dotnet:$PATH\")",
+      "Bash(export PATH=\"/usr/bin:$PATH\")",
+      "Bash(PATH=\"$HOME/.dotnet:/usr/bin:$PATH\" dotnet build:*)",
+      "Bash($HOME/.dotnet/dotnet build:*)",
+      "Bash(/usr/bin/tail:*)",
+      "Bash(/home/max/.dotnet/dotnet build:*)"
     ]
   }
 }
