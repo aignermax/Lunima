@@ -26,19 +26,22 @@
             <Separator Width="1" Background="Gray" Margin="10,5"/>
 
             <!-- Zoom Controls -->
-            <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
-            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
-            <Button Content="Reset" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
+            <Button Content="+" Command="{Binding ZoomInCommand}" Width="30" Margin="2"/>
+            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="30" Margin="2"/>
+            <Button Content="[F] Fit" x:Name="ZoomToFitButton" Click="ZoomToFitButton_Click"
+                    Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Zoom to fit all components (F)"/>
+            <Button Content="1:1" Command="{Binding ResetZoomCommand}"
+                    Width="35" Margin="2" ToolTip.Tip="Reset zoom to 100%"/>
             <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
                        VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
 
             <Separator Width="1" Background="Gray" Margin="10,5"/>
 
             <!-- Undo/Redo -->
-            <Button Content="↶ Undo" Command="{Binding UndoCommand}"
-                    Width="65" Margin="2" Background="#3d3d3d" ToolTip.Tip="Ctrl+Z"/>
-            <Button Content="↷ Redo" Command="{Binding RedoCommand}"
-                    Width="65" Margin="2" Background="#3d3d3d" ToolTip.Tip="Ctrl+Y"/>
+            <Button Content="↶" Command="{Binding UndoCommand}"
+                    Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Undo (Ctrl+Z)"/>
+            <Button Content="↷" Command="{Binding RedoCommand}"
+                    Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Redo (Ctrl+Y)"/>
 
             <Separator Width="1" Background="Gray" Margin="10,5"/>
 
@@ -69,7 +72,7 @@
                 <TextBlock Text="{Binding StatusText}"
                            VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
                 <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
-                    <Run Text="Shortcuts: S=Select, C=Connect, D=Delete, R=Rotate, G=Grid Snap, Del=Remove, Ctrl+Z=Undo, Ctrl+Y=Redo"/>
+                    <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Zoom to Fit  Del=Remove  Ctrl+Z/Y=Undo/Redo"/>
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -173,7 +176,8 @@
         </Border>
 
         <!-- Main Canvas -->
-        <controls:DesignCanvas ViewModel="{Binding Canvas}"
+        <controls:DesignCanvas x:Name="DesignCanvasControl"
+                               ViewModel="{Binding Canvas}"
                                Zoom="{Binding ZoomLevel}"
                                MainViewModel="{Binding}"/>
     </DockPanel>

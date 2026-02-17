@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 
@@ -18,5 +19,14 @@ public partial class MainWindow : Window
                 vm.FileDialogService = new FileDialogService(this);
             }
         };
+    }
+
+    private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            var canvas = DesignCanvasControl;
+            vm.ZoomToFit(canvas.Bounds.Width, canvas.Bounds.Height);
+        }
     }
 }
