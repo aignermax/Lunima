@@ -13,58 +13,64 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#2d2d2d" Height="40">
-            <!-- Mode Buttons -->
-            <TextBlock Text="Mode:" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="White"/>
-            <Button Content="[S] Select" Command="{Binding SetSelectModeCommand}"
-                    Width="80" Margin="2" Background="#3d3d3d" Foreground="LightBlue"/>
-            <Button Content="[C] Connect" Command="{Binding SetConnectModeCommand}"
-                    Width="85" Margin="2" Background="#3d3d3d" Foreground="Orange"/>
-            <Button Content="[D] Delete" Command="{Binding SetDeleteModeCommand}"
-                    Width="80" Margin="2" Background="#3d3d3d" Foreground="Red"/>
+        <ScrollViewer DockPanel.Dock="Top"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      Background="#2d2d2d"
+                      Height="40">
+            <StackPanel Orientation="Horizontal">
+                <!-- Mode Buttons -->
+                <TextBlock Text="Mode:" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="White"/>
+                <Button Content="[S] Select" Command="{Binding SetSelectModeCommand}"
+                        Width="80" Margin="2" Background="#3d3d3d" Foreground="LightBlue"/>
+                <Button Content="[C] Connect" Command="{Binding SetConnectModeCommand}"
+                        Width="85" Margin="2" Background="#3d3d3d" Foreground="Orange"/>
+                <Button Content="[D] Delete" Command="{Binding SetDeleteModeCommand}"
+                        Width="80" Margin="2" Background="#3d3d3d" Foreground="Red"/>
 
-            <Separator Width="1" Background="Gray" Margin="10,5"/>
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
 
-            <!-- Zoom Controls -->
-            <Button Content="+" Command="{Binding ZoomInCommand}" Width="30" Margin="2"/>
-            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="30" Margin="2"/>
-            <Button Content="[F] Fit" x:Name="ZoomToFitButton" Click="ZoomToFitButton_Click"
-                    Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Zoom to fit all components (F)"/>
-            <Button Content="1:1" Command="{Binding ResetZoomCommand}"
-                    Width="35" Margin="2" ToolTip.Tip="Reset zoom to 100%"/>
-            <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
-                       VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
+                <!-- Zoom Controls -->
+                <Button Content="+" Command="{Binding ZoomInCommand}" Width="30" Margin="2"/>
+                <Button Content="-" Command="{Binding ZoomOutCommand}" Width="30" Margin="2"/>
+                <Button Content="[F] Fit" x:Name="ZoomToFitButton" Click="ZoomToFitButton_Click"
+                        Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Zoom to fit all components (F)"/>
+                <Button Content="1:1" Command="{Binding ResetZoomCommand}"
+                        Width="35" Margin="2" ToolTip.Tip="Reset zoom to 100%"/>
+                <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
+                           VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
 
-            <Separator Width="1" Background="Gray" Margin="10,5"/>
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
 
-            <!-- Undo/Redo -->
-            <Button Content="↶" Command="{Binding UndoCommand}"
-                    Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Undo (Ctrl+Z)"/>
-            <Button Content="↷" Command="{Binding RedoCommand}"
-                    Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Redo (Ctrl+Y)"/>
+                <!-- Undo/Redo -->
+                <Button Content="↶" Command="{Binding UndoCommand}"
+                        Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Undo (Ctrl+Z)"/>
+                <Button Content="↷" Command="{Binding RedoCommand}"
+                        Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Redo (Ctrl+Y)"/>
 
-            <Separator Width="1" Background="Gray" Margin="10,5"/>
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
 
-            <!-- Actions -->
-            <Button Content="Delete Selected" Command="{Binding DeleteSelectedCommand}"
-                    Width="100" Margin="5" Background="#4d3d3d"/>
+                <!-- Actions -->
+                <Button Content="Delete Selected" Command="{Binding DeleteSelectedCommand}"
+                        Width="100" Margin="5" Background="#4d3d3d"/>
 
-            <Separator Width="1" Background="Gray" Margin="10,5"/>
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
 
-            <!-- File Operations -->
-            <Button Content="📂" Command="{Binding LoadDesignCommand}"
-                    Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Load design"/>
-            <Button Content="💾" Command="{Binding SaveDesignCommand}"
-                    Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design (Ctrl+S)"/>
-            <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
-                    Width="75" Margin="2" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
+                <!-- File Operations -->
+                <Button Content="📂" Command="{Binding LoadDesignCommand}"
+                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Load design"/>
+                <Button Content="💾" Command="{Binding SaveDesignCommand}"
+                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design (Ctrl+S)"/>
+                <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
+                        Width="75" Margin="2" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
 
-            <Separator Width="1" Background="Gray" Margin="10,5"/>
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
 
-            <!-- PDK -->
-            <Button Content="📦 Load PDK" Command="{Binding LoadPdkCommand}"
-                    Width="95" Margin="2" Background="#3d3d5d" ToolTip.Tip="Load PDK component library"/>
-        </StackPanel>
+                <!-- PDK -->
+                <Button Content="📦 Load PDK" Command="{Binding LoadPdkCommand}"
+                        Width="95" Margin="2" Background="#3d3d5d" ToolTip.Tip="Load PDK component library"/>
+            </StackPanel>
+        </ScrollViewer>
 
         <!-- Status Bar -->
         <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
