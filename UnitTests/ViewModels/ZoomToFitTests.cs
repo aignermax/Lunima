@@ -1,4 +1,7 @@
+using CAP.Avalonia.Commands;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
 using Xunit;
 
@@ -9,10 +12,13 @@ namespace UnitTests.ViewModels;
 /// </summary>
 public class ZoomToFitTests
 {
+    private static MainViewModel CreateViewModel() =>
+        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager());
+
     [Fact]
     public void ZoomToFit_EmptyCanvas_DoesNotChangeZoom()
     {
-        var vm = new MainViewModel();
+        var vm = CreateViewModel();
         double originalZoom = vm.ZoomLevel;
 
         vm.ZoomToFit(800, 600);
@@ -24,7 +30,7 @@ public class ZoomToFitTests
     [Fact]
     public void ZoomToFit_WithComponents_SetsZoomAndPan()
     {
-        var vm = new MainViewModel();
+        var vm = CreateViewModel();
         var comp = TestComponentFactory.CreateStraightWaveGuide();
         comp.PhysicalX = 100;
         comp.PhysicalY = 100;
@@ -41,7 +47,7 @@ public class ZoomToFitTests
     [Fact]
     public void ZoomToFit_ZeroViewport_DoesNothing()
     {
-        var vm = new MainViewModel();
+        var vm = CreateViewModel();
         double originalZoom = vm.ZoomLevel;
 
         vm.ZoomToFit(0, 0);
@@ -52,7 +58,7 @@ public class ZoomToFitTests
     [Fact]
     public void ZoomToFit_NegativeViewport_DoesNothing()
     {
-        var vm = new MainViewModel();
+        var vm = CreateViewModel();
         double originalZoom = vm.ZoomLevel;
 
         vm.ZoomToFit(-100, -100);
@@ -63,7 +69,7 @@ public class ZoomToFitTests
     [Fact]
     public void ZoomToFit_MultipleComponents_FitsAll()
     {
-        var vm = new MainViewModel();
+        var vm = CreateViewModel();
 
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
         comp1.PhysicalX = 0;
