@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.Views;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CAP.Avalonia;
@@ -24,6 +25,7 @@ public partial class App : Application
         // Register services
         services.AddSingleton<SimulationService>();
         services.AddSingleton<SimpleNazcaExporter>();
+        services.AddSingleton<PdkLoader>();
         services.AddSingleton<Commands.CommandManager>();
 
         // Register ViewModels

@@ -30,6 +30,20 @@ Connect-A-PIC-Pro/
 └── UnitTests/            # xUnit tests
 ```
 
+### Dependency Injection
+
+Services are registered in `App.axaml.cs` using `Microsoft.Extensions.DependencyInjection`:
+
+| Service | Lifetime | Purpose |
+|---------|----------|---------|
+| `SimulationService` | Singleton | S-Matrix light simulation orchestrator |
+| `SimpleNazcaExporter` | Singleton | Nazca Python export |
+| `PdkLoader` | Singleton | PDK JSON file loading |
+| `CommandManager` | Singleton | Undo/redo command history |
+| `MainViewModel` | Singleton | Root ViewModel |
+
+`FileDialogService` is set via property injection after window creation (requires `Window` reference). The container is accessible via `App.Services` for view code-behind when needed.
+
 ## Physical Coordinate System
 
 Components have physical dimensions and positions:
@@ -151,6 +165,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] **Light Simulation Visualization** - Power overlay on connections with color-coded power levels
 - [x] **Auto-Recalculation** - Simulation auto-updates when circuit changes while overlay is active
 - [x] **Per-Source Laser Config** - Wavelength and power settings per light source (UI + multi-wavelength simulation)
+- [x] **Dependency Injection** - `Microsoft.Extensions.DependencyInjection` with constructor injection for all services
 
 ### High Priority
 - [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins

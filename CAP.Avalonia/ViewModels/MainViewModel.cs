@@ -52,6 +52,7 @@ public partial class MainViewModel : ObservableObject
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
+    private readonly PdkLoader _pdkLoader;
     private PhysicalPin? _connectionStartPin;
     private string? _currentFilePath;
     private bool _isSimulating;
@@ -64,10 +65,12 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
+        PdkLoader pdkLoader,
         Commands.CommandManager commandManager)
     {
         Simulation = simulationService;
         _nazcaExporter = nazcaExporter;
+        _pdkLoader = pdkLoader;
         CommandManager = commandManager;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = () => RunSimulationCommand.Execute(null);
@@ -565,8 +568,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var loader = new PdkLoader();
-            var pdk = loader.LoadFromFile(filePath);
+            var pdk = _pdkLoader.LoadFromFile(filePath);
 
             // Convert PDK components to templates and add to library
             int addedCount = 0;
