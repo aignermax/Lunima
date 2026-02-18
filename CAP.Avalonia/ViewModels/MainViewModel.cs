@@ -412,6 +412,16 @@ public partial class MainViewModel : ObservableObject
     private async Task RunSimulation()
     {
         if (_isSimulating) return;
+
+        // Toggle off if overlay is already showing
+        if (Canvas.ShowPowerFlow)
+        {
+            Canvas.ShowPowerFlow = false;
+            Canvas.PowerFlowVisualizer.IsEnabled = false;
+            StatusText = "Simulation overlay OFF";
+            return;
+        }
+
         _isSimulating = true;
 
         try

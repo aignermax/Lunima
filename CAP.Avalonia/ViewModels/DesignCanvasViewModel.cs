@@ -37,11 +37,13 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// </summary>
     public void InvalidateSimulation()
     {
+        bool wasShowingOverlay = ShowPowerFlow;
         PowerFlowVisualizer.Clear();
+        ShowPowerFlow = false;
 
-        if (ShowPowerFlow)
+        if (wasShowingOverlay)
         {
-            // Overlay is active - auto-recalculate
+            // Overlay was active - auto-recalculate (SimulationService will re-enable ShowPowerFlow)
             SimulationRequested?.Invoke();
         }
     }
