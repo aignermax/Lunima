@@ -39,8 +39,9 @@ public class CreateConnectionCommand : IUndoableCommand
     {
         if (_connection != null && _connectionViewModel != null)
         {
-            _canvas.ConnectionManager.Connections.Remove(_connection);
+            _canvas.ConnectionManager.RemoveConnection(_connection);
             _canvas.Connections.Remove(_connectionViewModel);
+            _canvas.InvalidateSimulation();
             _connection = null;
             _connectionViewModel = null;
         }

@@ -9,8 +9,9 @@ namespace CAP.Avalonia.Commands;
 public class DeleteComponentCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly ComponentViewModel _componentViewModel;
+    private ComponentViewModel _componentViewModel;
     private readonly Component _component;
+    private readonly string? _templateName;
     private readonly double _x;
     private readonly double _y;
     private readonly List<(WaveguideConnection connection, WaveguideConnectionViewModel vm)> _deletedConnections = new();
@@ -22,6 +23,7 @@ public class DeleteComponentCommand : IUndoableCommand
         _canvas = canvas;
         _componentViewModel = componentViewModel;
         _component = componentViewModel.Component;
+        _templateName = componentViewModel.TemplateName;
         _x = componentViewModel.X;
         _y = componentViewModel.Y;
     }
@@ -46,17 +48,27 @@ public class DeleteComponentCommand : IUndoableCommand
 
     public void Undo()
     {
-        // Re-add the component
+        // Re-add the component (creates a new VM - update our reference for redo)
         _component.PhysicalX = _x;
         _component.PhysicalY = _y;
-        var newVm = _canvas.AddComponent(_component);
+        _componentViewModel = _canvas.AddComponent(_component, _templateName);
 
         // Re-add connections
         foreach (var (connection, _) in _deletedConnections)
         {
-            _canvas.ConnectionManager.Connections.Add(connection);
+            _canvas.ConnectionManager.AddExistingConnection(connection);
             var connVm = new WaveguideConnectionViewModel(connection);
             _canvas.Connections.Add(connVm);
+        }
+
+        // Recalculate routes for restored connections
+        if (_deletedConnections.Count > 0)
+        {
+            _canvas.ConnectionManager.RecalculateAllTransmissions();
+            foreach (var conn in _canvas.Connections)
+            {
+                conn.NotifyPathChanged();
+            }
         }
     }
 }
