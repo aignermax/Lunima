@@ -154,6 +154,27 @@
                         <TextBlock Text=" um" Foreground="Gray"/>
                     </StackPanel>
 
+                    <!-- Laser Configuration (visible only for light sources) -->
+                    <StackPanel IsVisible="{Binding SelectedComponent.IsLightSource, FallbackValue=False}">
+                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                        <TextBlock Text="Laser Configuration:" Foreground="Gold" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                        <TextBlock Text="Wavelength:" Foreground="Gray" Margin="0,5,0,3"/>
+                        <ComboBox ItemsSource="{Binding WavelengthOptions}"
+                                  SelectedValue="{Binding SelectedComponent.LaserConfig.WavelengthNm}"
+                                  SelectedValueBinding="{Binding WavelengthNm}"
+                                  DisplayMemberBinding="{Binding Label}"
+                                  Width="180" Margin="0,0,0,10"/>
+                        <TextBlock Text="Input Power:" Foreground="Gray" Margin="0,5,0,3"/>
+                        <Slider Minimum="0" Maximum="1"
+                                Value="{Binding SelectedComponent.LaserConfig.InputPower}"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Width="180" Margin="0,0,0,3"/>
+                        <TextBlock Foreground="White" Margin="0,0,0,5">
+                            <Run Text="Power: "/>
+                            <Run Text="{Binding SelectedComponent.LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
+                        </TextBlock>
+                    </StackPanel>
+
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
                     <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
