@@ -128,6 +128,12 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                     Console.WriteLine($"Warning: Pin '{pin.Name}' Y position ({pin.OffsetYMicrometers}) may be outside component bounds");
                 }
             }
+
+            // Validate parametric S-Matrix if present
+            if (comp.SMatrix != null && ParametricSMatrixMapper.IsParametric(comp.SMatrix))
+            {
+                ParametricSMatrixMapper.Validate(comp.SMatrix, comp.Name, comp.Pins);
+            }
         }
     }
 }
