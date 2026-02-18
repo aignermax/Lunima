@@ -46,11 +46,12 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<WavelengthOption> WavelengthOptions { get; } = WavelengthOption.All;
 
-    public Commands.CommandManager CommandManager { get; } = new();
-    public SimulationService Simulation { get; } = new();
+    public Commands.CommandManager CommandManager { get; }
+    public SimulationService Simulation { get; }
 
     public IFileDialogService? FileDialogService { get; set; }
 
+    private readonly SimpleNazcaExporter _nazcaExporter;
     private PhysicalPin? _connectionStartPin;
     private string? _currentFilePath;
     private bool _isSimulating;
@@ -60,8 +61,14 @@ public partial class MainViewModel : ObservableObject
     private double _moveStartY;
     private ComponentViewModel? _movingComponent;
 
-    public MainViewModel()
+    public MainViewModel(
+        SimulationService simulationService,
+        SimpleNazcaExporter nazcaExporter,
+        Commands.CommandManager commandManager)
     {
+        Simulation = simulationService;
+        _nazcaExporter = nazcaExporter;
+        CommandManager = commandManager;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = () => RunSimulationCommand.Execute(null);
         LoadComponentLibrary();
@@ -639,8 +646,7 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                var exporter = new SimpleNazcaExporter();
-                var nazcaCode = exporter.Export(Canvas);
+                var nazcaCode = _nazcaExporter.Export(Canvas);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
                 StatusText = $"Exported to {Path.GetFileName(filePath)}";
             }

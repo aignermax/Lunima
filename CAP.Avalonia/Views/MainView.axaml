@@ -5,10 +5,6 @@
              x:Class="CAP.Avalonia.Views.MainView"
              x:DataType="vm:MainViewModel">
 
-    <Design.DataContext>
-        <vm:MainViewModel />
-    </Design.DataContext>
-
     <DockPanel>
         <!-- Toolbar -->
         <ScrollViewer DockPanel.Dock="Top"

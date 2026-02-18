@@ -7,10 +7,6 @@
         Title="Connect-A-PIC Pro"
         Width="1400" Height="900">
 
-    <Design.DataContext>
-        <vm:MainViewModel />
-    </Design.DataContext>
-
     <DockPanel>
         <!-- Toolbar -->
         <ScrollViewer DockPanel.Dock="Top"
