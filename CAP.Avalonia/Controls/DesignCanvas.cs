@@ -592,8 +592,8 @@ public class DesignCanvas : Control
 
         var (startX, startY) = _connectionDragStartPin.GetAbsolutePosition();
 
-        // Check if hovering over a valid target pin
-        var targetPin = HitTestPin(_connectionDragCurrentPoint);
+        // Use the highlighted pin (set by UpdatePinHighlight) for consistent hit-testing
+        var targetPin = ViewModel?.HighlightedPin?.Pin;
         bool isValidTarget = targetPin != null && targetPin != _connectionDragStartPin &&
                              targetPin.ParentComponent != _connectionDragStartPin.ParentComponent;
 
@@ -966,8 +966,17 @@ public class DesignCanvas : Control
         // Update pin highlighting in Connect mode
         if (MainViewModel?.CurrentMode == InteractionMode.Connect)
         {
-            MainViewModel.CanvasMouseMove(canvasPoint.X, canvasPoint.Y);
-            InvalidateVisual(); // Redraw to show highlighting
+            if (_connectionDragStartPin != null)
+            {
+                // During drag: use drag start pin as exclude so same-component pins are excluded
+                vm.UpdatePinHighlight(canvasPoint.X, canvasPoint.Y, _connectionDragStartPin);
+            }
+            else
+            {
+                // Not dragging: use normal flow (MainViewModel tracks click-to-connect state)
+                MainViewModel.CanvasMouseMove(canvasPoint.X, canvasPoint.Y);
+            }
+            InvalidateVisual();
         }
 
         // Update power flow hover detection
@@ -991,8 +1000,8 @@ public class DesignCanvas : Control
         {
             _connectionDragCurrentPoint = canvasPoint;
 
-            // Check if hovering over a valid target pin
-            var targetPin = HitTestPin(_connectionDragCurrentPoint);
+            // Use the highlighted pin (already set by UpdatePinHighlight above) for consistent targeting
+            var targetPin = vm.HighlightedPin?.Pin;
             if (targetPin != null && targetPin != _connectionDragStartPin &&
                 targetPin.ParentComponent != _connectionDragStartPin.ParentComponent)
             {
@@ -1041,10 +1050,8 @@ public class DesignCanvas : Control
         // Complete connection drag & drop
         if (_connectionDragStartPin != null)
         {
-            var point = e.GetPosition(this);
-            var canvasPoint = ScreenToCanvas(point);
-            // Use the highlighted pin (from hover) if available, otherwise hit test
-            var targetPin = ViewModel?.HighlightedPin?.Pin ?? HitTestPin(canvasPoint);
+            // Use the highlighted pin — same pin the user saw highlighted during hover
+            var targetPin = ViewModel?.HighlightedPin?.Pin;
 
             if (targetPin != null && targetPin != _connectionDragStartPin &&
                 targetPin.ParentComponent != _connectionDragStartPin.ParentComponent)
@@ -1345,10 +1352,16 @@ public class DesignCanvas : Control
         return Math.Sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
     }
 
+    /// <summary>
+    /// Finds the nearest pin within hit radius of the given canvas point.
+    /// </summary>
     private PhysicalPin? HitTestPin(Point canvasPoint)
     {
         var vm = ViewModel;
         if (vm == null) return null;
+
+        PhysicalPin? nearest = null;
+        double nearestDistance = double.MaxValue;
 
         foreach (var comp in vm.Components)
         {
@@ -1356,13 +1369,14 @@ public class DesignCanvas : Control
             {
                 var (pinX, pinY) = pin.GetAbsolutePosition();
                 var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
-                if (distance <= PinHitRadius)
+                if (distance < nearestDistance && distance <= PinHitRadius)
                 {
-                    return pin;
+                    nearest = pin;
+                    nearestDistance = distance;
                 }
             }
         }
 
-        return null;
+        return nearest;
     }
 }

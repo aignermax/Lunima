@@ -447,21 +447,26 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets the pin at or near the given position.
+    /// Gets the nearest pin at or near the given position.
+    /// Uses the same nearest-pin logic as UpdatePinHighlight for consistency.
     /// </summary>
     public PhysicalPin? GetPinAt(double x, double y, double tolerance = 15.0)
     {
+        PhysicalPin? nearest = null;
+        double nearestDistance = double.MaxValue;
+
         foreach (var pinVm in AllPins)
         {
             var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
             double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
 
-            if (dist <= tolerance)
+            if (dist < nearestDistance && dist <= tolerance)
             {
-                return pinVm.Pin;
+                nearest = pinVm.Pin;
+                nearestDistance = dist;
             }
         }
-        return null;
+        return nearest;
     }
 
     /// <summary>
