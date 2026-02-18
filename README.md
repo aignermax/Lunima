@@ -140,35 +140,56 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Avalonia UI with component placement, connections, rotation
 - [x] Undo/Redo system (Command pattern)
 - [x] Save/Load designs (.cappro JSON format)
+- [x] Save As support
 - [x] Nazca Python export
 - [x] Delete components and connections
-- [x] Keyboard shortcuts (S/C/D/R, Ctrl+Z/Y, Ctrl+S)
-
-### High Priority
+- [x] Keyboard shortcuts (S/C/D/R/G/F/L/P, Ctrl+Z/Y, Ctrl+S) — global, work regardless of focus
 - [x] **PDK JSON Format** - Define JSON schema for PDK component libraries with physical pins
 - [x] **PDK Loader** - Load PDK JSON files and add components to UI library
-- [ ] **Auto-Routing** - Manhattan routing with bend segments around obstacles
-- [ ] **Grid Snapping** - Optional snap-to-grid for cleaner layouts
-- [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
+- [x] **Grid Snapping** - Optional snap-to-grid with configurable grid size
+- [x] **Zoom to Fit** - Auto-fit design in viewport (F key)
+- [x] **Light Simulation Visualization** - Power overlay on connections with color-coded power levels
+- [x] **Auto-Recalculation** - Simulation auto-updates when circuit changes while overlay is active
+- [x] **Per-Source Laser Config** - Wavelength and power settings per light source (UI + multi-wavelength simulation)
 
-### Medium Priority
+### High Priority
+- [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
 - [ ] **Multi-Select** - Box select or Ctrl+click multiple components
 - [ ] **Copy/Paste** - Duplicate components or selections
-- [ ] **Component Properties Panel** - Edit parameters (coupling ratio, phase, etc.)
-- [ ] **Zoom to Fit** - Auto-fit design in viewport
-- [ ] **Light Simulation Visualization** - Show power levels at pins/connections
+
+### Path to Professional Use: Real PDK / CML Integration
+
+The goal is to make Connect-A-PIC Pro usable with real foundry component data so simulation results are physically meaningful.
+
+**Background:** Professional photonic design uses Compact Model Libraries (CMLs) — parameterized S-matrices calibrated to real fabrication data. Foundries ship CMLs with their PDKs. Major vendors (Ansys Lumerical, Synopsys) use proprietary encrypted formats. However, open PDKs exist and are widely used in research/education.
+
+**Step 1: Import SiEPIC Open PDK** (highest impact)
+- [ ] **Parse SiEPIC S-parameter files** - SiEPIC EBeam PDK (UBC, GitHub, SOI 220nm silicon — the most common photonic platform) ships S-parameter data (.dat files) with wavelength-dependent S-matrices for standard components (directional couplers, ring resonators, grating couplers, Y-branches, etc.)
+- [ ] **Wavelength-dependent S-matrices in core** - Currently S-matrices are fixed per component. Need to extend `Component` to hold S-matrix lookup tables indexed by wavelength (nm → Complex S-matrix). The per-source laser config UI already supports wavelength selection; this makes it functional.
+- [ ] **SiEPIC SiN PDK** - Silicon nitride platform, also open. Second priority after SOI.
+
+**Step 2: Define an open component model format**
+- [ ] **JSON compact model format** - Define a simple JSON/YAML schema: port definitions + S-matrix data at wavelength points + component parameters (geometry, coupling ratios, etc.). This becomes our CML equivalent — readable, editable, version-controllable.
+- [ ] **Parameterized models** - Components where S-matrix varies with user-adjustable parameters (e.g., coupler gap, ring radius, waveguide width). Could use interpolation between pre-computed S-matrices or analytical formulas.
+
+**Step 3: Professional features**
+- [ ] **Wavelength sweep / spectral response** - Run simulation across a wavelength range, plot transmission vs wavelength at output ports. This is the #1 analysis tool in photonic circuit design.
+- [ ] **Design Rule Checking** - Min bend radius, spacing violations, pin angle mismatches
+- [ ] **Direct GDS Export** - Export layout polygons without Nazca intermediate step
+- [ ] **Hierarchical Designs** - Sub-circuits as reusable blocks
 
 ### Nice to Have
-- [ ] **Hierarchical Designs** - Sub-circuits as reusable blocks
-- [ ] **Direct GDS Export** - Without Nazca intermediate step
-- [ ] **Wavelength Sweep** - Plot response vs wavelength
-- [ ] **Design Rule Checking** - Min bend radius, spacing violations
 - [ ] **Better Component Graphics** - Icons/symbols instead of rectangles
 - [ ] **Browser Version** - WebAssembly deployment
+- [ ] **Component Properties Panel** - Edit S-matrix parameters per component instance
 
-### Future / Separate Projects
+### Future Vision: Optical Computing
+- [ ] **Nonlinear components** - S-matrix depends on input power (optical transistor / switch)
+- [ ] **Delay lines** - Waveguide loops with defined propagation time (optical memory/register)
+- [ ] **Pulsed laser source** - Time-domain clock signal for synchronous optical logic
+- [ ] **Time-domain simulation** - Step-based solver (vs current steady-state) for signal propagation
+- [ ] **Multi-chip interconnect** - Inter-chip optical cables between separate chip canvases
 - [ ] **Python PDK Extractor** - Tool to convert Nazca Python PDKs to JSON format
-- [ ] **Embedded Python** - Run exported Nazca code directly in app
 
 ## Original Project
 
