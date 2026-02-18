@@ -1232,28 +1232,34 @@ public class DesignCanvas : Control
                 }
                 break;
             case Key.P:
-                // Toggle power flow overlay - run simulation first if no data
+                // Toggle power flow overlay
                 if (!ctrlPressed)
                 {
                     var canvasVm = ViewModel;
                     if (canvasVm != null)
                     {
-                        if (canvasVm.PowerFlowVisualizer.CurrentResult == null && !canvasVm.ShowPowerFlow)
+                        if (!canvasVm.ShowPowerFlow)
                         {
-                            // No data yet - run simulation first
-                            mainVm?.RunSimulationCommand.Execute(null);
+                            // Turning on - run simulation if no data exists
+                            if (canvasVm.PowerFlowVisualizer.CurrentResult == null)
+                            {
+                                mainVm?.RunSimulationCommand.Execute(null);
+                            }
+                            else
+                            {
+                                canvasVm.ShowPowerFlow = true;
+                                canvasVm.PowerFlowVisualizer.IsEnabled = true;
+                            }
+                            if (mainVm != null)
+                                mainVm.StatusText = "Power flow overlay: ON (auto-updates on changes)";
                         }
                         else
                         {
-                            // Toggle visibility
-                            canvasVm.ShowPowerFlow = !canvasVm.ShowPowerFlow;
-                            canvasVm.PowerFlowVisualizer.IsEnabled = canvasVm.ShowPowerFlow;
+                            // Turning off
+                            canvasVm.ShowPowerFlow = false;
+                            canvasVm.PowerFlowVisualizer.IsEnabled = false;
                             if (mainVm != null)
-                            {
-                                mainVm.StatusText = canvasVm.ShowPowerFlow
-                                    ? "Power flow overlay: ON"
-                                    : "Power flow overlay: OFF";
-                            }
+                                mainVm.StatusText = "Power flow overlay: OFF";
                         }
                     }
                 }

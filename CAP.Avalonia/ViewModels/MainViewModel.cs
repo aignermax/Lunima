@@ -58,6 +58,7 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         _canvas = new DesignCanvasViewModel();
+        _canvas.SimulationRequested = () => RunSimulationCommand.Execute(null);
         LoadComponentLibrary();
     }
 

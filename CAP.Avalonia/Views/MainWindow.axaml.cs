@@ -47,4 +47,5 @@ public partial class MainWindow : Window
             vm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
         }
     }
+
 }

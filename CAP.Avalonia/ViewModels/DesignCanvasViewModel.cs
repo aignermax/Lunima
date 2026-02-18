@@ -26,13 +26,24 @@ public partial class DesignCanvasViewModel : ObservableObject
     private bool _showPowerFlow;
 
     /// <summary>
-    /// Clears cached simulation results when the circuit changes.
-    /// The next P press will trigger a fresh simulation.
+    /// Callback invoked when simulation needs to be re-run (e.g., circuit changed while overlay is active).
+    /// Set by MainViewModel to trigger auto-recalculation.
+    /// </summary>
+    public Action? SimulationRequested { get; set; }
+
+    /// <summary>
+    /// Called when the circuit changes (component moved, connection added/removed).
+    /// If the power overlay is active, requests auto-recalculation instead of hiding it.
     /// </summary>
     public void InvalidateSimulation()
     {
         PowerFlowVisualizer.Clear();
-        ShowPowerFlow = false;
+
+        if (ShowPowerFlow)
+        {
+            // Overlay is active - auto-recalculate
+            SimulationRequested?.Invoke();
+        }
     }
 
     /// <summary>
