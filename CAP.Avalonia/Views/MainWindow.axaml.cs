@@ -26,18 +26,100 @@ public partial class MainWindow : Window
     {
         base.OnKeyDown(e);
         if (e.Handled) return;
+        if (DataContext is not MainViewModel mainVm) return;
+
+        var ctrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
         // Global keyboard shortcuts that work regardless of focus
         switch (e.Key)
         {
-            case Key.F:
-                if (DataContext is MainViewModel vm)
+            case Key.S:
+                if (ctrlPressed)
+                    mainVm.SaveDesignCommand.Execute(null);
+                else
+                    mainVm.SetSelectModeCommand.Execute(null);
+                break;
+            case Key.C:
+                if (!ctrlPressed)
+                    mainVm.SetConnectModeCommand.Execute(null);
+                break;
+            case Key.D:
+                if (!ctrlPressed)
+                    mainVm.SetDeleteModeCommand.Execute(null);
+                break;
+            case Key.Delete:
+            case Key.Back:
+                mainVm.DeleteSelectedCommand.Execute(null);
+                break;
+            case Key.Escape:
+                mainVm.SetSelectModeCommand.Execute(null);
+                break;
+            case Key.Z:
+                if (ctrlPressed)
+                    mainVm.UndoCommand.Execute(null);
+                break;
+            case Key.Y:
+                if (ctrlPressed)
+                    mainVm.RedoCommand.Execute(null);
+                break;
+            case Key.R:
+                if (!ctrlPressed)
+                    mainVm.RotateSelectedCommand.Execute(null);
+                break;
+            case Key.G:
+                if (!ctrlPressed)
                 {
-                    vm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
-                    e.Handled = true;
+                    var canvas = mainVm.Canvas;
+                    if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                    {
+                        canvas.ShowGridOverlay = !canvas.ShowGridOverlay;
+                    }
+                    else
+                    {
+                        canvas.GridSnap.Toggle();
+                        mainVm.StatusText = canvas.GridSnap.IsEnabled
+                            ? $"Grid snap ON ({canvas.GridSnap.GridSizeMicrometers}µm)"
+                            : "Grid snap OFF";
+                    }
                 }
                 break;
+            case Key.F:
+                if (!ctrlPressed)
+                    mainVm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
+                break;
+            case Key.P:
+                if (!ctrlPressed)
+                {
+                    var canvasVm = mainVm.Canvas;
+                    if (!canvasVm.ShowPowerFlow)
+                    {
+                        if (canvasVm.PowerFlowVisualizer.CurrentResult == null)
+                            mainVm.RunSimulationCommand.Execute(null);
+                        else
+                        {
+                            canvasVm.ShowPowerFlow = true;
+                            canvasVm.PowerFlowVisualizer.IsEnabled = true;
+                        }
+                        mainVm.StatusText = "Power flow overlay: ON (auto-updates on changes)";
+                    }
+                    else
+                    {
+                        canvasVm.ShowPowerFlow = false;
+                        canvasVm.PowerFlowVisualizer.IsEnabled = false;
+                        mainVm.StatusText = "Power flow overlay: OFF";
+                    }
+                }
+                break;
+            case Key.L:
+                if (!ctrlPressed)
+                    mainVm.RunSimulationCommand.Execute(null);
+                break;
+            default:
+                return; // Don't mark as handled for unrecognized keys
         }
+
+        e.Handled = true;
+        DesignCanvasControl.InvalidateVisual();
     }
 
     private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
