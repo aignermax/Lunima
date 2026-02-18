@@ -61,14 +61,20 @@ public class DeleteComponentCommand : IUndoableCommand
             _canvas.Connections.Add(connVm);
         }
 
-        // Recalculate routes for restored connections
-        if (_deletedConnections.Count > 0)
+        // Rebuild pathfinding grid and recalculate routes
+        var router = WaveguideConnection.SharedRouter;
+        if (router.PathfindingGrid != null)
         {
-            _canvas.ConnectionManager.RecalculateAllTransmissions();
-            foreach (var conn in _canvas.Connections)
-            {
-                conn.NotifyPathChanged();
-            }
+            router.PathfindingGrid.RebuildFromComponents(
+                _canvas.Components.Select(c => c.Component));
         }
+        _canvas.ConnectionManager.RecalculateAllTransmissions();
+        foreach (var conn in _canvas.Connections)
+        {
+            conn.NotifyPathChanged();
+        }
+
+        // Invalidate simulation so power flow overlay updates with restored circuit
+        _canvas.InvalidateSimulation();
     }
 }
