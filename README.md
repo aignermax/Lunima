@@ -14,6 +14,8 @@ Connect-A-PIC Pro extends the educational version with professional features:
 - **Cross-Platform UI**: Avalonia-based frontend supporting Desktop and WebAssembly (browser)
 - **Decoupled from Godot**: No game engine dependency - pure .NET solution
 
+<img width="3712" height="2323" alt="image" src="https://github.com/user-attachments/assets/9efd3c84-2ad4-44b8-a5bb-59db6f356ab9" />
+
 ## Architecture
 
 ```
