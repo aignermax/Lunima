@@ -121,6 +121,8 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="Properties"
                            FontWeight="Bold" Margin="10" Foreground="White"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="10">
                     <TextBlock Text="Selected Component:" Foreground="Gray" Margin="0,0,0,5"/>
                     <TextBlock Text="{Binding SelectedComponent.Name, FallbackValue='None'}"
@@ -171,6 +173,61 @@
                         </TextBlock>
                     </StackPanel>
 
+                    <!-- Component Parameter Slider (e.g., Phase Shifter) -->
+                    <StackPanel IsVisible="{Binding SelectedComponent.HasSliders, FallbackValue=False}">
+                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                        <TextBlock Text="Component Parameter:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedComponent.SliderLabel}" Foreground="Gray" Margin="0,5,0,3"/>
+                        <Slider Minimum="{Binding SelectedComponent.SliderMin}"
+                                Maximum="{Binding SelectedComponent.SliderMax}"
+                                Value="{Binding SelectedComponent.SliderValue}"
+                                Width="180" Margin="0,0,0,3"/>
+                        <TextBlock Foreground="White" Margin="0,0,0,5">
+                            <Run Text="{Binding SelectedComponent.SliderLabel}"/>
+                            <Run Text=" "/>
+                            <Run Text="{Binding SelectedComponent.SliderValue, StringFormat={}{0:F1}}"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Parameter Sweep (visible when component has slider) -->
+                    <StackPanel IsVisible="{Binding SelectedComponent.HasSliders, FallbackValue=False}">
+                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                        <TextBlock Text="Parameter Sweep:" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                            <TextBlock Text="Start:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+                            <NumericUpDown Value="{Binding Sweep.StartValue}"
+                                           Minimum="{Binding SelectedComponent.SliderMin}"
+                                           Maximum="{Binding SelectedComponent.SliderMax}"
+                                           Increment="10" Width="130" FormatString="F0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="End:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+                            <NumericUpDown Value="{Binding Sweep.EndValue}"
+                                           Minimum="{Binding SelectedComponent.SliderMin}"
+                                           Maximum="{Binding SelectedComponent.SliderMax}"
+                                           Increment="10" Width="130" FormatString="F0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="Steps:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+                            <NumericUpDown Value="{Binding Sweep.StepCount}"
+                                           Minimum="2" Maximum="100"
+                                           Increment="1" Width="130" FormatString="F0"/>
+                        </StackPanel>
+                        <Button Content="Run Sweep" Command="{Binding Sweep.RunSweepCommand}"
+                                Width="120" Margin="0,5,0,5" Background="#3d5d3d"
+                                IsEnabled="{Binding Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+                        <TextBlock Text="{Binding Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                                   IsVisible="{Binding Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                                      IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding Sweep.ResultText}" Foreground="LightGreen"
+                                       FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
+                        </ScrollViewer>
+                        <Button Content="Export CSV" Command="{Binding Sweep.ExportCsvCommand}"
+                                Width="100" Margin="0,5,0,0" Background="#3d3d5d"
+                                IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
                     <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
@@ -186,7 +243,7 @@
                         <TextBlock Text="Grid Size: " Foreground="Gray" VerticalAlignment="Center" Width="70"/>
                         <NumericUpDown Value="{Binding Canvas.GridSnap.GridSizeMicrometers}"
                                        Minimum="1" Maximum="1000" Increment="10"
-                                       Width="100" Margin="5,0,5,0"
+                                       Width="120" Margin="5,0,5,0"
                                        FormatString="F0"/>
                         <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -203,6 +260,7 @@
                         <TextBlock Text="{Binding Canvas.Connections.Count}" Foreground="White"/>
                     </StackPanel>
                 </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 

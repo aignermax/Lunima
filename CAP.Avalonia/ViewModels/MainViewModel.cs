@@ -48,6 +48,7 @@ public partial class MainViewModel : ObservableObject
 
     public Commands.CommandManager CommandManager { get; }
     public SimulationService Simulation { get; }
+    public ParameterSweepViewModel Sweep { get; } = new();
 
     public IFileDialogService? FileDialogService { get; set; }
 
@@ -73,7 +74,7 @@ public partial class MainViewModel : ObservableObject
         _pdkLoader = pdkLoader;
         CommandManager = commandManager;
         _canvas = new DesignCanvasViewModel();
-        _canvas.SimulationRequested = () => RunSimulationCommand.Execute(null);
+        _canvas.SimulationRequested = async () => await ExecuteSimulation();
         LoadComponentLibrary();
     }
 
@@ -127,6 +128,8 @@ public partial class MainViewModel : ObservableObject
             var cfg = value.LaserConfig!;
             StatusText = $"Selected: {value.Name} [{cfg.WavelengthLabel}, Power={cfg.InputPower:F2}]";
         }
+
+        Sweep.ConfigureForComponent(value, Canvas);
     }
 
     public void CanvasClicked(double canvasX, double canvasY)
@@ -437,7 +440,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (_isSimulating) return;
 
-        // Toggle off if overlay is already showing
+        // Toggle off if overlay is already showing (user pressed Simulate button)
         if (Canvas.ShowPowerFlow)
         {
             Canvas.ShowPowerFlow = false;
@@ -446,6 +449,15 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        await ExecuteSimulation();
+    }
+
+    /// <summary>
+    /// Runs simulation without toggle logic. Used by auto-resimulation (slider changes, circuit edits).
+    /// </summary>
+    private async Task ExecuteSimulation()
+    {
+        if (_isSimulating) return;
         _isSimulating = true;
 
         try
@@ -711,7 +723,10 @@ public partial class MainViewModel : ObservableObject
                     X = c.X,
                     Y = c.Y,
                     Identifier = c.Component.Identifier,
-                    Rotation = (int)c.Component.Rotation90CounterClock
+                    Rotation = (int)c.Component.Rotation90CounterClock,
+                    SliderValue = c.HasSliders ? c.SliderValue : null,
+                    LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
+                    LaserPower = c.LaserConfig?.InputPower
                 }).ToList(),
                 Connections = Canvas.Connections.Select(c => new ConnectionData
                 {
@@ -784,7 +799,20 @@ public partial class MainViewModel : ObservableObject
                             ApplyRotationToComponent(component);
                         }
 
-                        Canvas.AddComponent(component, template.Name);
+                        var vm = Canvas.AddComponent(component, template.Name);
+
+                        // Restore slider value
+                        if (compData.SliderValue.HasValue && vm.HasSliders)
+                            vm.SliderValue = compData.SliderValue.Value;
+
+                        // Restore laser configuration
+                        if (vm.LaserConfig != null)
+                        {
+                            if (compData.LaserWavelengthNm.HasValue)
+                                vm.LaserConfig.WavelengthNm = compData.LaserWavelengthNm.Value;
+                            if (compData.LaserPower.HasValue)
+                                vm.LaserConfig.InputPower = compData.LaserPower.Value;
+                        }
                     }
                 }
 
@@ -864,6 +892,9 @@ public class ComponentData
     public double Y { get; set; }
     public string Identifier { get; set; } = "";
     public int Rotation { get; set; } // 0, 1, 2, 3 for R0, R90, R180, R270
+    public double? SliderValue { get; set; }
+    public int? LaserWavelengthNm { get; set; }
+    public double? LaserPower { get; set; }
 }
 
 public class ConnectionData

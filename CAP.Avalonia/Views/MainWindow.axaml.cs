@@ -18,6 +18,7 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
             {
                 vm.FileDialogService = new FileDialogService(this);
+                vm.Sweep.FileDialogService = vm.FileDialogService;
             }
         };
     }

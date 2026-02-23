@@ -66,9 +66,7 @@ public class SimulationService
         canvas.PowerFlowVisualizer.UpdateFromSimulation(
             canvas.ConnectionManager.Connections, allFieldResults);
 
-        canvas.PowerFlowVisualizer.IsEnabled = true;
-        canvas.ShowPowerFlow = false;
-        canvas.ShowPowerFlow = true;
+        canvas.RefreshPowerFlowDisplay();
 
         return new SimulationResult
         {

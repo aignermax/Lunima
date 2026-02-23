@@ -32,7 +32,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     public Action? SimulationRequested { get; set; }
 
     /// <summary>
-    /// Called when the circuit changes (component moved, connection added/removed).
+    /// Called when the circuit topology changes (component moved, connection added/removed).
     /// If the power overlay is active, requests auto-recalculation instead of hiding it.
     /// </summary>
     public void InvalidateSimulation()
@@ -45,6 +45,34 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             // Overlay was active - auto-recalculate (SimulationService will re-enable ShowPowerFlow)
             SimulationRequested?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Called when a component parameter (slider) changes.
+    /// Re-runs simulation without clearing the overlay, avoiding visual flicker.
+    /// </summary>
+    public void RequestResimulation()
+    {
+        if (ShowPowerFlow)
+            SimulationRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Updates the power flow display after simulation.
+    /// If overlay is already visible, forces a re-render without toggling off/on.
+    /// </summary>
+    public void RefreshPowerFlowDisplay()
+    {
+        PowerFlowVisualizer.IsEnabled = true;
+        if (ShowPowerFlow)
+        {
+            // Already visible — just force re-render with updated data
+            OnPropertyChanged(nameof(ShowPowerFlow));
+        }
+        else
+        {
+            ShowPowerFlow = true;
         }
     }
 
@@ -285,6 +313,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     public ComponentViewModel AddComponent(Component component, string? templateName = null)
     {
         var vm = new ComponentViewModel(component, templateName);
+        vm.OnSliderChanged = () => RequestResimulation();
         Components.Add(vm);
 
         // Add obstacle to A* pathfinding grid
@@ -610,6 +639,51 @@ public partial class ComponentViewModel : ObservableObject
     public double Width => Component.WidthMicrometers;
     public double Height => Component.HeightMicrometers;
     public string Name => Component.Identifier;
+
+    /// <summary>
+    /// Whether this component has adjustable slider parameters.
+    /// </summary>
+    public bool HasSliders => Component.GetAllSliders().Count > 0;
+
+    /// <summary>
+    /// Display label for the slider (e.g., "Phase (°)").
+    /// </summary>
+    public string SliderLabel
+    {
+        get
+        {
+            if (TemplateName?.Contains("Phase") == true) return "Phase (°)";
+            if (TemplateName?.Contains("Directional") == true) return "Coupling (%)";
+            return "Parameter";
+        }
+    }
+
+    /// <summary>
+    /// First slider's current value (get/set).
+    /// </summary>
+    /// <summary>
+    /// Callback to notify the canvas that a slider changed (triggers auto-re-simulation).
+    /// Set by DesignCanvasViewModel when the component is added.
+    /// </summary>
+    public Action? OnSliderChanged { get; set; }
+
+    public double SliderValue
+    {
+        get => Component.GetSlider(0)?.Value ?? 0;
+        set
+        {
+            var slider = Component.GetSlider(0);
+            if (slider != null && Math.Abs(slider.Value - value) > 0.001)
+            {
+                slider.Value = value;
+                OnPropertyChanged();
+                OnSliderChanged?.Invoke();
+            }
+        }
+    }
+
+    public double SliderMin => Component.GetSlider(0)?.MinValue ?? 0;
+    public double SliderMax => Component.GetSlider(0)?.MaxValue ?? 1;
 
     public ComponentViewModel(Component component, string? templateName = null)
     {

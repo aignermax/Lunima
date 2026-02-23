@@ -1,5 +1,6 @@
 using CAP_Core.Components;
 using CAP_Core.Components.FormulaReading;
+using CAP_Core.Grid.FormulaReading;
 using CAP_Core.LightCalculation;
 using CAP_Core.Tiles;
 using System.Numerics;
@@ -56,6 +57,7 @@ public static class ComponentTemplates
             {
                 // Directional Coupler: more compact than MMI
                 // Typical: 10-20µm coupling length, ~10µm total width
+                // Slider controls coupling ratio κ (0-100%)
                 Name = "Directional Coupler",
                 Category = "Couplers",
                 WidthMicrometers = 30,
@@ -67,7 +69,10 @@ public static class ComponentTemplates
                     new PinDefinition("out1", 30, 3, 0),  // Right side, pin points east (away from center)
                     new PinDefinition("out2", 30, 9, 0)   // Right side, pin points east (away from center)
                 },
-                CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5)
+                HasSlider = true,
+                SliderMin = 0,
+                SliderMax = 100,
+                CreateSMatrixWithSliders = (pins, sliders) => CreateDirectionalCouplerMatrix(pins, sliders)
             },
             new ComponentTemplate
             {
@@ -85,7 +90,7 @@ public static class ComponentTemplates
                 HasSlider = true,
                 SliderMin = 0,
                 SliderMax = 360,
-                CreateSMatrix = pins => CreatePhaseShifterMatrix(pins)
+                CreateSMatrixWithSliders = (pins, sliders) => CreatePhaseShifterMatrix(pins, sliders)
             },
             new ComponentTemplate
             {
@@ -189,21 +194,28 @@ public static class ComponentTemplates
         var parts = new Part[1, 1];
         parts[0, 0] = new Part(logicalPins);
 
-        // Create S-Matrix
-        var sMatrix = template.CreateSMatrix(logicalPins);
+        // Create sliders before S-Matrix (slider-aware S-Matrices need slider IDs)
+        var sliders = new List<Slider>();
+        if (template.HasSlider)
+        {
+            sliders.Add(new Slider(Guid.NewGuid(), 0, (template.SliderMin + template.SliderMax) / 2, template.SliderMax, template.SliderMin));
+        }
+
+        // Create S-Matrix (use slider-aware factory if available)
+        SMatrix sMatrix;
+        if (template.CreateSMatrixWithSliders != null)
+            sMatrix = template.CreateSMatrixWithSliders(logicalPins, sliders);
+        else if (template.CreateSMatrix != null)
+            sMatrix = template.CreateSMatrix(logicalPins);
+        else
+            throw new InvalidOperationException($"Template '{template.Name}' has no S-Matrix factory.");
+
         var wavelengthMap = new Dictionary<int, SMatrix>
         {
             { 1550, sMatrix },
             { 1310, sMatrix },
             { 980, sMatrix }
         };
-
-        // Create sliders if needed
-        var sliders = new List<Slider>();
-        if (template.HasSlider)
-        {
-            sliders.Add(new Slider(Guid.NewGuid(), 0, (template.SliderMin + template.SliderMax) / 2, template.SliderMax, template.SliderMin));
-        }
 
         // Create physical pins linked to logical pins
         var physicalPins = new List<PhysicalPin>();
@@ -319,19 +331,90 @@ public static class ComponentTemplates
         return sMatrix;
     }
 
-    private static SMatrix CreatePhaseShifterMatrix(List<Pin> pins)
+    private static SMatrix CreatePhaseShifterMatrix(List<Pin> pins, List<Slider> sliders)
     {
-        // pins: [in, out] - lossless pass-through (phase handled by slider/nonlinear)
+        // pins: [in, out] - lossless pass-through with slider-controlled phase shift
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var sMatrix = new SMatrix(pinIds, new());
+        var sliderIds = sliders.Select(s => (s.ID, s.Value)).ToList();
+        var sMatrix = new SMatrix(pinIds, sliderIds);
 
-        if (pins.Count >= 2)
+        if (pins.Count >= 2 && sliders.Count > 0)
         {
+            // Phase shift formula: ToComplexFromPolar(1, SLIDER0 * Pi / 180)
+            // Converts degrees (0-360) to radians and applies as phase at unity amplitude
+            var phaseFormula = "ToComplexFromPolar(1, SLIDER0 * Pi / 180)";
+            var forward = MathExpressionReader.ConvertToDelegate(phaseFormula, pins, sliders);
+            var reverse = MathExpressionReader.ConvertToDelegate(phaseFormula, pins, sliders);
+
+            if (forward != null)
+                sMatrix.NonLinearConnections[(pins[0].IDInFlow, pins[1].IDOutFlow)] = forward.Value;
+            if (reverse != null)
+                sMatrix.NonLinearConnections[(pins[1].IDInFlow, pins[0].IDOutFlow)] = reverse.Value;
+        }
+        else if (pins.Count >= 2)
+        {
+            // Fallback: unity pass-through if no slider
             var unity = new Complex(1.0, 0);
             var transfers = new Dictionary<(Guid, Guid), Complex>
             {
                 { (pins[0].IDInFlow, pins[1].IDOutFlow), unity },
                 { (pins[1].IDInFlow, pins[0].IDOutFlow), unity }
+            };
+            sMatrix.SetValues(transfers);
+        }
+
+        return sMatrix;
+    }
+
+    private static SMatrix CreateDirectionalCouplerMatrix(List<Pin> pins, List<Slider> sliders)
+    {
+        // pins: [in1, in2, out1, out2]
+        // SLIDER0 = coupling ratio κ in percent (0-100)
+        // through = sqrt(1 - κ/100), cross = j * sqrt(κ/100)
+        var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+        var sliderIds = sliders.Select(s => (s.ID, s.Value)).ToList();
+        var sMatrix = new SMatrix(pinIds, sliderIds);
+
+        if (pins.Count >= 4 && sliders.Count > 0)
+        {
+            var throughFormula = "ToComplexFromPolar(Sqrt(1 - SLIDER0 / 100), 0)";
+            var crossFormula = "ToComplexFromPolar(Sqrt(SLIDER0 / 100), Pi / 2)";
+
+            // Forward: in1->out1 (through), in1->out2 (cross), in2->out1 (cross), in2->out2 (through)
+            var fwdThrough1 = MathExpressionReader.ConvertToDelegate(throughFormula, pins, sliders);
+            var fwdCross1 = MathExpressionReader.ConvertToDelegate(crossFormula, pins, sliders);
+            var fwdCross2 = MathExpressionReader.ConvertToDelegate(crossFormula, pins, sliders);
+            var fwdThrough2 = MathExpressionReader.ConvertToDelegate(throughFormula, pins, sliders);
+            // Reverse: out1->in1 (through), out1->in2 (cross), out2->in1 (cross), out2->in2 (through)
+            var revThrough1 = MathExpressionReader.ConvertToDelegate(throughFormula, pins, sliders);
+            var revCross1 = MathExpressionReader.ConvertToDelegate(crossFormula, pins, sliders);
+            var revCross2 = MathExpressionReader.ConvertToDelegate(crossFormula, pins, sliders);
+            var revThrough2 = MathExpressionReader.ConvertToDelegate(throughFormula, pins, sliders);
+
+            if (fwdThrough1 != null) sMatrix.NonLinearConnections[(pins[0].IDInFlow, pins[2].IDOutFlow)] = fwdThrough1.Value;
+            if (fwdCross1 != null)   sMatrix.NonLinearConnections[(pins[0].IDInFlow, pins[3].IDOutFlow)] = fwdCross1.Value;
+            if (fwdCross2 != null)   sMatrix.NonLinearConnections[(pins[1].IDInFlow, pins[2].IDOutFlow)] = fwdCross2.Value;
+            if (fwdThrough2 != null) sMatrix.NonLinearConnections[(pins[1].IDInFlow, pins[3].IDOutFlow)] = fwdThrough2.Value;
+            if (revThrough1 != null) sMatrix.NonLinearConnections[(pins[2].IDInFlow, pins[0].IDOutFlow)] = revThrough1.Value;
+            if (revCross1 != null)   sMatrix.NonLinearConnections[(pins[2].IDInFlow, pins[1].IDOutFlow)] = revCross1.Value;
+            if (revCross2 != null)   sMatrix.NonLinearConnections[(pins[3].IDInFlow, pins[0].IDOutFlow)] = revCross2.Value;
+            if (revThrough2 != null) sMatrix.NonLinearConnections[(pins[3].IDInFlow, pins[1].IDOutFlow)] = revThrough2.Value;
+        }
+        else if (pins.Count >= 4)
+        {
+            // Fallback: 50/50 coupling
+            var through = new Complex(Math.Sqrt(0.5), 0);
+            var cross = new Complex(0, Math.Sqrt(0.5));
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                { (pins[0].IDInFlow, pins[2].IDOutFlow), through },
+                { (pins[0].IDInFlow, pins[3].IDOutFlow), cross },
+                { (pins[1].IDInFlow, pins[2].IDOutFlow), cross },
+                { (pins[1].IDInFlow, pins[3].IDOutFlow), through },
+                { (pins[2].IDInFlow, pins[0].IDOutFlow), through },
+                { (pins[2].IDInFlow, pins[1].IDOutFlow), cross },
+                { (pins[3].IDInFlow, pins[0].IDOutFlow), cross },
+                { (pins[3].IDInFlow, pins[1].IDOutFlow), through }
             };
             sMatrix.SetValues(transfers);
         }
@@ -397,7 +480,8 @@ public class ComponentTemplate
     public bool HasSlider { get; set; }
     public double SliderMin { get; set; }
     public double SliderMax { get; set; }
-    public Func<List<Pin>, SMatrix> CreateSMatrix { get; set; } = _ => null!;
+    public Func<List<Pin>, SMatrix>? CreateSMatrix { get; set; }
+    public Func<List<Pin>, List<Slider>, SMatrix>? CreateSMatrixWithSliders { get; set; }
 
     /// <summary>
     /// Nazca function name for export (e.g., "pdk.mmi2x2").
