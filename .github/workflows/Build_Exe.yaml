@@ -71,6 +71,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from csproj
+        id: version
+        run: |
+          version=$(grep '<Version>' CAP.Desktop/CAP.Desktop.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | xargs)
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "Version: $version"
+
       - name: Download Windows build
         uses: actions/download-artifact@v4
         with:
@@ -85,19 +94,19 @@ jobs:
 
       - name: Create archives
         run: |
-          cd win-x64 && zip -r ../Connect-A-PIC-Pro-win-x64.zip . && cd ..
-          cd linux-x64 && tar czf ../Connect-A-PIC-Pro-linux-x64.tar.gz . && cd ..
-
-      - name: Generate tag
-        id: tag
-        run: echo "tag=build-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+          cd win-x64 && zip -r ../Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-win-x64.zip . && cd ..
+          cd linux-x64 && tar czf ../Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-linux-x64.tar.gz . && cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: Build ${{ steps.tag.outputs.tag }}
-          body: "Automated build from main branch"
+          tag_name: v${{ steps.version.outputs.version }}-build.${{ github.run_number }}
+          name: Connect-A-PIC Pro v${{ steps.version.outputs.version }} (build ${{ github.run_number }})
+          body: |
+            Automated build from main branch.
+
+            **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ github.sha }}
           files: |
-            Connect-A-PIC-Pro-win-x64.zip
-            Connect-A-PIC-Pro-linux-x64.tar.gz
+            Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-win-x64.zip
+            Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-linux-x64.tar.gz

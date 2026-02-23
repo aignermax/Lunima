@@ -1,41 +1,38 @@
-name: '🗂 Version Change'
+name: Version Change
+
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version (no 'v' prefix)"
+        description: "Version (no 'v' prefix, e.g. 0.2.0)"
         required: true
 
 jobs:
   create_version_pull_request:
-    name: '🗂 Create Version Pull Request'
+    name: Create Version Pull Request
     runs-on: ubuntu-latest
     steps:
-      - name: '🧾 Checkout'
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: '📝 Change Version'
+      - name: Update Version in csproj
         uses: vers-one/dotnet-project-version-updater@v1.3
         with:
-          file: "Connect-A-PIC.csproj"
+          file: "CAP.Desktop/CAP.Desktop.csproj"
           version: ${{ github.event.inputs.version }}
 
-      - name: '📝 Update README.md'
-        run: |
-          sed -i 's/<!--version-->.*<!--version-->/<!--version-->${{ github.event.inputs.version }}<!--version-->/' README.md
-
-      - name: '🏷️ Create and Push Tag'
+      - name: Create and Push Tag
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git tag v${{ github.event.inputs.version }}
           git push origin v${{ github.event.inputs.version }}
 
-      - name: '⤴️ Create Pull Request'
+      - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: version/${{ github.event.inputs.version }}
           commit-message: "Update version to ${{ github.event.inputs.version }}"
-          title: 'chore(project): update version to ${{ github.event.inputs.version }}'
-          body: 'chore(project): update the version to ${{ github.event.inputs.version }}.'
+          title: "chore: update version to ${{ github.event.inputs.version }}"
+          body: "Updates project version to ${{ github.event.inputs.version }}."
