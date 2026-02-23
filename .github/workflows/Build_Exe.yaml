@@ -59,6 +59,18 @@ jobs:
           -p:DebugType=none
           -o publish
 
+      - name: Rename executable
+        run: |
+          cd publish
+          if [ -f CAP.Desktop ]; then
+            mv CAP.Desktop Connect-A-PIC-Pro
+            chmod +x Connect-A-PIC-Pro
+          fi
+          if [ -f CAP.Desktop.exe ]; then
+            mv CAP.Desktop.exe Connect-A-PIC-Pro.exe
+          fi
+        shell: bash
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -104,9 +116,19 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}-build.${{ github.run_number }}
           name: Connect-A-PIC Pro v${{ steps.version.outputs.version }} (build ${{ github.run_number }})
           body: |
-            Automated build from main branch.
+            ## Connect-A-PIC Pro v${{ steps.version.outputs.version }}
 
-            **Version:** ${{ steps.version.outputs.version }}
+            ### Windows
+            1. Download `Connect-A-PIC-Pro-...-win-x64.zip`
+            2. Extract and run `Connect-A-PIC-Pro.exe`
+
+            ### Linux
+            1. Download `Connect-A-PIC-Pro-...-linux-x64.tar.gz`
+            2. Extract: `tar xzf Connect-A-PIC-Pro-*.tar.gz`
+            3. Run: `./Connect-A-PIC-Pro`
+
+            No .NET installation required — everything is included.
+
             **Commit:** ${{ github.sha }}
           files: |
             Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-win-x64.zip
