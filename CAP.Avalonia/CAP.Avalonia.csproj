@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
     <PackageReference Include="Avalonia.Skia" Version="11.2.1" />
