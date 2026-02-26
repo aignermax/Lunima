@@ -7,22 +7,22 @@ Do NOT submit backend-only or core-only code. Every PR must include user-testabl
 
 A complete vertical slice includes ALL of these layers:
 
-1. **Core logic** — New classes in `Connect-A-Pic-Core/` (interface-first design)
+1. **Core logic** — New classes in `Connect-A-Pic-Core/` (concrete classes are fine, use interfaces only when multiple implementations are needed)
 2. **ViewModel** — `ObservableObject` in `CAP.Avalonia/ViewModels/` with `[ObservableProperty]` and `[RelayCommand]`
 3. **View / AXAML** — UI panel in `CAP.Avalonia/Views/` or a new section in `MainWindow.axaml`
 4. **DI wiring** — Register new services in `CAP.Avalonia/App.axaml.cs` if needed
 5. **Unit tests** — xUnit tests in `UnitTests/` for core logic
-6. **Integration tests** — Core + ViewModel integration tests in `UnitTests/Integration/`
+6. **Integration tests** — Core + ViewModel integration tests in `UnitTests/` (place alongside related unit tests)
 
 ## Code Quality Rules
 
-- **Max 250 lines per file** — If a class exceeds 250 lines, split it into smaller, focused classes
+- **Max 250 lines per new file** — Aim for 250 lines in newly created files. Existing files like `MainViewModel.cs` and `DesignCanvas.cs` are larger — do not refactor them just for line count
 - **SOLID principles**:
   - Single Responsibility: Each class has one reason to change
   - Open/Closed: Extend via interfaces, not modification
   - Liskov Substitution: Subtypes must be substitutable for base types
   - Interface Segregation: Prefer small, focused interfaces
-  - Dependency Inversion: Depend on abstractions (inject interfaces, not concrete classes)
+  - Dependency Inversion: Use constructor injection. Concrete classes are fine — only create interfaces when there are multiple implementations
 - **Clean Code**:
   - Meaningful, descriptive names (no abbreviations except well-known ones like `VM`, `DI`)
   - Small methods (max ~20 lines per method)
@@ -149,18 +149,17 @@ Reference: `UnitTests/Simulation/SimulationIntegrationTests.cs`
 
 Follow this step-by-step when implementing a new analysis/diagnostic feature:
 
-1. **Define interface** in `Connect-A-Pic-Core/` (e.g., `IMyAnalyzer`)
-2. **Implement core class** in `Connect-A-Pic-Core/Analysis/MyAnalyzer.cs` (max 250 lines)
-3. **Create ViewModel** in `CAP.Avalonia/ViewModels/MyFeatureViewModel.cs`
+1. **Implement core class** in `Connect-A-Pic-Core/Analysis/MyAnalyzer.cs` (max 250 lines, no interface needed unless multiple implementations exist)
+2. **Create ViewModel** in `CAP.Avalonia/ViewModels/MyFeatureViewModel.cs`
    - Inherit `ObservableObject`
    - Use `[ObservableProperty]` for bindable state
    - Use `[RelayCommand]` for actions
    - Follow `ParameterSweepViewModel` pattern
-4. **Add ViewModel as property** on `MainViewModel`:
+3. **Add ViewModel as property** on `MainViewModel`:
    ```csharp
    public MyFeatureViewModel MyFeature { get; } = new();
    ```
-5. **Add AXAML panel** in `MainWindow.axaml` right panel section:
+4. **Add AXAML panel** in `MainWindow.axaml` right panel section:
    ```xml
    <StackPanel IsVisible="{Binding SomeCondition}">
        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
@@ -168,9 +167,9 @@ Follow this step-by-step when implementing a new analysis/diagnostic feature:
        <!-- UI elements bound to MyFeature.* -->
    </StackPanel>
    ```
-6. **Register in DI** (`App.axaml.cs`) if the core class needs to be a service
-7. **Write unit tests** in `UnitTests/` for the core analyzer class
-8. **Write integration test** in `UnitTests/Integration/` testing Core→ViewModel data flow
+5. **Register in DI** (`App.axaml.cs`) if the core class needs to be a service
+6. **Write unit tests** in `UnitTests/` for the core analyzer class
+7. **Write integration test** in `UnitTests/` (alongside related tests) testing Core→ViewModel data flow
 
 ## Build and Verify
 
