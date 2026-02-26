@@ -2,7 +2,8 @@ name: Build & Publish
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 env:
@@ -86,12 +87,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read version from csproj
-        id: version
+      - name: Compute release info
+        id: info
         run: |
           version=$(grep '<Version>' CAP.Desktop/CAP.Desktop.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | xargs)
           echo "version=$version" >> $GITHUB_OUTPUT
-          echo "Version: $version"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v${version}-build.${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download Windows build
         uses: actions/download-artifact@v4
@@ -107,16 +112,16 @@ jobs:
 
       - name: Create archives
         run: |
-          cd win-x64 && zip -r ../Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-win-x64.zip . && cd ..
-          cd linux-x64 && tar czf ../Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-linux-x64.tar.gz . && cd ..
+          cd win-x64 && zip -r ../Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip . && cd ..
+          cd linux-x64 && tar czf ../Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-linux-x64.tar.gz . && cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}-build.${{ github.run_number }}
-          name: Connect-A-PIC Pro v${{ steps.version.outputs.version }} (build ${{ github.run_number }})
+          tag_name: ${{ steps.info.outputs.tag }}
+          name: Connect-A-PIC Pro v${{ steps.info.outputs.version }}
           body: |
-            ## Connect-A-PIC Pro v${{ steps.version.outputs.version }}
+            ## Connect-A-PIC Pro v${{ steps.info.outputs.version }}
 
             ### Windows
             1. Download `Connect-A-PIC-Pro-...-win-x64.zip`
@@ -131,5 +136,5 @@ jobs:
 
             **Commit:** ${{ github.sha }}
           files: |
-            Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-win-x64.zip
-            Connect-A-PIC-Pro-${{ steps.version.outputs.version }}-linux-x64.tar.gz
+            Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip
+            Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-linux-x64.tar.gz
