@@ -2,7 +2,7 @@ name: Claude Agent - Issue Implementation
 
 on:
   issues:
-    types: [opened, reopened, labeled]
+    types: [labeled]
   issue_comment:
     types: [created]
 
@@ -10,12 +10,13 @@ jobs:
   implement-issue:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent-task') ||
-      (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'reopened') &&
-       contains(toJSON(github.event.issue.labels.*.name), 'agent-task'))
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent-task')
 
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    concurrency:
+      group: claude-agent-${{ github.event.issue.number }}
+      cancel-in-progress: false
 
     permissions:
       contents: write
