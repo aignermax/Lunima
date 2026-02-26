@@ -1,0 +1,217 @@
+# CLAUDE.md — Instructions for Claude Code Agent
+
+## CRITICAL: Vertical Slice Requirement
+
+**Every feature implementation MUST be a complete vertical slice.**
+Do NOT submit backend-only or core-only code. Every PR must include user-testable UI.
+
+A complete vertical slice includes ALL of these layers:
+
+1. **Core logic** — New classes in `Connect-A-Pic-Core/` (interface-first design)
+2. **ViewModel** — `ObservableObject` in `CAP.Avalonia/ViewModels/` with `[ObservableProperty]` and `[RelayCommand]`
+3. **View / AXAML** — UI panel in `CAP.Avalonia/Views/` or a new section in `MainWindow.axaml`
+4. **DI wiring** — Register new services in `CAP.Avalonia/App.axaml.cs` if needed
+5. **Unit tests** — xUnit tests in `UnitTests/` for core logic
+6. **Integration tests** — Core + ViewModel integration tests in `UnitTests/Integration/`
+
+## Code Quality Rules
+
+- **Max 250 lines per file** — If a class exceeds 250 lines, split it into smaller, focused classes
+- **SOLID principles**:
+  - Single Responsibility: Each class has one reason to change
+  - Open/Closed: Extend via interfaces, not modification
+  - Liskov Substitution: Subtypes must be substitutable for base types
+  - Interface Segregation: Prefer small, focused interfaces
+  - Dependency Inversion: Depend on abstractions (inject interfaces, not concrete classes)
+- **Clean Code**:
+  - Meaningful, descriptive names (no abbreviations except well-known ones like `VM`, `DI`)
+  - Small methods (max ~20 lines per method)
+  - No magic numbers — use named constants
+  - No deep nesting (max 2-3 levels)
+  - Prefer early returns over nested if/else
+
+## Project Structure
+
+```
+Connect-A-Pic-Core/          # Core simulation engine (no UI dependencies)
+├── Components/              # Component models, pins, S-matrices, parametric
+├── Routing/                 # Waveguide routing, A* pathfinding
+├── LightCalculation/        # S-Matrix propagation, power flow analysis
+├── Analysis/                # Parameter sweep, sweep configuration
+├── Grid/                    # Component placement, connection management
+├── ExternalPorts/           # Light source configuration
+└── Helpers/                 # Utilities, collections
+
+CAP_Contracts/               # Shared interfaces (IDataAccessor, ILogger)
+
+CAP-DataAccess/              # JSON persistence, PDK loading
+├── Components/ComponentDraftMapper/  # PdkLoader, DTOs
+└── PDKs/                    # PDK JSON files (demo-pdk.json)
+
+CAP.Avalonia/                # Shared cross-platform UI
+├── ViewModels/              # MVVM ViewModels (MainViewModel, DesignCanvasViewModel, etc.)
+├── Views/                   # AXAML views (MainWindow.axaml, MainView.axaml)
+├── Commands/                # Undo/redo commands (IUndoableCommand, CommandManager)
+├── Services/                # SimulationService, SimpleNazcaExporter, FileDialogService
+├── Controls/                # Custom controls (DesignCanvas)
+└── Visualization/           # Power flow rendering
+
+CAP.Desktop/                 # Desktop entry point (Program.cs)
+CAP.Browser/                 # WebAssembly entry point (planned)
+UnitTests/                   # xUnit test suite
+```
+
+## Architecture Patterns
+
+### MVVM (CommunityToolkit.Mvvm)
+
+ViewModels inherit `ObservableObject`. Use source generators:
+
+```csharp
+public partial class MyFeatureViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private string _resultText = "";
+
+    [ObservableProperty]
+    private bool _isProcessing;
+
+    // Auto-generates OnResultTextChanged partial method
+    partial void OnResultTextChanged(string value) { }
+
+    [RelayCommand]
+    private async Task RunAnalysis() { }
+}
+```
+
+Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
+
+### Dependency Injection
+
+All services registered as singletons in `CAP.Avalonia/App.axaml.cs`:
+
+```csharp
+services.AddSingleton<SimulationService>();
+services.AddSingleton<MyNewService>();
+services.AddSingleton<MainViewModel>();
+```
+
+Use constructor injection. Access via `App.Services` only in code-behind when needed.
+
+### Command Pattern (Undo/Redo)
+
+Implement `IUndoableCommand` (in `CAP.Avalonia/Commands/ICommand.cs`):
+
+```csharp
+public class MyCommand : IUndoableCommand
+{
+    public string Description => "My action";
+    public void Execute() { }
+    public void Undo() { }
+}
+```
+
+Execute via `CommandManager.ExecuteCommand(cmd)`.
+
+### Views (Avalonia AXAML)
+
+- Use `x:DataType="vm:YourViewModel"` for compiled bindings
+- MainWindow layout: DockPanel with Top=toolbar, Bottom=status, Left=library, Right=properties, Center=canvas
+- New feature panels go in the Right panel (properties area) as collapsible sections
+- Follow the Parameter Sweep panel pattern in `MainWindow.axaml` (lines 193-229)
+
+### Unit Tests
+
+- xUnit with `[Fact]` and `[Theory]` attributes
+- Shouldly for assertions: `result.ShouldBe(expected)`, `value.ShouldBeGreaterThan(0)`
+- Moq for mocking: `new Mock<ILightCalculator>()`
+- Test helpers in `UnitTests/Helpers/TestComponentFactory.cs`
+- Reference: `UnitTests/Analysis/ParameterSweeperTests.cs`
+
+### Integration Tests (Core + ViewModel)
+
+Test that core services produce correct data and ViewModels expose it properly:
+
+```csharp
+[Fact]
+public void ViewModel_ReflectsCoreAnalysisResults()
+{
+    var coreService = new MyAnalyzer();
+    var vm = new MyFeatureViewModel(coreService);
+    vm.RunAnalysisCommand.Execute(null);
+    vm.ResultText.ShouldNotBeNullOrEmpty();
+}
+```
+
+Reference: `UnitTests/Simulation/SimulationIntegrationTests.cs`
+
+## Recipe: Adding a New Feature Panel
+
+Follow this step-by-step when implementing a new analysis/diagnostic feature:
+
+1. **Define interface** in `Connect-A-Pic-Core/` (e.g., `IMyAnalyzer`)
+2. **Implement core class** in `Connect-A-Pic-Core/Analysis/MyAnalyzer.cs` (max 250 lines)
+3. **Create ViewModel** in `CAP.Avalonia/ViewModels/MyFeatureViewModel.cs`
+   - Inherit `ObservableObject`
+   - Use `[ObservableProperty]` for bindable state
+   - Use `[RelayCommand]` for actions
+   - Follow `ParameterSweepViewModel` pattern
+4. **Add ViewModel as property** on `MainViewModel`:
+   ```csharp
+   public MyFeatureViewModel MyFeature { get; } = new();
+   ```
+5. **Add AXAML panel** in `MainWindow.axaml` right panel section:
+   ```xml
+   <StackPanel IsVisible="{Binding SomeCondition}">
+       <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+       <TextBlock Text="My Feature:" Foreground="LightBlue" FontWeight="SemiBold"/>
+       <!-- UI elements bound to MyFeature.* -->
+   </StackPanel>
+   ```
+6. **Register in DI** (`App.axaml.cs`) if the core class needs to be a service
+7. **Write unit tests** in `UnitTests/` for the core analyzer class
+8. **Write integration test** in `UnitTests/Integration/` testing Core→ViewModel data flow
+
+## Build and Verify
+
+Always run before creating a PR:
+
+```bash
+dotnet build
+dotnet test ./UnitTests/UnitTests.csproj --logger:trx
+```
+
+## Branch and PR Conventions
+
+- **Branch naming**: `feature/issue-{number}-short-description`
+  - Example: `feature/issue-42-loss-budget-analyzer`
+- **PR body must include**:
+  - `Closes #{issue_number}`
+  - Vertical slice checklist (which layers were implemented)
+  - How to manually test the feature in the UI
+
+## Key File Reference
+
+| Purpose | Path |
+|---------|------|
+| DI container setup | `CAP.Avalonia/App.axaml.cs` |
+| Main ViewModel | `CAP.Avalonia/ViewModels/MainViewModel.cs` |
+| Main Window layout | `CAP.Avalonia/Views/MainWindow.axaml` |
+| Canvas ViewModel | `CAP.Avalonia/ViewModels/DesignCanvasViewModel.cs` |
+| Canvas control | `CAP.Avalonia/Controls/DesignCanvas.cs` |
+| Simulation service | `CAP.Avalonia/Services/SimulationService.cs` |
+| Command interfaces | `CAP.Avalonia/Commands/ICommand.cs` |
+| Command manager | `CAP.Avalonia/Commands/CommandManager.cs` |
+| Example ViewModel | `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` |
+| Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
+| Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
+| Example integration tests | `UnitTests/Simulation/SimulationIntegrationTests.cs` |
+| PDK data | `CAP-DataAccess/PDKs/demo-pdk.json` |
+
+## Setup Requirements
+
+To enable the automated agent workflow:
+
+1. Add `ANTHROPIC_API_KEY` to repository secrets (Settings > Secrets > Actions)
+2. Install Claude GitHub App: https://github.com/apps/claude
+3. Create `agent-pr` label: `gh label create agent-pr --description "PR created by Claude agent" --color "7057ff"`

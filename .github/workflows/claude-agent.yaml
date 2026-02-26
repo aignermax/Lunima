@@ -1,0 +1,94 @@
+name: Claude Agent - Issue Implementation
+
+on:
+  issues:
+    types: [opened, reopened, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  implement-issue:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent-task') ||
+      (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'reopened') &&
+       contains(toJSON(github.event.issue.labels.*.name), 'agent-task'))
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Run Claude Code Agent
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: "agent-task"
+          prompt: |
+            You are implementing issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+
+            IMPORTANT: Read CLAUDE.md first. It contains the project conventions, architecture
+            patterns, and the CRITICAL vertical slice requirement.
+
+            ## Issue Body
+            ${{ github.event.issue.body }}
+
+            ## Your Task
+            Implement a COMPLETE VERTICAL SLICE for this issue. This means:
+
+            1. Core logic in Connect-A-Pic-Core/ (interface-first, max 250 lines/file)
+            2. ViewModel in CAP.Avalonia/ViewModels/ (ObservableObject with [ObservableProperty])
+            3. View/AXAML UI in CAP.Avalonia/Views/ or MainWindow.axaml right panel
+            4. DI wiring in CAP.Avalonia/App.axaml.cs if new services are needed
+            5. Unit tests in UnitTests/ for core logic
+            6. Integration tests in UnitTests/Integration/ for Core→ViewModel data flow
+
+            ## Code Quality
+            - Max 250 lines per file (split into smaller classes if needed)
+            - Follow SOLID principles (see CLAUDE.md for details)
+            - Clean Code: meaningful names, small methods, no magic numbers
+
+            ## Before Creating the PR
+            - Run: dotnet build
+            - Run: dotnet test ./UnitTests/UnitTests.csproj --logger:trx
+            - Both must pass with zero failures
+
+            ## PR Requirements
+            - Branch name: feature/issue-${{ github.event.issue.number }}-<short-description>
+            - PR body must include: Closes #${{ github.event.issue.number }}
+            - PR body must list what was implemented at each layer
+            - PR body must describe how to manually test the feature in the UI
+
+      - name: Label PR with agent-pr
+        if: always() && steps.claude.outputs.branch_name
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create label if it doesn't exist
+          gh label create agent-pr \
+            --description "PR created by Claude Code agent" \
+            --color "7057ff" 2>/dev/null || true
+
+          # Find and label the PR
+          PR_NUMBER=$(gh pr list \
+            --head "${{ steps.claude.outputs.branch_name }}" \
+            --json number --jq '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "agent-pr"
+          fi

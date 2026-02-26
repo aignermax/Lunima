@@ -1,0 +1,69 @@
+name: Agent Task
+description: Feature request for automated implementation by Claude Code agent. Must be a vertical slice (Core + ViewModel + View + Tests).
+title: "[Agent] "
+labels: ["agent-task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue will be automatically picked up by the Claude Code agent.
+        The agent will implement a **complete vertical slice**: core logic, ViewModel, UI panel, and tests.
+        Just describe what you want — the agent handles the rest.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What feature should be implemented? Describe the desired behavior.
+      placeholder: |
+        Example: Calculate and display total loss budget from inputs to outputs,
+        helping identify bottlenecks and feasibility issues early.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Concrete, testable criteria. The agent will use these to verify completeness.
+      placeholder: |
+        - [ ] Calculate min/max/average loss for all input-to-output paths
+        - [ ] Display results in a panel in the UI
+        - [ ] Export results to CSV
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: Technical Notes
+      description: |
+        Optional hints for the agent: relevant files, existing code to reuse,
+        related classes, or suggested approach.
+      placeholder: |
+        - Use existing WaveguideConnection.TotalLossDb for loss data
+        - Follow ParameterSweepViewModel pattern for the UI panel
+        - See SimulationIntegrationTests.cs for integration test examples
+    validations:
+      required: false
+
+  - type: textarea
+    id: strategic-fit
+    attributes:
+      label: Strategic Fit
+      description: How does this feature support the tool's purpose of architecture exploration?
+      placeholder: "Answers the question: is this architecture feasible?"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated Complexity
+      description: Helps the agent plan its approach.
+      options:
+        - Small (1-2 new files per layer)
+        - Medium (3-5 new files per layer)
+        - Large (6+ files, cross-cutting changes)
+    validations:
+      required: false
