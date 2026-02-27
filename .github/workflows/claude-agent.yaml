@@ -13,7 +13,7 @@ jobs:
       (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent-task')
 
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 60
     concurrency:
       group: claude-agent-${{ github.event.issue.number }}
       cancel-in-progress: false
@@ -28,7 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -43,41 +43,26 @@ jobs:
           github_token: ${{ secrets.CAP_GH_TOKEN || secrets.GITHUB_TOKEN }}
           label_trigger: "agent-task"
           claude_args: |
+            --max-turns 50
             --allowedTools "Bash(dotnet build:*),Bash(dotnet test:*),Bash(dotnet restore:*),Bash(git *),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh label create:*),Bash(gh api:*),Edit,Read,Write"
           prompt: |
             You are implementing issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
 
-            IMPORTANT: Read CLAUDE.md first. It contains the project conventions, architecture
-            patterns, and the CRITICAL vertical slice requirement.
+            ## Instructions
+            Read CLAUDE.md FIRST — it contains ALL project conventions, architecture patterns,
+            the vertical slice requirement, build commands, branch naming, and PR format.
+            Do NOT deviate from those rules. Everything you need is in that file.
 
             ## Issue Body
             ${{ github.event.issue.body }}
 
-            ## Your Task
-            Implement a COMPLETE VERTICAL SLICE for this issue. This means:
-
-            1. Core logic in Connect-A-Pic-Core/ (interface-first, max 250 lines/file)
-            2. ViewModel in CAP.Avalonia/ViewModels/ (ObservableObject with [ObservableProperty])
-            3. View/AXAML UI in CAP.Avalonia/Views/ or MainWindow.axaml right panel
-            4. DI wiring in CAP.Avalonia/App.axaml.cs if new services are needed
-            5. Unit tests in UnitTests/ for core logic
-            6. Integration tests in UnitTests/Integration/ for Core→ViewModel data flow
-
-            ## Code Quality
-            - Max 250 lines per file (split into smaller classes if needed)
-            - Follow SOLID principles (see CLAUDE.md for details)
-            - Clean Code: meaningful names, small methods, no magic numbers
-
-            ## Before Creating the PR
-            - Run: dotnet build
-            - Run: dotnet test ./UnitTests/UnitTests.csproj --logger:trx
-            - Both must pass with zero failures
-
-            ## PR Requirements
-            - Branch name: feature/issue-${{ github.event.issue.number }}-<short-description>
-            - PR body must include: Closes #${{ github.event.issue.number }}
-            - PR body must list what was implemented at each layer
-            - PR body must describe how to manually test the feature in the UI
+            ## Efficiency Rules (save tokens and time)
+            - PLAN before coding: decide which files to create/modify, then execute
+            - Read multiple files in parallel when possible (batch tool calls)
+            - Don't read files you don't need — use Glob/Grep to find the right ones first
+            - Don't re-read files you've already read
+            - If dotnet build fails, fix ALL errors at once, not one at a time
+            - Create the PR as your LAST action — don't waste turns if it fails
 
       - name: Label PR with agent-pr
         if: always() && steps.claude.outputs.branch_name
