@@ -40,7 +40,10 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.CAP_GH_TOKEN || secrets.GITHUB_TOKEN }}
           label_trigger: "agent-task"
+          claude_args: |
+            --allowedTools "Bash(dotnet build:*),Bash(dotnet test:*),Bash(dotnet restore:*),Bash(git *),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh label create:*),Bash(gh api:*),Edit,Read,Write"
           prompt: |
             You are implementing issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
 
@@ -79,7 +82,7 @@ jobs:
       - name: Label PR with agent-pr
         if: always() && steps.claude.outputs.branch_name
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CAP_GH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # Create label if it doesn't exist
           gh label create agent-pr \
