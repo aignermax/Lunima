@@ -30,6 +30,7 @@ public class SimpleNazcaExporter
     private static void AppendHeader(StringBuilder sb)
     {
         sb.AppendLine("import nazca as nd");
+        sb.AppendLine("import nazca.demofab as demo");
         sb.AppendLine("from nazca.interconnects import Interconnect");
         sb.AppendLine();
         sb.AppendLine("# PDK Configuration");
@@ -182,22 +183,22 @@ public class SimpleNazcaExporter
         var name = comp.NazcaFunctionName?.ToLower() ?? comp.Identifier.ToLower();
 
         if (name.Contains("straight") || name.Contains("waveguide"))
-            return "nd.strt(length=250)";
+            return "demo.shallow.strt(length=250)";
         if (name.Contains("splitter") || name.Contains("1x2"))
-            return "nd.mmi1x2()";
+            return "demo.mmi1x2_sh()";
         if (name.Contains("grating"))
-            return "nd.grating()";
+            return "demo.io()";
         if (name.Contains("coupler") || name.Contains("2x2"))
-            return "nd.mmi2x2()";
+            return "demo.mmi2x2_dp()";
         if (name.Contains("phase") || name.Contains("shifter"))
-            return "nd.eopm(length=500)";
+            return "demo.eopm_dc(length=500)";
         if (name.Contains("detector") || name.Contains("photo"))
-            return "nd.pd()";
+            return "demo.pd()";
         if (name.Contains("bend"))
-            return "nd.bend(angle=90)";
+            return "demo.shallow.bend(angle=90)";
         if (name.Contains("y-junction") || name.Contains("yjunction"))
-            return "nd.Yjunction()";
+            return "demo.mmi1x2_sh()";
 
-        return $"nd.strt(length={comp.WidthMicrometers.ToString(CultureInfo.InvariantCulture)})";
+        return $"demo.shallow.strt(length={comp.WidthMicrometers.ToString(CultureInfo.InvariantCulture)})";
     }
 }

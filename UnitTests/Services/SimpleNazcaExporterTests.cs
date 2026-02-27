@@ -90,8 +90,8 @@ public class SimpleNazcaExporterTests
         // Act
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
 
-        // Assert - should map to nd.grating(), NOT nd.mmi2x2()
-        result.ShouldBe("nd.grating()");
+        // Assert - should map to demo.io(), NOT demo.mmi2x2_dp()
+        result.ShouldBe("demo.io()");
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class SimpleNazcaExporterTests
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
 
         // Assert
-        result.ShouldBe("nd.mmi2x2()");
+        result.ShouldBe("demo.mmi2x2_dp()");
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class SimpleNazcaExporterTests
     {
         var comp = CreateComponentWithName("splitter_1x2");
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
-        result.ShouldBe("nd.mmi1x2()");
+        result.ShouldBe("demo.mmi1x2_sh()");
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class SimpleNazcaExporterTests
     {
         var comp = CreateComponentWithName("phase_shifter");
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
-        result.ShouldBe("nd.eopm(length=500)");
+        result.ShouldBe("demo.eopm_dc(length=500)");
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class SimpleNazcaExporterTests
     {
         var comp = CreateComponentWithName("photodetector");
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
-        result.ShouldBe("nd.pd()");
+        result.ShouldBe("demo.pd()");
     }
 
     [Fact]
