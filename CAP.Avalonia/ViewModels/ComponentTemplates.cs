@@ -509,6 +509,11 @@ public class ComponentTemplate
     /// Optional Nazca function parameters (e.g., "length=50").
     /// </summary>
     public string? NazcaParameters { get; set; }
+
+    /// <summary>
+    /// Identifies which PDK this component comes from (e.g., "SiEPIC EBeam", "Built-in").
+    /// </summary>
+    public string PdkSource { get; set; } = "Built-in";
 }
 
 public class PinDefinition

@@ -88,27 +88,34 @@
         </Border>
 
         <!-- Left Panel - Component Library -->
-        <Border DockPanel.Dock="Left" Width="200" Background="#252526">
+        <Border DockPanel.Dock="Left" Width="220" Background="#252526">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="Component Library"
-                           FontWeight="Bold" Margin="10" Foreground="White"/>
+                           FontWeight="Bold" Margin="10,10,10,4" Foreground="White"/>
+                <TextBox DockPanel.Dock="Top" Watermark="Search components..."
+                         Text="{Binding SearchText}"
+                         Margin="10,0,10,6" FontSize="11"
+                         Background="#1e1e1e" Foreground="White"
+                         BorderBrush="#3e3e3e"/>
                 <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
                            FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
-                <ListBox ItemsSource="{Binding ComponentLibrary}"
+                <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
                          SelectedItem="{Binding SelectedTemplate}"
                          Background="Transparent" Foreground="White"
                          Margin="5">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:ComponentTemplate">
-                            <StackPanel Margin="5">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="Gray"/>
-                                <TextBlock FontSize="9" Foreground="DimGray">
-                                    <Run Text="{Binding WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                    <Run Text="x"/>
-                                    <Run Text="{Binding HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                    <Run Text="um"/>
-                                </TextBlock>
+                            <StackPanel Orientation="Horizontal" Margin="3">
+                                <controls:ComponentPreview
+                                    Width="56" Height="36"
+                                    WidthMicrometers="{Binding WidthMicrometers}"
+                                    HeightMicrometers="{Binding HeightMicrometers}"
+                                    PinDefinitions="{Binding PinDefinitions}"
+                                    Margin="0,0,6,0"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                    <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                                </StackPanel>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

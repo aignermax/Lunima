@@ -39,7 +39,11 @@ public partial class MainViewModel : ObservableObject
     private ComponentViewModel? _selectedComponent;
 
     public ObservableCollection<ComponentTemplate> ComponentLibrary { get; } = new();
+    public ObservableCollection<ComponentTemplate> FilteredComponentLibrary { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
+
+    [ObservableProperty]
+    private string _searchText = "";
 
     /// <summary>
     /// Available wavelength options for the laser configuration dropdown.
@@ -98,6 +102,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         StatusText = $"Loaded {ComponentLibrary.Count} component types";
+        FilterComponents();
     }
 
     private void LoadBundledPdks()
@@ -115,7 +120,7 @@ public partial class MainViewModel : ObservableObject
                 var pdk = _pdkLoader.LoadFromFile(pdkFile);
                 foreach (var pdkComp in pdk.Components)
                 {
-                    var template = ConvertPdkComponentToTemplate(pdkComp);
+                    var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name);
                     ComponentLibrary.Add(template);
                 }
             }
@@ -124,6 +129,28 @@ public partial class MainViewModel : ObservableObject
                 // Skip malformed PDK files silently at startup
             }
         }
+    }
+
+    partial void OnSearchTextChanged(string value) => FilterComponents();
+
+    private void FilterComponents()
+    {
+        FilteredComponentLibrary.Clear();
+        var query = SearchText?.Trim() ?? "";
+
+        foreach (var t in ComponentLibrary)
+        {
+            if (query.Length == 0 || MatchesSearch(t, query))
+                FilteredComponentLibrary.Add(t);
+        }
+    }
+
+    private static bool MatchesSearch(ComponentTemplate t, string query)
+    {
+        return t.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || t.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || (t.NazcaFunctionName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+            || t.PdkSource.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -616,13 +643,14 @@ public partial class MainViewModel : ObservableObject
             int addedCount = 0;
             foreach (var pdkComp in pdk.Components)
             {
-                var template = ConvertPdkComponentToTemplate(pdkComp);
+                var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name);
                 ComponentLibrary.Add(template);
                 if (!Categories.Contains(template.Category))
                     Categories.Add(template.Category);
                 addedCount++;
             }
 
+            FilterComponents();
             StatusText = $"Loaded PDK '{pdk.Name}' with {addedCount} components";
         }
         catch (Exception ex)
@@ -631,7 +659,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp)
+    private ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp, string pdkName = "PDK")
     {
         var pinDefs = pdkComp.Pins.Select(p => new PinDefinition(
             p.Name,
@@ -652,6 +680,7 @@ public partial class MainViewModel : ObservableObject
             HasSlider = pdkComp.Sliders?.Any() ?? false,
             SliderMin = pdkComp.Sliders?.FirstOrDefault()?.MinVal ?? 0,
             SliderMax = pdkComp.Sliders?.FirstOrDefault()?.MaxVal ?? 100,
+            PdkSource = pdkName,
         };
 
         // Use multi-wavelength factory when wavelengthData is present

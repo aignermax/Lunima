@@ -29,6 +29,10 @@ public partial class MainWindow : Window
         if (e.Handled) return;
         if (DataContext is not MainViewModel mainVm) return;
 
+        // Don't intercept keystrokes when a text input has focus (e.g., search box)
+        if (FocusManager?.GetFocusedElement() is TextBox)
+            return;
+
         var ctrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
         // Global keyboard shortcuts that work regardless of focus

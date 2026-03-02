@@ -440,12 +440,10 @@ public class DesignCanvas : Control
             if (isHighlighted)
             {
                 var glowBrush = new SolidColorBrush(Color.FromArgb(100, 0, 255, 255));
-                var glowRect = new Rect(pinX - pinSize * 1.5, pinY - pinSize * 1.5, pinSize * 3, pinSize * 3);
-                context.FillRectangle(glowBrush, glowRect);
+                context.DrawEllipse(glowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
             }
 
-            var pinRect = new Rect(pinX - pinSize, pinY - pinSize, pinSize * 2, pinSize * 2);
-            context.FillRectangle(pinBrush, pinRect);
+            context.DrawEllipse(pinBrush, null, new Point(pinX, pinY), pinSize, pinSize);
 
             // Draw pin direction indicator (using absolute angle which includes component rotation)
             var dirPen = new Pen(isHighlighted ? Brushes.Cyan : Brushes.White, isHighlighted ? 2 : 1);
