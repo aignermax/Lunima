@@ -82,12 +82,14 @@ public class SimpleNazcaExporter
             var varName = $"comp_{compIndex}";
             componentNames[comp] = varName;
 
-            var x = comp.PhysicalX.ToString("F2", ci);
-            var y = comp.PhysicalY.ToString("F2", ci);
-            var rot = comp.RotationDegrees.ToString("F0", ci);
+            // Nazca .put() places the component's origin (a0 pin) at the given position.
+            // Our editor stores the top-left corner, so we offset to the origin pin.
+            var nazcaX = (comp.PhysicalX + comp.NazcaOriginOffsetX).ToString("F2", ci);
+            var nazcaY = NormalizeZero(-(comp.PhysicalY + comp.NazcaOriginOffsetY)).ToString("F2", ci);
+            var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
             var nazcaFunc = GetNazcaFunction(comp);
 
-            sb.AppendLine($"        {varName} = {nazcaFunc}.put({x}, {y}, {rot})  # {comp.Identifier}");
+            sb.AppendLine($"        {varName} = {nazcaFunc}.put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
             compIndex++;
         }
 
@@ -152,6 +154,12 @@ public class SimpleNazcaExporter
         };
     }
 
+    /// <summary>
+    /// Normalizes negative zero to positive zero to avoid "-0.00" in output.
+    /// </summary>
+    private static double NormalizeZero(double value) =>
+        value == 0.0 ? 0.0 : value;
+
     private static string FormatStraightSegment(
         StraightSegment straight, CultureInfo ci, bool isFirst)
     {
@@ -160,8 +168,8 @@ public class SimpleNazcaExporter
         if (isFirst)
         {
             var x = straight.StartPoint.X.ToString("F2", ci);
-            var y = straight.StartPoint.Y.ToString("F2", ci);
-            var angle = straight.StartAngleDegrees.ToString("F2", ci);
+            var y = NormalizeZero(-straight.StartPoint.Y).ToString("F2", ci);
+            var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.strt(length={length}).put({x}, {y}, {angle})";
         }
 
@@ -171,13 +179,13 @@ public class SimpleNazcaExporter
     private static string FormatBendSegment(BendSegment bend, CultureInfo ci, bool isFirst)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
-        var sweepAngle = bend.SweepAngleDegrees.ToString("F2", ci);
+        var sweepAngle = NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
 
         if (isFirst)
         {
             var x = bend.StartPoint.X.ToString("F2", ci);
-            var y = bend.StartPoint.Y.ToString("F2", ci);
-            var angle = bend.StartAngleDegrees.ToString("F2", ci);
+            var y = NormalizeZero(-bend.StartPoint.Y).ToString("F2", ci);
+            var angle = NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
         }
 
@@ -219,7 +227,8 @@ public class SimpleNazcaExporter
     /// </summary>
     internal static bool IsPdkFunction(string name) =>
         name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-        name.Contains(".", StringComparison.Ordinal);
+        (name.Contains(".", StringComparison.Ordinal) &&
+         !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Maps a component to its Nazca function call string.

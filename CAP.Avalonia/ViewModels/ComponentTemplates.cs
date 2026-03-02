@@ -18,56 +18,69 @@ public static class ComponentTemplates
     {
         // Realistic component sizes based on typical silicon photonics foundry PDKs
         // Waveguide routing is automatic - no need for manual waveguide/bend components
+        // Sizes and pin positions match Nazca demofab PDK exactly.
+        // Translation from Nazca (Y-up, origin at a0) to our editor (Y-down, top-left origin):
+        //   width = bbox.xmax - bbox.xmin
+        //   height = bbox.ymax - bbox.ymin
+        //   pin offset = (nazca_x - bbox.xmin, bbox.ymax - nazca_y)
+        //   origin offset = (0 - bbox.xmin, bbox.ymax - 0) = where Nazca's a0 sits in our coords
         return new List<ComponentTemplate>
         {
             new ComponentTemplate
             {
-                // 1x2 MMI Splitter: typical length 5-15µm, width ~6µm for the MMI section
-                // Total footprint including tapers: ~20×15µm
+                // demo.mmi1x2_sh(): bbox (0, -27.5, 80, 27.5) = 80×55
+                // Pins: a0=(0,0), b0=(80,2), b1=(80,-2)
                 Name = "1x2 MMI Splitter",
                 Category = "Splitters",
-                WidthMicrometers = 20,
-                HeightMicrometers = 15,
+                WidthMicrometers = 80,
+                HeightMicrometers = 55,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 27.5,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 7.5, 180),  // Left side, pin points west (away from center)
-                    new PinDefinition("out1", 20, 4, 0),   // Right side, pin points east (away from center)
-                    new PinDefinition("out2", 20, 11, 0)   // Right side, pin points east (away from center)
+                    new PinDefinition("in", 0, 27.5, 180),
+                    new PinDefinition("out1", 80, 25.5, 0),
+                    new PinDefinition("out2", 80, 29.5, 0)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
             },
             new ComponentTemplate
             {
-                // 2x2 MMI Coupler: typical length 30-50µm, width ~6µm
-                // Total footprint: ~50×20µm
+                // demo.mmi2x2_dp(): bbox (0, -30, 250, 30) = 250×60
+                // Pins: a0=(0,4), a1=(0,-4), b0=(250,4), b1=(250,-4)
+                // NazcaOriginOffset points to a0 pin: (0, ymax - a0.y) = (0, 30-4) = (0, 26)
                 Name = "2x2 MMI Coupler",
                 Category = "Couplers",
-                WidthMicrometers = 50,
-                HeightMicrometers = 20,
+                WidthMicrometers = 250,
+                HeightMicrometers = 60,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 26,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in1", 0, 5, 180),    // Left side, pin points west (away from center)
-                    new PinDefinition("in2", 0, 15, 180),   // Left side, pin points west (away from center)
-                    new PinDefinition("out1", 50, 5, 0),    // Right side, pin points east (away from center)
-                    new PinDefinition("out2", 50, 15, 0)    // Right side, pin points east (away from center)
+                    new PinDefinition("in1", 0, 26, 180),
+                    new PinDefinition("in2", 0, 34, 180),
+                    new PinDefinition("out1", 250, 26, 0),
+                    new PinDefinition("out2", 250, 34, 0)
                 },
-                CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5) // 50/50 coupling
+                CreateSMatrix = pins => CreateCouplerMatrix(pins, 0.5)
             },
             new ComponentTemplate
             {
-                // Directional Coupler: more compact than MMI
-                // Typical: 10-20µm coupling length, ~10µm total width
+                // demo.mmi2x2_dp(): same physical device as 2x2 MMI Coupler
                 // Slider controls coupling ratio κ (0-100%)
+                // NazcaOriginOffset points to a0 pin: (0, 26) — same as 2x2 MMI
                 Name = "Directional Coupler",
                 Category = "Couplers",
-                WidthMicrometers = 30,
-                HeightMicrometers = 12,
+                WidthMicrometers = 250,
+                HeightMicrometers = 60,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 26,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in1", 0, 3, 180),  // Left side, pin points west (away from center)
-                    new PinDefinition("in2", 0, 9, 180),  // Left side, pin points west (away from center)
-                    new PinDefinition("out1", 30, 3, 0),  // Right side, pin points east (away from center)
-                    new PinDefinition("out2", 30, 9, 0)   // Right side, pin points east (away from center)
+                    new PinDefinition("in1", 0, 26, 180),
+                    new PinDefinition("in2", 0, 34, 180),
+                    new PinDefinition("out1", 250, 26, 0),
+                    new PinDefinition("out2", 250, 34, 0)
                 },
                 HasSlider = true,
                 SliderMin = 0,
@@ -76,16 +89,18 @@ public static class ComponentTemplates
             },
             new ComponentTemplate
             {
-                // Thermo-optic Phase Shifter: 100-300µm heater length, ~5µm wide
-                // Total footprint: ~200×10µm
+                // demo.eopm_dc(length=500): bbox (0, -30, 500, 30) = 500×60
+                // Pins: a0=(0,0), b0=(500,0)
                 Name = "Phase Shifter",
                 Category = "Modulators",
-                WidthMicrometers = 200,
-                HeightMicrometers = 10,
+                WidthMicrometers = 500,
+                HeightMicrometers = 60,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 30,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 5, 180),   // Left side, pin points west (away from center)
-                    new PinDefinition("out", 200, 5, 0)   // Right side, pin points east (away from center)
+                    new PinDefinition("in", 0, 30, 180),
+                    new PinDefinition("out", 500, 30, 0)
                 },
                 HasSlider = true,
                 SliderMin = 0,
@@ -94,77 +109,84 @@ public static class ComponentTemplates
             },
             new ComponentTemplate
             {
-                // Grating Coupler: ~15×15µm grating area + taper
-                // Total footprint: ~30×20µm
+                // demo.io(): bbox (0, -9.5, 100, 9.5) = 100×19
+                // Pins: a0=(0,0) fiber side, b0=(100,0) waveguide side
                 Name = "Grating Coupler",
                 Category = "I/O",
-                WidthMicrometers = 30,
-                HeightMicrometers = 20,
+                WidthMicrometers = 100,
+                HeightMicrometers = 19,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 9.5,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("waveguide", 30, 10, 0)
+                    new PinDefinition("waveguide", 100, 9.5, 0)
                 },
-                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.3) // ~30% coupling efficiency
+                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.3)
             },
             new ComponentTemplate
             {
-                // Ge Photodetector: 10-50µm length, ~5µm wide
-                // Total footprint: ~40×15µm
+                // demo.pd(): bbox (0, -27.5, 70, 27.5) = 70×55
+                // Pins: a0=(0,0) input
                 Name = "Photodetector",
                 Category = "I/O",
-                WidthMicrometers = 40,
-                HeightMicrometers = 15,
+                WidthMicrometers = 70,
+                HeightMicrometers = 55,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 27.5,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 7.5, 180)
+                    new PinDefinition("in", 0, 27.5, 180)
                 },
-                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.9) // ~90% absorption
+                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.9)
             },
             new ComponentTemplate
             {
-                // Y-Junction: compact alternative to MMI
-                // Typical: ~5×10µm
+                // demo.mmi1x2_sh(): same physical device as 1x2 MMI Splitter
                 Name = "Y-Junction",
                 Category = "Splitters",
-                WidthMicrometers = 10,
-                HeightMicrometers = 12,
+                WidthMicrometers = 80,
+                HeightMicrometers = 55,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 27.5,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 6, 180),  // Left side, pin points west (away from center)
-                    new PinDefinition("out1", 10, 3, 0), // Right side, pin points east (away from center)
-                    new PinDefinition("out2", 10, 9, 0)  // Right side, pin points east (away from center)
+                    new PinDefinition("in", 0, 27.5, 180),
+                    new PinDefinition("out1", 80, 25.5, 0),
+                    new PinDefinition("out2", 80, 29.5, 0)
                 },
                 CreateSMatrix = pins => CreateSplitterMatrix(pins)
             },
             new ComponentTemplate
             {
-                // Ring Resonator: radius ~5-10µm, coupling region
-                // Total footprint: ~30×25µm
+                // Ring Resonator: no exact demofab match, use mmi1x2 footprint
                 Name = "Ring Resonator",
                 Category = "Filters",
-                WidthMicrometers = 30,
-                HeightMicrometers = 25,
+                WidthMicrometers = 80,
+                HeightMicrometers = 55,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 27.5,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("in", 0, 5, 180),      // Left side, pin points west (away from center)
-                    new PinDefinition("through", 30, 5, 0),  // Right side, pin points east (away from center)
-                    new PinDefinition("drop", 30, 20, 0)     // Right side, pin points east (away from center)
+                    new PinDefinition("in", 0, 22.5, 180),
+                    new PinDefinition("through", 80, 22.5, 0),
+                    new PinDefinition("drop", 80, 47.5, 0)
                 },
                 CreateSMatrix = pins => CreateRingResonatorMatrix(pins)
             },
             new ComponentTemplate
             {
-                // Edge Coupler for fiber coupling
-                // Taper length: 100-300µm
+                // demo.io(): same physical device as Grating Coupler
                 Name = "Edge Coupler",
                 Category = "I/O",
-                WidthMicrometers = 150,
-                HeightMicrometers = 15,
+                WidthMicrometers = 100,
+                HeightMicrometers = 19,
+                NazcaOriginOffsetX = 0,
+                NazcaOriginOffsetY = 9.5,
                 PinDefinitions = new[]
                 {
-                    new PinDefinition("waveguide", 150, 7.5, 0)
+                    new PinDefinition("waveguide", 100, 9.5, 0)
                 },
-                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.5) // ~50% coupling
+                CreateSMatrix = pins => CreateTerminalMatrix(pins, 0.5)
             }
         };
     }
@@ -262,6 +284,8 @@ public static class ComponentTemplates
         component.PhysicalY = y;
         component.WidthMicrometers = template.WidthMicrometers;
         component.HeightMicrometers = template.HeightMicrometers;
+        component.NazcaOriginOffsetX = template.NazcaOriginOffsetX;
+        component.NazcaOriginOffsetY = template.NazcaOriginOffsetY;
 
         return component;
     }
@@ -514,6 +538,13 @@ public class ComponentTemplate
     /// Identifies which PDK this component comes from (e.g., "SiEPIC EBeam", "Built-in").
     /// </summary>
     public string PdkSource { get; set; } = "Built-in";
+
+    /// <summary>
+    /// Offset from our top-left origin to Nazca's component origin (a0 pin position).
+    /// Used by the exporter to correctly place components with .put(x, y).
+    /// </summary>
+    public double NazcaOriginOffsetX { get; set; } = 0;
+    public double NazcaOriginOffsetY { get; set; } = 0;
 }
 
 public class PinDefinition

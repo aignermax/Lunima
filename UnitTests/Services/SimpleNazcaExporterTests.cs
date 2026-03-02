@@ -40,34 +40,36 @@ public class SimpleNazcaExporterTests
     [Fact]
     public void FormatSegment_BendSegment_FirstHasCoordinates()
     {
+        // Sweep angle 90 → negated to -90 for Y-axis flip
         var segment = new BendSegment(50, 0, 50, 0, 90);
 
         var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        result.ShouldContain("nd.bend(radius=50.00, angle=90.00)");
+        result.ShouldContain("nd.bend(radius=50.00, angle=-90.00)");
         result.ShouldContain(".put(");
-        result.ShouldContain(", 0.00)");
     }
 
     [Fact]
     public void FormatSegment_BendSegment_ChainedHasEmptyPut()
     {
+        // Sweep angle 90 → negated to -90 for Y-axis flip
         var segment = new BendSegment(50, 0, 50, 0, 90);
 
         var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: false);
 
-        result.ShouldContain("nd.bend(radius=50.00, angle=90.00)");
+        result.ShouldContain("nd.bend(radius=50.00, angle=-90.00)");
         result.ShouldEndWith(".put()");
     }
 
     [Fact]
-    public void FormatSegment_NegativeSweepAngle_PreservesSign()
+    public void FormatSegment_NegativeSweepAngle_GetsNegated()
     {
+        // -90 sweep → negated to +90 for Y-axis flip
         var segment = new BendSegment(50, 0, 25, 180, -90);
 
         var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        result.ShouldContain("angle=-90.00");
+        result.ShouldContain("angle=90.00");
         result.ShouldContain("radius=25.00");
     }
 
@@ -85,7 +87,7 @@ public class SimpleNazcaExporterTests
         SimpleNazcaExporter.AppendSegmentExport(sb, segments);
         var result = sb.ToString();
 
-        // First segment should have coordinates
+        // First segment should have coordinates (Y=0 negated is still 0)
         result.ShouldContain("nd.strt(length=");
         result.ShouldContain(".put(0.00, 0.00, 0.00)");
 
@@ -104,6 +106,7 @@ public class SimpleNazcaExporterTests
     [Fact]
     public void AppendSegmentExport_SingleSegment_HasCoordinates()
     {
+        // Y=20 → negated to -20
         var segments = new List<PathSegment>
         {
             new StraightSegment(10, 20, 110, 20, 0)
@@ -113,7 +116,7 @@ public class SimpleNazcaExporterTests
         SimpleNazcaExporter.AppendSegmentExport(sb, segments);
         var result = sb.ToString();
 
-        result.ShouldContain(".put(10.00, 20.00, 0.00)");
+        result.ShouldContain(".put(10.00, -20.00, 0.00)");
     }
 
     [Fact]
@@ -157,25 +160,26 @@ public class SimpleNazcaExporterTests
     }
 
     [Fact]
-    public void FormatSegment_StraightWithAngle_IncludesAngle()
+    public void FormatSegment_StraightWithAngle_IncludesNegatedAngle()
     {
+        // angle=45 → negated to -45, Y=20 → negated to -20
         var angle = 45.0;
         var segment = new StraightSegment(10, 20, 80.71, 90.71, angle);
 
         var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        result.ShouldContain(".put(10.00, 20.00, 45.00)");
+        result.ShouldContain(".put(10.00, -20.00, -45.00)");
     }
 
     [Fact]
     public void FormatSegment_DefaultIsFirst_HasCoordinates()
     {
-        // The default parameter isFirst=true should include coordinates
+        // Y=10 → negated to -10
         var segment = new StraightSegment(5, 10, 55, 10, 0);
 
         var result = SimpleNazcaExporter.FormatSegment(segment);
 
-        result.ShouldContain(".put(5.00, 10.00, 0.00)");
+        result.ShouldContain(".put(5.00, -10.00, 0.00)");
     }
 
     private static Component CreateComponentWithName(string nazcaFunctionName)

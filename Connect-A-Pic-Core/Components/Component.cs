@@ -26,6 +26,8 @@ public class Component : ICloneable
     public double PhysicalOffsetX { get; set; }
     public double PhysicalOffsetY { get; set; }
     public double RotationDegrees { get; set; }
+    public double NazcaOriginOffsetX { get; set; }
+    public double NazcaOriginOffsetY { get; set; }
 
     public Part[,] Parts { get; protected set; }
     public List<PhysicalPin> PhysicalPins { get; protected set; } = new();
@@ -306,6 +308,8 @@ public class Component : ICloneable
         clonedComponent.PhysicalOffsetX = PhysicalOffsetX;
         clonedComponent.PhysicalOffsetY = PhysicalOffsetY;
         clonedComponent.RotationDegrees = RotationDegrees;
+        clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
+        clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
 
         return clonedComponent;
     }
