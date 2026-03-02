@@ -488,7 +488,9 @@ public partial class MainViewModel : ObservableObject
         {
             var cmd = new RotateComponentCommand(Canvas, SelectedComponent);
             CommandManager.ExecuteCommand(cmd);
-            StatusText = $"Rotated: {SelectedComponent.Name}";
+            StatusText = cmd.WasApplied
+                ? $"Rotated: {SelectedComponent.Name}"
+                : $"Cannot rotate: {SelectedComponent.Name} would overlap another component";
         }
     }
 
