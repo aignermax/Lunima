@@ -74,6 +74,7 @@ public class SimpleNazcaExporter
         sb.AppendLine("        # Components");
         var componentNames = new Dictionary<Component, string>();
         int compIndex = 0;
+        var ci = CultureInfo.InvariantCulture;
 
         foreach (var compVm in canvas.Components)
         {
@@ -81,11 +82,12 @@ public class SimpleNazcaExporter
             var varName = $"comp_{compIndex}";
             componentNames[comp] = varName;
 
-            var x = comp.PhysicalX.ToString("F2", CultureInfo.InvariantCulture);
-            var y = comp.PhysicalY.ToString("F2", CultureInfo.InvariantCulture);
+            var x = comp.PhysicalX.ToString("F2", ci);
+            var y = comp.PhysicalY.ToString("F2", ci);
+            var rot = comp.RotationDegrees.ToString("F0", ci);
             var nazcaFunc = GetNazcaFunction(comp);
 
-            sb.AppendLine($"        {varName} = {nazcaFunc}.put({x}, {y})  # {comp.Identifier}");
+            sb.AppendLine($"        {varName} = {nazcaFunc}.put({x}, {y}, {rot})  # {comp.Identifier}");
             compIndex++;
         }
 
@@ -121,51 +123,65 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Appends segment-by-segment Nazca export for a routed connection.
+    /// First segment uses absolute .put(x, y, angle); subsequent segments
+    /// chain with .put() so Nazca auto-connects them without gaps.
     /// </summary>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments)
     {
-        foreach (var segment in segments)
+        for (int i = 0; i < segments.Count; i++)
         {
-            sb.AppendLine(FormatSegment(segment));
+            sb.AppendLine(FormatSegment(segments[i], isFirst: i == 0));
         }
     }
 
     /// <summary>
     /// Formats a single path segment as a Nazca Python call.
     /// </summary>
-    internal static string FormatSegment(PathSegment segment)
+    /// <param name="segment">The path segment to format.</param>
+    /// <param name="isFirst">If true, includes absolute coordinates; if false, chains with .put().</param>
+    internal static string FormatSegment(PathSegment segment, bool isFirst = true)
     {
         var ci = CultureInfo.InvariantCulture;
 
         return segment switch
         {
-            StraightSegment straight => FormatStraightSegment(straight, ci),
-            BendSegment bend => FormatBendSegment(bend, ci),
+            StraightSegment straight => FormatStraightSegment(straight, ci, isFirst),
+            BendSegment bend => FormatBendSegment(bend, ci, isFirst),
             _ => $"        # Unknown segment type: {segment.GetType().Name}"
         };
     }
 
     private static string FormatStraightSegment(
-        StraightSegment straight, CultureInfo ci)
+        StraightSegment straight, CultureInfo ci, bool isFirst)
     {
         var length = straight.LengthMicrometers.ToString("F2", ci);
-        var x = straight.StartPoint.X.ToString("F2", ci);
-        var y = straight.StartPoint.Y.ToString("F2", ci);
-        var angle = straight.StartAngleDegrees.ToString("F2", ci);
 
-        return $"        nd.strt(length={length}).put({x}, {y}, {angle})";
+        if (isFirst)
+        {
+            var x = straight.StartPoint.X.ToString("F2", ci);
+            var y = straight.StartPoint.Y.ToString("F2", ci);
+            var angle = straight.StartAngleDegrees.ToString("F2", ci);
+            return $"        nd.strt(length={length}).put({x}, {y}, {angle})";
+        }
+
+        return $"        nd.strt(length={length}).put()";
     }
 
-    private static string FormatBendSegment(BendSegment bend, CultureInfo ci)
+    private static string FormatBendSegment(BendSegment bend, CultureInfo ci, bool isFirst)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
         var sweepAngle = bend.SweepAngleDegrees.ToString("F2", ci);
-        var x = bend.StartPoint.X.ToString("F2", ci);
-        var y = bend.StartPoint.Y.ToString("F2", ci);
-        var angle = bend.StartAngleDegrees.ToString("F2", ci);
 
-        return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
+        if (isFirst)
+        {
+            var x = bend.StartPoint.X.ToString("F2", ci);
+            var y = bend.StartPoint.Y.ToString("F2", ci);
+            var angle = bend.StartAngleDegrees.ToString("F2", ci);
+            return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
+        }
+
+        return $"        nd.bend(radius={radius}, angle={sweepAngle}).put()";
     }
 
     private static void AppendFallbackExport(

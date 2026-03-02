@@ -15,51 +15,65 @@ namespace UnitTests.Services;
 public class SimpleNazcaExporterTests
 {
     [Fact]
-    public void FormatSegment_StraightSegment_OutputsNdStrt()
+    public void FormatSegment_StraightSegment_FirstHasCoordinates()
     {
-        // Arrange
         var segment = new StraightSegment(0, 0, 100, 0, 0);
 
-        // Act
-        var result = SimpleNazcaExporter.FormatSegment(segment);
+        var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        // Assert
         result.ShouldContain("nd.strt(length=100.00)");
         result.ShouldContain(".put(0.00, 0.00, 0.00)");
     }
 
     [Fact]
-    public void FormatSegment_BendSegment_OutputsNdBend()
+    public void FormatSegment_StraightSegment_ChainedHasEmptyPut()
     {
-        // Arrange
+        var segment = new StraightSegment(100, 0, 200, 0, 0);
+
+        var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: false);
+
+        result.ShouldContain("nd.strt(length=100.00)");
+        result.ShouldContain(".put()");
+        result.ShouldNotContain(".put(100");
+    }
+
+    [Fact]
+    public void FormatSegment_BendSegment_FirstHasCoordinates()
+    {
         var segment = new BendSegment(50, 0, 50, 0, 90);
 
-        // Act
-        var result = SimpleNazcaExporter.FormatSegment(segment);
+        var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        // Assert
         result.ShouldContain("nd.bend(radius=50.00, angle=90.00)");
         result.ShouldContain(".put(");
+        result.ShouldContain(", 0.00)");
+    }
+
+    [Fact]
+    public void FormatSegment_BendSegment_ChainedHasEmptyPut()
+    {
+        var segment = new BendSegment(50, 0, 50, 0, 90);
+
+        var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: false);
+
+        result.ShouldContain("nd.bend(radius=50.00, angle=90.00)");
+        result.ShouldEndWith(".put()");
     }
 
     [Fact]
     public void FormatSegment_NegativeSweepAngle_PreservesSign()
     {
-        // Arrange
         var segment = new BendSegment(50, 0, 25, 180, -90);
 
-        // Act
-        var result = SimpleNazcaExporter.FormatSegment(segment);
+        var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        // Assert
         result.ShouldContain("angle=-90.00");
         result.ShouldContain("radius=25.00");
     }
 
     [Fact]
-    public void AppendSegmentExport_MixedSegments_OutputsAllSegments()
+    public void AppendSegmentExport_MixedSegments_FirstHasCoordsRestChained()
     {
-        // Arrange
         var segments = new List<PathSegment>
         {
             new StraightSegment(0, 0, 50, 0, 0),
@@ -68,42 +82,53 @@ public class SimpleNazcaExporterTests
         };
         var sb = new System.Text.StringBuilder();
 
-        // Act
         SimpleNazcaExporter.AppendSegmentExport(sb, segments);
         var result = sb.ToString();
 
-        // Assert
+        // First segment should have coordinates
         result.ShouldContain("nd.strt(length=");
-        result.ShouldContain("nd.bend(radius=50.00, angle=90.00)");
-        var strtCount = CountOccurrences(result, "nd.strt(");
-        var bendCount = CountOccurrences(result, "nd.bend(");
-        strtCount.ShouldBe(2);
-        bendCount.ShouldBe(1);
+        result.ShouldContain(".put(0.00, 0.00, 0.00)");
+
+        // Subsequent segments should chain
+        var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        lines.Length.ShouldBe(3);
+
+        // Line 0: first segment with coords
+        lines[0].ShouldContain(".put(0.00, 0.00, 0.00)");
+
+        // Lines 1 & 2: chained with empty .put()
+        lines[1].Trim().ShouldEndWith(".put()");
+        lines[2].Trim().ShouldEndWith(".put()");
+    }
+
+    [Fact]
+    public void AppendSegmentExport_SingleSegment_HasCoordinates()
+    {
+        var segments = new List<PathSegment>
+        {
+            new StraightSegment(10, 20, 110, 20, 0)
+        };
+        var sb = new System.Text.StringBuilder();
+
+        SimpleNazcaExporter.AppendSegmentExport(sb, segments);
+        var result = sb.ToString();
+
+        result.ShouldContain(".put(10.00, 20.00, 0.00)");
     }
 
     [Fact]
     public void GetNazcaFunction_GratingCoupler_ReturnsGrating()
     {
-        // Arrange - a component with "grating coupler" in its name
         var comp = CreateComponentWithName("grating_coupler");
-
-        // Act
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
-
-        // Assert - should map to demo.io(), NOT demo.mmi2x2_dp()
         result.ShouldBe("demo.io()");
     }
 
     [Fact]
     public void GetNazcaFunction_DirectionalCoupler_ReturnsMmi2x2()
     {
-        // Arrange
         var comp = CreateComponentWithName("directional_coupler");
-
-        // Act
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
-
-        // Assert
         result.ShouldBe("demo.mmi2x2_dp()");
     }
 
@@ -134,30 +159,23 @@ public class SimpleNazcaExporterTests
     [Fact]
     public void FormatSegment_StraightWithAngle_IncludesAngle()
     {
-        // Arrange - angled straight segment
         var angle = 45.0;
         var segment = new StraightSegment(10, 20, 80.71, 90.71, angle);
 
-        // Act
-        var result = SimpleNazcaExporter.FormatSegment(segment);
+        var result = SimpleNazcaExporter.FormatSegment(segment, isFirst: true);
 
-        // Assert
         result.ShouldContain(".put(10.00, 20.00, 45.00)");
     }
 
     [Fact]
-    public void FormatSegment_BendWithStartPoint_UsesCorrectCoordinates()
+    public void FormatSegment_DefaultIsFirst_HasCoordinates()
     {
-        // Arrange
-        var bend = new BendSegment(100, 0, 50, 0, 90);
+        // The default parameter isFirst=true should include coordinates
+        var segment = new StraightSegment(5, 10, 55, 10, 0);
 
-        // Act
-        var result = SimpleNazcaExporter.FormatSegment(bend);
+        var result = SimpleNazcaExporter.FormatSegment(segment);
 
-        // Assert
-        result.ShouldContain("nd.bend(radius=50.00, angle=90.00)");
-        // Start angle should be 0
-        result.ShouldContain(", 0.00)");
+        result.ShouldContain(".put(5.00, 10.00, 0.00)");
     }
 
     private static Component CreateComponentWithName(string nazcaFunctionName)
