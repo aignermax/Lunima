@@ -127,7 +127,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
     public class PdkSMatrixDraft
     {
         /// <summary>
-        /// Wavelength in nm this S-Matrix applies to.
+        /// Wavelength in nm this S-Matrix applies to (for single-wavelength mode).
         /// </summary>
         [JsonPropertyName("wavelengthNm")]
         public int WavelengthNm { get; set; } = 1550;
@@ -135,9 +135,18 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         /// <summary>
         /// S-Matrix connections as list of (fromPin, toPin, magnitude, phaseDegrees).
         /// Magnitude is transmission amplitude (0-1), phase in degrees.
+        /// Used for single-wavelength mode. Ignored when wavelengthData is present.
         /// </summary>
         [JsonPropertyName("connections")]
         public List<SMatrixConnection> Connections { get; set; } = new();
+
+        /// <summary>
+        /// Optional multi-wavelength S-Matrix data.
+        /// When present, this takes precedence over the single-wavelength connections.
+        /// Each entry contains S-Matrix connections at a specific wavelength.
+        /// </summary>
+        [JsonPropertyName("wavelengthData")]
+        public List<WavelengthSMatrixEntry>? WavelengthData { get; set; }
 
         /// <summary>
         /// Optional parameter definitions for parametric S-Matrix formulas.
@@ -145,6 +154,19 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         /// </summary>
         [JsonPropertyName("parameters")]
         public List<ParameterDefinitionDraft>? Parameters { get; set; }
+    }
+
+    /// <summary>
+    /// S-Matrix connections at a specific wavelength.
+    /// Used for multi-wavelength PDK components (e.g., from measured S-parameter data).
+    /// </summary>
+    public class WavelengthSMatrixEntry
+    {
+        [JsonPropertyName("wavelengthNm")]
+        public int WavelengthNm { get; set; }
+
+        [JsonPropertyName("connections")]
+        public List<SMatrixConnection> Connections { get; set; } = new();
     }
 
     /// <summary>

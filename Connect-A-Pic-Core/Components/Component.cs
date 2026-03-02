@@ -64,7 +64,7 @@ public class Component : ICloneable
         IsPlacedInGrid = false;
         NazcaFunctionName = nazcaFunctionName;
         var firstSlider = sliders.FirstOrDefault();
-        NazcaFunctionParameters = InsertSliderValue(NazcaFunctionParameters ?? "");
+        NazcaFunctionParameters = InsertSliderValue(nazcaFunctionParams ?? "");
 
         // Initialize physical pins and set parent references
         PhysicalPins = physicalPins ?? new List<PhysicalPin>();

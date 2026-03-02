@@ -201,21 +201,31 @@ public static class ComponentTemplates
             sliders.Add(new Slider(Guid.NewGuid(), 0, (template.SliderMin + template.SliderMax) / 2, template.SliderMax, template.SliderMin));
         }
 
-        // Create S-Matrix (use slider-aware factory if available)
-        SMatrix sMatrix;
-        if (template.CreateSMatrixWithSliders != null)
-            sMatrix = template.CreateSMatrixWithSliders(logicalPins, sliders);
-        else if (template.CreateSMatrix != null)
-            sMatrix = template.CreateSMatrix(logicalPins);
-        else
-            throw new InvalidOperationException($"Template '{template.Name}' has no S-Matrix factory.");
-
-        var wavelengthMap = new Dictionary<int, SMatrix>
+        // Create wavelength→S-Matrix map
+        Dictionary<int, SMatrix> wavelengthMap;
+        if (template.CreateWavelengthSMatrixMap != null)
         {
-            { 1550, sMatrix },
-            { 1310, sMatrix },
-            { 980, sMatrix }
-        };
+            // Multi-wavelength: each wavelength has its own S-matrix
+            wavelengthMap = template.CreateWavelengthSMatrixMap(logicalPins);
+        }
+        else
+        {
+            // Single S-matrix duplicated across standard wavelengths
+            SMatrix sMatrix;
+            if (template.CreateSMatrixWithSliders != null)
+                sMatrix = template.CreateSMatrixWithSliders(logicalPins, sliders);
+            else if (template.CreateSMatrix != null)
+                sMatrix = template.CreateSMatrix(logicalPins);
+            else
+                throw new InvalidOperationException($"Template '{template.Name}' has no S-Matrix factory.");
+
+            wavelengthMap = new Dictionary<int, SMatrix>
+            {
+                { 1550, sMatrix },
+                { 1310, sMatrix },
+                { 980, sMatrix }
+            };
+        }
 
         // Create physical pins linked to logical pins
         var physicalPins = new List<PhysicalPin>();
@@ -482,6 +492,12 @@ public class ComponentTemplate
     public double SliderMax { get; set; }
     public Func<List<Pin>, SMatrix>? CreateSMatrix { get; set; }
     public Func<List<Pin>, List<Slider>, SMatrix>? CreateSMatrixWithSliders { get; set; }
+
+    /// <summary>
+    /// Optional factory for multi-wavelength S-matrices (e.g., from measured .sparam data).
+    /// When set, takes precedence over CreateSMatrix for building the wavelength map.
+    /// </summary>
+    public Func<List<Pin>, Dictionary<int, SMatrix>>? CreateWavelengthSMatrixMap { get; set; }
 
     /// <summary>
     /// Nazca function name for export (e.g., "pdk.mmi2x2").

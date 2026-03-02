@@ -63,6 +63,14 @@ namespace CAP_Core.LightCalculation
                 {
                     allSMatrices.Add(matrixFound);
                 }
+                else if (component.WaveLengthToSMatrixMap.Count > 0)
+                {
+                    // Nearest-wavelength fallback for multi-wavelength PDK components
+                    var nearestKey = component.WaveLengthToSMatrixMap.Keys
+                        .OrderBy(k => Math.Abs(k - waveLength))
+                        .First();
+                    allSMatrices.Add(component.WaveLengthToSMatrixMap[nearestKey]);
+                }
                 else
                 {
                     throw new InvalidDataException($"The Matrix was not defined for the specific waveLength: {waveLength} at component {component.Identifier}");

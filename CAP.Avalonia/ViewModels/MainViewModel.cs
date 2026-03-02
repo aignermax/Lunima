@@ -81,19 +81,49 @@ public partial class MainViewModel : ObservableObject
     private void LoadComponentLibrary()
     {
         var templates = ComponentTemplates.GetAllTemplates();
-        var categories = templates.Select(t => t.Category).Distinct().OrderBy(c => c);
-
-        foreach (var category in categories)
-        {
-            Categories.Add(category);
-        }
 
         foreach (var template in templates)
         {
             ComponentLibrary.Add(template);
         }
 
+        // Auto-load bundled PDK files from PDKs directory
+        LoadBundledPdks();
+
+        // Build category list from all loaded templates
+        var categories = ComponentLibrary.Select(t => t.Category).Distinct().OrderBy(c => c);
+        foreach (var category in categories)
+        {
+            Categories.Add(category);
+        }
+
         StatusText = $"Loaded {ComponentLibrary.Count} component types";
+    }
+
+    private void LoadBundledPdks()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var pdkDir = Path.Combine(baseDir, "PDKs");
+
+        if (!Directory.Exists(pdkDir))
+            return;
+
+        foreach (var pdkFile in Directory.GetFiles(pdkDir, "*.json"))
+        {
+            try
+            {
+                var pdk = _pdkLoader.LoadFromFile(pdkFile);
+                foreach (var pdkComp in pdk.Components)
+                {
+                    var template = ConvertPdkComponentToTemplate(pdkComp);
+                    ComponentLibrary.Add(template);
+                }
+            }
+            catch
+            {
+                // Skip malformed PDK files silently at startup
+            }
+        }
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -588,6 +618,8 @@ public partial class MainViewModel : ObservableObject
             {
                 var template = ConvertPdkComponentToTemplate(pdkComp);
                 ComponentLibrary.Add(template);
+                if (!Categories.Contains(template.Category))
+                    Categories.Add(template.Category);
                 addedCount++;
             }
 
@@ -608,7 +640,7 @@ public partial class MainViewModel : ObservableObject
             p.AngleDegrees
         )).ToArray();
 
-        return new ComponentTemplate
+        var template = new ComponentTemplate
         {
             Name = pdkComp.Name,
             Category = pdkComp.Category,
@@ -620,8 +652,32 @@ public partial class MainViewModel : ObservableObject
             HasSlider = pdkComp.Sliders?.Any() ?? false,
             SliderMin = pdkComp.Sliders?.FirstOrDefault()?.MinVal ?? 0,
             SliderMax = pdkComp.Sliders?.FirstOrDefault()?.MaxVal ?? 100,
-            CreateSMatrix = pins => CreateSMatrixFromPdk(pins, pdkComp.SMatrix)
         };
+
+        // Use multi-wavelength factory when wavelengthData is present
+        if (pdkComp.SMatrix?.WavelengthData is { Count: > 0 } wlData)
+        {
+            template.CreateWavelengthSMatrixMap = pins =>
+            {
+                var map = new Dictionary<int, CAP_Core.LightCalculation.SMatrix>();
+                foreach (var entry in wlData)
+                {
+                    var draft = new PdkSMatrixDraft
+                    {
+                        WavelengthNm = entry.WavelengthNm,
+                        Connections = entry.Connections
+                    };
+                    map[entry.WavelengthNm] = CreateSMatrixFromPdk(pins, draft);
+                }
+                return map;
+            };
+        }
+        else
+        {
+            template.CreateSMatrix = pins => CreateSMatrixFromPdk(pins, pdkComp.SMatrix);
+        }
+
+        return template;
     }
 
     private static CAP_Core.LightCalculation.SMatrix CreateSMatrixFromPdk(
@@ -629,11 +685,37 @@ public partial class MainViewModel : ObservableObject
         PdkSMatrixDraft? sMatrixDraft)
     {
         var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var connections = new List<(Guid, double)>();
+        var sMatrix = new CAP_Core.LightCalculation.SMatrix(pinIds, new List<(Guid, double)>());
 
-        // For now, create empty S-Matrix - full S-Matrix conversion would require
-        // mapping pin names to Pin objects and setting up proper connections
-        return new CAP_Core.LightCalculation.SMatrix(pinIds, connections);
+        if (sMatrixDraft?.Connections == null || sMatrixDraft.Connections.Count == 0)
+            return sMatrix;
+
+        // Build pin lookup by name
+        var pinByName = new Dictionary<string, Pin>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pin in pins)
+        {
+            pinByName[pin.Name] = pin;
+        }
+
+        var transfers = new Dictionary<(Guid, Guid), System.Numerics.Complex>();
+
+        foreach (var conn in sMatrixDraft.Connections)
+        {
+            if (!pinByName.TryGetValue(conn.FromPin, out var fromPin) ||
+                !pinByName.TryGetValue(conn.ToPin, out var toPin))
+                continue;
+
+            var phaseRad = conn.PhaseDegrees * Math.PI / 180.0;
+            var value = System.Numerics.Complex.FromPolarCoordinates(conn.Magnitude, phaseRad);
+
+            // Forward: light enters fromPin, exits toPin
+            transfers[(fromPin.IDInFlow, toPin.IDOutFlow)] = value;
+            // Reciprocal: light enters toPin, exits fromPin
+            transfers[(toPin.IDInFlow, fromPin.IDOutFlow)] = value;
+        }
+
+        sMatrix.SetValues(transfers);
+        return sMatrix;
     }
 
     [RelayCommand]

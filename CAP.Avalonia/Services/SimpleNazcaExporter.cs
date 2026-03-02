@@ -15,11 +15,17 @@ public class SimpleNazcaExporter
     /// <summary>
     /// Exports the full design to a Python/Nazca script.
     /// </summary>
-    public string Export(DesignCanvasViewModel canvas)
+    /// <param name="canvas">The design canvas to export.</param>
+    /// <param name="pdkModuleName">Optional PDK module name (e.g., "siepic_ebeam_pdk") for import.</param>
+    public string Export(DesignCanvasViewModel canvas, string? pdkModuleName = null)
     {
         var sb = new StringBuilder();
 
-        AppendHeader(sb);
+        // Detect PDK module from components if not explicitly provided
+        if (pdkModuleName == null)
+            pdkModuleName = DetectPdkModule(canvas);
+
+        AppendHeader(sb, pdkModuleName);
         var componentNames = AppendComponents(sb, canvas);
         AppendConnections(sb, canvas, componentNames);
         AppendFooter(sb);
@@ -27,10 +33,27 @@ public class SimpleNazcaExporter
         return sb.ToString();
     }
 
-    private static void AppendHeader(StringBuilder sb)
+    /// <summary>
+    /// Detects the PDK module name from component NazcaFunctionNames.
+    /// Returns null if only demofab/built-in components are used.
+    /// </summary>
+    private static string? DetectPdkModule(DesignCanvasViewModel canvas)
+    {
+        foreach (var compVm in canvas.Components)
+        {
+            var funcName = compVm.Component.NazcaFunctionName;
+            if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
+                return null; // PDK functions are called directly, module detected in header
+        }
+        return null;
+    }
+
+    private static void AppendHeader(StringBuilder sb, string? pdkModuleName)
     {
         sb.AppendLine("import nazca as nd");
         sb.AppendLine("import nazca.demofab as demo");
+        if (!string.IsNullOrEmpty(pdkModuleName))
+            sb.AppendLine($"import {pdkModuleName}");
         sb.AppendLine("from nazca.interconnects import Interconnect");
         sb.AppendLine();
         sb.AppendLine("# PDK Configuration");
@@ -176,11 +199,31 @@ public class SimpleNazcaExporter
     }
 
     /// <summary>
+    /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550").
+    /// </summary>
+    internal static bool IsPdkFunction(string name) =>
+        name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains(".", StringComparison.Ordinal);
+
+    /// <summary>
     /// Maps a component to its Nazca function call string.
+    /// Uses the stored NazcaFunctionName when it's a real PDK function,
+    /// falls back to heuristic demofab mapping otherwise.
     /// </summary>
     internal static string GetNazcaFunction(Component comp)
     {
-        var name = comp.NazcaFunctionName?.ToLower() ?? comp.Identifier.ToLower();
+        // Use stored PDK function name if available and looks like a real function
+        var funcName = comp.NazcaFunctionName;
+        if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
+        {
+            var funcParams = comp.NazcaFunctionParameters;
+            return string.IsNullOrEmpty(funcParams)
+                ? $"{funcName}()"
+                : $"{funcName}({funcParams})";
+        }
+
+        // Fallback: heuristic mapping to demofab
+        var name = funcName?.ToLower() ?? comp.Identifier.ToLower();
 
         if (name.Contains("straight") || name.Contains("waveguide"))
             return "demo.shallow.strt(length=250)";
