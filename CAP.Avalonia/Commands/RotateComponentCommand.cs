@@ -5,11 +5,13 @@ namespace CAP.Avalonia.Commands;
 
 /// <summary>
 /// Command for rotating a component 90° counter-clockwise.
+/// Rotation is rejected when the rotated footprint would overlap another component.
 /// </summary>
 public class RotateComponentCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly ComponentViewModel _component;
+    private bool _applied;
 
     public RotateComponentCommand(DesignCanvasViewModel canvas, ComponentViewModel component)
     {
@@ -19,13 +21,34 @@ public class RotateComponentCommand : IUndoableCommand
 
     public string Description => $"Rotate {_component.Name}";
 
+    /// <summary>
+    /// Whether the last Execute() call actually applied the rotation.
+    /// False if the rotation was blocked due to a collision.
+    /// </summary>
+    public bool WasApplied => _applied;
+
     public void Execute()
     {
+        var comp = _component.Component;
+
+        // After 90° CCW rotation, width and height dimensions swap.
+        double rotatedWidth = comp.HeightMicrometers;
+        double rotatedHeight = comp.WidthMicrometers;
+
+        if (!_canvas.CanPlaceComponent(_component.X, _component.Y, rotatedWidth, rotatedHeight, _component))
+        {
+            _applied = false;
+            return;
+        }
+
+        _applied = true;
         RotateComponent90();
     }
 
     public void Undo()
     {
+        if (!_applied) return;
+
         // Rotate 3 times to undo (270° = -90°)
         RotateComponent90();
         RotateComponent90();
@@ -75,7 +98,7 @@ public class RotateComponentCommand : IUndoableCommand
         _component.NotifyDimensionsChanged();
 
         // Update obstacle in pathfinding grid
-        var router = CAP_Core.Components.WaveguideConnection.SharedRouter;
+        var router = WaveguideConnection.SharedRouter;
         router.UpdateComponentObstacle(comp);
 
         // Recalculate paths for any connected waveguides
