@@ -5,7 +5,7 @@
   "foundry": "Demo Foundry",
   "version": "1.0.0",
   "defaultWavelengthNm": 1550,
-  "nazcaModuleName": "demo_pdk",
+  "nazcaModuleName": null,
   "components": [
     {
       "name": "MMI 1x2",

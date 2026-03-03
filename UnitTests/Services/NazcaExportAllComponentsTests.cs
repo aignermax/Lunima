@@ -1,0 +1,224 @@
+using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels;
+using CAP_DataAccess.Components.ComponentDraftMapper;
+using Shouldly;
+using Xunit;
+
+namespace UnitTests.Services;
+
+/// <summary>
+/// Tests that all component templates (built-in + PDK) can be placed on a canvas
+/// and exported to valid Nazca Python code with correct function calls and imports.
+/// </summary>
+public class NazcaExportAllComponentsTests
+{
+    [Fact]
+    public void Export_AllBuiltInTemplates_EachComponentAppearsInOutput()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var templates = ComponentTemplates.GetAllTemplates();
+
+        double xOffset = 0;
+        foreach (var template in templates)
+        {
+            var component = ComponentTemplates.CreateFromTemplate(template, xOffset, 0);
+            canvas.AddComponent(component, template.Name);
+            xOffset += template.WidthMicrometers + 100;
+        }
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Every component should appear as comp_N = ...
+        for (int i = 0; i < templates.Count; i++)
+        {
+            result.ShouldContain($"comp_{i} =",
+                customMessage: $"Built-in template '{templates[i].Name}' not found in export");
+        }
+
+        // Verify basic structure
+        result.ShouldContain("import nazca as nd");
+        result.ShouldContain("def create_design():");
+        result.ShouldContain("nd.export_gds()");
+    }
+
+    [Fact]
+    public void Export_AllBuiltInTemplates_UseDemofabFunctions()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var templates = ComponentTemplates.GetAllTemplates();
+
+        foreach (var template in templates)
+        {
+            var component = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+            canvas.AddComponent(component, template.Name);
+        }
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Built-in templates should all use demo.* functions (no bare ebeam_* calls)
+        result.ShouldContain("demo.");
+        result.ShouldNotContain("from siepic_ebeam_pdk import");
+    }
+
+    [Fact]
+    public void Export_SiepicPdkComponents_IncludesImportAndFunctions()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var loader = new PdkLoader();
+
+        var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
+        if (pdkPath == null)
+        {
+            // Skip if PDK file not found in test environment
+            return;
+        }
+
+        var pdk = loader.LoadFromFile(pdkPath);
+        pdk.Components.Count.ShouldBeGreaterThan(0, "SiEPIC PDK should have components");
+
+        double xOffset = 0;
+        var expectedFunctions = new List<string>();
+
+        foreach (var pdkComp in pdk.Components)
+        {
+            var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
+            var component = ComponentTemplates.CreateFromTemplate(template, xOffset, 0);
+            canvas.AddComponent(component, template.Name);
+            xOffset += template.WidthMicrometers + 100;
+
+            // Track expected function names
+            if (!string.IsNullOrEmpty(pdkComp.NazcaFunction))
+                expectedFunctions.Add(pdkComp.NazcaFunction);
+        }
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Every PDK function should have a stub definition and be called in the design
+        foreach (var funcName in expectedFunctions)
+        {
+            result.ShouldContain($"def {funcName}(**kwargs):",
+                customMessage: $"Stub definition for '{funcName}' not found in export");
+            result.ShouldContain($"{funcName}(",
+                customMessage: $"PDK function call '{funcName}' not found in export");
+        }
+
+        // Every component should have a comp_N variable
+        for (int i = 0; i < pdk.Components.Count; i++)
+        {
+            result.ShouldContain($"comp_{i} =",
+                customMessage: $"SiEPIC component '{pdk.Components[i].Name}' (comp_{i}) not in export");
+        }
+    }
+
+    [Fact]
+    public void Export_MixedBuiltInAndPdk_BothDemofabAndPdkImportsPresent()
+    {
+        var canvas = new DesignCanvasViewModel();
+
+        // Add one built-in component
+        var builtInTemplates = ComponentTemplates.GetAllTemplates();
+        var splitter = builtInTemplates.First(t => t.Name.Contains("Splitter"));
+        var builtInComp = ComponentTemplates.CreateFromTemplate(splitter, 0, 0);
+        canvas.AddComponent(builtInComp, splitter.Name);
+
+        // Add one SiEPIC PDK component
+        var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
+        if (pdkPath == null) return;
+
+        var loader = new PdkLoader();
+        var pdk = loader.LoadFromFile(pdkPath);
+        var pdkComp = pdk.Components.First();
+        var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
+        var pdkComponent = ComponentTemplates.CreateFromTemplate(template, 500, 0);
+        canvas.AddComponent(pdkComponent, template.Name);
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Demofab import and PDK stub should be present
+        result.ShouldContain("import nazca.demofab as demo");
+        result.ShouldContain($"def {pdkComp.NazcaFunction}(**kwargs):",
+            customMessage: "PDK component stub definition missing");
+
+        // Both components should appear
+        result.ShouldContain("comp_0 =");
+        result.ShouldContain("comp_1 =");
+        result.ShouldContain("demo.");
+        result.ShouldContain($"{pdkComp.NazcaFunction}(");
+    }
+
+    [Fact]
+    public void Export_PdkComponentWithParameters_ParametersIncludedInFunctionCall()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
+        if (pdkPath == null) return;
+
+        var loader = new PdkLoader();
+        var pdk = loader.LoadFromFile(pdkPath);
+
+        // Find a component with parameters (e.g., dc_halfring_straight has gap, radius)
+        var compWithParams = pdk.Components.FirstOrDefault(c =>
+            !string.IsNullOrEmpty(c.NazcaParameters));
+
+        if (compWithParams == null) return; // skip if no parameterized components
+
+        var template = ConvertPdkComponentToTemplate(compWithParams, pdk.Name, pdk.NazcaModuleName);
+        var component = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+        canvas.AddComponent(component, template.Name);
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Function should include parameters
+        result.ShouldContain($"{compWithParams.NazcaFunction}({compWithParams.NazcaParameters})",
+            customMessage: $"Parameters missing for {compWithParams.NazcaFunction}");
+    }
+
+    /// <summary>
+    /// Converts a PDK component draft to a ComponentTemplate (mirrors MainViewModel logic).
+    /// </summary>
+    private static ComponentTemplate ConvertPdkComponentToTemplate(
+        CAP_DataAccess.Components.ComponentDraftMapper.DTOs.PdkComponentDraft pdkComp,
+        string pdkName,
+        string? nazcaModuleName)
+    {
+        var pinDefs = pdkComp.Pins.Select(p => new PinDefinition(
+            p.Name, p.OffsetXMicrometers, p.OffsetYMicrometers, p.AngleDegrees
+        )).ToArray();
+
+        return new ComponentTemplate
+        {
+            Name = pdkComp.Name,
+            Category = pdkComp.Category,
+            WidthMicrometers = pdkComp.WidthMicrometers,
+            HeightMicrometers = pdkComp.HeightMicrometers,
+            PinDefinitions = pinDefs,
+            NazcaFunctionName = pdkComp.NazcaFunction,
+            NazcaParameters = pdkComp.NazcaParameters,
+            PdkSource = pdkName,
+            NazcaModuleName = nazcaModuleName,
+            // Minimal S-matrix factory for test (identity pass-through)
+            CreateSMatrix = pins =>
+            {
+                var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+                return new CAP_Core.LightCalculation.SMatrix(pinIds, new());
+            }
+        };
+    }
+
+    private static string? FindPdkFile(string fileName)
+    {
+        // Search common locations
+        var candidates = new[]
+        {
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PDKs", fileName),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "CAP-DataAccess", "PDKs", fileName),
+        };
+
+        return candidates.FirstOrDefault(File.Exists);
+    }
+}

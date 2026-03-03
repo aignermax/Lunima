@@ -286,6 +286,7 @@ public static class ComponentTemplates
         component.HeightMicrometers = template.HeightMicrometers;
         component.NazcaOriginOffsetX = template.NazcaOriginOffsetX;
         component.NazcaOriginOffsetY = template.NazcaOriginOffsetY;
+        component.NazcaModuleName = template.NazcaModuleName;
 
         return component;
     }
@@ -545,6 +546,11 @@ public class ComponentTemplate
     /// </summary>
     public double NazcaOriginOffsetX { get; set; } = 0;
     public double NazcaOriginOffsetY { get; set; } = 0;
+
+    /// <summary>
+    /// Python module name for Nazca import (e.g., "siepic_ebeam_pdk").
+    /// </summary>
+    public string? NazcaModuleName { get; set; }
 }
 
 public class PinDefinition

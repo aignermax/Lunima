@@ -36,6 +36,7 @@ public class Component : ICloneable
     public event EventHandler SliderValueChanged;
     public string NazcaFunctionName { get; set; }
     public string NazcaFunctionParameters { get; set; }
+    public string? NazcaModuleName { get; set; }
     private DiscreteRotation _discreteRotation;
     public DiscreteRotation Rotation90CounterClock
     {

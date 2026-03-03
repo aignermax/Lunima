@@ -167,6 +167,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] **Auto-Recalculation** - Simulation auto-updates when circuit changes while overlay is active
 - [x] **Per-Source Laser Config** - Wavelength and power settings per light source (UI + multi-wavelength simulation)
 - [x] **Dependency Injection** - `Microsoft.Extensions.DependencyInjection` with constructor injection for all services
+- [x] **SiEPIC EBeam PDK** - 12 real components with measured S-parameters, auto-loaded at startup
+- [x] **Multi-Wavelength S-Matrices** - Per-wavelength S-matrix data with nearest-wavelength fallback
+- [x] **Component Library Search** - Fulltext search by name, category, PDK source, or Nazca function
+- [x] **Component Preview** - Miniature schematics in component panel showing pin layout
+- [x] **Nazca GDS Export Fixes** - Chained waveguide segments (no gaps), component rotation, Y-axis transform, demofab 1:1 matching
+- [x] **Nazca Integration Tests** - Python syntax validation + GDS file generation tests
 
 ### High Priority
 - [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
@@ -179,23 +185,27 @@ The goal is to make Connect-A-PIC Pro usable with real foundry component data so
 
 **Background:** Professional photonic design uses Compact Model Libraries (CMLs) — parameterized S-matrices calibrated to real fabrication data. Foundries ship CMLs with their PDKs. Major vendors (Ansys Lumerical, Synopsys) use proprietary encrypted formats. However, open PDKs exist and are widely used in research/education.
 
-**Step 1: Import SiEPIC Open PDK** (highest impact)
-- [ ] **Parse SiEPIC S-parameter files** - SiEPIC EBeam PDK (UBC, GitHub, SOI 220nm silicon — the most common photonic platform) ships S-parameter data (.dat files) with wavelength-dependent S-matrices for standard components (directional couplers, ring resonators, grating couplers, Y-branches, etc.)
-- [ ] **Wavelength-dependent S-matrices in core** - Currently S-matrices are fixed per component. Need to extend `Component` to hold S-matrix lookup tables indexed by wavelength (nm → Complex S-matrix). The per-source laser config UI already supports wavelength selection; this makes it functional.
+**Step 1: Import SiEPIC Open PDK** ✅
+- [x] **Parse SiEPIC S-parameter files** - 12 SiEPIC EBeam PDK components with real Lumerical-simulated S-parameters, bundled as `siepic-ebeam-pdk.json`
+- [x] **Wavelength-dependent S-matrices in core** - Multi-wavelength support with nearest-wavelength fallback in `SystemMatrixBuilder`
 - [ ] **SiEPIC SiN PDK** - Silicon nitride platform, also open. Second priority after SOI.
 
-**Step 2: Define an open component model format**
-- [ ] **JSON compact model format** - Define a simple JSON/YAML schema: port definitions + S-matrix data at wavelength points + component parameters (geometry, coupling ratios, etc.). This becomes our CML equivalent — readable, editable, version-controllable.
+**Step 2: Define an open component model format** ✅
+- [x] **JSON compact model format** - PDK JSON schema with physical pins, multi-wavelength S-matrices, Nazca function names. Auto-loaded at startup from `PDKs/` directory.
 - [ ] **Parameterized models** - Components where S-matrix varies with user-adjustable parameters (e.g., coupler gap, ring radius, waveguide width). Could use interpolation between pre-computed S-matrices or analytical formulas.
 
 **Step 3: Professional features**
-- [ ] **Wavelength sweep / spectral response** - Run simulation across a wavelength range, plot transmission vs wavelength at output ports. This is the #1 analysis tool in photonic circuit design.
+- [x] **Nazca GDS Export** - Chained waveguide segments, component rotation, Y-axis coordinate transform, real PDK function names
+- [x] **Component Library Search** - Fulltext search across name, category, PDK source
+- [x] **Component Preview** - Miniature schematic with pin layout in the component panel
+- [x] **Demofab 1:1 Matching** - Built-in components match Nazca demofab dimensions exactly with correct origin offsets
+- [ ] **Wavelength sweep / spectral response** - Run simulation across a wavelength range, plot transmission vs wavelength at output ports
 - [ ] **Design Rule Checking** - Min bend radius, spacing violations, pin angle mismatches
 - [ ] **Direct GDS Export** - Export layout polygons without Nazca intermediate step
 - [ ] **Hierarchical Designs** - Sub-circuits as reusable blocks
 
 ### Nice to Have
-- [ ] **Better Component Graphics** - Icons/symbols instead of rectangles
+- [x] **Component Preview Graphics** - Miniature schematics with pin positions in the component library
 - [ ] **Browser Version** - WebAssembly deployment
 - [ ] **Component Properties Panel** - Edit S-matrix parameters per component instance
 

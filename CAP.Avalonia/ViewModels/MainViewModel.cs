@@ -120,7 +120,7 @@ public partial class MainViewModel : ObservableObject
                 var pdk = _pdkLoader.LoadFromFile(pdkFile);
                 foreach (var pdkComp in pdk.Components)
                 {
-                    var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name);
+                    var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
                     ComponentLibrary.Add(template);
                 }
             }
@@ -645,7 +645,7 @@ public partial class MainViewModel : ObservableObject
             int addedCount = 0;
             foreach (var pdkComp in pdk.Components)
             {
-                var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name);
+                var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
                 ComponentLibrary.Add(template);
                 if (!Categories.Contains(template.Category))
                     Categories.Add(template.Category);
@@ -661,7 +661,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp, string pdkName = "PDK")
+    private ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp, string pdkName = "PDK", string? nazcaModuleName = null)
     {
         var pinDefs = pdkComp.Pins.Select(p => new PinDefinition(
             p.Name,
@@ -683,6 +683,7 @@ public partial class MainViewModel : ObservableObject
             SliderMin = pdkComp.Sliders?.FirstOrDefault()?.MinVal ?? 0,
             SliderMax = pdkComp.Sliders?.FirstOrDefault()?.MaxVal ?? 100,
             PdkSource = pdkName,
+            NazcaModuleName = nazcaModuleName,
         };
 
         // Use multi-wavelength factory when wavelengthData is present
@@ -895,11 +896,10 @@ public partial class MainViewModel : ObservableObject
                 Canvas.ConnectionManager.Clear();
                 CommandManager.ClearHistory();
 
-                // Load components
-                var templates = ComponentTemplates.GetAllTemplates();
+                // Load components — search both built-in and loaded PDK templates
                 foreach (var compData in designData.Components)
                 {
-                    var template = templates.FirstOrDefault(t =>
+                    var template = ComponentLibrary.FirstOrDefault(t =>
                         t.Name.Equals(compData.TemplateName, StringComparison.OrdinalIgnoreCase));
 
                     if (template != null)

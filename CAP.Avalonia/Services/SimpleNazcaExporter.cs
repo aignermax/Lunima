@@ -21,11 +21,8 @@ public class SimpleNazcaExporter
     {
         var sb = new StringBuilder();
 
-        // Detect PDK module from components if not explicitly provided
-        if (pdkModuleName == null)
-            pdkModuleName = DetectPdkModule(canvas);
-
-        AppendHeader(sb, pdkModuleName);
+        AppendHeader(sb);
+        AppendPdkComponentStubs(sb, canvas);
         var componentNames = AppendComponents(sb, canvas);
         AppendConnections(sb, canvas, componentNames);
         AppendFooter(sb);
@@ -33,27 +30,10 @@ public class SimpleNazcaExporter
         return sb.ToString();
     }
 
-    /// <summary>
-    /// Detects the PDK module name from component NazcaFunctionNames.
-    /// Returns null if only demofab/built-in components are used.
-    /// </summary>
-    private static string? DetectPdkModule(DesignCanvasViewModel canvas)
-    {
-        foreach (var compVm in canvas.Components)
-        {
-            var funcName = compVm.Component.NazcaFunctionName;
-            if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
-                return null; // PDK functions are called directly, module detected in header
-        }
-        return null;
-    }
-
-    private static void AppendHeader(StringBuilder sb, string? pdkModuleName)
+    private static void AppendHeader(StringBuilder sb)
     {
         sb.AppendLine("import nazca as nd");
         sb.AppendLine("import nazca.demofab as demo");
-        if (!string.IsNullOrEmpty(pdkModuleName))
-            sb.AppendLine($"import {pdkModuleName}");
         sb.AppendLine("from nazca.interconnects import Interconnect");
         sb.AppendLine();
         sb.AppendLine("# PDK Configuration");
@@ -63,14 +43,55 @@ public class SimpleNazcaExporter
         sb.AppendLine("# Create interconnect for waveguide routing");
         sb.AppendLine("ic = Interconnect(width=WG_WIDTH, radius=BEND_RADIUS)");
         sb.AppendLine();
-        sb.AppendLine("def create_design():");
-        sb.AppendLine("    with nd.Cell(name='ConnectAPIC_Design') as design:");
-        sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Generates standalone Nazca cell definitions for PDK components.
+    /// Each unique PDK function used in the design gets a stub cell
+    /// with correct dimensions and pin positions — no external PDK install needed.
+    /// </summary>
+    private static void AppendPdkComponentStubs(StringBuilder sb, DesignCanvasViewModel canvas)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var generated = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var compVm in canvas.Components)
+        {
+            var comp = compVm.Component;
+            var funcName = comp.NazcaFunctionName;
+            if (string.IsNullOrEmpty(funcName) || !IsPdkFunction(funcName))
+                continue;
+            if (!generated.Add(funcName))
+                continue; // already generated
+
+            var w = comp.WidthMicrometers.ToString("F2", ci);
+            var h = comp.HeightMicrometers.ToString("F2", ci);
+
+            sb.AppendLine($"def {funcName}(**kwargs):");
+            sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
+            sb.AppendLine($"    with nd.Cell(name='{funcName}') as _cell:");
+            sb.AppendLine($"        nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
+
+            // Generate pins with Nazca coordinates (Y-up: nazca_y = height - editor_y)
+            foreach (var pin in comp.PhysicalPins)
+            {
+                var px = pin.OffsetXMicrometers.ToString("F2", ci);
+                var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
+                var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
+                sb.AppendLine($"        nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
+            }
+
+            sb.AppendLine($"    return _cell");
+            sb.AppendLine();
+        }
     }
 
     private static Dictionary<Component, string> AppendComponents(
         StringBuilder sb, DesignCanvasViewModel canvas)
     {
+        sb.AppendLine("def create_design():");
+        sb.AppendLine("    with nd.Cell(name='ConnectAPIC_Design') as design:");
+        sb.AppendLine();
         sb.AppendLine("        # Components");
         var componentNames = new Dictionary<Component, string>();
         int compIndex = 0;
