@@ -186,17 +186,37 @@ public class SimpleNazcaExporter
     private static string FormatStraightSegment(
         StraightSegment straight, CultureInfo ci, bool isFirst)
     {
-        var length = straight.LengthMicrometers.ToString("F2", ci);
+        // For chained segments, use the forward-projected length instead of Euclidean
+        // distance. Nazca's nd.strt() goes forward along the propagation direction,
+        // so if the segment is slightly diagonal, the Euclidean length would overshoot.
+        var length = isFirst
+            ? straight.LengthMicrometers
+            : ProjectForwardLength(straight);
+        var lengthStr = length.ToString("F2", ci);
 
         if (isFirst)
         {
             var x = straight.StartPoint.X.ToString("F2", ci);
             var y = NormalizeZero(-straight.StartPoint.Y).ToString("F2", ci);
             var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
-            return $"        nd.strt(length={length}).put({x}, {y}, {angle})";
+            return $"        nd.strt(length={lengthStr}).put({x}, {y}, {angle})";
         }
 
-        return $"        nd.strt(length={length}).put()";
+        return $"        nd.strt(length={lengthStr}).put()";
+    }
+
+    /// <summary>
+    /// Projects a straight segment's length onto its propagation direction.
+    /// Nazca's nd.strt(length=L) goes forward by L along the current angle,
+    /// so if the segment is slightly diagonal, we need the forward component only.
+    /// </summary>
+    private static double ProjectForwardLength(StraightSegment straight)
+    {
+        double dx = straight.EndPoint.X - straight.StartPoint.X;
+        double dy = straight.EndPoint.Y - straight.StartPoint.Y;
+        double angleRad = straight.StartAngleDegrees * Math.PI / 180.0;
+        double projected = dx * Math.Cos(angleRad) + dy * Math.Sin(angleRad);
+        return Math.Max(0, projected);
     }
 
     private static string FormatBendSegment(BendSegment bend, CultureInfo ci, bool isFirst)

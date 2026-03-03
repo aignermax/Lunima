@@ -346,23 +346,17 @@ public class WaveguideRouter
         }
 
         // S-bend with flexible angle
-        // Calculate the angle needed based on geometry
-        double sweepAngle;
-        if (absLat <= 2 * r)
-        {
-            // Can achieve with single S-bend
-            double cosVal = 1.0 - absLat / (2.0 * r);
-            cosVal = Math.Max(-1, Math.Min(1, cosVal));
-            sweepAngle = Math.Acos(cosVal) * 180.0 / Math.PI;
-        }
-        else
-        {
-            // Need larger angle - use atan for reasonable estimate
-            sweepAngle = Math.Atan2(absLat, fwdDist) * 180.0 / Math.PI;
-        }
-
-        // Clamp angle to reasonable range
-        sweepAngle = Math.Max(5, Math.Min(75, sweepAngle));
+        // Calculate the exact sweep angle that accounts for both bends AND the
+        // middle straight section's lateral contribution.
+        //
+        // Geometry: bend1(+α) → straight at angle α → bend2(-α)
+        //   Total lateral  = 2R(1−cosα) + L·sinα = absLat
+        //   Total forward   = 2R·sinα + L·cosα    = fwdDist
+        //
+        // Solving via half-angle substitution t = tan(α/2):
+        //   t²(4R − absLat) − 2t·fwdDist + absLat = 0
+        double sweepAngle = CalculateExactSBendSweep(fwdDist, absLat, r);
+        sweepAngle = Math.Max(5, Math.Min(85, sweepAngle));
 
         // Determine bend direction based on which side target is
         // latDist > 0 means target is to the LEFT → turn left (positive sweep = CCW)
@@ -384,6 +378,7 @@ public class WaveguideRouter
         double angle = NormalizeAngle(startAngle + sweepAngle * bendDir);
 
         // Middle straight section
+        // Exact length: forward_to_end = L + R·sin(sweep), so L = fwd - R·sin(sweep)
         double midRad = angle * Math.PI / 180;
         double midFwdX = Math.Cos(midRad);
         double midFwdY = Math.Sin(midRad);
@@ -392,9 +387,12 @@ public class WaveguideRouter
         double dyToEnd = endY - y;
         double fwdToEnd = dxToEnd * midFwdX + dyToEnd * midFwdY;
 
-        if (fwdToEnd > r + 1)
+        double sweepRad = sweepAngle * Math.PI / 180;
+        double bend2Forward = r * Math.Sin(sweepRad);
+        double straightLen = fwdToEnd - bend2Forward;
+
+        if (straightLen > 0.5)
         {
-            double straightLen = fwdToEnd - r;
             double sx = x + midFwdX * straightLen;
             double sy = y + midFwdY * straightLen;
             path.Segments.Add(new StraightSegment(x, y, sx, sy, angle));
@@ -504,6 +502,48 @@ public class WaveguideRouter
         double cosValue = 1 - lateral / (2 * radius);
         if (cosValue < -1 || cosValue > 1) return double.NaN;
         return Math.Acos(cosValue) * 180 / Math.PI;
+    }
+
+    /// <summary>
+    /// Calculates the exact S-bend sweep angle that accounts for both bends
+    /// AND the middle straight section's lateral contribution.
+    ///
+    /// The total S-bend displacement is:
+    ///   lateral = 2R(1−cos α) + L·sin α
+    ///   forward = 2R·sin α + L·cos α
+    ///
+    /// Solved via half-angle substitution t = tan(α/2):
+    ///   t²(4R − lat) − 2t·fwd + lat = 0
+    /// </summary>
+    private static double CalculateExactSBendSweep(double forward, double lateral, double radius)
+    {
+        double a = 4 * radius - lateral;
+        double b = -2 * forward;
+        double c = lateral;
+
+        double discriminant = b * b - 4 * a * c;
+        if (discriminant < 0)
+        {
+            // No real solution — fall back to simple estimate
+            return Math.Atan2(lateral, forward) * 180 / Math.PI;
+        }
+
+        double sqrtD = Math.Sqrt(discriminant);
+
+        // Two solutions; pick the smaller angle (t2 gives smaller α)
+        double t1 = (-b + sqrtD) / (2 * a);
+        double t2 = (-b - sqrtD) / (2 * a);
+
+        // Use t2 (smaller half-angle) if positive, otherwise t1
+        double t = (t2 > 0.001) ? t2 : (t1 > 0.001 ? t1 : 0);
+
+        if (t <= 0)
+        {
+            return Math.Atan2(lateral, forward) * 180 / Math.PI;
+        }
+
+        double alpha = 2 * Math.Atan(t) * 180 / Math.PI;
+        return alpha;
     }
 
     /// <summary>
@@ -668,7 +708,7 @@ public class WaveguideRouter
 
         // Final straight to end
         double distToEnd = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
-        if (distToEnd > 0.5)
+        if (distToEnd > 0.01)
         {
             path.Segments.Add(new StraightSegment(x, y, endX, endY, angle));
         }
@@ -770,11 +810,12 @@ public class WaveguideRouter
         // Key insight: there are 16 combinations, but we can handle them systematically
         RouteManhattanExplicit(path, startX, startY, startDir, endX, endY, endDir, dx, dy, r);
 
-        // IMPORTANT: Ensure the path starts and ends EXACTLY at the pin positions.
-        // This prevents the pathIsStale check in rendering from triggering a fallback line.
+        // Ensure the path starts and ends at the pin positions.
+        // Segments are kept direction-aligned (no diagonal lines) so that
+        // Nazca export with nd.strt(length=L).put() goes the right distance.
         if (path.Segments.Count > 0)
         {
-            // Fix start position
+            // Fix start position — project onto propagation direction
             var firstSeg = path.Segments[0];
             double startDist = Math.Sqrt(Math.Pow(firstSeg.StartPoint.X - startX, 2) +
                                          Math.Pow(firstSeg.StartPoint.Y - startY, 2));
@@ -789,15 +830,14 @@ public class WaveguideRouter
                 }
                 else if (firstSeg is BendSegment)
                 {
-                    // For bend, insert a tiny straight segment before it
                     path.Segments.Insert(0, new StraightSegment(
                         startX, startY,
                         firstSeg.StartPoint.X, firstSeg.StartPoint.Y,
-                        startDir)); // Use startDir instead of angle0
+                        startDir));
                 }
             }
 
-            // Fix end position
+            // Fix end position — keep direction-aligned (project onto propagation direction)
             var lastSeg = path.Segments[^1];
             double endDist = Math.Sqrt(Math.Pow(lastSeg.EndPoint.X - endX, 2) +
                                        Math.Pow(lastSeg.EndPoint.Y - endY, 2));
@@ -805,16 +845,37 @@ public class WaveguideRouter
             {
                 if (lastSeg is StraightSegment straight)
                 {
+                    // Project the target onto the segment's propagation direction
+                    // This keeps the segment direction-aligned for correct Nazca export
+                    double angleRad = straight.StartAngleDegrees * Math.PI / 180;
+                    double fwdDx = Math.Cos(angleRad);
+                    double fwdDy = Math.Sin(angleRad);
+                    double dxe = endX - straight.StartPoint.X;
+                    double dye = endY - straight.StartPoint.Y;
+                    double fwdDist = dxe * fwdDx + dye * fwdDy;
+                    double projEndX = straight.StartPoint.X + fwdDx * fwdDist;
+                    double projEndY = straight.StartPoint.Y + fwdDy * fwdDist;
                     path.Segments[^1] = new StraightSegment(
                         straight.StartPoint.X, straight.StartPoint.Y,
-                        endX, endY, straight.StartAngleDegrees);
+                        projEndX, projEndY, straight.StartAngleDegrees);
                 }
                 else if (lastSeg is BendSegment bend)
                 {
-                    // For bend, add a tiny straight segment after it
-                    path.Segments.Add(new StraightSegment(
-                        bend.EndPoint.X, bend.EndPoint.Y,
-                        endX, endY, bend.EndAngleDegrees));
+                    // Project target onto the bend's output direction
+                    double angleRad = bend.EndAngleDegrees * Math.PI / 180;
+                    double fwdDx = Math.Cos(angleRad);
+                    double fwdDy = Math.Sin(angleRad);
+                    double dxe = endX - bend.EndPoint.X;
+                    double dye = endY - bend.EndPoint.Y;
+                    double fwdDist = dxe * fwdDx + dye * fwdDy;
+                    if (fwdDist > 0.01)
+                    {
+                        double projEndX = bend.EndPoint.X + fwdDx * fwdDist;
+                        double projEndY = bend.EndPoint.Y + fwdDy * fwdDist;
+                        path.Segments.Add(new StraightSegment(
+                            bend.EndPoint.X, bend.EndPoint.Y,
+                            projEndX, projEndY, bend.EndAngleDegrees));
+                    }
                 }
             }
         }
