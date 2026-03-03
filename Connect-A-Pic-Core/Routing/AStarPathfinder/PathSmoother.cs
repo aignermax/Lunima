@@ -89,9 +89,9 @@ public class PathSmoother
             }
         }
 
-        // Final straight segment to end pin
+        // Final straight segment to snap exactly to end pin position
         double finalDistance = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
-        if (finalDistance > 0.5)
+        if (finalDistance > 0.01)
         {
             routedPath.Segments.Add(new StraightSegment(x, y, endX, endY, currentAngle));
         }

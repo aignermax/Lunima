@@ -417,11 +417,11 @@ public class WaveguideRouter
         x = bend2.EndPoint.X;
         y = bend2.EndPoint.Y;
 
-        // Final straight to exact end position
+        // Final straight to snap exactly to end pin position
         double finalDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
-        if (finalDist > 0.5)
+        if (finalDist > 0.01)
         {
-            path.Segments.Add(new StraightSegment(x, y, endX, endY, startAngle));
+            path.Segments.Add(new StraightSegment(x, y, endX, endY, bend2.EndAngleDegrees));
         }
 
         // Check for obstacles

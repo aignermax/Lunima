@@ -67,10 +67,10 @@ public class SimpleNazcaExporter
             var w = comp.WidthMicrometers.ToString("F2", ci);
             var h = comp.HeightMicrometers.ToString("F2", ci);
 
-            sb.AppendLine($"def {funcName}(**kwargs):");
+            // Define cell once, return cached instance on each call
+            sb.AppendLine($"with nd.Cell(name='{funcName}') as _{funcName}_cell:");
             sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
-            sb.AppendLine($"    with nd.Cell(name='{funcName}') as _cell:");
-            sb.AppendLine($"        nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
+            sb.AppendLine($"    nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
 
             // Generate pins with Nazca coordinates (Y-up: nazca_y = height - editor_y)
             foreach (var pin in comp.PhysicalPins)
@@ -78,10 +78,12 @@ public class SimpleNazcaExporter
                 var px = pin.OffsetXMicrometers.ToString("F2", ci);
                 var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
                 var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
-                sb.AppendLine($"        nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
+                sb.AppendLine($"    nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
             }
 
-            sb.AppendLine($"    return _cell");
+            sb.AppendLine();
+            sb.AppendLine($"def {funcName}(**kwargs):");
+            sb.AppendLine($"    return _{funcName}_cell");
             sb.AppendLine();
         }
     }
