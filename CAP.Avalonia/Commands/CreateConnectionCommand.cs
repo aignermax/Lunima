@@ -33,15 +33,18 @@ public class CreateConnectionCommand : IUndoableCommand
         {
             _connection = _connectionViewModel.Connection;
         }
+        // Trigger async re-routing so the UI doesn't block
+        _ = _canvas.RecalculateRoutesAsync();
     }
 
     public void Undo()
     {
         if (_connection != null && _connectionViewModel != null)
         {
-            _canvas.ConnectionManager.RemoveConnection(_connection);
+            _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
             _canvas.Connections.Remove(_connectionViewModel);
             _canvas.InvalidateSimulation();
+            _ = _canvas.RecalculateRoutesAsync();
             _connection = null;
             _connectionViewModel = null;
         }

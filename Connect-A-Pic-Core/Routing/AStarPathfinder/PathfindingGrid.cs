@@ -40,6 +40,10 @@ public class PathfindingGrid
     // Track waveguide path cells (keyed by connection ID)
     private readonly Dictionary<Guid, HashSet<(int x, int y)>> _waveguideCells = new();
 
+    // Pin reservation zones: cells near pins that get a soft cost penalty (not blocked).
+    // Routes CAN pass through but A* prefers to avoid them, keeping pin areas accessible.
+    private readonly HashSet<(int x, int y)> _pinZoneCells = new();
+
     /// <summary>
     /// Creates a grid covering the specified area.
     /// </summary>
@@ -151,6 +155,15 @@ public class PathfindingGrid
             }
         }
         _componentCells[component] = cells;
+
+        // Mark pin reservation zones — soft penalty area around each pin.
+        // Routes can pass through but A* prefers to avoid them.
+        double pinZoneRadius = 15.0; // µm around each pin
+        foreach (var pin in component.PhysicalPins)
+        {
+            var (pinX, pinY) = pin.GetAbsolutePosition();
+            MarkPinReservationZone(pinX, pinY, pinZoneRadius);
+        }
     }
 
     /// <summary>
@@ -284,6 +297,15 @@ public class PathfindingGrid
     }
 
     /// <summary>
+    /// Sets the state of a cell directly. Used for testing and manual grid manipulation.
+    /// </summary>
+    public void SetCellState(int gridX, int gridY, byte state)
+    {
+        if (IsInBounds(gridX, gridY))
+            _cells[gridX, gridY] = state;
+    }
+
+    /// <summary>
     /// Checks if coordinates are within grid bounds.
     /// </summary>
     public bool IsInBounds(int gridX, int gridY)
@@ -299,6 +321,8 @@ public class PathfindingGrid
     {
         Array.Clear(_cells);
         _componentCells.Clear();
+        _waveguideCells.Clear();
+        _pinZoneCells.Clear();
 
         foreach (var component in components)
         {
@@ -415,6 +439,39 @@ public class PathfindingGrid
         foreach (var connectionId in _waveguideCells.Keys.ToList())
         {
             RemoveWaveguideObstacle(connectionId);
+        }
+    }
+
+    /// <summary>
+    /// Checks if a cell is in a pin reservation zone (soft penalty, not blocked).
+    /// </summary>
+    public bool IsPinReservationZone(int gridX, int gridY)
+    {
+        return _pinZoneCells.Contains((gridX, gridY));
+    }
+
+    /// <summary>
+    /// Marks a circular zone around a pin position as a reservation zone.
+    /// Only marks cells that are currently free (state=0) — doesn't mark obstacles.
+    /// </summary>
+    private void MarkPinReservationZone(double pinX, double pinY, double radiusMicrometers)
+    {
+        var (gcx, gcy) = PhysicalToGrid(pinX, pinY);
+        int gridRadius = (int)Math.Ceiling(radiusMicrometers / CellSizeMicrometers);
+
+        for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)
+        {
+            for (int gy = gcy - gridRadius; gy <= gcy + gridRadius; gy++)
+            {
+                if (!IsInBounds(gx, gy)) continue;
+
+                var (px, py) = GridToPhysical(gx, gy);
+                double dist = Math.Sqrt((px - pinX) * (px - pinX) + (py - pinY) * (py - pinY));
+                if (dist <= radiusMicrometers)
+                {
+                    _pinZoneCells.Add((gx, gy));
+                }
+            }
         }
     }
 

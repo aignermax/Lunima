@@ -22,11 +22,6 @@ public class AStarPathfinder
     /// </summary>
     public int GoalTolerance { get; set; } = 3;
 
-    /// <summary>
-    /// Tracks total distance traveled from start (for pin escape enforcement).
-    /// </summary>
-    private Dictionary<(int, int, GridDirection), int> _distanceFromStart = new();
-
     public AStarPathfinder(PathfindingGrid grid, RoutingCostCalculator costCalculator)
     {
         _grid = grid;
@@ -48,7 +43,7 @@ public class AStarPathfinder
     {
         var openSet = new PriorityQueue<AStarNode, double>();
         var visited = new Dictionary<(int, int, GridDirection), AStarNode>();
-        _distanceFromStart = new Dictionary<(int, int, GridDirection), int>();
+        var distanceFromStart = new Dictionary<(int, int, GridDirection), int>();
 
         // Create start node
         // StraightRunLength = 0 forces the path to go straight first before turning
@@ -63,7 +58,7 @@ public class AStarPathfinder
 
         openSet.Enqueue(startNode, startNode.FCost);
         visited[startNode.GetKey()] = startNode;
-        _distanceFromStart[startNode.GetKey()] = 0;
+        distanceFromStart[startNode.GetKey()] = 0;
 
         int nodesExpanded = 0;
 
@@ -79,7 +74,7 @@ public class AStarPathfinder
             }
 
             // Expand neighbors
-            foreach (var neighbor in GetNeighbors(current, endX, endY, endDirection))
+            foreach (var neighbor in GetNeighbors(current, endX, endY, endDirection, distanceFromStart))
             {
                 var key = neighbor.GetKey();
 
@@ -140,10 +135,11 @@ public class AStarPathfinder
     /// Gets valid neighboring nodes from the current position.
     /// </summary>
     private IEnumerable<AStarNode> GetNeighbors(AStarNode current,
-                                                  int goalX, int goalY, GridDirection goalDir)
+                                                  int goalX, int goalY, GridDirection goalDir,
+                                                  Dictionary<(int, int, GridDirection), int> distFromStart)
     {
         // Get distance from start for pin escape enforcement
-        int distanceFromStart = _distanceFromStart.GetValueOrDefault(current.GetKey(), 0);
+        int distanceFromStart = distFromStart.GetValueOrDefault(current.GetKey(), 0);
 
         foreach (var dir in GridDirectionExtensions.GetAllDirections())
         {
@@ -182,10 +178,12 @@ public class AStarPathfinder
             if (current.Direction != GridDirection.None && dir == current.Direction.GetOpposite())
                 continue;
 
-            // Calculate costs (including proximity penalty for being near other waveguides)
+            // Calculate costs (including proximity penalty for being near other waveguides
+            // and pin reservation zones)
             double moveCost = _costCalculator.CalculateMoveCost(current, newX, newY, dir);
             double proximityCost = _costCalculator.CalculateProximityCost(_grid, newX, newY);
-            double newGCost = current.GCost + moveCost + proximityCost;
+            double pinZoneCost = _costCalculator.CalculatePinZoneCost(_grid, newX, newY);
+            double newGCost = current.GCost + moveCost + proximityCost + pinZoneCost;
             double newHCost = _costCalculator.CalculateHeuristic(
                 newX, newY, dir, goalX, goalY, goalDir);
 
@@ -200,7 +198,7 @@ public class AStarPathfinder
             };
 
             // Track distance from start for this neighbor
-            _distanceFromStart[neighbor.GetKey()] = distanceFromStart + 1;
+            distFromStart[neighbor.GetKey()] = distanceFromStart + 1;
 
             yield return neighbor;
         }

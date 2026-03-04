@@ -121,8 +121,8 @@ public partial class DesignCanvasViewModel : ObservableObject
     partial void OnMinBendRadiusMicrometersChanged(double value)
     {
         Router.MinBendRadiusMicrometers = value;
-        // Recalculate all waveguide routes with new bend radius
-        ConnectionManager.RecalculateAllTransmissions();
+        // Recalculate all waveguide routes with new bend radius (async)
+        _ = RecalculateRoutesAsync();
     }
 
     /// <summary>
@@ -149,6 +149,14 @@ public partial class DesignCanvasViewModel : ObservableObject
     private const double ComponentClearanceMicrometers = 5.0;
 
     private bool _isDragging;
+    private CancellationTokenSource? _routingCts;
+    private readonly SemaphoreSlim _routingSemaphore = new(1, 1);
+
+    [ObservableProperty]
+    private bool _isRouting;
+
+    [ObservableProperty]
+    private string _routingStatusText = "";
 
     [ObservableProperty]
     private ComponentViewModel? _selectedComponent;
@@ -189,6 +197,11 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             Router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
         }
+
+        // NOTE: HPA* hierarchical pathfinding is available but not activated yet.
+        // Router.BuildHierarchicalGraph() creates sector portals that force suboptimal
+        // detours, and the DistanceTransform goes stale during sequential routing
+        // (disabling proximity cost). Needs incremental DT updates before activation.
     }
 
     /// <summary>
@@ -211,12 +224,8 @@ public partial class DesignCanvasViewModel : ObservableObject
     partial void OnUseAStarRoutingChanged(bool value)
     {
         Router.Strategy = value ? RoutingStrategy.Auto : RoutingStrategy.Manhattan;
-        // Recalculate all connections with new routing strategy
-        ConnectionManager.RecalculateAllTransmissions();
-        foreach (var conn in Connections)
-        {
-            conn.NotifyPathChanged();
-        }
+        // Recalculate all connections with new routing strategy (async)
+        _ = RecalculateRoutesAsync();
     }
 
     /// <summary>
@@ -228,29 +237,94 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Call when done dragging a component. Triggers final route recalculation.
+    /// Call when done dragging a component. Triggers async route recalculation.
     /// </summary>
-    public void EndDragComponent(ComponentViewModel component)
+    public async void EndDragComponent(ComponentViewModel component)
     {
         _isDragging = false;
 
-        // Rebuild the entire obstacle grid to ensure all components are correctly marked
-        // This is necessary because the moved component may now block paths for other connections
-        if (Router.PathfindingGrid != null)
-        {
-            Router.PathfindingGrid.RebuildFromComponents(Components.Select(c => c.Component));
-        }
-
-        // Recalculate all routes since any connection could now be affected
-        ConnectionManager.RecalculateAllTransmissions();
-
-        // Notify UI about all connections (paths may have changed globally)
-        foreach (var conn in Connections)
-        {
-            conn.NotifyPathChanged();
-        }
-
+        // Recalculate routes asynchronously so UI stays responsive.
+        // RecalculateRoutesAsync rebuilds the obstacle grid internally
+        // (inside the semaphore, on the background thread) to prevent races.
+        await RecalculateRoutesAsync();
         InvalidateSimulation();
+    }
+
+    /// <summary>
+    /// Asynchronously recalculates all waveguide routes on a background thread.
+    /// Cancels any previous in-progress routing. Updates UI on completion.
+    /// Always rebuilds the obstacle grid before routing to ensure consistency.
+    /// </summary>
+    public async Task RecalculateRoutesAsync()
+    {
+        // Cancel any previous routing operation
+        _routingCts?.Cancel();
+        _routingCts?.Dispose();
+        _routingCts = new CancellationTokenSource();
+        var token = _routingCts.Token;
+
+        // Serialize routing: wait for any in-progress routing to finish.
+        // Don't pass token — cancelled callers just bail after acquiring.
+        await _routingSemaphore.WaitAsync();
+        try
+        {
+            // If our token was cancelled while waiting, skip routing
+            if (token.IsCancellationRequested) return;
+
+            IsRouting = true;
+            RoutingStatusText = $"Routing {ConnectionManager.Connections.Count} connections...";
+
+            // Snapshot component list on UI thread for thread safety
+            var components = Components.Select(c => c.Component).ToList();
+
+            var completed = await Task.Run(() =>
+            {
+                if (token.IsCancellationRequested) return false;
+
+                // Rebuild obstacle grid inside semaphore + background thread.
+                // This prevents races: RebuildFromComponents and routing
+                // always execute on the same thread, never concurrently.
+                Router.PathfindingGrid?.RebuildFromComponents(components);
+
+                if (token.IsCancellationRequested) return false;
+
+                ConnectionManager.RecalculateAllTransmissions(token);
+                return !token.IsCancellationRequested;
+            });
+
+            if (completed && !token.IsCancellationRequested)
+            {
+                foreach (var conn in Connections)
+                {
+                    conn.NotifyPathChanged();
+                }
+                RoutingStatusText = "";
+            }
+        }
+        finally
+        {
+            _routingSemaphore.Release();
+            IsRouting = false;
+        }
+    }
+
+    /// <summary>
+    /// Connects two pins asynchronously, routing on a background thread.
+    /// Used for interactive connection creation (UI stays responsive).
+    /// </summary>
+    public async Task<WaveguideConnectionViewModel?> ConnectPinsAsync(
+        PhysicalPin startPin, PhysicalPin endPin)
+    {
+        RemoveConnectionsForPin(startPin);
+        RemoveConnectionsForPin(endPin);
+
+        var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
+        var vm = new WaveguideConnectionViewModel(connection);
+        Connections.Add(vm);
+
+        await RecalculateRoutesAsync();
+        InvalidateSimulation();
+        return vm;
     }
 
     /// <summary>
@@ -295,18 +369,9 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
         else
         {
-            // Not dragging (e.g., programmatic move): recalculate immediately
+            // Not dragging (e.g., programmatic move): update obstacle and route async
             Router.UpdateComponentObstacle(component.Component);
-            ConnectionManager.RecalculateTransmissionsForComponent(component.Component);
-
-            foreach (var conn in Connections)
-            {
-                if (conn.Connection.StartPin.ParentComponent == component.Component ||
-                    conn.Connection.EndPin.ParentComponent == component.Component)
-                {
-                    conn.NotifyPathChanged();
-                }
-            }
+            _ = RecalculateRoutesAsync();
         }
     }
 
@@ -354,31 +419,58 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
 
         Components.Remove(component);
+
+        // Recalculate remaining routes asynchronously (freed space may allow better routes)
+        if (ConnectionManager.Connections.Count > 0)
+        {
+            _ = RecalculateRoutesAsync();
+        }
+
         InvalidateSimulation();
     }
 
+    /// <summary>
+    /// Creates a connection between two pins without routing.
+    /// Routing should be triggered separately via RecalculateRoutesAsync().
+    /// Used by commands (Execute/Undo pattern) where routing is fire-and-forget.
+    /// </summary>
     public WaveguideConnectionViewModel? ConnectPins(PhysicalPin startPin, PhysicalPin endPin)
     {
         // Remove any existing connections on either pin (only one waveguide per pin allowed)
         RemoveConnectionsForPin(startPin);
         RemoveConnectionsForPin(endPin);
 
-        var connection = ConnectionManager.AddConnection(startPin, endPin);
+        var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
         var vm = new WaveguideConnectionViewModel(connection);
         Connections.Add(vm);
-
-        // Notify all connections that paths may have changed (due to sequential re-routing)
-        foreach (var conn in Connections)
-        {
-            conn.NotifyPathChanged();
-        }
 
         InvalidateSimulation();
         return vm;
     }
 
     /// <summary>
+    /// Connects two pins using a previously cached route, bypassing A* routing.
+    /// Used when loading designs with cached route data.
+    /// Does not call InvalidateSimulation or NotifyPathChanged — caller should do that after bulk loading.
+    /// </summary>
+    public WaveguideConnectionViewModel? ConnectPinsWithCachedRoute(
+        PhysicalPin startPin,
+        PhysicalPin endPin,
+        RoutedPath cachedRoute)
+    {
+        RemoveConnectionsForPin(startPin);
+        RemoveConnectionsForPin(endPin);
+
+        var connection = ConnectionManager.AddConnectionWithCachedRoute(startPin, endPin, cachedRoute);
+        var vm = new WaveguideConnectionViewModel(connection);
+        Connections.Add(vm);
+
+        return vm;
+    }
+
+    /// <summary>
     /// Removes all connections that involve a specific pin.
+    /// Uses deferred removal (no re-routing). Caller is responsible for triggering routing.
     /// </summary>
     public void RemoveConnectionsForPin(PhysicalPin pin)
     {
@@ -388,14 +480,8 @@ public partial class DesignCanvasViewModel : ObservableObject
 
         foreach (var conn in connectionsToRemove)
         {
-            ConnectionManager.RemoveConnection(conn.Connection);
+            ConnectionManager.RemoveConnectionDeferred(conn.Connection);
             Connections.Remove(conn);
-        }
-
-        // Notify remaining connections that paths may have changed
-        foreach (var conn in Connections)
-        {
-            conn.NotifyPathChanged();
         }
 
         if (connectionsToRemove.Count > 0)

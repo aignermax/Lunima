@@ -64,6 +64,12 @@ public class WaveguideRouter
     public RoutingCostCalculator CostCalculator { get; } = new();
 
     /// <summary>
+    /// Hierarchical pathfinder for fast long-distance routing.
+    /// Built via BuildHierarchicalGraph(). When null, flat A* is used.
+    /// </summary>
+    private HierarchicalPathfinder? _hierarchicalPathfinder;
+
+    /// <summary>
     /// Grid cell size in micrometers for A* pathfinding.
     /// Larger values = faster routing but less precise paths.
     /// Should be smaller than MinBendRadiusMicrometers for smooth curves.
@@ -98,6 +104,32 @@ public class WaveguideRouter
         CostCalculator.CellSizeMicrometers = size;
         CostCalculator.MinBendRadiusMicrometers = MinBendRadiusMicrometers;
         CostCalculator.MinStraightRunCells = (int)Math.Ceiling(MinBendRadiusMicrometers * 2 / size);
+    }
+
+    /// <summary>
+    /// Builds the hierarchical pathfinding graph for fast long-distance routing.
+    /// Call after InitializePathfindingGrid() and after bulk component placement.
+    /// Also builds the distance transform for O(1) proximity cost lookups.
+    /// </summary>
+    public void BuildHierarchicalGraph(int sectorSizeCells = 50)
+    {
+        if (PathfindingGrid == null) return;
+
+        _hierarchicalPathfinder = new HierarchicalPathfinder(PathfindingGrid, CostCalculator);
+        _hierarchicalPathfinder.BuildSectorGraph(sectorSizeCells);
+
+        // Wire distance transform into cost calculator for O(1) proximity lookups
+        CostCalculator.DistanceTransformGrid = _hierarchicalPathfinder.DistanceTransform;
+    }
+
+    /// <summary>
+    /// Rebuilds only the distance transform (after waveguide changes).
+    /// Cheaper than full BuildHierarchicalGraph().
+    /// </summary>
+    public void RebuildDistanceTransform()
+    {
+        if (PathfindingGrid == null || _hierarchicalPathfinder?.DistanceTransform == null) return;
+        _hierarchicalPathfinder.DistanceTransform.Rebuild(PathfindingGrid);
     }
 
     /// <summary>
@@ -434,8 +466,9 @@ public class WaveguideRouter
 
     /// <summary>
     /// Checks if any segment in a path passes through blocked cells.
+    /// Used by WaveguideConnectionManager for incremental routing validation.
     /// </summary>
-    private bool IsPathBlocked(IEnumerable<PathSegment> segments)
+    public bool IsPathBlocked(IEnumerable<PathSegment> segments)
     {
         if (PathfindingGrid == null)
             return false;
@@ -745,24 +778,33 @@ public class WaveguideRouter
             var startDir = GridDirectionExtensions.FromAngle(startAngle);
             var endDir = GridDirectionExtensions.FromAngle(endInputAngle);
 
-            // Run A* pathfinding with adaptive pin escape distance
-            // Try with full escape distance first, then fallback to reduced if blocked
-            var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
-
+            // Run pathfinding with adaptive pin escape distance
+            // Use hierarchical pathfinder if available (faster for long distances)
             int originalEscapeCells = CostCalculator.MinPinEscapeCells;
             List<AStarPathfinder.AStarNode>? gridPath = null;
 
             // Attempt 1: Full escape distance (clean exit)
-            gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
-                                            gridEndX, gridEndY, endDir);
+            if (_hierarchicalPathfinder != null)
+            {
+                gridPath = _hierarchicalPathfinder.FindPath(
+                    gridStartX, gridStartY, startDir,
+                    gridEndX, gridEndY, endDir);
+            }
+            else
+            {
+                var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
+                gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
+                                                gridEndX, gridEndY, endDir);
+            }
 
             // Attempt 2: If failed, try with reduced escape distance (tight spaces)
             if (gridPath == null || gridPath.Count < 2)
             {
-                CostCalculator.MinPinEscapeCells = Math.Max(5, originalEscapeCells / 3); // 15 -> 5 cells
-                gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
+                CostCalculator.MinPinEscapeCells = Math.Max(5, originalEscapeCells / 3);
+                var fallbackPathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
+                gridPath = fallbackPathfinder.FindPath(gridStartX, gridStartY, startDir,
                                                 gridEndX, gridEndY, endDir);
-                CostCalculator.MinPinEscapeCells = originalEscapeCells; // Restore
+                CostCalculator.MinPinEscapeCells = originalEscapeCells;
             }
 
             if (gridPath == null || gridPath.Count < 2)

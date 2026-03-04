@@ -79,6 +79,15 @@ public partial class MainViewModel : ObservableObject
         CommandManager = commandManager;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
+        _canvas.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
+            {
+                var routingText = _canvas.RoutingStatusText;
+                if (!string.IsNullOrEmpty(routingText))
+                    StatusText = routingText;
+            }
+        };
         LoadComponentLibrary();
     }
 
@@ -849,11 +858,19 @@ public partial class MainViewModel : ObservableObject
                     StartPinName = c.Connection.StartPin.Name,
                     EndComponentIndex = Canvas.Components.ToList().FindIndex(
                         comp => comp.Component == c.Connection.EndPin.ParentComponent),
-                    EndPinName = c.Connection.EndPin.Name
+                    EndPinName = c.Connection.EndPin.Name,
+                    CachedSegments = c.Connection.RoutedPath != null
+                        ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
+                        : null,
+                    IsBlockedFallback = c.Connection.IsBlockedFallback ? true : null
                 }).ToList()
             };
 
-            var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
             await File.WriteAllTextAsync(filePath, json);
             _currentFilePath = filePath;
             StatusText = $"Saved to {Path.GetFileName(filePath)}";
@@ -929,7 +946,7 @@ public partial class MainViewModel : ObservableObject
                     }
                 }
 
-                // Load connections
+                // Load connections — use cached routes when available for fast loading
                 foreach (var connData in designData.Connections)
                 {
                     if (connData.StartComponentIndex >= 0 && connData.StartComponentIndex < Canvas.Components.Count &&
@@ -945,9 +962,25 @@ public partial class MainViewModel : ObservableObject
 
                         if (startPin != null && endPin != null)
                         {
-                            Canvas.ConnectPins(startPin, endPin);
+                            var cachedPath = PathSegmentConverter.ToRoutedPath(
+                                connData.CachedSegments, connData.IsBlockedFallback ?? false);
+
+                            if (cachedPath != null && cachedPath.IsValid)
+                            {
+                                Canvas.ConnectPinsWithCachedRoute(startPin, endPin, cachedPath);
+                            }
+                            else
+                            {
+                                Canvas.ConnectPins(startPin, endPin);
+                            }
                         }
                     }
+                }
+
+                // Notify all connections about their paths for UI rendering
+                foreach (var conn in Canvas.Connections)
+                {
+                    conn.NotifyPathChanged();
                 }
 
                 _currentFilePath = filePath;
@@ -1016,4 +1049,38 @@ public class ConnectionData
     public string StartPinName { get; set; } = "";
     public int EndComponentIndex { get; set; }
     public string EndPinName { get; set; } = "";
+
+    /// <summary>
+    /// Cached route segments for fast loading (null in old files → fall back to routing).
+    /// </summary>
+    public List<PathSegmentData>? CachedSegments { get; set; }
+
+    /// <summary>
+    /// Whether the cached route is a blocked fallback path (null → false).
+    /// </summary>
+    public bool? IsBlockedFallback { get; set; }
+}
+
+/// <summary>
+/// DTO for serializing waveguide path segments (straight lines and circular arcs).
+/// </summary>
+public class PathSegmentData
+{
+    /// <summary>
+    /// Segment type discriminator: "Straight" or "Bend".
+    /// </summary>
+    public string Type { get; set; } = "";
+
+    public double StartX { get; set; }
+    public double StartY { get; set; }
+    public double EndX { get; set; }
+    public double EndY { get; set; }
+    public double StartAngleDegrees { get; set; }
+    public double EndAngleDegrees { get; set; }
+
+    // Bend-specific fields (null for Straight segments)
+    public double? CenterX { get; set; }
+    public double? CenterY { get; set; }
+    public double? RadiusMicrometers { get; set; }
+    public double? SweepAngleDegrees { get; set; }
 }

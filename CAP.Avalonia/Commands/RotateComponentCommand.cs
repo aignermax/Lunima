@@ -101,17 +101,7 @@ public class RotateComponentCommand : IUndoableCommand
         var router = WaveguideConnection.SharedRouter;
         router.UpdateComponentObstacle(comp);
 
-        // Recalculate paths for any connected waveguides
-        // This is important because pin angles change with rotation!
-        _canvas.ConnectionManager.RecalculateTransmissionsForComponent(comp);
-
-        foreach (var conn in _canvas.Connections)
-        {
-            if (conn.Connection.StartPin.ParentComponent == comp ||
-                conn.Connection.EndPin.ParentComponent == comp)
-            {
-                conn.NotifyPathChanged();
-            }
-        }
+        // Recalculate paths asynchronously (pin angles change with rotation)
+        _ = _canvas.RecalculateRoutesAsync();
     }
 }

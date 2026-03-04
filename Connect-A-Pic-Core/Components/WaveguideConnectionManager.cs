@@ -48,6 +48,78 @@ public class WaveguideConnectionManager
         return connection;
     }
 
+    /// <summary>
+    /// Adds a connection with a pre-computed cached route, bypassing A* routing.
+    /// Registers the cached route as an obstacle in the pathfinding grid.
+    /// Used when loading designs with cached route data.
+    /// </summary>
+    public WaveguideConnection AddConnectionWithCachedRoute(
+        PhysicalPin startPin,
+        PhysicalPin endPin,
+        RoutedPath cachedPath)
+    {
+        var connection = new WaveguideConnection
+        {
+            StartPin = startPin,
+            EndPin = endPin,
+            PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+        };
+
+        connection.RestoreCachedPath(cachedPath);
+        Connections.Add(connection);
+
+        // Register cached route as obstacle for future routing
+        var router = WaveguideConnection.SharedRouter;
+        if (UseSequentialRouting && router.PathfindingGrid != null &&
+            connection.IsPathValid && connection.RoutedPath != null)
+        {
+            router.PathfindingGrid.AddWaveguideObstacle(
+                connection.Id,
+                connection.RoutedPath.Segments,
+                WaveguideWidthMicrometers);
+        }
+
+        return connection;
+    }
+
+    /// <summary>
+    /// Adds a connection without triggering route calculation.
+    /// Used for async routing: add connection first, then route asynchronously.
+    /// </summary>
+    public WaveguideConnection AddConnectionDeferred(PhysicalPin startPin, PhysicalPin endPin)
+    {
+        var connection = new WaveguideConnection
+        {
+            StartPin = startPin,
+            EndPin = endPin,
+            PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+        };
+        Connections.Add(connection);
+        return connection;
+    }
+
+    /// <summary>
+    /// Asynchronously recalculates all transmissions on a background thread.
+    /// Returns false if cancelled before completion. Never throws on cancellation.
+    /// </summary>
+    public async Task<bool> RecalculateAllTransmissionsAsync(CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested) return false;
+
+        return await Task.Run(() =>
+        {
+            if (cancellationToken.IsCancellationRequested) return false;
+            RecalculateAllTransmissions(cancellationToken);
+            return !cancellationToken.IsCancellationRequested;
+        });
+    }
+
+    /// <summary>
+    /// Removes all connections for a component without triggering route recalculation.
+    /// Caller is responsible for triggering RecalculateAllTransmissionsAsync().
+    /// </summary>
     public void RemoveConnectionsForComponent(Component component)
     {
         var router = WaveguideConnection.SharedRouter;
@@ -68,12 +140,6 @@ public class WaveguideConnectionManager
         Connections.RemoveAll(c =>
             c.StartPin.ParentComponent == component ||
             c.EndPin.ParentComponent == component);
-
-        // Recalculate remaining connections - they might find better routes now
-        if (Connections.Count > 0)
-        {
-            RecalculateAllTransmissions();
-        }
     }
 
     public void RemoveConnection(WaveguideConnection connection)
@@ -92,6 +158,20 @@ public class WaveguideConnectionManager
         {
             RecalculateAllTransmissions();
         }
+    }
+
+    /// <summary>
+    /// Removes a connection without triggering route recalculation.
+    /// Used for async routing: remove connection first, then route asynchronously.
+    /// </summary>
+    public void RemoveConnectionDeferred(WaveguideConnection connection)
+    {
+        var router = WaveguideConnection.SharedRouter;
+        if (router.PathfindingGrid != null)
+        {
+            router.PathfindingGrid.RemoveWaveguideObstacle(connection.Id);
+        }
+        Connections.Remove(connection);
     }
 
     public void AddExistingConnection(WaveguideConnection connection)
@@ -113,39 +193,40 @@ public class WaveguideConnectionManager
     public int MaxRoutingAttempts { get; set; } = 6;
 
     /// <summary>
-    /// Recalculates transmission for all connections.
-    /// When UseSequentialRouting is enabled, routes connections sequentially
-    /// to avoid waveguide collisions. If routing fails, tries different orderings.
+    /// Recalculates transmission for all connections using incremental routing.
+    /// Existing valid routes are preserved; only broken or new connections are re-routed.
+    /// Falls back to full re-route if incremental routing leaves failed connections.
     /// </summary>
-    public void RecalculateAllTransmissions()
+    public void RecalculateAllTransmissions(CancellationToken cancellationToken = default)
     {
         var router = WaveguideConnection.SharedRouter;
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
-            // Try the current ordering first
-            var result = TryRouteInOrder(Connections.ToList(), router);
+            // Phase 1: Incremental routing — keep valid routes, only re-route broken ones
+            var result = TryRouteIncremental(router, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
 
-            // If all paths are valid, we're done
             if (result.allValid)
-            {
                 return;
-            }
 
-            // Some paths failed - try different orderings
+            // Phase 2: Incremental routing failed for some connections.
+            // Fall back to full re-route with ordering strategies.
+            result = TryRouteInOrder(Connections.ToList(), router, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
+            if (result.allValid) return;
+
             var bestOrder = Connections.ToList();
             int bestFailedCount = result.failedCount;
 
-            // Generate different orderings to try
             var orderings = GenerateOrderings(Connections.ToList(), MaxRoutingAttempts - 1);
-
             foreach (var ordering in orderings)
             {
-                result = TryRouteInOrder(ordering, router);
+                if (cancellationToken.IsCancellationRequested) return;
+                result = TryRouteInOrder(ordering, router, cancellationToken);
 
                 if (result.allValid)
                 {
-                    // Found a perfect ordering - use it
                     ReorderConnections(ordering);
                     return;
                 }
@@ -157,11 +238,10 @@ public class WaveguideConnectionManager
                 }
             }
 
-            // Use the best ordering we found
-            if (bestOrder != Connections.ToList())
+            if (!cancellationToken.IsCancellationRequested && bestOrder != Connections.ToList())
             {
                 ReorderConnections(bestOrder);
-                TryRouteInOrder(bestOrder, router);
+                TryRouteInOrder(bestOrder, router, cancellationToken);
             }
         }
         else
@@ -169,15 +249,131 @@ public class WaveguideConnectionManager
             // Simple routing without collision avoidance
             foreach (var connection in Connections)
             {
+                if (cancellationToken.IsCancellationRequested) return;
                 connection.RecalculateTransmission();
             }
         }
     }
 
     /// <summary>
-    /// Tries to route all connections in the given order.
+    /// Tolerance for checking if path endpoints still match pin positions (in µm).
     /// </summary>
-    private (bool allValid, int failedCount) TryRouteInOrder(List<WaveguideConnection> orderedConnections, WaveguideRouter router)
+    private const double EndpointToleranceMicrometers = 1.0;
+
+    /// <summary>
+    /// Incremental routing: preserves existing valid routes, only re-routes broken or new connections.
+    /// A route is "still valid" if:
+    ///   1. It has a non-null, non-fallback RoutedPath
+    ///   2. Its endpoints still match the current pin positions (component wasn't moved)
+    ///   3. The path doesn't pass through any component obstacle
+    /// </summary>
+    private (bool allValid, int failedCount) TryRouteIncremental(
+        WaveguideRouter router,
+        CancellationToken cancellationToken = default)
+    {
+        var grid = router.PathfindingGrid!;
+
+        // After RebuildFromComponents, the grid has ONLY component obstacles (no waveguides).
+        // Check each connection's existing route against component obstacles only.
+        grid.ClearAllWaveguideObstacles();
+
+        var validConnections = new List<WaveguideConnection>();
+        var invalidConnections = new List<WaveguideConnection>();
+
+        foreach (var connection in Connections)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return (false, 0);
+
+            if (IsRouteStillValid(connection, router))
+            {
+                validConnections.Add(connection);
+            }
+            else
+            {
+                invalidConnections.Add(connection);
+            }
+        }
+
+        // Register all valid routes as waveguide obstacles first.
+        // This ensures new/re-routed connections route around existing infrastructure.
+        foreach (var connection in validConnections)
+        {
+            grid.AddWaveguideObstacle(
+                connection.Id,
+                connection.RoutedPath!.Segments,
+                WaveguideWidthMicrometers);
+        }
+
+        // Route only the invalid/new connections
+        int failedCount = 0;
+        foreach (var connection in invalidConnections)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return (false, failedCount);
+
+            connection.RecalculateTransmission();
+
+            if (connection.IsPathValid && connection.RoutedPath != null)
+            {
+                grid.AddWaveguideObstacle(
+                    connection.Id,
+                    connection.RoutedPath.Segments,
+                    WaveguideWidthMicrometers);
+            }
+            else
+            {
+                failedCount++;
+            }
+        }
+
+        return (failedCount == 0, failedCount);
+    }
+
+    /// <summary>
+    /// Checks if an existing route is still valid (not broken by component changes).
+    /// </summary>
+    private static bool IsRouteStillValid(WaveguideConnection connection, WaveguideRouter router)
+    {
+        if (connection.RoutedPath == null || !connection.IsPathValid)
+            return false;
+
+        if (connection.RoutedPath.IsBlockedFallback)
+            return false;
+
+        if (connection.RoutedPath.Segments.Count == 0)
+            return false;
+
+        // Check endpoints still match pin positions (component may have moved)
+        var (startX, startY) = connection.StartPin.GetAbsolutePosition();
+        var (endX, endY) = connection.EndPin.GetAbsolutePosition();
+        var firstSeg = connection.RoutedPath.Segments[0];
+        var lastSeg = connection.RoutedPath.Segments[^1];
+
+        double startDist = Distance(firstSeg.StartPoint.X, firstSeg.StartPoint.Y, startX, startY);
+        double endDist = Distance(lastSeg.EndPoint.X, lastSeg.EndPoint.Y, endX, endY);
+
+        if (startDist > EndpointToleranceMicrometers || endDist > EndpointToleranceMicrometers)
+            return false;
+
+        // Check path doesn't pass through component obstacles
+        return !router.IsPathBlocked(connection.RoutedPath.Segments);
+    }
+
+    private static double Distance(double x1, double y1, double x2, double y2)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>
+    /// Tries to route all connections in the given order (full re-route).
+    /// </summary>
+    private (bool allValid, int failedCount) TryRouteInOrder(
+        List<WaveguideConnection> orderedConnections,
+        WaveguideRouter router,
+        CancellationToken cancellationToken = default)
     {
         // Clear all waveguide obstacles from previous routing
         router.PathfindingGrid!.ClearAllWaveguideObstacles();
@@ -187,6 +383,9 @@ public class WaveguideConnectionManager
         // Route each connection sequentially
         foreach (var connection in orderedConnections)
         {
+            if (cancellationToken.IsCancellationRequested)
+                return (false, failedCount);
+
             connection.RecalculateTransmission();
 
             // If routing succeeded, mark this waveguide as an obstacle

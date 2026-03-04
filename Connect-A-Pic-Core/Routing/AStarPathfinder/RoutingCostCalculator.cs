@@ -60,6 +60,19 @@ public class RoutingCostCalculator
     public double ProximityCostMultiplier { get; set; } = 100.0;
 
     /// <summary>
+    /// Cost penalty for routing through a pin reservation zone.
+    /// Lower than ProximityCostMultiplier — a soft nudge, not a hard block.
+    /// Default: 30 (roughly half a turn cost — enough to prefer a detour).
+    /// </summary>
+    public double PinZoneCostPenalty { get; set; } = 30.0;
+
+    /// <summary>
+    /// Precomputed distance transform for O(1) proximity cost lookups.
+    /// When set, CalculateProximityCost uses this instead of brute-force scanning.
+    /// </summary>
+    public DistanceTransform? DistanceTransformGrid { get; set; }
+
+    /// <summary>
     /// Calculates the cost to move from one node to an adjacent cell.
     /// </summary>
     /// <param name="from">Current node</param>
@@ -146,10 +159,27 @@ public class RoutingCostCalculator
     /// <returns>Additional cost penalty (0 if far from obstacles)</returns>
     public double CalculateProximityCost(PathfindingGrid grid, int x, int y)
     {
-        // Calculate search radius in cells
+        // Fast path: use precomputed distance transform (O(1) lookup)
+        if (DistanceTransformGrid != null)
+        {
+            double dist = DistanceTransformGrid.GetDistanceMicrometers(x, y);
+            if (dist >= MinSafeSpacingMicrometers) return 0;
+            double proximityRatio = 1.0 - (dist / MinSafeSpacingMicrometers);
+            return proximityRatio * ProximityCostMultiplier;
+        }
+
+        // Fallback: brute-force scan (O(N²) where N = search radius)
+        return CalculateProximityCostBruteForce(grid, x, y);
+    }
+
+    /// <summary>
+    /// Original brute-force proximity cost calculation.
+    /// Scans all cells within MinSafeSpacingMicrometers radius.
+    /// </summary>
+    private double CalculateProximityCostBruteForce(PathfindingGrid grid, int x, int y)
+    {
         int searchRadiusCells = (int)Math.Ceiling(MinSafeSpacingMicrometers / CellSizeMicrometers);
 
-        // Find minimum distance to any waveguide obstacle (state = 2)
         double minDistance = double.MaxValue;
         bool foundWaveguide = false;
 
@@ -157,15 +187,13 @@ public class RoutingCostCalculator
         {
             for (int dy = -searchRadiusCells; dy <= searchRadiusCells; dy++)
             {
-                if (dx == 0 && dy == 0) continue; // Skip self
+                if (dx == 0 && dy == 0) continue;
 
                 int checkX = x + dx;
                 int checkY = y + dy;
 
                 byte cellState = grid.GetCellState(checkX, checkY);
 
-                // Only consider waveguide obstacles (state = 2)
-                // Component obstacles (state = 1) are hard boundaries
                 if (cellState == 2)
                 {
                     double distance = Math.Sqrt(dx * dx + dy * dy) * CellSizeMicrometers;
@@ -179,14 +207,19 @@ public class RoutingCostCalculator
         }
 
         if (!foundWaveguide || minDistance >= MinSafeSpacingMicrometers)
-        {
-            return 0; // No penalty if far enough away
-        }
+            return 0;
 
-        // Linear penalty: closer = more expensive
-        // At distance 0: full penalty, at MinSafeSpacing: no penalty
         double proximityRatio = 1.0 - (minDistance / MinSafeSpacingMicrometers);
         return proximityRatio * ProximityCostMultiplier;
+    }
+
+    /// <summary>
+    /// Returns a cost penalty if the cell is inside a pin reservation zone.
+    /// This nudges routes away from pin areas, keeping them accessible.
+    /// </summary>
+    public double CalculatePinZoneCost(PathfindingGrid grid, int x, int y)
+    {
+        return grid.IsPinReservationZone(x, y) ? PinZoneCostPenalty : 0;
     }
 
     /// <summary>

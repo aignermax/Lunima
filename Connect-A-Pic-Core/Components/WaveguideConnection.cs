@@ -118,6 +118,23 @@ namespace CAP_Core.Components
         }
 
         /// <summary>
+        /// Restores a previously cached routed path without invoking the router.
+        /// Recalculates transmission loss from the provided path geometry.
+        /// Used when loading designs with cached route data.
+        /// </summary>
+        public void RestoreCachedPath(RoutedPath cachedPath)
+        {
+            RoutedPath = cachedPath;
+
+            double propagationLoss = (PathLengthMicrometers / 10000.0) * PropagationLossDbPerCm;
+            double bendLoss = BendCount * BendLossDbPer90Deg;
+            TotalLossDb = propagationLoss + bendLoss;
+
+            double amplitudeCoefficient = Math.Pow(10, -TotalLossDb / 20.0);
+            TransmissionCoefficient = new Complex(amplitudeCoefficient, 0);
+        }
+
+        /// <summary>
         /// Gets all path segments for rendering or export.
         /// </summary>
         public IReadOnlyList<PathSegment> GetPathSegments()

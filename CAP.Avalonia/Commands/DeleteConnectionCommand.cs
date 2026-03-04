@@ -23,7 +23,8 @@ public class DeleteConnectionCommand : IUndoableCommand
     public void Execute()
     {
         _canvas.Connections.Remove(_connectionVm);
-        _canvas.ConnectionManager.RemoveConnection(_connection);
+        _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
+        _ = _canvas.RecalculateRoutesAsync();
     }
 
     public void Undo()
@@ -31,5 +32,6 @@ public class DeleteConnectionCommand : IUndoableCommand
         // Re-add the connection
         _canvas.ConnectionManager.AddExistingConnection(_connection);
         _canvas.Connections.Add(_connectionVm);
+        _ = _canvas.RecalculateRoutesAsync();
     }
 }
