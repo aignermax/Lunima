@@ -1,5 +1,6 @@
 # Connect-A-PIC Pro
 <img width="1412" height="936" alt="Bildschirmfoto_2026-03-02_22-25-45" src="https://github.com/user-attachments/assets/75204d1a-0a20-4144-af1d-9e4bc0e43380" />
+<img width="1534" height="475" alt="image" src="https://github.com/user-attachments/assets/80dcf0e1-1cbf-4709-ab79-5292cf3e415e" />
 
 > **An architecture-level photonic design tool for fast concept validation and system exploration.**
 
