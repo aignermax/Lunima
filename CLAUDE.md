@@ -16,7 +16,7 @@ A complete vertical slice includes ALL of these layers:
 
 ## Code Quality Rules
 
-- **Max 250 lines per new file** — Aim for 250 lines in newly created files. Existing files like `MainViewModel.cs` and `DesignCanvas.cs` are larger — do not refactor them just for line count
+- **Max 250 lines per file** — Aim for 250 lines in newly created files. When modifying existing files that exceed 300 lines, look for opportunities to extract cohesive logic into separate classes. Files over 500 lines should be actively refactored when touched. No backwards compatibility needed — just move the code
 - **SOLID principles**:
   - Single Responsibility: Each class has one reason to change
   - Open/Closed: Extend via interfaces, not modification
