@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Components;
@@ -58,6 +59,12 @@ public class DesignCanvas : Control
     private bool _showDragPreview;
     private Point _dragPreviewPosition; // top-left of snapped target
     private bool _dragPreviewValid;
+
+    // Group drag state (when dragging multiple selected components)
+    private bool _isGroupDragging;
+    private double _groupDragStartCanvasX;
+    private double _groupDragStartCanvasY;
+    private Dictionary<ComponentViewModel, (double x, double y)> _groupDragStartPositions = new();
 
     // Power flow hover state
     private WaveguideConnectionViewModel? _hoveredConnection;
@@ -186,6 +193,12 @@ public class DesignCanvas : Control
             if (_connectionDragStartPin != null)
             {
                 DrawConnectionPreview(context);
+            }
+
+            // Draw box-selection rectangle
+            if (vm.Selection.IsBoxSelecting)
+            {
+                DrawSelectionRectangle(context, vm.Selection);
             }
         }
 
@@ -615,6 +628,28 @@ public class DesignCanvas : Control
         {
             context.DrawEllipse(Brushes.LimeGreen, null, endPoint, 5, 5);
         }
+    }
+
+    private void DrawSelectionRectangle(DrawingContext context, SelectionManager selection)
+    {
+        var (minX, minY, maxX, maxY) = selection.GetNormalizedBox();
+        double width = maxX - minX;
+        double height = maxY - minY;
+        if (width < 1 && height < 1) return;
+
+        var rect = new global::Avalonia.Rect(minX, minY, width, height);
+
+        // Semi-transparent blue fill
+        var fillBrush = new SolidColorBrush(Color.FromArgb(30, 100, 150, 255));
+        context.FillRectangle(fillBrush, rect);
+
+        // Blue dashed border
+        var borderPen = new Pen(
+            new SolidColorBrush(Color.FromArgb(180, 100, 180, 255)), 1.5)
+        {
+            DashStyle = new DashStyle(new double[] { 6, 3 }, 0)
+        };
+        context.DrawRectangle(null, borderPen, rect);
     }
 
     private void DrawWaveguideConnection(

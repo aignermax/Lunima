@@ -480,13 +480,63 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void DeleteSelected()
     {
+        var selection = Canvas.Selection;
+
+        if (selection.HasMultipleSelected)
+        {
+            int count = selection.SelectedComponents.Count;
+            var cmd = new GroupDeleteCommand(Canvas, selection.SelectedComponents.ToList());
+            CommandManager.ExecuteCommand(cmd);
+            selection.ClearSelection();
+            SelectedComponent = null;
+            StatusText = $"Deleted {count} components";
+            return;
+        }
+
         if (SelectedComponent != null)
         {
             var name = SelectedComponent.Name;
             var cmd = new DeleteComponentCommand(Canvas, SelectedComponent);
             CommandManager.ExecuteCommand(cmd);
+            selection.ClearSelection();
             SelectedComponent = null;
             StatusText = $"Deleted: {name}";
+        }
+    }
+
+    [RelayCommand]
+    private void CopySelected()
+    {
+        var selection = Canvas.Selection;
+        if (!selection.HasSelection) return;
+
+        Canvas.Clipboard.Copy(
+            selection.SelectedComponents.ToList(),
+            Canvas.Connections);
+
+        StatusText = $"Copied {selection.SelectedComponents.Count} component(s)";
+    }
+
+    [RelayCommand]
+    private void PasteSelected()
+    {
+        if (!Canvas.Clipboard.HasContent) return;
+
+        var cmd = new PasteComponentsCommand(Canvas, Canvas.Clipboard);
+        CommandManager.ExecuteCommand(cmd);
+
+        // Select the pasted components
+        if (cmd.Result != null)
+        {
+            Canvas.Selection.ClearSelection();
+            foreach (var comp in cmd.Result.Components)
+            {
+                comp.IsSelected = true;
+                Canvas.Selection.SelectedComponents.Add(comp);
+            }
+
+            _ = Canvas.RecalculateRoutesAsync();
+            StatusText = $"Pasted {cmd.Result.Components.Count} component(s)";
         }
     }
 
