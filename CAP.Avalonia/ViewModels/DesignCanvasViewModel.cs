@@ -179,8 +179,6 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// </summary>
     public void InitializeAStarRouting()
     {
-        Router.Strategy = UseAStarRouting ? RoutingStrategy.Auto : RoutingStrategy.Manhattan;
-
         // Set obstacle padding for clearance between waveguides and components
         if (Router.PathfindingGrid != null)
         {
@@ -209,7 +207,6 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// </summary>
     public void InitializeAStarRouting(double minX, double minY, double maxX, double maxY)
     {
-        Router.Strategy = UseAStarRouting ? RoutingStrategy.Auto : RoutingStrategy.Manhattan;
         Router.InitializePathfindingGrid(
             minX, minY, maxX, maxY,
             Components.Select(c => c.Component));
@@ -223,8 +220,8 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     partial void OnUseAStarRoutingChanged(bool value)
     {
-        Router.Strategy = value ? RoutingStrategy.Auto : RoutingStrategy.Manhattan;
-        // Recalculate all connections with new routing strategy (async)
+        // A* is always used; this toggle is kept for backward compatibility.
+        // Recalculate connections (async)
         _ = RecalculateRoutesAsync();
     }
 

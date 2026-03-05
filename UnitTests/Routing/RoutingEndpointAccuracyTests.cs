@@ -29,7 +29,7 @@ public class RoutingEndpointAccuracyTests
     public void Route_StraightAlignment_EndpointsMatchPins()
     {
         var (startPin, endPin) = CreateAlignedPins(0, 25, 100, 25);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -45,7 +45,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 50, startPinOffsetY: 25, startAngle: 0,
             endCompX: 200, endCompY: 50, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -61,7 +61,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 50, startPinOffsetY: 25, startAngle: 0,
             endCompX: 200, endCompY: 50, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -75,7 +75,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 50, startPinOffsetY: 25, startAngle: 0,
             endCompX: 200, endCompY: 50, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -90,7 +90,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 25, startPinOffsetY: 50, startAngle: 90,
             endCompX: 50, endCompY: 50, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -106,7 +106,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 25, startPinOffsetY: 50, startAngle: 90,
             endCompX: 50, endCompY: 50, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -123,7 +123,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 50, startPinOffsetY: 25, startAngle: 0,
             endCompX: 150, endCompY: yOffset, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -142,7 +142,7 @@ public class RoutingEndpointAccuracyTests
         var (startPin, endPin) = CreateOffsetPins(
             startCompX: 0, startCompY: 0, startPinOffsetX: 50, startPinOffsetY: 25, startAngle: 0,
             endCompX: 150, endCompY: yOffset, endPinOffsetX: 0, endPinOffsetY: 25, endAngle: 180);
-        var router = CreateRouter();
+        var router = CreateRouter(startPin, endPin);
 
         var path = router.Route(startPin, endPin);
 
@@ -336,11 +336,23 @@ public class RoutingEndpointAccuracyTests
         return (startPin, endPin);
     }
 
-    private static WaveguideRouter CreateRouter() => new()
+    private static WaveguideRouter CreateRouter(PhysicalPin? startPin = null, PhysicalPin? endPin = null)
     {
-        MinBendRadiusMicrometers = 10.0,
-        MinWaveguideSpacingMicrometers = 2.0
-    };
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = 10.0,
+            MinWaveguideSpacingMicrometers = 2.0
+        };
+
+        // Initialize A* grid from pin parent components (A* is now the only routing method)
+        if (startPin?.ParentComponent != null && endPin?.ParentComponent != null)
+        {
+            var components = new[] { startPin.ParentComponent, endPin.ParentComponent };
+            router.InitializePathfindingGrid(-100, -100, 400, 250, components);
+        }
+
+        return router;
+    }
 
     private static Component CreateTestComponent(double x, double y)
     {

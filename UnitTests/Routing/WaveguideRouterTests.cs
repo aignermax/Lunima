@@ -21,12 +21,21 @@ public class WaveguideRouterTests
         };
     }
 
+    /// <summary>
+    /// Initializes the router's A* grid from the given components.
+    /// </summary>
+    private void InitGrid(params Component[] components)
+    {
+        _router.InitializePathfindingGrid(-100, -100, 400, 250, components);
+    }
+
     [Fact]
     public void Route_StraightAlignment_CreatesStraightSegment()
     {
         // Arrange
         var startComponent = CreateTestComponent(0, 0);
         var endComponent = CreateTestComponent(100, 0);
+        InitGrid(startComponent, endComponent);
 
         var startPin = new PhysicalPin
         {
@@ -62,6 +71,7 @@ public class WaveguideRouterTests
         // Arrange - pins are parallel but offset
         var startComponent = CreateTestComponent(0, 0);
         var endComponent = CreateTestComponent(100, 50);
+        InitGrid(startComponent, endComponent);
 
         var startPin = new PhysicalPin
         {
@@ -91,11 +101,12 @@ public class WaveguideRouterTests
     }
 
     [Fact]
-    public void Route_PerpendicularPins_UsesManhattanRouting()
+    public void Route_PerpendicularPins_UsesAStar()
     {
         // Arrange - pins at 90 degrees
         var startComponent = CreateTestComponent(0, 0);
         var endComponent = CreateTestComponent(50, 50);
+        InitGrid(startComponent, endComponent);
 
         var startPin = new PhysicalPin
         {
@@ -121,7 +132,7 @@ public class WaveguideRouterTests
         // Assert
         path.ShouldNotBeNull();
         path.IsValid.ShouldBeTrue();
-        // Manhattan routing with 90-degree turn
+        // Should have at least one turn
         path.TotalEquivalent90DegreeBends.ShouldBeGreaterThanOrEqualTo(1);
     }
 
@@ -133,7 +144,6 @@ public class WaveguideRouterTests
         {
             MinBendRadiusMicrometers = 10.0,
             MinWaveguideSpacingMicrometers = 2.0,
-            Strategy = RoutingStrategy.Auto
         };
 
         // Components: start at x=0, end at x=200, obstacle in the middle

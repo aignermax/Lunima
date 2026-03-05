@@ -5,16 +5,13 @@ namespace CAP_Core.Routing;
 
 /// <summary>
 /// Routing strategy for waveguide connections.
+/// Kept for API compatibility. Route() always uses A* with Manhattan fallback.
 /// </summary>
 public enum RoutingStrategy
 {
-    /// <summary>Try strategies in order: Straight, S-Bend, A*, Manhattan</summary>
+    /// <summary>A* pathfinding with Manhattan fallback (default)</summary>
     Auto,
-    /// <summary>Direct line (only works if pins are aligned)</summary>
-    Straight,
-    /// <summary>Two opposing bends (works for parallel offset pins)</summary>
-    SBend,
-    /// <summary>Simple manhattan routing with bends (always works)</summary>
+    /// <summary>Simple manhattan routing with bends (no obstacle avoidance)</summary>
     Manhattan,
     /// <summary>A* pathfinding with obstacle avoidance</summary>
     AStar
@@ -47,11 +44,6 @@ public class WaveguideRouter
     /// List of obstacles (component bounding boxes) to route around.
     /// </summary>
     public List<RoutingObstacle> Obstacles { get; } = new();
-
-    /// <summary>
-    /// Current routing strategy.
-    /// </summary>
-    public RoutingStrategy Strategy { get; set; } = RoutingStrategy.Auto;
 
     /// <summary>
     /// The pathfinding grid for A* routing. Must be initialized before using AStar strategy.
@@ -104,6 +96,10 @@ public class WaveguideRouter
         CostCalculator.CellSizeMicrometers = size;
         CostCalculator.MinBendRadiusMicrometers = MinBendRadiusMicrometers;
         CostCalculator.MinStraightRunCells = (int)Math.Ceiling(MinBendRadiusMicrometers * 2 / size);
+
+        // Clear stale distance transform — the old grid doesn't match the new one.
+        // Don't null _hierarchicalPathfinder here (race condition with BuildHierarchicalGraph).
+        CostCalculator.DistanceTransformGrid = null;
     }
 
     /// <summary>
@@ -158,11 +154,8 @@ public class WaveguideRouter
 
     /// <summary>
     /// Routes a waveguide between two pins.
-    /// Strategy order:
-    /// 1. Straight line (if pins are aligned)
-    /// 2. S-bend (smooth curves, flexible angles)
-    /// 3. Manhattan (90° turns only, more predictable)
-    /// 4. A* pathfinding (obstacle avoidance)
+    /// Always uses A* pathfinding for reliable obstacle avoidance.
+    /// Falls back to Manhattan routing (marked as blocked) if A* fails.
     /// </summary>
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin)
     {
@@ -174,62 +167,7 @@ public class WaveguideRouter
         // The end pin's "input" direction is opposite to its defined angle
         double endInputAngle = NormalizeAngle(endAngle + 180);
 
-        // 1. Try straight line first (fastest, simplest)
-        var path = new RoutedPath();
-        if (TryRouteStraight(startX, startY, startAngle, endX, endY, endInputAngle, path))
-        {
-            if (!IsPathBlocked(path.Segments))
-            {
-                return path;
-            }
-        }
-
-        // Calculate forward and lateral distances for routing decisions
-        double startRad = startAngle * Math.PI / 180;
-        double fwdX = Math.Cos(startRad);
-        double fwdY = Math.Sin(startRad);
-        double dx = endX - startX;
-        double dy = endY - startY;
-        double forwardDist = dx * fwdX + dy * fwdY;
-        double leftX = -fwdY;
-        double leftY = fwdX;
-        double lateralDist = dx * leftX + dy * leftY;
-
-        // 2. Try S-bend (smooth curves, flexible angles) - only if target is forward
-        path = new RoutedPath();
-        if (forwardDist >= MinBendRadiusMicrometers)
-        {
-            if (TryRouteSBend(startX, startY, startAngle, endX, endY, endInputAngle, path))
-            {
-                if (path.IsValid && !IsPathBlocked(path.Segments))
-                {
-                    return path;
-                }
-            }
-        }
-
-        // 3. Try U-turn if target is behind us
-        if (forwardDist < MinBendRadiusMicrometers)
-        {
-            path = new RoutedPath();
-            if (TryRouteUturn(startX, startY, startAngle, endX, endY, endInputAngle, lateralDist, forwardDist, path))
-            {
-                if (path.IsValid && !IsPathBlocked(path.Segments))
-                {
-                    return path;
-                }
-            }
-        }
-
-        // 4. Try Manhattan routing (90° turns, predictable)
-        path = new RoutedPath();
-        RouteManhattan(startX, startY, startAngle, endX, endY, endInputAngle, path);
-        if (path.IsValid && !IsPathBlocked(path.Segments))
-        {
-            return path;
-        }
-
-        // 5. Try A* for obstacle avoidance
+        // Primary: A* pathfinding (always respects obstacle grid)
         if (PathfindingGrid != null)
         {
             var astarPath = new RoutedPath();
@@ -242,14 +180,12 @@ public class WaveguideRouter
             }
         }
 
-        // Return whatever we have (may be blocked)
-        if (!path.IsValid || path.Segments.Count == 0)
-        {
-            path = new RoutedPath { IsBlockedFallback = true };
-            RouteManhattan(startX, startY, startAngle, endX, endY, endInputAngle, path);
-        }
+        // Fallback: Manhattan routing
+        // Only mark as blocked if we had a grid but A* still failed (real obstacle)
+        var path = new RoutedPath();
+        RouteManhattan(startX, startY, startAngle, endX, endY, endInputAngle, path);
 
-        if (IsPathBlocked(path.Segments))
+        if (PathfindingGrid != null || path.Segments.Count == 0 || !path.IsValid)
         {
             path.IsBlockedFallback = true;
         }
@@ -258,40 +194,8 @@ public class WaveguideRouter
     }
 
     /// <summary>
-    /// Attempts to route with a straight line (only works if pins are aligned).
-    /// </summary>
-    private bool TryRouteStraight(double startX, double startY, double startAngle,
-                                   double endX, double endY, double endInputAngle,
-                                   RoutedPath path)
-    {
-        double dx = endX - startX;
-        double dy = endY - startY;
-        double connectionAngle = Math.Atan2(dy, dx) * 180 / Math.PI;
-
-        // Check if start pin points toward end
-        double startDiff = Math.Abs(NormalizeAngle(connectionAngle - startAngle));
-        // Check if end pin can receive from this direction
-        double endDiff = Math.Abs(NormalizeAngle(connectionAngle - endInputAngle));
-
-        // Only allow straight routing if pins are truly aligned (< 2° tolerance)
-        // This prevents diagonal lines that don't match pin angles
-        if (startDiff < 2 && endDiff < 2)
-        {
-            // Check if path is blocked by obstacles
-            if (IsLineBlocked(startX, startY, endX, endY))
-            {
-                return false;
-            }
-
-            path.Segments.Add(new StraightSegment(startX, startY, endX, endY, startAngle));
-            return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
     /// Checks if a straight line between two points passes through any blocked cells.
+    /// Uses half-cell stepping to catch diagonal crossings that skip cells.
     /// </summary>
     private bool IsLineBlocked(double x1, double y1, double x2, double y2)
     {
@@ -309,9 +213,15 @@ public class WaveguideRouter
         dx /= length;
         dy /= length;
 
-        // Sample points along the line, checking each for blocked cells
-        double stepSize = PathfindingGrid.CellSizeMicrometers;
-        for (double t = stepSize; t < length - stepSize; t += stepSize)
+        // Half-cell steps ensure diagonal lines can't skip between cells.
+        // On a 45° diagonal, 1-cell steps land √2 cells apart — missing cells in between.
+        double stepSize = PathfindingGrid.CellSizeMicrometers * 0.5;
+
+        // Full-cell margin at endpoints: pins sit on component edges,
+        // so sampling too close to start/end hits the component body.
+        double margin = PathfindingGrid.CellSizeMicrometers;
+
+        for (double t = margin; t < length - margin; t += stepSize)
         {
             double px = x1 + dx * t;
             double py = y1 + dy * t;
@@ -324,144 +234,6 @@ public class WaveguideRouter
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Simple, flexible S-bend routing.
-    /// Creates smooth curves between two pins without strict Manhattan constraints.
-    /// </summary>
-    private bool TryRouteSBend(double startX, double startY, double startAngle,
-                                double endX, double endY, double endInputAngle,
-                                RoutedPath path)
-    {
-        double r = MinBendRadiusMicrometers;
-        double dx = endX - startX;
-        double dy = endY - startY;
-        double dist = Math.Sqrt(dx * dx + dy * dy);
-
-        if (dist < 1.0) return false;
-
-        // Direction vectors from start angle
-        double startRad = startAngle * Math.PI / 180;
-        double fwdX = Math.Cos(startRad);
-        double fwdY = Math.Sin(startRad);
-
-        // Project to get forward and lateral distances
-        double fwdDist = dx * fwdX + dy * fwdY;
-
-        // Use cross product to determine which side the target is on
-        // cross = fwdX * dy - fwdY * dx
-        // Positive cross = target is to the LEFT (counter-clockwise from forward)
-        // Negative cross = target is to the RIGHT (clockwise from forward)
-        double cross = fwdX * dy - fwdY * dx;
-        double absLat = Math.Abs(cross) / dist * dist; // Approximate lateral distance
-
-        // Recalculate proper lateral distance
-        // Left perpendicular (90° CCW from forward): (-fwdY, fwdX)
-        double leftX = -fwdY;
-        double leftY = fwdX;
-        double latDist = dx * leftX + dy * leftY;
-        absLat = Math.Abs(latDist);
-
-        // Target is behind us - can't do simple S-bend
-        if (fwdDist < r)
-        {
-            return false;
-        }
-
-        // Very small lateral offset - TryRouteStraight should handle truly aligned pins
-        // For small but non-zero offsets, we still need a proper S-bend
-        if (absLat < 0.5)
-        {
-            // Essentially aligned - let straight routing handle it
-            return false;
-        }
-
-        // S-bend with flexible angle
-        // Calculate the exact sweep angle that accounts for both bends AND the
-        // middle straight section's lateral contribution.
-        //
-        // Geometry: bend1(+α) → straight at angle α → bend2(-α)
-        //   Total lateral  = 2R(1−cosα) + L·sinα = absLat
-        //   Total forward   = 2R·sinα + L·cosα    = fwdDist
-        //
-        // Solving via half-angle substitution t = tan(α/2):
-        //   t²(4R − absLat) − 2t·fwdDist + absLat = 0
-        double sweepAngle = CalculateExactSBendSweep(fwdDist, absLat, r);
-        sweepAngle = Math.Max(5, Math.Min(85, sweepAngle));
-
-        // Determine bend direction based on which side target is
-        // latDist > 0 means target is to the LEFT → turn left (positive sweep = CCW)
-        // latDist < 0 means target is to the RIGHT → turn right (negative sweep = CW)
-        double bendDir = latDist >= 0 ? 1 : -1;
-
-        // Perpendicular pointing toward the target (left if bendDir=1, right if bendDir=-1)
-        double perpX = leftX * bendDir;
-        double perpY = leftY * bendDir;
-
-        // First bend center is perpendicular to start direction, on the inside of the turn
-        double c1x = startX + perpX * r;
-        double c1y = startY + perpY * r;
-        var bend1 = new BendSegment(c1x, c1y, r, startAngle, sweepAngle * bendDir);
-        path.Segments.Add(bend1);
-
-        double x = bend1.EndPoint.X;
-        double y = bend1.EndPoint.Y;
-        double angle = NormalizeAngle(startAngle + sweepAngle * bendDir);
-
-        // Middle straight section
-        // Exact length: forward_to_end = L + R·sin(sweep), so L = fwd - R·sin(sweep)
-        double midRad = angle * Math.PI / 180;
-        double midFwdX = Math.Cos(midRad);
-        double midFwdY = Math.Sin(midRad);
-
-        double dxToEnd = endX - x;
-        double dyToEnd = endY - y;
-        double fwdToEnd = dxToEnd * midFwdX + dyToEnd * midFwdY;
-
-        double sweepRad = sweepAngle * Math.PI / 180;
-        double bend2Forward = r * Math.Sin(sweepRad);
-        double straightLen = fwdToEnd - bend2Forward;
-
-        if (straightLen > 0.5)
-        {
-            double sx = x + midFwdX * straightLen;
-            double sy = y + midFwdY * straightLen;
-            path.Segments.Add(new StraightSegment(x, y, sx, sy, angle));
-            x = sx;
-            y = sy;
-        }
-
-        // Second bend - turn back toward original direction
-        // Left perpendicular of mid direction
-        double midLeftX = -midFwdY;
-        double midLeftY = midFwdX;
-
-        // For second bend, we turn the OPPOSITE way (back to original direction)
-        // Center is on the opposite side from first bend
-        double c2x = x - midLeftX * bendDir * r;
-        double c2y = y - midLeftY * bendDir * r;
-        var bend2 = new BendSegment(c2x, c2y, r, angle, -sweepAngle * bendDir);
-        path.Segments.Add(bend2);
-
-        x = bend2.EndPoint.X;
-        y = bend2.EndPoint.Y;
-
-        // Final straight to snap exactly to end pin position
-        double finalDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
-        if (finalDist > 0.01)
-        {
-            path.Segments.Add(new StraightSegment(x, y, endX, endY, bend2.EndAngleDegrees));
-        }
-
-        // Check for obstacles
-        if (IsPathBlocked(path.Segments))
-        {
-            path.Segments.Clear();
-            return false;
-        }
-
-        return path.Segments.Count > 0;
     }
 
     /// <summary>
@@ -497,6 +269,7 @@ public class WaveguideRouter
 
     /// <summary>
     /// Checks if an arc segment passes through blocked cells.
+    /// Uses arc-length-based sampling (half-cell steps) to catch obstacles on gentle curves.
     /// </summary>
     private bool IsArcBlocked(BendSegment bend)
     {
@@ -505,15 +278,19 @@ public class WaveguideRouter
 
         double startRad = bend.StartAngleDegrees * Math.PI / 180;
         double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
-        int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
+
+        // Arc length = |sweep| * radius. Sample at half-cell intervals along the arc.
+        double arcLength = Math.Abs(sweepRad) * bend.RadiusMicrometers;
+        double stepLength = PathfindingGrid.CellSizeMicrometers * 0.5;
+        int numSamples = Math.Max(10, (int)Math.Ceiling(arcLength / stepLength));
+
+        double sign = Math.Sign(bend.SweepAngleDegrees);
+        if (sign == 0) sign = 1;
 
         for (int i = 1; i < numSamples; i++) // Skip start and end points
         {
             double t = (double)i / numSamples;
             double angle = startRad + sweepRad * t;
-
-            double sign = Math.Sign(bend.SweepAngleDegrees);
-            if (sign == 0) sign = 1;
 
             double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
             double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
@@ -526,227 +303,6 @@ public class WaveguideRouter
         }
 
         return false;
-    }
-
-    private double CalculateSBendSweep(double forward, double lateral, double radius)
-    {
-        // For an S-bend: lateral = 2 * R * (1 - cos(sweep))
-        // cos(sweep) = 1 - lateral / (2 * R)
-        double cosValue = 1 - lateral / (2 * radius);
-        if (cosValue < -1 || cosValue > 1) return double.NaN;
-        return Math.Acos(cosValue) * 180 / Math.PI;
-    }
-
-    /// <summary>
-    /// Calculates the exact S-bend sweep angle that accounts for both bends
-    /// AND the middle straight section's lateral contribution.
-    ///
-    /// The total S-bend displacement is:
-    ///   lateral = 2R(1−cos α) + L·sin α
-    ///   forward = 2R·sin α + L·cos α
-    ///
-    /// Solved via half-angle substitution t = tan(α/2):
-    ///   t²(4R − lat) − 2t·fwd + lat = 0
-    /// </summary>
-    private static double CalculateExactSBendSweep(double forward, double lateral, double radius)
-    {
-        double a = 4 * radius - lateral;
-        double b = -2 * forward;
-        double c = lateral;
-
-        double discriminant = b * b - 4 * a * c;
-        if (discriminant < 0)
-        {
-            // No real solution — fall back to simple estimate
-            return Math.Atan2(lateral, forward) * 180 / Math.PI;
-        }
-
-        double sqrtD = Math.Sqrt(discriminant);
-
-        // Two solutions; pick the smaller angle (t2 gives smaller α)
-        double t1 = (-b + sqrtD) / (2 * a);
-        double t2 = (-b - sqrtD) / (2 * a);
-
-        // Use t2 (smaller half-angle) if positive, otherwise t1
-        double t = (t2 > 0.001) ? t2 : (t1 > 0.001 ? t1 : 0);
-
-        if (t <= 0)
-        {
-            return Math.Atan2(lateral, forward) * 180 / Math.PI;
-        }
-
-        double alpha = 2 * Math.Atan(t) * 180 / Math.PI;
-        return alpha;
-    }
-
-    /// <summary>
-    /// Routes a U-turn path when pins face the same direction.
-    /// Uses small-angle bends when components are nearly aligned (e.g., 10° instead of 90°).
-    /// This avoids the ugly 90°-180°-90° zigzag pattern.
-    /// </summary>
-    private bool TryRouteUturn(double startX, double startY, double startAngle,
-                                double endX, double endY, double endInputAngle,
-                                double lateralDist, double forwardDist, RoutedPath path)
-    {
-        double r = MinBendRadiusMicrometers;
-        double absLateral = Math.Abs(lateralDist);
-
-        // Get direction vectors
-        double startRad = startAngle * Math.PI / 180;
-        double forwardX = Math.Cos(startRad);
-        double forwardY = Math.Sin(startRad);
-        double perpX = -forwardY; // 90° left of forward
-        double perpY = forwardX;
-
-        // Determine which direction to turn (up or down for horizontal pins)
-        double bendDirection = lateralDist >= 0 ? 1 : -1;
-
-        // Calculate the minimum bend angle needed to achieve the lateral offset
-        // For small lateral offsets, use small angles (like 10-20°)
-        // For larger offsets, need larger angles up to 90°
-        double minAngle;
-        if (absLateral < 0.5)
-        {
-            // Nearly aligned - use a very small angle
-            minAngle = 5;
-        }
-        else if (absLateral < 2 * r)
-        {
-            // Calculate angle needed: lateral = 2 * R * (1 - cos(θ))
-            // cos(θ) = 1 - lateral / (2 * R)
-            double cosValue = 1 - absLateral / (2 * r);
-            cosValue = Math.Max(-1, Math.Min(1, cosValue));
-            minAngle = Math.Acos(cosValue) * 180 / Math.PI;
-        }
-        else
-        {
-            // Lateral offset too large for gentle bend
-            minAngle = 90;
-        }
-        minAngle = Math.Max(5, Math.Min(90, minAngle));
-
-        // For a U-turn, we need total 180° of turning.
-        // With small-angle approach:
-        // Bend 1: +minAngle (turn toward lateral direction)
-        // Bend 2: +(180 - 2*minAngle) (the main reversal)
-        // Bend 3: +minAngle (align with end direction)
-        // Total: minAngle + (180 - 2*minAngle) + minAngle = 180°
-
-        // For small minAngle (e.g., 10°):
-        // Bend 1: +10°, Bend 2: +160°, Bend 3: +10° = 180° total
-        // This creates a smooth hairpin turn
-
-        double sweep1 = minAngle * bendDirection;
-        double sweep2 = (180 - 2 * minAngle) * bendDirection;
-        double sweep3 = minAngle * bendDirection;
-
-        // If sweep2 is too large (> 90°), we need to split it
-        // But for now, let's try with the geometry as-is
-
-        // First, we need some forward distance before the turn
-        // The total forward travel during the U-turn depends on the bend geometry
-        double forwardFromBends = 2 * r * Math.Sin(minAngle * Math.PI / 180);
-        double neededForward = Math.Max(r * 2, forwardDist + r * 2);
-
-        // Start with a straight segment forward
-        double x = startX;
-        double y = startY;
-        double angle = startAngle;
-
-        double straightForward = neededForward - forwardFromBends;
-        if (straightForward > 0.5)
-        {
-            double x1 = x + forwardX * straightForward;
-            double y1 = y + forwardY * straightForward;
-            path.Segments.Add(new StraightSegment(x, y, x1, y1, angle));
-            x = x1;
-            y = y1;
-        }
-
-        // First bend: small turn toward lateral direction
-        double perpDir = perpX * bendDirection;
-        double perpDirY = perpY * bendDirection;
-        double center1X = x + perpDir * r;
-        double center1Y = y + perpDirY * r;
-        var bend1 = new BendSegment(center1X, center1Y, r, angle, sweep1);
-        path.Segments.Add(bend1);
-        x = bend1.EndPoint.X;
-        y = bend1.EndPoint.Y;
-        angle = NormalizeAngle(angle + sweep1);
-
-        // Second bend: the main reversal (may need special handling if > 90°)
-        if (Math.Abs(sweep2) > 90)
-        {
-            // Split into two 90° bends with a straight section between
-            // This ensures we stay within the bend radius constraints
-
-            // First half of reversal
-            double halfSweep = 90 * bendDirection;
-            double midAngleRad = angle * Math.PI / 180;
-            double midPerpX = -Math.Sin(midAngleRad) * bendDirection;
-            double midPerpY = Math.Cos(midAngleRad) * bendDirection;
-            double center2aX = x + midPerpX * r;
-            double center2aY = y + midPerpY * r;
-            var bend2a = new BendSegment(center2aX, center2aY, r, angle, halfSweep);
-            path.Segments.Add(bend2a);
-            x = bend2a.EndPoint.X;
-            y = bend2a.EndPoint.Y;
-            angle = NormalizeAngle(angle + halfSweep);
-
-            // Remaining sweep for second half
-            double remainingSweep = sweep2 - halfSweep;
-            if (Math.Abs(remainingSweep) > 5)
-            {
-                midAngleRad = angle * Math.PI / 180;
-                midPerpX = -Math.Sin(midAngleRad) * bendDirection;
-                midPerpY = Math.Cos(midAngleRad) * bendDirection;
-                double center2bX = x + midPerpX * r;
-                double center2bY = y + midPerpY * r;
-                var bend2b = new BendSegment(center2bX, center2bY, r, angle, remainingSweep);
-                path.Segments.Add(bend2b);
-                x = bend2b.EndPoint.X;
-                y = bend2b.EndPoint.Y;
-                angle = NormalizeAngle(angle + remainingSweep);
-            }
-        }
-        else
-        {
-            // Small enough for single bend
-            double midAngleRad = angle * Math.PI / 180;
-            double midPerpX = -Math.Sin(midAngleRad) * bendDirection;
-            double midPerpY = Math.Cos(midAngleRad) * bendDirection;
-            double center2X = x + midPerpX * r;
-            double center2Y = y + midPerpY * r;
-            var bend2 = new BendSegment(center2X, center2Y, r, angle, sweep2);
-            path.Segments.Add(bend2);
-            x = bend2.EndPoint.X;
-            y = bend2.EndPoint.Y;
-            angle = NormalizeAngle(angle + sweep2);
-        }
-
-        // Third bend: align with end direction
-        if (Math.Abs(sweep3) > 5)
-        {
-            double finalAngleRad = angle * Math.PI / 180;
-            double finalPerpX = -Math.Sin(finalAngleRad) * bendDirection;
-            double finalPerpY = Math.Cos(finalAngleRad) * bendDirection;
-            double center3X = x + finalPerpX * r;
-            double center3Y = y + finalPerpY * r;
-            var bend3 = new BendSegment(center3X, center3Y, r, angle, sweep3);
-            path.Segments.Add(bend3);
-            x = bend3.EndPoint.X;
-            y = bend3.EndPoint.Y;
-            angle = NormalizeAngle(angle + sweep3);
-        }
-
-        // Final straight to end
-        double distToEnd = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
-        if (distToEnd > 0.01)
-        {
-            path.Segments.Add(new StraightSegment(x, y, endX, endY, angle));
-        }
-
-        return path.Segments.Count > 0 && path.IsValid;
     }
 
     /// <summary>
@@ -766,7 +322,12 @@ public class WaveguideRouter
         double corridorWidth = MinWaveguideSpacingMicrometers * 2;
 
         var clearedStart = PathfindingGrid.ClearPinCorridor(startX, startY, startAngle, corridorLength, corridorWidth);
-        var clearedEnd = PathfindingGrid.ClearPinCorridor(endX, endY, endInputAngle, corridorLength, corridorWidth);
+        // Clear corridors in BOTH directions for the end pin:
+        // 1. Facing direction (away from component) — ensures approach path is clear
+        // 2. Input direction (into component) — ensures the terminal grid cell is reachable
+        double endFacingAngle = NormalizeAngle(endInputAngle + 180);
+        var clearedEndApproach = PathfindingGrid.ClearPinCorridor(endX, endY, endFacingAngle, corridorLength, corridorWidth);
+        var clearedEndTerminal = PathfindingGrid.ClearPinCorridor(endX, endY, endInputAngle, corridorLength, corridorWidth);
 
         try
         {
@@ -825,7 +386,8 @@ public class WaveguideRouter
         {
             // Restore cleared cells to their original state
             PathfindingGrid.RestoreCells(clearedStart);
-            PathfindingGrid.RestoreCells(clearedEnd);
+            PathfindingGrid.RestoreCells(clearedEndApproach);
+            PathfindingGrid.RestoreCells(clearedEndTerminal);
         }
     }
 
@@ -974,8 +536,13 @@ public class WaveguideRouter
                     int turnDir = dy >= 0 ? 90 : 270;
                     AddCardinalBend(path, midX - r, y, 0, turnDir, r);
                     var bend1End = path.Segments[^1].EndPoint;
-                    path.Segments.Add(new StraightSegment(bend1End.X, bend1End.Y, bend1End.X, endY + (dy >= 0 ? -r : r), turnDir));
-                    AddCardinalBend(path, bend1End.X, endY + (dy >= 0 ? -r : r), turnDir, 0, r);
+                    double vertTargetY = endY + (dy >= 0 ? -r : r);
+                    // Use actual direction for the segment angle (may differ from turnDir
+                    // when offset < 2*bendRadius, causing the segment to go backward)
+                    int vertAngle = vertTargetY >= bend1End.Y ? 90 : 270;
+                    if (Math.Abs(vertTargetY - bend1End.Y) > 0.5)
+                        path.Segments.Add(new StraightSegment(bend1End.X, bend1End.Y, bend1End.X, vertTargetY, vertAngle));
+                    AddCardinalBend(path, bend1End.X, vertTargetY, turnDir, 0, r);
                     var bend2End = path.Segments[^1].EndPoint;
                     if (Math.Abs(endX - bend2End.X) > 0.5)
                         path.Segments.Add(new StraightSegment(bend2End.X, bend2End.Y, endX, endY, 0));

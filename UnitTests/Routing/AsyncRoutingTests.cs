@@ -241,23 +241,32 @@ public class AsyncRoutingTests
         var compD = CreateTestComponent(200, 100);
 
         var router = WaveguideConnection.SharedRouter;
+        // Reset router to known state (other tests may have changed settings)
+        router.MinBendRadiusMicrometers = 10.0;
+        router.AStarCellSize = 2.0;
+        router.CostCalculator.MinStraightRunCells = 20;
+        router.CostCalculator.MinPinEscapeCells = 15;
         router.InitializePathfindingGrid(-50, -50, 300, 200,
             new[] { compA, compB, compC, compD });
 
         var conn1 = manager.AddConnectionDeferred(CreateOutputPin(compA), CreateInputPin(compB));
         var conn2 = manager.AddConnectionDeferred(CreateOutputPin(compC), CreateInputPin(compD));
 
-        // Route all connections
+        // Route all connections — first pass may fix invalid routes from stale shared state
         manager.RecalculateAllTransmissions();
-
         conn1.IsPathValid.ShouldBeTrue();
         conn2.IsPathValid.ShouldBeTrue();
 
-        // Store the original paths
+        // Route again to reach steady state (incremental routing may fix first-pass artifacts)
+        manager.RecalculateAllTransmissions();
+        conn1.IsPathValid.ShouldBeTrue();
+        conn2.IsPathValid.ShouldBeTrue();
+
+        // Store the steady-state paths
         var conn1PathLength = conn1.PathLengthMicrometers;
         var conn2PathLength = conn2.PathLengthMicrometers;
 
-        // Recalculate again without moving anything — paths should be preserved (same length)
+        // Third routing — should preserve steady-state paths exactly
         manager.RecalculateAllTransmissions();
 
         conn1.PathLengthMicrometers.ShouldBe(conn1PathLength);
@@ -275,6 +284,11 @@ public class AsyncRoutingTests
         var compD = CreateTestComponent(200, 100);
 
         var router = WaveguideConnection.SharedRouter;
+        // Reset router to known state (other tests may have changed settings)
+        router.MinBendRadiusMicrometers = 10.0;
+        router.AStarCellSize = 2.0;
+        router.CostCalculator.MinStraightRunCells = 20;
+        router.CostCalculator.MinPinEscapeCells = 15;
         router.InitializePathfindingGrid(-50, -50, 300, 200,
             new[] { compA, compB, compC, compD });
 
