@@ -37,6 +37,9 @@ public class PathSmoother
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
         double currentAngle = AngleUtilities.QuantizeToCardinal(startPin.GetAbsoluteAngle());
+        // End pin entry angle: opposite of pin's outward facing direction
+        double endEntryAngle = AngleUtilities.NormalizeAngle(endPin.GetAbsoluteAngle() + 180);
+        endEntryAngle = AngleUtilities.QuantizeToCardinal(endEntryAngle);
 
         // Current position
         double x = startX;
@@ -71,23 +74,17 @@ public class PathSmoother
                 double endStraightX = x + (dx / distanceToCorner) * straightDistance;
                 double endStraightY = y + (dy / distanceToCorner) * straightDistance;
 
-                // Use actual direction to corner (not stale currentAngle) for the stored angle.
-                // After a bend, currentAngle may not match the actual direction to the next corner.
-                double segAngle = Math.Atan2(endStraightY - y, endStraightX - x) * 180 / Math.PI;
-                segAngle = AngleUtilities.QuantizeToCardinal(segAngle);
-
                 // Snap to cardinal axis to avoid diagonal artifacts from grid quantization.
-                // A* grid cells are integer-positioned, so corners at direction changes may be
-                // slightly off-axis. Snapping keeps segments perfectly horizontal/vertical.
-                if (segAngle == 0 || segAngle == 180) // Horizontal
+                // Use currentAngle (from A* path direction) — it's authoritative.
+                // Don't recompute from atan2: cardinal snapping shifts positions, causing drift.
+                if (currentAngle == 0 || currentAngle == 180) // Horizontal
                     endStraightY = y;
-                else if (segAngle == 90 || segAngle == 270) // Vertical
+                else if (currentAngle == 90 || currentAngle == 270) // Vertical
                     endStraightX = x;
 
-                routedPath.Segments.Add(new StraightSegment(x, y, endStraightX, endStraightY, segAngle));
+                routedPath.Segments.Add(new StraightSegment(x, y, endStraightX, endStraightY, currentAngle));
                 x = endStraightX;
                 y = endStraightY;
-                currentAngle = segAngle;
             }
 
             // Add bend at corner if direction changes
@@ -105,25 +102,22 @@ public class PathSmoother
         }
 
         // Final segment(s) to snap exactly to end pin position.
-        // If slightly off-axis, split into a perpendicular correction + cardinal main segment
-        // to avoid diagonal segments that break Nazca GDS export.
+        // Use the end pin's entry angle (authoritative), not atan2 from geometry.
+        // If slightly off-axis, add a perpendicular correction first.
         double finalDx = endX - x;
         double finalDy = endY - y;
         double finalDistance = Math.Sqrt(finalDx * finalDx + finalDy * finalDy);
         if (finalDistance > 0.01)
         {
-            double finalAngle = AngleUtilities.QuantizeToCardinal(
-                Math.Atan2(finalDy, finalDx) * 180 / Math.PI);
-
-            // Check for perpendicular error (off-axis from the cardinal direction)
-            double perpError = (finalAngle == 0 || finalAngle == 180)
-                ? Math.Abs(finalDy)  // Horizontal: Y error
-                : Math.Abs(finalDx); // Vertical: X error
+            // Check for perpendicular error relative to the entry direction
+            double perpError = (endEntryAngle == 0 || endEntryAngle == 180)
+                ? Math.Abs(finalDy)  // Horizontal entry: Y error
+                : Math.Abs(finalDx); // Vertical entry: X error
 
             if (perpError > 0.01)
             {
                 // Add a small perpendicular correction segment first
-                if (finalAngle == 0 || finalAngle == 180)
+                if (endEntryAngle == 0 || endEntryAngle == 180)
                 {
                     double corrAngle = finalDy > 0 ? 90.0 : 270.0;
                     routedPath.Segments.Add(new StraightSegment(x, y, x, endY, corrAngle));
@@ -137,13 +131,11 @@ public class PathSmoother
                 }
             }
 
-            // Main cardinal-aligned segment to the pin
+            // Main segment to the pin using the pin's entry angle
             double remainDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
             if (remainDist > 0.01)
             {
-                double remainAngle = AngleUtilities.QuantizeToCardinal(
-                    Math.Atan2(endY - y, endX - x) * 180 / Math.PI);
-                routedPath.Segments.Add(new StraightSegment(x, y, endX, endY, remainAngle));
+                routedPath.Segments.Add(new StraightSegment(x, y, endX, endY, endEntryAngle));
             }
         }
 
