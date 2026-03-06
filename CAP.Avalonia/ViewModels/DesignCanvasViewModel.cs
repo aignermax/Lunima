@@ -196,9 +196,10 @@ public partial class DesignCanvasViewModel : ObservableObject
             Router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
         }
 
-        // Build hierarchical graph for long-distance routing.
-        // DT stays fresh via GridObstacleManager callbacks wired in BuildHierarchicalGraph().
-        Router.BuildHierarchicalGraph();
+        // NOTE: HPA* hierarchical pathfinding is available but not activated yet.
+        // Router.BuildHierarchicalGraph() creates sector portals that force suboptimal
+        // detours, and the DistanceTransform goes stale during sequential routing
+        // (disabling proximity cost). Needs incremental DT updates before activation.
     }
 
     /// <summary>
@@ -215,20 +216,6 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             Router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
         }
-
-        Router.BuildHierarchicalGraph();
-    }
-
-    /// <summary>
-    /// Applies routing settings and reinitializes the pathfinding grid.
-    /// Call this after changing routing parameters to rebuild with new settings.
-    /// </summary>
-    public void ApplyRoutingSettings(RoutingSettingsViewModel settings)
-    {
-        settings.ApplyToRouter(Router);
-
-        // Reinitialize grid with new cell size
-        InitializeAStarRouting();
     }
 
     partial void OnUseAStarRoutingChanged(bool value)
@@ -253,17 +240,19 @@ public partial class DesignCanvasViewModel : ObservableObject
     {
         _isDragging = false;
 
-        // Incremental: only update the moved component's obstacle + re-route its connections.
-        await RecalculateRoutesAsync(movedComponent: component.Component);
+        // Recalculate routes asynchronously so UI stays responsive.
+        // RecalculateRoutesAsync rebuilds the obstacle grid internally
+        // (inside the semaphore, on the background thread) to prevent races.
+        await RecalculateRoutesAsync();
         InvalidateSimulation();
     }
 
     /// <summary>
-    /// Asynchronously recalculates waveguide routes on a background thread.
-    /// When movedComponent is provided, only updates that component's obstacle
-    /// and re-routes its connections. Otherwise rebuilds the full grid.
+    /// Asynchronously recalculates all waveguide routes on a background thread.
+    /// Cancels any previous in-progress routing. Updates UI on completion.
+    /// Always rebuilds the obstacle grid before routing to ensure consistency.
     /// </summary>
-    public async Task RecalculateRoutesAsync(Component? movedComponent = null)
+    public async Task RecalculateRoutesAsync()
     {
         // Cancel any previous routing operation
         _routingCts?.Cancel();
@@ -289,28 +278,14 @@ public partial class DesignCanvasViewModel : ObservableObject
             {
                 if (token.IsCancellationRequested) return false;
 
-                if (movedComponent != null && Router.PathfindingGrid != null)
-                {
-                    // Incremental: only update the moved component's obstacle cells
-                    Router.UpdateComponentObstacle(movedComponent);
-                }
-                else
-                {
-                    // Full rebuild (add/remove component, file load, etc.)
-                    Router.PathfindingGrid?.RebuildFromComponents(components);
-                }
+                // Rebuild obstacle grid inside semaphore + background thread.
+                // This prevents races: RebuildFromComponents and routing
+                // always execute on the same thread, never concurrently.
+                Router.PathfindingGrid?.RebuildFromComponents(components);
 
                 if (token.IsCancellationRequested) return false;
 
-                if (movedComponent != null)
-                {
-                    ConnectionManager.RecalculateTransmissionsForComponent(movedComponent, token);
-                }
-                else
-                {
-                    ConnectionManager.RecalculateAllTransmissions(token);
-                }
-
+                ConnectionManager.RecalculateAllTransmissions(token);
                 return !token.IsCancellationRequested;
             });
 

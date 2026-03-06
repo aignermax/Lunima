@@ -235,43 +235,6 @@
                                 IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
 
-                    <!-- Routing Settings -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Routing Settings:" Foreground="LightBlue" FontWeight="SemiBold" Margin="0,0,0,10"/>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Cell Size:" Foreground="Gray" VerticalAlignment="Center" Width="70"/>
-                        <NumericUpDown Value="{Binding RoutingSettings.CellSizeMicrometers}"
-                                       Minimum="1" Maximum="20" Increment="0.5"
-                                       Width="100" Margin="5,0,5,0"
-                                       FormatString="F1"/>
-                        <TextBlock Text="µm" VerticalAlignment="Center" Foreground="Gray"/>
-                    </StackPanel>
-
-                    <TextBlock Text="Presets:" Foreground="Gray" FontSize="10" Margin="0,0,0,3"/>
-                    <WrapPanel Margin="0,0,0,10">
-                        <Button Content="2µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="2"
-                                Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="3µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="3"
-                                Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="4µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="4"
-                                Width="45" Margin="2" Background="#4d4d3d" FontSize="9" FontWeight="Bold"/>
-                        <Button Content="5µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="5"
-                                Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="8µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="8"
-                                Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="10µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="10"
-                                Width="48" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                    </WrapPanel>
-
-                    <CheckBox Content="Use HPA* (hierarchical pathfinding)"
-                              IsChecked="{Binding RoutingSettings.UseHierarchicalPathfinding}"
-                              Foreground="White" Margin="0,0,0,10" FontSize="11"/>
-
-                    <Button Content="Apply &amp; Re-route All" Command="{Binding ApplyRoutingSettingsCommand}"
-                            Background="#3d5d3d" Foreground="LightGreen" Margin="0,5,0,0"
-                            ToolTip.Tip="Apply settings and re-route all connections"/>
-
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
                     <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
