@@ -42,25 +42,6 @@ public class BendBuilder
         _allowedRadii = allowedRadii?.OrderBy(r => r).ToList() ?? new List<double>();
     }
 
-    /// <summary>
-    /// Finds the largest allowed radius that fits within the given distance.
-    /// Returns 0 if no radius fits.
-    /// </summary>
-    /// <param name="maxDistance">Maximum available distance in micrometers.</param>
-    /// <returns>Largest fitting radius, or 0 if none fits.</returns>
-    public double FindLargestRadiusAtMost(double maxDistance)
-    {
-        if (_allowedRadii.Count == 0)
-            return maxDistance >= _minBendRadius ? _minBendRadius : 0;
-
-        double best = 0;
-        foreach (var r in _allowedRadii)
-        {
-            if (r <= maxDistance)
-                best = r;
-        }
-        return best;
-    }
 
     /// <summary>
     /// Builds a bend segment from current position and angle to target angle.

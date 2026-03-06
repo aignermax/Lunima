@@ -25,18 +25,13 @@ public class PathfindingGrid
     private byte[,] _cells;
 
     /// <summary>
-    /// Callback invoked when waveguide cells are added (for distance transform updates).
+    /// Manages component/waveguide obstacle tracking and pin reservation zones.
     /// </summary>
-    public Action<HashSet<(int, int)>>? OnWaveguideCellsAdded { get; set; }
-
-    /// <summary>
-    /// Callback invoked when all waveguide obstacles are cleared (for distance transform rebuild).
-    /// </summary>
-    public Action? OnAllWaveguidesCleared { get; set; }
+    public GridObstacleManager ObstacleManager { get; }
 
     /// <summary>
     /// Creates a grid covering the specified area.
-
+    /// </summary>
     public PathfindingGrid(double minX, double minY, double maxX, double maxY,
                            double cellSize = 1.0, double padding = 1.0)
     {
@@ -204,136 +199,9 @@ public class PathfindingGrid
     }
 
     /// <summary>
-    /// Marks cells along a waveguide path as blocked.
-    /// Used for sequential routing to avoid collisions with already-routed waveguides.
-    /// Blocks the ENTIRE path including near pins - ClearPinCorridor handles new connections.
-    /// </summary>
-    /// <param name="connectionId">Unique ID of the waveguide connection</param>
-    /// <param name="segments">Path segments to mark as obstacles</param>
-    /// <param name="waveguideWidth">Width of the waveguide in micrometers</param>
-    public void AddWaveguideObstacle(Guid connectionId, IEnumerable<PathSegment> segments, double waveguideWidth)
-    {
-        // First remove any existing obstacle for this connection
-        RemoveWaveguideObstacle(connectionId);
-
-        var segmentList = segments.ToList();
-        if (segmentList.Count == 0) return;
-
-        var cells = new HashSet<(int, int)>();
-        // For waveguides, don't add the component padding - just use the waveguide width directly
-        // The waveguideWidth parameter already includes the desired clearance
-        double halfWidth = waveguideWidth / 2;
-
-        // Block the ENTIRE waveguide path - no exclusion zones
-        // When routing new waveguides, ClearPinCorridor() temporarily clears the area
-        // around pins to allow new connections to start
-        foreach (var segment in segmentList)
-        {
-            if (segment is StraightSegment straight)
-            {
-                MarkLineAsCells(straight.StartPoint.X, straight.StartPoint.Y,
-                    straight.EndPoint.X, straight.EndPoint.Y, halfWidth, cells);
-            }
-            else if (segment is BendSegment bend)
-            {
-                // Mark cells along arc - sample points along the arc
-                double startRad = bend.StartAngleDegrees * Math.PI / 180;
-                double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
-                int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
-
-                for (int i = 0; i <= numSamples; i++)
-                {
-                    double t = (double)i / numSamples;
-                    double angle = startRad + sweepRad * t;
-
-                    // Point on arc (perpendicular to tangent direction)
-                    double sign = Math.Sign(bend.SweepAngleDegrees);
-                    if (sign == 0) sign = 1;
-
-                    double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
-                    double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
-
-                    MarkCircleAsCells(px, py, halfWidth, cells);
-                }
-            }
-        }
-
-        // Apply cells to grid
-        foreach (var (gx, gy) in cells)
-        {
-            if (IsInBounds(gx, gy) && _cells[gx, gy] == 0)
-            {
-                _cells[gx, gy] = 2; // Blocked by waveguide
-            }
-        }
-
-        _waveguideCells[connectionId] = cells;
-        OnWaveguideCellsAdded?.Invoke(cells);
-    }
-
-    /// <summary>
-    /// Removes a waveguide obstacle from the grid.
-    /// </summary>
-    public void RemoveWaveguideObstacle(Guid connectionId)
-    {
-        if (_waveguideCells.TryGetValue(connectionId, out var cells))
-        {
-            foreach (var (gx, gy) in cells)
-            {
-                if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
-                {
-                    _cells[gx, gy] = 0;
-                }
-            }
-            _waveguideCells.Remove(connectionId);
-        }
-    }
-
-    /// <summary>
-    /// Clears all waveguide obstacles from the grid.
-    /// </summary>
-    public void ClearAllWaveguideObstacles()
-    {
-        foreach (var connectionId in _waveguideCells.Keys.ToList())
-        {
-            RemoveWaveguideObstacle(connectionId);
-        }
-        OnAllWaveguidesCleared?.Invoke();
-    }
-
-    /// <summary>
-    /// Checks if a cell is in a pin reservation zone (soft penalty, not blocked).
-    /// </summary>
-    public bool IsPinReservationZone(int gridX, int gridY)
-    {
-        return _pinZoneCells.Contains((gridX, gridY));
-    }
-
-    /// <summary>
     /// Marks a circular zone around a pin position as a reservation zone.
     /// Only marks cells that are currently free (state=0) — doesn't mark obstacles.
     /// </summary>
-    private void MarkPinReservationZone(double pinX, double pinY, double radiusMicrometers)
-    {
-        var (gcx, gcy) = PhysicalToGrid(pinX, pinY);
-        int gridRadius = (int)Math.Ceiling(radiusMicrometers / CellSizeMicrometers);
-
-        for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)
-        {
-            for (int gy = gcy - gridRadius; gy <= gcy + gridRadius; gy++)
-            {
-                if (!IsInBounds(gx, gy)) continue;
-
-                var (px, py) = GridToPhysical(gx, gy);
-                double dist = Math.Sqrt((px - pinX) * (px - pinX) + (py - pinY) * (py - pinY));
-                if (dist <= radiusMicrometers)
-                {
-                    _pinZoneCells.Add((gx, gy));
-                }
-            }
-        }
-    }
-
     /// <summary>
     /// Marks cells along a line with given half-width.
     /// </summary>
