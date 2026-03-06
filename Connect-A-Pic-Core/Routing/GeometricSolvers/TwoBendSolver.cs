@@ -1,6 +1,7 @@
 using CAP_Core.Components;
+using CAP_Core.Routing.AStarPathfinder;
 
-namespace CAP_Core.Routing.AStarPathfinder;
+namespace CAP_Core.Routing.GeometricSolvers;
 
 /// <summary>
 /// Attempts to connect two pins using exactly two circular bends (biarc).

@@ -1,5 +1,6 @@
 using CAP_Core.Components;
 using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.GeometricSolvers;
 
 namespace CAP_Core.Routing;
 
@@ -41,7 +42,6 @@ public class WaveguideRouter
     /// </summary>
     public RoutingCostCalculator CostCalculator { get; } = new();
 
-    private HierarchicalPathfinder? _hierarchicalPathfinder;
     private TwoBendSolver? _twoBendSolver;
 
     /// <summary>
@@ -55,13 +55,6 @@ public class WaveguideRouter
     /// Clearance padding around components in micrometers.
     /// </summary>
     public double ObstaclePaddingMicrometers { get; set; } = 5.0;
-
-    /// <summary>
-    /// Whether to use hierarchical pathfinding (HPA*) for long-distance routes.
-    /// When false, uses flat A* with increased node limit for all routes.
-    /// Set to false if experiencing routing detours or loops.
-    /// </summary>
-    public bool UseHierarchicalPathfinding { get; set; } = false;
 
     /// <summary>
     /// Initializes the pathfinding grid for A* routing.
@@ -81,41 +74,6 @@ public class WaveguideRouter
         CostCalculator.DistanceTransformGrid = null;
     }
 
-    /// <summary>
-    /// Builds the hierarchical pathfinding graph for fast long-distance routing.
-    /// Only builds if UseHierarchicalPathfinding is enabled.
-    /// </summary>
-    public void BuildHierarchicalGraph(int sectorSizeCells = 50)
-    {
-        if (PathfindingGrid == null) return;
-
-        if (!UseHierarchicalPathfinding)
-        {
-            // HPA* disabled - clear any existing hierarchical pathfinder
-            _hierarchicalPathfinder = null;
-            CostCalculator.DistanceTransformGrid = null;
-            return;
-        }
-
-        _hierarchicalPathfinder = new HierarchicalPathfinder(PathfindingGrid, CostCalculator);
-        _hierarchicalPathfinder.BuildSectorGraph(sectorSizeCells);
-        CostCalculator.DistanceTransformGrid = _hierarchicalPathfinder.DistanceTransform;
-
-        // Wire DT incremental updates via PathfindingGrid callbacks
-        var dt = _hierarchicalPathfinder.DistanceTransform;
-        var grid = PathfindingGrid;
-        grid.OnWaveguideCellsAdded = cells => dt?.AddWaveguideCells(cells);
-        grid.OnAllWaveguidesCleared = () => dt?.Rebuild(grid);
-    }
-
-    /// <summary>
-    /// Rebuilds only the distance transform (after waveguide changes).
-    /// </summary>
-    public void RebuildDistanceTransform()
-    {
-        if (PathfindingGrid == null || _hierarchicalPathfinder?.DistanceTransform == null) return;
-        _hierarchicalPathfinder.DistanceTransform.Rebuild(PathfindingGrid);
-    }
 
     public void UpdateComponentObstacle(Component component) =>
         PathfindingGrid?.UpdateComponentObstacle(component);
@@ -256,24 +214,13 @@ public class WaveguideRouter
             int scaledStraightRun = Math.Min(originalStraightRun, Math.Max(2, gridDistance / 4));
             CostCalculator.MinStraightRunCells = scaledStraightRun;
 
-            List<AStarNode>? gridPath = null;
-
-            if (_hierarchicalPathfinder != null && UseHierarchicalPathfinding)
+            // Use flat A* with generous node limit for all routes
+            var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
             {
-                gridPath = _hierarchicalPathfinder.FindPath(
-                    gridStartX, gridStartY, startDir,
-                    gridEndX, gridEndY, endDir);
-            }
-            else
-            {
-                // HPA* disabled - use flat A* with generous node limit for all routes
-                var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
-                {
-                    MaxNodesExpanded = 1_000_000  // 1M nodes - handles even very long routes
-                };
-                gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
-                                                gridEndX, gridEndY, endDir);
-            }
+                MaxNodesExpanded = 1_000_000  // 1M nodes - handles even very long routes
+            };
+            var gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
+                                            gridEndX, gridEndY, endDir);
 
             // Loop detection: if path is >2× Manhattan distance, retry with minimal constraints
             if (gridPath != null && gridPath.Count > gridDistance * 2 && scaledEscape > 2)
