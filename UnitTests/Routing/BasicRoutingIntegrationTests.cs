@@ -48,6 +48,24 @@ public class BasicRoutingIntegrationTests
         Console.WriteLine($"[TEST] Routing from ({startX}, {startY}) @ {startPin.GetAbsoluteAngle()}°");
         Console.WriteLine($"[TEST]         to ({endX}, {endY}) @ {endPin.GetAbsoluteAngle() + 180}° entry");
 
+        // Grid diagnostics
+        if (_router.PathfindingGrid != null)
+        {
+            var blockedCount = _router.PathfindingGrid.GetBlockedCellCount();
+            var totalCells = _router.PathfindingGrid.Width * _router.PathfindingGrid.Height;
+            Console.WriteLine($"[TEST] Grid: {_router.PathfindingGrid.Width}x{_router.PathfindingGrid.Height} cells, {blockedCount}/{totalCells} blocked ({100.0 * blockedCount / totalCells:F1}%)");
+
+            var (gridStartX, gridStartY) = _router.PathfindingGrid.PhysicalToGrid(startX, startY);
+            var (gridEndX, gridEndY) = _router.PathfindingGrid.PhysicalToGrid(endX, endY);
+            Console.WriteLine($"[TEST] Grid coords: start=({gridStartX}, {gridStartY}), end=({gridEndX}, {gridEndY})");
+            Console.WriteLine($"[TEST] Manhattan distance: {Math.Abs(gridEndX - gridStartX) + Math.Abs(gridEndY - gridStartY)} cells");
+
+            // Check if start/end cells are blocked
+            bool startBlocked = _router.PathfindingGrid.IsBlocked(gridStartX, gridStartY);
+            bool endBlocked = _router.PathfindingGrid.IsBlocked(gridEndX, gridEndY);
+            Console.WriteLine($"[TEST] Start cell blocked: {startBlocked}, End cell blocked: {endBlocked}");
+        }
+
         // Act
         var path = _router.Route(startPin, endPin);
 
