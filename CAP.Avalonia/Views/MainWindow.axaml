@@ -243,7 +243,7 @@
                         <TextBlock Text="Cell Size:" Foreground="Gray" VerticalAlignment="Center" Width="70"/>
                         <NumericUpDown Value="{Binding RoutingSettings.CellSizeMicrometers}"
                                        Minimum="1" Maximum="20" Increment="0.5"
-                                       Width="80" Margin="5,0,5,0"
+                                       Width="100" Margin="5,0,5,0"
                                        FormatString="F1"/>
                         <TextBlock Text="µm" VerticalAlignment="Center" Foreground="Gray"/>
                     </StackPanel>
