@@ -3,6 +3,7 @@ using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.GeometricSolvers;
 using Shouldly;
 using Xunit;
 
