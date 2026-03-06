@@ -45,13 +45,22 @@ public class WaveguideRouter
 
     /// <summary>
     /// Grid cell size in micrometers for A* pathfinding.
+    /// Larger values = faster routing but less precise obstacle avoidance.
+    /// Recommended: 3-5µm for most designs.
     /// </summary>
-    public double AStarCellSize { get; set; } = 2.0;
+    public double AStarCellSize { get; set; } = 4.0;
 
     /// <summary>
     /// Clearance padding around components in micrometers.
     /// </summary>
     public double ObstaclePaddingMicrometers { get; set; } = 5.0;
+
+    /// <summary>
+    /// Whether to use hierarchical pathfinding (HPA*) for long-distance routes.
+    /// When false, uses flat A* with increased node limit for all routes.
+    /// Set to false if experiencing routing detours or loops.
+    /// </summary>
+    public bool UseHierarchicalPathfinding { get; set; } = false;
 
     /// <summary>
     /// Initializes the pathfinding grid for A* routing.
@@ -73,14 +82,31 @@ public class WaveguideRouter
 
     /// <summary>
     /// Builds the hierarchical pathfinding graph for fast long-distance routing.
+    /// Only builds if UseHierarchicalPathfinding is enabled.
     /// </summary>
     public void BuildHierarchicalGraph(int sectorSizeCells = 50)
     {
         if (PathfindingGrid == null) return;
 
+        if (!UseHierarchicalPathfinding)
+        {
+            // HPA* disabled - clear any existing hierarchical pathfinder
+            _hierarchicalPathfinder = null;
+            CostCalculator.DistanceTransformGrid = null;
+            return;
+        }
+
         _hierarchicalPathfinder = new HierarchicalPathfinder(PathfindingGrid, CostCalculator);
         _hierarchicalPathfinder.BuildSectorGraph(sectorSizeCells);
         CostCalculator.DistanceTransformGrid = _hierarchicalPathfinder.DistanceTransform;
+
+        // Wire DT incremental updates to obstacle manager callbacks
+        var dt = _hierarchicalPathfinder.DistanceTransform;
+        var grid = PathfindingGrid;
+        grid.ObstacleManager.OnWaveguideCellsAdded = cells =>
+            dt?.AddWaveguideCells(cells);
+        grid.ObstacleManager.OnAllWaveguidesCleared = () =>
+            dt?.Rebuild(grid);
     }
 
     /// <summary>
@@ -169,7 +195,7 @@ public class WaveguideRouter
         if (PathfindingGrid == null) return false;
 
         double corridorLength = MinBendRadiusMicrometers * 3;
-        double corridorWidth = MinWaveguideSpacingMicrometers * 2;
+        double corridorWidth = MinBendRadiusMicrometers;
 
         var clearedStart = PathfindingGrid.ClearPinCorridor(
             startX, startY, startAngle, corridorLength, corridorWidth);
@@ -192,9 +218,22 @@ public class WaveguideRouter
             var endDir = GridDirectionExtensions.FromAngle(endInputAngle);
 
             int originalEscapeCells = CostCalculator.MinPinEscapeCells;
+
+            // Scale escape distance based on pin separation.
+            // Both start escape + end approach must fit within the total distance,
+            // with room left for turns. Use 1/6 of distance, minimum 2 cells.
+            int gridDistance = Math.Abs(gridEndX - gridStartX) + Math.Abs(gridEndY - gridStartY);
+            int scaledEscape = Math.Min(originalEscapeCells, Math.Max(2, gridDistance / 6));
+            CostCalculator.MinPinEscapeCells = scaledEscape;
+
+            // Also scale MinStraightRunCells for close pins to allow tighter turns
+            int originalStraightRun = CostCalculator.MinStraightRunCells;
+            int scaledStraightRun = Math.Min(originalStraightRun, Math.Max(2, gridDistance / 4));
+            CostCalculator.MinStraightRunCells = scaledStraightRun;
+
             List<AStarNode>? gridPath = null;
 
-            if (_hierarchicalPathfinder != null)
+            if (_hierarchicalPathfinder != null && UseHierarchicalPathfinding)
             {
                 gridPath = _hierarchicalPathfinder.FindPath(
                     gridStartX, gridStartY, startDir,
@@ -202,19 +241,39 @@ public class WaveguideRouter
             }
             else
             {
-                var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
+                // HPA* disabled - use flat A* with generous node limit for all routes
+                var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
+                {
+                    MaxNodesExpanded = 1_000_000  // 1M nodes - handles even very long routes
+                };
                 gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
                                                 gridEndX, gridEndY, endDir);
             }
 
+            // Loop detection: if path is >2× Manhattan distance, retry with minimal constraints
+            if (gridPath != null && gridPath.Count > gridDistance * 2 && scaledEscape > 2)
+            {
+                CostCalculator.MinPinEscapeCells = 2;
+                CostCalculator.MinStraightRunCells = 2;
+                var retry = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
+                var retryPath = retry.FindPath(gridStartX, gridStartY, startDir,
+                                                gridEndX, gridEndY, endDir);
+                if (retryPath != null && retryPath.Count < gridPath.Count)
+                    gridPath = retryPath;
+            }
+
             if (gridPath == null || gridPath.Count < 2)
             {
-                CostCalculator.MinPinEscapeCells = Math.Max(5, originalEscapeCells / 3);
+                CostCalculator.MinPinEscapeCells = 2;
+                CostCalculator.MinStraightRunCells = 2;
                 var fallback = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
                 gridPath = fallback.FindPath(gridStartX, gridStartY, startDir,
                                               gridEndX, gridEndY, endDir);
-                CostCalculator.MinPinEscapeCells = originalEscapeCells;
             }
+
+            CostCalculator.MinStraightRunCells = originalStraightRun;
+
+            CostCalculator.MinPinEscapeCells = originalEscapeCells;
 
             if (gridPath == null || gridPath.Count < 2) return false;
 
