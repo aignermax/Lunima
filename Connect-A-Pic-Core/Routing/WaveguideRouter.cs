@@ -120,6 +120,7 @@ public class WaveguideRouter
                               astarPath, startPin, endPin))
             {
                 // Check if A* produced valid geometry (not just segments)
+                Console.WriteLine($"[WaveguideRouter]   A* result: IsValid={astarPath.IsValid}, IsInvalidGeometry={astarPath.IsInvalidGeometry}, Segments={astarPath.Segments.Count}");
                 if (astarPath.IsValid && !astarPath.IsInvalidGeometry && astarPath.Segments.Count > 0)
                 {
                     Console.WriteLine("[WaveguideRouter] A* succeeded with valid geometry!");
@@ -127,7 +128,7 @@ public class WaveguideRouter
                 }
                 else
                 {
-                    Console.WriteLine("[WaveguideRouter] A* produced invalid geometry");
+                    Console.WriteLine($"[WaveguideRouter] A* produced invalid geometry (IsValid={astarPath.IsValid}, IsInvalidGeometry={astarPath.IsInvalidGeometry})");
                 }
             }
             else
@@ -255,6 +256,7 @@ public class WaveguideRouter
             path.Segments.AddRange(smoothedPath.Segments);
             path.IsInvalidGeometry = smoothedPath.IsInvalidGeometry;
             path.DebugGridPath = gridPath;
+            path.IsInvalidGeometry = smoothedPath.IsInvalidGeometry; // Propagate geometry validation flag
 
             // Success requires valid segments without geometry violations
             return path.Segments.Count > 0 && !path.IsInvalidGeometry;
