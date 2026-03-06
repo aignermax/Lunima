@@ -48,6 +48,10 @@ public class PathSmoother
         // Extract corners where direction changes
         var corners = ExtractCorners(gridPath);
 
+        // Find the last corner that involves an actual direction change (turn).
+        // This is where we snap to the pin's axis to eliminate grid quantization error.
+        int lastTurnIndex = FindLastTurningCorner(corners, currentAngle);
+
         // Skip first corner (it's the start position) and process the rest
         for (int i = 1; i < corners.Count; i++)
         {
@@ -55,32 +59,66 @@ public class PathSmoother
             var newDirection = corners[i].Direction; // Direction AFTER this corner
             double newAngle = AngleUtilities.DirectionToAngle(newDirection);
 
-            // Calculate distance to corner
-            double dx = cornerX - x;
-            double dy = cornerY - y;
-            double distanceToCorner = Math.Sqrt(dx * dx + dy * dy);
-
             // Check if direction will change at this corner
             bool willTurn = !AngleUtilities.IsAngleClose(currentAngle, newAngle);
 
+            // For the last turning corner, snap perpendicular coordinate to the
+            // end pin's exact position. This makes the bend exit precisely on the
+            // pin's axis, eliminating grid quantization error without correction segments.
+            if (i == lastTurnIndex)
+            {
+                if (newAngle == 0 || newAngle == 180) // Horizontal after turn → snap Y
+                    cornerY = endY;
+                else if (newAngle == 90 || newAngle == 270) // Vertical after turn → snap X
+                    cornerX = endX;
+            }
+
+            // Calculate distance to corner projected onto current travel direction.
+            // Use cardinal projection instead of Euclidean to avoid perpendicular
+            // grid offset contaminating the distance calculation.
+            double dx = cornerX - x;
+            double dy = cornerY - y;
+            bool isHorizontal = (currentAngle == 0 || currentAngle == 180);
+            bool isVertical = (currentAngle == 90 || currentAngle == 270);
+            double projectedDistance = isHorizontal ? Math.Abs(dx) : Math.Abs(dy);
+            double distanceToCorner = Math.Sqrt(dx * dx + dy * dy);
+
+            // Skip if corner is behind us (bend overshot the grid corner position).
+            double angleRad = currentAngle * Math.PI / 180;
+            double dot = dx * Math.Cos(angleRad) + dy * Math.Sin(angleRad);
+            if (dot < -0.01 && !willTurn)
+            {
+                // Corner is behind us in our travel direction — skip straight segment
+                continue;
+            }
+
+            // At the last turning corner, if there isn't enough room for the standard
+            // bend radius, use a smaller allowed radius to avoid overshooting the pin axis.
+            double effectiveBendRadius = _minBendRadius;
+            if (i == lastTurnIndex && willTurn && projectedDistance < _minBendRadius
+                && projectedDistance > 0.5)
+            {
+                effectiveBendRadius = _bendBuilder.FindLargestRadiusAtMost(projectedDistance);
+            }
+
             // Calculate how far to go straight (leave room for bend if turning)
             double straightDistance = willTurn
-                ? Math.Max(0, distanceToCorner - _minBendRadius)
-                : distanceToCorner;
+                ? Math.Max(0, projectedDistance - effectiveBendRadius)
+                : projectedDistance;
+
+            // Skip very short segments (grid quantization artifacts).
+            // Threshold scales with cell size to avoid micro-bends with coarse grids.
+            double minSegmentLength = Math.Max(0.5, _grid.CellSizeMicrometers * 0.5);
 
             // Add straight segment toward corner (but stop before if we'll turn)
-            if (straightDistance > 0.5)
+            if (straightDistance > minSegmentLength && dot > 0.01)
             {
-                double endStraightX = x + (dx / distanceToCorner) * straightDistance;
-                double endStraightY = y + (dy / distanceToCorner) * straightDistance;
-
-                // Snap to cardinal axis to avoid diagonal artifacts from grid quantization.
-                // Use currentAngle (from A* path direction) — it's authoritative.
-                // Don't recompute from atan2: cardinal snapping shifts positions, causing drift.
-                if (currentAngle == 0 || currentAngle == 180) // Horizontal
-                    endStraightY = y;
-                else if (currentAngle == 90 || currentAngle == 270) // Vertical
-                    endStraightX = x;
+                // Move exactly along the cardinal direction — no diagonal drift.
+                double dirSign = isHorizontal
+                    ? (dx > 0 ? 1 : -1)
+                    : (dy > 0 ? 1 : -1);
+                double endStraightX = isHorizontal ? x + dirSign * straightDistance : x;
+                double endStraightY = isVertical ? y + dirSign * straightDistance : y;
 
                 routedPath.Segments.Add(new StraightSegment(x, y, endStraightX, endStraightY, currentAngle));
                 x = endStraightX;
@@ -90,7 +128,10 @@ public class PathSmoother
             // Add bend at corner if direction changes
             if (willTurn)
             {
-                var bend = _bendBuilder.BuildBend(x, y, currentAngle, newAngle, BendMode.Cardinal90);
+                double? radiusOverride = (effectiveBendRadius < _minBendRadius)
+                    ? effectiveBendRadius : null;
+                var bend = _bendBuilder.BuildBend(x, y, currentAngle, newAngle,
+                    BendMode.Cardinal90, radiusOverride);
                 if (bend != null)
                 {
                     routedPath.Segments.Add(bend);
@@ -101,22 +142,21 @@ public class PathSmoother
             }
         }
 
-        // Final segment(s) to snap exactly to end pin position.
-        // Use the end pin's entry angle (authoritative), not atan2 from geometry.
-        // If slightly off-axis, add a perpendicular correction first.
+        // Final segment(s) to reach end pin.
+        // Grid quantization creates perpendicular offset between the last A* corner
+        // and the exact pin position. Handle by adding axis-aligned correction segments.
         double finalDx = endX - x;
         double finalDy = endY - y;
         double finalDistance = Math.Sqrt(finalDx * finalDx + finalDy * finalDy);
         if (finalDistance > 0.01)
         {
-            // Check for perpendicular error relative to the entry direction
             double perpError = (endEntryAngle == 0 || endEntryAngle == 180)
-                ? Math.Abs(finalDy)  // Horizontal entry: Y error
-                : Math.Abs(finalDx); // Vertical entry: X error
+                ? Math.Abs(finalDy) : Math.Abs(finalDx);
 
-            if (perpError > 0.01)
+            if (perpError > 0.5)
             {
-                // Add a small perpendicular correction segment first
+                // Perpendicular correction: add an axis-aligned segment to reach the pin axis.
+                // Then add the final segment along the entry direction.
                 if (endEntryAngle == 0 || endEntryAngle == 180)
                 {
                     double corrAngle = finalDy > 0 ? 90.0 : 270.0;
@@ -131,15 +171,38 @@ public class PathSmoother
                 }
             }
 
-            // Main segment to the pin using the pin's entry angle
-            double remainDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
+            // Final segment to pin. Compute correct direction from geometry.
+            double remDx = endX - x;
+            double remDy = endY - y;
+            double remainDist = Math.Sqrt(remDx * remDx + remDy * remDy);
             if (remainDist > 0.01)
             {
-                routedPath.Segments.Add(new StraightSegment(x, y, endX, endY, endEntryAngle));
+                double actualAngle = Math.Atan2(remDy, remDx) * 180 / Math.PI;
+                double segmentAngle = AngleUtilities.QuantizeToCardinal(actualAngle);
+                routedPath.Segments.Add(new StraightSegment(x, y, endX, endY, segmentAngle));
             }
         }
 
         return routedPath;
+    }
+
+    /// <summary>
+    /// Finds the index of the last corner that involves a direction change.
+    /// Returns -1 if no turns exist.
+    /// </summary>
+    private static int FindLastTurningCorner(
+        List<(int X, int Y, GridDirection Direction)> corners, double startAngle)
+    {
+        int lastTurn = -1;
+        double prevAngle = startAngle;
+        for (int i = 1; i < corners.Count; i++)
+        {
+            double angle = AngleUtilities.DirectionToAngle(corners[i].Direction);
+            if (!AngleUtilities.IsAngleClose(prevAngle, angle))
+                lastTurn = i;
+            prevAngle = angle;
+        }
+        return lastTurn;
     }
 
     /// <summary>
