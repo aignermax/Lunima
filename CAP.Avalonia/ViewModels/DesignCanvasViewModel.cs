@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CAP_Core.Components;
 using CAP_Core.Routing;
+using CAP.Avalonia.Selection;
 using CAP.Avalonia.Visualization;
 
 namespace CAP.Avalonia.ViewModels;
@@ -13,6 +14,16 @@ public partial class DesignCanvasViewModel : ObservableObject
     public ObservableCollection<PinViewModel> AllPins { get; } = new();
 
     public WaveguideConnectionManager ConnectionManager { get; } = new();
+
+    /// <summary>
+    /// Manages multi-component selection state.
+    /// </summary>
+    public SelectionManager Selection { get; } = new();
+
+    /// <summary>
+    /// Clipboard for copy-paste operations.
+    /// </summary>
+    public ComponentClipboard Clipboard { get; } = new();
 
     /// <summary>
     /// Manages power flow visualization state and data.
