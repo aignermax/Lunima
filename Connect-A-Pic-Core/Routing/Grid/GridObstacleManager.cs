@@ -159,8 +159,10 @@ public class GridObstacleManager
     private HashSet<(int, int)> CollectPinCorridorCells(Component component)
     {
         var pinCorridorCells = new HashSet<(int, int)>();
-        double corridorLength = 10.0;
-        double corridorWidth = 4.0;
+        // Use same corridor dimensions as ClearPinCorridor in WaveguideRouter
+        // to ensure pin cells are never blocked
+        double corridorLength = 30.0;  // MinBendRadius * 3
+        double corridorWidth = 10.0;   // MinBendRadius
 
         foreach (var pin in component.PhysicalPins)
         {

@@ -34,12 +34,19 @@ public class TerminalConnector
         double endY,
         double endEntryAngle)
     {
+        Console.WriteLine($"[TerminalConnector] Connecting from ({x:F1},{y:F1}) @ {currentAngle}° to ({endX:F1},{endY:F1}) @ {endEntryAngle}°");
+
         double dx = endX - x;
         double dy = endY - y;
         double distance = Math.Sqrt(dx * dx + dy * dy);
 
+        Console.WriteLine($"[TerminalConnector] Distance to end: {distance:F2}µm");
+
         if (distance < 0.1)
+        {
+            Console.WriteLine($"[TerminalConnector] Already at pin");
             return true; // Already at pin
+        }
 
         // Calculate position on entry axis
         double entryAxisX, entryAxisY;
@@ -60,8 +67,12 @@ public class TerminalConnector
         // STRATEGY 1: Already on entry axis with correct angle
         if (Math.Abs(lateralOffset) < 0.5 && AngleUtilities.IsAngleClose(currentAngle, endEntryAngle))
         {
+            Console.WriteLine($"[TerminalConnector] STRATEGY 1: Already on axis");
             if (!IsLineAlignedWithAngle(x, y, endX, endY, endEntryAngle))
+            {
+                Console.WriteLine($"[TerminalConnector] STRATEGY 1 FAILED: Line not aligned with angle");
                 return false;
+            }
 
             if (forwardDistance > 0.5)
             {
@@ -69,26 +80,36 @@ public class TerminalConnector
                 x = endX;
                 y = endY;
             }
+            Console.WriteLine($"[TerminalConnector] STRATEGY 1 SUCCESS");
             return true;
         }
 
         // STRATEGY 2: Reach entry axis, then straight to pin
+        Console.WriteLine($"[TerminalConnector] STRATEGY 2: Trying to reach entry axis at ({entryAxisX:F1},{entryAxisY:F1})");
+        Console.WriteLine($"[TerminalConnector] lateralOffset={lateralOffset:F2}, forwardDistance={forwardDistance:F2}");
         if (TryReachEntryAxis(path, ref x, ref y, ref currentAngle,
             entryAxisX, entryAxisY, endX, endY, endEntryAngle, lateralOffset, forwardDistance))
         {
+            Console.WriteLine($"[TerminalConnector] STRATEGY 2: Reached entry axis at ({x:F1},{y:F1})");
             if (Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2)) > 0.5)
             {
                 if (!IsLineAlignedWithAngle(x, y, endX, endY, endEntryAngle))
+                {
+                    Console.WriteLine($"[TerminalConnector] STRATEGY 2 FAILED: Final segment not aligned");
                     return false;
+                }
 
                 path.Segments.Add(new StraightSegment(x, y, endX, endY, endEntryAngle));
                 x = endX;
                 y = endY;
             }
+            Console.WriteLine($"[TerminalConnector] STRATEGY 2 SUCCESS");
             return true;
         }
+        Console.WriteLine($"[TerminalConnector] STRATEGY 2 FAILED: Could not reach entry axis");
 
         // STRATEGY 3: S-bend if very tight
+        Console.WriteLine($"[TerminalConnector] STRATEGY 3: Trying S-bend (distance={distance:F2}, threshold={_minBendRadius * 4:F2})");
         if (distance < _minBendRadius * 4)
         {
             bool sBendSuccess = _sBendBuilder.TryBuildApproachSBend(
@@ -98,10 +119,20 @@ public class TerminalConnector
             {
                 double finalDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
                 if (finalDist < 0.5 && AngleUtilities.IsAngleClose(currentAngle, endEntryAngle))
+                {
+                    Console.WriteLine($"[TerminalConnector] STRATEGY 3 SUCCESS");
                     return true;
+                }
+                Console.WriteLine($"[TerminalConnector] STRATEGY 3: S-bend built but didn't reach target (dist={finalDist:F2})");
             }
+            Console.WriteLine($"[TerminalConnector] STRATEGY 3 FAILED: S-bend failed");
+        }
+        else
+        {
+            Console.WriteLine($"[TerminalConnector] STRATEGY 3 SKIPPED: distance too large");
         }
 
+        Console.WriteLine($"[TerminalConnector] ALL STRATEGIES FAILED - cannot solve geometry");
         return false; // Cannot solve geometry
     }
 

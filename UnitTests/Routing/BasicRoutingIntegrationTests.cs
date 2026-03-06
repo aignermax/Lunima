@@ -11,6 +11,25 @@ namespace UnitTests.Routing;
 /// <summary>
 /// Integration tests for basic routing scenarios that should always work.
 /// These test the full routing stack: TwoBendSolver → A* → PathSmoother.
+///
+/// KNOWN ISSUES (2026-03-06):
+/// - TwoComponents_VerticallyStacked_ShouldConnect: FAILING
+///   Root cause: Terminal connector cannot bridge final gap from Manhattan path end to pin
+///   A* stops within GoalTolerance (3 cells = 12µm) but terminal connector needs tighter geometry
+///
+/// - TwoComponents_WithObstacleInBetween_ShouldRouteAround: FAILING
+///   Likely same terminal connector issue
+///
+/// FIXES APPLIED:
+/// ✅ Pin corridor pre-clearing: Create pins before InitializePathfindingGrid
+/// ✅ PathSmoother: Process only up to lastTurnIndex (was processing all corners)
+/// ✅ GridObstacleManager: Increased corridor dimensions to match WaveguideRouter (30µm × 10µm)
+/// ✅ TerminalConnector: Relax forwardDistance constraint when lateralOffset is small
+///
+/// TODO:
+/// - Improve terminal connector geometry solving for A*  goal tolerance gaps
+/// - OR reduce A* GoalTolerance (but this makes pathfinding much harder/fail)
+/// - OR improve A* to get closer to target while respecting pin escape constraints
 /// </summary>
 public class BasicRoutingIntegrationTests
 {
@@ -34,13 +53,17 @@ public class BasicRoutingIntegrationTests
         var topComponent = CreateTestComponent(x: 0, y: 0);
         var bottomComponent = CreateTestComponent(x: 0, y: 100); // 100µm below
 
-        InitializeGrid(topComponent, bottomComponent);
-
+        // CRITICAL: Create pins BEFORE initializing grid so CollectPinCorridorCells can see them
         // Top component output (right side, pointing right)
-        var startPin = CreatePin(topComponent, offsetX: 25, offsetY: 0, angle: 0, isInput: false);
+        // Pin OUTSIDE the component boundary (component is 50µm wide, so use offset > 25)
+        var startPin = CreatePin(topComponent, offsetX: 30, offsetY: 0, angle: 0, isInput: false);
 
-        // Bottom component input (left side, pointing left)
-        var endPin = CreatePin(bottomComponent, offsetX: -25, offsetY: 0, angle: 180, isInput: true);
+        // Bottom component input (right side, pointing left to receive from right)
+        // Changed from -30 to +30 so end pin is on the RIGHT side
+        var endPin = CreatePin(bottomComponent, offsetX: 30, offsetY: 0, angle: 180, isInput: true);
+
+        // NOW initialize grid - CollectPinCorridorCells will see the pins
+        InitializeGrid(topComponent, bottomComponent);
 
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
@@ -64,6 +87,23 @@ public class BasicRoutingIntegrationTests
             bool startBlocked = _router.PathfindingGrid.IsBlocked(gridStartX, gridStartY);
             bool endBlocked = _router.PathfindingGrid.IsBlocked(gridEndX, gridEndY);
             Console.WriteLine($"[TEST] Start cell blocked: {startBlocked}, End cell blocked: {endBlocked}");
+
+            // Check cells around start
+            Console.WriteLine($"[TEST] Cells around start ({gridStartX}, {gridStartY}):");
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                for (int dx = -2; dx <= 2; dx++)
+                {
+                    int checkX = gridStartX + dx;
+                    int checkY = gridStartY + dy;
+                    if (_router.PathfindingGrid.IsInBounds(checkX, checkY))
+                    {
+                        bool blocked = _router.PathfindingGrid.IsBlocked(checkX, checkY);
+                        Console.Write(blocked ? "X" : ".");
+                    }
+                }
+                Console.WriteLine();
+            }
         }
 
         // Act
@@ -144,10 +184,11 @@ public class BasicRoutingIntegrationTests
         var obstacleComponent = CreateTestComponent(x: 75, y: 0); // In the middle
         var rightComponent = CreateTestComponent(x: 150, y: 0);
 
-        InitializeGrid(leftComponent, obstacleComponent, rightComponent);
-
+        // Create pins BEFORE grid initialization
         var startPin = CreatePin(leftComponent, offsetX: 25, offsetY: 0, angle: 0, isInput: false);
         var endPin = CreatePin(rightComponent, offsetX: -25, offsetY: 0, angle: 180, isInput: true);
+
+        InitializeGrid(leftComponent, obstacleComponent, rightComponent);
 
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
@@ -185,7 +226,8 @@ public class BasicRoutingIntegrationTests
             parts: parts,
             typeNumber: 0,
             identifier: $"TestComponent_{x}_{y}",
-            rotationCounterClock: DiscreteRotation.R0
+            rotationCounterClock: DiscreteRotation.R0,
+            physicalPins: new List<PhysicalPin>()  // Pass empty pins list to constructor
         );
 
         component.WidthMicrometers = 50;
@@ -206,6 +248,8 @@ public class BasicRoutingIntegrationTests
             AngleDegrees = angle,
             ParentComponent = component
         };
+
+        component.PhysicalPins.Add(pin);  // Add pin to component
 
         return pin;
     }

@@ -19,6 +19,8 @@ public class WaypointExtractor
         if (gridPath == null || gridPath.Count == 0)
             return corners;
 
+        Console.WriteLine($"[WaypointExtractor] Extracting corners from {gridPath.Count} grid nodes");
+
         // Always add start
         corners.Add((gridPath[0].X, gridPath[0].Y, gridPath[0].Direction));
 
@@ -38,6 +40,12 @@ public class WaypointExtractor
             corners.Add((last.X, last.Y, last.Direction));
         }
 
+        Console.WriteLine($"[WaypointExtractor] Extracted {corners.Count} corners");
+        for (int i = 0; i < Math.Min(corners.Count, 10); i++)
+        {
+            Console.WriteLine($"[WaypointExtractor]   Corner {i}: ({corners[i].X},{corners[i].Y}) dir={corners[i].Direction}");
+        }
+
         return corners;
     }
 
@@ -54,11 +62,15 @@ public class WaypointExtractor
         {
             double angle = AngleUtilities.DirectionToAngle(corners[i].Direction);
             if (!AngleUtilities.IsAngleClose(angle, initialAngle))
+            {
+                Console.WriteLine($"[WaypointExtractor] FindLastTurningCorner: Found turn at index {i} (angle={angle}° vs initial={initialAngle}°)");
                 return i;
+            }
 
             initialAngle = angle;
         }
 
+        Console.WriteLine($"[WaypointExtractor] FindLastTurningCorner: No turn found, returning {corners.Count - 1}");
         return corners.Count - 1;
     }
 }

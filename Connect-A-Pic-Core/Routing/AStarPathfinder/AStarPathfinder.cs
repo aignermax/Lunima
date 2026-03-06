@@ -21,7 +21,8 @@ public class AStarPathfinder
 
     /// <summary>
     /// Distance tolerance for reaching the goal (in grid cells).
-    /// With 5µm cells, 3 cells = 15µm tolerance.
+    /// With 4µm cells, 3 cells = 12µm tolerance.
+    /// Terminal connector must be robust enough to handle this gap.
     /// </summary>
     public int GoalTolerance { get; set; } = 3;
 
@@ -59,6 +60,9 @@ public class AStarPathfinder
         startNode.HCost = _costCalculator.CalculateHeuristic(
             startX, startY, startDirection, endX, endY, endDirection);
 
+        Console.WriteLine($"[A*] Starting from ({startX},{startY}) dir={startDirection} to ({endX},{endY}) dir={endDirection}");
+        Console.WriteLine($"[A*] MinPinEscapeCells={_costCalculator.MinPinEscapeCells}, MinStraightRunCells={_costCalculator.MinStraightRunCells}");
+
         openSet.Enqueue(startNode, startNode.FCost);
         visited[startNode.GetKey()] = startNode;
         distanceFromStart[startNode.GetKey()] = 0;
@@ -73,6 +77,7 @@ public class AStarPathfinder
             // Check if we reached the goal
             if (IsGoalReached(current, endX, endY, endDirection))
             {
+                Console.WriteLine($"[A*] SUCCESS! Path found after expanding {nodesExpanded} nodes");
                 return ReconstructPath(current);
             }
 
@@ -94,6 +99,8 @@ public class AStarPathfinder
         }
 
         // No path found
+        Console.WriteLine($"[A*] FAILED! No path found after expanding {nodesExpanded} nodes (limit: {MaxNodesExpanded})");
+        Console.WriteLine($"[A*] OpenSet empty: {openSet.Count == 0}, Nodes expanded: {nodesExpanded}");
         return null;
     }
 

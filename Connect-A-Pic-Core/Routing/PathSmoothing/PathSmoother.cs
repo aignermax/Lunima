@@ -34,10 +34,14 @@ public class PathSmoother
 
     public RoutedPath ConvertToSegments(List<AStarNode> gridPath, PhysicalPin startPin, PhysicalPin endPin)
     {
+        Console.WriteLine($"[PathSmoother] Converting grid path with {gridPath?.Count ?? 0} nodes");
         var routedPath = new RoutedPath();
 
         if (gridPath == null || gridPath.Count < 2)
+        {
+            Console.WriteLine($"[PathSmoother] Grid path invalid or too short");
             return routedPath;
+        }
 
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
@@ -58,6 +62,8 @@ public class PathSmoother
             ref x, ref y, ref currentAngle,
             endX, endY);
 
+        Console.WriteLine($"[PathSmoother] After Manhattan processing: at ({x:F1},{y:F1}) @ {currentAngle}°, need to reach ({endX:F1},{endY:F1})");
+
         // Geometric terminal approach with strict validation
         bool terminalSuccess = _terminalConnector.AppendTerminalApproach(
             routedPath, ref x, ref y, ref currentAngle,
@@ -65,7 +71,12 @@ public class PathSmoother
 
         if (!terminalSuccess)
         {
+            Console.WriteLine($"[PathSmoother] Terminal approach failed - marking as invalid geometry");
             routedPath.IsInvalidGeometry = true;
+        }
+        else
+        {
+            Console.WriteLine($"[PathSmoother] SUCCESS! Generated {routedPath.Segments.Count} segments");
         }
 
         return routedPath;

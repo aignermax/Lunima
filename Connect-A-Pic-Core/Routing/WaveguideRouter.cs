@@ -194,10 +194,16 @@ public class WaveguideRouter
         var clearedEndTerminal = PathfindingGrid.ClearPinCorridor(
             endX, endY, endInputAngle, corridorLength, corridorWidth);
 
+        Console.WriteLine($"[WaveguideRouter] Cleared {clearedStart.Count} cells at start, {clearedEndApproach.Count} + {clearedEndTerminal.Count} at end");
+
         try
         {
             var (gridStartX, gridStartY) = PathfindingGrid.PhysicalToGrid(startX, startY);
             var (gridEndX, gridEndY) = PathfindingGrid.PhysicalToGrid(endX, endY);
+
+            bool startBlocked = PathfindingGrid.IsBlocked(gridStartX, gridStartY);
+            bool endBlocked = PathfindingGrid.IsBlocked(gridEndX, gridEndY);
+            Console.WriteLine($"[WaveguideRouter] After clearing: start ({gridStartX},{gridStartY}) blocked={startBlocked}, end ({gridEndX},{gridEndY}) blocked={endBlocked}");
 
             var startDir = GridDirectionExtensions.FromAngle(startAngle);
             var endDir = GridDirectionExtensions.FromAngle(endInputAngle);
