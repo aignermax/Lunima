@@ -100,13 +100,11 @@ public class WaveguideRouter
         _hierarchicalPathfinder.BuildSectorGraph(sectorSizeCells);
         CostCalculator.DistanceTransformGrid = _hierarchicalPathfinder.DistanceTransform;
 
-        // Wire DT incremental updates to obstacle manager callbacks
+        // Wire DT incremental updates via PathfindingGrid callbacks
         var dt = _hierarchicalPathfinder.DistanceTransform;
         var grid = PathfindingGrid;
-        grid.ObstacleManager.OnWaveguideCellsAdded = cells =>
-            dt?.AddWaveguideCells(cells);
-        grid.ObstacleManager.OnAllWaveguidesCleared = () =>
-            dt?.Rebuild(grid);
+        grid.OnWaveguideCellsAdded = cells => dt?.AddWaveguideCells(cells);
+        grid.OnAllWaveguidesCleared = () => dt?.Rebuild(grid);
     }
 
     /// <summary>
@@ -281,9 +279,11 @@ public class WaveguideRouter
             var smoothedPath = smoother.ConvertToSegments(gridPath, startPin, endPin);
 
             path.Segments.AddRange(smoothedPath.Segments);
+            path.IsInvalidGeometry = smoothedPath.IsInvalidGeometry;
             path.DebugGridPath = gridPath;
 
-            return path.Segments.Count > 0;
+            // Success requires valid segments without geometry violations
+            return path.Segments.Count > 0 && !path.IsInvalidGeometry;
         }
         finally
         {

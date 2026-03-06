@@ -53,6 +53,7 @@ public partial class MainViewModel : ObservableObject
     public Commands.CommandManager CommandManager { get; }
     public SimulationService Simulation { get; }
     public ParameterSweepViewModel Sweep { get; } = new();
+    public RoutingDiagnosticsViewModel RoutingDiagnostics { get; } = new();
 
     public IFileDialogService? FileDialogService { get; set; }
 
@@ -79,6 +80,7 @@ public partial class MainViewModel : ObservableObject
         CommandManager = commandManager;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
+        RoutingDiagnostics.Configure(_canvas);
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
