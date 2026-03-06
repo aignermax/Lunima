@@ -123,12 +123,12 @@ public class BiarcSolver
         double centerX, double centerY,
         double bendDir, double radius)
     {
-        // Calculate angles from center to start and end points
-        double angleToStart = Math.Atan2(startY - centerY, startX - centerX) * 180 / Math.PI;
-        double angleToEnd = Math.Atan2(endY - centerY, endX - centerX) * 180 / Math.PI;
+        // Calculate radial angles from center to start and end points
+        double radialAngleToStart = Math.Atan2(startY - centerY, startX - centerX) * 180 / Math.PI;
+        double radialAngleToEnd = Math.Atan2(endY - centerY, endX - centerX) * 180 / Math.PI;
 
         // Calculate sweep angle (accounting for direction)
-        double sweep = angleToEnd - angleToStart;
+        double sweep = radialAngleToEnd - radialAngleToStart;
 
         // Normalize sweep to match bend direction
         if (bendDir > 0) // Left turn (counter-clockwise)
@@ -146,10 +146,16 @@ public class BiarcSolver
         if (Math.Abs(sweep) > 350)
             return null;
 
+        // Convert radial angle to tangent angle
+        // The tangent is perpendicular to the radius
+        // For left bend (counter-clockwise), tangent = radial + 90°
+        // For right bend (clockwise), tangent = radial - 90°
+        double tangentAngleAtStart = radialAngleToStart + (bendDir > 0 ? 90 : -90);
+
         return new BendSegment(
             centerX, centerY,
             radius,
-            angleToStart,
+            tangentAngleAtStart,
             sweep);
     }
 }
