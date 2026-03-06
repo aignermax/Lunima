@@ -42,6 +42,7 @@ public class WaveguideRouter
     /// </summary>
     public RoutingCostCalculator CostCalculator { get; } = new();
 
+    private StraightLineSolver? _straightLineSolver;
     private TwoBendSolver? _twoBendSolver;
 
     /// <summary>
@@ -100,10 +101,19 @@ public class WaveguideRouter
 
         double endInputAngle = AngleUtilities.NormalizeAngle(endAngle + 180);
 
-        // Initialize two-bend solver if needed
+        // Initialize geometric solvers if needed
+        _straightLineSolver ??= new StraightLineSolver(this);
         _twoBendSolver ??= new TwoBendSolver(MinBendRadiusMicrometers, AllowedBendRadii, this);
 
-        // Try two-bend connection first (simple geometric solution)
+        // Try straight line first (simplest case)
+        var straightPath = _straightLineSolver.TryStraightConnection(startPin, endPin);
+        if (straightPath != null)
+        {
+            Console.WriteLine("[WaveguideRouter] Straight-line solver succeeded!");
+            return straightPath;
+        }
+
+        // Try two-bend connection (most common case)
         var twoBendPath = _twoBendSolver.TryTwoBendConnection(startPin, endPin);
         if (twoBendPath != null)
         {
