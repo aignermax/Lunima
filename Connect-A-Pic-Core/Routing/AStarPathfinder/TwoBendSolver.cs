@@ -201,7 +201,7 @@ public class TwoBendSolver
 
             // Try to build arcs with this junction
             var result = TryBuildArcsWithJunction(
-                startAngle,
+                startX, startY, startAngle,
                 endX, endY, endEntryAngle,
                 c1X, c1Y, c2X, c2Y, radius,
                 junctionAngle,
@@ -219,7 +219,7 @@ public class TwoBendSolver
     /// Attempts to build arc segments with a specific junction point.
     /// </summary>
     private RoutedPath? TryBuildArcsWithJunction(
-        double startAngle,
+        double startX, double startY, double startAngle,
         double endX, double endY, double endEntryAngle,
         double c1X, double c1Y, double c2X, double c2Y, double radius,
         double junctionAngle,
@@ -251,6 +251,17 @@ public class TwoBendSolver
         // Create bend segments
         var bend1 = new BendSegment(c1X, c1Y, radius, startAngle, sweep1);
         var bend2 = new BendSegment(c2X, c2Y, radius, junctionAngle, sweep2);
+
+        // CRITICAL: Validate first arc actually starts at start pin
+        double startError = Math.Sqrt(
+            Math.Pow(bend1.StartPoint.X - startX, 2) +
+            Math.Pow(bend1.StartPoint.Y - startY, 2));
+
+        if (startError > 1.0) // 1 micron tolerance
+        {
+            Console.WriteLine($"[TwoBendSolver]     Start validation failed: {startError:F3}µm offset");
+            return null;
+        }
 
         // Validate continuity: bend1 end must match bend2 start
         double continuityError = Math.Sqrt(

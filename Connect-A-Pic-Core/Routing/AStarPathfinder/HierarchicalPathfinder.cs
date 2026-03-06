@@ -20,6 +20,19 @@ public class HierarchicalPathfinder
     public int FlatSearchThreshold { get; set; } = 200;
 
     /// <summary>
+    /// Maximum path-length / Manhattan-distance ratio before falling back to flat A*.
+    /// If HPA* returns a path longer than this ratio, a flat A* retry with higher node
+    /// limit is attempted to find a more direct route.
+    /// </summary>
+    public double QualityThreshold { get; set; } = 3.0;
+
+    /// <summary>
+    /// MaxNodesExpanded for fallback flat A* when HPA* path quality is poor or HPA* fails.
+    /// Higher than the default 200K to handle long routes across large grids.
+    /// </summary>
+    public int FallbackMaxNodes { get; set; } = 500_000;
+
+    /// <summary>
     /// Whether the hierarchical graph has been built.
     /// </summary>
     public bool IsBuilt => _sectorGraph != null;
@@ -79,9 +92,38 @@ public class HierarchicalPathfinder
         }
 
         // Long routes: use hierarchical search
-        return HierarchicalSearch(
+        var hpaPath = HierarchicalSearch(
             startX, startY, startDir,
             endX, endY, endDir);
+
+        // Quality check: if HPA* path is much longer than expected, retry flat A*
+        if (hpaPath != null && manhattan > 0 && hpaPath.Count > manhattan * QualityThreshold)
+        {
+            var flatPath = FallbackFlatSearch(
+                startX, startY, startDir, endX, endY, endDir);
+            if (flatPath != null && flatPath.Count < hpaPath.Count)
+                return flatPath;
+        }
+
+        // If HPA* found nothing, try flat A* with higher node limit
+        if (hpaPath == null)
+        {
+            return FallbackFlatSearch(
+                startX, startY, startDir, endX, endY, endDir);
+        }
+
+        return hpaPath;
+    }
+
+    private List<AStarNode>? FallbackFlatSearch(
+        int startX, int startY, GridDirection startDir,
+        int endX, int endY, GridDirection endDir)
+    {
+        var fallback = new AStarPathfinder(_grid, _costCalculator)
+        {
+            MaxNodesExpanded = FallbackMaxNodes
+        };
+        return fallback.FindPath(startX, startY, startDir, endX, endY, endDir);
     }
 
     private List<AStarNode>? HierarchicalSearch(

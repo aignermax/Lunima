@@ -107,6 +107,27 @@ public class BendBuilder
     }
 
     /// <summary>
+    /// Finds the largest allowed radius that fits within maxRadius.
+    /// Used at the last turn when standard radius would overshoot.
+    /// Falls back to smallest allowed radius if none fit.
+    /// </summary>
+    public double FindLargestRadiusAtMost(double maxRadius)
+    {
+        if (_allowedRadii.Count == 0)
+            return Math.Min(_minBendRadius, maxRadius);
+
+        double best = 0;
+        foreach (var r in _allowedRadii)
+        {
+            if (r <= maxRadius + 0.01)
+                best = r;
+        }
+
+        // If no allowed radius fits, use the smallest available
+        return best > 0 ? best : _allowedRadii[0];
+    }
+
+    /// <summary>
     /// Selects the smallest radius from allowed radii that meets minimum requirement.
     /// Falls back to minimum radius if no allowed radii specified.
     /// </summary>

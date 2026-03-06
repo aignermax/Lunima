@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet test UnitTests/UnitTests.csproj --no-restore)",
+      "Bash(python -c \"import nazca; print\\(nazca.__version__\\)\")",
+      "Bash(git status -u)",
+      "Bash(dotnet test UnitTests/UnitTests.csproj --verbosity quiet)",
+      "Bash(gh pr merge 48 --merge)",
+      "Bash(git pull)",
+      "Bash(xargs grep -l \"class ConnectionData\\\\|class DesignFileData\")"
+    ]
+  }
+}

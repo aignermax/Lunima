@@ -161,15 +161,24 @@ public class WaveguideRouter
             if (TryRouteAStar(startX, startY, startAngle, endX, endY, endInputAngle,
                               astarPath, startPin, endPin))
             {
-                if (astarPath.IsValid)
+                // Check if A* produced valid geometry (not just segments)
+                if (astarPath.IsValid && !astarPath.IsInvalidGeometry && astarPath.Segments.Count > 0)
                 {
-                    Console.WriteLine("[WaveguideRouter] A* succeeded!");
+                    Console.WriteLine("[WaveguideRouter] A* succeeded with valid geometry!");
                     return astarPath;
                 }
+                else
+                {
+                    Console.WriteLine("[WaveguideRouter] A* produced invalid geometry");
+                }
+            }
+            else
+            {
+                Console.WriteLine("[WaveguideRouter] A* pathfinding failed (no path found)");
             }
         }
 
-        // No Manhattan fallback - return invalid path
+        // All strategies failed - return invalid path
         Console.WriteLine("[WaveguideRouter] All routing strategies failed, returning invalid path");
         var invalidPath = new RoutedPath
         {
