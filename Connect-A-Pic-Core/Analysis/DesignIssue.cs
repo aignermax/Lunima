@@ -1,0 +1,73 @@
+using CAP_Core.Components;
+
+namespace CAP_Core.Analysis;
+
+/// <summary>
+/// Type of design issue detected during validation.
+/// </summary>
+public enum DesignIssueType
+{
+    /// <summary>
+    /// Path violates minimum bend radius constraints (segments too short for bends).
+    /// </summary>
+    InvalidGeometry,
+
+    /// <summary>
+    /// Path could not be routed around obstacles; fallback straight-line path used.
+    /// </summary>
+    BlockedPath
+}
+
+/// <summary>
+/// Represents a single design issue found during validation.
+/// Contains the affected connection and location for navigation.
+/// </summary>
+public class DesignIssue
+{
+    /// <summary>
+    /// The type of issue detected.
+    /// </summary>
+    public DesignIssueType Type { get; }
+
+    /// <summary>
+    /// The affected waveguide connection.
+    /// </summary>
+    public WaveguideConnection Connection { get; }
+
+    /// <summary>
+    /// X coordinate of the issue midpoint (average of start/end pins) in micrometers.
+    /// </summary>
+    public double X { get; }
+
+    /// <summary>
+    /// Y coordinate of the issue midpoint (average of start/end pins) in micrometers.
+    /// </summary>
+    public double Y { get; }
+
+    /// <summary>
+    /// Human-readable description of the issue.
+    /// </summary>
+    public string Description { get; }
+
+    /// <summary>
+    /// Creates a new design issue.
+    /// </summary>
+    /// <param name="type">The issue type.</param>
+    /// <param name="connection">The affected connection.</param>
+    /// <param name="x">Midpoint X in micrometers.</param>
+    /// <param name="y">Midpoint Y in micrometers.</param>
+    /// <param name="description">Human-readable description.</param>
+    public DesignIssue(
+        DesignIssueType type,
+        WaveguideConnection connection,
+        double x,
+        double y,
+        string description)
+    {
+        Type = type;
+        Connection = connection;
+        X = x;
+        Y = y;
+        Description = description;
+    }
+}
