@@ -127,7 +127,7 @@ public class WaveguideRouter
 
     /// <summary>
     /// Routes a waveguide between two pins.
-    /// Always uses A* pathfinding. Falls back to Manhattan (marked as blocked) if A* fails.
+    /// Tries two-bend connection, then A* pathfinding, then Manhattan fallback.
     /// </summary>
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin)
     {
@@ -138,6 +138,15 @@ public class WaveguideRouter
 
         double endInputAngle = AngleUtilities.NormalizeAngle(endAngle + 180);
 
+        // Try two-bend connection first (simple geometric solution)
+        var twoBendSolver = new TwoBendSolver(MinBendRadiusMicrometers, AllowedBendRadii, this);
+        var twoBendPath = twoBendSolver.TryTwoBendConnection(startPin, endPin);
+        if (twoBendPath != null)
+        {
+            return twoBendPath;
+        }
+
+        // Fall back to A* pathfinding
         if (PathfindingGrid != null)
         {
             var astarPath = new RoutedPath();
@@ -148,6 +157,7 @@ public class WaveguideRouter
             }
         }
 
+        // Final fallback to Manhattan router
         var path = new RoutedPath();
         var manhattan = new ManhattanRouter(MinBendRadiusMicrometers);
         manhattan.Route(startX, startY, startAngle, endX, endY, endInputAngle, path);
