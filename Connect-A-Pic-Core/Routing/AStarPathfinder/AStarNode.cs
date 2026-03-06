@@ -1,3 +1,6 @@
+using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.Utilities;
+
 namespace CAP_Core.Routing.AStarPathfinder;
 
 /// <summary>

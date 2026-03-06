@@ -1,7 +1,12 @@
+using CAP_Core.Routing.PathSmoothing;
+using CAP_Core.Routing.SegmentBuilders;
+using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.Grid;
+using CAP_Core.Routing.Utilities;
 using CAP_Core.Components;
 using CAP_Core.Routing;
 
-namespace CAP_Core.Routing.AStarPathfinder;
+namespace CAP_Core.Routing.PathSmoothing;
 
 /// <summary>
 /// Converts A* grid paths to physical waveguide segments.

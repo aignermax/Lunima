@@ -1,4 +1,5 @@
-namespace CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.Utilities;
+namespace CAP_Core.Routing.Utilities;
 
 /// <summary>
 /// Represents a cardinal direction of travel on the pathfinding grid.

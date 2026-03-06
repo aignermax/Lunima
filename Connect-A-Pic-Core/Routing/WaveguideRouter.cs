@@ -1,3 +1,6 @@
+using CAP_Core.Routing.PathSmoothing;
+using CAP_Core.Routing.Grid;
+using CAP_Core.Routing.Utilities;
 using CAP_Core.Components;
 using CAP_Core.Routing.AStarPathfinder;
 using CAP_Core.Routing.GeometricSolvers;

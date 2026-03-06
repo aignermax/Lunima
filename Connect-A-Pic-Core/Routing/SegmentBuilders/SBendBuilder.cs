@@ -1,6 +1,9 @@
+using CAP_Core.Routing.PathSmoothing;
+using CAP_Core.Routing.SegmentBuilders;
+using CAP_Core.Routing.Utilities;
 using CAP_Core.Routing;
 
-namespace CAP_Core.Routing.AStarPathfinder;
+namespace CAP_Core.Routing.SegmentBuilders;
 
 /// <summary>
 /// Builds S-bend patterns for path corrections and non-cardinal approaches.

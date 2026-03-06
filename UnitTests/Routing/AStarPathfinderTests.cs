@@ -2,6 +2,8 @@ using Xunit;
 using Shouldly;
 using CAP_Core.Routing.AStarPathfinder;
 using CAP_Core.Routing;
+using CAP_Core.Routing.Utilities;
+using CAP_Core.Routing.Grid;
 using CAP_Core.Components;
 
 namespace UnitTests.Routing;

@@ -1,6 +1,7 @@
+using CAP_Core.Routing.Grid;
 using CAP_Core.Components;
 
-namespace CAP_Core.Routing.AStarPathfinder;
+namespace CAP_Core.Routing.Grid;
 
 /// <summary>
 /// Manages the pathfinding grid for A* waveguide routing.

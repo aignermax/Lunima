@@ -1,5 +1,6 @@
 using CAP_Core.Components;
 using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.Utilities;
 
 namespace CAP_Core.Routing.GeometricSolvers;
 
@@ -356,6 +357,35 @@ public class TwoBendSolver
                 return true;
         }
 
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a straight line segment passes through blocked cells.
+    /// </summary>
+    private bool IsLineBlocked(double x1, double y1, double x2, double y2)
+    {
+        if (_router.PathfindingGrid == null)
+            return false;
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        if (length < 0.001) return false;
+
+        dx /= length;
+        dy /= length;
+
+        double stepSize = _router.PathfindingGrid.CellSizeMicrometers * 0.5;
+
+        for (double t = 0; t < length; t += stepSize)
+        {
+            double px = x1 + dx * t;
+            double py = y1 + dy * t;
+            var (gx, gy) = _router.PathfindingGrid.PhysicalToGrid(px, py);
+            if (_router.PathfindingGrid.IsBlocked(gx, gy))
+                return true;
+        }
         return false;
     }
 
