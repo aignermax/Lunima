@@ -23,7 +23,8 @@
       "Bash(PATH=\"$HOME/.dotnet:/usr/bin:$PATH\" dotnet build:*)",
       "Bash($HOME/.dotnet/dotnet build:*)",
       "Bash(/usr/bin/tail:*)",
-      "Bash(/home/max/.dotnet/dotnet build:*)"
+      "Bash(/home/max/.dotnet/dotnet build:*)",
+      "Bash(dotnet test ./UnitTests/UnitTests.csproj --filter \"IncrementalRouting_PreservesValidRoutes\")"
     ]
   }
 }
