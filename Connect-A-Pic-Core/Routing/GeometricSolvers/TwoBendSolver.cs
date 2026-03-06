@@ -27,7 +27,7 @@ public class TwoBendSolver
     /// <returns>A valid RoutedPath if a two-bend solution exists, otherwise null</returns>
     public RoutedPath? TryTwoBendConnection(PhysicalPin startPin, PhysicalPin endPin)
     {
-        Console.WriteLine("[TwoBendSolver] Attempting two-bend connection...");
+        Console.WriteLine("[TwoBendSolver] Attempting connection...");
 
         // Extract start pose
         var (startX, startY) = startPin.GetAbsolutePosition();
@@ -38,7 +38,15 @@ public class TwoBendSolver
         double endAngle = endPin.GetAbsoluteAngle();
         double endEntryAngle = AngleUtilities.NormalizeAngle(endAngle + 180);
 
-        // Try all four bend direction combinations: LL, LR, RL, RR
+        // FIRST: Try straight line (zero bends - special case)
+        var straightPath = TryStraightLine(startX, startY, startAngle, endX, endY, endEntryAngle);
+        if (straightPath != null)
+        {
+            Console.WriteLine("[TwoBendSolver] SUCCESS with straight line!");
+            return straightPath;
+        }
+
+        // SECOND: Try all four bend direction combinations: LL, LR, RL, RR
         var bendCombinations = new[]
         {
             (1.0, 1.0, "LL"),    // Left-Left
@@ -349,5 +357,37 @@ public class TwoBendSolver
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Attempts to connect two pins with a straight line (zero bends).
+    /// Only succeeds if pins are aligned and facing each other.
+    /// </summary>
+    private RoutedPath? TryStraightLine(
+        double startX, double startY, double startAngle,
+        double endX, double endY, double endEntryAngle)
+    {
+        // Check if angles are aligned (start direction must match end entry direction)
+        double angleDiff = Math.Abs(AngleUtilities.NormalizeAngle(startAngle - endEntryAngle));
+        if (angleDiff > 5.0) return null; // 5° tolerance
+
+        // Check if line from start to end is aligned with start angle
+        double dx = endX - startX;
+        double dy = endY - startY;
+        double distance = Math.Sqrt(dx * dx + dy * dy);
+        if (distance < 1.0) return null; // Too close
+
+        double lineAngle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+        double lineAngleDiff = Math.Abs(AngleUtilities.NormalizeAngle(lineAngle - startAngle));
+        if (lineAngleDiff > 5.0) return null; // Line not aligned with start direction
+
+        // Check if path is blocked
+        if (_router.PathfindingGrid != null && IsLineBlocked(startX, startY, endX, endY))
+            return null;
+
+        // Create straight segment
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(startX, startY, endX, endY, startAngle));
+        return path;
     }
 }
