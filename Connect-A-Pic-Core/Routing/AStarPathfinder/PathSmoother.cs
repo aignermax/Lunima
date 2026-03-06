@@ -12,12 +12,14 @@ public class PathSmoother
     private readonly PathfindingGrid _grid;
     private readonly double _minBendRadius;
     private readonly BendBuilder _bendBuilder;
+    private readonly SBendBuilder _sBendBuilder;
 
     public PathSmoother(PathfindingGrid grid, double minBendRadius, List<double>? allowedRadii = null)
     {
         _grid = grid;
         _minBendRadius = minBendRadius;
         _bendBuilder = new BendBuilder(minBendRadius, allowedRadii);
+        _sBendBuilder = new SBendBuilder(_bendBuilder, minBendRadius);
     }
 
     /// <summary>
@@ -92,32 +94,31 @@ public class PathSmoother
                 continue;
             }
 
-            // Check if there's enough room for a bend. If not, mark as invalid geometry.
+            // Check if there's enough room for proper Manhattan routing.
+            // If components are too close, use smooth S-bend fallback instead.
             double effectiveBendRadius = _minBendRadius;
+            bool useSBendFallback = false;
 
-            // For ALL turns: validate if we have enough space for the bend
-            if (willTurn && projectedDistance < _minBendRadius)
+            // Detect tight space: not enough room for two 90° bends
+            if (willTurn && projectedDistance < _minBendRadius * 2)
             {
-                if (projectedDistance > 0.5)
+                // Check if we're near the end and should use S-bend to reach pin smoothly
+                double distanceToEnd = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
+
+                if (distanceToEnd < _minBendRadius * 4 && i >= corners.Count - 2)
                 {
-                    // Try to find a smaller allowed radius
+                    // Too close for Manhattan routing - use smooth S-bend to end pin
+                    useSBendFallback = true;
+                }
+                else if (projectedDistance < _minBendRadius && i == lastTurnIndex)
+                {
+                    // Last turn is tight - try smaller radius
                     effectiveBendRadius = _bendBuilder.FindLargestRadiusAtMost(projectedDistance);
                     if (effectiveBendRadius < 0.5)
                     {
-                        // No valid bend radius available - components too close
-                        routedPath.IsInvalidGeometry = true;
+                        // Even smallest radius doesn't fit - use S-bend
+                        useSBendFallback = true;
                     }
-                }
-                else
-                {
-                    // Distance too short for any bend - mark as invalid
-                    routedPath.IsInvalidGeometry = true;
-                }
-
-                // For the last turn, use the reduced radius to align with pin
-                if (i == lastTurnIndex && effectiveBendRadius >= 0.5)
-                {
-                    // Keep the reduced radius for proper pin alignment
                 }
             }
 
@@ -148,23 +149,40 @@ public class PathSmoother
             // Add bend at corner if direction changes
             if (willTurn)
             {
-                double? radiusOverride = (effectiveBendRadius < _minBendRadius)
-                    ? effectiveBendRadius : null;
-                var bend = _bendBuilder.BuildBend(x, y, currentAngle, newAngle,
-                    BendMode.Cardinal90, radiusOverride);
-                if (bend != null)
+                if (useSBendFallback)
                 {
-                    routedPath.Segments.Add(bend);
-                    x = bend.EndPoint.X;
-                    y = bend.EndPoint.Y;
+                    // Use smooth S-bend to reach end pin (components too close for Manhattan)
+                    bool sBendSuccess = _sBendBuilder.TryBuildApproachSBend(
+                        routedPath, ref x, ref y, ref currentAngle,
+                        endX, endY, endEntryAngle);
+
+                    if (sBendSuccess)
+                    {
+                        // S-bend connected to end pin - we're done
+                        break;
+                    }
+                    else
+                    {
+                        // S-bend failed - fall through to regular bend with small radius
+                        useSBendFallback = false;
+                    }
                 }
-                else
+
+                if (!useSBendFallback)
                 {
-                    // BuildBend failed - no valid geometry exists
-                    // This creates a sharp corner (invalid for manufacturing)
-                    routedPath.IsInvalidGeometry = true;
+                    // Standard Manhattan bend
+                    double? radiusOverride = (effectiveBendRadius < _minBendRadius)
+                        ? effectiveBendRadius : null;
+                    var bend = _bendBuilder.BuildBend(x, y, currentAngle, newAngle,
+                        BendMode.Cardinal90, radiusOverride);
+                    if (bend != null)
+                    {
+                        routedPath.Segments.Add(bend);
+                        x = bend.EndPoint.X;
+                        y = bend.EndPoint.Y;
+                    }
+                    currentAngle = newAngle; // Update current direction
                 }
-                currentAngle = newAngle; // Update current direction
             }
         }
 
