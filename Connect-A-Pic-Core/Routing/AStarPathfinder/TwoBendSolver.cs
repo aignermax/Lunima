@@ -69,18 +69,49 @@ public class TwoBendSolver
     /// <summary>
     /// Attempts to construct a two-bend path with specified bend directions.
     /// Solves the biarc problem: find two tangent circular arcs connecting two poses.
+    /// Tries multiple radii to find a valid solution.
     /// </summary>
     private RoutedPath? TryBuildTwoBendPath(
         double startX, double startY, double startAngle,
         double endX, double endY, double endEntryAngle,
         double firstBendDir, double secondBendDir)
     {
-        // Select bend radius
-        double radius = _minBendRadius;
+        // Try multiple radii - small radii often fail because circles can't intersect
+        var radiiToTry = new List<double>();
+
         if (_allowedRadii.Count > 0)
         {
-            radius = _allowedRadii.Where(r => r >= _minBendRadius).DefaultIfEmpty(_minBendRadius).First();
+            // Use allowed radii in increasing order
+            radiiToTry.AddRange(_allowedRadii.Where(r => r >= _minBendRadius).OrderBy(r => r));
         }
+        else
+        {
+            // Try min radius, then 1.5x, 2x, 3x multiples
+            radiiToTry.Add(_minBendRadius);
+            radiiToTry.Add(_minBendRadius * 1.5);
+            radiiToTry.Add(_minBendRadius * 2.0);
+            radiiToTry.Add(_minBendRadius * 3.0);
+        }
+
+        foreach (var radius in radiiToTry)
+        {
+            var path = TryBuildWithRadius(startX, startY, startAngle, endX, endY, endEntryAngle,
+                                          firstBendDir, secondBendDir, radius);
+            if (path != null)
+                return path;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Attempts to build a two-bend path with a specific radius.
+    /// </summary>
+    private RoutedPath? TryBuildWithRadius(
+        double startX, double startY, double startAngle,
+        double endX, double endY, double endEntryAngle,
+        double firstBendDir, double secondBendDir, double radius)
+    {
 
         // Calculate first bend center (perpendicular to start direction)
         double startRad = startAngle * Math.PI / 180.0;
@@ -101,65 +132,99 @@ public class TwoBendSolver
         double dy = c2Y - c1Y;
         double centerDistance = Math.Sqrt(dx * dx + dy * dy);
 
-        // Solve for the junction point where the two arcs meet tangentially
-        double junctionX, junctionY, junctionAngle;
+        // Solve for the junction point using circle-circle intersection
+        // The two arcs meet where the two circles (both radius R) intersect
 
-        if (firstBendDir == secondBendDir)
+        if (centerDistance < 0.1)
         {
-            // Same direction bends (CC or ⊂⊂)
-            // The two circles must be externally tangent
-            // Junction point lies on the line between centers
+            // Centers coincide - degenerate case
+            return null;
+        }
 
-            // For external tangency with equal radii, distance should be 2R
-            // But we don't strictly require this - we compute the junction and validate
-            if (centerDistance < 0.1)
-            {
-                // Centers coincide - degenerate case
-                return null;
-            }
+        // For same-direction bends: circles must be externally tangent or separate
+        // For opposite-direction bends: circles can overlap
 
-            // Junction point is on the line between centers
-            // For same-direction bends, it's between the centers
-            double t = radius / centerDistance;
-            junctionX = c1X + dx * t;
-            junctionY = c1Y + dy * t;
+        // Check if circles can intersect
+        // For equal radii R: intersection exists if 0 < d < 2R
+        if (centerDistance > 2.0 * radius + 0.01)
+        {
+            // Circles too far apart - no intersection
+            return null;
+        }
 
+        // Compute circle-circle intersection points
+        // Using standard formula:
+        // a = d/2 (for equal radii)
+        // h = sqrt(R² - a²)
+        // midpoint = C1 + (C2 - C1) * 0.5
+        // junction = midpoint ± perpendicular * h
+
+        double a = centerDistance / 2.0;
+        double hSquared = radius * radius - a * a;
+
+        if (hSquared < 0)
+        {
+            // Circles don't intersect (happens when d > 2R)
+            return null;
+        }
+
+        double h = Math.Sqrt(hSquared);
+
+        // Midpoint between centers
+        double midX = c1X + dx * 0.5;
+        double midY = c1Y + dy * 0.5;
+
+        // Perpendicular vector to line between centers
+        double perpX = -dy / centerDistance;
+        double perpY = dx / centerDistance;
+
+        // Two possible intersection points
+        double junction1X = midX + perpX * h;
+        double junction1Y = midY + perpY * h;
+
+        double junction2X = midX - perpX * h;
+        double junction2Y = midY - perpY * h;
+
+        // Try both junction points and pick the one that produces valid arcs
+        var candidates = new[]
+        {
+            (junction1X, junction1Y),
+            (junction2X, junction2Y)
+        };
+
+        foreach (var (junctionX, junctionY) in candidates)
+        {
             // Calculate tangent angle at junction
             // The tangent is perpendicular to the line from center to junction
             double angleToJunction = Math.Atan2(junctionY - c1Y, junctionX - c1X) * 180.0 / Math.PI;
-            junctionAngle = angleToJunction + (firstBendDir > 0 ? 90 : -90);
-        }
-        else
-        {
-            // Opposite direction bends (S-bend: C⊃ or ⊃C)
-            // This is the MOST COMMON case in photonic routing!
+            double junctionAngle = angleToJunction + (firstBendDir > 0 ? 90 : -90);
 
-            // For opposite curvatures, the junction point lies on the external line
-            // connecting the two circles (not between centers, but on opposite sides)
+            // Try to build arcs with this junction
+            var result = TryBuildArcsWithJunction(
+                startAngle,
+                endX, endY, endEntryAngle,
+                c1X, c1Y, c2X, c2Y, radius,
+                junctionAngle,
+                firstBendDir, secondBendDir);
 
-            if (centerDistance < 0.1)
-            {
-                // Centers coincide - degenerate case
-                return null;
-            }
-
-            // The junction point is on the line between centers, outside the segment
-            // For opposite directions: distance from C1 to junction = radius
-            // But junction extends beyond or before the center line
-
-            // Vector from C1 toward C2
-            double unitX = dx / centerDistance;
-            double unitY = dy / centerDistance;
-
-            // Junction point: extend from C1 along the line toward C2 by radius
-            junctionX = c1X + unitX * radius;
-            junctionY = c1Y + unitY * radius;
-
-            // Calculate tangent angle at junction
-            double angleToJunction = Math.Atan2(junctionY - c1Y, junctionX - c1X) * 180.0 / Math.PI;
-            junctionAngle = angleToJunction + (firstBendDir > 0 ? 90 : -90);
+            if (result != null)
+                return result;
         }
 
+        // Neither intersection point worked
+        return null;
+    }
+
+    /// <summary>
+    /// Attempts to build arc segments with a specific junction point.
+    /// </summary>
+    private RoutedPath? TryBuildArcsWithJunction(
+        double startAngle,
+        double endX, double endY, double endEntryAngle,
+        double c1X, double c1Y, double c2X, double c2Y, double radius,
+        double junctionAngle,
+        double firstBendDir, double secondBendDir)
+    {
         // Compute sweep angles
         double sweep1 = AngleUtilities.NormalizeAngle(junctionAngle - startAngle);
         double sweep2 = AngleUtilities.NormalizeAngle(endEntryAngle - junctionAngle);
