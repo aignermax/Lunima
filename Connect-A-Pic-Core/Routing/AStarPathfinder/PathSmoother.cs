@@ -93,12 +93,25 @@ public class PathSmoother
             }
 
             // At the last turning corner, if there isn't enough room for the standard
-            // bend radius, use a smaller allowed radius to avoid overshooting the pin axis.
+            // bend radius, check if we can use a smaller allowed radius.
+            // If not possible, mark path as invalid geometry.
             double effectiveBendRadius = _minBendRadius;
-            if (i == lastTurnIndex && willTurn && projectedDistance < _minBendRadius
-                && projectedDistance > 0.5)
+            if (i == lastTurnIndex && willTurn && projectedDistance < _minBendRadius)
             {
-                effectiveBendRadius = _bendBuilder.FindLargestRadiusAtMost(projectedDistance);
+                if (projectedDistance > 0.5)
+                {
+                    effectiveBendRadius = _bendBuilder.FindLargestRadiusAtMost(projectedDistance);
+                    if (effectiveBendRadius < 0.5)
+                    {
+                        // No valid bend radius available - components too close
+                        routedPath.IsInvalidGeometry = true;
+                    }
+                }
+                else
+                {
+                    // Distance too short for any bend
+                    routedPath.IsInvalidGeometry = true;
+                }
             }
 
             // Calculate how far to go straight (leave room for bend if turning)

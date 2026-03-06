@@ -637,7 +637,7 @@ public class DesignCanvas : Control
                 ? PowerFlowRenderer.CreatePowerPen(flow, vm.PowerFlowVisualizer.FadeThresholdDb)
                 : new Pen(new SolidColorBrush(Color.FromArgb(40, 80, 80, 120)), 1);
         }
-        else if (conn.IsBlockedFallback)
+        else if (conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true)
         {
             // Red dashed line for blocked/invalid paths
             waveguidePen = new Pen(Brushes.Red, 2)

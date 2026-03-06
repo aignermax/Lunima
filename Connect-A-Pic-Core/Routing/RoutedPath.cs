@@ -16,6 +16,12 @@ public class RoutedPath
     public bool IsBlockedFallback { get; set; } = false;
 
     /// <summary>
+    /// Indicates if this path has invalid geometry (e.g., segments too short for minimum bend radius).
+    /// When true, the path violates physical constraints and should be displayed as an error (red).
+    /// </summary>
+    public bool IsInvalidGeometry { get; set; } = false;
+
+    /// <summary>
     /// Debug information: The raw A* grid path used to generate this path.
     /// Only populated when A* routing is used.
     /// </summary>
