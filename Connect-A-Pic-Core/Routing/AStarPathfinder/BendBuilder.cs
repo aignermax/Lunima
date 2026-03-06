@@ -41,6 +41,26 @@ public class BendBuilder
     }
 
     /// <summary>
+    /// Finds the largest allowed radius that fits within the given distance.
+    /// Returns 0 if no radius fits.
+    /// </summary>
+    /// <param name="maxDistance">Maximum available distance in micrometers.</param>
+    /// <returns>Largest fitting radius, or 0 if none fits.</returns>
+    public double FindLargestRadiusAtMost(double maxDistance)
+    {
+        if (_allowedRadii.Count == 0)
+            return maxDistance >= _minBendRadius ? _minBendRadius : 0;
+
+        double best = 0;
+        foreach (var r in _allowedRadii)
+        {
+            if (r <= maxDistance)
+                best = r;
+        }
+        return best;
+    }
+
+    /// <summary>
     /// Builds a bend segment from current position and angle to target angle.
     /// </summary>
     /// <param name="x">Current X position (micrometers)</param>
@@ -48,9 +68,10 @@ public class BendBuilder
     /// <param name="fromAngle">Current angle (degrees)</param>
     /// <param name="toAngle">Target angle (degrees)</param>
     /// <param name="mode">Bend mode (Cardinal90, Flexible, Limited45)</param>
+    /// <param name="radiusOverride">Optional radius override (null = use default min radius).</param>
     /// <returns>Bend segment, or null if no bend needed</returns>
     public BendSegment? BuildBend(double x, double y, double fromAngle, double toAngle,
-                                   BendMode mode = BendMode.Cardinal90)
+                                   BendMode mode = BendMode.Cardinal90, double? radiusOverride = null)
     {
         double sweepAngle = AngleUtilities.NormalizeAngle(toAngle - fromAngle);
 
@@ -68,7 +89,7 @@ public class BendBuilder
             return null;
 
         // Select appropriate radius
-        double radius = SelectRadius(_minBendRadius);
+        double radius = radiusOverride ?? SelectRadius(_minBendRadius);
 
         // Calculate bend direction
         double bendDir = Math.Sign(sweepAngle);

@@ -100,13 +100,8 @@ public class WaveguideRouter
         _hierarchicalPathfinder.BuildSectorGraph(sectorSizeCells);
         CostCalculator.DistanceTransformGrid = _hierarchicalPathfinder.DistanceTransform;
 
-        // Wire DT incremental updates to obstacle manager callbacks
-        var dt = _hierarchicalPathfinder.DistanceTransform;
-        var grid = PathfindingGrid;
-        grid.ObstacleManager.OnWaveguideCellsAdded = cells =>
-            dt?.AddWaveguideCells(cells);
-        grid.ObstacleManager.OnAllWaveguidesCleared = () =>
-            dt?.Rebuild(grid);
+        // NOTE: DT incremental updates via ObstacleManager callbacks removed.
+        // HPA* is not yet activated (see DesignCanvasViewModel note).
     }
 
     /// <summary>

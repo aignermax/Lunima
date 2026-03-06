@@ -54,6 +54,11 @@ public partial class MainViewModel : ObservableObject
     public SimulationService Simulation { get; }
     public ParameterSweepViewModel Sweep { get; } = new();
 
+    /// <summary>
+    /// ViewModel for the Design Checks panel (validation and navigation of issues).
+    /// </summary>
+    public DesignValidationViewModel DesignValidation { get; } = new();
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
@@ -88,6 +93,7 @@ public partial class MainViewModel : ObservableObject
                     StatusText = routingText;
             }
         };
+        WireDesignValidation();
         LoadComponentLibrary();
     }
 
@@ -602,6 +608,59 @@ public partial class MainViewModel : ObservableObject
     {
         Canvas.PanX = 0;
         Canvas.PanY = 0;
+    }
+
+    /// <summary>
+    /// Runs design validation on all waveguide connections and populates the Design Checks panel.
+    /// </summary>
+    [RelayCommand]
+    private void RunDesignChecks()
+    {
+        var connections = Canvas.Connections
+            .Select(c => c.Connection)
+            .ToList();
+
+        DesignValidation.RunValidation(connections);
+        StatusText = DesignValidation.StatusText;
+    }
+
+    /// <summary>
+    /// Wires up navigation and highlighting callbacks for the DesignValidation ViewModel.
+    /// </summary>
+    private void WireDesignValidation()
+    {
+        DesignValidation.NavigateToPosition = (x, y) =>
+        {
+            NavigateCanvasTo(x, y);
+        };
+
+        DesignValidation.HighlightConnection = (connection) =>
+        {
+            foreach (var conn in Canvas.Connections)
+            {
+                conn.IsSelected = conn.Connection == connection;
+            }
+        };
+    }
+
+    /// <summary>
+    /// Callback to get the current canvas viewport size (width, height) in screen pixels.
+    /// Set by the View code-behind (MainWindow) after initialization.
+    /// </summary>
+    public Func<(double width, double height)>? GetViewportSize { get; set; }
+
+    /// <summary>
+    /// Pans the canvas so the given coordinate (in micrometers) is centered in view.
+    /// Preserves the current zoom level.
+    /// </summary>
+    /// <param name="centerX">X coordinate in micrometers to center on.</param>
+    /// <param name="centerY">Y coordinate in micrometers to center on.</param>
+    private void NavigateCanvasTo(double centerX, double centerY)
+    {
+        var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);
+
+        Canvas.PanX = vpWidth / 2 - centerX * ZoomLevel;
+        Canvas.PanY = vpHeight / 2 - centerY * ZoomLevel;
     }
 
     /// <summary>
