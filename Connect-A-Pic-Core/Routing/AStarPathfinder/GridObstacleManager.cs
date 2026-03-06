@@ -15,14 +15,12 @@ public class GridObstacleManager
     private readonly HashSet<(int x, int y)> _pinZoneCells = new();
 
     /// <summary>
-    /// Called after waveguide cells are added, passing the newly marked cells
-    /// so the DistanceTransform can run incremental BFS.
+    /// Called after waveguide cells are added, passing the newly marked cells.
     /// </summary>
     public Action<IEnumerable<(int x, int y)>>? OnWaveguideCellsAdded { get; set; }
 
     /// <summary>
-    /// Called after all waveguide obstacles are cleared,
-    /// signaling a full DistanceTransform rebuild is needed.
+    /// Called after all waveguide obstacles are cleared.
     /// </summary>
     public Action? OnAllWaveguidesCleared { get; set; }
 

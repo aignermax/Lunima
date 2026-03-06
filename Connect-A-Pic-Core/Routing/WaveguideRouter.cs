@@ -71,8 +71,6 @@ public class WaveguideRouter
         CostCalculator.CellSizeMicrometers = size;
         CostCalculator.MinBendRadiusMicrometers = MinBendRadiusMicrometers;
         CostCalculator.MinStraightRunCells = (int)Math.Ceiling(MinBendRadiusMicrometers * 2 / size);
-
-        CostCalculator.DistanceTransformGrid = null;
     }
 
 

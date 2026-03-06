@@ -66,11 +66,7 @@ public class RoutingCostCalculator
     /// </summary>
     public double PinZoneCostPenalty { get; set; } = 30.0;
 
-    /// <summary>
-    /// Precomputed distance transform for O(1) proximity cost lookups.
-    /// When set, CalculateProximityCost uses this instead of brute-force scanning.
-    /// </summary>
-    public DistanceTransform? DistanceTransformGrid { get; set; }
+    // Distance transform removed - was only used by HPA* which has been deleted
 
     /// <summary>
     /// Calculates the cost to move from one node to an adjacent cell.
@@ -159,16 +155,7 @@ public class RoutingCostCalculator
     /// <returns>Additional cost penalty (0 if far from obstacles)</returns>
     public double CalculateProximityCost(PathfindingGrid grid, int x, int y)
     {
-        // Fast path: use precomputed distance transform (O(1) lookup)
-        if (DistanceTransformGrid != null)
-        {
-            double dist = DistanceTransformGrid.GetDistanceMicrometers(x, y);
-            if (dist >= MinSafeSpacingMicrometers) return 0;
-            double proximityRatio = 1.0 - (dist / MinSafeSpacingMicrometers);
-            return proximityRatio * ProximityCostMultiplier;
-        }
-
-        // Fallback: brute-force scan (O(N²) where N = search radius)
+        // Use brute-force scan (distance transform was removed with HPA*)
         return CalculateProximityCostBruteForce(grid, x, y);
     }
 
