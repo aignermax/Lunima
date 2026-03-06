@@ -42,6 +42,7 @@ public class WaveguideRouter
     public RoutingCostCalculator CostCalculator { get; } = new();
 
     private HierarchicalPathfinder? _hierarchicalPathfinder;
+    private TwoBendSolver? _twoBendSolver;
 
     /// <summary>
     /// Grid cell size in micrometers for A* pathfinding.
@@ -127,10 +128,13 @@ public class WaveguideRouter
 
     /// <summary>
     /// Routes a waveguide between two pins.
-    /// Tries two-bend connection, then A* pathfinding, then Manhattan fallback.
+    /// Tries two-bend geometric solution first, then falls back to A* pathfinding.
+    /// Returns invalid path if both fail (no Manhattan fallback for photonic routing).
     /// </summary>
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin)
     {
+        Console.WriteLine($"[WaveguideRouter] Routing from {startPin.Name} to {endPin.Name}");
+
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
         double startAngle = startPin.GetAbsoluteAngle();
@@ -138,36 +142,40 @@ public class WaveguideRouter
 
         double endInputAngle = AngleUtilities.NormalizeAngle(endAngle + 180);
 
+        // Initialize two-bend solver if needed
+        _twoBendSolver ??= new TwoBendSolver(MinBendRadiusMicrometers, AllowedBendRadii, this);
+
         // Try two-bend connection first (simple geometric solution)
-        var twoBendSolver = new TwoBendSolver(MinBendRadiusMicrometers, AllowedBendRadii, this);
-        var twoBendPath = twoBendSolver.TryTwoBendConnection(startPin, endPin);
+        var twoBendPath = _twoBendSolver.TryTwoBendConnection(startPin, endPin);
         if (twoBendPath != null)
         {
+            Console.WriteLine("[WaveguideRouter] Two-bend solver succeeded!");
             return twoBendPath;
         }
 
         // Fall back to A* pathfinding
+        Console.WriteLine("[WaveguideRouter] Two-bend failed, trying A*...");
         if (PathfindingGrid != null)
         {
             var astarPath = new RoutedPath();
             if (TryRouteAStar(startX, startY, startAngle, endX, endY, endInputAngle,
                               astarPath, startPin, endPin))
             {
-                if (astarPath.IsValid) return astarPath;
+                if (astarPath.IsValid)
+                {
+                    Console.WriteLine("[WaveguideRouter] A* succeeded!");
+                    return astarPath;
+                }
             }
         }
 
-        // Final fallback to Manhattan router
-        var path = new RoutedPath();
-        var manhattan = new ManhattanRouter(MinBendRadiusMicrometers);
-        manhattan.Route(startX, startY, startAngle, endX, endY, endInputAngle, path);
-
-        if (PathfindingGrid != null || path.Segments.Count == 0 || !path.IsValid)
+        // No Manhattan fallback - return invalid path
+        Console.WriteLine("[WaveguideRouter] All routing strategies failed, returning invalid path");
+        var invalidPath = new RoutedPath
         {
-            path.IsBlockedFallback = true;
-        }
-
-        return path;
+            IsInvalidGeometry = true
+        };
+        return invalidPath;
     }
 
     /// <summary>
