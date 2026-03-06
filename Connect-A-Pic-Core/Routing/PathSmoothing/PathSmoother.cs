@@ -56,13 +56,14 @@ public class PathSmoother
         var corners = _waypointExtractor.ExtractCorners(gridPath);
         int lastTurnIndex = _waypointExtractor.FindLastTurningCorner(corners, currentAngle);
 
-        // Process Manhattan routing through corners
+        // Process Manhattan routing through corners UP TO last turn
+        // Terminal connector will handle geometry from last turn to end pin
         ProcessManhattanSegments(
             routedPath, corners, lastTurnIndex,
             ref x, ref y, ref currentAngle,
             endX, endY);
 
-        Console.WriteLine($"[PathSmoother] After Manhattan processing: at ({x:F1},{y:F1}) @ {currentAngle}°, need to reach ({endX:F1},{endY:F1})");
+        Console.WriteLine($"[PathSmoother] After Manhattan processing: at ({x:F2}, {y:F2}) @ {currentAngle:F1}°, need to reach ({endX:F2}, {endY:F2})");
 
         // Geometric terminal approach with strict validation
         bool terminalSuccess = _terminalConnector.AppendTerminalApproach(
@@ -85,6 +86,7 @@ public class PathSmoother
     /// <summary>
     /// Processes Manhattan routing segments through extracted corners.
     /// Inserts straight segments and 90-degree bends.
+    /// Stops at lastTurnIndex to let TerminalConnector handle final approach.
     /// </summary>
     private void ProcessManhattanSegments(
         RoutedPath routedPath,
@@ -96,6 +98,8 @@ public class PathSmoother
         double endX,
         double endY)
     {
+        // Process all corners in Manhattan routing
+        // TerminalConnector will handle any remaining distance + angle correction
         for (int i = 1; i < corners.Count; i++)
         {
             var (cornerX, cornerY) = _grid.GridToPhysical(corners[i].X, corners[i].Y);
@@ -103,14 +107,7 @@ public class PathSmoother
             double newAngle = AngleUtilities.DirectionToAngle(newDirection);
             bool willTurn = !AngleUtilities.IsAngleClose(currentAngle, newAngle);
 
-            // Snap last turning corner to end pin axis
-            if (i == lastTurnIndex)
-            {
-                if (newAngle == 0 || newAngle == 180)
-                    cornerY = endY;
-                else if (newAngle == 90 || newAngle == 270)
-                    cornerX = endX;
-            }
+            Console.WriteLine($"[PathSmoother] Processing corner {i}: grid({corners[i].X},{corners[i].Y}) phys({cornerX:F1},{cornerY:F1}) dir={newDirection} angle={newAngle}°");
 
             double dx = cornerX - x;
             double dy = cornerY - y;
@@ -122,7 +119,23 @@ public class PathSmoother
             double angleRad = currentAngle * Math.PI / 180;
             double dot = dx * Math.Cos(angleRad) + dy * Math.Sin(angleRad);
             if (dot < -0.01 && !willTurn)
+            {
+                Console.WriteLine($"[PathSmoother]   Skipping - backward movement (dot={dot:F2})");
                 continue; // Skip backward movement
+            }
+
+            // Check if processing this corner would overshoot the end pin
+            double distanceFromCornerToEnd = Math.Sqrt(
+                Math.Pow(endX - cornerX, 2) + Math.Pow(endY - cornerY, 2));
+            double distanceFromCurrentToEnd = Math.Sqrt(
+                Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
+
+            // If corner is further from end than current position, skip it
+            if (distanceFromCornerToEnd > distanceFromCurrentToEnd && !willTurn)
+            {
+                Console.WriteLine($"[PathSmoother]   Skipping - would overshoot (corner-to-end={distanceFromCornerToEnd:F1} vs current-to-end={distanceFromCurrentToEnd:F1})");
+                continue;
+            }
 
             // Calculate straight segment length (reserve space for bend if turning)
             double straightDistance = willTurn
@@ -136,6 +149,7 @@ public class PathSmoother
                 double endStraightX = isHorizontal ? x + dirSign * straightDistance : x;
                 double endStraightY = isVertical ? y + dirSign * straightDistance : y;
 
+                Console.WriteLine($"[PathSmoother]   Adding straight: ({x:F1},{y:F1})→({endStraightX:F1},{endStraightY:F1}) len={straightDistance:F1}");
                 routedPath.Segments.Add(new StraightSegment(x, y, endStraightX, endStraightY, currentAngle));
                 x = endStraightX;
                 y = endStraightY;
@@ -144,14 +158,30 @@ public class PathSmoother
             // Insert 90-degree bend if direction changes
             if (willTurn)
             {
+                Console.WriteLine($"[PathSmoother]   Considering bend: {currentAngle}° → {newAngle}°");
                 var bend = _bendBuilder.BuildBend(x, y, currentAngle, newAngle, BendMode.Cardinal90);
                 if (bend != null)
                 {
+                    // Check if bend endpoint would overshoot the end pin
+                    double distBeforeBend = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
+                    double distAfterBend = Math.Sqrt(Math.Pow(endX - bend.EndPoint.X, 2) + Math.Pow(endY - bend.EndPoint.Y, 2));
+
+                    if (distAfterBend > distBeforeBend)
+                    {
+                        Console.WriteLine($"[PathSmoother]   Skipping bend - would overshoot (dist before={distBeforeBend:F1} after={distAfterBend:F1})");
+                        break; // Stop processing corners, let TerminalConnector handle the rest
+                    }
+
                     routedPath.Segments.Add(bend);
+                    Console.WriteLine($"[PathSmoother]   Bend endpoint: ({bend.EndPoint.X:F1},{bend.EndPoint.Y:F1})");
                     x = bend.EndPoint.X;
                     y = bend.EndPoint.Y;
+                    currentAngle = newAngle;
                 }
-                currentAngle = newAngle;
+                else
+                {
+                    currentAngle = newAngle;
+                }
             }
         }
     }

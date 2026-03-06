@@ -132,6 +132,135 @@ public class TerminalConnector
             Console.WriteLine($"[TerminalConnector] STRATEGY 3 SKIPPED: distance too large");
         }
 
+        // STRATEGY 4: Close-range turn + straight (for perpendicular final approaches)
+        Console.WriteLine($"[TerminalConnector] STRATEGY 4: Trying close-range turn + straight");
+        double angleDiff = Math.Abs(AngleUtilities.NormalizeAngle(endEntryAngle - currentAngle));
+        if (distance < _minBendRadius * 2 && angleDiff > 45 && angleDiff < 135)
+        {
+            // Perpendicular or near-perpendicular approach with limited space
+            // Use tightest possible bend radius (minBendRadius / 2 if very tight)
+            double tightRadius = distance < _minBendRadius ? _minBendRadius * 0.5 : _minBendRadius;
+            Console.WriteLine($"[TerminalConnector] Using tight radius={tightRadius:F1}µm for close-range turn");
+
+            var finalBend = _bendBuilder.BuildBend(x, y, currentAngle, endEntryAngle, BendMode.Flexible, tightRadius);
+            if (finalBend != null)
+            {
+                path.Segments.Add(finalBend);
+                x = finalBend.EndPoint.X;
+                y = finalBend.EndPoint.Y;
+                currentAngle = endEntryAngle;
+
+                double remainingDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
+                Console.WriteLine($"[TerminalConnector] After bend: at ({x:F2},{y:F2}), {remainingDist:F2}µm from target");
+
+                if (remainingDist > 0.1)
+                {
+                    // Calculate actual angle from current position to target
+                    double actualAngle = Math.Atan2(endY - y, endX - x) * 180 / Math.PI;
+                    actualAngle = AngleUtilities.NormalizeAngle(actualAngle);
+
+                    double angleError = Math.Abs(AngleUtilities.NormalizeAngle(actualAngle - endEntryAngle));
+                    Console.WriteLine($"[TerminalConnector] Final segment: declared={endEntryAngle:F1}° actual={actualAngle:F1}° error={angleError:F1}°");
+
+                    // Only accept if angle error is small (G1 continuity requirement)
+                    if (angleError > 5)
+                    {
+                        Console.WriteLine($"[TerminalConnector] STRATEGY 4 FAILED: Angle error too large ({angleError:F1}°)");
+                        return false;
+                    }
+
+                    // Use actual angle for the segment
+                    path.Segments.Add(new StraightSegment(x, y, endX, endY, actualAngle));
+                    x = endX;
+                    y = endY;
+                    currentAngle = actualAngle;
+                }
+
+                Console.WriteLine($"[TerminalConnector] STRATEGY 4 SUCCESS");
+                return true;
+            }
+        }
+
+        // STRATEGY 5: Tiny S-bend for very close same-direction pins with lateral offset
+        if (distance < _minBendRadius && Math.Abs(AngleUtilities.NormalizeAngle(endEntryAngle - currentAngle)) < 10)
+        {
+            Console.WriteLine($"[TerminalConnector] STRATEGY 5: Trying tiny S-bend for close same-direction pins");
+            // Use half the minimum radius for these extremely tight cases
+            double tinyRadius = _minBendRadius * 0.5;
+            double lateralShift = Math.Abs(lateralOffset);
+
+            if (lateralShift > 0.5 && forwardDistance > tinyRadius)
+            {
+                // Calculate bend angle for the lateral shift
+                double bendAngle = Math.Atan2(lateralShift, forwardDistance) * 180 / Math.PI;
+                bendAngle = Math.Clamp(bendAngle, 15, 60);
+                double bendSign = Math.Sign(lateralOffset);
+
+                // First bend (toward offset direction)
+                double midAngle = AngleUtilities.NormalizeAngle(currentAngle + bendAngle * bendSign);
+                var bend1 = _bendBuilder.BuildBend(x, y, currentAngle, midAngle, BendMode.Flexible, tinyRadius);
+                if (bend1 != null)
+                {
+                    path.Segments.Add(bend1);
+                    x = bend1.EndPoint.X;
+                    y = bend1.EndPoint.Y;
+                    currentAngle = midAngle;
+
+                    // Calculate remaining distance and angle to target
+                    double remainingDx = endX - x;
+                    double remainingDy = endY - y;
+                    double remainingDist = Math.Sqrt(remainingDx * remainingDx + remainingDy * remainingDy);
+
+                    if (remainingDist > 0.5)
+                    {
+                        // Add short straight if there's room
+                        double straightDist = Math.Min(remainingDist * 0.4, tinyRadius);
+                        if (straightDist > 0.5)
+                        {
+                            double angleRad = currentAngle * Math.PI / 180;
+                            double straightEndX = x + straightDist * Math.Cos(angleRad);
+                            double straightEndY = y + straightDist * Math.Sin(angleRad);
+                            path.Segments.Add(new StraightSegment(x, y, straightEndX, straightEndY, currentAngle));
+                            x = straightEndX;
+                            y = straightEndY;
+                        }
+
+                        // Second bend (back to target angle)
+                        var bend2 = _bendBuilder.BuildBend(x, y, currentAngle, endEntryAngle, BendMode.Flexible, tinyRadius);
+                        if (bend2 != null)
+                        {
+                            path.Segments.Add(bend2);
+                            x = bend2.EndPoint.X;
+                            y = bend2.EndPoint.Y;
+                            currentAngle = endEntryAngle;
+                        }
+
+                        // Final straight to exact target
+                        double finalDist = Math.Sqrt(Math.Pow(endX - x, 2) + Math.Pow(endY - y, 2));
+                        if (finalDist > 0.1)
+                        {
+                            double finalAngle = Math.Atan2(endY - y, endX - x) * 180 / Math.PI;
+                            double angleError = Math.Abs(AngleUtilities.NormalizeAngle(finalAngle - endEntryAngle));
+
+                            // Check G1 continuity (bend should end aligned with target direction)
+                            if (angleError > 5)
+                            {
+                                Console.WriteLine($"[TerminalConnector] STRATEGY 5 FAILED: Final angle error {angleError:F1}°");
+                                return false;
+                            }
+
+                            path.Segments.Add(new StraightSegment(x, y, endX, endY, finalAngle));
+                            x = endX;
+                            y = endY;
+                        }
+
+                        Console.WriteLine($"[TerminalConnector] STRATEGY 5 SUCCESS");
+                        return true;
+                    }
+                }
+            }
+        }
+
         Console.WriteLine($"[TerminalConnector] ALL STRATEGIES FAILED - cannot solve geometry");
         return false; // Cannot solve geometry
     }
