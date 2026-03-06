@@ -92,14 +92,15 @@ public class PathSmoother
                 continue;
             }
 
-            // At the last turning corner, if there isn't enough room for the standard
-            // bend radius, check if we can use a smaller allowed radius.
-            // If not possible, mark path as invalid geometry.
+            // Check if there's enough room for a bend. If not, mark as invalid geometry.
             double effectiveBendRadius = _minBendRadius;
-            if (i == lastTurnIndex && willTurn && projectedDistance < _minBendRadius)
+
+            // For ALL turns: validate if we have enough space for the bend
+            if (willTurn && projectedDistance < _minBendRadius)
             {
                 if (projectedDistance > 0.5)
                 {
+                    // Try to find a smaller allowed radius
                     effectiveBendRadius = _bendBuilder.FindLargestRadiusAtMost(projectedDistance);
                     if (effectiveBendRadius < 0.5)
                     {
@@ -109,8 +110,14 @@ public class PathSmoother
                 }
                 else
                 {
-                    // Distance too short for any bend
+                    // Distance too short for any bend - mark as invalid
                     routedPath.IsInvalidGeometry = true;
+                }
+
+                // For the last turn, use the reduced radius to align with pin
+                if (i == lastTurnIndex && effectiveBendRadius >= 0.5)
+                {
+                    // Keep the reduced radius for proper pin alignment
                 }
             }
 
@@ -150,6 +157,12 @@ public class PathSmoother
                     routedPath.Segments.Add(bend);
                     x = bend.EndPoint.X;
                     y = bend.EndPoint.Y;
+                }
+                else
+                {
+                    // BuildBend failed - no valid geometry exists
+                    // This creates a sharp corner (invalid for manufacturing)
+                    routedPath.IsInvalidGeometry = true;
                 }
                 currentAngle = newAngle; // Update current direction
             }
