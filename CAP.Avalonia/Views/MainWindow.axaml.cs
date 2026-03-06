@@ -19,6 +19,7 @@ public partial class MainWindow : Window
             {
                 vm.FileDialogService = new FileDialogService(this);
                 vm.Sweep.FileDialogService = vm.FileDialogService;
+                vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.GetViewportSize = () => (
                     DesignCanvasControl.Bounds.Width,
                     DesignCanvasControl.Bounds.Height);
