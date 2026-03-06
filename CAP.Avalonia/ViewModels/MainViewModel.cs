@@ -53,6 +53,7 @@ public partial class MainViewModel : ObservableObject
     public Commands.CommandManager CommandManager { get; }
     public SimulationService Simulation { get; }
     public ParameterSweepViewModel Sweep { get; } = new();
+    public RoutingSettingsViewModel RoutingSettings { get; } = new();
 
     public IFileDialogService? FileDialogService { get; set; }
 
@@ -991,6 +992,45 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusText = $"Load failed: {ex.Message}";
             }
+        }
+    }
+
+    [RelayCommand]
+    private void SetRoutingCellSize(object parameter)
+    {
+        if (parameter is int size)
+        {
+            RoutingSettings.CellSizeMicrometers = size;
+        }
+        else if (parameter is double sizeDouble)
+        {
+            RoutingSettings.CellSizeMicrometers = sizeDouble;
+        }
+        else if (parameter is string sizeStr && double.TryParse(sizeStr, out var parsed))
+        {
+            RoutingSettings.CellSizeMicrometers = parsed;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ApplyRoutingSettings()
+    {
+        try
+        {
+            StatusText = "Applying routing settings...";
+
+            // Apply settings to router and rebuild grid
+            Canvas.ApplyRoutingSettings(RoutingSettings);
+
+            // Re-route all connections with new settings
+            await Canvas.RecalculateRoutesAsync();
+
+            StatusText = $"Routing settings applied: {RoutingSettings.CellSizeMicrometers}µm cells, " +
+                         $"HPA*={(RoutingSettings.UseHierarchicalPathfinding ? "ON" : "OFF")}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to apply routing settings: {ex.Message}";
         }
     }
 
