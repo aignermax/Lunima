@@ -250,17 +250,17 @@
 
                     <TextBlock Text="Presets:" Foreground="Gray" FontSize="10" Margin="0,0,0,3"/>
                     <WrapPanel Margin="0,0,0,10">
-                        <Button Content="2µm" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetRoutingCellSizeCommand}" CommandParameter="2"
+                        <Button Content="2µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="2"
                                 Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="3µm" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetRoutingCellSizeCommand}" CommandParameter="3"
+                        <Button Content="3µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="3"
                                 Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="4µm" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetRoutingCellSizeCommand}" CommandParameter="4"
+                        <Button Content="4µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="4"
                                 Width="45" Margin="2" Background="#4d4d3d" FontSize="9" FontWeight="Bold"/>
-                        <Button Content="5µm" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetRoutingCellSizeCommand}" CommandParameter="5"
+                        <Button Content="5µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="5"
                                 Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="8µm" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetRoutingCellSizeCommand}" CommandParameter="8"
+                        <Button Content="8µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="8"
                                 Width="45" Margin="2" Background="#3d3d3d" FontSize="9"/>
-                        <Button Content="10µm" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SetRoutingCellSizeCommand}" CommandParameter="10"
+                        <Button Content="10µm" Command="{Binding SetRoutingCellSizeCommand}" CommandParameter="10"
                                 Width="48" Margin="2" Background="#3d3d3d" FontSize="9"/>
                     </WrapPanel>
 
