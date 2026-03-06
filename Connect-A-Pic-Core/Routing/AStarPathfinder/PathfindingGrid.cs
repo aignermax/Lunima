@@ -45,6 +45,16 @@ public class PathfindingGrid
     private readonly HashSet<(int x, int y)> _pinZoneCells = new();
 
     /// <summary>
+    /// Callback invoked when waveguide cells are added (for distance transform updates).
+    /// </summary>
+    public Action<HashSet<(int, int)>>? OnWaveguideCellsAdded { get; set; }
+
+    /// <summary>
+    /// Callback invoked when all waveguide obstacles are cleared (for distance transform rebuild).
+    /// </summary>
+    public Action? OnAllWaveguidesCleared { get; set; }
+
+    /// <summary>
     /// Creates a grid covering the specified area.
     /// </summary>
     /// <param name="minX">Minimum X bound in micrometers</param>
@@ -411,6 +421,7 @@ public class PathfindingGrid
         }
 
         _waveguideCells[connectionId] = cells;
+        OnWaveguideCellsAdded?.Invoke(cells);
     }
 
     /// <summary>
@@ -440,6 +451,7 @@ public class PathfindingGrid
         {
             RemoveWaveguideObstacle(connectionId);
         }
+        OnAllWaveguidesCleared?.Invoke();
     }
 
     /// <summary>
