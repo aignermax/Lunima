@@ -149,7 +149,9 @@ public class WaveguideRouter
         }
 
         var path = new RoutedPath();
-        var manhattan = new ManhattanRouter(MinBendRadiusMicrometers);
+        // Use small lead-in/lead-out for smoother transitions (15% of bend radius)
+        double leadLength = MinBendRadiusMicrometers * 0.15;
+        var manhattan = new ManhattanRouter(MinBendRadiusMicrometers, leadOut: leadLength, leadIn: leadLength);
         manhattan.Route(startX, startY, startAngle, endX, endY, endInputAngle, path);
 
         // Check if the Manhattan path is actually blocked or invalid
