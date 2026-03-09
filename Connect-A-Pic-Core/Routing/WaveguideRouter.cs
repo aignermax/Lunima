@@ -152,7 +152,8 @@ public class WaveguideRouter
         var manhattan = new ManhattanRouter(MinBendRadiusMicrometers);
         manhattan.Route(startX, startY, startAngle, endX, endY, endInputAngle, path);
 
-        if (PathfindingGrid != null || path.Segments.Count == 0 || !path.IsValid)
+        // Check if the Manhattan path is actually blocked or invalid
+        if (path.Segments.Count == 0 || !path.IsValid || IsPathBlocked(path.Segments))
         {
             path.IsBlockedFallback = true;
         }
