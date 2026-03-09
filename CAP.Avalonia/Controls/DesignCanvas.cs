@@ -941,6 +941,8 @@ public class DesignCanvas : Control
                 {
                     // Ctrl: Add to selection (keep all others selected)
                     vm.Selection.AddToSelection(_draggingComponent);
+                    // Don't start dragging on Ctrl+click - just modify selection
+                    _draggingComponent = null;
                 }
                 else if (isAltPressed)
                 {
