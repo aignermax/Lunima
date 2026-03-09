@@ -933,21 +933,59 @@ public class DesignCanvas : Control
             _draggingComponent = HitTestComponent(canvasPoint);
             if (_draggingComponent != null)
             {
-                foreach (var c in vm.Components) c.IsSelected = false;
-                _draggingComponent.IsSelected = true;
-                vm.SelectedComponent = _draggingComponent;
-                mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-                // Start tracking for undo
-                mainVm?.StartMoveComponent(_draggingComponent);
-                _dragStartX = _draggingComponent.X;
-                _dragStartY = _draggingComponent.Y;
+                // Check for modifier keys
+                bool isCtrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+                bool isAltPressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+
+                if (isCtrlPressed)
+                {
+                    // Ctrl: Add to selection (keep all others selected)
+                    vm.Selection.AddToSelection(_draggingComponent);
+                }
+                else if (isAltPressed)
+                {
+                    // Alt: Remove from selection
+                    vm.Selection.RemoveFromSelection(_draggingComponent);
+                    _draggingComponent = null; // Don't start dragging when removing
+                }
+                else
+                {
+                    // Normal click: if component is already selected, keep selection (for group drag)
+                    // Otherwise, select only this component (clear others)
+                    if (!vm.Selection.SelectedComponents.Contains(_draggingComponent))
+                    {
+                        vm.Selection.SelectSingle(_draggingComponent);
+                        vm.SelectedComponent = _draggingComponent;
+                    }
+                    // If already selected, do nothing - allows dragging the entire group
+                }
+
+                if (_draggingComponent != null)
+                {
+                    mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
+                    // Start tracking for undo (group move if multiple selected)
+                    mainVm?.StartMoveComponent(_draggingComponent);
+                    _dragStartX = _draggingComponent.X;
+                    _dragStartY = _draggingComponent.Y;
+
+                    // Store initial positions for all selected components (for group drag revert)
+                    _groupDragStartPositions.Clear();
+                    foreach (var comp in vm.Selection.SelectedComponents)
+                    {
+                        _groupDragStartPositions[comp] = (comp.X, comp.Y);
+                    }
+                }
+
                 InvalidateVisual();
             }
             else
             {
-                // Deselect all
-                foreach (var c in vm.Components) c.IsSelected = false;
-                vm.SelectedComponent = null;
+                // Clicked empty space - start box selection
+                vm.Selection.IsBoxSelecting = true;
+                vm.Selection.BoxStartX = canvasPoint.X;
+                vm.Selection.BoxStartY = canvasPoint.Y;
+                vm.Selection.BoxEndX = canvasPoint.X;
+                vm.Selection.BoxEndY = canvasPoint.Y;
                 InvalidateVisual();
             }
         }
@@ -1050,21 +1088,60 @@ public class DesignCanvas : Control
         }
         else if (_draggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
         {
-            // Move smoothly during drag (snap + collision checked on release)
-            vm.MoveComponent(_draggingComponent, delta.X / Zoom, delta.Y / Zoom);
+            double deltaX = delta.X / Zoom;
+            double deltaY = delta.Y / Zoom;
 
-            // Calculate drag preview (shows where component will land on release)
-            var snapSettings = vm.GridSnap;
-            double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
-            double centerY = _draggingComponent.Y + _draggingComponent.Height / 2.0;
-            var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
-            double previewX = snappedCX - _draggingComponent.Width / 2.0;
-            double previewY = snappedCY - _draggingComponent.Height / 2.0;
-            _dragPreviewPosition = new Point(previewX, previewY);
-            _dragPreviewValid = vm.CanMoveComponentTo(_draggingComponent, previewX, previewY);
-            // Show preview when grid snap is on (snap target differs) or position is invalid (red warning)
-            _showDragPreview = snapSettings.IsEnabled || !_dragPreviewValid;
+            // Check if dragging a group (multiple selected components)
+            bool isDraggingGroup = vm.Selection.SelectedComponents.Count > 1;
 
+            if (isDraggingGroup)
+            {
+                // Move all selected components together
+                foreach (var comp in vm.Selection.SelectedComponents)
+                {
+                    vm.MoveComponent(comp, deltaX, deltaY);
+                }
+
+                // Calculate drag preview based on dragged component (representative)
+                var snapSettings = vm.GridSnap;
+                double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
+                double centerY = _draggingComponent.Y + _draggingComponent.Height / 2.0;
+                var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
+                double previewX = snappedCX - _draggingComponent.Width / 2.0;
+                double previewY = snappedCY - _draggingComponent.Height / 2.0;
+                _dragPreviewPosition = new Point(previewX, previewY);
+
+                // Check if entire group can move to target position
+                double snapDeltaX = previewX - _draggingComponent.X;
+                double snapDeltaY = previewY - _draggingComponent.Y;
+                _dragPreviewValid = vm.Selection.CanMoveGroup(vm, snapDeltaX, snapDeltaY);
+                _showDragPreview = snapSettings.IsEnabled || !_dragPreviewValid;
+            }
+            else
+            {
+                // Single component drag (original behavior)
+                vm.MoveComponent(_draggingComponent, deltaX, deltaY);
+
+                // Calculate drag preview (shows where component will land on release)
+                var snapSettings = vm.GridSnap;
+                double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
+                double centerY = _draggingComponent.Y + _draggingComponent.Height / 2.0;
+                var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
+                double previewX = snappedCX - _draggingComponent.Width / 2.0;
+                double previewY = snappedCY - _draggingComponent.Height / 2.0;
+                _dragPreviewPosition = new Point(previewX, previewY);
+                _dragPreviewValid = vm.CanMoveComponentTo(_draggingComponent, previewX, previewY);
+                // Show preview when grid snap is on (snap target differs) or position is invalid (red warning)
+                _showDragPreview = snapSettings.IsEnabled || !_dragPreviewValid;
+            }
+
+            InvalidateVisual();
+        }
+        else if (vm.Selection.IsBoxSelecting)
+        {
+            // Update box selection rectangle
+            vm.Selection.BoxEndX = canvasPoint.X;
+            vm.Selection.BoxEndY = canvasPoint.Y;
             InvalidateVisual();
         }
         else if (_isPanning)
@@ -1120,6 +1197,7 @@ public class DesignCanvas : Control
         if (_draggingComponent != null)
         {
             var vm = ViewModel;
+            bool isDraggingGroup = vm?.Selection.SelectedComponents.Count > 1;
 
             // Calculate final position (with grid snap if enabled)
             double finalX = _draggingComponent.X;
@@ -1136,27 +1214,68 @@ public class DesignCanvas : Control
                 finalY = snappedCY - _draggingComponent.Height / 2.0;
             }
 
+            // Calculate delta for final position
+            double deltaX = finalX - _draggingComponent.X;
+            double deltaY = finalY - _draggingComponent.Y;
+
             // Check collision at final position
-            bool canPlace = vm?.CanMoveComponentTo(_draggingComponent, finalX, finalY) ?? true;
+            bool canPlace;
+            if (isDraggingGroup)
+            {
+                canPlace = vm?.Selection.CanMoveGroup(vm, deltaX, deltaY) ?? true;
+            }
+            else
+            {
+                canPlace = vm?.CanMoveComponentTo(_draggingComponent, finalX, finalY) ?? true;
+            }
 
             if (canPlace)
             {
                 // Move to final (possibly snapped) position
-                double deltaX = finalX - _draggingComponent.X;
-                double deltaY = finalY - _draggingComponent.Y;
                 if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
                 {
-                    vm?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                    if (isDraggingGroup)
+                    {
+                        // Move all selected components
+                        foreach (var comp in vm.Selection.SelectedComponents)
+                        {
+                            vm?.MoveComponent(comp, deltaX, deltaY);
+                        }
+                    }
+                    else
+                    {
+                        vm?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                    }
                 }
             }
             else
             {
-                // Revert to start position - drop is invalid
-                double deltaX = _dragStartX - _draggingComponent.X;
-                double deltaY = _dragStartY - _draggingComponent.Y;
-                if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+                // Revert to start positions - drop is invalid
+                if (isDraggingGroup)
                 {
-                    vm?.MoveComponent(_draggingComponent, deltaX, deltaY);
+                    // Revert all components in the group
+                    foreach (var comp in vm.Selection.SelectedComponents)
+                    {
+                        if (_groupDragStartPositions.TryGetValue(comp, out var startPos))
+                        {
+                            double revertDeltaX = startPos.x - comp.X;
+                            double revertDeltaY = startPos.y - comp.Y;
+                            if (Math.Abs(revertDeltaX) > 0.001 || Math.Abs(revertDeltaY) > 0.001)
+                            {
+                                vm?.MoveComponent(comp, revertDeltaX, revertDeltaY);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Revert single component
+                    double revertDeltaX = _dragStartX - _draggingComponent.X;
+                    double revertDeltaY = _dragStartY - _draggingComponent.Y;
+                    if (Math.Abs(revertDeltaX) > 0.001 || Math.Abs(revertDeltaY) > 0.001)
+                    {
+                        vm?.MoveComponent(_draggingComponent, revertDeltaX, revertDeltaY);
+                    }
                 }
                 if (MainViewModel != null)
                     MainViewModel.StatusText = "Cannot place here - overlaps with another component";
@@ -1164,6 +1283,25 @@ public class DesignCanvas : Control
 
             _showDragPreview = false;
             MainViewModel?.EndMoveComponent();
+            InvalidateVisual();
+        }
+
+        // Complete box selection
+        if (ViewModel?.Selection.IsBoxSelecting == true)
+        {
+            var (minX, minY, maxX, maxY) = ViewModel.Selection.GetNormalizedBox();
+
+            // Check for modifier keys
+            bool isCtrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+            bool isAltPressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+
+            ViewModel.Selection.SelectInRectangle(
+                ViewModel.Components,
+                minX, minY, maxX, maxY,
+                addToSelection: isCtrlPressed,
+                removeFromSelection: isAltPressed);
+
+            ViewModel.Selection.IsBoxSelecting = false;
             InvalidateVisual();
         }
 

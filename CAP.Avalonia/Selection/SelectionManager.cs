@@ -60,6 +60,30 @@ public class SelectionManager
     }
 
     /// <summary>
+    /// Adds a component to the selection without removing others.
+    /// </summary>
+    public void AddToSelection(ComponentViewModel component)
+    {
+        if (!SelectedComponents.Contains(component))
+        {
+            SelectedComponents.Add(component);
+            component.IsSelected = true;
+        }
+    }
+
+    /// <summary>
+    /// Removes a component from the selection.
+    /// </summary>
+    public void RemoveFromSelection(ComponentViewModel component)
+    {
+        if (SelectedComponents.Contains(component))
+        {
+            SelectedComponents.Remove(component);
+            component.IsSelected = false;
+        }
+    }
+
+    /// <summary>
     /// Toggles a component in the selection (Shift+click behavior).
     /// </summary>
     public void ToggleSelection(ComponentViewModel component)
@@ -89,26 +113,49 @@ public class SelectionManager
     }
 
     /// <summary>
-    /// Selects all components fully contained within the given rectangle.
+    /// Selects all components that intersect with the given rectangle.
     /// </summary>
     /// <param name="allComponents">All components on the canvas.</param>
     /// <param name="rectMinX">Left edge of selection rectangle.</param>
     /// <param name="rectMinY">Top edge of selection rectangle.</param>
     /// <param name="rectMaxX">Right edge of selection rectangle.</param>
     /// <param name="rectMaxY">Bottom edge of selection rectangle.</param>
+    /// <param name="addToSelection">If true, adds to existing selection (Ctrl behavior).</param>
+    /// <param name="removeFromSelection">If true, removes from existing selection (Alt behavior).</param>
     public void SelectInRectangle(
         IEnumerable<ComponentViewModel> allComponents,
         double rectMinX, double rectMinY,
-        double rectMaxX, double rectMaxY)
+        double rectMaxX, double rectMaxY,
+        bool addToSelection = false,
+        bool removeFromSelection = false)
     {
-        ClearSelection();
+        if (!addToSelection && !removeFromSelection)
+        {
+            ClearSelection();
+        }
 
         foreach (var comp in allComponents)
         {
-            if (IsFullyInside(comp, rectMinX, rectMinY, rectMaxX, rectMaxY))
+            if (Intersects(comp, rectMinX, rectMinY, rectMaxX, rectMaxY))
             {
-                comp.IsSelected = true;
-                SelectedComponents.Add(comp);
+                if (removeFromSelection)
+                {
+                    // Alt: Remove from selection
+                    if (SelectedComponents.Contains(comp))
+                    {
+                        SelectedComponents.Remove(comp);
+                        comp.IsSelected = false;
+                    }
+                }
+                else
+                {
+                    // Normal or Ctrl: Add to selection
+                    if (!SelectedComponents.Contains(comp))
+                    {
+                        comp.IsSelected = true;
+                        SelectedComponents.Add(comp);
+                    }
+                }
             }
         }
     }
@@ -125,6 +172,21 @@ public class SelectionManager
                comp.Y >= rectMinY &&
                comp.X + comp.Width <= rectMaxX &&
                comp.Y + comp.Height <= rectMaxY;
+    }
+
+    /// <summary>
+    /// Checks whether a component intersects (touches) the given rectangle.
+    /// </summary>
+    public static bool Intersects(
+        ComponentViewModel comp,
+        double rectMinX, double rectMinY,
+        double rectMaxX, double rectMaxY)
+    {
+        // Check if rectangles overlap using standard AABB collision detection
+        return comp.X < rectMaxX &&
+               comp.X + comp.Width > rectMinX &&
+               comp.Y < rectMaxY &&
+               comp.Y + comp.Height > rectMinY;
     }
 
     /// <summary>
