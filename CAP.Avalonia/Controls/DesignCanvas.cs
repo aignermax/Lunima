@@ -1285,6 +1285,16 @@ public class DesignCanvas : Control
 
             _showDragPreview = false;
             MainViewModel?.EndMoveComponent();
+
+            // Ensure all components in the selection remain visually selected after drag
+            if (vm != null && isDraggingGroup)
+            {
+                foreach (var comp in vm.Selection.SelectedComponents)
+                {
+                    comp.IsSelected = true;
+                }
+            }
+
             InvalidateVisual();
         }
 
