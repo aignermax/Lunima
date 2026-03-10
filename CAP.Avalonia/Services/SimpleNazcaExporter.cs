@@ -105,10 +105,15 @@ public class SimpleNazcaExporter
             var varName = $"comp_{compIndex}";
             componentNames[comp] = varName;
 
-            // Nazca .put() places the component's origin (a0 pin) at the given position.
-            // Our editor stores the top-left corner, so we offset to the origin pin.
-            var nazcaX = (comp.PhysicalX + comp.NazcaOriginOffsetX).ToString("F2", ci);
-            var nazcaY = NormalizeZero(-(comp.PhysicalY + comp.NazcaOriginOffsetY)).ToString("F2", ci);
+            // Nazca .put() places the component's origin (first pin) at the given position.
+            // Our editor stores the top-left corner, so we offset to place the first pin correctly.
+            // The first pin's offset in the editor (Y-down) becomes the Nazca origin offset.
+            var firstPin = comp.PhysicalPins.FirstOrDefault();
+            double originOffsetX = firstPin?.OffsetXMicrometers ?? comp.NazcaOriginOffsetX;
+            double originOffsetY = firstPin?.OffsetYMicrometers ?? comp.NazcaOriginOffsetY;
+
+            var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
+            var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
             var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
             var nazcaFunc = GetNazcaFunction(comp);
 
