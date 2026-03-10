@@ -90,12 +90,28 @@ jobs:
       - name: Compute release info
         id: info
         run: |
+          # Extract version from csproj
           version=$(grep '<Version>' CAP.Desktop/CAP.Desktop.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | xargs)
           echo "version=$version" >> $GITHUB_OUTPUT
+
+          # Determine tag based on trigger type
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            # Use the actual tag that triggered this workflow
+            tag="${{ github.ref_name }}"
+            echo "tag=$tag" >> $GITHUB_OUTPUT
+            echo "Using existing tag: $tag"
           else
-            echo "tag=v${version}-build.${{ github.run_number }}" >> $GITHUB_OUTPUT
+            # Manual workflow_dispatch - create build tag
+            tag="v${version}-build.${{ github.run_number }}"
+            echo "tag=$tag" >> $GITHUB_OUTPUT
+            echo "Creating build tag: $tag"
+          fi
+
+          # Verify tag matches version (warning only, don't fail)
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            if [ "$tag" != "v$version" ]; then
+              echo "::warning::Tag '$tag' does not match csproj version 'v$version'"
+            fi
           fi
 
       - name: Download Windows build
@@ -115,6 +131,67 @@ jobs:
           cd win-x64 && zip -r ../Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip . && cd ..
           cd linux-x64 && tar czf ../Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-linux-x64.tar.gz . && cd ..
 
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          git fetch --tags
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "build" | head -2 | tail -1)
+          CURR_TAG="${{ steps.info.outputs.tag }}"
+
+          echo "Generating changelog from $PREV_TAG to $CURR_TAG"
+
+          # Get commits since last release tag
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log $PREV_TAG..$CURR_TAG --pretty=format:"- %s" --no-merges)
+            COMMIT_COUNT=$(git rev-list --count $PREV_TAG..$CURR_TAG --no-merges)
+          else
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges | head -20)
+            COMMIT_COUNT=$(git rev-list --count HEAD --no-merges)
+          fi
+
+          # Categorize commits
+          FEATURES=$(echo "$COMMITS" | grep -iE "^- (feat|feature|add|implement):" || true)
+          FIXES=$(echo "$COMMITS" | grep -iE "^- (fix|bugfix):" || true)
+          IMPROVEMENTS=$(echo "$COMMITS" | grep -iE "^- (refactor|improve|update|enhance|chore):" || true)
+          BREAKING=$(echo "$COMMITS" | grep -iE "BREAKING|breaking change" || true)
+          OTHER=$(echo "$COMMITS" | grep -viE "^- (feat|feature|add|implement|fix|bugfix|refactor|improve|update|enhance|chore):" || true)
+
+          # Build changelog sections
+          CHANGELOG=""
+
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG+="### ✨ New Features"$'\n'"$FEATURES"$'\n\n'
+          fi
+
+          if [ -n "$FIXES" ]; then
+            CHANGELOG+="### 🐛 Bug Fixes"$'\n'"$FIXES"$'\n\n'
+          fi
+
+          if [ -n "$IMPROVEMENTS" ]; then
+            CHANGELOG+="### 🔧 Improvements"$'\n'"$IMPROVEMENTS"$'\n\n'
+          fi
+
+          if [ -n "$BREAKING" ]; then
+            CHANGELOG+="### ⚠️ Breaking Changes"$'\n'"$BREAKING"$'\n\n'
+          fi
+
+          if [ -n "$OTHER" ] && [ $(echo "$OTHER" | wc -l) -gt 0 ]; then
+            CHANGELOG+="### 📝 Other Changes"$'\n'"$OTHER"$'\n\n'
+          fi
+
+          # Add commit summary
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG+="---"$'\n'"**$COMMIT_COUNT commits** since $PREV_TAG"
+          else
+            CHANGELOG+="---"$'\n'"**$COMMIT_COUNT commits** in this release"
+          fi
+
+          # Save to output (use delimiter for multiline)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -123,17 +200,22 @@ jobs:
           body: |
             ## Connect-A-PIC Pro v${{ steps.info.outputs.version }}
 
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## 📦 Installation
+
             ### Windows
-            1. Download `Connect-A-PIC-Pro-...-win-x64.zip`
+            1. Download `Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip`
             2. Extract and run `Connect-A-PIC-Pro.exe`
 
             ### Linux
-            1. Download `Connect-A-PIC-Pro-...-linux-x64.tar.gz`
+            1. Download `Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-linux-x64.tar.gz`
             2. Extract: `tar xzf Connect-A-PIC-Pro-*.tar.gz`
             3. Run: `./Connect-A-PIC-Pro`
 
             No .NET installation required — everything is included.
 
+            ---
             **Commit:** ${{ github.sha }}
           files: |
             Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip
