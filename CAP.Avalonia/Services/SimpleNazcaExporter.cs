@@ -107,10 +107,22 @@ public class SimpleNazcaExporter
 
             // Nazca .put() places the component's origin (first pin) at the given position.
             // Our editor stores the top-left corner, so we offset to place the first pin correctly.
-            // The first pin's offset in the editor (Y-down) becomes the Nazca origin offset.
+            // Must account for component rotation when transforming pin offset to world coordinates.
             var firstPin = comp.PhysicalPins.FirstOrDefault();
-            double originOffsetX = firstPin?.OffsetXMicrometers ?? comp.NazcaOriginOffsetX;
-            double originOffsetY = firstPin?.OffsetYMicrometers ?? comp.NazcaOriginOffsetY;
+            double originOffsetX = comp.NazcaOriginOffsetX;
+            double originOffsetY = comp.NazcaOriginOffsetY;
+
+            if (firstPin != null)
+            {
+                // Transform pin offset according to component rotation
+                double pinLocalX = firstPin.OffsetXMicrometers;
+                double pinLocalY = firstPin.OffsetYMicrometers;
+                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+
+                // Rotate the pin offset by the component's rotation
+                originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
+                originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+            }
 
             var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
             var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
