@@ -47,8 +47,8 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Actions -->
-                <Button Content="Delete Selected" Command="{Binding DeleteSelectedCommand}"
-                        Width="100" Margin="5" Background="#4d3d3d"/>
+                <Button Content="❌" Command="{Binding DeleteSelectedCommand}"
+                        Width="36" Margin="2" Background="#4d3d3d" ToolTip.Tip="Delete Selected (Del)"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
@@ -60,13 +60,13 @@
                 <Button Content="💾+" Command="{Binding SaveDesignAsCommand}"
                         Width="40" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design as..."/>
                 <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
-                        Width="75" Margin="2" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
+                        MinWidth="75" Margin="2" Padding="8,4" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- PDK -->
                 <Button Content="📦 Load PDK" Command="{Binding LoadPdkCommand}"
-                        Width="95" Margin="2" Background="#3d3d5d" ToolTip.Tip="Load PDK component library"/>
+                        MinWidth="95" Margin="2" Padding="8,4" Background="#3d3d5d" ToolTip.Tip="Load PDK component library"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
@@ -293,12 +293,14 @@
                     <!-- Routing Diagnostics -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Routing Diagnostics:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                        <Button Content="Analyze Routes" Command="{Binding RoutingDiagnostics.RunDiagnosticsCommand}"
-                                Width="110" Margin="0,0,5,0" Background="#5d3d3d"
-                                IsEnabled="{Binding RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
+                    <Button Content="Analyze Routes" Command="{Binding RoutingDiagnostics.RunDiagnosticsCommand}"
+                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"
+                            IsEnabled="{Binding RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                         <Button Content="Export JSON" Command="{Binding RoutingDiagnostics.ExportPathsJsonCommand}"
-                                Width="100" Background="#3d3d5d"/>
+                                MinWidth="100" Margin="0,0,5,0" Padding="8,4" Background="#3d3d5d"/>
+                        <Button Content="📋" Command="{Binding RoutingDiagnostics.CopyPathsJsonToClipboardCommand}"
+                                Width="36" Background="#3d3d5d" ToolTip.Tip="Copy JSON to clipboard"/>
                     </StackPanel>
                     <TextBlock Text="{Binding RoutingDiagnostics.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
                                IsVisible="{Binding RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

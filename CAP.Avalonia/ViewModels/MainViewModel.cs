@@ -1097,6 +1097,10 @@ public partial class MainViewModel : ObservableObject
                 _currentFilePath = filePath;
                 StatusText = $"Loaded {Path.GetFileName(filePath)} ({Canvas.Components.Count} components, {Canvas.Connections.Count} connections)";
                 CommandManager.NotifyStateChanged();
+
+                // Auto zoom-to-fit after loading
+                var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);
+                ZoomToFit(vpWidth, vpHeight);
             }
             catch (Exception ex)
             {

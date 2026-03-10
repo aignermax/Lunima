@@ -47,7 +47,7 @@ public class AsyncRoutingTests
         var cts = new CancellationTokenSource();
         cts.Cancel(); // Cancel immediately
 
-        var result = await manager.RecalculateAllTransmissionsAsync(cts.Token);
+        var result = await manager.RecalculateAllTransmissionsAsync(null, cts.Token);
         result.ShouldBeFalse();
     }
 
@@ -185,7 +185,7 @@ public class AsyncRoutingTests
 
         // Start first routing
         var cts1 = new CancellationTokenSource();
-        var task1 = manager.RecalculateAllTransmissionsAsync(cts1.Token);
+        var task1 = manager.RecalculateAllTransmissionsAsync(null, cts1.Token);
 
         // Cancel immediately and start second routing (overlapping)
         cts1.Cancel();
@@ -217,7 +217,7 @@ public class AsyncRoutingTests
         for (int i = 0; i < 10; i++)
         {
             var cts = new CancellationTokenSource();
-            var task = manager.RecalculateAllTransmissionsAsync(cts.Token);
+            var task = manager.RecalculateAllTransmissionsAsync(null, cts.Token);
             previousTasks.Add(task);
 
             // Cancel after a tiny delay to overlap with execution

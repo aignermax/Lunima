@@ -13,7 +13,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // Set up the FileDialogService when the window is loaded
-        Loaded += (_, _) =>
+        Loaded += async (_, _) =>
         {
             if (DataContext is MainViewModel vm)
             {
@@ -23,6 +23,16 @@ public partial class MainWindow : Window
                 vm.GetViewportSize = () => (
                     DesignCanvasControl.Bounds.Width,
                     DesignCanvasControl.Bounds.Height);
+
+                // Wire up clipboard for RoutingDiagnostics
+                vm.RoutingDiagnostics.CopyToClipboard = async (text) =>
+                {
+                    var clipboard = Clipboard;
+                    if (clipboard != null)
+                    {
+                        await clipboard.SetTextAsync(text);
+                    }
+                };
             }
         };
     }

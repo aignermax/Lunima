@@ -22,9 +22,13 @@ public class DeleteConnectionCommand : IUndoableCommand
 
     public void Execute()
     {
-        _canvas.Connections.Remove(_connectionVm);
-        _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
-        _ = _canvas.RecalculateRoutesAsync();
+        // Only remove if it's actually in the collection (to support redo)
+        if (_canvas.Connections.Contains(_connectionVm))
+        {
+            _canvas.Connections.Remove(_connectionVm);
+            _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
+            _ = _canvas.RecalculateRoutesAsync();
+        }
     }
 
     public void Undo()

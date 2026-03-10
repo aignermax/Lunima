@@ -262,6 +262,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// Asynchronously recalculates all waveguide routes on a background thread.
     /// Cancels any previous in-progress routing. Updates UI on completion.
     /// Always rebuilds the obstacle grid before routing to ensure consistency.
+    /// Provides progressive visual updates throttled to max 10 Hz (every 100ms).
     /// </summary>
     public async Task RecalculateRoutesAsync()
     {
@@ -285,6 +286,44 @@ public partial class DesignCanvasViewModel : ObservableObject
             // Snapshot component list on UI thread for thread safety
             var components = Components.Select(c => c.Component).ToList();
 
+            // Throttle UI updates to max 10 Hz (every 100ms)
+            var lastUpdateTime = DateTime.MinValue;
+            var updateLock = new object();
+            bool updatePending = false;
+
+            Action progressCallback = () =>
+            {
+                lock (updateLock)
+                {
+                    var now = DateTime.UtcNow;
+                    var elapsed = (now - lastUpdateTime).TotalMilliseconds;
+
+                    // Throttle: only update if at least 100ms have passed
+                    if (elapsed >= 100)
+                    {
+                        lastUpdateTime = now;
+                        updatePending = false;
+
+                        // Dispatch to UI thread
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                        {
+                            if (!token.IsCancellationRequested)
+                            {
+                                // Notify all connections to update their paths
+                                foreach (var conn in Connections)
+                                {
+                                    conn.NotifyPathChanged();
+                                }
+                            }
+                        }, global::Avalonia.Threading.DispatcherPriority.Background);
+                    }
+                    else
+                    {
+                        updatePending = true;
+                    }
+                }
+            };
+
             var completed = await Task.Run(() =>
             {
                 if (token.IsCancellationRequested) return false;
@@ -296,12 +335,13 @@ public partial class DesignCanvasViewModel : ObservableObject
 
                 if (token.IsCancellationRequested) return false;
 
-                ConnectionManager.RecalculateAllTransmissions(token);
+                ConnectionManager.RecalculateAllTransmissions(progressCallback, token);
                 return !token.IsCancellationRequested;
             });
 
             if (completed && !token.IsCancellationRequested)
             {
+                // Final update to ensure all paths are shown
                 foreach (var conn in Connections)
                 {
                     conn.NotifyPathChanged();

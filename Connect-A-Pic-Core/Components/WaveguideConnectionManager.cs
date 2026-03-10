@@ -104,14 +104,16 @@ public class WaveguideConnectionManager
     /// Asynchronously recalculates all transmissions on a background thread.
     /// Returns false if cancelled before completion. Never throws on cancellation.
     /// </summary>
-    public async Task<bool> RecalculateAllTransmissionsAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> RecalculateAllTransmissionsAsync(
+        Action? progressCallback = null,
+        CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested) return false;
 
         return await Task.Run(() =>
         {
             if (cancellationToken.IsCancellationRequested) return false;
-            RecalculateAllTransmissions(cancellationToken);
+            RecalculateAllTransmissions(progressCallback, cancellationToken);
             return !cancellationToken.IsCancellationRequested;
         });
     }
@@ -197,14 +199,18 @@ public class WaveguideConnectionManager
     /// Existing valid routes are preserved; only broken or new connections are re-routed.
     /// Falls back to full re-route if incremental routing leaves failed connections.
     /// </summary>
-    public void RecalculateAllTransmissions(CancellationToken cancellationToken = default)
+    /// <param name="progressCallback">Optional callback invoked after each connection is routed.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    public void RecalculateAllTransmissions(
+        Action? progressCallback = null,
+        CancellationToken cancellationToken = default)
     {
         var router = WaveguideConnection.SharedRouter;
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
             // Phase 1: Incremental routing — keep valid routes, only re-route broken ones
-            var result = TryRouteIncremental(router, cancellationToken);
+            var result = TryRouteIncremental(router, progressCallback, cancellationToken);
             if (cancellationToken.IsCancellationRequested) return;
 
             if (result.allValid)
@@ -212,7 +218,7 @@ public class WaveguideConnectionManager
 
             // Phase 2: Incremental routing failed for some connections.
             // Fall back to full re-route with ordering strategies.
-            result = TryRouteInOrder(Connections.ToList(), router, cancellationToken);
+            result = TryRouteInOrder(Connections.ToList(), router, progressCallback, cancellationToken);
             if (cancellationToken.IsCancellationRequested) return;
             if (result.allValid) return;
 
@@ -223,7 +229,7 @@ public class WaveguideConnectionManager
             foreach (var ordering in orderings)
             {
                 if (cancellationToken.IsCancellationRequested) return;
-                result = TryRouteInOrder(ordering, router, cancellationToken);
+                result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
 
                 if (result.allValid)
                 {
@@ -241,7 +247,7 @@ public class WaveguideConnectionManager
             if (!cancellationToken.IsCancellationRequested && bestOrder != Connections.ToList())
             {
                 ReorderConnections(bestOrder);
-                TryRouteInOrder(bestOrder, router, cancellationToken);
+                TryRouteInOrder(bestOrder, router, progressCallback, cancellationToken);
             }
         }
         else
@@ -251,6 +257,7 @@ public class WaveguideConnectionManager
             {
                 if (cancellationToken.IsCancellationRequested) return;
                 connection.RecalculateTransmission();
+                progressCallback?.Invoke();
             }
         }
     }
@@ -269,6 +276,7 @@ public class WaveguideConnectionManager
     /// </summary>
     private (bool allValid, int failedCount) TryRouteIncremental(
         WaveguideRouter router,
+        Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
         var grid = router.PathfindingGrid!;
@@ -313,6 +321,7 @@ public class WaveguideConnectionManager
                 return (false, failedCount);
 
             connection.RecalculateTransmission();
+            progressCallback?.Invoke();
 
             if (connection.IsPathValid && connection.RoutedPath != null)
             {
@@ -373,6 +382,7 @@ public class WaveguideConnectionManager
     private (bool allValid, int failedCount) TryRouteInOrder(
         List<WaveguideConnection> orderedConnections,
         WaveguideRouter router,
+        Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
         // Clear all waveguide obstacles from previous routing
@@ -387,6 +397,7 @@ public class WaveguideConnectionManager
                 return (false, failedCount);
 
             connection.RecalculateTransmission();
+            progressCallback?.Invoke();
 
             // If routing succeeded, mark this waveguide as an obstacle
             if (connection.IsPathValid && connection.RoutedPath != null)

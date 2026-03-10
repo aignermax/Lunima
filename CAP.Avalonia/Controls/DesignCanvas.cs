@@ -115,7 +115,9 @@ public class DesignCanvas : Control
     private void OnCanvasViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(DesignCanvasViewModel.ShowPowerFlow) ||
-            e.PropertyName == nameof(DesignCanvasViewModel.IsRouting))
+            e.PropertyName == nameof(DesignCanvasViewModel.IsRouting) ||
+            e.PropertyName == nameof(DesignCanvasViewModel.PanX) ||
+            e.PropertyName == nameof(DesignCanvasViewModel.PanY))
         {
             InvalidateVisual();
         }

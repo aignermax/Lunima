@@ -5,6 +5,7 @@ namespace CAP.Avalonia.Commands;
 
 /// <summary>
 /// Command for creating a waveguide connection between two pins.
+/// Tracks and restores any connections that were overwritten.
 /// </summary>
 public class CreateConnectionCommand : IUndoableCommand
 {
@@ -13,6 +14,9 @@ public class CreateConnectionCommand : IUndoableCommand
     private readonly PhysicalPin _endPin;
     private WaveguideConnection? _connection;
     private WaveguideConnectionViewModel? _connectionViewModel;
+
+    // Track any connections that were removed when creating this connection
+    private List<(WaveguideConnection connection, WaveguideConnectionViewModel viewModel)>? _removedConnections;
 
     public CreateConnectionCommand(
         DesignCanvasViewModel canvas,
@@ -28,10 +32,48 @@ public class CreateConnectionCommand : IUndoableCommand
 
     public void Execute()
     {
-        _connectionViewModel = _canvas.ConnectPins(_startPin, _endPin);
-        if (_connectionViewModel != null)
+        if (_connection != null && _connectionViewModel != null)
         {
-            _connection = _connectionViewModel.Connection;
+            // Redo: remove any restored connections first, then re-add the new connection
+            if (_removedConnections != null)
+            {
+                foreach (var (conn, vm) in _removedConnections)
+                {
+                    _canvas.Connections.Remove(vm);
+                    _canvas.ConnectionManager.RemoveConnectionDeferred(conn);
+                }
+            }
+
+            _canvas.ConnectionManager.AddExistingConnection(_connection);
+            _canvas.Connections.Add(_connectionViewModel);
+        }
+        else
+        {
+            // First execution: track connections that will be removed
+            _removedConnections = new List<(WaveguideConnection, WaveguideConnectionViewModel)>();
+
+            // Find connections on start pin
+            var startConnections = _canvas.Connections
+                .Where(c => c.Connection.StartPin == _startPin || c.Connection.EndPin == _startPin)
+                .ToList();
+
+            // Find connections on end pin
+            var endConnections = _canvas.Connections
+                .Where(c => c.Connection.StartPin == _endPin || c.Connection.EndPin == _endPin)
+                .ToList();
+
+            // Store all connections that will be removed
+            foreach (var conn in startConnections.Concat(endConnections).Distinct())
+            {
+                _removedConnections.Add((conn.Connection, conn));
+            }
+
+            // Create new connection (this will remove the old ones)
+            _connectionViewModel = _canvas.ConnectPins(_startPin, _endPin);
+            if (_connectionViewModel != null)
+            {
+                _connection = _connectionViewModel.Connection;
+            }
         }
         // Trigger async re-routing so the UI doesn't block
         _ = _canvas.RecalculateRoutesAsync();
@@ -41,12 +83,22 @@ public class CreateConnectionCommand : IUndoableCommand
     {
         if (_connection != null && _connectionViewModel != null)
         {
+            // Remove the new connection
             _canvas.ConnectionManager.RemoveConnectionDeferred(_connection);
             _canvas.Connections.Remove(_connectionViewModel);
+
+            // Restore any connections that were removed
+            if (_removedConnections != null)
+            {
+                foreach (var (conn, vm) in _removedConnections)
+                {
+                    _canvas.ConnectionManager.AddExistingConnection(conn);
+                    _canvas.Connections.Add(vm);
+                }
+            }
+
             _canvas.InvalidateSimulation();
             _ = _canvas.RecalculateRoutesAsync();
-            _connection = null;
-            _connectionViewModel = null;
         }
     }
 }

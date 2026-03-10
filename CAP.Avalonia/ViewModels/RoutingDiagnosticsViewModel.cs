@@ -180,6 +180,54 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Callback to copy text to the system clipboard.
+    /// Set by the View code-behind since clipboard access requires a TopLevel reference.
+    /// </summary>
+    public Func<string, Task>? CopyToClipboard { get; set; }
+
+    /// <summary>
+    /// Copies all routed paths as JSON to the clipboard.
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyPathsJsonToClipboard()
+    {
+        if (_canvas == null || _canvas.Connections.Count == 0)
+        {
+            StatusText = "No connections to copy";
+            return;
+        }
+
+        try
+        {
+            var paths = new Dictionary<string, RoutedPath>();
+            foreach (var conn in _canvas.Connections)
+            {
+                if (conn.Connection.RoutedPath != null)
+                {
+                    paths[GetConnectionLabel(conn)] = conn.Connection.RoutedPath;
+                }
+            }
+
+            var json = RoutedPathSerializer.ToJson(paths);
+
+            // Copy to clipboard via callback
+            if (CopyToClipboard != null)
+            {
+                await CopyToClipboard(json);
+                StatusText = $"Copied {paths.Count} paths to clipboard";
+            }
+            else
+            {
+                StatusText = "Clipboard not available";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Copy failed: {ex.Message}";
+        }
+    }
+
     private static string GetConnectionLabel(WaveguideConnectionViewModel conn)
     {
         var start = conn.Connection.StartPin;
