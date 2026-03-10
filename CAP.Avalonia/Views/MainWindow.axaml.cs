@@ -59,8 +59,20 @@ public partial class MainWindow : Window
                     mainVm.SetSelectModeCommand.Execute(null);
                 break;
             case Key.C:
-                if (!ctrlPressed)
+                if (ctrlPressed)
+                {
+                    Console.WriteLine("DEBUG: Ctrl+C detected");
+                    mainVm.CopySelectedCommand.Execute(null);
+                }
+                else
                     mainVm.SetConnectModeCommand.Execute(null);
+                break;
+            case Key.V:
+                if (ctrlPressed)
+                {
+                    Console.WriteLine("DEBUG: Ctrl+V detected");
+                    mainVm.PasteSelectedCommand.Execute(null);
+                }
                 break;
             case Key.D:
                 if (!ctrlPressed)
