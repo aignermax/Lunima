@@ -1,4 +1,5 @@
 using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels;
 using CAP_Core.Components;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
@@ -214,5 +215,162 @@ public class SimpleNazcaExporterTests
             index += pattern.Length;
         }
         return count;
+    }
+
+    [Fact]
+    public void IsPdkFunction_RealPdkFunction_ReturnsTrue()
+    {
+        var result = SimpleNazcaExporter.IsPdkFunction("ebeam_y_1550");
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsPdkFunction_DemoPdkFunction_ReturnsFalse()
+    {
+        var result = SimpleNazcaExporter.IsPdkFunction("demo_pdk.mmi1x2");
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsPdkFunction_ExternalPdkWithDot_ReturnsTrue()
+    {
+        var result = SimpleNazcaExporter.IsPdkFunction("siepic.gc_te1550");
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GetNazcaFunction_DemoPdkStraightWithLength100_ReturnsCorrectCall()
+    {
+        var comp = CreateComponentWithName("demo_pdk.straight");
+        comp.NazcaFunctionParameters = "length=100";
+        comp.WidthMicrometers = 100;
+        comp.HeightMicrometers = 10;
+
+        var result = SimpleNazcaExporter.GetNazcaFunction(comp);
+
+        result.ShouldBe("demo_pdk.straight(length=100)");
+    }
+
+    [Fact]
+    public void GetNazcaFunction_DemoPdkStraightWithoutParams_UsesComponentWidth()
+    {
+        var comp = CreateComponentWithName("straight_waveguide");
+        comp.WidthMicrometers = 150;
+        comp.HeightMicrometers = 10;
+
+        var result = SimpleNazcaExporter.GetNazcaFunction(comp);
+
+        result.ShouldBe("demo.shallow.strt(length=150)");
+    }
+
+    [Fact]
+    public void GetNazcaFunction_UnknownComponent_UsesWidth()
+    {
+        var comp = CreateComponentWithName("unknown_component");
+        comp.WidthMicrometers = 75;
+        comp.HeightMicrometers = 25;
+
+        var result = SimpleNazcaExporter.GetNazcaFunction(comp);
+
+        result.ShouldBe("demo.shallow.strt(length=75)");
+    }
+
+    [Fact]
+    public void GetNazcaFunction_RealPdkFunction_IncludesParameters()
+    {
+        var comp = CreateComponentWithName("ebeam_y_1550");
+        comp.NazcaFunctionParameters = "wg_width=0.5";
+
+        var result = SimpleNazcaExporter.GetNazcaFunction(comp);
+
+        result.ShouldBe("ebeam_y_1550(wg_width=0.5)");
+    }
+
+    [Fact]
+    public void Export_StraightWaveguide100um_ExportsCorrectLength()
+    {
+        // Arrange: Create a canvas with a 100µm straight waveguide
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateDemoPdkStraightWaveguide(100);
+        var compVm = new ComponentViewModel(comp);
+        canvas.Components.Add(compVm);
+
+        // Act: Export to Nazca Python
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Assert: Verify that the exported code includes the correct length parameter
+        result.ShouldContain("demo_pdk.straight(length=100)");
+
+        // Verify stub function is parametric
+        result.ShouldContain("def demo_pdk.straight(length=100, **kwargs):");
+        result.ShouldContain("nd.strt(length=length");
+
+        // Verify component placement uses the stub
+        result.ShouldContain("comp_0 = demo_pdk.straight(length=100).put(");
+    }
+
+    [Fact]
+    public void Export_StraightWaveguide200um_ExportsCorrectLength()
+    {
+        // Arrange: Create a canvas with a 200µm straight waveguide
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateDemoPdkStraightWaveguide(200);
+        var compVm = new ComponentViewModel(comp);
+        canvas.Components.Add(compVm);
+
+        // Act: Export to Nazca Python
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Assert: Verify correct length
+        result.ShouldContain("demo_pdk.straight(length=200)");
+        result.ShouldContain("comp_0 = demo_pdk.straight(length=200).put(");
+    }
+
+    private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)
+    {
+        var parts = new Part[1, 1];
+        parts[0, 0] = new Part(new List<Pin>());
+
+        var component = new Component(
+            laserWaveLengthToSMatrixMap: new Dictionary<int, SMatrix>(),
+            sliders: new List<Slider>(),
+            nazcaFunctionName: "demo_pdk.straight",
+            nazcaFunctionParams: $"length={lengthMicrometers}",
+            parts: parts,
+            typeNumber: 0,
+            identifier: $"Straight Waveguide {lengthMicrometers}µm",
+            rotationCounterClock: DiscreteRotation.R0
+        );
+
+        component.WidthMicrometers = lengthMicrometers;
+        component.HeightMicrometers = 10;
+        component.PhysicalX = 0;
+        component.PhysicalY = 0;
+
+        // Add physical pins (input at x=0, output at x=length)
+        var inputPin = new PhysicalPin
+        {
+            Name = "a0",
+            OffsetXMicrometers = 0,
+            OffsetYMicrometers = 5,
+            AngleDegrees = 180,
+            ParentComponent = component
+        };
+
+        var outputPin = new PhysicalPin
+        {
+            Name = "b0",
+            OffsetXMicrometers = lengthMicrometers,
+            OffsetYMicrometers = 5,
+            AngleDegrees = 0,
+            ParentComponent = component
+        };
+
+        component.PhysicalPins.Add(inputPin);
+        component.PhysicalPins.Add(outputPin);
+
+        return component;
     }
 }
