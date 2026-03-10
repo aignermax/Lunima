@@ -761,6 +761,11 @@ public partial class ComponentViewModel : ObservableObject
     private bool _isSelected;
 
     /// <summary>
+    /// Whether this component is locked (cannot be moved, rotated, or deleted).
+    /// </summary>
+    public bool IsLocked => Component.IsLocked;
+
+    /// <summary>
     /// Laser configuration for light source components (null for non-sources).
     /// </summary>
     public LaserConfig? LaserConfig { get; }

@@ -42,6 +42,10 @@ public class MoveComponentCommand : IMergeableCommand
 
     public void Execute()
     {
+        // Don't move locked components
+        if (_componentViewModel.Component.IsLocked)
+            return;
+
         // Move to end position
         var deltaX = _endX - _componentViewModel.X;
         var deltaY = _endY - _componentViewModel.Y;

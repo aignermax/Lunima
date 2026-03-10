@@ -51,7 +51,11 @@ public class GroupMoveCommand : IUndoableCommand
     {
         foreach (var comp in _components)
         {
-            _canvas.MoveComponent(comp, dx, dy);
+            // Skip locked components
+            if (!comp.Component.IsLocked)
+            {
+                _canvas.MoveComponent(comp, dx, dy);
+            }
         }
     }
 }

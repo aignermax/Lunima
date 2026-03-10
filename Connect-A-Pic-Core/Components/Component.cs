@@ -29,6 +29,11 @@ public class Component : ICloneable
     public double NazcaOriginOffsetX { get; set; }
     public double NazcaOriginOffsetY { get; set; }
 
+    /// <summary>
+    /// Indicates whether this component is locked (cannot be moved, deleted, or rotated).
+    /// </summary>
+    public bool IsLocked { get; set; }
+
     public Part[,] Parts { get; protected set; }
     public List<PhysicalPin> PhysicalPins { get; protected set; } = new();
     public Dictionary<int, SMatrix> WaveLengthToSMatrixMap { get; set; }
@@ -311,6 +316,7 @@ public class Component : ICloneable
         clonedComponent.RotationDegrees = RotationDegrees;
         clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
         clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
+        clonedComponent.IsLocked = IsLocked;
 
         return clonedComponent;
     }

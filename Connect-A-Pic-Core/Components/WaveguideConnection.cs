@@ -17,6 +17,11 @@ namespace CAP_Core.Components
         public WaveguideType Type { get; set; } = WaveguideType.Auto;
 
         /// <summary>
+        /// Indicates whether this connection is locked (cannot be deleted or modified).
+        /// </summary>
+        public bool IsLocked { get; set; }
+
+        /// <summary>
         /// Propagation loss in dB per centimeter. Typical values: 1-3 dB/cm for silicon photonics.
         /// </summary>
         public double PropagationLossDbPerCm { get; set; } = 2.0;
