@@ -60,10 +60,16 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public DesignValidationViewModel DesignValidation { get; } = new();
 
+    /// <summary>
+    /// ViewModel for PDK management (loading, filtering, enabling/disabling PDKs).
+    /// </summary>
+    public PdkManagerViewModel PdkManager { get; } = new();
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
     private readonly PdkLoader _pdkLoader;
+    private readonly UserPreferencesService _preferencesService;
     private PhysicalPin? _connectionStartPin;
     private string? _currentFilePath;
     private bool _isSimulating;
@@ -77,12 +83,14 @@ public partial class MainViewModel : ObservableObject
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
         PdkLoader pdkLoader,
-        Commands.CommandManager commandManager)
+        Commands.CommandManager commandManager,
+        UserPreferencesService preferencesService)
     {
         Simulation = simulationService;
         _nazcaExporter = nazcaExporter;
         _pdkLoader = pdkLoader;
         CommandManager = commandManager;
+        _preferencesService = preferencesService;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         RoutingDiagnostics.Configure(_canvas);
@@ -96,7 +104,9 @@ public partial class MainViewModel : ObservableObject
             }
         };
         WireDesignValidation();
+        PdkManager.OnFilterChanged = FilterComponents;
         LoadComponentLibrary();
+        RestorePdkFilterState();
     }
 
     private void LoadComponentLibrary()
@@ -106,6 +116,12 @@ public partial class MainViewModel : ObservableObject
         foreach (var template in templates)
         {
             ComponentLibrary.Add(template);
+        }
+
+        // Register built-in templates as a PDK
+        if (templates.Count > 0)
+        {
+            PdkManager.RegisterPdk("Built-in Components", null, true, templates.Count);
         }
 
         // Auto-load bundled PDK files from PDKs directory
@@ -135,11 +151,16 @@ public partial class MainViewModel : ObservableObject
             try
             {
                 var pdk = _pdkLoader.LoadFromFile(pdkFile);
+                int componentCount = 0;
                 foreach (var pdkComp in pdk.Components)
                 {
                     var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
                     ComponentLibrary.Add(template);
+                    componentCount++;
                 }
+
+                // Register bundled PDK with the manager
+                PdkManager.RegisterPdk(pdk.Name, pdkFile, true, componentCount);
             }
             catch
             {
@@ -154,12 +175,44 @@ public partial class MainViewModel : ObservableObject
     {
         FilteredComponentLibrary.Clear();
         var query = SearchText?.Trim() ?? "";
+        var enabledPdks = PdkManager.GetEnabledPdkNames();
 
         foreach (var t in ComponentLibrary)
         {
+            // Filter by PDK enabled state
+            if (!enabledPdks.Contains(t.PdkSource))
+                continue;
+
+            // Filter by search query
             if (query.Length == 0 || MatchesSearch(t, query))
                 FilteredComponentLibrary.Add(t);
         }
+
+        // Save filter state to preferences
+        SavePdkFilterState();
+    }
+
+    private void RestorePdkFilterState()
+    {
+        var enabledPdks = _preferencesService.GetEnabledPdks();
+
+        // If no preferences saved, enable all by default
+        if (enabledPdks.Count == 0)
+            return;
+
+        // Apply saved filter state
+        foreach (var pdk in PdkManager.LoadedPdks)
+        {
+            pdk.IsEnabled = enabledPdks.Contains(pdk.Name);
+        }
+
+        FilterComponents();
+    }
+
+    private void SavePdkFilterState()
+    {
+        var enabledPdks = PdkManager.GetEnabledPdkNames();
+        _preferencesService.SetEnabledPdks(enabledPdks);
     }
 
     private static bool MatchesSearch(ComponentTemplate t, string query)
@@ -757,9 +810,23 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrEmpty(filePath)) return;
 
+        // Check for duplicate PDK
+        if (PdkManager.IsPdkLoaded(filePath))
+        {
+            StatusText = "PDK already loaded from this file";
+            return;
+        }
+
         try
         {
             var pdk = _pdkLoader.LoadFromFile(filePath);
+
+            // Check if PDK name already exists
+            if (PdkManager.IsPdkNameLoaded(pdk.Name, null))
+            {
+                StatusText = $"PDK '{pdk.Name}' is already loaded";
+                return;
+            }
 
             // Convert PDK components to templates and add to library
             int addedCount = 0;
@@ -771,6 +838,12 @@ public partial class MainViewModel : ObservableObject
                     Categories.Add(template.Category);
                 addedCount++;
             }
+
+            // Register user-loaded PDK
+            PdkManager.RegisterPdk(pdk.Name, filePath, false, addedCount);
+
+            // Save user PDK path for auto-reload
+            _preferencesService.AddUserPdkPath(filePath);
 
             FilterComponents();
             StatusText = $"Loaded PDK '{pdk.Name}' with {addedCount} components";
