@@ -155,8 +155,7 @@ public class WaveguideRouter
         manhattan.Route(startX, startY, startAngle, endX, endY, endInputAngle, path);
 
         // Check if the Manhattan path is actually blocked or invalid
-        // Exclude start/end components from blocking check (path naturally exits/enters them)
-        if (path.Segments.Count == 0 || !path.IsValid || IsPathBlocked(path.Segments, startPin, endPin))
+        if (path.Segments.Count == 0 || !path.IsValid || IsPathBlocked(path.Segments))
         {
             path.IsBlockedFallback = true;
         }
@@ -166,59 +165,25 @@ public class WaveguideRouter
 
     /// <summary>
     /// Checks if any segment in a path passes through blocked cells.
-    /// Optionally excludes start and end components from blocking checks.
     /// </summary>
-    /// <param name="segments">Path segments to check</param>
-    /// <param name="startPin">Start pin (component will be excluded from blocking check)</param>
-    /// <param name="endPin">End pin (component will be excluded from blocking check)</param>
-    public bool IsPathBlocked(IEnumerable<PathSegment> segments, PhysicalPin? startPin = null, PhysicalPin? endPin = null)
+    public bool IsPathBlocked(IEnumerable<PathSegment> segments)
     {
         if (PathfindingGrid == null) return false;
 
-        // Temporarily remove start and end component obstacles
-        bool removedStart = false;
-        bool removedEnd = false;
-
-        try
+        foreach (var segment in segments)
         {
-            if (startPin?.ParentComponent != null)
+            if (segment is StraightSegment)
             {
-                PathfindingGrid.RemoveComponentObstacle(startPin.ParentComponent);
-                removedStart = true;
+                if (IsLineBlocked(segment.StartPoint.X, segment.StartPoint.Y,
+                                  segment.EndPoint.X, segment.EndPoint.Y))
+                    return true;
             }
-            if (endPin?.ParentComponent != null && endPin.ParentComponent != startPin?.ParentComponent)
+            else if (segment is BendSegment bend)
             {
-                PathfindingGrid.RemoveComponentObstacle(endPin.ParentComponent);
-                removedEnd = true;
-            }
-
-            foreach (var segment in segments)
-            {
-                if (segment is StraightSegment)
-                {
-                    if (IsLineBlocked(segment.StartPoint.X, segment.StartPoint.Y,
-                                      segment.EndPoint.X, segment.EndPoint.Y))
-                        return true;
-                }
-                else if (segment is BendSegment bend)
-                {
-                    if (IsArcBlocked(bend)) return true;
-                }
-            }
-            return false;
-        }
-        finally
-        {
-            // Restore the removed component obstacles
-            if (removedStart && startPin?.ParentComponent != null)
-            {
-                PathfindingGrid.AddComponentObstacle(startPin.ParentComponent);
-            }
-            if (removedEnd && endPin?.ParentComponent != null)
-            {
-                PathfindingGrid.AddComponentObstacle(endPin.ParentComponent);
+                if (IsArcBlocked(bend)) return true;
             }
         }
+        return false;
     }
 
     /// <summary>
