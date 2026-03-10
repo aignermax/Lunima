@@ -372,6 +372,27 @@
         <controls:DesignCanvas x:Name="DesignCanvasControl"
                                ViewModel="{Binding Canvas}"
                                Zoom="{Binding ZoomLevel, Mode=TwoWay}"
-                               MainViewModel="{Binding}"/>
+                               MainViewModel="{Binding}">
+            <controls:DesignCanvas.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
+                        <MenuItem.Icon>
+                            <TextBlock Text="📋" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Paste" Command="{Binding PasteSelectedCommand}" InputGesture="Ctrl+V">
+                        <MenuItem.Icon>
+                            <TextBlock Text="📄" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Delete" Command="{Binding DeleteSelectedCommand}" InputGesture="Del">
+                        <MenuItem.Icon>
+                            <TextBlock Text="🗑️" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </ContextMenu>
+            </controls:DesignCanvas.ContextMenu>
+        </controls:DesignCanvas>
     </DockPanel>
 </Window>
