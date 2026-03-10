@@ -31,6 +31,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     public PowerFlowVisualizer PowerFlowVisualizer { get; } = new();
 
     /// <summary>
+    /// Manages pin alignment guide visualization during component dragging.
+    /// </summary>
+    public AlignmentGuideViewModel AlignmentGuide { get; } = new();
+
+    /// <summary>
     /// Whether power flow overlay is currently visible.
     /// </summary>
     [ObservableProperty]

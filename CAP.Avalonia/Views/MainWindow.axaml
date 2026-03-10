@@ -325,6 +325,15 @@
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
+                    <TextBlock Text="Alignment Guides:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <CheckBox Content="Show Pin Alignment"
+                              IsChecked="{Binding Canvas.AlignmentGuide.IsEnabled}"
+                              Foreground="White" Margin="0,0,0,5"/>
+                    <TextBlock Text="Shows cyan guide lines when pins align on same X or Y axis during dragging."
+                               Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+
                     <TextBlock Text="Statistics:" Foreground="Gray" Margin="0,0,0,5"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Components: " Foreground="Gray"/>
