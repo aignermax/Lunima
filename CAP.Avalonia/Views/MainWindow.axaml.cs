@@ -59,8 +59,14 @@ public partial class MainWindow : Window
                     mainVm.SetSelectModeCommand.Execute(null);
                 break;
             case Key.C:
-                if (!ctrlPressed)
+                if (ctrlPressed)
+                    mainVm.CopySelectedCommand.Execute(null);
+                else
                     mainVm.SetConnectModeCommand.Execute(null);
+                break;
+            case Key.V:
+                if (ctrlPressed)
+                    mainVm.PasteSelectedCommand.Execute(null);
                 break;
             case Key.D:
                 if (!ctrlPressed)
