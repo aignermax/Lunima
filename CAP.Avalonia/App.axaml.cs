@@ -27,6 +27,7 @@ public partial class App : Application
         services.AddSingleton<SimpleNazcaExporter>();
         services.AddSingleton<PdkLoader>();
         services.AddSingleton<Commands.CommandManager>();
+        services.AddSingleton<UserPreferencesService>();
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();

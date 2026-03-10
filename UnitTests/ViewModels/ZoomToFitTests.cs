@@ -13,7 +13,7 @@ namespace UnitTests.ViewModels;
 public class ZoomToFitTests
 {
     private static MainViewModel CreateViewModel() =>
-        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager());
+        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager(), new UserPreferencesService());
 
     [Fact]
     public void ZoomToFit_EmptyCanvas_DoesNotChangeZoom()
