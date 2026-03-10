@@ -386,7 +386,7 @@
                         </MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Delete" Command="{Binding DeleteSelectedCommand}" InputGesture="Del">
+                    <MenuItem Header="Delete" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">
                         <MenuItem.Icon>
                             <TextBlock Text="🗑️" FontSize="14"/>
                         </MenuItem.Icon>
