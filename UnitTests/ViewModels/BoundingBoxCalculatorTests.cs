@@ -1,4 +1,4 @@
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 using Shouldly;
 using Xunit;
 

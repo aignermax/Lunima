@@ -1,6 +1,8 @@
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Commands;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using Shouldly;
 using UnitTests.Helpers;
 using Xunit;

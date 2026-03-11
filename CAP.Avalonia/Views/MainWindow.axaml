@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
         xmlns:controls="using:CAP.Avalonia.Controls"
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
@@ -112,7 +113,7 @@
                                       HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding PdkManager.LoadedPdks}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:PdkInfoViewModel">
+                                    <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
                                         <StackPanel Margin="0,3">
                                             <StackPanel Orientation="Horizontal">
                                                 <CheckBox IsChecked="{Binding IsEnabled}"
@@ -149,7 +150,7 @@
                          Background="Transparent" Foreground="White"
                          Margin="5">
                     <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ComponentTemplate">
+                        <DataTemplate x:DataType="vmLib:ComponentTemplate">
                             <StackPanel Orientation="Horizontal" Margin="3">
                                 <controls:ComponentPreview
                                     Width="56" Height="36"

@@ -1,4 +1,5 @@
 using CAP_Core.Helpers;
+using CAP_Core.Components.Core;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,7 +18,7 @@ namespace CAP_Core.Grid
         public UniqueObservableCollection<IntVector> Selections { get; set; } = new();
         public SelectionManager(GridManager grid)
         {
-            grid.ComponentMover.OnComponentRemoved += (Components.Component component, int x, int y) =>
+            grid.ComponentMover.OnComponentRemoved += (Component component, int x, int y) =>
             {
                 IntVector? elementToRemove = null;
                 foreach( IntVector s in Selections)

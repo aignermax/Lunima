@@ -1,5 +1,6 @@
 using CAP_Core.Analysis;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Tiles;
 using Shouldly;
