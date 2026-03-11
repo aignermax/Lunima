@@ -286,29 +286,16 @@ public partial class DesignCanvas
 
     private void UpdateGroupDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
     {
-        // First, move by mouse delta
+        // Move all components by mouse delta
         foreach (var comp in vm.Selection.SelectedComponents)
         {
             vm.MoveComponent(comp, deltaX, deltaY);
         }
 
-        // Then check for alignment snapping
+        // Update alignment guide lines (visual only, no snapping during drag)
         if (vm.AlignmentGuide.IsEnabled)
         {
             vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
-
-            // Calculate snap delta based on current position (after mouse move)
-            var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_interactionState.DraggingComponent!, vm.Components, Zoom);
-
-            // Only apply snap if it would move us (non-zero delta)
-            // The snap delta is calculated to bring pins into alignment
-            if (snapDX != 0 || snapDY != 0)
-            {
-                foreach (var comp in vm.Selection.SelectedComponents)
-                {
-                    vm.MoveComponent(comp, snapDX, snapDY);
-                }
-            }
         }
 
         var snapSettings = vm.GridSnap;
@@ -329,17 +316,10 @@ public partial class DesignCanvas
     {
         vm.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
 
-        // Update alignment guides
+        // Update alignment guide lines (visual only, no snapping during drag)
         if (vm.AlignmentGuide.IsEnabled)
         {
             vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
-
-            // Apply pin alignment snapping
-            var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_interactionState.DraggingComponent!, vm.Components, Zoom);
-            if (snapDX != 0 || snapDY != 0)
-            {
-                vm.MoveComponent(_interactionState.DraggingComponent!, snapDX, snapDY);
-            }
         }
 
         var snapSettings = vm.GridSnap;
@@ -439,11 +419,26 @@ public partial class DesignCanvas
             double finalX = _interactionState.DraggingComponent.X;
             double finalY = _interactionState.DraggingComponent.Y;
 
+            // Apply pin alignment snapping on release (Figma-style)
+            if (vm?.AlignmentGuide != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.SnapEnabled)
+            {
+                var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapOnRelease(
+                    _interactionState.DraggingComponent,
+                    vm.Components);
+
+                if (snapDX != 0 || snapDY != 0)
+                {
+                    finalX += snapDX;
+                    finalY += snapDY;
+                }
+            }
+
+            // Apply grid snapping if pin alignment didn't snap
             var snapSettings = vm?.GridSnap;
             if (snapSettings != null && snapSettings.IsEnabled)
             {
-                double centerX = _interactionState.DraggingComponent.X + _interactionState.DraggingComponent.Width / 2.0;
-                double centerY = _interactionState.DraggingComponent.Y + _interactionState.DraggingComponent.Height / 2.0;
+                double centerX = finalX + _interactionState.DraggingComponent.Width / 2.0;
+                double centerY = finalY + _interactionState.DraggingComponent.Height / 2.0;
                 var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
                 finalX = snappedCX - _interactionState.DraggingComponent.Width / 2.0;
                 finalY = snappedCY - _interactionState.DraggingComponent.Height / 2.0;
