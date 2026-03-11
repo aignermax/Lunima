@@ -123,7 +123,19 @@ public partial class DesignCanvas
         if (_interactionState.DraggingComponent != null)
         {
             mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-            mainVm?.StartMoveComponent(_interactionState.DraggingComponent);
+
+            // Start tracking for undo
+            if (vm.Selection.SelectedComponents.Count > 1)
+            {
+                // Group move
+                mainVm?.StartGroupMove(vm.Selection.SelectedComponents);
+            }
+            else
+            {
+                // Single component move
+                mainVm?.StartMoveComponent(_interactionState.DraggingComponent);
+            }
+
             _interactionState.DragStartX = _interactionState.DraggingComponent.X;
             _interactionState.DragStartY = _interactionState.DraggingComponent.Y;
 
@@ -414,14 +426,21 @@ public partial class DesignCanvas
             }
 
             _interactionState.ShowDragPreview = false;
-            MainViewModel?.EndMoveComponent();
 
-            if (vm != null && isDraggingGroup)
+            // End tracking for undo
+            if (isDraggingGroup)
             {
-                foreach (var comp in vm.Selection.SelectedComponents)
+                MainViewModel?.EndGroupMove(vm!.Selection.SelectedComponents);
+
+                // Restore selection highlighting
+                foreach (var comp in vm!.Selection.SelectedComponents)
                 {
                     comp.IsSelected = true;
                 }
+            }
+            else
+            {
+                MainViewModel?.EndMoveComponent();
             }
 
             InvalidateVisual();
@@ -434,6 +453,7 @@ public partial class DesignCanvas
         {
             if (isDraggingGroup)
             {
+                // Move all components in the group by the same delta
                 foreach (var comp in vm!.Selection.SelectedComponents)
                 {
                     vm.MoveComponent(comp, deltaX, deltaY);
@@ -441,6 +461,7 @@ public partial class DesignCanvas
             }
             else
             {
+                // Move single component
                 vm?.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
             }
         }
