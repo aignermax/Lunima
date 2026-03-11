@@ -5776,7 +5776,7 @@
           {
             "fromPin": "port 1",
             "toPin": "port 1",
-            "magnitude": 4e-06,
+            "magnitude": 0.000004,
             "phaseDegrees": -2697.1
           },
           {
@@ -5806,7 +5806,7 @@
           {
             "fromPin": "port 2",
             "toPin": "port 2",
-            "magnitude": 3e-06,
+            "magnitude": 0.000003,
             "phaseDegrees": -4858.6
           },
           {
@@ -5836,7 +5836,7 @@
           {
             "fromPin": "port 3",
             "toPin": "port 3",
-            "magnitude": 4e-06,
+            "magnitude": 0.000004,
             "phaseDegrees": -67.72
           },
           {
@@ -5866,7 +5866,7 @@
           {
             "fromPin": "port 4",
             "toPin": "port 4",
-            "magnitude": 3e-06,
+            "magnitude": 0.000003,
             "phaseDegrees": 293.73
           }
         ],
@@ -5877,7 +5877,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 1.6e-05,
+                "magnitude": 0.000016,
                 "phaseDegrees": -146.23
               },
               {
@@ -5907,7 +5907,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 1.2e-05,
+                "magnitude": 0.000012,
                 "phaseDegrees": -22.37
               },
               {
@@ -5937,7 +5937,7 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 1.5e-05,
+                "magnitude": 0.000015,
                 "phaseDegrees": -38.06
               },
               {
@@ -5967,7 +5967,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 1.1e-05,
+                "magnitude": 0.000011,
                 "phaseDegrees": -151.44
               }
             ]
@@ -5978,13 +5978,13 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 2e-06,
+                "magnitude": 0.000002,
                 "phaseDegrees": -368.41
               },
               {
                 "fromPin": "port 1",
                 "toPin": "port 2",
-                "magnitude": 6.7e-05,
+                "magnitude": 0.000067,
                 "phaseDegrees": -714.06
               },
               {
@@ -5996,13 +5996,13 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 4",
-                "magnitude": 6e-06,
+                "magnitude": 0.000006,
                 "phaseDegrees": 272.66
               },
               {
                 "fromPin": "port 2",
                 "toPin": "port 1",
-                "magnitude": 6.7e-05,
+                "magnitude": 0.000067,
                 "phaseDegrees": -714.06
               },
               {
@@ -6014,7 +6014,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 3",
-                "magnitude": 6e-06,
+                "magnitude": 0.000006,
                 "phaseDegrees": -67.29
               },
               {
@@ -6032,25 +6032,25 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 2",
-                "magnitude": 6e-06,
+                "magnitude": 0.000006,
                 "phaseDegrees": -67.29
               },
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 2e-06,
+                "magnitude": 0.000002,
                 "phaseDegrees": -154.9
               },
               {
                 "fromPin": "port 3",
                 "toPin": "port 4",
-                "magnitude": 6.3e-05,
+                "magnitude": 0.000063,
                 "phaseDegrees": -160.6
               },
               {
                 "fromPin": "port 4",
                 "toPin": "port 1",
-                "magnitude": 6e-06,
+                "magnitude": 0.000006,
                 "phaseDegrees": 272.66
               },
               {
@@ -6062,7 +6062,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 3",
-                "magnitude": 6.3e-05,
+                "magnitude": 0.000063,
                 "phaseDegrees": -160.6
               },
               {
@@ -6079,7 +6079,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -1115.57
               },
               {
@@ -6109,7 +6109,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 2.5e-05,
+                "magnitude": 0.000025,
                 "phaseDegrees": -1555.57
               },
               {
@@ -6139,7 +6139,7 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -130.3
               },
               {
@@ -6169,7 +6169,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 2.3e-05,
+                "magnitude": 0.000023,
                 "phaseDegrees": 304.13
               }
             ]
@@ -6180,7 +6180,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -1469.52
               },
               {
@@ -6210,7 +6210,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 5e-06,
+                "magnitude": 0.000005,
                 "phaseDegrees": -2182.25
               },
               {
@@ -6240,7 +6240,7 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -125.04
               },
               {
@@ -6270,7 +6270,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 5e-06,
+                "magnitude": 0.000005,
                 "phaseDegrees": 228.65
               }
             ]
@@ -6281,7 +6281,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -1770.55
               },
               {
@@ -6311,7 +6311,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 2e-06,
+                "magnitude": 0.000002,
                 "phaseDegrees": -2942.59
               },
               {
@@ -6341,7 +6341,7 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -118.36
               },
               {
@@ -6371,7 +6371,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 2e-06,
+                "magnitude": 0.000002,
                 "phaseDegrees": 325.51
               }
             ]
@@ -6382,7 +6382,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": -2697.1
               },
               {
@@ -6412,7 +6412,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -4858.6
               },
               {
@@ -6442,7 +6442,7 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": -67.72
               },
               {
@@ -6472,7 +6472,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": 293.73
               }
             ]
@@ -6483,7 +6483,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 2e-06,
+                "magnitude": 0.000002,
                 "phaseDegrees": -2904.07
               },
               {
@@ -6513,7 +6513,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -4810.15
               },
               {
@@ -6543,7 +6543,7 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 2e-06,
+                "magnitude": 0.000002,
                 "phaseDegrees": -161.66
               },
               {
@@ -6573,7 +6573,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": 287.97
               }
             ]
@@ -6584,13 +6584,13 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 2.5e-05,
+                "magnitude": 0.000025,
                 "phaseDegrees": -3697.38
               },
               {
                 "fromPin": "port 1",
                 "toPin": "port 2",
-                "magnitude": 3.2e-05,
+                "magnitude": 0.000032,
                 "phaseDegrees": -4660.13
               },
               {
@@ -6608,13 +6608,13 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 1",
-                "magnitude": 3.2e-05,
+                "magnitude": 0.000032,
                 "phaseDegrees": -4660.13
               },
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": -5512.99
               },
               {
@@ -6644,13 +6644,13 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 2.3e-05,
+                "magnitude": 0.000023,
                 "phaseDegrees": -93.04
               },
               {
                 "fromPin": "port 3",
                 "toPin": "port 4",
-                "magnitude": 3e-05,
+                "magnitude": 0.00003,
                 "phaseDegrees": 939.41
               },
               {
@@ -6668,13 +6668,13 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 3",
-                "magnitude": 3e-05,
+                "magnitude": 0.00003,
                 "phaseDegrees": 939.41
               },
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": 281.73
               }
             ]
@@ -6715,7 +6715,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 8e-06,
+                "magnitude": 0.000008,
                 "phaseDegrees": -6192.44
               },
               {
@@ -6775,7 +6775,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 7e-06,
+                "magnitude": 0.000007,
                 "phaseDegrees": 248.97
               }
             ]
@@ -6786,13 +6786,13 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 2.1e-05,
+                "magnitude": 0.000021,
                 "phaseDegrees": -5207.61
               },
               {
                 "fromPin": "port 1",
                 "toPin": "port 2",
-                "magnitude": 2.5e-05,
+                "magnitude": 0.000025,
                 "phaseDegrees": -5601.42
               },
               {
@@ -6810,13 +6810,13 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 1",
-                "magnitude": 2.5e-05,
+                "magnitude": 0.000025,
                 "phaseDegrees": -5601.42
               },
               {
                 "fromPin": "port 2",
                 "toPin": "port 2",
-                "magnitude": 7e-06,
+                "magnitude": 0.000007,
                 "phaseDegrees": -6843.18
               },
               {
@@ -6846,13 +6846,13 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 2e-05,
+                "magnitude": 0.00002,
                 "phaseDegrees": 339.12
               },
               {
                 "fromPin": "port 3",
                 "toPin": "port 4",
-                "magnitude": 2.4e-05,
+                "magnitude": 0.000024,
                 "phaseDegrees": 1051.5
               },
               {
@@ -6870,13 +6870,13 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 3",
-                "magnitude": 2.4e-05,
+                "magnitude": 0.000024,
                 "phaseDegrees": 1051.5
               },
               {
                 "fromPin": "port 4",
                 "toPin": "port 4",
-                "magnitude": 7e-06,
+                "magnitude": 0.000007,
                 "phaseDegrees": 195.93
               }
             ]
@@ -6887,7 +6887,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 1",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": -5568.63
               },
               {
@@ -6905,7 +6905,7 @@
               {
                 "fromPin": "port 1",
                 "toPin": "port 4",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": 8119.32
               },
               {
@@ -6923,7 +6923,7 @@
               {
                 "fromPin": "port 2",
                 "toPin": "port 3",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": 7279.42
               },
               {
@@ -6941,13 +6941,13 @@
               {
                 "fromPin": "port 3",
                 "toPin": "port 2",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": 7279.42
               },
               {
                 "fromPin": "port 3",
                 "toPin": "port 3",
-                "magnitude": 3e-06,
+                "magnitude": 0.000003,
                 "phaseDegrees": 340.34
               },
               {
@@ -6959,7 +6959,7 @@
               {
                 "fromPin": "port 4",
                 "toPin": "port 1",
-                "magnitude": 4e-06,
+                "magnitude": 0.000004,
                 "phaseDegrees": 8119.32
               },
               {
@@ -8520,6 +8520,2491 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "name": "GC SiN TE 1310 8deg",
+      "category": "I/O",
+      "nazcaFunction": "GC_SiN_TE_1310_8degOxide_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7079457843841379,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7079457843841379,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "GC SiN TE 1550 8deg",
+      "category": "I/O",
+      "nazcaFunction": "GC_SiN_TE_1550_8degOxide_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7079457843841379,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7079457843841379,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "GC TE 1310 8deg",
+      "category": "I/O",
+      "nazcaFunction": "GC_TE_1310_8degOxide_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7498942093324559,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7498942093324559,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "GC TE 1550 8deg",
+      "category": "I/O",
+      "nazcaFunction": "GC_TE_1550_8degOxide_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7498942093324559,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7498942093324559,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "GC TM 1310 8deg",
+      "category": "I/O",
+      "nazcaFunction": "GC_TM_1310_8degOxide_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.6683439175686147,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.6683439175686147,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "GC TM 1550 8deg",
+      "category": "I/O",
+      "nazcaFunction": "GC_TM_1550_8degOxide_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.6683439175686147,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.6683439175686147,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "MMI 1x2 TE 1550 3dB",
+      "category": "Splitters",
+      "nazcaFunction": "ANT_MMI_1x2_te1550_3dB_BB",
+      "nazcaParameters": "",
+      "widthMicrometers": 15,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 10,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 20,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Y-Branch 895",
+      "category": "Splitters",
+      "nazcaFunction": "ebeam_YBranch_895",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 12,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 6,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 9,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 895,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Y-Branch TE 1310",
+      "category": "Splitters",
+      "nazcaFunction": "ebeam_YBranch_te1310",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 12,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 6,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 9,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Y-Branch Adiabatic",
+      "category": "Splitters",
+      "nazcaFunction": "ebeam_y_adiabatic",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 25,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 12.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 6,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 19,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Y-Branch Adiabatic 500nm",
+      "category": "Splitters",
+      "nazcaFunction": "ebeam_y_adiabatic_500pin",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 25,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 12.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 6,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 19,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "SWG Splitter TE 1310",
+      "category": "Splitters",
+      "nazcaFunction": "ebeam_splitter_swg_assist_te1310",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 12,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 6,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 9,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "SWG Splitter TE 1550",
+      "category": "Splitters",
+      "nazcaFunction": "ebeam_splitter_swg_assist_te1550",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 12,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 6,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 9,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.05,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.03,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "DC 2-1 TE 895",
+      "category": "Couplers",
+      "nazcaFunction": "ebeam_DC_2-1_te895",
+      "nazcaParameters": "",
+      "widthMicrometers": 20,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 20,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 20,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 895,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "DC TE 895",
+      "category": "Couplers",
+      "nazcaFunction": "ebeam_DC_te895",
+      "nazcaParameters": "",
+      "widthMicrometers": 20,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 20,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 20,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 895,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "MMI 2x2 50/50 TE 1310",
+      "category": "Couplers",
+      "nazcaFunction": "ebeam_MMI_2x2_5050_te1310",
+      "nazcaParameters": "",
+      "widthMicrometers": 25,
+      "heightMicrometers": 15,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 10,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 25,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 25,
+          "offsetYMicrometers": 10,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Adiabatic Coupler TE 1550",
+      "category": "Couplers",
+      "nazcaFunction": "ebeam_adiabatic_te1550",
+      "nazcaParameters": "",
+      "widthMicrometers": 50,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Adiabatic Coupler TM 1550",
+      "category": "Couplers",
+      "nazcaFunction": "ebeam_adiabatic_tm1550",
+      "nazcaParameters": "",
+      "widthMicrometers": 50,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 3,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 7,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.7071067811865476,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Routing Taper TE 1550 (L=20um)",
+      "category": "Tapers",
+      "nazcaFunction": "ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=20um",
+      "nazcaParameters": "",
+      "widthMicrometers": 20,
+      "heightMicrometers": 3,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 20,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.9988493699365052,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.9988493699365052,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Routing Taper TE 1550 (L=40um)",
+      "category": "Tapers",
+      "nazcaFunction": "ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=40um",
+      "nazcaParameters": "",
+      "widthMicrometers": 40,
+      "heightMicrometers": 3,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 40,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.9994245193792801,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.9994245193792801,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "SiN Taper 750-3000",
+      "category": "Tapers",
+      "nazcaFunction": "taper_SiN_750_3000",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 3,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.9977000638225533,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.9977000638225533,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Si SIMM Taper 1310",
+      "category": "Tapers",
+      "nazcaFunction": "taper_si_simm_1310",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 3,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.9977000638225533,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.9977000638225533,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Si SIMM Taper 1550",
+      "category": "Tapers",
+      "nazcaFunction": "taper_si_simm_1550",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 3,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 1.5,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.9977000638225533,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.9977000638225533,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Terminator SiN 1550",
+      "category": "Termination",
+      "nazcaFunction": "ebeam_terminator_SiN_1550",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.001,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Terminator SiN TE 895",
+      "category": "Termination",
+      "nazcaFunction": "ebeam_terminator_SiN_te895",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 895,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.001,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Terminator TE 1310",
+      "category": "Termination",
+      "nazcaFunction": "ebeam_terminator_te1310",
+      "nazcaParameters": "",
+      "widthMicrometers": 10,
+      "heightMicrometers": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1310,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.001,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Grating Coupler TE 895",
+      "category": "I/O",
+      "nazcaFunction": "ebeam_gc_te895",
+      "nazcaParameters": "",
+      "widthMicrometers": 30,
+      "heightMicrometers": 30,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 30,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 895,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.7498942093324559,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.7498942093324559,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Crossing Horizontal",
+      "category": "Crossings",
+      "nazcaFunction": "crossing_horizontal",
+      "nazcaParameters": "",
+      "widthMicrometers": 15,
+      "heightMicrometers": 15,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 7.5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 7.5,
+          "offsetYMicrometers": 0,
+          "angleDegrees": 270
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 7.5,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 90
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Crossing Manhattan",
+      "category": "Crossings",
+      "nazcaFunction": "crossing_manhattan",
+      "nazcaParameters": "",
+      "widthMicrometers": 15,
+      "heightMicrometers": 15,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 7.5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 7.5,
+          "offsetYMicrometers": 0,
+          "angleDegrees": 270
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 7.5,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 90
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Crossing 4-Port",
+      "category": "Crossings",
+      "nazcaFunction": "ebeam_crossing4",
+      "nazcaParameters": "",
+      "widthMicrometers": 15,
+      "heightMicrometers": 15,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 7.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 7.5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 7.5,
+          "offsetYMicrometers": 0,
+          "angleDegrees": 270
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 7.5,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 90
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.98,
+            "phaseDegrees": -45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Bond Pad",
+      "category": "Electrical",
+      "nazcaFunction": "ebeam_BondPad",
+      "nazcaParameters": "",
+      "widthMicrometers": 100,
+      "heightMicrometers": 100,
+      "pins": [
+        {
+          "name": "elec",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 50,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [],
+        "wavelengthData": []
+      }
+    },
+    {
+      "name": "Polarizer TM 1550",
+      "category": "Polarization",
+      "nazcaFunction": "ebeam_Polarizer_TM_1550_UQAM",
+      "nazcaParameters": "",
+      "widthMicrometers": 50,
+      "heightMicrometers": 5,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 2.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 2.5,
+          "angleDegrees": 0
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.9885530946569389,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.9885530946569389,
+            "phaseDegrees": -90
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.1,
+            "phaseDegrees": 180
+          }
+        ],
+        "wavelengthData": []
       }
     }
   ]
