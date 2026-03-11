@@ -128,13 +128,17 @@ public class PinAlignmentHelper
 
                 foreach (var otherPin in otherComp.PhysicalPins)
                 {
+                    // Skip if pins don't point at each other (must be ~180° apart)
+                    if (!ArePinsOpposing(draggingPin, otherPin))
+                        continue;
+
                     var (otherX, otherY) = otherPin.GetAbsolutePosition();
 
                     // Check horizontal alignment (same Y)
                     if (Math.Abs(draggingY - otherY) <= AlignmentToleranceMicrometers)
                     {
                         horizontalAlignments.Add(new HorizontalAlignment(
-                            draggingY,
+                            otherY,  // Use target Y for snapping
                             draggingPin,
                             otherPin));
                     }
@@ -143,7 +147,7 @@ public class PinAlignmentHelper
                     if (Math.Abs(draggingX - otherX) <= AlignmentToleranceMicrometers)
                     {
                         verticalAlignments.Add(new VerticalAlignment(
-                            draggingX,
+                            otherX,  // Use target X for snapping
                             draggingPin,
                             otherPin));
                     }
@@ -152,6 +156,70 @@ public class PinAlignmentHelper
         }
 
         return (horizontalAlignments, verticalAlignments);
+    }
+
+    /// <summary>
+    /// Checks if two pins are facing each other (opposing directions ~180° apart).
+    /// Pins must point at each other to be considered for alignment.
+    /// </summary>
+    private bool ArePinsOpposing(PhysicalPin pin1, PhysicalPin pin2)
+    {
+        // Get absolute angles (including component rotation)
+        double angle1 = pin1.GetAbsoluteAngle();
+        double angle2 = pin2.GetAbsoluteAngle();
+
+        // Calculate angular difference
+        double diff = Math.Abs(angle1 - angle2);
+        if (diff > 180)
+            diff = 360 - diff;
+
+        // Pins are opposing if they're within 10° of being 180° apart
+        return Math.Abs(diff - 180) <= 10;
+    }
+
+    /// <summary>
+    /// Calculates snap delta to align the dragging component's pins with nearby opposing pins.
+    /// Returns the offset to apply to the component position to achieve perfect alignment.
+    /// </summary>
+    /// <param name="draggingComponent">The component being dragged.</param>
+    /// <param name="otherComponents">All other components on the canvas.</param>
+    /// <param name="snapToleranceMicrometers">Maximum distance to trigger snapping (default 5µm).</param>
+    /// <returns>Tuple of (deltaX, deltaY) to apply for snapping, or (0, 0) if no snap.</returns>
+    public (double deltaX, double deltaY) CalculateSnapDelta(
+        Component draggingComponent,
+        IEnumerable<Component> otherComponents,
+        double snapToleranceMicrometers = 5.0)
+    {
+        var (horizontal, vertical) = FindAllAlignments(draggingComponent, otherComponents);
+
+        double snapDeltaX = 0;
+        double snapDeltaY = 0;
+
+        // Snap to closest horizontal alignment (Y coordinate)
+        if (horizontal.Count > 0)
+        {
+            var closest = horizontal
+                .OrderBy(a => Math.Abs(a.YCoordinate - a.DraggingPin.GetAbsolutePosition().y))
+                .First();
+
+            double diff = closest.YCoordinate - closest.DraggingPin.GetAbsolutePosition().y;
+            if (Math.Abs(diff) <= snapToleranceMicrometers)
+                snapDeltaY = diff;
+        }
+
+        // Snap to closest vertical alignment (X coordinate)
+        if (vertical.Count > 0)
+        {
+            var closest = vertical
+                .OrderBy(a => Math.Abs(a.XCoordinate - a.DraggingPin.GetAbsolutePosition().x))
+                .First();
+
+            double diff = closest.XCoordinate - closest.DraggingPin.GetAbsolutePosition().x;
+            if (Math.Abs(diff) <= snapToleranceMicrometers)
+                snapDeltaX = diff;
+        }
+
+        return (snapDeltaX, snapDeltaY);
     }
 }
 

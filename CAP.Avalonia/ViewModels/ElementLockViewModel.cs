@@ -35,6 +35,13 @@ public partial class ElementLockViewModel : ObservableObject
     public void Configure(DesignCanvasViewModel canvas)
     {
         Canvas = canvas;
+
+        // Subscribe to selection changes to update command availability
+        Canvas.Selection.SelectedComponents.CollectionChanged += (s, e) =>
+        {
+            RefreshCommands();
+        };
+
         UpdateLockCounts();
     }
 
