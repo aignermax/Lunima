@@ -202,6 +202,12 @@ public class DesignCanvas : Control
             {
                 DrawSelectionRectangle(context, vm.Selection);
             }
+
+            // Draw pin alignment guides (when dragging components)
+            if (_draggingComponent != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.HasAlignments)
+            {
+                DrawAlignmentGuides(context, vm);
+            }
         }
 
         // Draw mode indicator
@@ -819,6 +825,54 @@ public class DesignCanvas : Control
         }
     }
 
+    /// <summary>
+    /// Draws visual alignment guides showing when pins align on the same X or Y axis.
+    /// </summary>
+    private void DrawAlignmentGuides(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        var guidePen = new Pen(new SolidColorBrush(Color.FromArgb(180, 0, 255, 255)), 1.5)
+        {
+            DashStyle = new DashStyle(new double[] { 8, 4 }, 0)
+        };
+
+        var pinDotBrush = new SolidColorBrush(Color.FromArgb(200, 0, 255, 255));
+        const double pinDotRadius = 4.0;
+
+        // Draw horizontal alignment lines (same Y coordinate)
+        foreach (var alignment in vm.AlignmentGuide.HorizontalAlignments)
+        {
+            double y = alignment.YCoordinate;
+            var (draggingX, _) = alignment.DraggingPin.GetAbsolutePosition();
+            var (alignedX, _) = alignment.AlignedPin.GetAbsolutePosition();
+
+            // Draw line spanning from left pin to right pin
+            double minX = Math.Min(draggingX, alignedX);
+            double maxX = Math.Max(draggingX, alignedX);
+            context.DrawLine(guidePen, new Point(minX, y), new Point(maxX, y));
+
+            // Draw dots at pin positions
+            context.DrawEllipse(pinDotBrush, null, new Point(draggingX, y), pinDotRadius, pinDotRadius);
+            context.DrawEllipse(pinDotBrush, null, new Point(alignedX, y), pinDotRadius, pinDotRadius);
+        }
+
+        // Draw vertical alignment lines (same X coordinate)
+        foreach (var alignment in vm.AlignmentGuide.VerticalAlignments)
+        {
+            double x = alignment.XCoordinate;
+            var (_, draggingY) = alignment.DraggingPin.GetAbsolutePosition();
+            var (_, alignedY) = alignment.AlignedPin.GetAbsolutePosition();
+
+            // Draw line spanning from top pin to bottom pin
+            double minY = Math.Min(draggingY, alignedY);
+            double maxY = Math.Max(draggingY, alignedY);
+            context.DrawLine(guidePen, new Point(x, minY), new Point(x, maxY));
+
+            // Draw dots at pin positions
+            context.DrawEllipse(pinDotBrush, null, new Point(x, draggingY), pinDotRadius, pinDotRadius);
+            context.DrawEllipse(pinDotBrush, null, new Point(x, alignedY), pinDotRadius, pinDotRadius);
+        }
+    }
+
     private void DrawModeIndicator(DrawingContext context, Rect bounds)
     {
         var mainVm = MainViewModel;
@@ -1106,6 +1160,12 @@ public class DesignCanvas : Control
                     vm.MoveComponent(comp, deltaX, deltaY);
                 }
 
+                // Update alignment guides for group drag (use representative component)
+                if (vm.AlignmentGuide.IsEnabled)
+                {
+                    vm.AlignmentGuide.UpdateAlignments(_draggingComponent, vm.Components);
+                }
+
                 // Calculate drag preview based on dragged component (representative)
                 var snapSettings = vm.GridSnap;
                 double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
@@ -1125,6 +1185,12 @@ public class DesignCanvas : Control
             {
                 // Single component drag (original behavior)
                 vm.MoveComponent(_draggingComponent, deltaX, deltaY);
+
+                // Update alignment guides
+                if (vm.AlignmentGuide.IsEnabled)
+                {
+                    vm.AlignmentGuide.UpdateAlignments(_draggingComponent, vm.Components);
+                }
 
                 // Calculate drag preview (shows where component will land on release)
                 var snapSettings = vm.GridSnap;
@@ -1287,6 +1353,9 @@ public class DesignCanvas : Control
 
             _showDragPreview = false;
             MainViewModel?.EndMoveComponent();
+
+            // Clear alignment guides when drag ends
+            vm?.AlignmentGuide.ClearAlignments();
 
             // Ensure all components in the selection remain visually selected after drag
             if (vm != null && isDraggingGroup)
