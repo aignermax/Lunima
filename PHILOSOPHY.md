@@ -70,12 +70,28 @@ Beide Tool-Kategorien sind **komplementär, nicht konkurrierend**.
 
 ---
 
+## Bridge to Physical Design
+
+While Connect-A-PIC remains focused on architecture exploration, recent additions enable smoother handoff to physical design flows:
+
+- **Nazca PDK Export**: Export designs to Python/GDS via Nazca framework
+- **Multi-PDK Support**: Load and manage multiple Process Design Kits (SiEPIC, Demo PDK)
+- **GDS Generation**: Generate GDSII layout files for verification
+- **Component Dimension Validation**: Ensure components match PDK specifications
+
+These features don't change Connect-A-PIC's core mission as a thinking tool, but they reduce friction when moving successful concepts into detailed design environments.
+
+---
+
 ## Typische Use Cases
 
 - *"Kann diese photonic processor architecture überhaupt funktionieren?"*
 - *"Wie verhält sich ein interferometrisches Mesh auf Systemebene?"*
 - *"Welche Topologie skaliert besser?"*
 - *"Lohnt es sich, dieses Konzept überhaupt in einen schweren Tool-Flow zu bringen?"*
+- *"Export validated architectures to Nazca/GDS for physical verification"*
+- *"Compare multiple PDK implementations of the same architecture"*
+- *"Validate component dimensions against PDK specifications"*
 
 ---
 
@@ -104,10 +120,14 @@ Beide Tool-Kategorien sind **komplementär, nicht konkurrierend**.
 │   ┌─────────────────┐     ┌─────────────────┐     ┌─────────────┐  │
 │   │   EXPLORATION   │ --> │   VALIDATION    │ --> │  TAPE-OUT   │  │
 │   │                 │     │                 │     │             │  │
-│   │  Connect-A-PIC  │     │  INTERCONNECT   │     │  Foundry    │  │
-│   │                 │     │  OptoCompiler   │     │  PDK Flow   │  │
-│   │  "Does this     │     │  "Will this     │     │  "Build     │  │
-│   │   make sense?"  │     │   work?"        │     │   this"     │  │
+│   │  Connect-A-PIC  │ --> │  INTERCONNECT   │     │  Foundry    │  │
+│   │                 │  │  │  OptoCompiler   │     │  PDK Flow   │  │
+│   │  "Does this     │  │  │  "Will this     │     │  "Build     │  │
+│   │   make sense?"  │  │  │   work?"        │     │   this"     │  │
+│   │                 │  │  │                 │     │             │  │
+│   │  Now with:      │  │  │                 │     │             │  │
+│   │  • Nazca export │  └─>│  (or Python/    │     │             │  │
+│   │  • GDS output   │     │   GDS tools)    │     │             │  │
 │   └─────────────────┘     └─────────────────┘     └─────────────┘  │
 │                                                                     │
 │   Fast iteration          Accurate simulation      Manufacturing   │
@@ -119,4 +139,22 @@ Beide Tool-Kategorien sind **komplementär, nicht konkurrierend**.
 
 ---
 
-*Last updated: January 2026*
+## Recent Enhancements (2026)
+
+Connect-A-PIC has evolved to include:
+
+- **Nazca PDK Integration**: Export designs as Python scripts using Nazca framework
+- **GDS Generation**: Generate GDSII layout files from designs
+- **Multi-PDK Support**: Load and switch between different Process Design Kits
+- **Advanced Routing**: Manhattan and A* routing with collision detection
+- **Component Validation**: Dimension checks against PDK specifications
+- **Parameter Sweeps**: Systematic analysis of design variations
+- **Alignment Guides**: Figma-style snapping for precise component placement
+- **Undo/Redo**: Full command history for design exploration
+- **Locked Elements**: Fix components and connections to prevent accidental modification
+
+These features extend Connect-A-PIC's reach while preserving its core focus on fast architectural exploration.
+
+---
+
+*Last updated: March 2026*
