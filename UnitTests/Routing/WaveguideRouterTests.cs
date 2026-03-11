@@ -201,6 +201,99 @@ public class WaveguideRouterTests
             $"Should have multiple segments to route around obstacle. Got {path.Segments.Count}");
     }
 
+    [Fact]
+    public void Route_ManhattanFallback_DetectsCollisionWithComponents()
+    {
+        // Arrange - Create a scenario where A* fails and Manhattan is used
+        // Manhattan path should detect collision with component obstacle
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = 10.0,
+            MinWaveguideSpacingMicrometers = 2.0
+        };
+
+        var startComponent = CreateTestComponent(0, 0);
+        var endComponent = CreateTestComponent(200, 100);
+
+        // Large obstacle blocking most paths - forces Manhattan fallback
+        var obstacle = CreateTestComponent(50, 0);
+        obstacle.WidthMicrometers = 100;
+        obstacle.HeightMicrometers = 100;
+
+        router.InitializePathfindingGrid(-50, -50, 300, 200, new[] { startComponent, endComponent, obstacle });
+
+        var startPin = new PhysicalPin
+        {
+            Name = "output",
+            OffsetXMicrometers = 50,
+            OffsetYMicrometers = 25,
+            AngleDegrees = 0,
+            ParentComponent = startComponent
+        };
+
+        var endPin = new PhysicalPin
+        {
+            Name = "input",
+            OffsetXMicrometers = 0,
+            OffsetYMicrometers = 25,
+            AngleDegrees = 180,
+            ParentComponent = endComponent
+        };
+
+        // Act
+        var path = router.Route(startPin, endPin);
+
+        // Assert
+        path.ShouldNotBeNull();
+        // Manhattan should create a path, but it should be marked as blocked
+        path.Segments.ShouldNotBeEmpty();
+        path.IsBlockedFallback.ShouldBeTrue("Manhattan fallback should detect collision with obstacle");
+    }
+
+    [Fact]
+    public void Route_AStarPath_NoCollision_NotMarkedAsBlocked()
+    {
+        // Arrange - A* path with clear space (no obstacles)
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = 10.0,
+            MinWaveguideSpacingMicrometers = 2.0
+        };
+
+        var startComponent = CreateTestComponent(0, 0);
+        var endComponent = CreateTestComponent(200, 100);
+
+        // No obstacles in the path
+        router.InitializePathfindingGrid(-50, -50, 300, 200, new[] { startComponent, endComponent });
+
+        var startPin = new PhysicalPin
+        {
+            Name = "output",
+            OffsetXMicrometers = 50,
+            OffsetYMicrometers = 25,
+            AngleDegrees = 0, // Standard right-facing pin
+            ParentComponent = startComponent
+        };
+
+        var endPin = new PhysicalPin
+        {
+            Name = "input",
+            OffsetXMicrometers = 0,
+            OffsetYMicrometers = 25,
+            AngleDegrees = 180, // Standard left-facing pin
+            ParentComponent = endComponent
+        };
+
+        // Act
+        var path = router.Route(startPin, endPin);
+
+        // Assert
+        path.ShouldNotBeNull();
+        path.Segments.ShouldNotBeEmpty();
+        // Path should NOT be marked as blocked since there are no obstacles
+        path.IsBlockedFallback.ShouldBeFalse("Clear A* path should not be marked as blocked");
+    }
+
     private Component CreateTestComponent(double x, double y)
     {
         var parts = new Part[1, 1];
