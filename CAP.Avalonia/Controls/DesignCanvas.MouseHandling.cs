@@ -139,6 +139,14 @@ public partial class DesignCanvas
             _interactionState.DragStartX = _interactionState.DraggingComponent.X;
             _interactionState.DragStartY = _interactionState.DraggingComponent.Y;
 
+            // Track initial mouse position and offset for pin alignment snapping
+            _interactionState.InitialMouseCanvasX = canvasPoint.X;
+            _interactionState.InitialMouseCanvasY = canvasPoint.Y;
+            _interactionState.CurrentMouseCanvasX = canvasPoint.X;
+            _interactionState.CurrentMouseCanvasY = canvasPoint.Y;
+            _interactionState.InitialDragOffsetX = _interactionState.DraggingComponent.X - canvasPoint.X;
+            _interactionState.InitialDragOffsetY = _interactionState.DraggingComponent.Y - canvasPoint.Y;
+
             _interactionState.GroupDragStartPositions.Clear();
             foreach (var comp in vm.Selection.SelectedComponents)
             {
@@ -269,6 +277,10 @@ public partial class DesignCanvas
             double deltaX = delta.X / Zoom;
             double deltaY = delta.Y / Zoom;
 
+            // Update current mouse position in canvas coordinates
+            _interactionState.CurrentMouseCanvasX = canvasPoint.X;
+            _interactionState.CurrentMouseCanvasY = canvasPoint.Y;
+
             bool isDraggingGroup = vm.Selection.SelectedComponents.Count > 1;
 
             if (isDraggingGroup)
@@ -286,28 +298,39 @@ public partial class DesignCanvas
 
     private void UpdateGroupDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
     {
-        // First, move by mouse delta
-        foreach (var comp in vm.Selection.SelectedComponents)
+        // Calculate target position for dragging component using pin alignment snapping (if enabled)
+        double targetX, targetY;
+        if (vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.SnapEnabled)
         {
-            vm.MoveComponent(comp, deltaX, deltaY);
-        }
+            // Use new mouse-relative snap calculation for the dragging component
+            (targetX, targetY) = vm.AlignmentGuide.CalculateComponentPosition(
+                _interactionState.DraggingComponent!,
+                vm.Components,
+                _interactionState.CurrentMouseCanvasX,
+                _interactionState.CurrentMouseCanvasY,
+                _interactionState.InitialDragOffsetX,
+                _interactionState.InitialDragOffsetY,
+                Zoom);
 
-        // Then check for alignment snapping
-        if (vm.AlignmentGuide.IsEnabled)
-        {
-            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
+            // Calculate the delta to apply to all components in the group
+            double groupDeltaX = targetX - _interactionState.DraggingComponent!.X;
+            double groupDeltaY = targetY - _interactionState.DraggingComponent.Y;
 
-            // Calculate snap delta based on current position (after mouse move)
-            var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_interactionState.DraggingComponent!, vm.Components, Zoom);
-
-            // Only apply snap if it would move us (non-zero delta)
-            // The snap delta is calculated to bring pins into alignment
-            if (snapDX != 0 || snapDY != 0)
+            // Move all components in the group by the same delta
+            foreach (var comp in vm.Selection.SelectedComponents)
             {
-                foreach (var comp in vm.Selection.SelectedComponents)
-                {
-                    vm.MoveComponent(comp, snapDX, snapDY);
-                }
+                vm.MoveComponent(comp, groupDeltaX, groupDeltaY);
+            }
+
+            // Update alignment guide display
+            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
+        }
+        else
+        {
+            // No snapping - just apply mouse delta to all components
+            foreach (var comp in vm.Selection.SelectedComponents)
+            {
+                vm.MoveComponent(comp, deltaX, deltaY);
             }
         }
 
@@ -327,19 +350,31 @@ public partial class DesignCanvas
 
     private void UpdateSingleComponentDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
     {
-        vm.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
-
-        // Update alignment guides
-        if (vm.AlignmentGuide.IsEnabled)
+        // Calculate target position using pin alignment snapping (if enabled)
+        double targetX, targetY;
+        if (vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.SnapEnabled)
         {
-            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
+            // Use new mouse-relative snap calculation
+            (targetX, targetY) = vm.AlignmentGuide.CalculateComponentPosition(
+                _interactionState.DraggingComponent!,
+                vm.Components,
+                _interactionState.CurrentMouseCanvasX,
+                _interactionState.CurrentMouseCanvasY,
+                _interactionState.InitialDragOffsetX,
+                _interactionState.InitialDragOffsetY,
+                Zoom);
 
-            // Apply pin alignment snapping
-            var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_interactionState.DraggingComponent!, vm.Components, Zoom);
-            if (snapDX != 0 || snapDY != 0)
-            {
-                vm.MoveComponent(_interactionState.DraggingComponent!, snapDX, snapDY);
-            }
+            // Set component to calculated position
+            _interactionState.DraggingComponent!.X = targetX;
+            _interactionState.DraggingComponent.Y = targetY;
+
+            // Update alignment guide display
+            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
+        }
+        else
+        {
+            // No snapping - just apply mouse delta
+            vm.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
         }
 
         var snapSettings = vm.GridSnap;

@@ -18,6 +18,16 @@ public class CanvasInteractionState
     public Point DragPreviewPosition { get; set; }
     public bool DragPreviewValid { get; set; }
 
+    // Mouse tracking during drag (canvas coordinates)
+    public double InitialMouseCanvasX { get; set; }
+    public double InitialMouseCanvasY { get; set; }
+    public double CurrentMouseCanvasX { get; set; }
+    public double CurrentMouseCanvasY { get; set; }
+
+    // Initial offset between component position and mouse cursor when drag started
+    public double InitialDragOffsetX { get; set; }
+    public double InitialDragOffsetY { get; set; }
+
     // Group drag state
     public bool IsGroupDragging { get; set; }
     public double GroupDragStartCanvasX { get; set; }
