@@ -51,9 +51,14 @@ public partial class AlignmentGuideViewModel : ObservableObject
     private bool _isCurrentlySnapped = false;
 
     /// <summary>
-    /// The last snap position (X, Y) to detect when component has moved away.
+    /// The position when snap first occurred, used to track accumulated movement.
     /// </summary>
-    private (double x, double y)? _lastSnapPosition = null;
+    private (double x, double y)? _snapOriginPosition = null;
+
+    /// <summary>
+    /// Total accumulated distance moved while snapped (resets when snap breaks).
+    /// </summary>
+    private double _accumulatedSnapMovement = 0;
 
     /// <summary>
     /// Current horizontal alignments (updated during drag).
@@ -126,8 +131,8 @@ public partial class AlignmentGuideViewModel : ObservableObject
     /// <summary>
     /// Calculates snap delta to align pins if snapping is enabled.
     /// Returns the offset to apply to achieve perfect alignment.
-    /// Uses "sticky but breakable" logic - once snapped, component must move a certain
-    /// distance (SnapBreakDistance) before the snap releases.
+    /// Uses "sticky but breakable" logic - tracks accumulated movement and releases
+    /// snap when total movement exceeds SnapBreakDistance.
     /// </summary>
     /// <param name="draggingComponent">The component being dragged.</param>
     /// <param name="otherComponents">All other components on the canvas.</param>
@@ -142,27 +147,32 @@ public partial class AlignmentGuideViewModel : ObservableObject
         var currentX = draggingComponent.X;
         var currentY = draggingComponent.Y;
 
-        // Check if we need to break existing snap
-        if (_isCurrentlySnapped && _lastSnapPosition.HasValue)
+        // Check if we're currently snapped and need to track movement
+        if (_isCurrentlySnapped && _snapOriginPosition.HasValue)
         {
-            var distanceFromSnap = Math.Sqrt(
-                Math.Pow(currentX - _lastSnapPosition.Value.x, 2) +
-                Math.Pow(currentY - _lastSnapPosition.Value.y, 2));
+            // Calculate total distance moved from where we first snapped
+            var totalMovement = Math.Sqrt(
+                Math.Pow(currentX - _snapOriginPosition.Value.x, 2) +
+                Math.Pow(currentY - _snapOriginPosition.Value.y, 2));
 
-            // If moved far enough, break the snap
-            if (distanceFromSnap > SnapBreakDistanceMicrometers)
+            // If total accumulated movement exceeds break distance, release snap
+            if (totalMovement > SnapBreakDistanceMicrometers)
             {
                 _isCurrentlySnapped = false;
-                _lastSnapPosition = null;
+                _snapOriginPosition = null;
+                _accumulatedSnapMovement = 0;
+                // Don't snap to anything else this frame - let user move freely
+                return (0, 0);
             }
             else
             {
-                // Still within break distance, maintain snap
-                return (_lastSnapPosition.Value.x - currentX, _lastSnapPosition.Value.y - currentY);
+                // Still within break distance - keep snapping to original target
+                // Don't apply any delta, component should stay where it is
+                return (0, 0);
             }
         }
 
-        // Not currently snapped or snap was broken - check for new snap
+        // Not currently snapped - check for new snap opportunities
         var otherCoreComponents = otherComponents
             .Where(c => c != draggingComponent)
             .Select(c => c.Component);
@@ -172,11 +182,12 @@ public partial class AlignmentGuideViewModel : ObservableObject
             otherCoreComponents,
             SnapToleranceMicrometers);
 
-        // If we found a new snap, record it
+        // If we found a new snap, record the origin position
         if (snapDX != 0 || snapDY != 0)
         {
             _isCurrentlySnapped = true;
-            _lastSnapPosition = (currentX + snapDX, currentY + snapDY);
+            _snapOriginPosition = (currentX, currentY); // Save where we were when snap started
+            _accumulatedSnapMovement = 0;
         }
 
         return (snapDX, snapDY);
@@ -189,7 +200,8 @@ public partial class AlignmentGuideViewModel : ObservableObject
     public void ResetSnapState()
     {
         _isCurrentlySnapped = false;
-        _lastSnapPosition = null;
+        _snapOriginPosition = null;
+        _accumulatedSnapMovement = 0;
     }
 
     /// <summary>

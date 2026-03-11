@@ -390,6 +390,10 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
     {
+        // Don't move locked components
+        if (component.Component.IsLocked)
+            return;
+
         double newX = component.X + deltaX;
         double newY = component.Y + deltaY;
 

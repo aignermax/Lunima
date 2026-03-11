@@ -64,6 +64,7 @@ public partial class ElementLockViewModel : ObservableObject
             _lockManager.LockComponents(selectedComponents);
             StatusText = $"Locked {selectedComponents.Count} component(s)";
             UpdateLockCounts();
+            RefreshCommands(); // Update button states immediately
         }
     }
 
@@ -91,6 +92,7 @@ public partial class ElementLockViewModel : ObservableObject
             _lockManager.UnlockComponents(selectedComponents);
             StatusText = $"Unlocked {selectedComponents.Count} component(s)";
             UpdateLockCounts();
+            RefreshCommands(); // Update button states immediately
         }
     }
 

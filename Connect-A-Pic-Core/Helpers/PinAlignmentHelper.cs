@@ -159,8 +159,9 @@ public class PinAlignmentHelper
     }
 
     /// <summary>
-    /// Checks if two pins are facing each other (opposing directions ~180° apart).
-    /// Pins must point at each other to be considered for alignment.
+    /// Checks if two pins are facing each other (opposing directions ~180° apart)
+    /// AND if they geometrically point at each other's locations.
+    /// This ensures we only snap when the pin actually "sees" the other component.
     /// </summary>
     private bool ArePinsOpposing(PhysicalPin pin1, PhysicalPin pin2)
     {
@@ -173,8 +174,29 @@ public class PinAlignmentHelper
         if (diff > 180)
             diff = 360 - diff;
 
-        // Pins are opposing if they're within 10° of being 180° apart
-        return Math.Abs(diff - 180) <= 10;
+        // Pins must be within 10° of being 180° apart
+        if (Math.Abs(diff - 180) > 10)
+            return false;
+
+        // Now check if pin1 actually points TOWARDS pin2's location
+        var (x1, y1) = pin1.GetAbsolutePosition();
+        var (x2, y2) = pin2.GetAbsolutePosition();
+
+        // Calculate the angle from pin1 to pin2
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double angleToTarget = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+
+        // Normalize to 0-360 range
+        angleToTarget = ((angleToTarget % 360) + 360) % 360;
+
+        // Check if pin1's direction matches the direction to pin2 (within tolerance)
+        double directionDiff = Math.Abs(angle1 - angleToTarget);
+        if (directionDiff > 180)
+            directionDiff = 360 - directionDiff;
+
+        // Pin must point within 30° of the target (allows some angular tolerance)
+        return directionDiff <= 30;
     }
 
     /// <summary>
