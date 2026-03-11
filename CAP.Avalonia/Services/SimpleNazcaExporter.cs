@@ -59,36 +59,114 @@ public class SimpleNazcaExporter
         {
             var comp = compVm.Component;
             var funcName = comp.NazcaFunctionName;
-            if (string.IsNullOrEmpty(funcName) || !IsPdkFunction(funcName))
+            if (string.IsNullOrEmpty(funcName) || !RequiresStub(funcName))
                 continue;
             if (!generated.Add(funcName))
                 continue; // already generated
 
-            var w = comp.WidthMicrometers.ToString("F2", ci);
-            var h = comp.HeightMicrometers.ToString("F2", ci);
-
-            // Sanitize function name for valid Python identifier (replace dots with underscores)
-            var pythonFuncName = funcName.Replace(".", "_");
-
-            // Define cell once, return cached instance on each call
-            sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
-            sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
-            sb.AppendLine($"    nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
-
-            // Generate pins with Nazca coordinates (Y-up: nazca_y = height - editor_y)
-            foreach (var pin in comp.PhysicalPins)
+            // Check if this is a parametric straight waveguide
+            if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
             {
-                var px = pin.OffsetXMicrometers.ToString("F2", ci);
-                var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
-                var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
-                sb.AppendLine($"    nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
+                AppendParametricStraightStub(sb, funcName, comp, ci);
             }
-
-            sb.AppendLine();
-            sb.AppendLine($"def {pythonFuncName}(**kwargs):");
-            sb.AppendLine($"    return _{pythonFuncName}_cell");
-            sb.AppendLine();
+            else
+            {
+                AppendStandardComponentStub(sb, funcName, comp, ci);
+            }
         }
+    }
+
+    /// <summary>
+    /// Checks if a function requires a stub definition.
+    /// Returns true for real PDK functions and demo_pdk functions.
+    /// </summary>
+    private static bool RequiresStub(string funcName) =>
+        IsPdkFunction(funcName) ||
+        funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Checks if a component is a parametric straight waveguide.
+    /// </summary>
+    private static bool IsParametricStraight(string funcName, string parameters)
+    {
+        if (string.IsNullOrEmpty(parameters))
+            return false;
+
+        var lower = funcName.ToLowerInvariant();
+        var hasLength = parameters.Contains("length=", StringComparison.OrdinalIgnoreCase);
+        var isStraight = lower.Contains("straight") || lower.Contains("strt");
+
+        return hasLength && isStraight;
+    }
+
+    /// <summary>
+    /// Generates a parametric straight waveguide stub that uses nd.strt() with length parameter.
+    /// </summary>
+    private static void AppendParametricStraightStub(
+        StringBuilder sb, string funcName, Component comp, CultureInfo ci)
+    {
+        var h = comp.HeightMicrometers.ToString("F2", ci);
+
+        // Sanitize function name for valid Python identifier (replace dots with underscores)
+        var pythonFuncName = funcName.Replace(".", "_");
+
+        sb.AppendLine($"def {pythonFuncName}(length=100, **kwargs):");
+        sb.AppendLine($"    \"\"\"Auto-generated parametric straight waveguide stub for {funcName}.\"\"\"");
+        sb.AppendLine($"    with nd.Cell(name='{funcName}_{{length}}') as cell:");
+        sb.AppendLine($"        # Use nd.strt() for proper waveguide with specified length");
+        sb.AppendLine($"        nd.strt(length=length, width=0.45, layer=1).put(0, {h}/2)");
+
+        // Generate pins with Nazca coordinates
+        foreach (var pin in comp.PhysicalPins)
+        {
+            var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
+            var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
+
+            // For straight waveguides: input pin at x=0, output pin at x=length
+            if (pin.OffsetXMicrometers == 0)
+            {
+                sb.AppendLine($"        nd.Pin('{pin.Name}').put(0, {py}, {pa})");
+            }
+            else
+            {
+                sb.AppendLine($"        nd.Pin('{pin.Name}').put(length, {py}, {pa})");
+            }
+        }
+
+        sb.AppendLine($"    return cell");
+        sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Generates a standard non-parametric component stub using a polygon box.
+    /// </summary>
+    private static void AppendStandardComponentStub(
+        StringBuilder sb, string funcName, Component comp, CultureInfo ci)
+    {
+        var w = comp.WidthMicrometers.ToString("F2", ci);
+        var h = comp.HeightMicrometers.ToString("F2", ci);
+
+        // Sanitize function name for valid Python identifier (replace dots with underscores)
+        var pythonFuncName = funcName.Replace(".", "_");
+
+        // Define cell once, return cached instance on each call
+        sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
+        sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
+        sb.AppendLine($"    nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
+
+        // Generate pins with Nazca coordinates (Y-up: nazca_y = height - editor_y)
+        foreach (var pin in comp.PhysicalPins)
+        {
+            var px = pin.OffsetXMicrometers.ToString("F2", ci);
+            var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
+            var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
+            sb.AppendLine($"    nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"def {pythonFuncName}(**kwargs):");
+        sb.AppendLine($"    return _{pythonFuncName}_cell");
+        sb.AppendLine();
     }
 
     private static Dictionary<Component, string> AppendComponents(
@@ -108,52 +186,46 @@ public class SimpleNazcaExporter
             var varName = $"comp_{compIndex}";
             componentNames[comp] = varName;
 
-            // Calculate placement coordinates for this component
-            //
-            // For auto-generated stubs (demo_pdk.*, ebeam_*, etc.):
-            //   - Cell origin is at (0, 0) in cell-local coords
-            //   - We place the cell such that (0, 0) maps to the editor's top-left corner
-            //   - Placement: (physicalX, -(physicalY + height))
-            //
-            // For built-in Nazca PDK functions (demo.io(), demo.mmi1x2_sh(), etc.):
-            //   - Cell origin may be at a different location (e.g., centered, or at first pin)
-            //   - NazcaOriginOffset tells us where the cell origin is relative to our bbox
-            //   - We calculate placement to align the cell origin correctly
-
+            // Calculate origin offset based on component type:
+            // - Real PDK components: use NazcaOriginOffset (rotated if needed)
+            // - Parametric straights: calculate from first pin (rotated)
+            // - Standard demo_pdk: use height offset only
             double originOffsetX = 0;
             double originOffsetY = 0;
 
-            // Nazca .put() places the component's origin at the given position.
-            //
-            // For real PDK functions (ebeam_*, with explicit NazcaOriginOffset):
-            //   - Nazca defines where the cell origin is (usually at first pin)
-            //   - We apply NazcaOriginOffset to place the cell correctly
-            //   - Must rotate offset if component is rotated
-            //
-            // For generated stubs (demo_pdk.*, no explicit NazcaOriginOffset):
-            //   - We generate the stub with origin at bbox (0,0) = top-left corner
-            //   - No offset needed; place at (PhysicalX, -(PhysicalY + Height))
-
-            // Only apply offset if explicitly set (indicates real PDK function with known origin)
-            if (comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0)
+            var funcName = comp.NazcaFunctionName;
+            if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
             {
-                double pinLocalX = comp.NazcaOriginOffsetX;
-                double pinLocalY = comp.NazcaOriginOffsetY;
+                // Real PDK component: use stored NazcaOriginOffset, accounting for rotation
+                double offsetX = comp.NazcaOriginOffsetX;
+                double offsetY = comp.NazcaOriginOffsetY;
                 double rotRad = comp.RotationDegrees * Math.PI / 180.0;
 
-                // Rotate the offset by the component's rotation
-                originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
-                originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+                originOffsetX = offsetX * Math.Cos(rotRad) - offsetY * Math.Sin(rotRad);
+                originOffsetY = offsetX * Math.Sin(rotRad) + offsetY * Math.Cos(rotRad);
             }
-            // else: originOffsetX and originOffsetY remain 0
+            else if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
+            {
+                // Parametric straight: offset by rotated pin position
+                var firstPin = comp.PhysicalPins.FirstOrDefault();
+                if (firstPin != null)
+                {
+                    double pinLocalX = firstPin.OffsetXMicrometers;
+                    double pinLocalY = firstPin.OffsetYMicrometers;
+                    double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+
+                    originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
+                    originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+                }
+            }
+            else
+            {
+                // Standard demo_pdk component: cell origin at bottom-left, so offset by height for Y-flip
+                originOffsetY = comp.HeightMicrometers;
+            }
 
             var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
-            // For components with explicit origin offset, place at (PhysicalY + offset)
-            // For generated stubs (no offset), place at (PhysicalY + Height) to align bottom-left
-            double nazcaYValue = originOffsetX == 0 && originOffsetY == 0
-                ? -(comp.PhysicalY + comp.HeightMicrometers)
-                : -(comp.PhysicalY + originOffsetY);
-            var nazcaY = NormalizeZero(nazcaYValue).ToString("F2", ci);
+            var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
             var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
             var nazcaFunc = GetNazcaFunction(comp);
 
@@ -311,14 +383,12 @@ public class SimpleNazcaExporter
     }
 
     /// <summary>
-    /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550" or "demo_pdk.grating_coupler").
-    /// These functions should get auto-generated stubs with correct dimensions and pins.
+    /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550").
     /// </summary>
     internal static bool IsPdkFunction(string name) =>
         name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase) ||
         (name.Contains(".", StringComparison.Ordinal) &&
-         !name.StartsWith("demo.", StringComparison.OrdinalIgnoreCase));
+         !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Maps a component to its Nazca function call string.
@@ -331,7 +401,15 @@ public class SimpleNazcaExporter
         var funcName = comp.NazcaFunctionName;
         if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
         {
-            // Sanitize function name for valid Python identifier (replace dots with underscores)
+            var funcParams = comp.NazcaFunctionParameters;
+            return string.IsNullOrEmpty(funcParams)
+                ? $"{funcName}()"
+                : $"{funcName}({funcParams})";
+        }
+
+        // For demo_pdk components, sanitize the function name (dots -> underscores) to call the stub
+        if (!string.IsNullOrEmpty(funcName) && funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase))
+        {
             var pythonFuncName = funcName.Replace(".", "_");
             var funcParams = comp.NazcaFunctionParameters;
             return string.IsNullOrEmpty(funcParams)
@@ -341,9 +419,10 @@ public class SimpleNazcaExporter
 
         // Fallback: heuristic mapping to demofab
         var name = funcName?.ToLower() ?? comp.Identifier.ToLower();
+        var ci = CultureInfo.InvariantCulture;
 
         if (name.Contains("straight") || name.Contains("waveguide"))
-            return "demo.shallow.strt(length=250)";
+            return $"demo.shallow.strt(length={comp.WidthMicrometers.ToString(ci)})";
         if (name.Contains("splitter") || name.Contains("1x2"))
             return "demo.mmi1x2_sh()";
         if (name.Contains("grating"))
@@ -359,6 +438,6 @@ public class SimpleNazcaExporter
         if (name.Contains("y-junction") || name.Contains("yjunction"))
             return "demo.mmi1x2_sh()";
 
-        return $"demo.shallow.strt(length={comp.WidthMicrometers.ToString(CultureInfo.InvariantCulture)})";
+        return $"demo.shallow.strt(length={comp.WidthMicrometers.ToString(ci)})";
     }
 }
