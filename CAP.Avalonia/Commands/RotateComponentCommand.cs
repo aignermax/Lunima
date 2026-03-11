@@ -31,6 +31,13 @@ public class RotateComponentCommand : IUndoableCommand
     {
         var comp = _component.Component;
 
+        // Don't rotate locked components
+        if (comp.IsLocked)
+        {
+            _applied = false;
+            return;
+        }
+
         // After 90° CCW rotation, width and height dimensions swap.
         double rotatedWidth = comp.HeightMicrometers;
         double rotatedHeight = comp.WidthMicrometers;

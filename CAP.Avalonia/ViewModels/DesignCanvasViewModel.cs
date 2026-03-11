@@ -31,6 +31,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     public PowerFlowVisualizer PowerFlowVisualizer { get; } = new();
 
     /// <summary>
+    /// Manages pin alignment guide visualization during component dragging.
+    /// </summary>
+    public AlignmentGuideViewModel AlignmentGuide { get; } = new();
+
+    /// <summary>
     /// Whether power flow overlay is currently visible.
     /// </summary>
     [ObservableProperty]
@@ -41,6 +46,12 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// Set by MainViewModel to trigger auto-recalculation.
     /// </summary>
     public Action? SimulationRequested { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the canvas needs to be repainted (e.g., during incremental routing updates).
+    /// Set by the DesignCanvas control to trigger InvalidateVisual().
+    /// </summary>
+    public Action? RepaintRequested { get; set; }
 
     /// <summary>
     /// Called when the circuit topology changes (component moved, connection added/removed).
@@ -160,6 +171,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     private const double ComponentClearanceMicrometers = 5.0;
 
     private bool _isDragging;
+    private bool _isExecutingCommand; // True during command Execute/Undo to skip collision checks
     private CancellationTokenSource? _routingCts;
     private readonly SemaphoreSlim _routingSemaphore = new(1, 1);
 
@@ -245,6 +257,23 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Called before executing a command (Execute or Undo) to disable collision checking.
+    /// This allows components to move freely during undo/redo operations.
+    /// </summary>
+    public void BeginCommandExecution()
+    {
+        _isExecutingCommand = true;
+    }
+
+    /// <summary>
+    /// Called after executing a command (Execute or Undo) to re-enable collision checking.
+    /// </summary>
+    public void EndCommandExecution()
+    {
+        _isExecutingCommand = false;
+    }
+
+    /// <summary>
     /// Call when done dragging a component. Triggers async route recalculation.
     /// </summary>
     public async void EndDragComponent(ComponentViewModel component)
@@ -273,11 +302,20 @@ public partial class DesignCanvasViewModel : ObservableObject
         var token = _routingCts.Token;
 
         // Serialize routing: wait for any in-progress routing to finish.
-        // Don't pass token — cancelled callers just bail after acquiring.
-        await _routingSemaphore.WaitAsync();
+        // Pass the token so if this operation is cancelled while waiting, it bails immediately.
         try
         {
-            // If our token was cancelled while waiting, skip routing
+            await _routingSemaphore.WaitAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // This routing request was superseded by a newer one
+            return;
+        }
+
+        try
+        {
+            // Double-check: if our token was cancelled while waiting, skip routing
             if (token.IsCancellationRequested) return;
 
             IsRouting = true;
@@ -304,7 +342,7 @@ public partial class DesignCanvasViewModel : ObservableObject
                         lastUpdateTime = now;
                         updatePending = false;
 
-                        // Dispatch to UI thread
+                        // Dispatch to UI thread with Normal priority (not Background) to ensure updates are visible
                         global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                         {
                             if (!token.IsCancellationRequested)
@@ -314,8 +352,10 @@ public partial class DesignCanvasViewModel : ObservableObject
                                 {
                                     conn.NotifyPathChanged();
                                 }
+                                // Request canvas repaint to make changes visible
+                                RepaintRequested?.Invoke();
                             }
-                        }, global::Avalonia.Threading.DispatcherPriority.Background);
+                        }, global::Avalonia.Threading.DispatcherPriority.Normal);
                     }
                     else
                     {
@@ -385,12 +425,16 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
     {
+        // Don't move locked components
+        if (component.Component.IsLocked)
+            return;
+
         double newX = component.X + deltaX;
         double newY = component.Y + deltaY;
 
-        // During drag: allow free movement (collision checked on drop)
+        // During drag or command execution: allow free movement (collision checked on drop or not applicable for undo/redo)
         // Otherwise: check for overlap
-        if (!_isDragging && !CanPlaceComponent(newX, newY, component.Width, component.Height, excludeComponent: component))
+        if (!_isDragging && !_isExecutingCommand && !CanPlaceComponent(newX, newY, component.Width, component.Height, excludeComponent: component))
         {
             return;
         }
@@ -417,8 +461,9 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
         else
         {
-            // Not dragging (e.g., programmatic move): update obstacle and route async
-            Router.UpdateComponentObstacle(component.Component);
+            // Not dragging (e.g., programmatic move, undo/redo): route async
+            // RecalculateRoutesAsync will rebuild the obstacle grid inside the semaphore,
+            // preventing threading issues from concurrent undo/redo operations
             _ = RecalculateRoutesAsync();
         }
     }
@@ -759,6 +804,19 @@ public partial class ComponentViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>
+    /// Whether this component is locked (cannot be moved, rotated, or deleted).
+    /// </summary>
+    public bool IsLocked => Component.IsLocked;
+
+    /// <summary>
+    /// Notifies that the lock state has changed (called after undo/redo or direct lock/unlock).
+    /// </summary>
+    public void NotifyLockStateChanged()
+    {
+        OnPropertyChanged(nameof(IsLocked));
+    }
 
     /// <summary>
     /// Laser configuration for light source components (null for non-sources).

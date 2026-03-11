@@ -42,6 +42,7 @@ public class DesignCanvas : Control
     private Point _lastPointerPosition;
     private ComponentViewModel? _draggingComponent;
     private bool _isPanning;
+    private bool _hasPanned; // Track if actual panning occurred (to suppress context menu)
     private const double PinHitRadius = 15; // Hit test radius for pins
 
     // Waveguide connection drag & drop state
@@ -104,11 +105,13 @@ public class DesignCanvas : Control
         if (e.OldValue is DesignCanvasViewModel oldCanvas)
         {
             oldCanvas.PropertyChanged -= OnCanvasViewModelPropertyChanged;
+            oldCanvas.RepaintRequested = null;
         }
 
         if (e.NewValue is DesignCanvasViewModel newCanvas)
         {
             newCanvas.PropertyChanged += OnCanvasViewModelPropertyChanged;
+            newCanvas.RepaintRequested = () => InvalidateVisual();
         }
     }
 
@@ -201,6 +204,12 @@ public class DesignCanvas : Control
             if (vm.Selection.IsBoxSelecting)
             {
                 DrawSelectionRectangle(context, vm.Selection);
+            }
+
+            // Draw pin alignment guides (when dragging components)
+            if (_draggingComponent != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.HasAlignments)
+            {
+                DrawAlignmentGuides(context, vm);
             }
         }
 
@@ -819,6 +828,54 @@ public class DesignCanvas : Control
         }
     }
 
+    /// <summary>
+    /// Draws visual alignment guides showing when pins align on the same X or Y axis.
+    /// </summary>
+    private void DrawAlignmentGuides(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        var guidePen = new Pen(new SolidColorBrush(Color.FromArgb(180, 0, 255, 255)), 1.5)
+        {
+            DashStyle = new DashStyle(new double[] { 8, 4 }, 0)
+        };
+
+        var pinDotBrush = new SolidColorBrush(Color.FromArgb(200, 0, 255, 255));
+        const double pinDotRadius = 4.0;
+
+        // Draw horizontal alignment lines (same Y coordinate)
+        foreach (var alignment in vm.AlignmentGuide.HorizontalAlignments)
+        {
+            double y = alignment.YCoordinate;
+            var (draggingX, _) = alignment.DraggingPin.GetAbsolutePosition();
+            var (alignedX, _) = alignment.AlignedPin.GetAbsolutePosition();
+
+            // Draw line spanning from left pin to right pin
+            double minX = Math.Min(draggingX, alignedX);
+            double maxX = Math.Max(draggingX, alignedX);
+            context.DrawLine(guidePen, new Point(minX, y), new Point(maxX, y));
+
+            // Draw dots at pin positions
+            context.DrawEllipse(pinDotBrush, null, new Point(draggingX, y), pinDotRadius, pinDotRadius);
+            context.DrawEllipse(pinDotBrush, null, new Point(alignedX, y), pinDotRadius, pinDotRadius);
+        }
+
+        // Draw vertical alignment lines (same X coordinate)
+        foreach (var alignment in vm.AlignmentGuide.VerticalAlignments)
+        {
+            double x = alignment.XCoordinate;
+            var (_, draggingY) = alignment.DraggingPin.GetAbsolutePosition();
+            var (_, alignedY) = alignment.AlignedPin.GetAbsolutePosition();
+
+            // Draw line spanning from top pin to bottom pin
+            double minY = Math.Min(draggingY, alignedY);
+            double maxY = Math.Max(draggingY, alignedY);
+            context.DrawLine(guidePen, new Point(x, minY), new Point(x, maxY));
+
+            // Draw dots at pin positions
+            context.DrawEllipse(pinDotBrush, null, new Point(x, draggingY), pinDotRadius, pinDotRadius);
+            context.DrawEllipse(pinDotBrush, null, new Point(x, alignedY), pinDotRadius, pinDotRadius);
+        }
+    }
+
     private void DrawModeIndicator(DrawingContext context, Rect bounds)
     {
         var mainVm = MainViewModel;
@@ -967,8 +1024,18 @@ public class DesignCanvas : Control
                 if (_draggingComponent != null)
                 {
                     mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-                    // Start tracking for undo (group move if multiple selected)
-                    mainVm?.StartMoveComponent(_draggingComponent);
+                    // Start tracking for undo
+                    if (vm.Selection.SelectedComponents.Count > 1)
+                    {
+                        // Group move
+                        mainVm?.StartGroupMove(vm.Selection.SelectedComponents);
+                    }
+                    else
+                    {
+                        // Single component move
+                        mainVm?.StartMoveComponent(_draggingComponent);
+                    }
+
                     _dragStartX = _draggingComponent.X;
                     _dragStartY = _draggingComponent.Y;
 
@@ -997,6 +1064,7 @@ public class DesignCanvas : Control
                  e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
         {
             _isPanning = true;
+            _hasPanned = false; // Reset pan tracking
         }
 
         e.Handled = true;
@@ -1106,6 +1174,22 @@ public class DesignCanvas : Control
                     vm.MoveComponent(comp, deltaX, deltaY);
                 }
 
+                // Update alignment guides and apply pin snapping
+                if (vm.AlignmentGuide.IsEnabled)
+                {
+                    vm.AlignmentGuide.UpdateAlignments(_draggingComponent, vm.Components);
+
+                    // Apply pin alignment snapping
+                    var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_draggingComponent, vm.Components);
+                    if (snapDX != 0 || snapDY != 0)
+                    {
+                        foreach (var comp in vm.Selection.SelectedComponents)
+                        {
+                            vm.MoveComponent(comp, snapDX, snapDY);
+                        }
+                    }
+                }
+
                 // Calculate drag preview based on dragged component (representative)
                 var snapSettings = vm.GridSnap;
                 double centerX = _draggingComponent.X + _draggingComponent.Width / 2.0;
@@ -1125,6 +1209,19 @@ public class DesignCanvas : Control
             {
                 // Single component drag (original behavior)
                 vm.MoveComponent(_draggingComponent, deltaX, deltaY);
+
+                // Update alignment guides and apply pin snapping
+                if (vm.AlignmentGuide.IsEnabled)
+                {
+                    vm.AlignmentGuide.UpdateAlignments(_draggingComponent, vm.Components);
+
+                    // Apply pin alignment snapping
+                    var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_draggingComponent, vm.Components);
+                    if (snapDX != 0 || snapDY != 0)
+                    {
+                        vm.MoveComponent(_draggingComponent, snapDX, snapDY);
+                    }
+                }
 
                 // Calculate drag preview (shows where component will land on release)
                 var snapSettings = vm.GridSnap;
@@ -1152,6 +1249,7 @@ public class DesignCanvas : Control
         {
             vm.PanX += delta.X;
             vm.PanY += delta.Y;
+            _hasPanned = true; // Mark that we actually panned
             InvalidateVisual();
         }
 
@@ -1160,6 +1258,15 @@ public class DesignCanvas : Control
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
+        // Suppress context menu if we panned (right-click drag)
+        if (_hasPanned && e.InitialPressMouseButton == MouseButton.Right)
+        {
+            e.Handled = true;
+            _hasPanned = false;
+            _isPanning = false;
+            return;
+        }
+
         base.OnPointerReleased(e);
 
         // Complete connection drag & drop
@@ -1286,7 +1393,23 @@ public class DesignCanvas : Control
             }
 
             _showDragPreview = false;
-            MainViewModel?.EndMoveComponent();
+
+            // End tracking for undo
+            if (isDraggingGroup)
+            {
+                MainViewModel?.EndGroupMove(vm.Selection.SelectedComponents);
+            }
+            else
+            {
+                MainViewModel?.EndMoveComponent();
+            }
+
+            // Clear alignment guides and reset snap state when drag ends
+            if (vm?.AlignmentGuide != null)
+            {
+                vm.AlignmentGuide.ClearAlignments();
+                vm.AlignmentGuide.ResetSnapState();
+            }
 
             // Ensure all components in the selection remain visually selected after drag
             if (vm != null && isDraggingGroup)
@@ -1369,8 +1492,14 @@ public class DesignCanvas : Control
                     mainVm.SetSelectModeCommand.Execute(null);
                 break;
             case Key.C:
-                if (!ctrlPressed)
+                if (ctrlPressed)
+                    mainVm.CopySelectedCommand.Execute(null);
+                else
                     mainVm.SetConnectModeCommand.Execute(null);
+                break;
+            case Key.V:
+                if (ctrlPressed)
+                    mainVm.PasteSelectedCommand.Execute(null);
                 break;
             case Key.D:
                 if (!ctrlPressed)
