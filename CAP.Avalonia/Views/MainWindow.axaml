@@ -466,6 +466,44 @@
                         </ScrollViewer>
                     </StackPanel>
 
+                    <!-- S-Matrix Performance Diagnostics -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="S-Matrix Performance:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Text="Shows sparsity statistics and memory usage of the system S-Matrix."
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding SMatrixPerformance.StatusText}" Foreground="LightBlue" FontSize="10" Margin="0,5,0,3"/>
+
+                    <StackPanel Margin="0,5,0,0" IsVisible="{Binding SMatrixPerformance.HasAnalysis}">
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Matrix Size: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.MatrixSizeText}" Foreground="White"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Total Elements: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.TotalElementsText}" Foreground="White"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Non-Zero: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.NonZeroElementsText}" Foreground="LightGreen"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Sparsity: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.SparsityText}" Foreground="Cyan"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Storage Type: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.StorageTypeText}" Foreground="White"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Memory Usage: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.MemoryUsageText}" Foreground="Orange"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Memory Savings: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding SMatrixPerformance.MemorySavingsText}" Foreground="LightGreen"/>
+                        </StackPanel>
+                    </StackPanel>
+
                     <!-- Export Validation (E2E Tests) -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Export Validation:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
