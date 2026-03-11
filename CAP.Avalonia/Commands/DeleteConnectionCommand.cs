@@ -22,6 +22,10 @@ public class DeleteConnectionCommand : IUndoableCommand
 
     public void Execute()
     {
+        // Don't delete locked connections
+        if (_connection.IsLocked)
+            return;
+
         // Only remove if it's actually in the collection (to support redo)
         if (_canvas.Connections.Contains(_connectionVm))
         {

@@ -303,6 +303,50 @@
                                 Width="70" Margin="5,0,0,0" Background="#3d3d3d"/>
                     </StackPanel>
 
+                    <!-- Element Lock Panel -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Lock Elements:" Foreground="Gold" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,10" TextWrapping="Wrap">
+                        Lock components to prevent moving, rotating, or deleting.
+                    </TextBlock>
+
+                    <!-- Selection-based lock controls -->
+                    <StackPanel IsVisible="{Binding ElementLock.HasSelection}">
+                        <TextBlock Text="Selected Components:" Foreground="Gray" Margin="0,0,0,5"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Content="Lock"
+                                    Command="{Binding ElementLock.LockSelectedComponentsCommand}"
+                                    Width="80" Margin="0,0,5,0" Background="#5d3d3d"/>
+                            <Button Content="Unlock"
+                                    Command="{Binding ElementLock.UnlockSelectedComponentsCommand}"
+                                    Width="80" Margin="5,0,0,0" Background="#3d5d3d"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Global unlock controls -->
+                    <Button Content="Unlock All Components"
+                            Command="{Binding ElementLock.UnlockAllComponentsCommand}"
+                            Width="160" Margin="0,5,0,5"
+                            Background="#3d4d5d"/>
+
+                    <Button Content="Unlock All Connections"
+                            Command="{Binding ElementLock.UnlockAllConnectionsCommand}"
+                            Width="160" Margin="0,0,0,5"
+                            Background="#3d4d5d"/>
+
+                    <!-- Status display -->
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <TextBlock Text="Locked: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding ElementLock.LockedComponentCount}" Foreground="Orange"/>
+                        <TextBlock Text=" components, " Foreground="Gray"/>
+                        <TextBlock Text="{Binding ElementLock.LockedConnectionCount}" Foreground="Orange"/>
+                        <TextBlock Text=" connections" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ElementLock.StatusText}"
+                               Foreground="LightGreen" FontSize="10" Margin="0,0,0,5"
+                               IsVisible="{Binding ElementLock.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
                     <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
@@ -322,6 +366,15 @@
                                        FormatString="F0"/>
                         <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center"/>
                     </StackPanel>
+
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+
+                    <TextBlock Text="Alignment Guides:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <CheckBox Content="Show Pin Alignment"
+                              IsChecked="{Binding Canvas.AlignmentGuide.IsEnabled}"
+                              Foreground="White" Margin="0,0,0,5"/>
+                    <TextBlock Text="Shows cyan guide lines when pins align on same X or Y axis during dragging."
+                               Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
@@ -361,6 +414,19 @@
                     <ScrollViewer MaxHeight="150" Margin="0,5,0,0"
                                   IsVisible="{Binding RoutingDiagnostics.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                         <TextBlock Text="{Binding RoutingDiagnostics.ResultText}" Foreground="LightGray"
+                                   FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
+                    </ScrollViewer>
+
+                    <!-- Component Dimension Diagnostics -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Component Dimensions:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <Button Content="Check Dimensions" Command="{Binding DimensionDiagnostics.RefreshDiagnosticsCommand}"
+                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Validates that component dimensions in GDS export match the UI display."
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+                    <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                                  IsVisible="{Binding DimensionDiagnostics.DiagnosticsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
                                    FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
                     </ScrollViewer>
                 </StackPanel>

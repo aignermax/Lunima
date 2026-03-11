@@ -269,4 +269,29 @@ public class SiepicPdkTests
         values.Count.ShouldBe(1);
         values.First().Value.Magnitude.ShouldBe(0.5);
     }
+
+    [Fact]
+    public void LoadSiepicPdk_GratingCouplerTE1550_HasCorrectPinOffset()
+    {
+        // Issue #66: Grating Coupler TE 1550 position offset in GDS export
+        // The first pin offset should be used as NazcaOriginOffset when loading PDK components
+        var path = GetSiepicPdkPath();
+        if (!File.Exists(path)) return;
+
+        var loader = new PdkLoader();
+        var pdk = loader.LoadFromFile(path);
+
+        var gratingCoupler = pdk.Components.First(c => c.Name == "Grating Coupler TE 1550");
+        gratingCoupler.ShouldNotBeNull();
+        gratingCoupler.WidthMicrometers.ShouldBe(30);
+        gratingCoupler.HeightMicrometers.ShouldBe(30);
+        gratingCoupler.Pins.Count.ShouldBe(2);
+
+        // Port 1 is at (15, 30) and should be the first pin used as origin
+        var firstPin = gratingCoupler.Pins[0];
+        firstPin.Name.ShouldBe("port 1");
+        firstPin.OffsetXMicrometers.ShouldBe(15);
+        firstPin.OffsetYMicrometers.ShouldBe(30);
+        firstPin.AngleDegrees.ShouldBe(90);
+    }
 }
