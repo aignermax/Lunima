@@ -1129,7 +1129,8 @@ public partial class MainViewModel : ObservableObject
                     Rotation = (int)c.Component.Rotation90CounterClock,
                     SliderValue = c.HasSliders ? c.SliderValue : null,
                     LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
-                    LaserPower = c.LaserConfig?.InputPower
+                    LaserPower = c.LaserConfig?.InputPower,
+                    IsLocked = c.Component.IsLocked ? true : null
                 }).ToList(),
                 Connections = Canvas.Connections.Select(c => new ConnectionData
                 {
@@ -1142,7 +1143,8 @@ public partial class MainViewModel : ObservableObject
                     CachedSegments = c.Connection.RoutedPath != null
                         ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
                         : null,
-                    IsBlockedFallback = c.Connection.IsBlockedFallback ? true : null
+                    IsBlockedFallback = c.Connection.IsBlockedFallback ? true : null,
+                    IsLocked = c.Connection.IsLocked ? true : null
                 }).ToList()
             };
 
@@ -1223,6 +1225,10 @@ public partial class MainViewModel : ObservableObject
                             if (compData.LaserPower.HasValue)
                                 vm.LaserConfig.InputPower = compData.LaserPower.Value;
                         }
+
+                        // Restore lock state
+                        if (compData.IsLocked == true)
+                            component.IsLocked = true;
                     }
                 }
 
@@ -1245,13 +1251,21 @@ public partial class MainViewModel : ObservableObject
                             var cachedPath = PathSegmentConverter.ToRoutedPath(
                                 connData.CachedSegments, connData.IsBlockedFallback ?? false);
 
+                            WaveguideConnectionViewModel? connVm = null;
+
                             if (cachedPath != null && cachedPath.IsValid)
                             {
-                                Canvas.ConnectPinsWithCachedRoute(startPin, endPin, cachedPath);
+                                connVm = Canvas.ConnectPinsWithCachedRoute(startPin, endPin, cachedPath);
                             }
                             else
                             {
-                                Canvas.ConnectPins(startPin, endPin);
+                                connVm = Canvas.ConnectPins(startPin, endPin);
+                            }
+
+                            // Restore lock state
+                            if (connVm != null && connData.IsLocked == true)
+                            {
+                                connVm.Connection.IsLocked = true;
                             }
                         }
                     }
@@ -1325,6 +1339,7 @@ public class ComponentData
     public double? SliderValue { get; set; }
     public int? LaserWavelengthNm { get; set; }
     public double? LaserPower { get; set; }
+    public bool? IsLocked { get; set; }
 }
 
 public class ConnectionData
@@ -1343,6 +1358,11 @@ public class ConnectionData
     /// Whether the cached route is a blocked fallback path (null → false).
     /// </summary>
     public bool? IsBlockedFallback { get; set; }
+
+    /// <summary>
+    /// Whether the connection is locked (cannot be deleted or modified) (null → false).
+    /// </summary>
+    public bool? IsLocked { get; set; }
 }
 
 /// <summary>
