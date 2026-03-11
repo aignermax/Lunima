@@ -429,6 +429,42 @@
                         <TextBlock Text="{Binding DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
                                    FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
                     </ScrollViewer>
+
+                    <!-- Component Dimension Validation -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Component Dimensions:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <Button Content="Validate Dimensions" Command="{Binding DimensionValidator.RunValidationCommand}"
+                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#3d4d5d" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="{Binding DimensionValidator.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
+                               IsVisible="{Binding DimensionValidator.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <StackPanel Margin="0,5,0,0" IsVisible="{Binding DimensionValidator.HasIssues}">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                            <TextBlock Text="⚠️ Dimension Issues:" Foreground="Orange" FontSize="10" FontWeight="SemiBold"/>
+                            <Button Content="📋" Command="{Binding DimensionValidator.CopyIssuesToClipboardCommand}"
+                                    Width="24" Height="20" Margin="5,0,0,0" Padding="0" Background="#3d3d5d"
+                                    ToolTip.Tip="Copy issues to clipboard"/>
+                        </StackPanel>
+                        <ScrollViewer MaxHeight="120">
+                            <ItemsControl ItemsSource="{Binding DimensionValidator.Issues}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,2,0,4">
+                                            <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Issue}" Foreground="Orange" FontSize="9" Margin="2,0,0,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
+                                                <TextBlock Text="Current: " Foreground="Gray" FontSize="9"/>
+                                                <TextBlock Text="{Binding CurrentDimensions}" Foreground="LightGray" FontSize="9"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
+                                                <TextBlock Text="Recommended: " Foreground="Gray" FontSize="9"/>
+                                                <TextBlock Text="{Binding RecommendedDimensions}" Foreground="LightGreen" FontSize="9"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>

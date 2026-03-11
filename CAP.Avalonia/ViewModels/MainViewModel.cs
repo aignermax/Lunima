@@ -75,6 +75,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public ElementLockViewModel ElementLock { get; } = new();
 
+    /// <summary>
+    /// ViewModel for component dimension validation (checks bbox vs pin positions).
+    /// </summary>
+    public ComponentDimensionViewModel DimensionValidator { get; } = new();
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
@@ -109,6 +114,7 @@ public partial class MainViewModel : ObservableObject
         RoutingDiagnostics.Configure(_canvas);
         DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
         ElementLock.Configure(_canvas, CommandManager);
+        DimensionValidator.Configure(_canvas);
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
