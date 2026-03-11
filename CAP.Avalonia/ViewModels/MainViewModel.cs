@@ -869,6 +869,13 @@ public partial class MainViewModel : ObservableObject
             p.AngleDegrees
         )).ToArray();
 
+        // Calculate Nazca origin offset from first pin position
+        // Nazca places components at the first pin's position, so we need to offset
+        // from our top-left origin (0,0) to the first pin location
+        var firstPin = pdkComp.Pins.FirstOrDefault();
+        double nazcaOriginOffsetX = firstPin?.OffsetXMicrometers ?? 0;
+        double nazcaOriginOffsetY = firstPin?.OffsetYMicrometers ?? 0;
+
         var template = new ComponentTemplate
         {
             Name = pdkComp.Name,
@@ -883,6 +890,8 @@ public partial class MainViewModel : ObservableObject
             SliderMax = pdkComp.Sliders?.FirstOrDefault()?.MaxVal ?? 100,
             PdkSource = pdkName,
             NazcaModuleName = nazcaModuleName,
+            NazcaOriginOffsetX = nazcaOriginOffsetX,
+            NazcaOriginOffsetY = nazcaOriginOffsetY,
         };
 
         // Use multi-wavelength factory when wavelengthData is present
