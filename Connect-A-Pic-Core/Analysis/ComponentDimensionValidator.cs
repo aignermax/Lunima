@@ -49,11 +49,12 @@ public class ComponentDimensionValidator
         public double CurrentHeight { get; init; }
     }
 
-    private const double PinMarginMicrometers = 5.0;
     private const double ToleranceMicrometers = 0.1;
 
     /// <summary>
     /// Validates a component's dimensions against its pin positions.
+    /// Pins must lie within the component bounding box (0 to width, 0 to height).
+    /// No additional margin is required - pins may be exactly at the component edges.
     /// </summary>
     /// <param name="component">Component to validate.</param>
     /// <returns>Validation result with recommended dimensions if invalid.</returns>
@@ -73,8 +74,10 @@ public class ComponentDimensionValidator
         }
 
         var bbox = CalculatePinBoundingBox(component.PhysicalPins);
-        var requiredWidth = bbox.MaxX - bbox.MinX + 2 * PinMarginMicrometers;
-        var requiredHeight = bbox.MaxY - bbox.MinY + 2 * PinMarginMicrometers;
+        // Pins must fit within component bounds: 0 <= pin.x <= width, 0 <= pin.y <= height
+        // No extra margin needed - pins at edges (e.g., width=80, pin.x=80) are valid
+        var requiredWidth = bbox.MaxX - bbox.MinX;
+        var requiredHeight = bbox.MaxY - bbox.MinY;
 
         bool widthValid = component.WidthMicrometers >= requiredWidth - ToleranceMicrometers;
         bool heightValid = component.HeightMicrometers >= requiredHeight - ToleranceMicrometers;

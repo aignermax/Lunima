@@ -30,10 +30,9 @@ public static class ComponentTemplates
             {
                 // demo.mmi1x2_sh(): bbox (0, -27.5, 80, 27.5) = 80×55
                 // Pins: a0=(0,0), b0=(80,2), b1=(80,-2)
-                // Width increased to 90µm to provide margin around pins
                 Name = "1x2 MMI Splitter",
                 Category = "Splitters",
-                WidthMicrometers = 90,
+                WidthMicrometers = 80,
                 HeightMicrometers = 55,
                 NazcaOriginOffsetX = 0,
                 NazcaOriginOffsetY = 27.5,
@@ -50,10 +49,9 @@ public static class ComponentTemplates
                 // demo.mmi2x2_dp(): bbox (0, -30, 250, 30) = 250×60
                 // Pins: a0=(0,4), a1=(0,-4), b0=(250,4), b1=(250,-4)
                 // NazcaOriginOffset points to a0 pin: (0, ymax - a0.y) = (0, 30-4) = (0, 26)
-                // Width increased to 260µm to provide margin around pins
                 Name = "2x2 MMI Coupler",
                 Category = "Couplers",
-                WidthMicrometers = 260,
+                WidthMicrometers = 250,
                 HeightMicrometers = 60,
                 NazcaOriginOffsetX = 0,
                 NazcaOriginOffsetY = 26,
@@ -71,10 +69,9 @@ public static class ComponentTemplates
                 // demo.mmi2x2_dp(): same physical device as 2x2 MMI Coupler
                 // Slider controls coupling ratio κ (0-100%)
                 // NazcaOriginOffset points to a0 pin: (0, 26) — same as 2x2 MMI
-                // Width increased to 260µm to provide margin around pins
                 Name = "Directional Coupler",
                 Category = "Couplers",
-                WidthMicrometers = 260,
+                WidthMicrometers = 250,
                 HeightMicrometers = 60,
                 NazcaOriginOffsetX = 0,
                 NazcaOriginOffsetY = 26,
@@ -94,10 +91,9 @@ public static class ComponentTemplates
             {
                 // demo.eopm_dc(length=500): bbox (0, -30, 500, 30) = 500×60
                 // Pins: a0=(0,0), b0=(500,0)
-                // Width increased to 510µm to provide margin around pins
                 Name = "Phase Shifter",
                 Category = "Modulators",
-                WidthMicrometers = 510,
+                WidthMicrometers = 500,
                 HeightMicrometers = 60,
                 NazcaOriginOffsetX = 0,
                 NazcaOriginOffsetY = 30,
@@ -146,10 +142,9 @@ public static class ComponentTemplates
             new ComponentTemplate
             {
                 // demo.mmi1x2_sh(): same physical device as 1x2 MMI Splitter
-                // Width increased to 90µm to provide margin around pins
                 Name = "Y-Junction",
                 Category = "Splitters",
-                WidthMicrometers = 90,
+                WidthMicrometers = 80,
                 HeightMicrometers = 55,
                 NazcaOriginOffsetX = 0,
                 NazcaOriginOffsetY = 27.5,
