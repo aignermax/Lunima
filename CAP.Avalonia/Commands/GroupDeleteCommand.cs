@@ -49,6 +49,10 @@ public class GroupDeleteCommand : IUndoableCommand
         // Remove all components (RemoveComponent also removes their connections)
         foreach (var data in _deletedComponents)
         {
+            // Skip locked components
+            if (data.Component.IsLocked)
+                continue;
+
             // Snapshot connections that still exist (may have been removed by prior deletion)
             data.Connections.Clear();
             foreach (var connVm in _canvas.Connections.ToList())

@@ -32,6 +32,10 @@ public class DeleteComponentCommand : IUndoableCommand
 
     public void Execute()
     {
+        // Don't delete locked components
+        if (_component.IsLocked)
+            return;
+
         // Store connections that will be deleted
         _deletedConnections.Clear();
         foreach (var connVm in _canvas.Connections.ToList())
