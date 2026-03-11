@@ -22,14 +22,21 @@ Connect-A-PIC Pro extends the educational version with professional features:
 Connect-A-PIC-Pro/
 ├── CAP_Contracts/        # Shared interfaces
 ├── Connect-A-Pic-Core/   # Core simulation engine
-│   ├── Components/       # Component models, pins, S-Matrix
-│   ├── Routing/          # Waveguide routing (WaveguideRouter, PathSegments)
-│   └── LightCalculation/ # S-Matrix light propagation
-├── CAP-DataAccess/       # JSON loading, component draft conversion
-├── CAP.Avalonia/         # Shared Avalonia UI (views, viewmodels, controls)
+│   ├── Components/       # Component models, pins, S-matrices, parametric
+│   ├── Routing/          # Waveguide routing (A*, Manhattan, CSC)
+│   ├── LightCalculation/ # S-Matrix propagation, power flow analysis
+│   ├── Analysis/         # Parameter sweep, sweep configuration
+│   └── Grid/             # Component placement, connection management
+├── CAP-DataAccess/       # JSON persistence, PDK loading
+│   └── PDKs/             # Bundled PDK JSON files (demo-pdk.json, siepic-ebeam-pdk.json)
+├── CAP.Avalonia/         # Shared cross-platform UI
+│   ├── ViewModels/       # MVVM ViewModels (30+ view models)
+│   ├── Views/            # AXAML views and controls
+│   ├── Commands/         # Undo/redo commands (IUndoableCommand, CommandManager)
+│   └── Services/         # SimulationService, NazcaExporter, FileDialogService
 ├── CAP.Desktop/          # Desktop application entry point
 ├── CAP.Browser/          # WebAssembly browser entry point (planned)
-└── UnitTests/            # xUnit tests
+└── UnitTests/            # 544 xUnit tests (539 passing)
 ```
 
 ### Dependency Injection
@@ -43,8 +50,9 @@ Services are registered in `App.axaml.cs` using `Microsoft.Extensions.Dependency
 | `PdkLoader` | Singleton | PDK JSON file loading |
 | `CommandManager` | Singleton | Undo/redo command history |
 | `MainViewModel` | Singleton | Root ViewModel |
+| `FileDialogService` | Property | Cross-platform file dialogs |
 
-`FileDialogService` is set via property injection after window creation (requires `Window` reference). The container is accessible via `App.Services` for view code-behind when needed.
+The container is accessible via `App.Services` for view code-behind when needed.
 
 ## Physical Coordinate System
 
@@ -151,7 +159,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Backlog / Roadmap
 
-### Done
+### Done (50+ features implemented)
 - [x] Physical coordinate system (µm positioning)
 - [x] Avalonia UI with component placement, connections, rotation
 - [x] Undo/Redo system (Command pattern)
@@ -173,12 +181,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] **Component Library Search** - Fulltext search by name, category, PDK source, or Nazca function
 - [x] **Component Preview** - Miniature schematics in component panel showing pin layout
 - [x] **Nazca GDS Export Fixes** - Chained waveguide segments (no gaps), component rotation, Y-axis transform, demofab 1:1 matching
-- [x] **Nazca Integration Tests** - Python syntax validation + GDS file generation tests
+- [x] **Nazca Integration Tests** - Python syntax validation, GDS generation, property-based tests
+- [x] **Multi-Select** - Box select + Shift+click for multiple components
+- [x] **Copy/Paste** - Duplicate components with Ctrl+C/V or context menu
+- [x] **Grating Coupler Component** - Vertical fiber coupling with Nazca GDS export
+- [x] **PDK Management Panel** - Toggle PDKs on/off with component count display
+- [x] **Pin Alignment Guides** - Figma-style visual guides during component placement
+- [x] **Routing Diagnostics Panel** - Real-time path validation with JSON export
+- [x] **Component Dimension Validation** - Verify component bounds match pin positions
+- [x] **Parameter Sweep** - Systematic analysis of component parameter variations
+- [x] **Element Locking** - Lock components/connections to prevent accidental modification
+- [x] **Incremental Routing** - Preserve valid routes when circuit changes
 
 ### High Priority
 - [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
-- [ ] **Multi-Select** - Box select or Ctrl+click multiple components
-- [ ] **Copy/Paste** - Duplicate components or selections
 
 ### Path to Professional Use: Real PDK / CML Integration
 
@@ -189,6 +205,7 @@ The goal is to make Connect-A-PIC Pro usable with real foundry component data so
 **Step 1: Import SiEPIC Open PDK** ✅
 - [x] **Parse SiEPIC S-parameter files** - 12 SiEPIC EBeam PDK components with real Lumerical-simulated S-parameters, bundled as `siepic-ebeam-pdk.json`
 - [x] **Wavelength-dependent S-matrices in core** - Multi-wavelength support with nearest-wavelength fallback in `SystemMatrixBuilder`
+- [ ] **Expand SiEPIC PDK** - Add remaining 31 components (43 total in full PDK) 🚧 IN PROGRESS
 - [ ] **SiEPIC SiN PDK** - Silicon nitride platform, also open. Second priority after SOI.
 
 **Step 2: Define an open component model format** ✅
