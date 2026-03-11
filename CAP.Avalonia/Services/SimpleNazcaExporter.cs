@@ -67,8 +67,11 @@ public class SimpleNazcaExporter
             var w = comp.WidthMicrometers.ToString("F2", ci);
             var h = comp.HeightMicrometers.ToString("F2", ci);
 
+            // Sanitize function name for valid Python identifier (replace dots with underscores)
+            var pythonFuncName = funcName.Replace(".", "_");
+
             // Define cell once, return cached instance on each call
-            sb.AppendLine($"with nd.Cell(name='{funcName}') as _{funcName}_cell:");
+            sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
             sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
             sb.AppendLine($"    nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
 
@@ -82,8 +85,8 @@ public class SimpleNazcaExporter
             }
 
             sb.AppendLine();
-            sb.AppendLine($"def {funcName}(**kwargs):");
-            sb.AppendLine($"    return _{funcName}_cell");
+            sb.AppendLine($"def {pythonFuncName}(**kwargs):");
+            sb.AppendLine($"    return _{pythonFuncName}_cell");
             sb.AppendLine();
         }
     }
@@ -105,27 +108,54 @@ public class SimpleNazcaExporter
             var varName = $"comp_{compIndex}";
             componentNames[comp] = varName;
 
-            // Nazca .put() places the component's origin (first pin) at the given position.
-            // Our editor stores the top-left corner, so we offset to place the first pin correctly.
-            // Must account for component rotation when transforming pin offset to world coordinates.
-            var firstPin = comp.PhysicalPins.FirstOrDefault();
-            double originOffsetX = comp.NazcaOriginOffsetX;
-            double originOffsetY = comp.NazcaOriginOffsetY;
+            // Calculate placement coordinates for this component
+            //
+            // For auto-generated stubs (demo_pdk.*, ebeam_*, etc.):
+            //   - Cell origin is at (0, 0) in cell-local coords
+            //   - We place the cell such that (0, 0) maps to the editor's top-left corner
+            //   - Placement: (physicalX, -(physicalY + height))
+            //
+            // For built-in Nazca PDK functions (demo.io(), demo.mmi1x2_sh(), etc.):
+            //   - Cell origin may be at a different location (e.g., centered, or at first pin)
+            //   - NazcaOriginOffset tells us where the cell origin is relative to our bbox
+            //   - We calculate placement to align the cell origin correctly
 
-            if (firstPin != null)
+            double originOffsetX = 0;
+            double originOffsetY = 0;
+
+            var funcName = comp.NazcaFunctionName;
+            bool isGeneratedStub = !string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName);
+
+            if (isGeneratedStub)
             {
-                // Transform pin offset according to component rotation
-                double pinLocalX = firstPin.OffsetXMicrometers;
-                double pinLocalY = firstPin.OffsetYMicrometers;
-                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+                // For generated stubs, cell origin is at bbox (0, 0)
+                // No offset needed; pins are defined inside the cell
+                originOffsetX = 0;
+                originOffsetY = 0;
+            }
+            else
+            {
+                // For built-in PDK functions, use NazcaOriginOffset or calculate from first pin
+                var firstPin = comp.PhysicalPins.FirstOrDefault();
+                originOffsetX = comp.NazcaOriginOffsetX;
+                originOffsetY = comp.NazcaOriginOffsetY;
 
-                // Rotate the pin offset by the component's rotation
-                originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
-                originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+                if (firstPin != null && originOffsetX == 0 && originOffsetY == 0)
+                {
+                    // If no explicit origin offset, calculate from first pin position
+                    // This handles legacy components without explicit NazcaOriginOffset
+                    double pinLocalX = firstPin.OffsetXMicrometers;
+                    double pinLocalY = firstPin.OffsetYMicrometers;
+                    double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+
+                    // Rotate the pin offset by the component's rotation
+                    originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
+                    originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+                }
             }
 
             var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
-            var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
+            var nazcaY = NormalizeZero(-(comp.PhysicalY + comp.HeightMicrometers - originOffsetY)).ToString("F2", ci);
             var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
             var nazcaFunc = GetNazcaFunction(comp);
 
@@ -283,12 +313,14 @@ public class SimpleNazcaExporter
     }
 
     /// <summary>
-    /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550").
+    /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550" or "demo_pdk.grating_coupler").
+    /// These functions should get auto-generated stubs with correct dimensions and pins.
     /// </summary>
     internal static bool IsPdkFunction(string name) =>
         name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase) ||
         (name.Contains(".", StringComparison.Ordinal) &&
-         !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+         !name.StartsWith("demo.", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Maps a component to its Nazca function call string.
@@ -301,10 +333,12 @@ public class SimpleNazcaExporter
         var funcName = comp.NazcaFunctionName;
         if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
         {
+            // Sanitize function name for valid Python identifier (replace dots with underscores)
+            var pythonFuncName = funcName.Replace(".", "_");
             var funcParams = comp.NazcaFunctionParameters;
             return string.IsNullOrEmpty(funcParams)
-                ? $"{funcName}()"
-                : $"{funcName}({funcParams})";
+                ? $"{pythonFuncName}()"
+                : $"{pythonFuncName}({funcParams})";
         }
 
         // Fallback: heuristic mapping to demofab
