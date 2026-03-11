@@ -414,3 +414,6 @@ FodyWeavers.xsd
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Godot leftover files (project migrated from Godot to Avalonia)
+*.uid

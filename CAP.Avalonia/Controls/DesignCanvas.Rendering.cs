@@ -81,6 +81,12 @@ public partial class DesignCanvas
                 DrawConnectionPreview(context);
             }
 
+            // Draw alignment guide helper lines
+            if (_interactionState.DraggingComponent != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.HasAlignments)
+            {
+                DrawAlignmentGuides(context, vm);
+            }
+
             // Draw box-selection rectangle
             if (vm.Selection.IsBoxSelecting)
             {
@@ -307,5 +313,50 @@ public partial class DesignCanvas
             Brushes.Yellow);
 
         context.DrawText(infoText, new Point(grid.MinX + 10, grid.MinY + 10));
+    }
+
+    private void DrawAlignmentGuides(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        var guidePen = new Pen(new SolidColorBrush(Color.FromArgb(180, 0, 255, 255)), 1.5)
+        {
+            DashStyle = new DashStyle(new double[] { 8, 4 }, 0)
+        };
+
+        var pinDotBrush = new SolidColorBrush(Color.FromArgb(200, 0, 255, 255));
+        const double pinDotRadius = 4.0;
+
+        // Draw horizontal alignment lines (same Y coordinate)
+        foreach (var alignment in vm.AlignmentGuide.HorizontalAlignments)
+        {
+            double y = alignment.YCoordinate;
+            var (draggingX, _) = alignment.DraggingPin.GetAbsolutePosition();
+            var (alignedX, _) = alignment.AlignedPin.GetAbsolutePosition();
+
+            // Draw line spanning from left pin to right pin
+            double minX = Math.Min(draggingX, alignedX);
+            double maxX = Math.Max(draggingX, alignedX);
+            context.DrawLine(guidePen, new Point(minX, y), new Point(maxX, y));
+
+            // Draw dots at pin positions
+            context.DrawEllipse(pinDotBrush, null, new Point(draggingX, y), pinDotRadius, pinDotRadius);
+            context.DrawEllipse(pinDotBrush, null, new Point(alignedX, y), pinDotRadius, pinDotRadius);
+        }
+
+        // Draw vertical alignment lines (same X coordinate)
+        foreach (var alignment in vm.AlignmentGuide.VerticalAlignments)
+        {
+            double x = alignment.XCoordinate;
+            var (_, draggingY) = alignment.DraggingPin.GetAbsolutePosition();
+            var (_, alignedY) = alignment.AlignedPin.GetAbsolutePosition();
+
+            // Draw line spanning from top pin to bottom pin
+            double minY = Math.Min(draggingY, alignedY);
+            double maxY = Math.Max(draggingY, alignedY);
+            context.DrawLine(guidePen, new Point(x, minY), new Point(x, maxY));
+
+            // Draw dots at pin positions
+            context.DrawEllipse(pinDotBrush, null, new Point(x, draggingY), pinDotRadius, pinDotRadius);
+            context.DrawEllipse(pinDotBrush, null, new Point(x, alignedY), pinDotRadius, pinDotRadius);
+        }
     }
 }

@@ -1,15 +1,17 @@
 using CAP.Avalonia.ViewModels;
+using CAP_Core.Components;
 
 namespace CAP.Avalonia.Commands;
 
 /// <summary>
 /// Command for moving multiple components as a single undoable operation.
 /// All components move by the same delta.
+/// Uses Core Component references instead of ComponentViewModels to survive delete/undo cycles.
 /// </summary>
 public class GroupMoveCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly List<ComponentViewModel> _components;
+    private readonly List<Component> _components;
     private readonly double _deltaX;
     private readonly double _deltaY;
     private bool _isFirstExecution = true;
@@ -28,7 +30,7 @@ public class GroupMoveCommand : IUndoableCommand
         double deltaY)
     {
         _canvas = canvas;
-        _components = components.ToList();
+        _components = components.Select(c => c.Component).ToList();
         _deltaX = deltaX;
         _deltaY = deltaY;
     }
@@ -77,9 +79,14 @@ public class GroupMoveCommand : IUndoableCommand
         foreach (var comp in _components)
         {
             // Skip locked components
-            if (!comp.Component.IsLocked)
+            if (comp.IsLocked)
+                continue;
+
+            // Find the current ComponentViewModel for this component
+            var componentViewModel = _canvas.Components.FirstOrDefault(c => c.Component == comp);
+            if (componentViewModel != null)
             {
-                _canvas.MoveComponent(comp, dx, dy);
+                _canvas.MoveComponent(componentViewModel, dx, dy);
             }
         }
     }

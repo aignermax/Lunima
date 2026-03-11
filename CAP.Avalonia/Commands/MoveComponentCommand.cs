@@ -1,15 +1,17 @@
 using CAP.Avalonia.ViewModels;
+using CAP_Core.Components;
 
 namespace CAP.Avalonia.Commands;
 
 /// <summary>
 /// Command for moving a component on the canvas.
 /// Supports merging multiple small moves into one command.
+/// Uses the Core Component reference instead of ComponentViewModel to survive delete/undo cycles.
 /// </summary>
 public class MoveComponentCommand : IMergeableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly ComponentViewModel _componentViewModel;
+    private readonly Component _component;
     private readonly double _startX;
     private readonly double _startY;
     private double _endX;
@@ -30,7 +32,7 @@ public class MoveComponentCommand : IMergeableCommand
         double endY)
     {
         _canvas = canvas;
-        _componentViewModel = componentViewModel;
+        _component = componentViewModel.Component;
         _startX = startX;
         _startY = startY;
         _endX = endX;
@@ -38,25 +40,30 @@ public class MoveComponentCommand : IMergeableCommand
         _lastMoveTime = DateTime.Now;
     }
 
-    public string Description => $"Move {_componentViewModel.Component.Identifier}";
+    public string Description => $"Move {_component.Identifier}";
 
     public void Execute()
     {
         // Don't move locked components
-        if (_componentViewModel.Component.IsLocked)
+        if (_component.IsLocked)
             return;
+
+        // Find the current ComponentViewModel for this component
+        var componentViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _component);
+        if (componentViewModel == null)
+            return; // Component no longer exists in canvas
 
         try
         {
             _canvas.BeginCommandExecution();
 
             // Move to end position
-            var deltaX = _endX - _componentViewModel.X;
-            var deltaY = _endY - _componentViewModel.Y;
+            var deltaX = _endX - componentViewModel.X;
+            var deltaY = _endY - componentViewModel.Y;
 
             if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
             {
-                _canvas.MoveComponent(_componentViewModel, deltaX, deltaY);
+                _canvas.MoveComponent(componentViewModel, deltaX, deltaY);
             }
         }
         finally
@@ -67,14 +74,19 @@ public class MoveComponentCommand : IMergeableCommand
 
     public void Undo()
     {
+        // Find the current ComponentViewModel for this component
+        var componentViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _component);
+        if (componentViewModel == null)
+            return; // Component no longer exists in canvas
+
         try
         {
             _canvas.BeginCommandExecution();
 
             // Move back to start position
-            var deltaX = _startX - _componentViewModel.X;
-            var deltaY = _startY - _componentViewModel.Y;
-            _canvas.MoveComponent(_componentViewModel, deltaX, deltaY);
+            var deltaX = _startX - componentViewModel.X;
+            var deltaY = _startY - componentViewModel.Y;
+            _canvas.MoveComponent(componentViewModel, deltaX, deltaY);
         }
         finally
         {
@@ -88,7 +100,7 @@ public class MoveComponentCommand : IMergeableCommand
             return false;
 
         // Only merge if it's the same component and within the time window
-        return otherMove._componentViewModel == _componentViewModel &&
+        return otherMove._component == _component &&
                DateTime.Now - _lastMoveTime < MergeTimeWindow;
     }
 

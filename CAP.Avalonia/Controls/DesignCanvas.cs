@@ -58,6 +58,12 @@ public partial class DesignCanvas : Control
     internal PhysicalPin? ConnectionDragStartPin => _interactionState.ConnectionDragStartPin;
     internal Point ConnectionDragCurrentPoint => _interactionState.ConnectionDragCurrentPoint;
 
+    /// <summary>
+    /// Gets the last canvas position tracked by pointer movement (in canvas coordinates).
+    /// Used for paste-at-cursor functionality.
+    /// </summary>
+    public Point LastCanvasPosition => _interactionState.LastCanvasPosition;
+
     static DesignCanvas()
     {
         AffectsRender<DesignCanvas>(ViewModelProperty, ZoomProperty);

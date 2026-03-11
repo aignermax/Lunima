@@ -35,6 +35,7 @@ public class CanvasInteractionState
 
     // Panning state
     public bool IsPanning { get; set; }
+    public bool HasPanned { get; set; }
     public Point LastPointerPosition { get; set; }
 
     // Power flow hover state

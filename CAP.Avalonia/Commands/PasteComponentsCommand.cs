@@ -11,17 +11,25 @@ public class PasteComponentsCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly ComponentClipboard _clipboard;
+    private readonly double? _targetX;
+    private readonly double? _targetY;
     private PasteResult? _result;
 
     /// <summary>
     /// Creates a paste command.
     /// </summary>
+    /// <param name="targetX">Optional target X position (canvas coordinates)</param>
+    /// <param name="targetY">Optional target Y position (canvas coordinates)</param>
     public PasteComponentsCommand(
         DesignCanvasViewModel canvas,
-        ComponentClipboard clipboard)
+        ComponentClipboard clipboard,
+        double? targetX = null,
+        double? targetY = null)
     {
         _canvas = canvas;
         _clipboard = clipboard;
+        _targetX = targetX;
+        _targetY = targetY;
     }
 
     /// <inheritdoc />
@@ -30,7 +38,7 @@ public class PasteComponentsCommand : IUndoableCommand
     /// <inheritdoc />
     public void Execute()
     {
-        _result = _clipboard.Paste(_canvas);
+        _result = _clipboard.Paste(_canvas, _targetX, _targetY);
     }
 
     /// <inheritdoc />
