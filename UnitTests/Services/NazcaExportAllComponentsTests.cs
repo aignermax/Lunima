@@ -222,8 +222,7 @@ public class NazcaExportAllComponentsTests
     [Fact]
     public void Export_GratingCouplerTE1550_CorrectPositionWithRotation()
     {
-        // Issue #66/#68: Verify Grating Coupler TE 1550 position and rotation are correctly handled
-        // After issue #68 fix, ebeam_* components generate stubs with cell origin at (0,0)
+        // Issue #66: Verify Grating Coupler TE 1550 position offset is correctly handled
         var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
         if (pdkPath == null) return;
 
@@ -244,18 +243,16 @@ public class NazcaExportAllComponentsTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // After issue #68 fix: PDK stubs (ebeam_*) have cell origin at bbox (0,0)
-        // Placement: (physicalX, -(physicalY + height)) = (100, -(100 + 30)) = (100, -130)
-        // NazcaOriginOffset is NOT used for generated stubs
+        // Component should be placed at physical position + pin offset
+        // Physical (100, 100) + pin offset (15, 30) = Nazca position (115, -130)
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain(".put(100.00, -130.00, 0)");
+        result.ShouldContain(".put(115.00, -130.00, 0)");
     }
 
     [Fact]
     public void Export_GratingCouplerTE1550_CorrectPositionWithRotation180()
     {
-        // Issue #66/#68: Verify rotated Grating Coupler TE 1550 has correct position
-        // After issue #68 fix, ebeam_* components generate stubs with cell origin at (0,0)
+        // Issue #66: Verify rotated Grating Coupler TE 1550 has correct position
         var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
         if (pdkPath == null) return;
 
@@ -274,11 +271,10 @@ public class NazcaExportAllComponentsTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // After issue #68 fix: PDK stubs (ebeam_*) have cell origin at bbox (0,0)
-        // Placement with 180° rotation: (100, -130, -180)
-        // Component bbox still placed at same position, rotation applied via .put() angle parameter
+        // With 180° rotation, pin offset (15, 30) becomes (-15, -30) in rotated coords
+        // Physical (100, 100) + rotated offset (-15, -30) = Nazca position (85, -70)
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain(".put(100.00, -130.00, -180)");
+        result.ShouldContain(".put(85.00, -70.00, -180)");
     }
 
     private static string? FindPdkFile(string fileName)
