@@ -123,7 +123,19 @@ public partial class DesignCanvas
         if (_interactionState.DraggingComponent != null)
         {
             mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-            mainVm?.StartMoveComponent(_interactionState.DraggingComponent);
+
+            // Start tracking for undo
+            if (vm.Selection.SelectedComponents.Count > 1)
+            {
+                // Group move
+                mainVm?.StartGroupMove(vm.Selection.SelectedComponents);
+            }
+            else
+            {
+                // Single component move
+                mainVm?.StartMoveComponent(_interactionState.DraggingComponent);
+            }
+
             _interactionState.DragStartX = _interactionState.DraggingComponent.X;
             _interactionState.DragStartY = _interactionState.DraggingComponent.Y;
 
@@ -158,6 +170,9 @@ public partial class DesignCanvas
         if (vm == null) return;
 
         var canvasPoint = ScreenToCanvas(point);
+
+        // Always track the last canvas position for paste-at-cursor
+        _interactionState.LastCanvasPosition = canvasPoint;
 
         UpdatePlacementPreview(canvasPoint, vm);
         UpdatePinHighlighting(canvasPoint, vm);
@@ -213,7 +228,6 @@ public partial class DesignCanvas
     {
         if (vm.ShowPowerFlow)
         {
-            _interactionState.LastCanvasPosition = canvasPoint;
             var previousHover = _interactionState.HoveredConnection;
             _interactionState.HoveredConnection = DesignCanvasHitTesting.HitTestConnection(canvasPoint, vm);
             if (_interactionState.HoveredConnection != previousHover)
@@ -272,9 +286,29 @@ public partial class DesignCanvas
 
     private void UpdateGroupDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
     {
+        // First, move by mouse delta
         foreach (var comp in vm.Selection.SelectedComponents)
         {
             vm.MoveComponent(comp, deltaX, deltaY);
+        }
+
+        // Then check for alignment snapping
+        if (vm.AlignmentGuide.IsEnabled)
+        {
+            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
+
+            // Calculate snap delta based on current position (after mouse move)
+            var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_interactionState.DraggingComponent!, vm.Components, Zoom);
+
+            // Only apply snap if it would move us (non-zero delta)
+            // The snap delta is calculated to bring pins into alignment
+            if (snapDX != 0 || snapDY != 0)
+            {
+                foreach (var comp in vm.Selection.SelectedComponents)
+                {
+                    vm.MoveComponent(comp, snapDX, snapDY);
+                }
+            }
         }
 
         var snapSettings = vm.GridSnap;
@@ -294,6 +328,19 @@ public partial class DesignCanvas
     private void UpdateSingleComponentDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
     {
         vm.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
+
+        // Update alignment guides
+        if (vm.AlignmentGuide.IsEnabled)
+        {
+            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
+
+            // Apply pin alignment snapping
+            var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_interactionState.DraggingComponent!, vm.Components, Zoom);
+            if (snapDX != 0 || snapDY != 0)
+            {
+                vm.MoveComponent(_interactionState.DraggingComponent!, snapDX, snapDY);
+            }
+        }
 
         var snapSettings = vm.GridSnap;
         double centerX = _interactionState.DraggingComponent!.X + _interactionState.DraggingComponent.Width / 2.0;
@@ -322,12 +369,22 @@ public partial class DesignCanvas
         {
             vm.PanX += delta.X;
             vm.PanY += delta.Y;
+            _interactionState.HasPanned = true; // Mark that we actually panned
             InvalidateVisual();
         }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
+        // Suppress context menu if we panned (right-click drag)
+        if (_interactionState.HasPanned && e.InitialPressMouseButton == MouseButton.Right)
+        {
+            e.Handled = true;
+            _interactionState.HasPanned = false;
+            _interactionState.IsPanning = false;
+            return;
+        }
+
         base.OnPointerReleased(e);
 
         CompleteConnectionDrag(e);
@@ -336,6 +393,7 @@ public partial class DesignCanvas
 
         _interactionState.DraggingComponent = null;
         _interactionState.IsPanning = false;
+        _interactionState.HasPanned = false;
     }
 
     private void CompleteConnectionDrag(PointerReleasedEventArgs e)
@@ -414,14 +472,28 @@ public partial class DesignCanvas
             }
 
             _interactionState.ShowDragPreview = false;
-            MainViewModel?.EndMoveComponent();
 
-            if (vm != null && isDraggingGroup)
+            // Clear alignment guides and reset snap state
+            if (vm != null)
             {
-                foreach (var comp in vm.Selection.SelectedComponents)
+                vm.AlignmentGuide.ClearAlignments();
+                vm.AlignmentGuide.ResetSnapState();
+            }
+
+            // End tracking for undo
+            if (isDraggingGroup)
+            {
+                MainViewModel?.EndGroupMove(vm!.Selection.SelectedComponents);
+
+                // Restore selection highlighting
+                foreach (var comp in vm!.Selection.SelectedComponents)
                 {
                     comp.IsSelected = true;
                 }
+            }
+            else
+            {
+                MainViewModel?.EndMoveComponent();
             }
 
             InvalidateVisual();
@@ -434,6 +506,7 @@ public partial class DesignCanvas
         {
             if (isDraggingGroup)
             {
+                // Move all components in the group by the same delta
                 foreach (var comp in vm!.Selection.SelectedComponents)
                 {
                     vm.MoveComponent(comp, deltaX, deltaY);
@@ -441,6 +514,7 @@ public partial class DesignCanvas
             }
             else
             {
+                // Move single component
                 vm?.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
             }
         }

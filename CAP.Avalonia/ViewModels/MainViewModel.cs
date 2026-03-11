@@ -646,12 +646,16 @@ public partial class MainViewModel : ObservableObject
         StatusText = $"Copied {selection.SelectedComponents.Count} component(s)";
     }
 
-    [RelayCommand]
-    private void PasteSelected()
+    /// <summary>
+    /// Pastes components from clipboard at the specified position.
+    /// </summary>
+    /// <param name="targetX">Target X position in canvas coordinates (optional)</param>
+    /// <param name="targetY">Target Y position in canvas coordinates (optional)</param>
+    public void PasteSelected(double? targetX = null, double? targetY = null)
     {
         if (!Canvas.Clipboard.HasContent) return;
 
-        var cmd = new PasteComponentsCommand(Canvas, Canvas.Clipboard);
+        var cmd = new PasteComponentsCommand(Canvas, Canvas.Clipboard, targetX, targetY);
         CommandManager.ExecuteCommand(cmd);
 
         // Select the pasted components
@@ -667,6 +671,15 @@ public partial class MainViewModel : ObservableObject
             _ = Canvas.RecalculateRoutesAsync();
             StatusText = $"Pasted {cmd.Result.Components.Count} component(s)";
         }
+    }
+
+    /// <summary>
+    /// RelayCommand wrapper for PasteSelected that uses default positioning.
+    /// </summary>
+    [RelayCommand]
+    private void PasteSelectedCommand()
+    {
+        PasteSelected();
     }
 
     [RelayCommand]

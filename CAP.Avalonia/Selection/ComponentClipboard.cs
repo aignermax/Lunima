@@ -67,31 +67,39 @@ public class ComponentClipboard
     }
 
     /// <summary>
-    /// Pastes copied components onto the canvas with an offset.
+    /// Pastes copied components onto the canvas.
+    /// If targetX/targetY are provided, pastes relative to cursor position.
+    /// Otherwise pastes with fixed offset from original positions.
     /// Returns the list of newly created component ViewModels.
     /// </summary>
-    public PasteResult? Paste(DesignCanvasViewModel canvas)
+    public PasteResult? Paste(DesignCanvasViewModel canvas, double? targetX = null, double? targetY = null)
     {
         if (!HasContent) return null;
 
         var newComponents = new List<ComponentViewModel>();
         var clonedComps = new List<Component>();
 
+        // Calculate offset: either from cursor position or fixed offset
+        double offsetX, offsetY;
+        if (targetX.HasValue && targetY.HasValue)
+        {
+            // Paste at cursor - calculate offset from first component's original position
+            var firstEntry = _entries[0];
+            offsetX = targetX.Value - firstEntry.OriginalX;
+            offsetY = targetY.Value - firstEntry.OriginalY;
+        }
+        else
+        {
+            // Paste with fixed offset
+            offsetX = PasteOffsetMicrometers;
+            offsetY = PasteOffsetMicrometers;
+        }
+
         foreach (var entry in _entries)
         {
             var cloned = (Component)entry.OriginalComponent.Clone();
-            cloned.PhysicalX = entry.OriginalX + PasteOffsetMicrometers;
-            cloned.PhysicalY = entry.OriginalY + PasteOffsetMicrometers;
-
-            // Find valid position near target
-            var valid = canvas.FindValidPlacement(
-                cloned.PhysicalX, cloned.PhysicalY,
-                cloned.WidthMicrometers, cloned.HeightMicrometers);
-
-            if (valid == null) continue;
-
-            cloned.PhysicalX = valid.Value.x;
-            cloned.PhysicalY = valid.Value.y;
+            cloned.PhysicalX = entry.OriginalX + offsetX;
+            cloned.PhysicalY = entry.OriginalY + offsetY;
 
             clonedComps.Add(cloned);
             var vm = canvas.AddComponent(cloned, entry.TemplateName);

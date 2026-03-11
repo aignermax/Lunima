@@ -71,7 +71,9 @@ public partial class MainWindow : Window
                 if (ctrlPressed)
                 {
                     Console.WriteLine("DEBUG: Ctrl+V detected");
-                    mainVm.PasteSelectedCommand.Execute(null);
+                    // Get the last canvas position for paste-at-cursor
+                    var canvasPos = DesignCanvasControl.LastCanvasPosition;
+                    mainVm.PasteSelected(canvasPos.X, canvasPos.Y);
                 }
                 break;
             case Key.D:

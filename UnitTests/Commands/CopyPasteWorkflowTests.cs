@@ -187,14 +187,14 @@ public class CopyPasteWorkflowTests
     }
 
     /// <summary>
-    /// Verifies that pasted components avoid overlapping with existing components.
+    /// Verifies that pasting at a specific cursor position places the component at that location.
     /// </summary>
     [Fact]
-    public void Paste_AvoidOverlap_FindsValidPlacement()
+    public void Paste_AtCursorPosition_PlacesAtSpecifiedLocation()
     {
         var canvas = new DesignCanvasViewModel();
 
-        // Place original component
+        // Place original component at (100, 100)
         var comp1 = CreateComponent(100, 50, 100, 100);
         var vm1 = canvas.AddComponent(comp1);
 
@@ -203,16 +203,18 @@ public class CopyPasteWorkflowTests
             new[] { vm1 },
             canvas.Connections);
 
-        // Paste - should find a position that doesn't overlap
-        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        // Paste at cursor position (300, 200)
+        var targetX = 300.0;
+        var targetY = 200.0;
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard, targetX, targetY);
         cmd.Execute();
 
         cmd.Result.ShouldNotBeNull();
         var pastedVm = cmd.Result.Components[0];
 
-        // Check that components don't overlap (with 5µm minimum gap)
-        bool overlaps = CheckOverlap(vm1, pastedVm, minGap: 5.0);
-        overlaps.ShouldBeFalse("Pasted component should not overlap original");
+        // The pasted component should be at the cursor position
+        pastedVm.X.ShouldBe(targetX, "Pasted component should be at cursor X");
+        pastedVm.Y.ShouldBe(targetY, "Pasted component should be at cursor Y");
     }
 
     /// <summary>
@@ -313,13 +315,5 @@ public class CopyPasteWorkflowTests
         component.PhysicalY = y;
 
         return component;
-    }
-
-    private static bool CheckOverlap(ComponentViewModel comp1, ComponentViewModel comp2, double minGap)
-    {
-        return comp1.X - minGap < comp2.X + comp2.Width &&
-               comp1.X + comp1.Width + minGap > comp2.X &&
-               comp1.Y - minGap < comp2.Y + comp2.Height &&
-               comp1.Y + comp1.Height + minGap > comp2.Y;
     }
 }

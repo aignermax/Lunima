@@ -23,21 +23,23 @@ public partial class AlignmentGuideViewModel : ObservableObject
     /// Two pins are considered aligned if their X or Y coordinates differ by less than this value.
     /// </summary>
     [ObservableProperty]
-    private double _alignmentToleranceMicrometers = 1.0;
+    private double _alignmentToleranceMicrometers = 2.0;
 
     /// <summary>
     /// Tolerance for snap-to-align in micrometers.
     /// Component will snap to alignment if within this distance.
+    /// Increased to ~20µm for better usability at typical zoom levels.
     /// </summary>
     [ObservableProperty]
-    private double _snapToleranceMicrometers = 4.0;
+    private double _snapToleranceMicrometers = 20.0;
 
     /// <summary>
-    /// Distance in micrometers that component must move away from snap position
+    /// Distance in screen pixels that mouse must move away from snap position
     /// before snap is released. This creates a "sticky" feel without locking the component.
+    /// Set to 10 pixels for comfortable mouse movement tolerance.
     /// </summary>
     [ObservableProperty]
-    private double _snapBreakDistanceMicrometers = 2.0;
+    private double _snapBreakDistancePixels = 10.0;
 
     /// <summary>
     /// Whether snapping to alignment guides is enabled.
@@ -51,14 +53,20 @@ public partial class AlignmentGuideViewModel : ObservableObject
     private bool _isCurrentlySnapped = false;
 
     /// <summary>
-    /// The position when snap first occurred, used to track accumulated movement.
+    /// When snapped, this stores which axis is locked (true = X is snapped, false = Y is snapped).
+    /// Null if not snapped or both axes snapped.
     /// </summary>
-    private (double x, double y)? _snapOriginPosition = null;
+    private bool? _snappedAxisIsX = null;
 
     /// <summary>
-    /// Total accumulated distance moved while snapped (resets when snap breaks).
+    /// The snapped coordinate value (either X or Y depending on _snappedAxisIsX).
     /// </summary>
-    private double _accumulatedSnapMovement = 0;
+    private double? _snappedCoordinate = null;
+
+    /// <summary>
+    /// The original position before snapping occurred (used to restore if snap breaks).
+    /// </summary>
+    private (double x, double y)? _preSnapPosition = null;
 
     /// <summary>
     /// Current horizontal alignments (updated during drag).
@@ -136,10 +144,12 @@ public partial class AlignmentGuideViewModel : ObservableObject
     /// </summary>
     /// <param name="draggingComponent">The component being dragged.</param>
     /// <param name="otherComponents">All other components on the canvas.</param>
+    /// <param name="zoom">Current zoom level of the canvas (to convert pixels to micrometers).</param>
     /// <returns>Tuple of (deltaX, deltaY) to apply for snapping, or (0, 0) if no snap.</returns>
     public (double deltaX, double deltaY) CalculateSnapDelta(
         ComponentViewModel draggingComponent,
-        IEnumerable<ComponentViewModel> otherComponents)
+        IEnumerable<ComponentViewModel> otherComponents,
+        double zoom)
     {
         if (!IsEnabled || !SnapEnabled || draggingComponent == null)
             return (0, 0);
@@ -147,28 +157,53 @@ public partial class AlignmentGuideViewModel : ObservableObject
         var currentX = draggingComponent.X;
         var currentY = draggingComponent.Y;
 
-        // Check if we're currently snapped and need to track movement
-        if (_isCurrentlySnapped && _snapOriginPosition.HasValue)
+        // Check if we're currently snapped - maintain snapped axis but check for break
+        if (_isCurrentlySnapped && _snappedAxisIsX.HasValue && _snappedCoordinate.HasValue && _preSnapPosition.HasValue)
         {
-            // Calculate total distance moved from where we first snapped
-            var totalMovement = Math.Sqrt(
-                Math.Pow(currentX - _snapOriginPosition.Value.x, 2) +
-                Math.Pow(currentY - _snapOriginPosition.Value.y, 2));
+            // Convert pixel-based snap break distance to micrometers based on current zoom
+            double snapBreakDistanceMicrometers = SnapBreakDistancePixels / zoom;
 
-            // If total accumulated movement exceeds break distance, release snap
-            if (totalMovement > SnapBreakDistanceMicrometers)
+            // Check if mouse has moved too far away from the pre-snap position on the free axis
+            double distanceOnFreeAxis;
+            if (_snappedAxisIsX.Value)
             {
-                _isCurrentlySnapped = false;
-                _snapOriginPosition = null;
-                _accumulatedSnapMovement = 0;
-                // Don't snap to anything else this frame - let user move freely
-                return (0, 0);
+                // X is snapped, Y is free - check Y distance from where we started the snap
+                distanceOnFreeAxis = Math.Abs(currentY - _preSnapPosition.Value.y);
             }
             else
             {
-                // Still within break distance - keep snapping to original target
-                // Don't apply any delta, component should stay where it is
-                return (0, 0);
+                // Y is snapped, X is free - check X distance from where we started the snap
+                distanceOnFreeAxis = Math.Abs(currentX - _preSnapPosition.Value.x);
+            }
+
+            // If moved too far on the free axis, break snap and restore original position
+            if (distanceOnFreeAxis > snapBreakDistanceMicrometers)
+            {
+                _isCurrentlySnapped = false;
+                var restoreDeltaX = _preSnapPosition.Value.x - currentX;
+                var restoreDeltaY = _preSnapPosition.Value.y - currentY;
+
+                // Clear snap state
+                _snappedAxisIsX = null;
+                _snappedCoordinate = null;
+                _preSnapPosition = null;
+
+                // Return to original pre-snap position
+                return (restoreDeltaX, restoreDeltaY);
+            }
+
+            // Still within tolerance - maintain snap
+            if (_snappedAxisIsX.Value)
+            {
+                // X is snapped - lock X, let Y follow mouse
+                double deltaX = _snappedCoordinate.Value - currentX;
+                return (deltaX, 0);
+            }
+            else
+            {
+                // Y is snapped - lock Y, let X follow mouse
+                double deltaY = _snappedCoordinate.Value - currentY;
+                return (0, deltaY);
             }
         }
 
@@ -182,12 +217,25 @@ public partial class AlignmentGuideViewModel : ObservableObject
             otherCoreComponents,
             SnapToleranceMicrometers);
 
-        // If we found a new snap, record the origin position
+        // If we found a snap, record which axis is snapped and save original position
         if (snapDX != 0 || snapDY != 0)
         {
             _isCurrentlySnapped = true;
-            _snapOriginPosition = (currentX, currentY); // Save where we were when snap started
-            _accumulatedSnapMovement = 0;
+            _preSnapPosition = (currentX, currentY); // Save position before snapping
+
+            // Determine which axis is being snapped
+            if (Math.Abs(snapDX) > Math.Abs(snapDY))
+            {
+                // X snap is dominant
+                _snappedAxisIsX = true;
+                _snappedCoordinate = currentX + snapDX;
+            }
+            else
+            {
+                // Y snap is dominant (or equal)
+                _snappedAxisIsX = false;
+                _snappedCoordinate = currentY + snapDY;
+            }
         }
 
         return (snapDX, snapDY);
@@ -200,8 +248,9 @@ public partial class AlignmentGuideViewModel : ObservableObject
     public void ResetSnapState()
     {
         _isCurrentlySnapped = false;
-        _snapOriginPosition = null;
-        _accumulatedSnapMovement = 0;
+        _snappedAxisIsX = null;
+        _snappedCoordinate = null;
+        _preSnapPosition = null;
     }
 
     /// <summary>
