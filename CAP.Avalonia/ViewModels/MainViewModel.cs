@@ -84,6 +84,9 @@ public partial class MainViewModel : ObservableObject
     private double _moveStartY;
     private ComponentViewModel? _movingComponent;
 
+    // For tracking group move operations
+    private Dictionary<ComponentViewModel, (double x, double y)>? _groupMoveStartPositions;
+
     public MainViewModel(
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
@@ -99,7 +102,7 @@ public partial class MainViewModel : ObservableObject
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         RoutingDiagnostics.Configure(_canvas);
-        ElementLock.Configure(_canvas);
+        ElementLock.Configure(_canvas, CommandManager);
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
@@ -494,6 +497,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Called when starting to drag multiple components as a group.
+    /// </summary>
+    public void StartGroupMove(IEnumerable<ComponentViewModel> components)
+    {
+        _groupMoveStartPositions = new Dictionary<ComponentViewModel, (double x, double y)>();
+        foreach (var comp in components)
+        {
+            _groupMoveStartPositions[comp] = (comp.X, comp.Y);
+        }
+
+        // Enable drag mode to allow free movement during drag
+        var firstComp = components.FirstOrDefault();
+        if (firstComp != null)
+        {
+            Canvas.BeginDragComponent(firstComp);
+        }
+    }
+
+    /// <summary>
     /// Called when finished dragging a component.
     /// </summary>
     public void EndMoveComponent()
@@ -517,6 +539,40 @@ public partial class MainViewModel : ObservableObject
             }
         }
         _movingComponent = null;
+    }
+
+    /// <summary>
+    /// Called when finished dragging multiple components as a group.
+    /// </summary>
+    public void EndGroupMove(IEnumerable<ComponentViewModel> components)
+    {
+        if (_groupMoveStartPositions == null || !_groupMoveStartPositions.Any())
+            return;
+
+        // Calculate the delta from the first component (all moved by same delta)
+        var firstComp = _groupMoveStartPositions.Keys.FirstOrDefault();
+        if (firstComp == null)
+            return;
+
+        // End drag mode and recalculate routes
+        Canvas.EndDragComponent(firstComp);
+
+        var startPos = _groupMoveStartPositions[firstComp];
+        double deltaX = firstComp.X - startPos.x;
+        double deltaY = firstComp.Y - startPos.y;
+
+        // Only create command if there was actual movement
+        if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+        {
+            var cmd = new GroupMoveCommand(
+                Canvas,
+                _groupMoveStartPositions.Keys.ToList(),
+                deltaX,
+                deltaY);
+            CommandManager.ExecuteCommand(cmd);
+        }
+
+        _groupMoveStartPositions = null;
     }
 
     [RelayCommand]

@@ -124,9 +124,9 @@ public class AlignmentGuideViewModelTests
     {
         // Arrange
         var viewModel = new AlignmentGuideViewModel();
-        var draggingVm = CreateComponentViewModel(x: 0, y: 0, pinX: 10, pinY: 100.0);
-        var otherVm = CreateComponentViewModel(x: 50, y: 50, pinX: 10, pinY: 51.5);
-        // Pins at (10, 100) and (60, 101.5) - 1.5µm apart on Y
+        var draggingVm = CreateComponentViewModel(x: 0, y: 0, pinX: 10, pinY: 100.0, pinAngle: 0);
+        var otherVm = CreateComponentViewModel(x: 50, y: 50, pinX: 10, pinY: 51.5, pinAngle: 180);
+        // Pins at (10, 100) and (60, 101.5) - 1.5µm apart on Y - pointing at each other
 
         // Act - Set tolerance to 2.0µm (should detect)
         viewModel.AlignmentToleranceMicrometers = 2.0;
@@ -163,9 +163,9 @@ public class AlignmentGuideViewModelTests
     {
         // Arrange
         var viewModel = new AlignmentGuideViewModel();
-        var draggingVm = CreateComponentViewModel(x: 0, y: 0, pinX: 10, pinY: 100);
-        var comp1 = CreateComponentViewModel(x: 100, y: 0, pinX: 10, pinY: 100);
-        var comp2 = CreateComponentViewModel(x: 200, y: 0, pinX: 10, pinY: 100);
+        var draggingVm = CreateComponentViewModel(x: 0, y: 0, pinX: 10, pinY: 100, pinAngle: 0);
+        var comp1 = CreateComponentViewModel(x: 100, y: 0, pinX: 10, pinY: 100, pinAngle: 180);
+        var comp2 = CreateComponentViewModel(x: 200, y: 0, pinX: 10, pinY: 100, pinAngle: 180);
 
         // Act
         viewModel.UpdateAlignments(draggingVm, new[] { comp1, comp2 });
@@ -177,14 +177,14 @@ public class AlignmentGuideViewModelTests
 
     #region Test Helpers
 
-    private ComponentViewModel CreateComponentViewModel(double x, double y, double pinX, double pinY)
+    private ComponentViewModel CreateComponentViewModel(double x, double y, double pinX, double pinY, double pinAngle = 0)
     {
         var pin = new PhysicalPin
         {
             Name = "TestPin",
             OffsetXMicrometers = pinX,
             OffsetYMicrometers = pinY,
-            AngleDegrees = 0
+            AngleDegrees = pinAngle
         };
 
         var component = UnitTests.TestComponentFactory.CreateStraightWaveGuide();
@@ -199,9 +199,11 @@ public class AlignmentGuideViewModelTests
 
     private (ComponentViewModel dragging, ComponentViewModel other) CreateTwoAlignedComponentViewModels()
     {
-        // Create two components with pins aligned on Y axis (Y = 100)
-        var dragging = CreateComponentViewModel(x: 0, y: 0, pinX: 10, pinY: 100);
-        var other = CreateComponentViewModel(x: 100, y: 0, pinX: 50, pinY: 100);
+        // Create two components with pins aligned on Y axis (Y = 100) that point at each other
+        // dragging at (0,0) with pin at (10, 100) pointing right (0°)
+        // other at (100,0) with pin at (50, 100) - absolute position (150, 100) pointing left (180°)
+        var dragging = CreateComponentViewModel(x: 0, y: 0, pinX: 10, pinY: 100, pinAngle: 0);
+        var other = CreateComponentViewModel(x: 100, y: 0, pinX: 50, pinY: 100, pinAngle: 180);
         return (dragging, other);
     }
 

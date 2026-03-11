@@ -162,19 +162,27 @@ public class PinAlignmentHelperTests
     {
         // Arrange
         var helper = new PinAlignmentHelper();
+        // Create components with pins that actually point at each other
+        // dragging at (0,0), other at (200, 0)
+        // dragging pin1 at (100, 100) pointing right (0°)
+        // other pin1 at (100, 100) pointing left (180°)
         var draggingComp = CreateComponentWithTwoPins(
             x: 0, y: 0,
-            pin1X: 10, pin1Y: 100,
-            pin2X: 200, pin2Y: 150);
+            pin1X: 100, pin1Y: 100,
+            pin2X: 100, pin2Y: 200,
+            pin1Angle: 0,    // Points right
+            pin2Angle: 0);   // Points right
         var otherComp = CreateComponentWithTwoPins(
-            x: 100, y: 100,
-            pin1X: 10, pin1Y: 0,   // Aligns with dragging pin1 on X
-            pin2X: 100, pin2Y: 50); // Aligns with dragging pin2 on Y
+            x: 200, y: 0,
+            pin1X: -100, pin1Y: 100,
+            pin2X: -100, pin2Y: 200,
+            pin1Angle: 180, // At (100,100) points left - aligns with dragging pin1
+            pin2Angle: 180); // At (100,200) points left - aligns with dragging pin2
 
         // Act
         var (horizontal, vertical) = helper.FindAllAlignments(draggingComp, new[] { otherComp });
 
-        // Assert
+        // Assert - both pins align horizontally and vertically
         horizontal.Count.ShouldBeGreaterThanOrEqualTo(1);
         vertical.Count.ShouldBeGreaterThanOrEqualTo(1);
     }
@@ -226,14 +234,16 @@ public class PinAlignmentHelperTests
     private Component CreateComponentWithTwoPins(
         double x, double y,
         double pin1X, double pin1Y,
-        double pin2X, double pin2Y)
+        double pin2X, double pin2Y,
+        double pin1Angle = 0,
+        double pin2Angle = 180)
     {
         var pin1 = new PhysicalPin
         {
             Name = "Pin1",
             OffsetXMicrometers = pin1X,
             OffsetYMicrometers = pin1Y,
-            AngleDegrees = 0
+            AngleDegrees = pin1Angle
         };
 
         var pin2 = new PhysicalPin
@@ -241,7 +251,7 @@ public class PinAlignmentHelperTests
             Name = "Pin2",
             OffsetXMicrometers = pin2X,
             OffsetYMicrometers = pin2Y,
-            AngleDegrees = 180
+            AngleDegrees = pin2Angle
         };
 
         var component = UnitTests.TestComponentFactory.CreateStraightWaveGuide();
