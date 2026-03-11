@@ -921,6 +921,26 @@ public partial class WaveguideConnectionViewModel : ObservableObject
     /// </summary>
     public bool IsBlockedFallback => Connection.IsBlockedFallback;
 
+    /// <summary>
+    /// Whether target length constraint is enabled for this connection.
+    /// </summary>
+    public bool IsTargetLengthEnabled => Connection.IsTargetLengthEnabled;
+
+    /// <summary>
+    /// Target length in micrometers (null if not set).
+    /// </summary>
+    public double? TargetLengthMicrometers => Connection.TargetLengthMicrometers;
+
+    /// <summary>
+    /// Whether the current path length matches the target within tolerance.
+    /// </summary>
+    public bool? IsLengthMatched => Connection.IsLengthMatched;
+
+    /// <summary>
+    /// Difference between actual and target length in micrometers.
+    /// </summary>
+    public double? LengthDifference => Connection.LengthDifference;
+
     public WaveguideConnectionViewModel(WaveguideConnection connection)
     {
         Connection = connection;
@@ -935,6 +955,10 @@ public partial class WaveguideConnectionViewModel : ObservableObject
         OnPropertyChanged(nameof(PathLength));
         OnPropertyChanged(nameof(LossDb));
         OnPropertyChanged(nameof(IsBlockedFallback));
+        OnPropertyChanged(nameof(IsTargetLengthEnabled));
+        OnPropertyChanged(nameof(TargetLengthMicrometers));
+        OnPropertyChanged(nameof(IsLengthMatched));
+        OnPropertyChanged(nameof(LengthDifference));
     }
 }
 
