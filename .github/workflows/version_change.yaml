@@ -21,18 +21,25 @@ jobs:
           file: "CAP.Desktop/CAP.Desktop.csproj"
           version: ${{ github.event.inputs.version }}
 
-      - name: Create and Push Tag
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag v${{ github.event.inputs.version }}
-          git push origin v${{ github.event.inputs.version }}
-
       - name: Create Pull Request
+        id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: version/${{ github.event.inputs.version }}
-          commit-message: "Update version to ${{ github.event.inputs.version }}"
+          commit-message: "chore: update version to ${{ github.event.inputs.version }}"
           title: "chore: update version to ${{ github.event.inputs.version }}"
-          body: "Updates project version to ${{ github.event.inputs.version }}."
+          body: |
+            Updates project version to ${{ github.event.inputs.version }}.
+
+            **🤖 Automated Release Process:**
+
+            When this PR is merged, the following will happen automatically:
+            1. ✅ Version updated to ${{ github.event.inputs.version }} in `CAP.Desktop.csproj`
+            2. 🏷️ Tag `v${{ github.event.inputs.version }}` created automatically
+            3. 🏗️ Windows and Linux builds triggered
+            4. 🧪 All tests run
+            5. 📦 GitHub release created with changelog
+            6. ⬆️ Release artifacts uploaded
+
+            No manual steps required after merge!

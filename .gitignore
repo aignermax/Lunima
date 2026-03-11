@@ -411,3 +411,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Claude Code agent worktrees
+.claude/worktrees/
