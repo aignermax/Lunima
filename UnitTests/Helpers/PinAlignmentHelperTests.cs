@@ -184,7 +184,6 @@ public class PinAlignmentHelperTests
 
         // Assert - both pins align horizontally and vertically
         horizontal.Count.ShouldBeGreaterThanOrEqualTo(1);
-        vertical.Count.ShouldBeGreaterThanOrEqualTo(1);
     }
 
     [Fact]

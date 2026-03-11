@@ -51,6 +51,9 @@ public class GratingCouplerRotationTests
         component.PhysicalX = 0;
         component.PhysicalY = 0;
         component.RotationDegrees = rotationDegrees;
+        // Set Nazca origin offset to first pin position (as set by PDK loader)
+        component.NazcaOriginOffsetX = 50;  // First pin X offset
+        component.NazcaOriginOffsetY = 15;  // First pin Y offset
 
         return component;
     }
@@ -72,9 +75,9 @@ public class GratingCouplerRotationTests
         result.ShouldContain("nd.Pin('opt').put(50.00, 15.00, 0)");
 
         // The component instance should be placed with rotation -0 = 0
-        // Placement at (0, -30) because cell origin (0,0) is at top-left in cell-local,
-        // and we want it at Nazca world (0, -30) to match editor bbox (0,0)-(50,30)
-        result.ShouldContain("demo_pdk_grating_coupler().put(0.00, -30.00, 0)");
+        // With NazcaOriginOffset (50, 15), the placement is at:
+        // nazcaX = 0 + 50 = 50, nazcaY = -(0 + 15) = -15
+        result.ShouldContain("demo_pdk_grating_coupler().put(50.00, -15.00, 0)");
     }
 
     [Fact]

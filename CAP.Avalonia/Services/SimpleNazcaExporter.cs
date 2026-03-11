@@ -187,16 +187,15 @@ public class SimpleNazcaExporter
             componentNames[comp] = varName;
 
             // Calculate origin offset based on component type:
-            // - Real PDK components: use NazcaOriginOffset (rotated if needed)
+            // - PDK components (both real and demo_pdk): use NazcaOriginOffset (rotated if needed)
             // - Parametric straights: calculate from first pin (rotated)
-            // - Standard demo_pdk: use height offset only
             double originOffsetX = 0;
             double originOffsetY = 0;
 
             var funcName = comp.NazcaFunctionName;
-            if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
+            if (!string.IsNullOrEmpty(funcName) && (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase)))
             {
-                // Real PDK component: use stored NazcaOriginOffset, accounting for rotation
+                // PDK component (real or demo_pdk): use stored NazcaOriginOffset, accounting for rotation
                 double offsetX = comp.NazcaOriginOffsetX;
                 double offsetY = comp.NazcaOriginOffsetY;
                 double rotRad = comp.RotationDegrees * Math.PI / 180.0;
@@ -220,7 +219,7 @@ public class SimpleNazcaExporter
             }
             else
             {
-                // Standard demo_pdk component: cell origin at bottom-left, so offset by height for Y-flip
+                // Fallback for legacy components: offset by height for Y-flip
                 originOffsetY = comp.HeightMicrometers;
             }
 
