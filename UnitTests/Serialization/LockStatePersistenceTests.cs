@@ -1,4 +1,5 @@
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 using Shouldly;
 using System.Text.Json;
 using UnitTests.Helpers;

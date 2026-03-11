@@ -1,4 +1,4 @@
-using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 
 namespace CAP_Core.Routing.AStarPathfinder;

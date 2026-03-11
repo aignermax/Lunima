@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Library;
 
 namespace CAP.Avalonia.Controls;
 

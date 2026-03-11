@@ -3,10 +3,17 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Diagnostics;
+using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.Simulation;
+using CAP.Avalonia.ViewModels.Converters;
 
 namespace CAP.Avalonia.ViewModels;
 

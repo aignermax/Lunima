@@ -1,4 +1,4 @@
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Library;
 using Shouldly;
 
 namespace UnitTests.Integration;

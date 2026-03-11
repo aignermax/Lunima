@@ -3,6 +3,7 @@ using Shouldly;
 using CAP_Core.Routing.AStarPathfinder;
 using CAP_Core.Routing;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 
 namespace UnitTests.Routing;
 

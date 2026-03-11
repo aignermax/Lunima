@@ -1,5 +1,5 @@
 using CAP.Avalonia.Commands;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 using Shouldly;
 using UnitTests.Helpers;
 using Xunit;

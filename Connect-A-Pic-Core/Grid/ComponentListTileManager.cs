@@ -1,5 +1,5 @@
 using CAP_Core.Tiles;
-using Component = CAP_Core.Components.Component;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Grid;
 

@@ -1,6 +1,7 @@
 using CAP.Avalonia.Services;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;

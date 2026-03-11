@@ -1,6 +1,8 @@
 // CAP_Core/CodeExporter/NazcaExporter.cs
 using CAP_Contracts;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
 using CAP_Core.ExternalPorts;
 using CAP_Core.Grid;
 using CAP_Core.Helpers;

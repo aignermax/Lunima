@@ -1,4 +1,5 @@
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 
 namespace UnitTests.Simulation;
 
