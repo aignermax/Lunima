@@ -1,4 +1,5 @@
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.Commands;
 using CAP_Core.Components;
 using Shouldly;
 using UnitTests.Helpers;
@@ -14,12 +15,14 @@ public class ElementLockIntegrationTests
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly ElementLockViewModel _lockViewModel;
+    private readonly CommandManager _commandManager;
 
     public ElementLockIntegrationTests()
     {
         _canvas = new DesignCanvasViewModel();
         _lockViewModel = new ElementLockViewModel();
-        _lockViewModel.Configure(_canvas);
+        _commandManager = new CommandManager();
+        _lockViewModel.Configure(_canvas, _commandManager);
     }
 
     [Fact]
@@ -77,7 +80,7 @@ public class ElementLockIntegrationTests
     }
 
     [Fact]
-    public void ToggleSelectedComponents_TogglesLockStateInCanvas()
+    public void ToggleSelectedComponents_LocksAllWhenAnyUnlocked()
     {
         // Arrange
         var comp1 = TestComponentFactory.CreateBasicComponent();
@@ -95,12 +98,12 @@ public class ElementLockIntegrationTests
         _canvas.Selection.AddToSelection(vm1);
         _canvas.Selection.AddToSelection(vm2);
 
-        // Act
+        // Act - since comp1 is unlocked, should lock it
         _lockViewModel.ToggleSelectedComponentsCommand.Execute(null);
 
-        // Assert
+        // Assert - comp1 should now be locked, comp2 unchanged
         comp1.IsLocked.ShouldBeTrue();
-        comp2.IsLocked.ShouldBeFalse();
+        comp2.IsLocked.ShouldBeTrue();
     }
 
     [Fact]

@@ -12,6 +12,7 @@ public class GroupMoveCommand : IUndoableCommand
     private readonly List<ComponentViewModel> _components;
     private readonly double _deltaX;
     private readonly double _deltaY;
+    private bool _isFirstExecution = true;
 
     /// <summary>
     /// Creates a group move command.
@@ -38,13 +39,37 @@ public class GroupMoveCommand : IUndoableCommand
     /// <inheritdoc />
     public void Execute()
     {
-        MoveAll(_deltaX, _deltaY);
+        // On first execution, components are already at their final position from the drag operation.
+        // Only execute the move on Redo (when _isFirstExecution is false).
+        if (_isFirstExecution)
+        {
+            _isFirstExecution = false;
+            return;
+        }
+
+        try
+        {
+            _canvas.BeginCommandExecution();
+            MoveAll(_deltaX, _deltaY);
+        }
+        finally
+        {
+            _canvas.EndCommandExecution();
+        }
     }
 
     /// <inheritdoc />
     public void Undo()
     {
-        MoveAll(-_deltaX, -_deltaY);
+        try
+        {
+            _canvas.BeginCommandExecution();
+            MoveAll(-_deltaX, -_deltaY);
+        }
+        finally
+        {
+            _canvas.EndCommandExecution();
+        }
     }
 
     private void MoveAll(double dx, double dy)

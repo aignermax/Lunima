@@ -105,11 +105,13 @@ public class DesignCanvas : Control
         if (e.OldValue is DesignCanvasViewModel oldCanvas)
         {
             oldCanvas.PropertyChanged -= OnCanvasViewModelPropertyChanged;
+            oldCanvas.RepaintRequested = null;
         }
 
         if (e.NewValue is DesignCanvasViewModel newCanvas)
         {
             newCanvas.PropertyChanged += OnCanvasViewModelPropertyChanged;
+            newCanvas.RepaintRequested = () => InvalidateVisual();
         }
     }
 
@@ -1022,8 +1024,18 @@ public class DesignCanvas : Control
                 if (_draggingComponent != null)
                 {
                     mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-                    // Start tracking for undo (group move if multiple selected)
-                    mainVm?.StartMoveComponent(_draggingComponent);
+                    // Start tracking for undo
+                    if (vm.Selection.SelectedComponents.Count > 1)
+                    {
+                        // Group move
+                        mainVm?.StartGroupMove(vm.Selection.SelectedComponents);
+                    }
+                    else
+                    {
+                        // Single component move
+                        mainVm?.StartMoveComponent(_draggingComponent);
+                    }
+
                     _dragStartX = _draggingComponent.X;
                     _dragStartY = _draggingComponent.Y;
 
@@ -1381,7 +1393,16 @@ public class DesignCanvas : Control
             }
 
             _showDragPreview = false;
-            MainViewModel?.EndMoveComponent();
+
+            // End tracking for undo
+            if (isDraggingGroup)
+            {
+                MainViewModel?.EndGroupMove(vm.Selection.SelectedComponents);
+            }
+            else
+            {
+                MainViewModel?.EndMoveComponent();
+            }
 
             // Clear alignment guides and reset snap state when drag ends
             if (vm?.AlignmentGuide != null)

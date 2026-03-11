@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Grid;
+using CAP.Avalonia.Commands;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -11,6 +12,7 @@ namespace CAP.Avalonia.ViewModels;
 public partial class ElementLockViewModel : ObservableObject
 {
     private readonly LockManager _lockManager;
+    private Commands.CommandManager? _commandManager;
 
     [ObservableProperty]
     private DesignCanvasViewModel? _canvas;
@@ -24,17 +26,25 @@ public partial class ElementLockViewModel : ObservableObject
     [ObservableProperty]
     private int _lockedConnectionCount;
 
+    /// <summary>
+    /// Whether any components are currently selected.
+    /// Used to show/hide the lock button panel.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasSelection;
+
     public ElementLockViewModel()
     {
         _lockManager = new LockManager();
     }
 
     /// <summary>
-    /// Configures the ViewModel with the design canvas.
+    /// Configures the ViewModel with the design canvas and command manager.
     /// </summary>
-    public void Configure(DesignCanvasViewModel canvas)
+    public void Configure(DesignCanvasViewModel canvas, Commands.CommandManager commandManager)
     {
         Canvas = canvas;
+        _commandManager = commandManager;
 
         // Subscribe to selection changes to update command availability
         Canvas.Selection.SelectedComponents.CollectionChanged += (s, e) =>
@@ -51,7 +61,7 @@ public partial class ElementLockViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanLockSelectedComponents))]
     private void LockSelectedComponents()
     {
-        if (Canvas == null)
+        if (Canvas == null || _commandManager == null)
             return;
 
         var selectedComponents = Canvas.Selection.SelectedComponents
@@ -61,7 +71,8 @@ public partial class ElementLockViewModel : ObservableObject
 
         if (selectedComponents.Any())
         {
-            _lockManager.LockComponents(selectedComponents);
+            var cmd = new LockComponentsCommand(_lockManager, selectedComponents, Canvas);
+            _commandManager.ExecuteCommand(cmd);
             StatusText = $"Locked {selectedComponents.Count} component(s)";
             UpdateLockCounts();
             RefreshCommands(); // Update button states immediately
@@ -79,7 +90,7 @@ public partial class ElementLockViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUnlockSelectedComponents))]
     private void UnlockSelectedComponents()
     {
-        if (Canvas == null)
+        if (Canvas == null || _commandManager == null)
             return;
 
         var selectedComponents = Canvas.Selection.SelectedComponents
@@ -89,7 +100,8 @@ public partial class ElementLockViewModel : ObservableObject
 
         if (selectedComponents.Any())
         {
-            _lockManager.UnlockComponents(selectedComponents);
+            var cmd = new UnlockComponentsCommand(_lockManager, selectedComponents, Canvas);
+            _commandManager.ExecuteCommand(cmd);
             StatusText = $"Unlocked {selectedComponents.Count} component(s)";
             UpdateLockCounts();
             RefreshCommands(); // Update button states immediately
@@ -103,27 +115,47 @@ public partial class ElementLockViewModel : ObservableObject
 
     /// <summary>
     /// Toggles the lock state of selected components.
+    /// If any selected component is unlocked, locks all selected. Otherwise unlocks all.
     /// </summary>
     [RelayCommand(CanExecute = nameof(HasSelectedComponents))]
     private void ToggleSelectedComponents()
     {
-        if (Canvas == null)
+        if (Canvas == null || _commandManager == null)
             return;
 
         var selectedComponents = Canvas.Selection.SelectedComponents
             .Select(vm => vm.Component)
             .ToList();
 
-        if (selectedComponents.Any())
-        {
-            foreach (var component in selectedComponents)
-            {
-                _lockManager.ToggleComponentLock(component);
-            }
+        if (!selectedComponents.Any())
+            return;
 
-            StatusText = $"Toggled lock for {selectedComponents.Count} component(s)";
-            UpdateLockCounts();
+        // If any component is unlocked, lock all. Otherwise unlock all.
+        bool shouldLock = selectedComponents.Any(c => !c.IsLocked);
+
+        if (shouldLock)
+        {
+            var componentsToLock = selectedComponents.Where(c => !c.IsLocked).ToList();
+            if (componentsToLock.Any())
+            {
+                var cmd = new LockComponentsCommand(_lockManager, componentsToLock, Canvas);
+                _commandManager.ExecuteCommand(cmd);
+                StatusText = $"Locked {componentsToLock.Count} component(s)";
+            }
         }
+        else
+        {
+            var componentsToUnlock = selectedComponents.Where(c => c.IsLocked).ToList();
+            if (componentsToUnlock.Any())
+            {
+                var cmd = new UnlockComponentsCommand(_lockManager, componentsToUnlock, Canvas);
+                _commandManager.ExecuteCommand(cmd);
+                StatusText = $"Unlocked {componentsToUnlock.Count} component(s)";
+            }
+        }
+
+        UpdateLockCounts();
+        RefreshCommands();
     }
 
     private bool HasSelectedComponents()
@@ -137,7 +169,7 @@ public partial class ElementLockViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasLockedComponents))]
     private void UnlockAllComponents()
     {
-        if (Canvas == null)
+        if (Canvas == null || _commandManager == null)
             return;
 
         var allComponents = Canvas.Components.Select(vm => vm.Component).ToList();
@@ -145,7 +177,8 @@ public partial class ElementLockViewModel : ObservableObject
 
         if (lockedComponents.Any())
         {
-            _lockManager.UnlockComponents(lockedComponents);
+            var cmd = new UnlockComponentsCommand(_lockManager, lockedComponents, Canvas);
+            _commandManager.ExecuteCommand(cmd);
             StatusText = $"Unlocked all {lockedComponents.Count} component(s)";
             UpdateLockCounts();
         }
@@ -232,6 +265,7 @@ public partial class ElementLockViewModel : ObservableObject
     public void RefreshCommands()
     {
         UpdateLockCounts();
+        HasSelection = Canvas?.Selection.SelectedComponents.Any() ?? false;
         LockSelectedComponentsCommand.NotifyCanExecuteChanged();
         UnlockSelectedComponentsCommand.NotifyCanExecuteChanged();
         ToggleSelectedComponentsCommand.NotifyCanExecuteChanged();
