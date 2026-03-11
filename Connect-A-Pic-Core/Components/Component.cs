@@ -316,7 +316,7 @@ public class Component : ICloneable
         clonedComponent.RotationDegrees = RotationDegrees;
         clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
         clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
-        clonedComponent.IsLocked = IsLocked;
+        clonedComponent.IsLocked = false;  // Cloned components should always be unlocked
 
         return clonedComponent;
     }

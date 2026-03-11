@@ -162,28 +162,29 @@ public class PinAlignmentHelperTests
     {
         // Arrange
         var helper = new PinAlignmentHelper();
-        // Create components with opposing pins that point at each other
-        // Dragging component at (0, 0) with pin pointing right (0°) at offset (50, 100)
-        // Other component at (150, 0) with pin pointing left (180°) at offset (-50, 100)
-        // Final positions: dragging pin at (50, 100), other pin at (100, 100) - aligned on Y, pointing at each other
+        // Create components with pins that actually point at each other
+        // dragging at (0,0), other at (200, 0)
+        // dragging pin1 at (100, 100) pointing right (0°)
+        // other pin1 at (100, 100) pointing left (180°)
         var draggingComp = CreateComponentWithTwoPins(
             x: 0, y: 0,
-            pin1X: 50, pin1Y: 100,
-            pin2X: 50, pin2Y: 200,
-            pin1Angle: 0,    // Points right at (50, 100)
-            pin2Angle: 0);   // Points right at (50, 200)
+            pin1X: 100, pin1Y: 100,
+            pin2X: 100, pin2Y: 200,
+            pin1Angle: 0,    // Points right
+            pin2Angle: 0);   // Points right
         var otherComp = CreateComponentWithTwoPins(
-            x: 150, y: 0,
-            pin1X: -50, pin1Y: 100,
-            pin2X: -50, pin2Y: 200,
-            pin1Angle: 180,  // Points left at (100, 100) - opposes dragging pin1
-            pin2Angle: 180); // Points left at (100, 200) - opposes dragging pin2
+            x: 200, y: 0,
+            pin1X: -100, pin1Y: 100,
+            pin2X: -100, pin2Y: 200,
+            pin1Angle: 180, // At (100,100) points left - aligns with dragging pin1
+            pin2Angle: 180); // At (100,200) points left - aligns with dragging pin2
 
         // Act
         var (horizontal, vertical) = helper.FindAllAlignments(draggingComp, new[] { otherComp });
 
-        // Assert - Should detect horizontal alignments (Y=100 and Y=200)
+        // Assert - both pins align horizontally and vertically
         horizontal.Count.ShouldBeGreaterThanOrEqualTo(1);
+        vertical.Count.ShouldBeGreaterThanOrEqualTo(1);
     }
 
     [Fact]
