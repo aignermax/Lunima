@@ -42,6 +42,7 @@ public class DesignCanvas : Control
     private Point _lastPointerPosition;
     private ComponentViewModel? _draggingComponent;
     private bool _isPanning;
+    private bool _hasPanned; // Track if actual panning occurred (to suppress context menu)
     private const double PinHitRadius = 15; // Hit test radius for pins
 
     // Waveguide connection drag & drop state
@@ -1051,6 +1052,7 @@ public class DesignCanvas : Control
                  e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
         {
             _isPanning = true;
+            _hasPanned = false; // Reset pan tracking
         }
 
         e.Handled = true;
@@ -1160,10 +1162,20 @@ public class DesignCanvas : Control
                     vm.MoveComponent(comp, deltaX, deltaY);
                 }
 
-                // Update alignment guides for group drag (use representative component)
+                // Update alignment guides and apply pin snapping
                 if (vm.AlignmentGuide.IsEnabled)
                 {
                     vm.AlignmentGuide.UpdateAlignments(_draggingComponent, vm.Components);
+
+                    // Apply pin alignment snapping
+                    var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_draggingComponent, vm.Components);
+                    if (snapDX != 0 || snapDY != 0)
+                    {
+                        foreach (var comp in vm.Selection.SelectedComponents)
+                        {
+                            vm.MoveComponent(comp, snapDX, snapDY);
+                        }
+                    }
                 }
 
                 // Calculate drag preview based on dragged component (representative)
@@ -1186,10 +1198,17 @@ public class DesignCanvas : Control
                 // Single component drag (original behavior)
                 vm.MoveComponent(_draggingComponent, deltaX, deltaY);
 
-                // Update alignment guides
+                // Update alignment guides and apply pin snapping
                 if (vm.AlignmentGuide.IsEnabled)
                 {
                     vm.AlignmentGuide.UpdateAlignments(_draggingComponent, vm.Components);
+
+                    // Apply pin alignment snapping
+                    var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapDelta(_draggingComponent, vm.Components);
+                    if (snapDX != 0 || snapDY != 0)
+                    {
+                        vm.MoveComponent(_draggingComponent, snapDX, snapDY);
+                    }
                 }
 
                 // Calculate drag preview (shows where component will land on release)
@@ -1218,6 +1237,7 @@ public class DesignCanvas : Control
         {
             vm.PanX += delta.X;
             vm.PanY += delta.Y;
+            _hasPanned = true; // Mark that we actually panned
             InvalidateVisual();
         }
 
@@ -1226,6 +1246,15 @@ public class DesignCanvas : Control
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
+        // Suppress context menu if we panned (right-click drag)
+        if (_hasPanned && e.InitialPressMouseButton == MouseButton.Right)
+        {
+            e.Handled = true;
+            _hasPanned = false;
+            _isPanning = false;
+            return;
+        }
+
         base.OnPointerReleased(e);
 
         // Complete connection drag & drop
@@ -1354,8 +1383,12 @@ public class DesignCanvas : Control
             _showDragPreview = false;
             MainViewModel?.EndMoveComponent();
 
-            // Clear alignment guides when drag ends
-            vm?.AlignmentGuide.ClearAlignments();
+            // Clear alignment guides and reset snap state when drag ends
+            if (vm?.AlignmentGuide != null)
+            {
+                vm.AlignmentGuide.ClearAlignments();
+                vm.AlignmentGuide.ResetSnapState();
+            }
 
             // Ensure all components in the selection remain visually selected after drag
             if (vm != null && isDraggingGroup)
@@ -1438,8 +1471,14 @@ public class DesignCanvas : Control
                     mainVm.SetSelectModeCommand.Execute(null);
                 break;
             case Key.C:
-                if (!ctrlPressed)
+                if (ctrlPressed)
+                    mainVm.CopySelectedCommand.Execute(null);
+                else
                     mainVm.SetConnectModeCommand.Execute(null);
+                break;
+            case Key.V:
+                if (ctrlPressed)
+                    mainVm.PasteSelectedCommand.Execute(null);
                 break;
             case Key.D:
                 if (!ctrlPressed)

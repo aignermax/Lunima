@@ -79,9 +79,10 @@ public class PinAlignmentHelperTests
     {
         // Arrange
         var helper = new PinAlignmentHelper();
-        var draggingComp = CreateComponent(x: 0, y: 0, pinOffsetX: 100, pinOffsetY: 200);
-        var otherComp = CreateComponent(x: 200, y: 100, pinOffsetX: -100, pinOffsetY: 100);
-        // Pins are at: dragging=(100, 200), other=(100, 200) - perfect alignment
+        // Create pins that point at each other (0° and 180°)
+        var draggingComp = CreateComponent(x: 0, y: 0, pinOffsetX: 100, pinOffsetY: 200, pinAngle: 0);
+        var otherComp = CreateComponent(x: 200, y: 100, pinOffsetX: -100, pinOffsetY: 100, pinAngle: 180);
+        // Pins are at: dragging=(100, 200), other=(100, 200) - perfect alignment and opposing directions
 
         // Act
         var (horizontal, vertical) = helper.FindAllAlignments(draggingComp, new[] { otherComp });
@@ -202,14 +203,14 @@ public class PinAlignmentHelperTests
 
     #region Test Helpers
 
-    private Component CreateComponent(double x, double y, double pinOffsetX, double pinOffsetY)
+    private Component CreateComponent(double x, double y, double pinOffsetX, double pinOffsetY, double pinAngle = 0)
     {
         var pin = new PhysicalPin
         {
             Name = "TestPin",
             OffsetXMicrometers = pinOffsetX,
             OffsetYMicrometers = pinOffsetY,
-            AngleDegrees = 0
+            AngleDegrees = pinAngle
         };
 
         var component = UnitTests.TestComponentFactory.CreateStraightWaveGuide();
