@@ -18,11 +18,10 @@ namespace UnitTests.Services;
 public class ComponentDimensionExportTests
 {
     [Fact]
-    public void Export_Mmi2x2FromDemoPdk_UsesHeuristicFallback()
+    public void Export_Mmi2x2FromDemoPdk_GeneratesStub()
     {
-        // Demo PDK components use the heuristic fallback (demo.mmi2x2_dp()),
-        // not stub generation, because IsPdkFunction excludes "demo_pdk.*" names.
-        // This is intentional — demo_pdk is not a real PDK module.
+        // Demo PDK components now generate stubs (as of PR #76) with sanitized function names.
+        // The function name "demo_pdk.mmi2x2" becomes "demo_pdk_mmi2x2" in Python.
         var pdkPath = FindPdkFile("demo-pdk.json");
         if (pdkPath == null) return; // skip if PDK not found
 
@@ -42,9 +41,10 @@ public class ComponentDimensionExportTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // Assert - Should use heuristic fallback, not generate stub
-        result.ShouldContain("demo.mmi2x2_dp()");
-        result.ShouldNotContain("Auto-generated stub for demo_pdk.mmi2x2");
+        // Assert - Should generate stub with sanitized function name
+        result.ShouldContain("demo_pdk_mmi2x2()");
+        result.ShouldContain("Auto-generated stub for demo_pdk.mmi2x2");
+        result.ShouldContain("def demo_pdk_mmi2x2(**kwargs):");
     }
 
     [Fact]
