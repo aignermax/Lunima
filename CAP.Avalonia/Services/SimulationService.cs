@@ -53,6 +53,7 @@ public class SimulationService
         // Run simulation for each distinct wavelength
         var wavelengths = sourceConfigs.Select(s => s.WavelengthNm).Distinct().ToList();
         var allFieldResults = new Dictionary<Guid, Complex>();
+        SMatrix? systemMatrix = null;
 
         foreach (var wl in wavelengths)
         {
@@ -61,6 +62,12 @@ public class SimulationService
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var fields = await calculator.CalculateFieldPropagationAsync(cts, wl);
             MergeFieldResults(allFieldResults, fields);
+
+            // Capture the system S-Matrix from the first wavelength for diagnostics
+            if (systemMatrix == null)
+            {
+                systemMatrix = builder.GetSystemSMatrix(wl);
+            }
         }
 
         canvas.PowerFlowVisualizer.UpdateFromSimulation(
@@ -76,7 +83,8 @@ public class SimulationService
             LightSourceCount = sourceConfigs.Count,
             ComponentCount = canvas.Components.Count,
             ConnectionCount = canvas.Connections.Count,
-            SourceConfigs = sourceConfigs
+            SourceConfigs = sourceConfigs,
+            SystemMatrix = systemMatrix
         };
     }
 
@@ -162,6 +170,7 @@ public class SimulationResult
     public int ComponentCount { get; set; }
     public int ConnectionCount { get; set; }
     public List<SourceConfigInfo> SourceConfigs { get; set; } = new();
+    public SMatrix? SystemMatrix { get; set; }
 
     public static SimulationResult Empty(string message) => new()
     {
