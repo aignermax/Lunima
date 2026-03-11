@@ -65,6 +65,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public PdkManagerViewModel PdkManager { get; } = new();
 
+    /// <summary>
+    /// ViewModel for component dimension diagnostics (validation of GDS export dimensions).
+    /// </summary>
+    public ComponentDimensionDiagnosticsViewModel? DimensionDiagnostics { get; private set; }
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
@@ -94,6 +99,7 @@ public partial class MainViewModel : ObservableObject
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         RoutingDiagnostics.Configure(_canvas);
+        DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
