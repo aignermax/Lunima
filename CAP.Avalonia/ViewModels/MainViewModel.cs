@@ -80,6 +80,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public ComponentDimensionViewModel DimensionValidator { get; } = new();
 
+    /// <summary>
+    /// ViewModel for end-to-end Nazca export validation.
+    /// </summary>
+    public ExportValidationViewModel ExportValidation { get; } = new();
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
