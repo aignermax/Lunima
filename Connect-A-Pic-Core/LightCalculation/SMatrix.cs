@@ -26,7 +26,7 @@ namespace CAP_Core.LightCalculation
                 size = 0;
             }
 
-            SMat = Matrix<Complex>.Build.Dense(size, size);
+            SMat = Matrix<Complex>.Build.Sparse(size, size);
             // initialize PinReferences
             PinReference = new();
             ReversePinReference = new();
@@ -54,7 +54,7 @@ namespace CAP_Core.LightCalculation
 
             if (reset)
             {
-                SMat = Matrix<Complex>.Build.Dense(size, size);
+                SMat = Matrix<Complex>.Build.Sparse(size, size);
             }
 
             foreach (var relation in transfers.Keys)

@@ -85,6 +85,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public ExportValidationViewModel ExportValidation { get; } = new();
 
+    /// <summary>
+    /// ViewModel for S-Matrix performance diagnostics (sparsity analysis and memory usage).
+    /// </summary>
+    public SMatrixPerformanceViewModel SMatrixPerformance { get; } = new();
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
@@ -740,6 +745,12 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusText = $"Simulation complete: {result.LightSourceCount} source(s), " +
                              $"{result.ConnectionCount} connections @ {result.WavelengthSummary}";
+
+                // Analyze S-Matrix performance after successful simulation
+                if (result.SystemMatrix != null)
+                {
+                    SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
+                }
             }
             else
             {
