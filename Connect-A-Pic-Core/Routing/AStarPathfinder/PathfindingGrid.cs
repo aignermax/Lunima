@@ -43,6 +43,7 @@ public class PathfindingGrid
     // Pin reservation zones: cells near pins that get a soft cost penalty (not blocked).
     // Routes CAN pass through but A* prefers to avoid them, keeping pin areas accessible.
     private readonly HashSet<(int x, int y)> _pinZoneCells = new();
+    private readonly object _pinZoneLock = new();
 
     /// <summary>
     /// Callback invoked when waveguide cells are added (for distance transform updates).
@@ -332,7 +333,10 @@ public class PathfindingGrid
         Array.Clear(_cells);
         _componentCells.Clear();
         _waveguideCells.Clear();
-        _pinZoneCells.Clear();
+        lock (_pinZoneLock)
+        {
+            _pinZoneCells.Clear();
+        }
 
         foreach (var component in components)
         {
@@ -459,7 +463,10 @@ public class PathfindingGrid
     /// </summary>
     public bool IsPinReservationZone(int gridX, int gridY)
     {
-        return _pinZoneCells.Contains((gridX, gridY));
+        lock (_pinZoneLock)
+        {
+            return _pinZoneCells.Contains((gridX, gridY));
+        }
     }
 
     /// <summary>
@@ -471,17 +478,20 @@ public class PathfindingGrid
         var (gcx, gcy) = PhysicalToGrid(pinX, pinY);
         int gridRadius = (int)Math.Ceiling(radiusMicrometers / CellSizeMicrometers);
 
-        for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)
+        lock (_pinZoneLock)
         {
-            for (int gy = gcy - gridRadius; gy <= gcy + gridRadius; gy++)
+            for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)
             {
-                if (!IsInBounds(gx, gy)) continue;
-
-                var (px, py) = GridToPhysical(gx, gy);
-                double dist = Math.Sqrt((px - pinX) * (px - pinX) + (py - pinY) * (py - pinY));
-                if (dist <= radiusMicrometers)
+                for (int gy = gcy - gridRadius; gy <= gcy + gridRadius; gy++)
                 {
-                    _pinZoneCells.Add((gx, gy));
+                    if (!IsInBounds(gx, gy)) continue;
+
+                    var (px, py) = GridToPhysical(gx, gy);
+                    double dist = Math.Sqrt((px - pinX) * (px - pinX) + (py - pinY) * (py - pinY));
+                    if (dist <= radiusMicrometers)
+                    {
+                        _pinZoneCells.Add((gx, gy));
+                    }
                 }
             }
         }
