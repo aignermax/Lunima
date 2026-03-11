@@ -66,6 +66,11 @@ public partial class MainViewModel : ObservableObject
     public PdkManagerViewModel PdkManager { get; } = new();
 
     /// <summary>
+    /// ViewModel for component dimension diagnostics (validation of GDS export dimensions).
+    /// </summary>
+    public ComponentDimensionDiagnosticsViewModel? DimensionDiagnostics { get; private set; }
+
+    /// <summary>
     /// ViewModel for locking/unlocking components and connections.
     /// </summary>
     public ElementLockViewModel ElementLock { get; } = new();
@@ -102,6 +107,7 @@ public partial class MainViewModel : ObservableObject
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         RoutingDiagnostics.Configure(_canvas);
+        DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
         ElementLock.Configure(_canvas, CommandManager);
         _canvas.PropertyChanged += (s, e) =>
         {
