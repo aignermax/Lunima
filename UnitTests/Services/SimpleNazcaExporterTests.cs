@@ -248,7 +248,7 @@ public class SimpleNazcaExporterTests
 
         var result = SimpleNazcaExporter.GetNazcaFunction(comp);
 
-        result.ShouldBe("demo_pdk.straight(length=100)");
+        result.ShouldBe("demo_pdk_straight(length=100)");
     }
 
     [Fact]
@@ -300,14 +300,14 @@ public class SimpleNazcaExporterTests
         var result = exporter.Export(canvas);
 
         // Assert: Verify that the exported code includes the correct length parameter
-        result.ShouldContain("demo_pdk.straight(length=100)");
+        result.ShouldContain("demo_pdk_straight(length=100)");
 
         // Verify stub function is parametric
-        result.ShouldContain("def demo_pdk.straight(length=100, **kwargs):");
+        result.ShouldContain("def demo_pdk_straight(length=100, **kwargs):");
         result.ShouldContain("nd.strt(length=length");
 
         // Verify component placement uses the stub
-        result.ShouldContain("comp_0 = demo_pdk.straight(length=100).put(");
+        result.ShouldContain("comp_0 = demo_pdk_straight(length=100).put(");
     }
 
     [Fact]
@@ -324,8 +324,8 @@ public class SimpleNazcaExporterTests
         var result = exporter.Export(canvas);
 
         // Assert: Verify correct length
-        result.ShouldContain("demo_pdk.straight(length=200)");
-        result.ShouldContain("comp_0 = demo_pdk.straight(length=200).put(");
+        result.ShouldContain("demo_pdk_straight(length=200)");
+        result.ShouldContain("comp_0 = demo_pdk_straight(length=200).put(");
     }
 
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)

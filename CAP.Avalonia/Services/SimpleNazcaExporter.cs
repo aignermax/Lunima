@@ -107,7 +107,10 @@ public class SimpleNazcaExporter
     {
         var h = comp.HeightMicrometers.ToString("F2", ci);
 
-        sb.AppendLine($"def {funcName}(length=100, **kwargs):");
+        // Sanitize function name for valid Python identifier (replace dots with underscores)
+        var pythonFuncName = funcName.Replace(".", "_");
+
+        sb.AppendLine($"def {pythonFuncName}(length=100, **kwargs):");
         sb.AppendLine($"    \"\"\"Auto-generated parametric straight waveguide stub for {funcName}.\"\"\"");
         sb.AppendLine($"    with nd.Cell(name='{funcName}_{{length}}') as cell:");
         sb.AppendLine($"        # Use nd.strt() for proper waveguide with specified length");
@@ -143,8 +146,11 @@ public class SimpleNazcaExporter
         var w = comp.WidthMicrometers.ToString("F2", ci);
         var h = comp.HeightMicrometers.ToString("F2", ci);
 
+        // Sanitize function name for valid Python identifier (replace dots with underscores)
+        var pythonFuncName = funcName.Replace(".", "_");
+
         // Define cell once, return cached instance on each call
-        sb.AppendLine($"with nd.Cell(name='{funcName}') as _{funcName}_cell:");
+        sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
         sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
         sb.AppendLine($"    nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
 
@@ -158,8 +164,8 @@ public class SimpleNazcaExporter
         }
 
         sb.AppendLine();
-        sb.AppendLine($"def {funcName}(**kwargs):");
-        sb.AppendLine($"    return _{funcName}_cell");
+        sb.AppendLine($"def {pythonFuncName}(**kwargs):");
+        sb.AppendLine($"    return _{pythonFuncName}_cell");
         sb.AppendLine();
     }
 
@@ -180,23 +186,42 @@ public class SimpleNazcaExporter
             var varName = $"comp_{compIndex}";
             componentNames[comp] = varName;
 
-            // Nazca .put() places the component's origin (first pin) at the given position.
-            // Our editor stores the top-left corner, so we offset to place the first pin correctly.
-            // Must account for component rotation when transforming pin offset to world coordinates.
-            var firstPin = comp.PhysicalPins.FirstOrDefault();
-            double originOffsetX = comp.NazcaOriginOffsetX;
-            double originOffsetY = comp.NazcaOriginOffsetY;
+            // Calculate origin offset based on component type:
+            // - Real PDK components: use NazcaOriginOffset (rotated if needed)
+            // - Parametric straights: calculate from first pin (rotated)
+            // - Standard demo_pdk: use height offset only
+            double originOffsetX = 0;
+            double originOffsetY = 0;
 
-            if (firstPin != null)
+            var funcName = comp.NazcaFunctionName;
+            if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
             {
-                // Transform pin offset according to component rotation
-                double pinLocalX = firstPin.OffsetXMicrometers;
-                double pinLocalY = firstPin.OffsetYMicrometers;
+                // Real PDK component: use stored NazcaOriginOffset, accounting for rotation
+                double offsetX = comp.NazcaOriginOffsetX;
+                double offsetY = comp.NazcaOriginOffsetY;
                 double rotRad = comp.RotationDegrees * Math.PI / 180.0;
 
-                // Rotate the pin offset by the component's rotation
-                originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
-                originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+                originOffsetX = offsetX * Math.Cos(rotRad) - offsetY * Math.Sin(rotRad);
+                originOffsetY = offsetX * Math.Sin(rotRad) + offsetY * Math.Cos(rotRad);
+            }
+            else if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
+            {
+                // Parametric straight: offset by rotated pin position
+                var firstPin = comp.PhysicalPins.FirstOrDefault();
+                if (firstPin != null)
+                {
+                    double pinLocalX = firstPin.OffsetXMicrometers;
+                    double pinLocalY = firstPin.OffsetYMicrometers;
+                    double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+
+                    originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
+                    originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
+                }
+            }
+            else
+            {
+                // Standard demo_pdk component: cell origin at bottom-left, so offset by height for Y-flip
+                originOffsetY = comp.HeightMicrometers;
             }
 
             var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
@@ -382,13 +407,14 @@ public class SimpleNazcaExporter
                 : $"{funcName}({funcParams})";
         }
 
-        // For demo_pdk components, use the function name and parameters as-is
+        // For demo_pdk components, sanitize the function name (dots -> underscores) to call the stub
         if (!string.IsNullOrEmpty(funcName) && funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase))
         {
+            var pythonFuncName = funcName.Replace(".", "_");
             var funcParams = comp.NazcaFunctionParameters;
             return string.IsNullOrEmpty(funcParams)
-                ? $"{funcName}()"
-                : $"{funcName}({funcParams})";
+                ? $"{pythonFuncName}()"
+                : $"{pythonFuncName}({funcParams})";
         }
 
         // Fallback: heuristic mapping to demofab
