@@ -33,6 +33,16 @@ public partial class MainWindow : Window
                         await clipboard.SetTextAsync(text);
                     }
                 };
+
+                // Wire up clipboard for DimensionValidator
+                vm.DimensionValidator.CopyToClipboard = async (text) =>
+                {
+                    var clipboard = Clipboard;
+                    if (clipboard != null)
+                    {
+                        await clipboard.SetTextAsync(text);
+                    }
+                };
             }
         };
     }

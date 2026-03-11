@@ -438,7 +438,12 @@
                     <TextBlock Text="{Binding DimensionValidator.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
                                IsVisible="{Binding DimensionValidator.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     <StackPanel Margin="0,5,0,0" IsVisible="{Binding DimensionValidator.HasIssues}">
-                        <TextBlock Text="⚠️ Dimension Issues:" Foreground="Orange" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                            <TextBlock Text="⚠️ Dimension Issues:" Foreground="Orange" FontSize="10" FontWeight="SemiBold"/>
+                            <Button Content="📋" Command="{Binding DimensionValidator.CopyIssuesToClipboardCommand}"
+                                    Width="24" Height="20" Margin="5,0,0,0" Padding="0" Background="#3d3d5d"
+                                    ToolTip.Tip="Copy issues to clipboard"/>
+                        </StackPanel>
                         <ScrollViewer MaxHeight="120">
                             <ItemsControl ItemsSource="{Binding DimensionValidator.Issues}">
                                 <ItemsControl.ItemTemplate>

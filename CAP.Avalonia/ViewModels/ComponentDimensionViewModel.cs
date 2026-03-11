@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Analysis;
@@ -27,6 +28,12 @@ public partial class ComponentDimensionViewModel : ObservableObject
 
     private readonly ComponentDimensionValidator _validator = new();
     private DesignCanvasViewModel? _canvas;
+
+    /// <summary>
+    /// Clipboard copy function injected by the View.
+    /// Set by the View code-behind since clipboard access requires a TopLevel reference.
+    /// </summary>
+    public Func<string, Task>? CopyToClipboard { get; set; }
 
     /// <summary>
     /// Configures the validator to monitor a specific canvas.
@@ -69,6 +76,32 @@ public partial class ComponentDimensionViewModel : ObservableObject
         StatusText = HasIssues
             ? $"Found {IssueCount} component(s) with dimension issues"
             : "All components have valid dimensions";
+    }
+
+    /// <summary>
+    /// Copies all dimension issues to clipboard.
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyIssuesToClipboard()
+    {
+        if (!HasIssues || Issues.Count == 0 || CopyToClipboard == null)
+            return;
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Component Dimension Issues:");
+        sb.AppendLine();
+
+        foreach (var issue in Issues)
+        {
+            sb.AppendLine($"Component: {issue.ComponentName}");
+            sb.AppendLine($"  Issue: {issue.Issue}");
+            sb.AppendLine($"  Current: {issue.CurrentDimensions}");
+            sb.AppendLine($"  Recommended: {issue.RecommendedDimensions}");
+            sb.AppendLine();
+        }
+
+        await CopyToClipboard(sb.ToString());
+        StatusText = $"Copied {IssueCount} issue(s) to clipboard";
     }
 }
 
