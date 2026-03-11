@@ -190,6 +190,13 @@ public class NazcaExportAllComponentsTests
             p.Name, p.OffsetXMicrometers, p.OffsetYMicrometers, p.AngleDegrees
         )).ToArray();
 
+        // Calculate Nazca origin offset from first pin position
+        // Nazca places components at the first pin's position, so we need to offset
+        // from our top-left origin (0,0) to the first pin location
+        var firstPin = pdkComp.Pins.FirstOrDefault();
+        double nazcaOriginOffsetX = firstPin?.OffsetXMicrometers ?? 0;
+        double nazcaOriginOffsetY = firstPin?.OffsetYMicrometers ?? 0;
+
         return new ComponentTemplate
         {
             Name = pdkComp.Name,
@@ -201,6 +208,8 @@ public class NazcaExportAllComponentsTests
             NazcaParameters = pdkComp.NazcaParameters,
             PdkSource = pdkName,
             NazcaModuleName = nazcaModuleName,
+            NazcaOriginOffsetX = nazcaOriginOffsetX,
+            NazcaOriginOffsetY = nazcaOriginOffsetY,
             // Minimal S-matrix factory for test (identity pass-through)
             CreateSMatrix = pins =>
             {
@@ -208,6 +217,64 @@ public class NazcaExportAllComponentsTests
                 return new CAP_Core.LightCalculation.SMatrix(pinIds, new());
             }
         };
+    }
+
+    [Fact]
+    public void Export_GratingCouplerTE1550_CorrectPositionWithRotation()
+    {
+        // Issue #66: Verify Grating Coupler TE 1550 position offset is correctly handled
+        var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
+        if (pdkPath == null) return;
+
+        var loader = new PdkLoader();
+        var pdk = loader.LoadFromFile(pdkPath);
+        var gratingCoupler = pdk.Components.First(c => c.Name == "Grating Coupler TE 1550");
+
+        // Convert to template with correct NazcaOriginOffset
+        var template = ConvertPdkComponentToTemplate(gratingCoupler, pdk.Name, pdk.NazcaModuleName);
+        template.NazcaOriginOffsetX.ShouldBe(15, "First pin X offset should be 15");
+        template.NazcaOriginOffsetY.ShouldBe(30, "First pin Y offset should be 30");
+
+        // Place at (100, 100) without rotation
+        var canvas = new DesignCanvasViewModel();
+        var component = ComponentTemplates.CreateFromTemplate(template, 100, 100);
+        canvas.AddComponent(component, template.Name);
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Component should be placed at physical position + pin offset
+        // Physical (100, 100) + pin offset (15, 30) = Nazca position (115, -130)
+        result.ShouldContain("ebeam_gc_te1550()");
+        result.ShouldContain(".put(115.00, -130.00, 0)");
+    }
+
+    [Fact]
+    public void Export_GratingCouplerTE1550_CorrectPositionWithRotation180()
+    {
+        // Issue #66: Verify rotated Grating Coupler TE 1550 has correct position
+        var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
+        if (pdkPath == null) return;
+
+        var loader = new PdkLoader();
+        var pdk = loader.LoadFromFile(pdkPath);
+        var gratingCoupler = pdk.Components.First(c => c.Name == "Grating Coupler TE 1550");
+
+        var template = ConvertPdkComponentToTemplate(gratingCoupler, pdk.Name, pdk.NazcaModuleName);
+        var canvas = new DesignCanvasViewModel();
+        var component = ComponentTemplates.CreateFromTemplate(template, 100, 100);
+
+        // Rotate 180 degrees
+        component.RotationDegrees = 180;
+        canvas.AddComponent(component, template.Name);
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // With 180° rotation, pin offset (15, 30) becomes (-15, -30) in rotated coords
+        // Physical (100, 100) + rotated offset (-15, -30) = Nazca position (85, -70)
+        result.ShouldContain("ebeam_gc_te1550()");
+        result.ShouldContain(".put(85.00, -70.00, -180)");
     }
 
     private static string? FindPdkFile(string fileName)

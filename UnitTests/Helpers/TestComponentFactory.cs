@@ -92,5 +92,59 @@ namespace UnitTests
             };
             return new Component(connections, new(), "placeCell_DirectionalCoupler", "", parts, 0, "DirectionalCoupler", DiscreteRotation.R0);
         }
+
+        /// <summary>
+        /// Creates a basic component for testing (uses CreateStraightWaveGuide).
+        /// </summary>
+        public static Component CreateBasicComponent()
+        {
+            var component = CreateStraightWaveGuide();
+            component.PhysicalX = 0;
+            component.PhysicalY = 0;
+            component.WidthMicrometers = 250;
+            component.HeightMicrometers = 250;
+            return component;
+        }
+
+        /// <summary>
+        /// Creates a WaveguideConnection between two components for testing.
+        /// </summary>
+        public static WaveguideConnection CreateConnection(Component startComponent, Component endComponent)
+        {
+            // Ensure components have physical pins
+            if (startComponent.PhysicalPins.Count == 0)
+            {
+                var startPin = new PhysicalPin
+                {
+                    Name = "out",
+                    ParentComponent = startComponent,
+                    OffsetXMicrometers = 250,
+                    OffsetYMicrometers = 125,
+                    AngleDegrees = 0
+                };
+                startComponent.PhysicalPins.Add(startPin);
+            }
+
+            if (endComponent.PhysicalPins.Count == 0)
+            {
+                var endPin = new PhysicalPin
+                {
+                    Name = "in",
+                    ParentComponent = endComponent,
+                    OffsetXMicrometers = 0,
+                    OffsetYMicrometers = 125,
+                    AngleDegrees = 180
+                };
+                endComponent.PhysicalPins.Add(endPin);
+            }
+
+            var connection = new WaveguideConnection
+            {
+                StartPin = startComponent.PhysicalPins[0],
+                EndPin = endComponent.PhysicalPins[0]
+            };
+
+            return connection;
+        }
     }
 }

@@ -42,22 +42,44 @@ public class MoveComponentCommand : IMergeableCommand
 
     public void Execute()
     {
-        // Move to end position
-        var deltaX = _endX - _componentViewModel.X;
-        var deltaY = _endY - _componentViewModel.Y;
+        // Don't move locked components
+        if (_componentViewModel.Component.IsLocked)
+            return;
 
-        if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+        try
         {
-            _canvas.MoveComponent(_componentViewModel, deltaX, deltaY);
+            _canvas.BeginCommandExecution();
+
+            // Move to end position
+            var deltaX = _endX - _componentViewModel.X;
+            var deltaY = _endY - _componentViewModel.Y;
+
+            if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+            {
+                _canvas.MoveComponent(_componentViewModel, deltaX, deltaY);
+            }
+        }
+        finally
+        {
+            _canvas.EndCommandExecution();
         }
     }
 
     public void Undo()
     {
-        // Move back to start position
-        var deltaX = _startX - _componentViewModel.X;
-        var deltaY = _startY - _componentViewModel.Y;
-        _canvas.MoveComponent(_componentViewModel, deltaX, deltaY);
+        try
+        {
+            _canvas.BeginCommandExecution();
+
+            // Move back to start position
+            var deltaX = _startX - _componentViewModel.X;
+            var deltaY = _startY - _componentViewModel.Y;
+            _canvas.MoveComponent(_componentViewModel, deltaX, deltaY);
+        }
+        finally
+        {
+            _canvas.EndCommandExecution();
+        }
     }
 
     public bool CanMergeWith(IUndoableCommand other)
