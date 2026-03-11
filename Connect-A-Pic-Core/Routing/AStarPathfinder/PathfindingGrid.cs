@@ -39,6 +39,7 @@ public class PathfindingGrid
 
     // Track waveguide path cells (keyed by connection ID)
     private readonly Dictionary<Guid, HashSet<(int x, int y)>> _waveguideCells = new();
+    private readonly object _waveguideCellsLock = new();
 
     // Pin reservation zones: cells near pins that get a soft cost penalty (not blocked).
     // Routes CAN pass through but A* prefers to avoid them, keeping pin areas accessible.
@@ -332,7 +333,10 @@ public class PathfindingGrid
     {
         Array.Clear(_cells);
         _componentCells.Clear();
-        _waveguideCells.Clear();
+        lock (_waveguideCellsLock)
+        {
+            _waveguideCells.Clear();
+        }
         lock (_pinZoneLock)
         {
             _pinZoneCells.Clear();
@@ -424,7 +428,10 @@ public class PathfindingGrid
             }
         }
 
-        _waveguideCells[connectionId] = cells;
+        lock (_waveguideCellsLock)
+        {
+            _waveguideCells[connectionId] = cells;
+        }
         OnWaveguideCellsAdded?.Invoke(cells);
     }
 
@@ -433,16 +440,20 @@ public class PathfindingGrid
     /// </summary>
     public void RemoveWaveguideObstacle(Guid connectionId)
     {
-        if (_waveguideCells.TryGetValue(connectionId, out var cells))
+        HashSet<(int, int)>? cells;
+        lock (_waveguideCellsLock)
         {
-            foreach (var (gx, gy) in cells)
-            {
-                if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
-                {
-                    _cells[gx, gy] = 0;
-                }
-            }
+            if (!_waveguideCells.TryGetValue(connectionId, out cells))
+                return;
             _waveguideCells.Remove(connectionId);
+        }
+
+        foreach (var (gx, gy) in cells)
+        {
+            if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
+            {
+                _cells[gx, gy] = 0;
+            }
         }
     }
 
@@ -451,7 +462,13 @@ public class PathfindingGrid
     /// </summary>
     public void ClearAllWaveguideObstacles()
     {
-        foreach (var connectionId in _waveguideCells.Keys.ToList())
+        List<Guid> connectionIds;
+        lock (_waveguideCellsLock)
+        {
+            connectionIds = _waveguideCells.Keys.ToList();
+        }
+
+        foreach (var connectionId in connectionIds)
         {
             RemoveWaveguideObstacle(connectionId);
         }
