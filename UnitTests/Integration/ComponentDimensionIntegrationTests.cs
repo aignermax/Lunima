@@ -38,7 +38,7 @@ public class ComponentDimensionIntegrationTests
         issue.ComponentName.ShouldBe("TestComponent");
         issue.Issue.ShouldContain("Width");
         issue.CurrentDimensions.ShouldContain("100");
-        issue.RecommendedDimensions.ShouldContain("130"); // 120 + 2*5 margin
+        issue.RecommendedDimensions.ShouldContain("120"); // No margin - pins at 0 to 120, need width ≥ 120
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class ComponentDimensionIntegrationTests
     [Fact]
     public void DimensionValidator_MmiLikeComponent_DetectedAndDisplayed()
     {
-        // Arrange - Simulates the MMI 2x2 issue from demo-pdk.json
+        // Arrange - Component with pins that extend beyond bounds
         var canvas = new DesignCanvasViewModel();
         var dimensionViewModel = new ComponentDimensionViewModel();
         dimensionViewModel.Configure(canvas);
@@ -103,7 +103,7 @@ public class ComponentDimensionIntegrationTests
         issue.ComponentName.ShouldBe("MMI_2x2");
         issue.CurrentDimensions.ShouldContain("120");
         issue.CurrentDimensions.ShouldContain("50");
-        // Recommended should add 5µm margin on each side
+        // Pins extend to x=130, so recommended width must be at least 130
         issue.RecommendedDimensions.ShouldContain("130");
     }
 
@@ -127,12 +127,13 @@ public class ComponentDimensionIntegrationTests
     /// </summary>
     private static Component CreateMmi2x2LikeComponent()
     {
+        // Pins extend beyond component bounds (x=0 to x=130, but width is only 120)
         var pins = new[]
         {
             CreatePin("a0", 0, 12.5),
             CreatePin("a1", 0, 37.5),
-            CreatePin("b0", 120, 12.5),
-            CreatePin("b1", 120, 37.5)
+            CreatePin("b0", 130, 12.5),  // Pin outside component width!
+            CreatePin("b1", 130, 37.5)   // Pin outside component width!
         };
 
         var component = CreateComponent(120, 50, pins);
