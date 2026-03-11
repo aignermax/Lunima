@@ -123,39 +123,37 @@ public class SimpleNazcaExporter
             double originOffsetX = 0;
             double originOffsetY = 0;
 
-            var funcName = comp.NazcaFunctionName;
-            bool isGeneratedStub = !string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName);
+            // Nazca .put() places the component's origin at the given position.
+            //
+            // For real PDK functions (ebeam_*, with explicit NazcaOriginOffset):
+            //   - Nazca defines where the cell origin is (usually at first pin)
+            //   - We apply NazcaOriginOffset to place the cell correctly
+            //   - Must rotate offset if component is rotated
+            //
+            // For generated stubs (demo_pdk.*, no explicit NazcaOriginOffset):
+            //   - We generate the stub with origin at bbox (0,0) = top-left corner
+            //   - No offset needed; place at (PhysicalX, -(PhysicalY + Height))
 
-            if (isGeneratedStub)
+            // Only apply offset if explicitly set (indicates real PDK function with known origin)
+            if (comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0)
             {
-                // For generated stubs, cell origin is at bbox (0, 0)
-                // No offset needed; pins are defined inside the cell
-                originOffsetX = 0;
-                originOffsetY = 0;
-            }
-            else
-            {
-                // For built-in PDK functions, use NazcaOriginOffset or calculate from first pin
-                var firstPin = comp.PhysicalPins.FirstOrDefault();
-                originOffsetX = comp.NazcaOriginOffsetX;
-                originOffsetY = comp.NazcaOriginOffsetY;
+                double pinLocalX = comp.NazcaOriginOffsetX;
+                double pinLocalY = comp.NazcaOriginOffsetY;
+                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
 
-                if (firstPin != null && originOffsetX == 0 && originOffsetY == 0)
-                {
-                    // If no explicit origin offset, calculate from first pin position
-                    // This handles legacy components without explicit NazcaOriginOffset
-                    double pinLocalX = firstPin.OffsetXMicrometers;
-                    double pinLocalY = firstPin.OffsetYMicrometers;
-                    double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-
-                    // Rotate the pin offset by the component's rotation
-                    originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
-                    originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
-                }
+                // Rotate the offset by the component's rotation
+                originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
+                originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
             }
+            // else: originOffsetX and originOffsetY remain 0
 
             var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
-            var nazcaY = NormalizeZero(-(comp.PhysicalY + comp.HeightMicrometers - originOffsetY)).ToString("F2", ci);
+            // For components with explicit origin offset, place at (PhysicalY + offset)
+            // For generated stubs (no offset), place at (PhysicalY + Height) to align bottom-left
+            double nazcaYValue = originOffsetX == 0 && originOffsetY == 0
+                ? -(comp.PhysicalY + comp.HeightMicrometers)
+                : -(comp.PhysicalY + originOffsetY);
+            var nazcaY = NormalizeZero(nazcaYValue).ToString("F2", ci);
             var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
             var nazcaFunc = GetNazcaFunction(comp);
 
