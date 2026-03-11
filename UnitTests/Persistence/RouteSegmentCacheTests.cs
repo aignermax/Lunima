@@ -1,10 +1,14 @@
 using System.Text.Json;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Converters;
 using Shouldly;
 using Xunit;
 

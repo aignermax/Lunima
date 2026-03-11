@@ -2,7 +2,7 @@ using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Tiles;
 using static CAP_Core.Grid.GridManager;
 using static CAP_Core.Grid.IComponentMover;
-using Component = CAP_Core.Components.Component;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Grid
 {

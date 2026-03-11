@@ -1,6 +1,7 @@
 using CAP_Contracts;
 using CAP_Core;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP_Core.Components.Creation;
 using CAP_Core.Grid;
 using CAP_Core.Helpers;

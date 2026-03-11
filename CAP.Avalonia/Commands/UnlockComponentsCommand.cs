@@ -1,6 +1,7 @@
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP_Core.Grid;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 
 namespace CAP.Avalonia.Commands;
 

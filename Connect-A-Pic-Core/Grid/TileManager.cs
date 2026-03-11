@@ -1,6 +1,6 @@
 using CAP_Core.Tiles;
 using static CAP_Core.Grid.GridManager;
-using Component = CAP_Core.Components.Component;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Grid
 {

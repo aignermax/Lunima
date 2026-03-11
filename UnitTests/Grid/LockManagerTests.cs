@@ -1,4 +1,6 @@
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
 using CAP_Core.Grid;
 using Shouldly;
 using UnitTests.Helpers;

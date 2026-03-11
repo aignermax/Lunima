@@ -1,5 +1,5 @@
 using CAP.Avalonia.Selection;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 
 namespace CAP.Avalonia.Commands;
 

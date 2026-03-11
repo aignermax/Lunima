@@ -2,7 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Controls;
 

@@ -1,5 +1,6 @@
 using CAP_Core.Analysis;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using Shouldly;
 using UnitTests;
 

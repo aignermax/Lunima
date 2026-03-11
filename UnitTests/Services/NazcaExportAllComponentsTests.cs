@@ -1,5 +1,6 @@
 using CAP.Avalonia.Services;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Library;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
 using Xunit;

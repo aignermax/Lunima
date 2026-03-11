@@ -1,5 +1,6 @@
 using CAP_Core.Components;
 using CAP_Core.Components.ComponentHelpers;
+using CAP_Core.Components.Core;
 using CAP_Core.Helpers;
 using System;
 using System.Globalization;
