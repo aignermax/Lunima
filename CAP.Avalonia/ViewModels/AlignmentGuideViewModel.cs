@@ -64,16 +64,9 @@ public partial class AlignmentGuideViewModel : ObservableObject
     private double? _snappedCoordinate = null;
 
     /// <summary>
-    /// Mouse position in canvas coordinates when snap first engaged.
-    /// Used to measure snap break distance on the free axis.
+    /// The original position before snapping occurred (used to restore if snap breaks).
     /// </summary>
-    private (double x, double y)? _snapStartMousePosition = null;
-
-    /// <summary>
-    /// Initial offset between component and mouse at drag start.
-    /// Preserved throughout drag to maintain visual relationship.
-    /// </summary>
-    private (double x, double y)? _initialDragOffset = null;
+    private (double x, double y)? _preSnapPosition = null;
 
     /// <summary>
     /// Current horizontal alignments (updated during drag).
@@ -144,92 +137,77 @@ public partial class AlignmentGuideViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Calculates the target component position with snap-to-align behavior.
-    /// Maintains mouse-relative positioning and proper snap break mechanism.
+    /// Calculates snap delta to align pins if snapping is enabled.
+    /// Returns the offset to apply to achieve perfect alignment.
+    /// Uses "sticky but breakable" logic - tracks accumulated movement and releases
+    /// snap when total movement exceeds SnapBreakDistance.
     /// </summary>
     /// <param name="draggingComponent">The component being dragged.</param>
     /// <param name="otherComponents">All other components on the canvas.</param>
-    /// <param name="currentMouseCanvasX">Current mouse X position in canvas coordinates.</param>
-    /// <param name="currentMouseCanvasY">Current mouse Y position in canvas coordinates.</param>
-    /// <param name="initialOffsetX">Initial X offset (component X - mouse X at drag start).</param>
-    /// <param name="initialOffsetY">Initial Y offset (component Y - mouse Y at drag start).</param>
-    /// <param name="zoom">Current zoom level (for screen pixel distance calculation).</param>
-    /// <returns>Target (X, Y) position for the component.</returns>
-    public (double targetX, double targetY) CalculateComponentPosition(
+    /// <param name="zoom">Current zoom level of the canvas (to convert pixels to micrometers).</param>
+    /// <returns>Tuple of (deltaX, deltaY) to apply for snapping, or (0, 0) if no snap.</returns>
+    public (double deltaX, double deltaY) CalculateSnapDelta(
         ComponentViewModel draggingComponent,
         IEnumerable<ComponentViewModel> otherComponents,
-        double currentMouseCanvasX,
-        double currentMouseCanvasY,
-        double initialOffsetX,
-        double initialOffsetY,
         double zoom)
     {
         if (!IsEnabled || !SnapEnabled || draggingComponent == null)
-        {
-            // No snapping - return mouse-relative position
-            return (currentMouseCanvasX + initialOffsetX, currentMouseCanvasY + initialOffsetY);
-        }
+            return (0, 0);
 
-        // Store initial drag offset for snap break restoration
-        if (!_initialDragOffset.HasValue)
-        {
-            _initialDragOffset = (initialOffsetX, initialOffsetY);
-        }
+        var currentX = draggingComponent.X;
+        var currentY = draggingComponent.Y;
 
         // Check if we're currently snapped - maintain snapped axis but check for break
-        if (_isCurrentlySnapped && _snappedAxisIsX.HasValue && _snappedCoordinate.HasValue && _snapStartMousePosition.HasValue)
+        if (_isCurrentlySnapped && _snappedAxisIsX.HasValue && _snappedCoordinate.HasValue && _preSnapPosition.HasValue)
         {
-            // Measure snap break distance in screen pixels on the free axis (zoom-independent)
-            double mouseScreenDeltaOnFreeAxis;
+            // Convert pixel-based snap break distance to micrometers based on current zoom
+            double snapBreakDistanceMicrometers = SnapBreakDistancePixels / zoom;
+
+            // Check if mouse has moved too far away from the pre-snap position on the free axis
+            double distanceOnFreeAxis;
             if (_snappedAxisIsX.Value)
             {
-                // X is snapped, Y is free - check Y distance in screen pixels
-                mouseScreenDeltaOnFreeAxis = Math.Abs(currentMouseCanvasY - _snapStartMousePosition.Value.y) * zoom;
+                // X is snapped, Y is free - check Y distance from where we started the snap
+                distanceOnFreeAxis = Math.Abs(currentY - _preSnapPosition.Value.y);
             }
             else
             {
-                // Y is snapped, X is free - check X distance in screen pixels
-                mouseScreenDeltaOnFreeAxis = Math.Abs(currentMouseCanvasX - _snapStartMousePosition.Value.x) * zoom;
+                // Y is snapped, X is free - check X distance from where we started the snap
+                distanceOnFreeAxis = Math.Abs(currentX - _preSnapPosition.Value.x);
             }
 
-            // If moved too far on the free axis, break snap and restore to mouse-relative position
-            if (mouseScreenDeltaOnFreeAxis > SnapBreakDistancePixels)
+            // If moved too far on the free axis, break snap and restore original position
+            if (distanceOnFreeAxis > snapBreakDistanceMicrometers)
             {
-                // Break snap
                 _isCurrentlySnapped = false;
+                var restoreDeltaX = _preSnapPosition.Value.x - currentX;
+                var restoreDeltaY = _preSnapPosition.Value.y - currentY;
+
+                // Clear snap state
                 _snappedAxisIsX = null;
                 _snappedCoordinate = null;
-                _snapStartMousePosition = null;
+                _preSnapPosition = null;
 
-                // Return to mouse-relative position using preserved initial offset
-                return (currentMouseCanvasX + _initialDragOffset.Value.x,
-                        currentMouseCanvasY + _initialDragOffset.Value.y);
+                // Return to original pre-snap position
+                return (restoreDeltaX, restoreDeltaY);
             }
 
-            // Still within tolerance - maintain snap on locked axis, follow mouse on free axis
+            // Still within tolerance - maintain snap
             if (_snappedAxisIsX.Value)
             {
                 // X is snapped - lock X, let Y follow mouse
-                return (_snappedCoordinate.Value, currentMouseCanvasY + _initialDragOffset.Value.y);
+                double deltaX = _snappedCoordinate.Value - currentX;
+                return (deltaX, 0);
             }
             else
             {
                 // Y is snapped - lock Y, let X follow mouse
-                return (currentMouseCanvasX + _initialDragOffset.Value.x, _snappedCoordinate.Value);
+                double deltaY = _snappedCoordinate.Value - currentY;
+                return (0, deltaY);
             }
         }
 
-        // Not currently snapped - calculate normal mouse-relative position
-        double targetX = currentMouseCanvasX + initialOffsetX;
-        double targetY = currentMouseCanvasY + initialOffsetY;
-
-        // Temporarily set component to target position to check for snap opportunities
-        double originalX = draggingComponent.X;
-        double originalY = draggingComponent.Y;
-        draggingComponent.X = targetX;
-        draggingComponent.Y = targetY;
-
-        // Check for new snap opportunities
+        // Not currently snapped - check for new snap opportunities
         var otherCoreComponents = otherComponents
             .Where(c => c != draggingComponent)
             .Select(c => c.Component);
@@ -239,55 +217,28 @@ public partial class AlignmentGuideViewModel : ObservableObject
             otherCoreComponents,
             SnapToleranceMicrometers);
 
-        // Restore original position
-        draggingComponent.X = originalX;
-        draggingComponent.Y = originalY;
-
-        // If we found a snap, engage it
+        // If we found a snap, record which axis is snapped and save original position
         if (snapDX != 0 || snapDY != 0)
         {
             _isCurrentlySnapped = true;
-            _snapStartMousePosition = (currentMouseCanvasX, currentMouseCanvasY);
+            _preSnapPosition = (currentX, currentY); // Save position before snapping
 
-            // Apply snap delta to target position
-            double snappedX = targetX + snapDX;
-            double snappedY = targetY + snapDY;
-
-            // Determine which axis is being snapped (use the larger delta)
+            // Determine which axis is being snapped
             if (Math.Abs(snapDX) > Math.Abs(snapDY))
             {
-                // X snap is dominant - lock X coordinate
+                // X snap is dominant
                 _snappedAxisIsX = true;
-                _snappedCoordinate = snappedX;
-                // Return: snapped X, mouse-relative Y
-                return (_snappedCoordinate.Value, targetY);
+                _snappedCoordinate = currentX + snapDX;
             }
             else
             {
-                // Y snap is dominant (or equal) - lock Y coordinate
+                // Y snap is dominant (or equal)
                 _snappedAxisIsX = false;
-                _snappedCoordinate = snappedY;
-                // Return: mouse-relative X, snapped Y
-                return (targetX, _snappedCoordinate.Value);
+                _snappedCoordinate = currentY + snapDY;
             }
         }
 
-        // No snap - return normal mouse-relative position
-        return (targetX, targetY);
-    }
-
-    /// <summary>
-    /// Legacy method for backward compatibility. Use CalculateComponentPosition instead.
-    /// </summary>
-    [Obsolete("Use CalculateComponentPosition instead")]
-    public (double deltaX, double deltaY) CalculateSnapDelta(
-        ComponentViewModel draggingComponent,
-        IEnumerable<ComponentViewModel> otherComponents,
-        double zoom)
-    {
-        // This method is kept for backward compatibility but should not be used
-        // Return no snap
-        return (0, 0);
+        return (snapDX, snapDY);
     }
 
     /// <summary>
@@ -299,8 +250,7 @@ public partial class AlignmentGuideViewModel : ObservableObject
         _isCurrentlySnapped = false;
         _snappedAxisIsX = null;
         _snappedCoordinate = null;
-        _snapStartMousePosition = null;
-        _initialDragOffset = null;
+        _preSnapPosition = null;
     }
 
     /// <summary>
