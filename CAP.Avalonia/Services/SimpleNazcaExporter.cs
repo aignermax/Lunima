@@ -385,9 +385,14 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550").
+    /// Recognizes SiEPIC EBeam PDK naming patterns.
     /// </summary>
     internal static bool IsPdkFunction(string name) =>
         name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("GC_", StringComparison.Ordinal) ||
+        name.StartsWith("ANT_", StringComparison.Ordinal) ||
+        name.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("taper_", StringComparison.OrdinalIgnoreCase) ||
         (name.Contains(".", StringComparison.Ordinal) &&
          !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
 

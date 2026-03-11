@@ -2,6 +2,7 @@ using Xunit;
 using Shouldly;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
+using System.Linq;
 
 namespace UnitTests.Components
 {
@@ -268,6 +269,55 @@ namespace UnitTests.Components
             pdk.Components[0].Name.ShouldBe("Component A");
             pdk.Components[1].Name.ShouldBe("Component B");
             pdk.Components[2].Name.ShouldBe("Component C");
+        }
+
+        [Fact]
+        public void LoadFromFile_SiEPICEBeamPdk_LoadsAllComponents()
+        {
+            // Arrange
+            var loader = new PdkLoader();
+            var siepicPdkPath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "..", "..", "..", "..",
+                "CAP-DataAccess", "PDKs", "siepic-ebeam-pdk.json");
+
+            // Skip if file doesn't exist (CI environment might not have it)
+            if (!File.Exists(siepicPdkPath))
+            {
+                return; // Skip test
+            }
+
+            // Act
+            var pdk = loader.LoadFromFile(siepicPdkPath);
+
+            // Assert
+            pdk.Name.ShouldBe("SiEPIC EBeam PDK");
+            pdk.Foundry.ShouldBe("UBC / SiEPIC");
+            pdk.DefaultWavelengthNm.ShouldBe(1550);
+            pdk.NazcaModuleName.ShouldBe("siepic_ebeam_pdk");
+
+            // Verify we have expanded from 12 to 44 components (issue #92)
+            pdk.Components.Count.ShouldBe(44);
+
+            // Verify all components have valid structure
+            foreach (var comp in pdk.Components)
+            {
+                comp.Name.ShouldNotBeNullOrWhiteSpace();
+                comp.Category.ShouldNotBeNullOrWhiteSpace();
+                comp.NazcaFunction.ShouldNotBeNullOrWhiteSpace();
+                comp.Pins.Count.ShouldBeGreaterThan(0);
+                comp.WidthMicrometers.ShouldBeGreaterThan(0);
+                comp.HeightMicrometers.ShouldBeGreaterThan(0);
+            }
+
+            // Verify some new components are present
+            var componentNames = pdk.Components.Select(c => c.Name).ToList();
+            componentNames.ShouldContain("Y-Branch 1550"); // Original
+            componentNames.ShouldContain("Y-Branch 895"); // New
+            componentNames.ShouldContain("GC SiN TE 1310 8deg"); // New
+            componentNames.ShouldContain("Crossing Horizontal"); // New
+            componentNames.ShouldContain("Adiabatic Coupler TE 1550"); // New
+            componentNames.ShouldContain("Bond Pad"); // New
         }
     }
 }

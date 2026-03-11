@@ -36,7 +36,8 @@ public class SiepicPdkTests
         pdk.Name.ShouldBe("SiEPIC EBeam PDK");
         pdk.Foundry.ShouldBe("UBC / SiEPIC");
         pdk.DefaultWavelengthNm.ShouldBe(1550);
-        pdk.Components.Count.ShouldBe(12);
+        // Issue #92: Expanded from 12 to 44 components
+        pdk.Components.Count.ShouldBe(44);
     }
 
     [Fact]
