@@ -21,62 +21,91 @@ public partial class DesignCanvas
         {
             case Key.S:
                 HandleSKey(ctrlPressed, mainVm);
+                e.Handled = true;
                 break;
             case Key.C:
                 if (!ctrlPressed)
+                {
                     mainVm.SetConnectModeCommand.Execute(null);
+                    e.Handled = true;
+                }
+                // Let Ctrl+C pass through for copy
                 break;
             case Key.D:
                 if (!ctrlPressed)
+                {
                     mainVm.SetDeleteModeCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.Delete:
             case Key.Back:
                 mainVm.DeleteSelectedCommand.Execute(null);
+                e.Handled = true;
                 break;
             case Key.Escape:
                 mainVm.SetSelectModeCommand.Execute(null);
+                e.Handled = true;
                 break;
             case Key.Z:
                 if (ctrlPressed)
+                {
                     mainVm.UndoCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.Y:
                 if (ctrlPressed)
+                {
                     mainVm.RedoCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.R:
                 if (!ctrlPressed)
+                {
                     mainVm.RotateSelectedCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.G:
                 if (!ctrlPressed)
                 {
                     HandleGKey(e);
+                    e.Handled = true;
                 }
                 break;
             case Key.F:
                 if (!ctrlPressed)
                 {
                     mainVm.ZoomToFit(Bounds.Width, Bounds.Height);
+                    e.Handled = true;
                 }
                 break;
             case Key.P:
                 if (!ctrlPressed)
                 {
                     HandlePKey(mainVm);
+                    e.Handled = true;
                 }
                 break;
             case Key.L:
                 if (!ctrlPressed)
                 {
                     mainVm?.RunSimulationCommand.Execute(null);
+                    e.Handled = true;
                 }
+                break;
+            case Key.V:
+                // Let Ctrl+V pass through for paste
+                if (!ctrlPressed)
+                    e.Handled = true;
                 break;
         }
 
         InvalidateVisual();
-        e.Handled = true;
+        // Note: Only set e.Handled = true for keys we actually process
+        // This allows Ctrl+C, Ctrl+V, etc. to bubble up to MainWindow
     }
 
     private void HandleSKey(bool ctrlPressed, MainViewModel mainVm)

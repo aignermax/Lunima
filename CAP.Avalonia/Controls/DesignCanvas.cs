@@ -89,11 +89,13 @@ public partial class DesignCanvas : Control
         if (e.OldValue is DesignCanvasViewModel oldCanvas)
         {
             oldCanvas.PropertyChanged -= OnCanvasViewModelPropertyChanged;
+            oldCanvas.RepaintRequested = null;
         }
 
         if (e.NewValue is DesignCanvasViewModel newCanvas)
         {
             newCanvas.PropertyChanged += OnCanvasViewModelPropertyChanged;
+            newCanvas.RepaintRequested = () => InvalidateVisual();
         }
     }
 
