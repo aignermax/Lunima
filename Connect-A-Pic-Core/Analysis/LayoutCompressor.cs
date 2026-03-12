@@ -9,10 +9,10 @@ namespace CAP_Core.Analysis;
 /// </summary>
 public class LayoutCompressor
 {
-    private const double AttractionStrength = 0.5;
+    private const double AttractionStrength = 0.1;
     private const double RepulsionStrength = 50.0;
     private const double MinComponentSpacing = 20.0; // micrometers
-    private const double DampingFactor = 0.8;
+    private const double DampingFactor = 0.7;
     private const double ConvergenceThreshold = 0.5; // micrometers
     private const int MaxIterations = 100;
 
@@ -151,6 +151,8 @@ public class LayoutCompressor
 
     /// <summary>
     /// Calculates attractive force between connected components.
+    /// Uses logarithmic attraction (standard in force-directed graph layouts)
+    /// to pull components together while avoiding extreme forces.
     /// </summary>
     private (double fx, double fy) CalculateAttractionForce(
         Component comp1,
@@ -163,8 +165,12 @@ public class LayoutCompressor
         if (distance < 0.01)
             return (0, 0);
 
-        // Spring force: F = k * d
-        double force = AttractionStrength * distance;
+        // Logarithmic attraction force (standard in force-directed graph layouts)
+        // F = k * log(d / d_min)
+        // This provides strong attraction when far apart, weaker when close
+        double minDistance = Math.Max(MinComponentSpacing, 10.0);
+        double force = AttractionStrength * Math.Log(distance / minDistance);
+
         double fx = force * dx / distance;
         double fy = force * dy / distance;
 
