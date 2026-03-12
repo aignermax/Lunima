@@ -327,4 +327,69 @@ public class LayoutCompressorTests
         newSpan.ShouldBeLessThan(originalSpan,
             $"Compression should reduce span from {originalSpan:F2}µm, but got {newSpan:F2}µm");
     }
+
+    [Fact]
+    public void CompressLayout_WithProgressCallback_InvokesCallback()
+    {
+        // Arrange
+        var compressor = new LayoutCompressor();
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        comp2.PhysicalX = 1000;
+        comp2.PhysicalY = 1000;
+
+        var connection = TestComponentFactory.CreateConnection(comp1, comp2);
+        var components = new List<Component> { comp1, comp2 };
+        var connections = new List<WaveguideConnection> { connection };
+
+        var callbackIterations = new List<int>();
+
+        // Act
+        compressor.CompressLayout(components, connections, iteration =>
+        {
+            callbackIterations.Add(iteration);
+        });
+
+        // Assert
+        // Progress callback should have been called at least once
+        callbackIterations.Count.ShouldBeGreaterThanOrEqualTo(1,
+            "Progress callback should be called at least once during compression");
+
+        // First callback should be at iteration 0
+        callbackIterations.First().ShouldBe(0);
+
+        // Iterations should be in ascending order (if multiple callbacks)
+        for (int i = 1; i < callbackIterations.Count; i++)
+        {
+            callbackIterations[i].ShouldBeGreaterThanOrEqualTo(callbackIterations[i - 1]);
+        }
+    }
+
+    [Fact]
+    public void CompressLayout_WithoutProgressCallback_WorksNormally()
+    {
+        // Arrange
+        var compressor = new LayoutCompressor();
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        comp2.PhysicalX = 1000;
+        comp2.PhysicalY = 1000;
+
+        var connection = TestComponentFactory.CreateConnection(comp1, comp2);
+        var components = new List<Component> { comp1, comp2 };
+        var connections = new List<WaveguideConnection> { connection };
+
+        // Act - no callback provided
+        var result = compressor.CompressLayout(components, connections, null);
+
+        // Assert
+        result.ShouldNotBeEmpty();
+        result.Count.ShouldBe(2);
+    }
 }

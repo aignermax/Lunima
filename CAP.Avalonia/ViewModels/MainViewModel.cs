@@ -145,7 +145,7 @@ public partial class MainViewModel : ObservableObject
         DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
         ElementLock.Configure(_canvas, CommandManager);
         DimensionValidator.Configure(_canvas);
-        CompressLayout.Configure(_canvas);
+        CompressLayout.Configure(_canvas, CommandManager);
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))

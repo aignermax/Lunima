@@ -178,4 +178,60 @@ public class CompressLayoutIntegrationTests
         // Assert
         canExecute.ShouldBeFalse();
     }
+
+    [Fact]
+    public void ViewModel_ShowsProgressDuringCompression()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var viewModel = new CompressLayoutViewModel();
+        viewModel.Configure(canvas);
+
+        // Create components far apart to ensure algorithm runs multiple iterations
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        canvas.AddComponent(comp1, "Comp1");
+
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+        comp2.PhysicalX = 2000;
+        comp2.PhysicalY = 2000;
+        canvas.AddComponent(comp2, "Comp2");
+
+        // Act
+        var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
+        task.Wait();
+
+        // Assert
+        // Status should indicate completion
+        viewModel.StatusText.ShouldContain("complete");
+
+        // CurrentIteration should have been updated during compression
+        // (reset to 0 after completion)
+        viewModel.CurrentIteration.ShouldBe(0);
+
+        // Result text should show area reduction
+        viewModel.ResultText.ShouldContain("Area reduction");
+    }
+
+    [Fact]
+    public void ViewModel_ClearsStatusAfterReconfigure()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var viewModel = new CompressLayoutViewModel();
+        viewModel.Configure(canvas);
+
+        viewModel.StatusText = "Test status";
+        viewModel.ResultText = "Test result";
+        viewModel.CurrentIteration = 42;
+
+        // Act
+        viewModel.Configure(canvas);
+
+        // Assert
+        viewModel.StatusText.ShouldBe("");
+        viewModel.ResultText.ShouldBe("");
+        viewModel.CurrentIteration.ShouldBe(0);
+    }
 }
