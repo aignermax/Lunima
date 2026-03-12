@@ -110,20 +110,23 @@ public partial class MainWindow : Window
                     mainVm.RotateSelectedCommand.Execute(null);
                 break;
             case Key.G:
-                if (!ctrlPressed)
+                if (ctrlPressed)
+                {
+                    // Ctrl+G: Create component group from selection
+                    mainVm.CreateGroupCommand.Execute(null);
+                }
+                else if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
                 {
                     var canvas = mainVm.Canvas;
-                    if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-                    {
-                        canvas.ShowGridOverlay = !canvas.ShowGridOverlay;
-                    }
-                    else
-                    {
-                        canvas.GridSnap.Toggle();
-                        mainVm.BottomPanel.StatusText = canvas.GridSnap.IsEnabled
-                            ? $"Grid snap ON ({canvas.GridSnap.GridSizeMicrometers}µm)"
-                            : "Grid snap OFF";
-                    }
+                    canvas.ShowGridOverlay = !canvas.ShowGridOverlay;
+                }
+                else
+                {
+                    var canvas = mainVm.Canvas;
+                    canvas.GridSnap.Toggle();
+                    mainVm.BottomPanel.StatusText = canvas.GridSnap.IsEnabled
+                        ? $"Grid snap ON ({canvas.GridSnap.GridSizeMicrometers}µm)"
+                        : "Grid snap OFF";
                 }
                 break;
             case Key.F:

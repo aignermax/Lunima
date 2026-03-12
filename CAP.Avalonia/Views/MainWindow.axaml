@@ -51,6 +51,8 @@
                 <!-- Actions -->
                 <Button Content="❌" Command="{Binding DeleteSelectedCommand}"
                         Width="36" Margin="2" Background="#4d3d3d" ToolTip.Tip="Delete Selected (Del)"/>
+                <Button Content="📦 Group" Command="{Binding CreateGroupCommand}"
+                        MinWidth="70" Margin="2" Padding="8,4" Background="#3d3d5d" ToolTip.Tip="Create Component Group (Ctrl+G)"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
@@ -89,7 +91,7 @@
                 <TextBlock Text="{Binding BottomPanel.StatusText}"
                            VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
                 <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
-                    <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste"/>
+                    <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+G=Create Group  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste"/>
                 </TextBlock>
             </StackPanel>
         </Border>

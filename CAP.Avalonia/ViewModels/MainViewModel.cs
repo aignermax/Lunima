@@ -107,6 +107,12 @@ public partial class MainViewModel : ObservableObject
             }
         };
 
+        // Listen to selection changes to update command availability
+        _canvas.Selection.SelectedComponents.CollectionChanged += (s, e) =>
+        {
+            CreateGroupCommand.NotifyCanExecuteChanged();
+        };
+
         WireDesignValidation();
         WirePanelCallbacks();
         LoadComponentLibrary();
@@ -763,6 +769,41 @@ public partial class MainViewModel : ObservableObject
     private void PasteSelectedCommand()
     {
         PasteSelected();
+    }
+
+    /// <summary>
+    /// Creates a component group from the currently selected components.
+    /// Requires at least 2 components to be selected.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanCreateGroup))]
+    private void CreateGroup()
+    {
+        var selection = Canvas.Selection;
+        if (!selection.HasMultipleSelected)
+            return;
+
+        // Prompt for group name (for now, use a simple default name)
+        // In a full implementation, this would show a dialog
+        var groupName = $"Group {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+        var category = "User Defined";
+        var description = "";
+
+        var cmd = new CreateGroupCommand(
+            Canvas,
+            LeftPanel.ComponentGroups,
+            selection.SelectedComponents.ToList(),
+            groupName,
+            category,
+            description);
+
+        CommandManager.ExecuteCommand(cmd);
+        BottomPanel.StatusText = $"Created group '{groupName}' with {selection.SelectedComponents.Count} components";
+    }
+
+    private bool CanCreateGroup()
+    {
+        // Requires at least 2 components selected
+        return Canvas.Selection.SelectedComponents.Count >= 2;
     }
 
     [RelayCommand]
