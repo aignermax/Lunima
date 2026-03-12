@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Canvas"
+             x:Class="CAP.Avalonia.Views.BreadcrumbBar"
+             x:DataType="vm:DesignCanvasViewModel">
+    <Border Background="#2d2d2d" BorderBrush="#3d3d3d" BorderThickness="0,0,0,1" Padding="10,5">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+            <!-- Exit button -->
+            <Button Content="[Exit Edit Mode]"
+                    Command="{Binding ExitGroupEditModeCommand}"
+                    IsVisible="{Binding IsInGroupEditMode}"
+                    Background="#4d3d3d"
+                    Foreground="Orange"
+                    Padding="8,4"
+                    FontWeight="SemiBold"
+                    ToolTip.Tip="Exit group edit mode and return to root level (Esc)" />
+
+            <!-- Breadcrumb path -->
+            <ItemsControl ItemsSource="{Binding BreadcrumbPath}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="3"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="3">
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="White"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="›"
+                                       Foreground="Gray"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,0,0"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Currently editing indicator -->
+            <TextBlock Text="(editing)"
+                       Foreground="LightBlue"
+                       FontStyle="Italic"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsInGroupEditMode}"/>
+        </StackPanel>
+    </Border>
+</UserControl>

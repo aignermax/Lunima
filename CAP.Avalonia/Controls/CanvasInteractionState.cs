@@ -44,6 +44,13 @@ public class CanvasInteractionState
     public WaveguideConnectionViewModel? HoveredConnection { get; set; }
     public Point LastCanvasPosition { get; set; }
 
+    // Double-click detection state
+    public DateTime LastClickTime { get; set; }
+    public Point LastClickPosition { get; set; }
+    public ComponentViewModel? LastClickedComponent { get; set; }
+    public const double DoubleClickTimeMs = 500;
+    public const double DoubleClickDistanceThreshold = 5.0;
+
     /// <summary>
     /// Resets all drag-related state.
     /// </summary>

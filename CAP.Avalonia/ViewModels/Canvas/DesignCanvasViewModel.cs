@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Routing;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.Visualization;
@@ -136,6 +138,136 @@ public partial class DesignCanvasViewModel : ObservableObject
     public GridSnapSettings GridSnap { get; } = new();
 
     /// <summary>
+    /// Currently edited component group (null if editing at root level).
+    /// </summary>
+    [ObservableProperty]
+    private ComponentGroup? _currentEditGroup;
+
+    /// <summary>
+    /// Stack of parent groups for nested editing navigation.
+    /// </summary>
+    private readonly Stack<ComponentGroup> _editModeStack = new();
+
+    /// <summary>
+    /// Whether the canvas is currently in group edit mode.
+    /// </summary>
+    public bool IsInGroupEditMode => CurrentEditGroup != null;
+
+    /// <summary>
+    /// Breadcrumb path showing the current edit context.
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<GroupBreadcrumbItem> _breadcrumbPath = new();
+
+    /// <summary>
+    /// All component group instances on the canvas.
+    /// </summary>
+    private readonly Dictionary<Guid, ComponentGroupInstance> _groupInstances = new();
+
+    /// <summary>
+    /// Currently edited group instance (null if editing at root level).
+    /// </summary>
+    [ObservableProperty]
+    private ComponentGroupInstance? _currentEditGroupInstance;
+
+    /// <summary>
+    /// Enters edit mode for the specified component group instance.
+    /// </summary>
+    public void EnterGroupEditMode(ComponentGroupInstance groupInstance)
+    {
+        if (groupInstance == null)
+            return;
+
+        CurrentEditGroupInstance = groupInstance;
+        CurrentEditGroup = groupInstance.GroupDefinition;
+        UpdateBreadcrumbPath();
+        OnPropertyChanged(nameof(IsInGroupEditMode));
+    }
+
+    /// <summary>
+    /// Enters edit mode for a component that belongs to a group.
+    /// </summary>
+    public void EnterGroupEditModeForComponent(ComponentViewModel component)
+    {
+        if (component?.Component.ParentGroupInstanceId == null)
+            return;
+
+        if (_groupInstances.TryGetValue(component.Component.ParentGroupInstanceId.Value, out var groupInstance))
+        {
+            EnterGroupEditMode(groupInstance);
+        }
+    }
+
+    /// <summary>
+    /// Exits the current group edit mode, returning to root.
+    /// </summary>
+    [RelayCommand]
+    public void ExitGroupEditMode()
+    {
+        CurrentEditGroupInstance = null;
+        CurrentEditGroup = null;
+        UpdateBreadcrumbPath();
+        OnPropertyChanged(nameof(IsInGroupEditMode));
+    }
+
+    /// <summary>
+    /// Updates the breadcrumb navigation path.
+    /// </summary>
+    private void UpdateBreadcrumbPath()
+    {
+        BreadcrumbPath.Clear();
+
+        // Always add root
+        BreadcrumbPath.Add(new GroupBreadcrumbItem { Name = "Root", GroupInstance = null });
+
+        // Add current group if in edit mode
+        if (CurrentEditGroupInstance != null)
+        {
+            BreadcrumbPath.Add(new GroupBreadcrumbItem
+            {
+                Name = CurrentEditGroupInstance.Name,
+                GroupInstance = CurrentEditGroupInstance
+            });
+        }
+    }
+
+    /// <summary>
+    /// Registers a new group instance on the canvas.
+    /// </summary>
+    public void RegisterGroupInstance(ComponentGroupInstance groupInstance)
+    {
+        _groupInstances[groupInstance.InstanceId] = groupInstance;
+    }
+
+    /// <summary>
+    /// Unregisters a group instance (when all its components are deleted).
+    /// </summary>
+    public void UnregisterGroupInstance(Guid instanceId)
+    {
+        _groupInstances.Remove(instanceId);
+    }
+
+    /// <summary>
+    /// Checks if a component can be edited in the current edit context.
+    /// </summary>
+    public bool CanEditComponent(ComponentViewModel component)
+    {
+        if (!IsInGroupEditMode)
+            return true; // At root level, can edit all components
+
+        // In edit mode, can only edit components belonging to the current group
+        return component.Component.ParentGroupInstanceId == CurrentEditGroupInstance?.InstanceId;
+    }
+
+    /// <summary>
+    /// Checks if a component can be selected in the current edit context.
+    /// </summary>
+    public bool CanSelectComponent(ComponentViewModel component)
+    {
+        return CanEditComponent(component);
+    }
+
+    /// <summary>
     /// Minimum bend radius for waveguides in micrometers.
     /// Depends on the fabrication process - typical values: 5-20µm for silicon photonics.
     /// Default: 10µm (conservative value for most foundries).
@@ -197,6 +329,9 @@ public partial class DesignCanvasViewModel : ObservableObject
     {
         // Initialize A* pathfinding by default
         InitializeAStarRouting();
+
+        // Initialize breadcrumb path with root
+        UpdateBreadcrumbPath();
     }
 
     /// <summary>
@@ -1007,4 +1142,20 @@ public partial class PinViewModel : ObservableObject
         OnPropertyChanged(nameof(Y));
         OnPropertyChanged(nameof(Angle));
     }
+}
+
+/// <summary>
+/// Represents a breadcrumb item in the group edit navigation path.
+/// </summary>
+public class GroupBreadcrumbItem
+{
+    /// <summary>
+    /// Display name for this breadcrumb level.
+    /// </summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// The component group instance at this level (null for root).
+    /// </summary>
+    public ComponentGroupInstance? GroupInstance { get; set; }
 }

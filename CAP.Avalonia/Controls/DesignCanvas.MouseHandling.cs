@@ -89,7 +89,17 @@ public partial class DesignCanvas
         _interactionState.DraggingComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
         if (_interactionState.DraggingComponent != null)
         {
-            HandleComponentSelection(e, canvasPoint, vm, mainVm);
+            // Check for double-click
+            bool isDoubleClick = CheckForDoubleClick(e, canvasPoint, _interactionState.DraggingComponent);
+            if (isDoubleClick)
+            {
+                HandleDoubleClick(_interactionState.DraggingComponent, vm);
+                _interactionState.DraggingComponent = null;
+            }
+            else
+            {
+                HandleComponentSelection(e, canvasPoint, vm, mainVm);
+            }
         }
         else
         {
@@ -97,8 +107,50 @@ public partial class DesignCanvas
         }
     }
 
+    /// <summary>
+    /// Checks if the current click is a double-click on the same component.
+    /// </summary>
+    private bool CheckForDoubleClick(PointerPressedEventArgs e, Point canvasPoint, ComponentViewModel? component)
+    {
+        var now = DateTime.UtcNow;
+        var timeSinceLastClick = (now - _interactionState.LastClickTime).TotalMilliseconds;
+        var distanceFromLastClick = Math.Sqrt(
+            Math.Pow(canvasPoint.X - _interactionState.LastClickPosition.X, 2) +
+            Math.Pow(canvasPoint.Y - _interactionState.LastClickPosition.Y, 2));
+
+        bool isDoubleClick = timeSinceLastClick < CanvasInteractionState.DoubleClickTimeMs &&
+                             distanceFromLastClick < CanvasInteractionState.DoubleClickDistanceThreshold &&
+                             _interactionState.LastClickedComponent == component;
+
+        // Update last click state
+        _interactionState.LastClickTime = now;
+        _interactionState.LastClickPosition = canvasPoint;
+        _interactionState.LastClickedComponent = component;
+
+        return isDoubleClick;
+    }
+
+    /// <summary>
+    /// Handles double-click on a component (enters group edit mode if component belongs to a group).
+    /// </summary>
+    private void HandleDoubleClick(ComponentViewModel component, DesignCanvasViewModel vm)
+    {
+        if (component?.Component.ParentGroupInstanceId != null)
+        {
+            vm.EnterGroupEditModeForComponent(component);
+            InvalidateVisual();
+        }
+    }
+
     private void HandleComponentSelection(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
     {
+        // Check if component can be selected in current edit context
+        if (!vm.CanSelectComponent(_interactionState.DraggingComponent!))
+        {
+            _interactionState.DraggingComponent = null;
+            return;
+        }
+
         bool isCtrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         bool isAltPressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
 

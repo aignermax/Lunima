@@ -18,24 +18,50 @@ public partial class DesignCanvas
     {
         var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
 
+        // Check if component should be dimmed (outside current edit context)
+        bool shouldDim = ShouldDimComponent(comp);
+        double opacity = shouldDim ? 0.3 : 1.0;
+
         var fillBrush = comp.IsSelected
-            ? new SolidColorBrush(Color.FromRgb(60, 80, 120))
-            : new SolidColorBrush(Color.FromRgb(40, 50, 70));
+            ? new SolidColorBrush(Color.FromArgb((byte)(opacity * 255), 60, 80, 120))
+            : new SolidColorBrush(Color.FromArgb((byte)(opacity * 255), 40, 50, 70));
         context.FillRectangle(fillBrush, rect);
 
-        var borderPen = comp.IsSelected
-            ? new Pen(Brushes.Cyan, 2)
-            : new Pen(Brushes.Gray, 1);
+        var borderColor = comp.IsSelected ? Colors.Cyan : Colors.Gray;
+        var borderPen = new Pen(
+            new SolidColorBrush(Color.FromArgb((byte)(opacity * 255), borderColor.R, borderColor.G, borderColor.B)),
+            comp.IsSelected ? 2 : 1);
         context.DrawRectangle(borderPen, rect);
 
-        DrawComponentPins(context, comp);
-        DrawComponentName(context, comp);
-
-        // Draw lock icon for locked components
-        if (comp.IsLocked)
+        // Draw pins and name with same opacity
+        using (context.PushOpacity(opacity))
         {
-            DrawLockIcon(context, comp);
+            DrawComponentPins(context, comp);
+            DrawComponentName(context, comp);
+
+            // Draw lock icon for locked components
+            if (comp.IsLocked)
+            {
+                DrawLockIcon(context, comp);
+            }
         }
+    }
+
+    /// <summary>
+    /// Determines if a component should be dimmed based on the current edit context.
+    /// </summary>
+    private bool ShouldDimComponent(ComponentViewModel comp)
+    {
+        var vm = ViewModel;
+        if (vm == null || !vm.IsInGroupEditMode)
+            return false;
+
+        // Dim components that don't belong to the currently edited group
+        var currentEditInstanceId = vm.CurrentEditGroupInstance?.InstanceId;
+        if (currentEditInstanceId == null)
+            return false;
+
+        return comp.Component.ParentGroupInstanceId != currentEditInstanceId;
     }
 
     /// <summary>
