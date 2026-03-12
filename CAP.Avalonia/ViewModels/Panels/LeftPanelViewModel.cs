@@ -15,9 +15,15 @@ public partial class LeftPanelViewModel : ObservableObject
     /// </summary>
     public PdkManagerViewModel PdkManager { get; }
 
+    /// <summary>
+    /// Component group manager for saving and loading user-defined component groups.
+    /// </summary>
+    public ComponentGroupViewModel ComponentGroups { get; }
+
     public LeftPanelViewModel()
     {
         PdkManager = new PdkManagerViewModel();
+        ComponentGroups = new ComponentGroupViewModel();
     }
 
     /// <summary>

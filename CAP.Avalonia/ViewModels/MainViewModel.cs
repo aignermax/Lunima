@@ -146,6 +146,11 @@ public partial class MainViewModel : ObservableObject
 
         WireDesignValidation();
         LeftPanel.ConfigurePdkManager(FilterComponents);
+
+        // Wire up ComponentGroup callbacks
+        LeftPanel.ComponentGroups.OnCreateGroupFromSelection = CreateGroupFromSelection;
+        LeftPanel.ComponentGroups.OnPlaceGroup = PlaceComponentGroup;
+
         LoadComponentLibrary();
         RestorePdkFilterState();
     }
@@ -423,6 +428,103 @@ public partial class MainViewModel : ObservableObject
 
         CommandManager.ExecuteCommand(cmd);
         StatusText = $"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm";
+    }
+
+    private void CreateGroupFromSelection(string name, string category, string description)
+    {
+        var selectedComponents = Canvas.Components.Where(c => c.IsSelected).ToList();
+        if (selectedComponents.Count == 0)
+        {
+            StatusText = "No components selected - select components first";
+            return;
+        }
+
+        // Get the actual Component objects
+        var components = selectedComponents.Select(vm => vm.Component).ToList();
+
+        // Get connections between selected components
+        var componentSet = new HashSet<Component>(components);
+        var connections = Canvas.Connections
+            .Where(connVm =>
+                componentSet.Contains(connVm.Connection.StartPin.ParentComponent) &&
+                componentSet.Contains(connVm.Connection.EndPin.ParentComponent))
+            .Select(connVm => connVm.Connection)
+            .ToList();
+
+        // Create the group
+        var groupManager = new CAP_Core.Components.ComponentHelpers.ComponentGroupManager(
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ConnectAPicPro",
+                "component-groups.json"));
+
+        var group = groupManager.CreateGroupFromComponents(name, category, components, connections);
+        group.Description = description;
+
+        // Save via ViewModel (which will refresh the UI)
+        LeftPanel.ComponentGroups.SaveGroup(group);
+
+        StatusText = $"Created group '{name}' with {components.Count} components";
+    }
+
+    private void PlaceComponentGroup(CAP_Core.Components.ComponentHelpers.ComponentGroup group)
+    {
+        // Place at center of visible canvas area
+        double startX = 500; // TODO: Calculate from canvas viewport
+        double startY = 500;
+
+        // Instantiate all components in the group
+        var componentMap = new Dictionary<int, Component>();
+        foreach (var member in group.Components)
+        {
+            var template = ComponentLibrary.FirstOrDefault(t => t.Name == member.TemplateName);
+            if (template == null)
+            {
+                StatusText = $"Error: Template '{member.TemplateName}' not found in library";
+                continue;
+            }
+
+            double placeX = startX + member.RelativeX;
+            double placeY = startY + member.RelativeY;
+
+            var cmd = PlaceComponentCommand.TryCreate(Canvas, template, placeX, placeY);
+            if (cmd == null) continue;
+
+            CommandManager.ExecuteCommand(cmd);
+            var placedComponent = Canvas.Components.Last().Component;
+            placedComponent.Rotation90CounterClock = member.Rotation;
+
+            // Restore parameter values
+            var sliders = placedComponent.GetAllSliders();
+            for (int i = 0; i < sliders.Count && i < member.Parameters.Count; i++)
+            {
+                var key = $"Slider{i}";
+                if (member.Parameters.TryGetValue(key, out double value))
+                {
+                    sliders[i].Value = value;
+                }
+            }
+
+            componentMap[member.LocalId] = placedComponent;
+        }
+
+        // Recreate internal connections
+        foreach (var conn in group.Connections)
+        {
+            if (!componentMap.TryGetValue(conn.SourceComponentId, out var sourceComp) ||
+                !componentMap.TryGetValue(conn.TargetComponentId, out var targetComp))
+                continue;
+
+            var sourcePin = sourceComp.GetAllPins().FirstOrDefault(p => p.Name == conn.SourcePinName);
+            var targetPin = targetComp.GetAllPins().FirstOrDefault(p => p.Name == conn.TargetPinName);
+
+            if (sourcePin != null && targetPin != null)
+            {
+                Canvas.CreateWaveguideConnection(sourcePin, targetPin);
+            }
+        }
+
+        StatusText = $"Placed group '{group.Name}' ({group.Components.Count} components, {group.Connections.Count} connections)";
     }
 
     private void SelectAt(double x, double y)
