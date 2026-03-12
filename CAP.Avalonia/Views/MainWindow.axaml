@@ -281,6 +281,51 @@
                                 IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
 
+                    <!-- Waveguide Length Configuration (visible when connection is selected) -->
+                    <StackPanel IsVisible="{Binding SelectedWaveguideConnection, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                        <TextBlock Text="Waveguide Length:" Foreground="Magenta" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding WaveguideLength.ConnectionName}"
+                                   Foreground="White" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                        <TextBlock Text="Current Length:" Foreground="Gray" Margin="0,5,0,3"/>
+                        <TextBlock Foreground="White" Margin="0,0,0,5">
+                            <Run Text="{Binding WaveguideLength.CurrentLengthMicrometers, StringFormat={}{0:F2}}"/>
+                            <Run Text=" µm" Foreground="Gray"/>
+                        </TextBlock>
+
+                        <CheckBox Content="Enable Target Length"
+                                  IsChecked="{Binding WaveguideLength.IsTargetLengthEnabled}"
+                                  Foreground="White" Margin="0,5,0,8"/>
+
+                        <StackPanel IsVisible="{Binding WaveguideLength.IsTargetLengthEnabled}">
+                            <TextBlock Text="Target Length (µm):" Foreground="Gray" Margin="0,5,0,3"/>
+                            <NumericUpDown Value="{Binding WaveguideLength.TargetLengthMicrometers}"
+                                           Minimum="10" Maximum="10000"
+                                           Increment="10" Width="180" FormatString="F2" Margin="0,0,0,5"/>
+
+                            <TextBlock Text="Tolerance (µm):" Foreground="Gray" Margin="0,5,0,3"/>
+                            <NumericUpDown Value="{Binding WaveguideLength.ToleranceMicrometers}"
+                                           Minimum="0.1" Maximum="100"
+                                           Increment="0.5" Width="180" FormatString="F2" Margin="0,0,0,8"/>
+
+                            <Button Content="Set Target to Current"
+                                    Command="{Binding WaveguideLength.SetTargetToCurrentCommand}"
+                                    Width="160" Margin="0,5,0,5"
+                                    Background="#5d3d5d"/>
+
+                            <Button Content="Apply"
+                                    Command="{Binding WaveguideLength.ApplyTargetLengthCommand}"
+                                    Width="100" Margin="0,5,0,5"
+                                    Background="#3d5d3d"/>
+
+                            <TextBlock Text="{Binding WaveguideLength.LengthStatusText}"
+                                       Foreground="{Binding WaveguideLength.LengthStatusColor}"
+                                       FontSize="10" Margin="0,5,0,5"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+
                     <!-- Layout Compression Panel -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Layout Compression:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>

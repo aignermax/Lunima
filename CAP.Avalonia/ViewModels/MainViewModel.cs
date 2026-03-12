@@ -45,6 +45,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ComponentViewModel? _selectedComponent;
 
+    [ObservableProperty]
+    private WaveguideConnectionViewModel? _selectedWaveguideConnection;
+
     public ObservableCollection<ComponentTemplate> ComponentLibrary { get; } = new();
     public ObservableCollection<ComponentTemplate> FilteredComponentLibrary { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
@@ -101,6 +104,11 @@ public partial class MainViewModel : ObservableObject
     /// ViewModel for layout compression (minimize chip area while maintaining connectivity).
     /// </summary>
     public CompressLayoutViewModel CompressLayout { get; } = new();
+
+    /// <summary>
+    /// ViewModel for parameterized waveguide length configuration (phase matching).
+    /// </summary>
+    public WaveguideLengthViewModel WaveguideLength { get; } = new();
 
     public IFileDialogService? FileDialogService { get; set; }
 
@@ -303,6 +311,15 @@ public partial class MainViewModel : ObservableObject
         Sweep.ConfigureForComponent(value, Canvas);
     }
 
+    partial void OnSelectedWaveguideConnectionChanged(WaveguideConnectionViewModel? value)
+    {
+        WaveguideLength.SelectedConnection = value;
+        if (value != null)
+        {
+            WaveguideLength.UpdateLengthStatus();
+        }
+    }
+
     public void CanvasClicked(double canvasX, double canvasY)
     {
         switch (CurrentMode)
@@ -441,12 +458,27 @@ public partial class MainViewModel : ObservableObject
             component.IsSelected = true;
             SelectedComponent = component;
             Canvas.SelectedComponent = component;
+            SelectedWaveguideConnection = null;
             StatusText = $"Selected: {component.Name}";
         }
         else
         {
-            SelectedComponent = null;
-            Canvas.SelectedComponent = null;
+            // Check for connection at position
+            var connection = FindConnectionAt(x, y);
+            if (connection != null)
+            {
+                connection.IsSelected = true;
+                SelectedWaveguideConnection = connection;
+                SelectedComponent = null;
+                Canvas.SelectedComponent = null;
+                StatusText = $"Selected connection: {connection.PathLength:F1}µm, Loss: {connection.LossDb:F2}dB";
+            }
+            else
+            {
+                SelectedComponent = null;
+                Canvas.SelectedComponent = null;
+                SelectedWaveguideConnection = null;
+            }
         }
     }
 
@@ -1173,7 +1205,10 @@ public partial class MainViewModel : ObservableObject
                         ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
                         : null,
                     IsBlockedFallback = c.Connection.IsBlockedFallback ? true : null,
-                    IsLocked = c.Connection.IsLocked ? true : null
+                    IsLocked = c.Connection.IsLocked ? true : null,
+                    TargetLengthMicrometers = c.Connection.TargetLengthMicrometers,
+                    IsTargetLengthEnabled = c.Connection.IsTargetLengthEnabled ? true : null,
+                    LengthToleranceMicrometers = c.Connection.IsTargetLengthEnabled ? c.Connection.LengthToleranceMicrometers : null
                 }).ToList()
             };
 
@@ -1296,6 +1331,17 @@ public partial class MainViewModel : ObservableObject
                             {
                                 connVm.Connection.IsLocked = true;
                             }
+
+                            // Restore target length configuration
+                            if (connVm != null)
+                            {
+                                if (connData.TargetLengthMicrometers.HasValue)
+                                    connVm.Connection.TargetLengthMicrometers = connData.TargetLengthMicrometers.Value;
+                                if (connData.IsTargetLengthEnabled == true)
+                                    connVm.Connection.IsTargetLengthEnabled = true;
+                                if (connData.LengthToleranceMicrometers.HasValue)
+                                    connVm.Connection.LengthToleranceMicrometers = connData.LengthToleranceMicrometers.Value;
+                            }
                         }
                     }
                 }
@@ -1392,6 +1438,21 @@ public class ConnectionData
     /// Whether the connection is locked (cannot be deleted or modified) (null → false).
     /// </summary>
     public bool? IsLocked { get; set; }
+
+    /// <summary>
+    /// Target path length in micrometers for phase matching (null → no target).
+    /// </summary>
+    public double? TargetLengthMicrometers { get; set; }
+
+    /// <summary>
+    /// Whether target length constraint is enabled (null → false).
+    /// </summary>
+    public bool? IsTargetLengthEnabled { get; set; }
+
+    /// <summary>
+    /// Tolerance for target length matching in micrometers (null → use default).
+    /// </summary>
+    public double? LengthToleranceMicrometers { get; set; }
 }
 
 /// <summary>
