@@ -465,6 +465,42 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </StackPanel>
+
+                    <!-- Export Validation (E2E Tests) -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Export Validation:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <Button Content="Validate Export" Command="{Binding ExportValidation.RunValidationCommand}"
+                            CommandParameter="{Binding Canvas}"
+                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#3d5d5d" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="End-to-end validation: UI → Backend → Nazca code → Pin positions"
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ExportValidation.ValidationStatus}" Foreground="LightBlue" FontSize="10" Margin="0,5,0,3"
+                               IsVisible="{Binding ExportValidation.HasResults}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5"
+                                IsVisible="{Binding ExportValidation.HasResults}">
+                        <TextBlock Text="Passed: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding ExportValidation.PassedChecks}" Foreground="LightGreen"/>
+                        <TextBlock Text="/" Foreground="Gray"/>
+                        <TextBlock Text="{Binding ExportValidation.TotalChecks}" Foreground="White"/>
+                        <TextBlock Text="  Errors: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding ExportValidation.FailedChecks}" Foreground="Salmon"/>
+                        <TextBlock Text="  Warnings: " Foreground="Gray"/>
+                        <TextBlock Text="{Binding ExportValidation.WarningCount}" Foreground="Orange"/>
+                    </StackPanel>
+                    <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                                  IsVisible="{Binding ExportValidation.HasResults}">
+                        <ItemsControl ItemsSource="{Binding ExportValidation.Messages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,1">
+                                        <Run Text="{Binding Severity}" FontWeight="SemiBold"/>
+                                        <Run Text=": "/>
+                                        <Run Text="{Binding Message}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
