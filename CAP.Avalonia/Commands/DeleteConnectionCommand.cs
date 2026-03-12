@@ -1,4 +1,5 @@
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Connections;
 
 namespace CAP.Avalonia.Commands;
 
@@ -9,7 +10,7 @@ public class DeleteConnectionCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly WaveguideConnectionViewModel _connectionVm;
-    private readonly CAP_Core.Components.WaveguideConnection _connection;
+    private readonly WaveguideConnection _connection;
 
     public DeleteConnectionCommand(DesignCanvasViewModel canvas, WaveguideConnectionViewModel connectionVm)
     {

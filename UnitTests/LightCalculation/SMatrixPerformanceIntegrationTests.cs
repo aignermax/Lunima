@@ -1,4 +1,4 @@
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP_Core.LightCalculation;
 using Shouldly;
 

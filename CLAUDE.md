@@ -35,6 +35,12 @@ A complete vertical slice includes ALL of these layers:
 ```
 Connect-A-Pic-Core/          # Core simulation engine (no UI dependencies)
 ├── Components/              # Component models, pins, S-matrices, parametric
+│   ├── Core/                # Core component classes (Component, Pin, PhysicalPin, Part)
+│   ├── Connections/         # Waveguide connections and types
+│   ├── Parametric/          # Parametric components and formulas
+│   ├── FormulaReading/      # Formula parsing and evaluation
+│   ├── Creation/            # Component factory
+│   └── ComponentHelpers/    # Component utilities
 ├── Routing/                 # Waveguide routing, A* pathfinding
 ├── LightCalculation/        # S-Matrix propagation, power flow analysis
 ├── Analysis/                # Parameter sweep, sweep configuration
@@ -49,7 +55,14 @@ CAP-DataAccess/              # JSON persistence, PDK loading
 └── PDKs/                    # PDK JSON files (demo-pdk.json)
 
 CAP.Avalonia/                # Shared cross-platform UI
-├── ViewModels/              # MVVM ViewModels (MainViewModel, DesignCanvasViewModel, etc.)
+├── ViewModels/              # MVVM ViewModels
+│   ├── MainViewModel.cs     # Root ViewModel (keep at root)
+│   ├── Canvas/              # Canvas and layout (DesignCanvasViewModel, AlignmentGuideViewModel, GridSnapSettings)
+│   ├── Analysis/            # Analysis features (ParameterSweepViewModel)
+│   ├── Diagnostics/         # Diagnostics panels (DesignValidationViewModel, RoutingDiagnosticsViewModel, etc.)
+│   ├── Library/             # Component library (ComponentTemplates, PdkManagerViewModel, ElementLockViewModel)
+│   ├── Simulation/          # Simulation config (LaserConfig, WavelengthOption)
+│   └── Converters/          # Data converters (PathSegmentConverter)
 ├── Views/                   # AXAML views (MainWindow.axaml, MainView.axaml)
 ├── Commands/                # Undo/redo commands (IUndoableCommand, CommandManager)
 ├── Services/                # SimulationService, SimpleNazcaExporter, FileDialogService
@@ -84,7 +97,7 @@ public partial class MyFeatureViewModel : ObservableObject
 }
 ```
 
-Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
+Reference: `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs`
 
 ### Dependency Injection
 
@@ -196,12 +209,12 @@ dotnet test ./UnitTests/UnitTests.csproj --logger:trx
 | DI container setup | `CAP.Avalonia/App.axaml.cs` |
 | Main ViewModel | `CAP.Avalonia/ViewModels/MainViewModel.cs` |
 | Main Window layout | `CAP.Avalonia/Views/MainWindow.axaml` |
-| Canvas ViewModel | `CAP.Avalonia/ViewModels/DesignCanvasViewModel.cs` |
+| Canvas ViewModel | `CAP.Avalonia/ViewModels/Canvas/DesignCanvasViewModel.cs` |
 | Canvas control | `CAP.Avalonia/Controls/DesignCanvas.cs` |
 | Simulation service | `CAP.Avalonia/Services/SimulationService.cs` |
 | Command interfaces | `CAP.Avalonia/Commands/ICommand.cs` |
 | Command manager | `CAP.Avalonia/Commands/CommandManager.cs` |
-| Example ViewModel | `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` |
+| Example ViewModel | `CAP.Avalonia/ViewModels/Analysis/ParameterSweepViewModel.cs` |
 | Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
 | Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
 | Example integration tests | `UnitTests/Simulation/SimulationIntegrationTests.cs` |

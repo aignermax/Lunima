@@ -1,5 +1,6 @@
 using System.Numerics;
-using CAP_Core.Components;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.Connections;
 
 namespace CAP_Core.LightCalculation.PowerFlow;
 

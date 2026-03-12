@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using CAP_Core.Components.Core;
 
 namespace CAP_Core.Components.ComponentHelpers
 {

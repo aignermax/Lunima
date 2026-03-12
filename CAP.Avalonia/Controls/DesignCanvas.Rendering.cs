@@ -1,9 +1,10 @@
 using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.Selection;
-using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Components;
+using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 using CAP_Core.Routing.AStarPathfinder;
 

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 
 namespace CAP.Avalonia.Controls;
 

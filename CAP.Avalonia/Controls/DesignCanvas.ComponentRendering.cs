@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Routing;
+using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Controls;
 
@@ -140,7 +142,7 @@ public partial class DesignCanvas
         }
     }
 
-    private void DrawPinDirectionIndicator(DrawingContext context, CAP_Core.Components.PhysicalPin pin, double pinX, double pinY, bool isHighlighted)
+    private void DrawPinDirectionIndicator(DrawingContext context, PhysicalPin pin, double pinX, double pinY, bool isHighlighted)
     {
         var dirPen = new Pen(isHighlighted ? Brushes.Cyan : Brushes.White, isHighlighted ? 2 : 1);
         double angle = pin.GetAbsoluteAngle() * Math.PI / 180;

@@ -1,5 +1,6 @@
 using Avalonia.Input;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Canvas;
 
 namespace CAP.Avalonia.Controls;
 
