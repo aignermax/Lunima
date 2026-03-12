@@ -515,12 +515,12 @@ public partial class MainViewModel : ObservableObject
                 !componentMap.TryGetValue(conn.TargetComponentId, out var targetComp))
                 continue;
 
-            var sourcePin = sourceComp.GetAllPins().FirstOrDefault(p => p.Name == conn.SourcePinName);
-            var targetPin = targetComp.GetAllPins().FirstOrDefault(p => p.Name == conn.TargetPinName);
+            var sourcePin = sourceComp.GetPhysicalPin(conn.SourcePinName);
+            var targetPin = targetComp.GetPhysicalPin(conn.TargetPinName);
 
             if (sourcePin != null && targetPin != null)
             {
-                Canvas.CreateWaveguideConnection(sourcePin, targetPin);
+                Canvas.ConnectPins(sourcePin, targetPin);
             }
         }
 
