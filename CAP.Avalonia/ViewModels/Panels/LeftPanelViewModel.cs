@@ -47,6 +47,11 @@ public partial class LeftPanelViewModel : ObservableObject
     public ElementLockViewModel ElementLock { get; } = new();
 
     /// <summary>
+    /// Component group manager for saving and loading user-defined component groups.
+    /// </summary>
+    public ComponentGroupViewModel ComponentGroups { get; } = new();
+
+    /// <summary>
     /// Callback to trigger component filtering when search text or PDK filter changes.
     /// Set by MainViewModel after initialization.
     /// </summary>

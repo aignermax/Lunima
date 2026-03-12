@@ -145,6 +145,74 @@
                     </StackPanel>
                 </Expander>
 
+                <!-- Component Groups Panel -->
+                <Expander DockPanel.Dock="Top" Header="Component Groups" IsExpanded="False"
+                          Margin="5,0,5,5" Background="#2d2d2d">
+                    <StackPanel Margin="5">
+                        <TextBlock Text="{Binding LeftPanel.ComponentGroups.StatusText}"
+                                   FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+
+                        <!-- Create New Group Section -->
+                        <Border Background="#1e1e1e" Padding="5" Margin="0,0,0,5" CornerRadius="3">
+                            <StackPanel>
+                                <TextBlock Text="Create from Selection:" FontSize="10" Foreground="LightBlue" Margin="0,0,0,3"/>
+                                <TextBox Watermark="Group name..."
+                                         Text="{Binding LeftPanel.ComponentGroups.NewGroupName}"
+                                         FontSize="10" Margin="0,0,0,3"
+                                         Background="#2d2d2d" Foreground="White"/>
+                                <TextBox Watermark="Category (optional)..."
+                                         Text="{Binding LeftPanel.ComponentGroups.NewGroupCategory}"
+                                         FontSize="10" Margin="0,0,0,3"
+                                         Background="#2d2d2d" Foreground="White"/>
+                                <Button Content="Create Group"
+                                        Command="{Binding LeftPanel.ComponentGroups.CreateGroupCommand}"
+                                        FontSize="10" Height="24"
+                                        Background="#3d5d3d" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Saved Groups List -->
+                        <TextBlock Text="Saved Groups:" FontSize="10" Foreground="LightGray" Margin="0,5,0,3"/>
+                        <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding LeftPanel.ComponentGroups.AvailableGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vmLib:ComponentGroupInfo">
+                                        <Border Background="#1e1e1e" Padding="5" Margin="0,2" CornerRadius="3"
+                                                Cursor="Hand">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
+                                                               FontSize="9" Foreground="Gray"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- Action Buttons -->
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
+                            <Button Content="Place"
+                                    Command="{Binding LeftPanel.ComponentGroups.PlaceSelectedGroupCommand}"
+                                    Width="60" Height="24" Margin="2" FontSize="10"
+                                    Background="#3d5d3d"/>
+                            <Button Content="Delete"
+                                    Command="{Binding LeftPanel.ComponentGroups.DeleteSelectedGroupCommand}"
+                                    Width="60" Height="24" Margin="2" FontSize="10"
+                                    Background="#5d3d3d"/>
+                            <Button Content="Refresh"
+                                    Command="{Binding LeftPanel.ComponentGroups.RefreshGroupsCommand}"
+                                    Width="60" Height="24" Margin="2" FontSize="10"
+                                    Background="#3d3d3d"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
                 <ListBox ItemsSource="{Binding LeftPanel.FilteredComponentLibrary}"
                          SelectedItem="{Binding LeftPanel.SelectedTemplate}"
                          Background="Transparent" Foreground="White"

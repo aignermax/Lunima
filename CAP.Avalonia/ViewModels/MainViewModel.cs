@@ -118,6 +118,10 @@ public partial class MainViewModel : ObservableObject
         LeftPanel.PdkManager.OnFilterChanged = FilterComponents;
         LeftPanel.OnFilterChanged = FilterComponents;
 
+        // Wire up ComponentGroup callbacks
+        LeftPanel.ComponentGroups.OnCreateGroupFromSelection = CreateGroupFromSelection;
+        LeftPanel.ComponentGroups.OnPlaceGroup = PlaceComponentGroup;
+
         // Wire up selected component/connection sync between panels
         LeftPanel.PropertyChanged += (s, e) =>
         {
@@ -364,6 +368,113 @@ public partial class MainViewModel : ObservableObject
 
         CommandManager.ExecuteCommand(cmd);
         BottomPanel.StatusText = $"Placed {LeftPanel.SelectedTemplate.Name} at ({x:F0}, {y:F0})µm";
+    }
+
+    private void CreateGroupFromSelection(string name, string category, string description)
+    {
+        var selectedComponents = Canvas.Components.Where(c => c.IsSelected).ToList();
+        if (selectedComponents.Count == 0)
+        {
+            BottomPanel.StatusText = "No components selected - select components first";
+            return;
+        }
+
+        // Get the actual Component objects
+        var components = selectedComponents.Select(vm => vm.Component).ToList();
+
+        // Get connections between selected components
+        var componentSet = new HashSet<Component>(components);
+        var connections = Canvas.Connections
+            .Where(connVm =>
+                componentSet.Contains(connVm.Connection.StartPin.ParentComponent) &&
+                componentSet.Contains(connVm.Connection.EndPin.ParentComponent))
+            .Select(connVm => connVm.Connection)
+            .ToList();
+
+        // Create the group
+        var groupManager = new CAP_Core.Components.ComponentHelpers.ComponentGroupManager(
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ConnectAPicPro",
+                "component-groups.json"));
+
+        var group = groupManager.CreateGroupFromComponents(name, category, components, connections);
+        group.Description = description;
+
+        // Save via ViewModel (which will refresh the UI)
+        LeftPanel.ComponentGroups.SaveGroup(group);
+
+        BottomPanel.StatusText = $"Created group '{name}' with {components.Count} components";
+    }
+
+    private void PlaceComponentGroup(CAP_Core.Components.ComponentHelpers.ComponentGroup group)
+    {
+        // For now, place at a fixed offset - in a full implementation,
+        // this would enter a placement mode similar to PlaceComponent
+        double offsetX = 200;
+        double offsetY = 200;
+
+        var placedComponents = new List<ComponentViewModel>();
+        var componentMap = new Dictionary<int, Component>();
+
+        // Create and place all components in the group
+        foreach (var member in group.Components)
+        {
+            var template = LeftPanel.ComponentLibrary.FirstOrDefault(t => t.Name == member.TemplateName);
+            if (template == null)
+            {
+                BottomPanel.StatusText = $"Template '{member.TemplateName}' not found in library";
+                continue;
+            }
+
+            var component = ComponentTemplates.CreateFromTemplate(
+                template,
+                offsetX + member.RelativeX,
+                offsetY + member.RelativeY);
+
+            component.Rotation90CounterClock = member.Rotation;
+
+            // Apply parameter values
+            var sliders = component.GetAllSliders();
+            for (int i = 0; i < sliders.Count && i < member.Parameters.Count; i++)
+            {
+                if (member.Parameters.TryGetValue($"Slider{i}", out var value))
+                {
+                    sliders[i].Value = value;
+                }
+            }
+
+            var cmd = PlaceComponentCommand.TryCreate(Canvas, template, component.PhysicalX, component.PhysicalY);
+            if (cmd != null)
+            {
+                CommandManager.ExecuteCommand(cmd);
+                var vm = Canvas.Components.LastOrDefault();
+                if (vm != null)
+                {
+                    placedComponents.Add(vm);
+                    componentMap[member.LocalId] = vm.Component;
+                }
+            }
+        }
+
+        // Create connections between components
+        foreach (var connDef in group.Connections)
+        {
+            if (!componentMap.TryGetValue(connDef.SourceComponentId, out var sourceComp) ||
+                !componentMap.TryGetValue(connDef.TargetComponentId, out var targetComp))
+                continue;
+
+            var sourcePin = sourceComp.PhysicalPins.FirstOrDefault(p => p.Name == connDef.SourcePinName);
+            var targetPin = targetComp.PhysicalPins.FirstOrDefault(p => p.Name == connDef.TargetPinName);
+
+            if (sourcePin != null && targetPin != null)
+            {
+                var connCmd = new CreateConnectionCommand(Canvas, sourcePin, targetPin);
+                CommandManager.ExecuteCommand(connCmd);
+            }
+        }
+
+        BottomPanel.StatusText = $"Placed group '{group.Name}' with {placedComponents.Count} components";
     }
 
     private void SelectAt(double x, double y)
