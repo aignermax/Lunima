@@ -24,7 +24,7 @@ public class ZoomToFitTests
         vm.ZoomToFit(800, 600);
 
         vm.ZoomLevel.ShouldBe(originalZoom);
-        vm.StatusText.ShouldContain("No components");
+        vm.BottomPanel.StatusText.ShouldContain("No components");
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class ZoomToFitTests
         vm.ZoomToFit(800, 600);
 
         vm.ZoomLevel.ShouldBeGreaterThan(0);
-        vm.StatusText.ShouldContain("Zoom to fit");
+        vm.BottomPanel.StatusText.ShouldContain("Zoom to fit");
     }
 
     [Fact]

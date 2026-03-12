@@ -64,7 +64,7 @@ public partial class DesignCanvas
         {
             _interactionState.ConnectionDragStartPin = pin;
             _interactionState.ConnectionDragCurrentPoint = canvasPoint;
-            mainVm.StatusText = $"Drag to another pin to connect from {pin.Name}...";
+            mainVm.BottomPanel.StatusText = $"Drag to another pin to connect from {pin.Name}...";
             InvalidateVisual();
             e.Handled = true;
         }
@@ -189,10 +189,10 @@ public partial class DesignCanvas
     private void UpdatePlacementPreview(Point canvasPoint, DesignCanvasViewModel vm)
     {
         if (MainViewModel?.CurrentMode == InteractionMode.PlaceComponent &&
-            MainViewModel?.SelectedTemplate != null)
+            MainViewModel?.LeftPanel.SelectedTemplate != null)
         {
             _interactionState.ShowPlacementPreview = true;
-            _interactionState.PlacementPreviewTemplate = MainViewModel.SelectedTemplate;
+            _interactionState.PlacementPreviewTemplate = MainViewModel.LeftPanel.SelectedTemplate;
             var snapSettings = vm.GridSnap;
 
             var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
@@ -252,11 +252,11 @@ public partial class DesignCanvas
             if (targetPin != null && targetPin != _interactionState.ConnectionDragStartPin &&
                 targetPin.ParentComponent != _interactionState.ConnectionDragStartPin.ParentComponent)
             {
-                MainViewModel!.StatusText = $"Release to connect {_interactionState.ConnectionDragStartPin.Name} to {targetPin.Name}";
+                MainViewModel!.BottomPanel.StatusText = $"Release to connect {_interactionState.ConnectionDragStartPin.Name} to {targetPin.Name}";
             }
             else
             {
-                MainViewModel!.StatusText = $"Drag to another pin to connect from {_interactionState.ConnectionDragStartPin.Name}...";
+                MainViewModel!.BottomPanel.StatusText = $"Drag to another pin to connect from {_interactionState.ConnectionDragStartPin.Name}...";
             }
 
             InvalidateVisual();
@@ -408,7 +408,7 @@ public partial class DesignCanvas
             {
                 var cmd = new Commands.CreateConnectionCommand(ViewModel!, _interactionState.ConnectionDragStartPin, targetPin);
                 MainViewModel?.CommandManager.ExecuteCommand(cmd);
-                MainViewModel!.StatusText = $"Connected {_interactionState.ConnectionDragStartPin.Name} to {targetPin.Name}";
+                MainViewModel!.BottomPanel.StatusText = $"Connected {_interactionState.ConnectionDragStartPin.Name} to {targetPin.Name}";
             }
             else
             {
@@ -417,11 +417,11 @@ public partial class DesignCanvas
                 {
                     var deleteCmd = new Commands.DeleteConnectionCommand(ViewModel!, existingConnection);
                     MainViewModel?.CommandManager.ExecuteCommand(deleteCmd);
-                    MainViewModel!.StatusText = $"Deleted connection from {_interactionState.ConnectionDragStartPin.Name}";
+                    MainViewModel!.BottomPanel.StatusText = $"Deleted connection from {_interactionState.ConnectionDragStartPin.Name}";
                 }
                 else
                 {
-                    MainViewModel!.StatusText = "Connect mode: Drag from a pin to another pin to connect";
+                    MainViewModel!.BottomPanel.StatusText = "Connect mode: Drag from a pin to another pin to connect";
                 }
             }
 
@@ -548,7 +548,7 @@ public partial class DesignCanvas
             }
         }
         if (MainViewModel != null)
-            MainViewModel.StatusText = "Cannot place here - overlaps with another component";
+            MainViewModel.BottomPanel.StatusText = "Cannot place here - overlaps with another component";
     }
 
     private void CompleteBoxSelection(PointerReleasedEventArgs e)

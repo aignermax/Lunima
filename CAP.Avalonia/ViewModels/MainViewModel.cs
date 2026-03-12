@@ -9,11 +9,9 @@ using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using CAP.Avalonia.ViewModels.Canvas;
-using CAP.Avalonia.ViewModels.Analysis;
-using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Library;
-using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Converters;
+using CAP.Avalonia.ViewModels.Panels;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -31,85 +29,28 @@ public partial class MainViewModel : ObservableObject
     private DesignCanvasViewModel _canvas;
 
     [ObservableProperty]
-    private string _statusText = "Ready";
-
-    [ObservableProperty]
     private double _zoomLevel = 1.0;
 
     [ObservableProperty]
     private InteractionMode _currentMode = InteractionMode.Select;
 
-    [ObservableProperty]
-    private ComponentTemplate? _selectedTemplate;
-
-    [ObservableProperty]
-    private ComponentViewModel? _selectedComponent;
-
-    [ObservableProperty]
-    private WaveguideConnectionViewModel? _selectedWaveguideConnection;
-
-    public ObservableCollection<ComponentTemplate> ComponentLibrary { get; } = new();
-    public ObservableCollection<ComponentTemplate> FilteredComponentLibrary { get; } = new();
-    public ObservableCollection<string> Categories { get; } = new();
-
-    [ObservableProperty]
-    private string _searchText = "";
+    /// <summary>
+    /// Left panel ViewModel (component library, search, PDK management).
+    /// </summary>
+    public LeftPanelViewModel LeftPanel { get; } = new();
 
     /// <summary>
-    /// Available wavelength options for the laser configuration dropdown.
+    /// Right panel ViewModel (properties, sweep, diagnostics).
     /// </summary>
-    public IReadOnlyList<WavelengthOption> WavelengthOptions { get; } = WavelengthOption.All;
+    public RightPanelViewModel RightPanel { get; } = new();
+
+    /// <summary>
+    /// Bottom panel ViewModel (status text).
+    /// </summary>
+    public BottomPanelViewModel BottomPanel { get; } = new();
 
     public Commands.CommandManager CommandManager { get; }
     public SimulationService Simulation { get; }
-    public ParameterSweepViewModel Sweep { get; } = new();
-    public RoutingDiagnosticsViewModel RoutingDiagnostics { get; } = new();
-
-    /// <summary>
-    /// ViewModel for the Design Checks panel (validation and navigation of issues).
-    /// </summary>
-    public DesignValidationViewModel DesignValidation { get; } = new();
-
-    /// <summary>
-    /// ViewModel for PDK management (loading, filtering, enabling/disabling PDKs).
-    /// </summary>
-    public PdkManagerViewModel PdkManager { get; } = new();
-
-    /// <summary>
-    /// ViewModel for component dimension diagnostics (validation of GDS export dimensions).
-    /// </summary>
-    public ComponentDimensionDiagnosticsViewModel? DimensionDiagnostics { get; private set; }
-
-    /// <summary>
-    /// ViewModel for locking/unlocking components and connections.
-    /// </summary>
-    public ElementLockViewModel ElementLock { get; } = new();
-
-    /// <summary>
-    /// ViewModel for component dimension validation (checks bbox vs pin positions).
-    /// </summary>
-    public ComponentDimensionViewModel DimensionValidator { get; } = new();
-
-    /// <summary>
-    /// ViewModel for end-to-end Nazca export validation.
-    /// </summary>
-    public ExportValidationViewModel ExportValidation { get; } = new();
-
-    /// <summary>
-    /// ViewModel for S-Matrix performance diagnostics (sparsity analysis and memory usage).
-    /// </summary>
-    public SMatrixPerformanceViewModel SMatrixPerformance { get; } = new();
-
-    /// <summary>
-    /// ViewModel for layout compression (minimize chip area while maintaining connectivity).
-    /// </summary>
-    public CompressLayoutViewModel CompressLayout { get; } = new();
-
-    /// <summary>
-    /// ViewModel for parameterized waveguide length configuration (phase matching).
-    /// </summary>
-    public WaveguideLengthViewModel WaveguideLength { get; } = new();
-
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
@@ -127,6 +68,12 @@ public partial class MainViewModel : ObservableObject
     // For tracking group move operations
     private Dictionary<ComponentViewModel, (double x, double y)>? _groupMoveStartPositions;
 
+    /// <summary>
+    /// Callback to get the current canvas viewport size (width, height) in screen pixels.
+    /// Set by the View code-behind (MainWindow) after initialization.
+    /// </summary>
+    public Func<(double width, double height)>? GetViewportSize { get; set; }
+
     public MainViewModel(
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
@@ -141,24 +88,65 @@ public partial class MainViewModel : ObservableObject
         _preferencesService = preferencesService;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
-        RoutingDiagnostics.Configure(_canvas);
-        DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
-        ElementLock.Configure(_canvas, CommandManager);
-        DimensionValidator.Configure(_canvas);
-        CompressLayout.Configure(_canvas, CommandManager);
+
+        // Wire up panel ViewModels to canvas
+        RightPanel.RoutingDiagnostics.Configure(_canvas);
+        RightPanel.DimensionDiagnostics = new Diagnostics.ComponentDimensionDiagnosticsViewModel(_canvas);
+        LeftPanel.ElementLock.Configure(_canvas, CommandManager);
+        RightPanel.DimensionValidator.Configure(_canvas);
+        RightPanel.CompressLayout.Configure(_canvas, CommandManager);
+
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
             {
                 var routingText = _canvas.RoutingStatusText;
                 if (!string.IsNullOrEmpty(routingText))
-                    StatusText = routingText;
+                    BottomPanel.StatusText = routingText;
             }
         };
+
         WireDesignValidation();
-        PdkManager.OnFilterChanged = FilterComponents;
+        WirePanelCallbacks();
         LoadComponentLibrary();
         RestorePdkFilterState();
+    }
+
+    private void WirePanelCallbacks()
+    {
+        // Wire up PDK filter changed callback
+        LeftPanel.PdkManager.OnFilterChanged = FilterComponents;
+        LeftPanel.OnFilterChanged = FilterComponents;
+
+        // Wire up selected component/connection sync between panels
+        LeftPanel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(LeftPanel.SelectedTemplate) && LeftPanel.SelectedTemplate != null)
+            {
+                CurrentMode = InteractionMode.PlaceComponent;
+                BottomPanel.StatusText = $"Click on canvas to place: {LeftPanel.SelectedTemplate.Name}";
+            }
+        };
+
+        // Sync Sweep configuration with Canvas
+        RightPanel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(RightPanel.SelectedComponent))
+            {
+                RightPanel.Sweep.ConfigureForComponent(RightPanel.SelectedComponent, Canvas);
+                UpdateStatusForSelectedComponent();
+            }
+        };
+    }
+
+    private void UpdateStatusForSelectedComponent()
+    {
+        var comp = RightPanel.SelectedComponent;
+        if (comp?.IsLightSource == true)
+        {
+            var cfg = comp.LaserConfig!;
+            BottomPanel.StatusText = $"Selected: {comp.Name} [{cfg.WavelengthLabel}, Power={cfg.InputPower:F2}]";
+        }
     }
 
     private void LoadComponentLibrary()
@@ -167,26 +155,26 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var template in templates)
         {
-            ComponentLibrary.Add(template);
+            LeftPanel.ComponentLibrary.Add(template);
         }
 
         // Register built-in templates as a PDK
         if (templates.Count > 0)
         {
-            PdkManager.RegisterPdk("Built-in Components", null, true, templates.Count);
+            LeftPanel.PdkManager.RegisterPdk("Built-in Components", null, true, templates.Count);
         }
 
         // Auto-load bundled PDK files from PDKs directory
         LoadBundledPdks();
 
         // Build category list from all loaded templates
-        var categories = ComponentLibrary.Select(t => t.Category).Distinct().OrderBy(c => c);
+        var categories = LeftPanel.ComponentLibrary.Select(t => t.Category).Distinct().OrderBy(c => c);
         foreach (var category in categories)
         {
-            Categories.Add(category);
+            LeftPanel.Categories.Add(category);
         }
 
-        StatusText = $"Loaded {ComponentLibrary.Count} component types";
+        BottomPanel.StatusText = $"Loaded {LeftPanel.ComponentLibrary.Count} component types";
         FilterComponents();
     }
 
@@ -207,12 +195,12 @@ public partial class MainViewModel : ObservableObject
                 foreach (var pdkComp in pdk.Components)
                 {
                     var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
-                    ComponentLibrary.Add(template);
+                    LeftPanel.ComponentLibrary.Add(template);
                     componentCount++;
                 }
 
                 // Register bundled PDK with the manager
-                PdkManager.RegisterPdk(pdk.Name, pdkFile, true, componentCount);
+                LeftPanel.PdkManager.RegisterPdk(pdk.Name, pdkFile, true, componentCount);
             }
             catch
             {
@@ -221,26 +209,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    partial void OnSearchTextChanged(string value) => FilterComponents();
-
     private void FilterComponents()
     {
-        FilteredComponentLibrary.Clear();
-        var query = SearchText?.Trim() ?? "";
-        var enabledPdks = PdkManager.GetEnabledPdkNames();
-
-        foreach (var t in ComponentLibrary)
-        {
-            // Filter by PDK enabled state
-            if (!enabledPdks.Contains(t.PdkSource))
-                continue;
-
-            // Filter by search query
-            if (query.Length == 0 || MatchesSearch(t, query))
-                FilteredComponentLibrary.Add(t);
-        }
-
-        // Save filter state to preferences
+        var enabledPdks = LeftPanel.PdkManager.GetEnabledPdkNames();
+        LeftPanel.FilterComponents(enabledPdks);
         SavePdkFilterState();
     }
 
@@ -253,7 +225,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         // Apply saved filter state
-        foreach (var pdk in PdkManager.LoadedPdks)
+        foreach (var pdk in LeftPanel.PdkManager.LoadedPdks)
         {
             pdk.IsEnabled = enabledPdks.Contains(pdk.Name);
         }
@@ -263,25 +235,8 @@ public partial class MainViewModel : ObservableObject
 
     private void SavePdkFilterState()
     {
-        var enabledPdks = PdkManager.GetEnabledPdkNames();
+        var enabledPdks = LeftPanel.PdkManager.GetEnabledPdkNames();
         _preferencesService.SetEnabledPdks(enabledPdks);
-    }
-
-    private static bool MatchesSearch(ComponentTemplate t, string query)
-    {
-        return t.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || t.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || (t.NazcaFunctionName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
-            || t.PdkSource.Contains(query, StringComparison.OrdinalIgnoreCase);
-    }
-
-    partial void OnSelectedTemplateChanged(ComponentTemplate? value)
-    {
-        if (value != null)
-        {
-            CurrentMode = InteractionMode.PlaceComponent;
-            StatusText = $"Click on canvas to place: {value.Name}";
-        }
     }
 
     partial void OnCurrentModeChanged(InteractionMode value)
@@ -289,35 +244,15 @@ public partial class MainViewModel : ObservableObject
         _connectionStartPin = null; // Reset connection state when mode changes
         Canvas.ClearPinHighlight(); // Clear pin highlighting when mode changes
 
-        StatusText = value switch
+        BottomPanel.StatusText = value switch
         {
             InteractionMode.Select => "Select mode: Click to select, drag to move",
-            InteractionMode.PlaceComponent when SelectedTemplate != null => $"Place mode: Click to place {SelectedTemplate.Name}",
+            InteractionMode.PlaceComponent when LeftPanel.SelectedTemplate != null => $"Place mode: Click to place {LeftPanel.SelectedTemplate.Name}",
             InteractionMode.PlaceComponent => "Place mode: Select a component from the library",
             InteractionMode.Connect => "Connect mode: Move near a pin to start connection",
             InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
             _ => "Ready"
         };
-    }
-
-    partial void OnSelectedComponentChanged(ComponentViewModel? value)
-    {
-        if (value?.IsLightSource == true)
-        {
-            var cfg = value.LaserConfig!;
-            StatusText = $"Selected: {value.Name} [{cfg.WavelengthLabel}, Power={cfg.InputPower:F2}]";
-        }
-
-        Sweep.ConfigureForComponent(value, Canvas);
-    }
-
-    partial void OnSelectedWaveguideConnectionChanged(WaveguideConnectionViewModel? value)
-    {
-        WaveguideLength.SelectedConnection = value;
-        if (value != null)
-        {
-            WaveguideLength.UpdateLengthStatus();
-        }
     }
 
     public void CanvasClicked(double canvasX, double canvasY)
@@ -331,7 +266,6 @@ public partial class MainViewModel : ObservableObject
                 SelectAt(canvasX, canvasY);
                 break;
             case InteractionMode.Connect:
-                // Use the highlighted pin if available, otherwise find pin at position
                 var pin = Canvas.HighlightedPin?.Pin ?? Canvas.GetPinAt(canvasX, canvasY);
                 if (pin != null)
                 {
@@ -359,10 +293,8 @@ public partial class MainViewModel : ObservableObject
     {
         if (CurrentMode == InteractionMode.Connect)
         {
-            // Highlight pin near mouse position
             var nearPin = Canvas.UpdatePinHighlight(canvasX, canvasY, _connectionStartPin);
 
-            // Update status text
             if (nearPin != null)
             {
                 var pinName = nearPin.Name;
@@ -370,25 +302,24 @@ public partial class MainViewModel : ObservableObject
 
                 if (_connectionStartPin != null)
                 {
-                    StatusText = $"Click to connect to {pinName} on {compName}";
+                    BottomPanel.StatusText = $"Click to connect to {pinName} on {compName}";
                 }
                 else
                 {
-                    StatusText = $"Click {pinName} on {compName} to start connection";
+                    BottomPanel.StatusText = $"Click {pinName} on {compName} to start connection";
                 }
             }
             else if (_connectionStartPin != null)
             {
-                StatusText = $"Connection started from {_connectionStartPin.Name}. Move near a pin to connect.";
+                BottomPanel.StatusText = $"Connection started from {_connectionStartPin.Name}. Move near a pin to connect.";
             }
             else
             {
-                StatusText = "Connect mode: Move near a pin to start connection";
+                BottomPanel.StatusText = "Connect mode: Move near a pin to start connection";
             }
         }
         else
         {
-            // Clear any highlighting when not in Connect mode
             Canvas.ClearPinHighlight();
         }
     }
@@ -398,20 +329,19 @@ public partial class MainViewModel : ObservableObject
         if (_connectionStartPin == null)
         {
             _connectionStartPin = pin;
-            StatusText = $"Connection started from {pin.Name}. Click another pin to complete.";
+            BottomPanel.StatusText = $"Connection started from {pin.Name}. Click another pin to complete.";
         }
         else
         {
             if (_connectionStartPin != pin && _connectionStartPin.ParentComponent != pin.ParentComponent)
             {
-                // Create connection via command
                 var cmd = new CreateConnectionCommand(Canvas, _connectionStartPin, pin);
                 CommandManager.ExecuteCommand(cmd);
-                StatusText = $"Connected {_connectionStartPin.Name} to {pin.Name}";
+                BottomPanel.StatusText = $"Connected {_connectionStartPin.Name} to {pin.Name}";
             }
             else
             {
-                StatusText = "Cannot connect pin to itself or same component";
+                BottomPanel.StatusText = "Cannot connect pin to itself or same component";
             }
             _connectionStartPin = null;
         }
@@ -419,21 +349,21 @@ public partial class MainViewModel : ObservableObject
 
     private void PlaceComponentAt(double x, double y)
     {
-        if (SelectedTemplate == null) return;
+        if (LeftPanel.SelectedTemplate == null) return;
 
         // Center the component at the click position
-        double centeredX = x - SelectedTemplate.WidthMicrometers / 2;
-        double centeredY = y - SelectedTemplate.HeightMicrometers / 2;
+        double centeredX = x - LeftPanel.SelectedTemplate.WidthMicrometers / 2;
+        double centeredY = y - LeftPanel.SelectedTemplate.HeightMicrometers / 2;
 
-        var cmd = PlaceComponentCommand.TryCreate(Canvas, SelectedTemplate, centeredX, centeredY);
+        var cmd = PlaceComponentCommand.TryCreate(Canvas, LeftPanel.SelectedTemplate, centeredX, centeredY);
         if (cmd == null)
         {
-            StatusText = "No space available on chip for this component";
+            BottomPanel.StatusText = "No space available on chip for this component";
             return;
         }
 
         CommandManager.ExecuteCommand(cmd);
-        StatusText = $"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm";
+        BottomPanel.StatusText = $"Placed {LeftPanel.SelectedTemplate.Name} at ({x:F0}, {y:F0})µm";
     }
 
     private void SelectAt(double x, double y)
@@ -456,10 +386,10 @@ public partial class MainViewModel : ObservableObject
         if (component != null)
         {
             component.IsSelected = true;
-            SelectedComponent = component;
+            RightPanel.SelectedComponent = component;
             Canvas.SelectedComponent = component;
-            SelectedWaveguideConnection = null;
-            StatusText = $"Selected: {component.Name}";
+            RightPanel.SelectedWaveguideConnection = null;
+            BottomPanel.StatusText = $"Selected: {component.Name}";
         }
         else
         {
@@ -468,23 +398,22 @@ public partial class MainViewModel : ObservableObject
             if (connection != null)
             {
                 connection.IsSelected = true;
-                SelectedWaveguideConnection = connection;
-                SelectedComponent = null;
+                RightPanel.SelectedWaveguideConnection = connection;
+                RightPanel.SelectedComponent = null;
                 Canvas.SelectedComponent = null;
-                StatusText = $"Selected connection: {connection.PathLength:F1}µm, Loss: {connection.LossDb:F2}dB";
+                BottomPanel.StatusText = $"Selected connection: {connection.PathLength:F1}µm, Loss: {connection.LossDb:F2}dB";
             }
             else
             {
-                SelectedComponent = null;
+                RightPanel.SelectedComponent = null;
                 Canvas.SelectedComponent = null;
-                SelectedWaveguideConnection = null;
+                RightPanel.SelectedWaveguideConnection = null;
             }
         }
     }
 
     private void DeleteAt(double x, double y)
     {
-        // First check for component at position
         var component = Canvas.Components
             .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
             .LastOrDefault();
@@ -494,34 +423,27 @@ public partial class MainViewModel : ObservableObject
             var name = component.Name;
             var cmd = new DeleteComponentCommand(Canvas, component);
             CommandManager.ExecuteCommand(cmd);
-            SelectedComponent = null;
-            StatusText = $"Deleted: {name}";
+            RightPanel.SelectedComponent = null;
+            BottomPanel.StatusText = $"Deleted: {name}";
             return;
         }
 
-        // Check for connection at position
         var connection = FindConnectionAt(x, y);
         if (connection != null)
         {
             var cmd = new DeleteConnectionCommand(Canvas, connection);
             CommandManager.ExecuteCommand(cmd);
-            StatusText = "Deleted connection";
+            BottomPanel.StatusText = "Deleted connection";
         }
     }
 
     private WaveguideConnectionViewModel? FindConnectionAt(double x, double y)
     {
-        const double hitTolerance = 10.0; // micrometers
+        const double hitTolerance = 10.0;
 
         foreach (var conn in Canvas.Connections)
         {
-            // Simple line-to-point distance check
-            var startX = conn.StartX;
-            var startY = conn.StartY;
-            var endX = conn.EndX;
-            var endY = conn.EndY;
-
-            var distance = PointToLineDistance(x, y, startX, startY, endX, endY);
+            var distance = PointToLineDistance(x, y, conn.StartX, conn.StartY, conn.EndX, conn.EndY);
             if (distance <= hitTolerance)
             {
                 return conn;
@@ -538,11 +460,9 @@ public partial class MainViewModel : ObservableObject
 
         if (lengthSq < 0.0001)
         {
-            // Start and end are same point
             return Math.Sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
         }
 
-        // Project point onto line segment
         var t = Math.Max(0, Math.Min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
         var projX = x1 + t * dx;
         var projY = y1 + t * dy;
@@ -558,8 +478,6 @@ public partial class MainViewModel : ObservableObject
         _movingComponent = component;
         _moveStartX = component.X;
         _moveStartY = component.Y;
-
-        // Notify canvas to optimize during drag
         Canvas.BeginDragComponent(component);
     }
 
@@ -574,7 +492,6 @@ public partial class MainViewModel : ObservableObject
             _groupMoveStartPositions[comp] = (comp.X, comp.Y);
         }
 
-        // Enable drag mode to allow free movement during drag
         var firstComp = components.FirstOrDefault();
         if (firstComp != null)
         {
@@ -589,7 +506,6 @@ public partial class MainViewModel : ObservableObject
     {
         if (_movingComponent != null)
         {
-            // Notify canvas to do final route recalculation
             Canvas.EndDragComponent(_movingComponent);
 
             if (Math.Abs(_movingComponent.X - _moveStartX) > 0.001 ||
@@ -616,19 +532,16 @@ public partial class MainViewModel : ObservableObject
         if (_groupMoveStartPositions == null || !_groupMoveStartPositions.Any())
             return;
 
-        // Calculate the delta from the first component (all moved by same delta)
         var firstComp = _groupMoveStartPositions.Keys.FirstOrDefault();
         if (firstComp == null)
             return;
 
-        // End drag mode and recalculate routes
         Canvas.EndDragComponent(firstComp);
 
         var startPos = _groupMoveStartPositions[firstComp];
         double deltaX = firstComp.X - startPos.x;
         double deltaY = firstComp.Y - startPos.y;
 
-        // Only create command if there was actual movement
         if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
         {
             var cmd = new GroupMoveCommand(
@@ -646,7 +559,7 @@ public partial class MainViewModel : ObservableObject
     private void SetSelectMode()
     {
         CurrentMode = InteractionMode.Select;
-        SelectedTemplate = null;
+        LeftPanel.SelectedTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -654,16 +567,16 @@ public partial class MainViewModel : ObservableObject
     private void SetConnectMode()
     {
         CurrentMode = InteractionMode.Connect;
-        SelectedTemplate = null;
+        LeftPanel.SelectedTemplate = null;
         _connectionStartPin = null;
-        StatusText = "Connect mode: Click on a pin to start connection";
+        BottomPanel.StatusText = "Connect mode: Click on a pin to start connection";
     }
 
     [RelayCommand]
     private void SetDeleteMode()
     {
         CurrentMode = InteractionMode.Delete;
-        SelectedTemplate = null;
+        LeftPanel.SelectedTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -678,19 +591,19 @@ public partial class MainViewModel : ObservableObject
             var cmd = new GroupDeleteCommand(Canvas, selection.SelectedComponents.ToList());
             CommandManager.ExecuteCommand(cmd);
             selection.ClearSelection();
-            SelectedComponent = null;
-            StatusText = $"Deleted {count} components";
+            RightPanel.SelectedComponent = null;
+            BottomPanel.StatusText = $"Deleted {count} components";
             return;
         }
 
-        if (SelectedComponent != null)
+        if (RightPanel.SelectedComponent != null)
         {
-            var name = SelectedComponent.Name;
-            var cmd = new DeleteComponentCommand(Canvas, SelectedComponent);
+            var name = RightPanel.SelectedComponent.Name;
+            var cmd = new DeleteComponentCommand(Canvas, RightPanel.SelectedComponent);
             CommandManager.ExecuteCommand(cmd);
             selection.ClearSelection();
-            SelectedComponent = null;
-            StatusText = $"Deleted: {name}";
+            RightPanel.SelectedComponent = null;
+            BottomPanel.StatusText = $"Deleted: {name}";
         }
     }
 
@@ -704,14 +617,12 @@ public partial class MainViewModel : ObservableObject
             selection.SelectedComponents.ToList(),
             Canvas.Connections);
 
-        StatusText = $"Copied {selection.SelectedComponents.Count} component(s)";
+        BottomPanel.StatusText = $"Copied {selection.SelectedComponents.Count} component(s)";
     }
 
     /// <summary>
     /// Pastes components from clipboard at the specified position.
     /// </summary>
-    /// <param name="targetX">Target X position in canvas coordinates (optional)</param>
-    /// <param name="targetY">Target Y position in canvas coordinates (optional)</param>
     public void PasteSelected(double? targetX = null, double? targetY = null)
     {
         if (!Canvas.Clipboard.HasContent) return;
@@ -719,7 +630,6 @@ public partial class MainViewModel : ObservableObject
         var cmd = new PasteComponentsCommand(Canvas, Canvas.Clipboard, targetX, targetY);
         CommandManager.ExecuteCommand(cmd);
 
-        // Select the pasted components
         if (cmd.Result != null)
         {
             Canvas.Selection.ClearSelection();
@@ -730,13 +640,10 @@ public partial class MainViewModel : ObservableObject
             }
 
             _ = Canvas.RecalculateRoutesAsync();
-            StatusText = $"Pasted {cmd.Result.Components.Count} component(s)";
+            BottomPanel.StatusText = $"Pasted {cmd.Result.Components.Count} component(s)";
         }
     }
 
-    /// <summary>
-    /// RelayCommand wrapper for PasteSelected that uses default positioning.
-    /// </summary>
     [RelayCommand]
     private void PasteSelectedCommand()
     {
@@ -746,13 +653,13 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void RotateSelected()
     {
-        if (SelectedComponent != null)
+        if (RightPanel.SelectedComponent != null)
         {
-            var cmd = new RotateComponentCommand(Canvas, SelectedComponent);
+            var cmd = new RotateComponentCommand(Canvas, RightPanel.SelectedComponent);
             CommandManager.ExecuteCommand(cmd);
-            StatusText = cmd.WasApplied
-                ? $"Rotated: {SelectedComponent.Name}"
-                : $"Cannot rotate: {SelectedComponent.Name} would overlap another component";
+            BottomPanel.StatusText = cmd.WasApplied
+                ? $"Rotated: {RightPanel.SelectedComponent.Name}"
+                : $"Cannot rotate: {RightPanel.SelectedComponent.Name} would overlap another component";
         }
     }
 
@@ -761,12 +668,11 @@ public partial class MainViewModel : ObservableObject
     {
         if (_isSimulating) return;
 
-        // Toggle off if overlay is already showing (user pressed Simulate button)
         if (Canvas.ShowPowerFlow)
         {
             Canvas.ShowPowerFlow = false;
             Canvas.PowerFlowVisualizer.IsEnabled = false;
-            StatusText = "Simulation overlay OFF";
+            BottomPanel.StatusText = "Simulation overlay OFF";
             return;
         }
 
@@ -774,7 +680,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Runs simulation without toggle logic. Used by auto-resimulation (slider changes, circuit edits).
+    /// Runs simulation without toggle logic. Used by auto-resimulation.
     /// </summary>
     private async Task ExecuteSimulation()
     {
@@ -783,28 +689,27 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            StatusText = "Running simulation...";
+            BottomPanel.StatusText = "Running simulation...";
             var result = await Simulation.RunAsync(Canvas);
 
             if (result.Success)
             {
-                StatusText = $"Simulation complete: {result.LightSourceCount} source(s), " +
+                BottomPanel.StatusText = $"Simulation complete: {result.LightSourceCount} source(s), " +
                              $"{result.ConnectionCount} connections @ {result.WavelengthSummary}";
 
-                // Analyze S-Matrix performance after successful simulation
                 if (result.SystemMatrix != null)
                 {
-                    SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
+                    RightPanel.SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
                 }
             }
             else
             {
-                StatusText = result.ErrorMessage ?? "Simulation failed";
+                BottomPanel.StatusText = result.ErrorMessage ?? "Simulation failed";
             }
         }
         catch (Exception ex)
         {
-            StatusText = $"Simulation error: {ex.Message}";
+            BottomPanel.StatusText = $"Simulation error: {ex.Message}";
         }
         finally
         {
@@ -817,11 +722,11 @@ public partial class MainViewModel : ObservableObject
     {
         if (CommandManager.Undo())
         {
-            StatusText = $"Undone: {CommandManager.RedoDescription ?? "action"}";
+            BottomPanel.StatusText = $"Undone: {CommandManager.RedoDescription ?? "action"}";
         }
         else
         {
-            StatusText = "Nothing to undo";
+            BottomPanel.StatusText = "Nothing to undo";
         }
     }
 
@@ -830,11 +735,11 @@ public partial class MainViewModel : ObservableObject
     {
         if (CommandManager.Redo())
         {
-            StatusText = $"Redone: {CommandManager.UndoDescription ?? "action"}";
+            BottomPanel.StatusText = $"Redone: {CommandManager.UndoDescription ?? "action"}";
         }
         else
         {
-            StatusText = "Nothing to redo";
+            BottomPanel.StatusText = "Nothing to redo";
         }
     }
 
@@ -863,9 +768,6 @@ public partial class MainViewModel : ObservableObject
         Canvas.PanY = 0;
     }
 
-    /// <summary>
-    /// Runs design validation on all waveguide connections and populates the Design Checks panel.
-    /// </summary>
     [RelayCommand]
     private void RunDesignChecks()
     {
@@ -873,21 +775,18 @@ public partial class MainViewModel : ObservableObject
             .Select(c => c.Connection)
             .ToList();
 
-        DesignValidation.RunValidation(connections);
-        StatusText = DesignValidation.StatusText;
+        RightPanel.DesignValidation.RunValidation(connections);
+        BottomPanel.StatusText = RightPanel.DesignValidation.StatusText;
     }
 
-    /// <summary>
-    /// Wires up navigation and highlighting callbacks for the DesignValidation ViewModel.
-    /// </summary>
     private void WireDesignValidation()
     {
-        DesignValidation.NavigateToPosition = (x, y) =>
+        RightPanel.DesignValidation.NavigateToPosition = (x, y) =>
         {
             NavigateCanvasTo(x, y);
         };
 
-        DesignValidation.HighlightConnection = (connection) =>
+        RightPanel.DesignValidation.HighlightConnection = (connection) =>
         {
             foreach (var conn in Canvas.Connections)
             {
@@ -896,18 +795,6 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
-    /// <summary>
-    /// Callback to get the current canvas viewport size (width, height) in screen pixels.
-    /// Set by the View code-behind (MainWindow) after initialization.
-    /// </summary>
-    public Func<(double width, double height)>? GetViewportSize { get; set; }
-
-    /// <summary>
-    /// Pans the canvas so the given coordinate (in micrometers) is centered in view.
-    /// Preserves the current zoom level.
-    /// </summary>
-    /// <param name="centerX">X coordinate in micrometers to center on.</param>
-    /// <param name="centerY">Y coordinate in micrometers to center on.</param>
     private void NavigateCanvasTo(double centerX, double centerY)
     {
         var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);
@@ -918,10 +805,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Adjusts zoom and pan to fit all components in the viewport.
-    /// Applies 10% padding around the design. Does nothing on empty canvas.
     /// </summary>
-    /// <param name="viewportWidth">Viewport width in screen pixels.</param>
-    /// <param name="viewportHeight">Viewport height in screen pixels.</param>
     public void ZoomToFit(double viewportWidth, double viewportHeight)
     {
         if (viewportWidth <= 0 || viewportHeight <= 0) return;
@@ -929,7 +813,7 @@ public partial class MainViewModel : ObservableObject
         var bounds = BoundingBoxCalculator.Calculate(Canvas.Components);
         if (bounds == null)
         {
-            StatusText = "No components to fit";
+            BottomPanel.StatusText = "No components to fit";
             return;
         }
 
@@ -944,7 +828,7 @@ public partial class MainViewModel : ObservableObject
         ZoomLevel = zoom;
         Canvas.PanX = panX;
         Canvas.PanY = panY;
-        StatusText = $"Zoom to fit: {zoom:P0}";
+        BottomPanel.StatusText = $"Zoom to fit: {zoom:P0}";
     }
 
     [RelayCommand]
@@ -958,10 +842,9 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrEmpty(filePath)) return;
 
-        // Check for duplicate PDK
-        if (PdkManager.IsPdkLoaded(filePath))
+        if (LeftPanel.PdkManager.IsPdkLoaded(filePath))
         {
-            StatusText = "PDK already loaded from this file";
+            BottomPanel.StatusText = "PDK already loaded from this file";
             return;
         }
 
@@ -969,36 +852,31 @@ public partial class MainViewModel : ObservableObject
         {
             var pdk = _pdkLoader.LoadFromFile(filePath);
 
-            // Check if PDK name already exists
-            if (PdkManager.IsPdkNameLoaded(pdk.Name, null))
+            if (LeftPanel.PdkManager.IsPdkNameLoaded(pdk.Name, null))
             {
-                StatusText = $"PDK '{pdk.Name}' is already loaded";
+                BottomPanel.StatusText = $"PDK '{pdk.Name}' is already loaded";
                 return;
             }
 
-            // Convert PDK components to templates and add to library
             int addedCount = 0;
             foreach (var pdkComp in pdk.Components)
             {
                 var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName);
-                ComponentLibrary.Add(template);
-                if (!Categories.Contains(template.Category))
-                    Categories.Add(template.Category);
+                LeftPanel.ComponentLibrary.Add(template);
+                if (!LeftPanel.Categories.Contains(template.Category))
+                    LeftPanel.Categories.Add(template.Category);
                 addedCount++;
             }
 
-            // Register user-loaded PDK
-            PdkManager.RegisterPdk(pdk.Name, filePath, false, addedCount);
-
-            // Save user PDK path for auto-reload
+            LeftPanel.PdkManager.RegisterPdk(pdk.Name, filePath, false, addedCount);
             _preferencesService.AddUserPdkPath(filePath);
 
             FilterComponents();
-            StatusText = $"Loaded PDK '{pdk.Name}' with {addedCount} components";
+            BottomPanel.StatusText = $"Loaded PDK '{pdk.Name}' with {addedCount} components";
         }
         catch (Exception ex)
         {
-            StatusText = $"Failed to load PDK: {ex.Message}";
+            BottomPanel.StatusText = $"Failed to load PDK: {ex.Message}";
         }
     }
 
@@ -1011,9 +889,6 @@ public partial class MainViewModel : ObservableObject
             p.AngleDegrees
         )).ToArray();
 
-        // Calculate Nazca origin offset from first pin position
-        // Nazca places components at the first pin's position, so we need to offset
-        // from our top-left origin (0,0) to the first pin location
         var firstPin = pdkComp.Pins.FirstOrDefault();
         double nazcaOriginOffsetX = firstPin?.OffsetXMicrometers ?? 0;
         double nazcaOriginOffsetY = firstPin?.OffsetYMicrometers ?? 0;
@@ -1036,7 +911,6 @@ public partial class MainViewModel : ObservableObject
             NazcaOriginOffsetY = nazcaOriginOffsetY,
         };
 
-        // Use multi-wavelength factory when wavelengthData is present
         if (pdkComp.SMatrix?.WavelengthData is { Count: > 0 } wlData)
         {
             template.CreateWavelengthSMatrixMap = pins =>
@@ -1072,7 +946,6 @@ public partial class MainViewModel : ObservableObject
         if (sMatrixDraft?.Connections == null || sMatrixDraft.Connections.Count == 0)
             return sMatrix;
 
-        // Build pin lookup by name
         var pinByName = new Dictionary<string, Pin>(StringComparer.OrdinalIgnoreCase);
         foreach (var pin in pins)
         {
@@ -1090,9 +963,7 @@ public partial class MainViewModel : ObservableObject
             var phaseRad = conn.PhaseDegrees * Math.PI / 180.0;
             var value = System.Numerics.Complex.FromPolarCoordinates(conn.Magnitude, phaseRad);
 
-            // Forward: light enters fromPin, exits toPin
             transfers[(fromPin.IDInFlow, toPin.IDOutFlow)] = value;
-            // Reciprocal: light enters toPin, exits fromPin
             transfers[(toPin.IDInFlow, fromPin.IDOutFlow)] = value;
         }
 
@@ -1105,13 +976,13 @@ public partial class MainViewModel : ObservableObject
     {
         if (FileDialogService == null)
         {
-            StatusText = "Export not available";
+            BottomPanel.StatusText = "Export not available";
             return;
         }
 
         if (Canvas.Components.Count == 0)
         {
-            StatusText = "Nothing to export - add some components first";
+            BottomPanel.StatusText = "Nothing to export - add some components first";
             return;
         }
 
@@ -1126,11 +997,11 @@ public partial class MainViewModel : ObservableObject
             {
                 var nazcaCode = _nazcaExporter.Export(Canvas);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
-                StatusText = $"Exported to {Path.GetFileName(filePath)}";
+                BottomPanel.StatusText = $"Exported to {Path.GetFileName(filePath)}";
             }
             catch (Exception ex)
             {
-                StatusText = $"Export failed: {ex.Message}";
+                BottomPanel.StatusText = $"Export failed: {ex.Message}";
             }
         }
     }
@@ -1140,7 +1011,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (FileDialogService == null)
         {
-            StatusText = "Save not available";
+            BottomPanel.StatusText = "Save not available";
             return;
         }
 
@@ -1160,7 +1031,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (FileDialogService == null)
         {
-            StatusText = "Save not available";
+            BottomPanel.StatusText = "Save not available";
             return;
         }
 
@@ -1219,11 +1090,11 @@ public partial class MainViewModel : ObservableObject
             });
             await File.WriteAllTextAsync(filePath, json);
             _currentFilePath = filePath;
-            StatusText = $"Saved to {Path.GetFileName(filePath)}";
+            BottomPanel.StatusText = $"Saved to {Path.GetFileName(filePath)}";
         }
         catch (Exception ex)
         {
-            StatusText = $"Save failed: {ex.Message}";
+            BottomPanel.StatusText = $"Save failed: {ex.Message}";
         }
     }
 
@@ -1232,7 +1103,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (FileDialogService == null)
         {
-            StatusText = "Load not available";
+            BottomPanel.StatusText = "Load not available";
             return;
         }
 
@@ -1249,27 +1120,24 @@ public partial class MainViewModel : ObservableObject
 
                 if (designData == null)
                 {
-                    StatusText = "Invalid design file";
+                    BottomPanel.StatusText = "Invalid design file";
                     return;
                 }
 
-                // Clear current design
                 Canvas.Components.Clear();
                 Canvas.Connections.Clear();
                 Canvas.ConnectionManager.Clear();
                 CommandManager.ClearHistory();
 
-                // Load components — search both built-in and loaded PDK templates
                 foreach (var compData in designData.Components)
                 {
-                    var template = ComponentLibrary.FirstOrDefault(t =>
+                    var template = LeftPanel.ComponentLibrary.FirstOrDefault(t =>
                         t.Name.Equals(compData.TemplateName, StringComparison.OrdinalIgnoreCase));
 
                     if (template != null)
                     {
                         var component = ComponentTemplates.CreateFromTemplate(template, compData.X, compData.Y);
 
-                        // Apply rotation
                         for (int i = 0; i < compData.Rotation; i++)
                         {
                             ApplyRotationToComponent(component);
@@ -1277,11 +1145,9 @@ public partial class MainViewModel : ObservableObject
 
                         var vm = Canvas.AddComponent(component, template.Name);
 
-                        // Restore slider value
                         if (compData.SliderValue.HasValue && vm.HasSliders)
                             vm.SliderValue = compData.SliderValue.Value;
 
-                        // Restore laser configuration
                         if (vm.LaserConfig != null)
                         {
                             if (compData.LaserWavelengthNm.HasValue)
@@ -1290,13 +1156,11 @@ public partial class MainViewModel : ObservableObject
                                 vm.LaserConfig.InputPower = compData.LaserPower.Value;
                         }
 
-                        // Restore lock state
                         if (compData.IsLocked == true)
                             component.IsLocked = true;
                     }
                 }
 
-                // Load connections — use cached routes when available for fast loading
                 foreach (var connData in designData.Connections)
                 {
                     if (connData.StartComponentIndex >= 0 && connData.StartComponentIndex < Canvas.Components.Count &&
@@ -1326,13 +1190,11 @@ public partial class MainViewModel : ObservableObject
                                 connVm = Canvas.ConnectPins(startPin, endPin);
                             }
 
-                            // Restore lock state
                             if (connVm != null && connData.IsLocked == true)
                             {
                                 connVm.Connection.IsLocked = true;
                             }
 
-                            // Restore target length configuration
                             if (connVm != null)
                             {
                                 if (connData.TargetLengthMicrometers.HasValue)
@@ -1346,37 +1208,30 @@ public partial class MainViewModel : ObservableObject
                     }
                 }
 
-                // Notify all connections about their paths for UI rendering
                 foreach (var conn in Canvas.Connections)
                 {
                     conn.NotifyPathChanged();
                 }
 
                 _currentFilePath = filePath;
-                StatusText = $"Loaded {Path.GetFileName(filePath)} ({Canvas.Components.Count} components, {Canvas.Connections.Count} connections)";
+                BottomPanel.StatusText = $"Loaded {Path.GetFileName(filePath)} ({Canvas.Components.Count} components, {Canvas.Connections.Count} connections)";
                 CommandManager.NotifyStateChanged();
 
-                // Auto zoom-to-fit after loading
                 var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);
                 ZoomToFit(vpWidth, vpHeight);
             }
             catch (Exception ex)
             {
-                StatusText = $"Load failed: {ex.Message}";
+                BottomPanel.StatusText = $"Load failed: {ex.Message}";
             }
         }
     }
 
-    /// <summary>
-    /// Applies a 90° counter-clockwise rotation to a component (same logic as RotateComponentCommand).
-    /// Pin angles are stored relative to the component - GetAbsoluteAngle() adds RotationDegrees.
-    /// </summary>
     private static void ApplyRotationToComponent(Component comp)
     {
         var width = comp.WidthMicrometers;
         var height = comp.HeightMicrometers;
 
-        // Rotate pin offsets around component center
         foreach (var pin in comp.PhysicalPins)
         {
             var cx = width / 2;
@@ -1387,13 +1242,11 @@ public partial class MainViewModel : ObservableObject
             var newY = x;
             pin.OffsetXMicrometers = newX + cy;
             pin.OffsetYMicrometers = newY + cx;
-            // NOTE: Pin angles stay relative to component.
-            // GetAbsoluteAngle() adds component.RotationDegrees.
         }
 
         comp.WidthMicrometers = height;
         comp.HeightMicrometers = width;
-        comp.RotateBy90CounterClockwise(); // This updates RotationDegrees
+        comp.RotateBy90CounterClockwise();
     }
 }
 
@@ -1410,7 +1263,7 @@ public class ComponentData
     public double X { get; set; }
     public double Y { get; set; }
     public string Identifier { get; set; } = "";
-    public int Rotation { get; set; } // 0, 1, 2, 3 for R0, R90, R180, R270
+    public int Rotation { get; set; }
     public double? SliderValue { get; set; }
     public int? LaserWavelengthNm { get; set; }
     public double? LaserPower { get; set; }
@@ -1423,56 +1276,23 @@ public class ConnectionData
     public string StartPinName { get; set; } = "";
     public int EndComponentIndex { get; set; }
     public string EndPinName { get; set; } = "";
-
-    /// <summary>
-    /// Cached route segments for fast loading (null in old files → fall back to routing).
-    /// </summary>
     public List<PathSegmentData>? CachedSegments { get; set; }
-
-    /// <summary>
-    /// Whether the cached route is a blocked fallback path (null → false).
-    /// </summary>
     public bool? IsBlockedFallback { get; set; }
-
-    /// <summary>
-    /// Whether the connection is locked (cannot be deleted or modified) (null → false).
-    /// </summary>
     public bool? IsLocked { get; set; }
-
-    /// <summary>
-    /// Target path length in micrometers for phase matching (null → no target).
-    /// </summary>
     public double? TargetLengthMicrometers { get; set; }
-
-    /// <summary>
-    /// Whether target length constraint is enabled (null → false).
-    /// </summary>
     public bool? IsTargetLengthEnabled { get; set; }
-
-    /// <summary>
-    /// Tolerance for target length matching in micrometers (null → use default).
-    /// </summary>
     public double? LengthToleranceMicrometers { get; set; }
 }
 
-/// <summary>
-/// DTO for serializing waveguide path segments (straight lines and circular arcs).
-/// </summary>
 public class PathSegmentData
 {
-    /// <summary>
-    /// Segment type discriminator: "Straight" or "Bend".
-    /// </summary>
     public string Type { get; set; } = "";
-
     public double StartX { get; set; }
     public double StartY { get; set; }
     public double EndX { get; set; }
     public double EndY { get; set; }
     public double StartAngleDegrees { get; set; }
     public double EndAngleDegrees { get; set; }
-
-    // Bend-specific fields (null for Straight segments)
     public double? CenterX { get; set; }
     public double? CenterY { get; set; }
     public double? RadiusMicrometers { get; set; }

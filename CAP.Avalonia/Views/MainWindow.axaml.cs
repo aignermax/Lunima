@@ -18,14 +18,14 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
             {
                 vm.FileDialogService = new FileDialogService(this);
-                vm.Sweep.FileDialogService = vm.FileDialogService;
-                vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.GetViewportSize = () => (
                     DesignCanvasControl.Bounds.Width,
                     DesignCanvasControl.Bounds.Height);
 
                 // Wire up clipboard for RoutingDiagnostics
-                vm.RoutingDiagnostics.CopyToClipboard = async (text) =>
+                vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
@@ -35,7 +35,7 @@ public partial class MainWindow : Window
                 };
 
                 // Wire up clipboard for DimensionValidator
-                vm.DimensionValidator.CopyToClipboard = async (text) =>
+                vm.RightPanel.DimensionValidator.CopyToClipboard = async (text) =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
@@ -120,7 +120,7 @@ public partial class MainWindow : Window
                     else
                     {
                         canvas.GridSnap.Toggle();
-                        mainVm.StatusText = canvas.GridSnap.IsEnabled
+                        mainVm.BottomPanel.StatusText = canvas.GridSnap.IsEnabled
                             ? $"Grid snap ON ({canvas.GridSnap.GridSizeMicrometers}µm)"
                             : "Grid snap OFF";
                     }
@@ -143,13 +143,13 @@ public partial class MainWindow : Window
                             canvasVm.ShowPowerFlow = true;
                             canvasVm.PowerFlowVisualizer.IsEnabled = true;
                         }
-                        mainVm.StatusText = "Power flow overlay: ON (auto-updates on changes)";
+                        mainVm.BottomPanel.StatusText = "Power flow overlay: ON (auto-updates on changes)";
                     }
                     else
                     {
                         canvasVm.ShowPowerFlow = false;
                         canvasVm.PowerFlowVisualizer.IsEnabled = false;
-                        mainVm.StatusText = "Power flow overlay: OFF";
+                        mainVm.BottomPanel.StatusText = "Power flow overlay: OFF";
                     }
                 }
                 break;

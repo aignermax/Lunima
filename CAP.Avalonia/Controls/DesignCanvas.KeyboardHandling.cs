@@ -94,7 +94,7 @@ public partial class DesignCanvas
                 if (ctrlPressed)
                 {
                     // Ctrl+L toggles lock state of selected components
-                    mainVm?.ElementLock.ToggleSelectedComponentsCommand.Execute(null);
+                    mainVm?.LeftPanel.ElementLock.ToggleSelectedComponentsCommand.Execute(null);
                     e.Handled = true;
                 }
                 else
@@ -138,7 +138,7 @@ public partial class DesignCanvas
                 vm.GridSnap.Toggle();
                 if (MainViewModel != null)
                 {
-                    MainViewModel.StatusText = vm.GridSnap.IsEnabled
+                    MainViewModel.BottomPanel.StatusText = vm.GridSnap.IsEnabled
                         ? $"Grid snap ON ({vm.GridSnap.GridSizeMicrometers}µm)"
                         : "Grid snap OFF";
                 }
@@ -163,14 +163,14 @@ public partial class DesignCanvas
                     canvasVm.PowerFlowVisualizer.IsEnabled = true;
                 }
                 if (mainVm != null)
-                    mainVm.StatusText = "Power flow overlay: ON (auto-updates on changes)";
+                    mainVm.BottomPanel.StatusText = "Power flow overlay: ON (auto-updates on changes)";
             }
             else
             {
                 canvasVm.ShowPowerFlow = false;
                 canvasVm.PowerFlowVisualizer.IsEnabled = false;
                 if (mainVm != null)
-                    mainVm.StatusText = "Power flow overlay: OFF";
+                    mainVm.BottomPanel.StatusText = "Power flow overlay: OFF";
             }
         }
     }
