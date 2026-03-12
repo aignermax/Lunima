@@ -97,6 +97,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public SMatrixPerformanceViewModel SMatrixPerformance { get; } = new();
 
+    /// <summary>
+    /// ViewModel for layout compression (minimize chip area while maintaining connectivity).
+    /// </summary>
+    public CompressLayoutViewModel CompressLayout { get; } = new();
+
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
@@ -132,6 +137,7 @@ public partial class MainViewModel : ObservableObject
         DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
         ElementLock.Configure(_canvas, CommandManager);
         DimensionValidator.Configure(_canvas);
+        CompressLayout.Configure(_canvas);
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
