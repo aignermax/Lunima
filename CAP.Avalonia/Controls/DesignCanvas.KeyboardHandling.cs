@@ -90,7 +90,13 @@ public partial class DesignCanvas
                 }
                 break;
             case Key.L:
-                if (!ctrlPressed)
+                if (ctrlPressed)
+                {
+                    // Ctrl+L toggles lock state of selected components
+                    mainVm?.ElementLock.ToggleSelectedComponentsCommand.Execute(null);
+                    e.Handled = true;
+                }
+                else
                 {
                     mainVm?.RunSimulationCommand.Execute(null);
                     e.Handled = true;

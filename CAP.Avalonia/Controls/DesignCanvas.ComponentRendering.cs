@@ -28,6 +28,60 @@ public partial class DesignCanvas
 
         DrawComponentPins(context, comp);
         DrawComponentName(context, comp);
+
+        // Draw lock icon for locked components
+        if (comp.IsLocked)
+        {
+            DrawLockIcon(context, comp);
+        }
+    }
+
+    /// <summary>
+    /// Draws a lock icon overlay for locked components.
+    /// </summary>
+    private void DrawLockIcon(DrawingContext context, ComponentViewModel comp)
+    {
+        // Position lock icon in bottom-right corner of component
+        double iconSize = Math.Min(comp.Width, comp.Height) * 0.25;
+        iconSize = Math.Clamp(iconSize, 12, 24);
+
+        double iconX = comp.X + comp.Width - iconSize - 4;
+        double iconY = comp.Y + comp.Height - iconSize - 4;
+
+        // Draw semi-transparent background circle
+        var bgBrush = new SolidColorBrush(Color.FromArgb(180, 40, 40, 40));
+        context.DrawEllipse(bgBrush, null, new Point(iconX + iconSize / 2, iconY + iconSize / 2), iconSize / 2, iconSize / 2);
+
+        // Draw lock icon (simplified padlock shape)
+        var lockPen = new Pen(Brushes.Orange, 2);
+
+        // Lock body (rectangle)
+        double bodyWidth = iconSize * 0.5;
+        double bodyHeight = iconSize * 0.5;
+        double bodyX = iconX + (iconSize - bodyWidth) / 2;
+        double bodyY = iconY + iconSize * 0.5;
+        var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
+        context.DrawRectangle(Brushes.Orange, null, bodyRect);
+
+        // Lock shackle (arc)
+        double shackleWidth = iconSize * 0.4;
+        double shackleHeight = iconSize * 0.3;
+        double shackleCenterX = iconX + iconSize / 2;
+        double shackleTopY = bodyY;
+
+        // Draw shackle as a small arc (simplified)
+        var shackleGeometry = new StreamGeometry();
+        using (var ctx = shackleGeometry.Open())
+        {
+            ctx.BeginFigure(new Point(shackleCenterX - shackleWidth / 2, shackleTopY), false);
+            ctx.ArcTo(
+                new Point(shackleCenterX + shackleWidth / 2, shackleTopY),
+                new Size(shackleWidth / 2, shackleHeight),
+                0,
+                false,
+                SweepDirection.CounterClockwise);
+        }
+        context.DrawGeometry(null, lockPen, shackleGeometry);
     }
 
     private void DrawComponentPins(DrawingContext context, ComponentViewModel comp)
