@@ -45,6 +45,9 @@ public partial class DesignCanvas
                 DrawLockIcon(context, comp);
             }
         }
+
+        // Draw group hover overlay (outside opacity push so it's always visible)
+        DrawGroupHoverOverlay(context, comp);
     }
 
     /// <summary>

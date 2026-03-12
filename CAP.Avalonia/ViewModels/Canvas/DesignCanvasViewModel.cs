@@ -248,6 +248,22 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Gets all registered group instances on the canvas.
+    /// </summary>
+    public IEnumerable<ComponentGroupInstance> GetAllGroupInstances()
+    {
+        return _groupInstances.Values;
+    }
+
+    /// <summary>
+    /// Gets a group instance by its ID.
+    /// </summary>
+    public ComponentGroupInstance? GetGroupInstance(Guid instanceId)
+    {
+        return _groupInstances.GetValueOrDefault(instanceId);
+    }
+
+    /// <summary>
     /// Checks if a component can be edited in the current edit context.
     /// </summary>
     public bool CanEditComponent(ComponentViewModel component)

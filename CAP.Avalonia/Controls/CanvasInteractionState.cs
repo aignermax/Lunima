@@ -3,6 +3,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.ComponentHelpers;
 
 namespace CAP.Avalonia.Controls;
 
@@ -43,6 +44,9 @@ public class CanvasInteractionState
     // Power flow hover state
     public WaveguideConnectionViewModel? HoveredConnection { get; set; }
     public Point LastCanvasPosition { get; set; }
+
+    // Group hover state
+    public ComponentGroupInstance? HoveredGroupInstance { get; set; }
 
     // Double-click detection state
     public DateTime LastClickTime { get; set; }

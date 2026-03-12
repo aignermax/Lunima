@@ -64,6 +64,9 @@ public partial class DesignCanvas
                 DrawComponent(context, comp);
             }
 
+            // Draw component groups (dashed borders and labels)
+            DrawComponentGroups(context, vm);
+
             // Draw component placement preview
             if (_interactionState.ShowPlacementPreview && _interactionState.PlacementPreviewTemplate != null)
             {

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Input;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.ComponentHelpers;
 
 namespace CAP.Avalonia.Controls;
 
@@ -230,6 +231,7 @@ public partial class DesignCanvas
         UpdatePlacementPreview(canvasPoint, vm);
         UpdatePinHighlighting(canvasPoint, vm);
         UpdatePowerFlowHover(canvasPoint, vm);
+        UpdateGroupHover(canvasPoint, vm);
         UpdateConnectionDragPreview(canvasPoint, vm);
         UpdateComponentDrag(delta, canvasPoint, vm);
         UpdateBoxSelection(canvasPoint, vm);
@@ -292,6 +294,61 @@ public partial class DesignCanvas
         {
             _interactionState.HoveredConnection = null;
         }
+    }
+
+    private void UpdateGroupHover(Point canvasPoint, DesignCanvasViewModel vm)
+    {
+        // Don't update group hover when dragging or in other modes
+        if (_interactionState.DraggingComponent != null ||
+            _interactionState.IsPanning ||
+            vm.Selection.IsBoxSelecting ||
+            MainViewModel?.CurrentMode != InteractionMode.Select)
+        {
+            return;
+        }
+
+        var previousHover = _interactionState.HoveredGroupInstance;
+
+        // First, check if we're hovering over any component
+        var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
+
+        if (hoveredComponent != null && hoveredComponent.Component.ParentGroupInstanceId != null)
+        {
+            // Component belongs to a group - find and highlight the group
+            var groupInstance = vm.GetGroupInstance(hoveredComponent.Component.ParentGroupInstanceId.Value);
+            _interactionState.HoveredGroupInstance = groupInstance;
+        }
+        else
+        {
+            // Check if we're hovering directly over a group border/label
+            var hoveredGroup = HitTestGroupBorder(canvasPoint, vm);
+            _interactionState.HoveredGroupInstance = hoveredGroup;
+        }
+
+        // Repaint if hover state changed
+        if (_interactionState.HoveredGroupInstance != previousHover)
+        {
+            InvalidateVisual();
+        }
+    }
+
+    private ComponentGroupInstance? HitTestGroupBorder(
+        Point canvasPoint,
+        DesignCanvasViewModel vm)
+    {
+        foreach (var groupInstance in vm.GetAllGroupInstances())
+        {
+            if (ComponentGroupRenderer.HitTestGroupBounds(
+                groupInstance,
+                canvasPoint.X,
+                canvasPoint.Y,
+                10.0))
+            {
+                return groupInstance;
+            }
+        }
+
+        return null;
     }
 
     private void UpdateConnectionDragPreview(Point canvasPoint, DesignCanvasViewModel vm)
