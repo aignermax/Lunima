@@ -92,6 +92,7 @@ public partial class MainViewModel : ObservableObject
     public SMatrixPerformanceViewModel SMatrixPerformance => RightPanel.SMatrixPerformance;
     public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
     public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
+    public ComponentGroupViewModel ComponentGroup => RightPanel.ComponentGroup;
 
     public IFileDialogService? FileDialogService { get; set; }
 
