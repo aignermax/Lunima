@@ -173,27 +173,52 @@
 
                         <!-- Saved Groups List -->
                         <TextBlock Text="Saved Groups:" FontSize="10" Foreground="LightGray" Margin="0,5,0,3"/>
-                        <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding LeftPanel.ComponentGroups.AvailableGroups}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vmLib:ComponentGroupInfo">
-                                        <Border Background="#1e1e1e" Padding="5" Margin="0,2" CornerRadius="3"
-                                                Cursor="Hand">
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                                </StackPanel>
+                        <ListBox ItemsSource="{Binding LeftPanel.ComponentGroups.AvailableGroups}"
+                                 SelectedItem="{Binding LeftPanel.ComponentGroups.SelectedGroup}"
+                                 MaxHeight="150"
+                                 Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vmLib:ComponentGroupInfo">
+                                    <Border Padding="5" Margin="0,2" CornerRadius="3" Cursor="Hand">
+                                        <StackPanel Orientation="Horizontal">
+                                            <!-- Preview thumbnail -->
+                                            <Border Background="#2d2d2d" Width="60" Height="45" Margin="0,0,8,0"
+                                                    CornerRadius="3" BorderBrush="#3d3d3d" BorderThickness="1">
+                                                <controls:ComponentPreview
+                                                    WidthMicrometers="{Binding WidthMicrometers}"
+                                                    HeightMicrometers="{Binding HeightMicrometers}"
+                                                    PinDefinitions="{x:Null}"/>
+                                            </Border>
+                                            <!-- Group info -->
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                     <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray" Margin="0,0,8,0"/>
                                                     <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
                                                                FontSize="9" Foreground="Gray"/>
                                                 </StackPanel>
+                                                <TextBlock Text="{Binding WidthMicrometers, StringFormat={}{0:F0} × }" FontSize="8" Foreground="#666"
+                                                           Margin="0,1,0,0" Opacity="0.8">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding StringFormat="{}{0:F0} × {1:F0} µm">
+                                                            <Binding Path="WidthMicrometers"/>
+                                                            <Binding Path="HeightMicrometers"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
                                             </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ItemContainerTheme>
+                                <ControlTheme TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                    <Setter Property="Background" Value="#1e1e1e"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                </ControlTheme>
+                            </ListBox.ItemContainerTheme>
+                        </ListBox>
 
                         <!-- Action Buttons -->
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
