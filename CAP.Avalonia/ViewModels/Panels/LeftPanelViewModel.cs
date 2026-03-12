@@ -52,6 +52,11 @@ public partial class LeftPanelViewModel : ObservableObject
     public ComponentGroupViewModel ComponentGroups { get; } = new();
 
     /// <summary>
+    /// Hierarchy panel showing component tree structure.
+    /// </summary>
+    public HierarchyPanelViewModel HierarchyPanel { get; } = new();
+
+    /// <summary>
     /// Callback to trigger component filtering when search text or PDK filter changes.
     /// Set by MainViewModel after initialization.
     /// </summary>

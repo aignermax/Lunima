@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Panels"
+             x:Class="CAP.Avalonia.Views.HierarchyPanel"
+             x:DataType="vm:HierarchyPanelViewModel"
+             Background="#252526">
+
+    <DockPanel>
+        <!-- Header -->
+        <StackPanel DockPanel.Dock="Top" Margin="10,10,10,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                <TextBlock Text="Hierarchy"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusText}"
+                           Foreground="Gray"
+                           FontSize="10"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                <Button Content="⊞"
+                        Command="{Binding ExpandAllCommand}"
+                        Width="30" Height="24"
+                        Margin="0,0,3,0"
+                        Background="#3d3d3d"
+                        ToolTip.Tip="Expand All"/>
+                <Button Content="⊟"
+                        Command="{Binding CollapseAllCommand}"
+                        Width="30" Height="24"
+                        Margin="3,0,0,0"
+                        Background="#3d3d3d"
+                        ToolTip.Tip="Collapse All"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Tree View -->
+        <TreeView ItemsSource="{Binding RootNodes}"
+                  SelectedItem="{Binding SelectedNode}"
+                  Background="Transparent"
+                  Margin="5,0,5,5">
+
+            <!-- Tree Item Template -->
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:HierarchyNodeViewModel">
+                    <Border Padding="3"
+                            CornerRadius="3">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- Expand/Collapse Button -->
+                            <Button Content="{Binding IconGlyph}"
+                                    Command="{Binding ToggleExpandedCommand}"
+                                    Width="24" Height="24"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    IsVisible="{Binding IsGroup}"
+                                    Margin="0,0,3,0"/>
+
+                            <!-- Icon for non-group items -->
+                            <TextBlock Text="{Binding IconGlyph}"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,5,0"
+                                       IsVisible="{Binding !IsGroup}"/>
+
+                            <!-- Display Name -->
+                            <TextBlock Text="{Binding DisplayName}"
+                                       Foreground="White"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,5,0"/>
+
+                            <!-- Focus Button -->
+                            <Button Content="🔍"
+                                    Command="{Binding FocusComponentCommand}"
+                                    Width="20" Height="20"
+                                    Padding="0"
+                                    FontSize="10"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    ToolTip.Tip="Zoom to component"
+                                    Opacity="0.6"
+                                    Margin="3,0,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+
+            <!-- Tree Item Container Style -->
+            <TreeView.ItemContainerTheme>
+                <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Padding" Value="2"/>
+                </ControlTheme>
+            </TreeView.ItemContainerTheme>
+        </TreeView>
+    </DockPanel>
+</UserControl>

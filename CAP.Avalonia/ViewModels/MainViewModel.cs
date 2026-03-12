@@ -95,6 +95,7 @@ public partial class MainViewModel : ObservableObject
         LeftPanel.ElementLock.Configure(_canvas, CommandManager);
         RightPanel.DimensionValidator.Configure(_canvas);
         RightPanel.CompressLayout.Configure(_canvas, CommandManager);
+        LeftPanel.HierarchyPanel.Configure(_canvas);
 
         _canvas.PropertyChanged += (s, e) =>
         {
@@ -121,6 +122,9 @@ public partial class MainViewModel : ObservableObject
         // Wire up ComponentGroup callbacks
         LeftPanel.ComponentGroups.OnCreateGroupFromSelection = CreateGroupFromSelection;
         LeftPanel.ComponentGroups.OnPlaceGroup = PlaceComponentGroup;
+
+        // Wire up HierarchyPanel focus callback
+        LeftPanel.HierarchyPanel.OnFocusRequested = NavigateCanvasTo;
 
         // Wire up selected component/connection sync between panels
         LeftPanel.PropertyChanged += (s, e) =>
