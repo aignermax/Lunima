@@ -324,15 +324,22 @@ public class WaveguideConnectionManager
             connection.RecalculateTransmission();
             progressCallback?.Invoke();
 
+            // Register ALL paths with valid geometry as obstacles, including blocked fallbacks.
+            // This ensures all routes (A* and Manhattan) are visible to subsequent routing.
             if (connection.IsPathValid && connection.RoutedPath != null)
             {
                 grid.AddWaveguideObstacle(
                     connection.Id,
                     connection.RoutedPath.Segments,
                     WaveguideWidthMicrometers);
+
+                // NOTE: Blocked fallbacks are NOT counted as failures in incremental routing.
+                // They have valid geometry and are registered as obstacles, but we'll try
+                // to improve them via full re-route ordering strategies later.
             }
             else
             {
+                // Only count connections with NO valid path as failures
                 failedCount++;
             }
         }
@@ -400,13 +407,23 @@ public class WaveguideConnectionManager
             connection.RecalculateTransmission();
             progressCallback?.Invoke();
 
-            // If routing succeeded, mark this waveguide as an obstacle
+            // Register ANY path with valid geometry as an obstacle, including blocked fallbacks.
+            // This ensures:
+            // 1. A* routes see Manhattan fallback paths as obstacles
+            // 2. Manhattan fallback paths see other Manhattan paths
+            // Paths without valid geometry (empty or disconnected) are not registered.
             if (connection.IsPathValid && connection.RoutedPath != null)
             {
                 router.PathfindingGrid.AddWaveguideObstacle(
                     connection.Id,
                     connection.RoutedPath.Segments,
                     WaveguideWidthMicrometers);
+
+                // Count blocked fallbacks as routing failures for ordering optimization
+                if (connection.IsBlockedFallback)
+                {
+                    failedCount++;
+                }
             }
             else
             {

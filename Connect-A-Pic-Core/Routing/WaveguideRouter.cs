@@ -128,6 +128,7 @@ public class WaveguideRouter
     /// <summary>
     /// Routes a waveguide between two pins.
     /// Always uses A* pathfinding. Falls back to Manhattan (marked as blocked) if A* fails.
+    /// Manhattan paths are checked for collisions with existing obstacles.
     /// </summary>
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin)
     {
@@ -148,15 +149,18 @@ public class WaveguideRouter
             }
         }
 
+        // A* failed - try Manhattan routing as fallback
         var path = new RoutedPath();
         // Use small lead-in/lead-out for smoother transitions (15% of bend radius)
         double leadLength = MinBendRadiusMicrometers * 0.15;
         var manhattan = new ManhattanRouter(MinBendRadiusMicrometers, leadOut: leadLength, leadIn: leadLength);
         manhattan.Route(startX, startY, startAngle, endX, endY, endInputAngle, path);
 
-        // Check if the Manhattan path is actually blocked or invalid
+        // Check if the Manhattan path collides with existing obstacles
+        // Manhattan routing doesn't use PathfindingGrid, so we check manually
         if (path.Segments.Count == 0 || !path.IsValid || IsPathBlocked(path.Segments))
         {
+            // Path is blocked - mark as faulty fallback
             path.IsBlockedFallback = true;
         }
 
