@@ -14,6 +14,7 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Converters;
+using CAP.Avalonia.ViewModels.Panels;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -62,53 +63,35 @@ public partial class MainViewModel : ObservableObject
 
     public Commands.CommandManager CommandManager { get; }
     public SimulationService Simulation { get; }
-    public ParameterSweepViewModel Sweep { get; } = new();
-    public RoutingDiagnosticsViewModel RoutingDiagnostics { get; } = new();
 
     /// <summary>
-    /// ViewModel for the Design Checks panel (validation and navigation of issues).
+    /// ViewModel for the left sidebar panel (component library, PDK management).
     /// </summary>
-    public DesignValidationViewModel DesignValidation { get; } = new();
+    public LeftPanelViewModel LeftPanel { get; }
 
     /// <summary>
-    /// ViewModel for PDK management (loading, filtering, enabling/disabling PDKs).
+    /// ViewModel for the right sidebar panel (analysis, diagnostics, validation).
     /// </summary>
-    public PdkManagerViewModel PdkManager { get; } = new();
+    public RightPanelViewModel RightPanel { get; }
 
     /// <summary>
-    /// ViewModel for component dimension diagnostics (validation of GDS export dimensions).
+    /// ViewModel for the bottom panel (waveguide length, element locking, status).
     /// </summary>
-    public ComponentDimensionDiagnosticsViewModel? DimensionDiagnostics { get; private set; }
+    public BottomPanelViewModel BottomPanel { get; }
 
-    /// <summary>
-    /// ViewModel for locking/unlocking components and connections.
-    /// </summary>
-    public ElementLockViewModel ElementLock { get; } = new();
-
-    /// <summary>
-    /// ViewModel for component dimension validation (checks bbox vs pin positions).
-    /// </summary>
-    public ComponentDimensionViewModel DimensionValidator { get; } = new();
-
-    /// <summary>
-    /// ViewModel for end-to-end Nazca export validation.
-    /// </summary>
-    public ExportValidationViewModel ExportValidation { get; } = new();
-
-    /// <summary>
-    /// ViewModel for S-Matrix performance diagnostics (sparsity analysis and memory usage).
-    /// </summary>
-    public SMatrixPerformanceViewModel SMatrixPerformance { get; } = new();
-
-    /// <summary>
-    /// ViewModel for layout compression (minimize chip area while maintaining connectivity).
-    /// </summary>
-    public CompressLayoutViewModel CompressLayout { get; } = new();
-
-    /// <summary>
-    /// ViewModel for parameterized waveguide length configuration (phase matching).
-    /// </summary>
-    public WaveguideLengthViewModel WaveguideLength { get; } = new();
+    // Backward-compatible properties - delegate to Panel ViewModels
+    // TODO: Update XAML bindings and remove these properties
+    public ParameterSweepViewModel Sweep => RightPanel.Sweep;
+    public RoutingDiagnosticsViewModel RoutingDiagnostics => RightPanel.RoutingDiagnostics;
+    public DesignValidationViewModel DesignValidation => RightPanel.DesignValidation;
+    public PdkManagerViewModel PdkManager => LeftPanel.PdkManager;
+    public ComponentDimensionDiagnosticsViewModel? DimensionDiagnostics => RightPanel.DimensionDiagnostics;
+    public ElementLockViewModel ElementLock => BottomPanel.ElementLock;
+    public ComponentDimensionViewModel DimensionValidator => RightPanel.DimensionValidator;
+    public ExportValidationViewModel ExportValidation => RightPanel.ExportValidation;
+    public SMatrixPerformanceViewModel SMatrixPerformance => RightPanel.SMatrixPerformance;
+    public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
+    public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
 
     public IFileDialogService? FileDialogService { get; set; }
 
@@ -141,22 +124,28 @@ public partial class MainViewModel : ObservableObject
         _preferencesService = preferencesService;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
-        RoutingDiagnostics.Configure(_canvas);
-        DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(_canvas);
-        ElementLock.Configure(_canvas, CommandManager);
-        DimensionValidator.Configure(_canvas);
-        CompressLayout.Configure(_canvas);
+
+        // Initialize Panel ViewModels
+        LeftPanel = new LeftPanelViewModel();
+        RightPanel = new RightPanelViewModel(_canvas);
+        BottomPanel = new BottomPanelViewModel(_canvas, CommandManager);
+
+        // Wire up canvas status updates to bottom panel
         _canvas.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(DesignCanvasViewModel.RoutingStatusText))
             {
                 var routingText = _canvas.RoutingStatusText;
                 if (!string.IsNullOrEmpty(routingText))
+                {
                     StatusText = routingText;
+                    BottomPanel.SetStatus(routingText);
+                }
             }
         };
+
         WireDesignValidation();
-        PdkManager.OnFilterChanged = FilterComponents;
+        LeftPanel.ConfigurePdkManager(FilterComponents);
         LoadComponentLibrary();
         RestorePdkFilterState();
     }
