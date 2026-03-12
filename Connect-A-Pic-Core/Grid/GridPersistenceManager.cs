@@ -1,5 +1,6 @@
 using CAP_Contracts;
 using CAP_Core.Components;
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Creation;
 using CAP_Core.Tiles;
@@ -14,6 +15,8 @@ namespace CAP_Core.Grid
 {
     public class GridPersistenceManager
     {
+        private List<ComponentGroup> _componentGroups = new();
+
         public GridPersistenceManager(GridManager myGrid, IDataAccessor dataAccessor)
         {
             MyGrid = myGrid;
@@ -22,6 +25,41 @@ namespace CAP_Core.Grid
 
         public GridManager MyGrid { get; }
         public IDataAccessor DataAccessor { get; }
+
+        /// <summary>
+        /// Gets or sets the component groups associated with this design.
+        /// </summary>
+        public IReadOnlyList<ComponentGroup> ComponentGroups => _componentGroups.AsReadOnly();
+
+        /// <summary>
+        /// Adds a component group to be saved with the design.
+        /// </summary>
+        public void AddComponentGroup(ComponentGroup group)
+        {
+            if (group == null)
+                throw new ArgumentNullException(nameof(group));
+
+            if (!_componentGroups.Any(g => g.Id == group.Id))
+            {
+                _componentGroups.Add(group);
+            }
+        }
+
+        /// <summary>
+        /// Removes a component group from the design.
+        /// </summary>
+        public void RemoveComponentGroup(Guid groupId)
+        {
+            _componentGroups.RemoveAll(g => g.Id == groupId);
+        }
+
+        /// <summary>
+        /// Clears all component groups from the design.
+        /// </summary>
+        public void ClearComponentGroups()
+        {
+            _componentGroups.Clear();
+        }
 
         public async Task<bool> SaveAsync(string path)
         {
@@ -44,21 +82,76 @@ namespace CAP_Core.Grid
                     }) ;
                 }
             }
-            var json = JsonSerializer.Serialize(gridData);
+
+            // Create design file data structure with components and groups
+            var designData = new DesignFileData
+            {
+                Components = gridData,
+                ComponentGroups = _componentGroups
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            var json = JsonSerializer.Serialize(designData, options);
             return await DataAccessor.Write(path, json);
         }
         public async Task LoadAsync(string path, IComponentFactory componentFactory)
         {
             var json = DataAccessor.ReadAsText(path);
-            var gridData = JsonSerializer.Deserialize<List<GridComponentData>>(json);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+
+            // Try to load as new format with component groups
+            DesignFileData? designData = null;
+            List<GridComponentData>? gridData = null;
+
+            try
+            {
+                designData = JsonSerializer.Deserialize<DesignFileData>(json, options);
+            }
+            catch
+            {
+                // Fall back to old format (just component list)
+                designData = null;
+            }
+
+            if (designData?.Components != null)
+            {
+                // New format
+                gridData = designData.Components;
+                _componentGroups = designData.ComponentGroups ?? new List<ComponentGroup>();
+            }
+            else
+            {
+                // Old format - just a component array
+                gridData = JsonSerializer.Deserialize<List<GridComponentData>>(json);
+                _componentGroups.Clear();
+            }
+
             MyGrid.ComponentMover.DeleteAllComponents();
 
-            foreach (var data in gridData)
+            if (gridData != null)
             {
-                var component = componentFactory.CreateComponentByIdentifier(data.Identifier);
-                component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
-                LoadSliders(data, component);
-                MyGrid.ComponentMover.PlaceComponent(data.X, data.Y, component);
+                foreach (var data in gridData)
+                {
+                    if (string.IsNullOrEmpty(data.Identifier))
+                        continue;
+
+                    var component = componentFactory.CreateComponentByIdentifier(data.Identifier);
+                    if (component == null)
+                        continue;
+
+                    component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
+                    LoadSliders(data, component);
+                    MyGrid.ComponentMover.PlaceComponent(data.X, data.Y, component);
+                }
             }
         }
 
@@ -87,6 +180,15 @@ namespace CAP_Core.Grid
             }
         }
 
+        /// <summary>
+        /// Container for the complete design file data including components and groups.
+        /// </summary>
+        public class DesignFileData
+        {
+            public List<GridComponentData> Components { get; set; } = new();
+            public List<ComponentGroup>? ComponentGroups { get; set; }
+        }
+
         public class GridComponentData
         {
             public int X { get; set; }
@@ -95,6 +197,7 @@ namespace CAP_Core.Grid
             public string Identifier { get; set; }
             public List<Slider>? Sliders { get; set; }
         }
+
         public class GridSliderData
         {
             public GridSliderData(int nr , double value)
