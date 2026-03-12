@@ -252,4 +252,79 @@ public class LayoutCompressorTests
         result[comp2].X.ShouldBe(500);
         result[comp2].Y.ShouldBe(600);
     }
+
+    [Fact]
+    public void CompressLayout_ActuallyCompresses_ComponentsGetCloserTogether()
+    {
+        // Arrange
+        var compressor = new LayoutCompressor();
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+
+        // Start components far apart
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        comp2.PhysicalX = 1000;
+        comp2.PhysicalY = 1000;
+
+        // Calculate original distance
+        double originalDistance = Math.Sqrt(
+            Math.Pow(comp2.PhysicalX - comp1.PhysicalX, 2) +
+            Math.Pow(comp2.PhysicalY - comp1.PhysicalY, 2));
+
+        var connection = TestComponentFactory.CreateConnection(comp1, comp2);
+        var components = new List<Component> { comp1, comp2 };
+        var connections = new List<WaveguideConnection> { connection };
+
+        // Act
+        var result = compressor.CompressLayout(components, connections);
+
+        // Assert
+        // Calculate new distance
+        double newDistance = Math.Sqrt(
+            Math.Pow(comp2.PhysicalX - comp1.PhysicalX, 2) +
+            Math.Pow(comp2.PhysicalY - comp1.PhysicalY, 2));
+
+        // The core bug fix: components should get CLOSER, not farther apart
+        newDistance.ShouldBeLessThan(originalDistance,
+            $"Compression should reduce distance from {originalDistance:F2}µm to less, but got {newDistance:F2}µm");
+    }
+
+    [Fact]
+    public void CompressLayout_WithThreeComponentsInLine_CompressesTogether()
+    {
+        // Arrange
+        var compressor = new LayoutCompressor();
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+        var comp3 = TestComponentFactory.CreateBasicComponent();
+
+        // Place in a line with large gaps
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        comp2.PhysicalX = 800;
+        comp2.PhysicalY = 0;
+        comp3.PhysicalX = 1600;
+        comp3.PhysicalY = 0;
+
+        var conn1 = TestComponentFactory.CreateConnection(comp1, comp2);
+        var conn2 = TestComponentFactory.CreateConnection(comp2, comp3);
+
+        var components = new List<Component> { comp1, comp2, comp3 };
+        var connections = new List<WaveguideConnection> { conn1, conn2 };
+
+        // Calculate original total span
+        double originalSpan = comp3.PhysicalX - comp1.PhysicalX;
+
+        // Act
+        var result = compressor.CompressLayout(components, connections);
+
+        // Assert
+        // Calculate new span
+        double newSpan = Math.Abs(comp3.PhysicalX - comp1.PhysicalX);
+
+        // Layout should compress - span should be smaller
+        newSpan.ShouldBeLessThan(originalSpan,
+            $"Compression should reduce span from {originalSpan:F2}µm, but got {newSpan:F2}µm");
+    }
 }
