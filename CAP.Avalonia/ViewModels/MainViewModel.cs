@@ -745,6 +745,46 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanCreateGroup))]
+    private void CreateGroup()
+    {
+        var selectedComponents = Canvas.Selection.SelectedComponents.ToList();
+        var cmd = new CreateGroupCommand(Canvas, selectedComponents);
+        CommandManager.ExecuteCommand(cmd);
+        Canvas.Selection.ClearSelection();
+        StatusText = $"Created group from {selectedComponents.Count} components";
+    }
+
+    private bool CanCreateGroup()
+    {
+        // Requires at least 2 components selected
+        return Canvas.Selection.SelectedComponents.Count >= 2;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUngroup))]
+    private void Ungroup()
+    {
+        var selectedGroup = Canvas.Selection.SelectedComponents
+            .Select(c => c.Component)
+            .OfType<CAP_Core.Components.Core.ComponentGroup>()
+            .FirstOrDefault();
+
+        if (selectedGroup != null)
+        {
+            var cmd = new UngroupCommand(Canvas, selectedGroup);
+            CommandManager.ExecuteCommand(cmd);
+            Canvas.Selection.ClearSelection();
+            StatusText = $"Ungrouped: {selectedGroup.GroupName}";
+        }
+    }
+
+    private bool CanUngroup()
+    {
+        // Requires exactly 1 ComponentGroup selected
+        return Canvas.Selection.SelectedComponents.Count == 1 &&
+               Canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup;
+    }
+
     [RelayCommand]
     private async Task RunSimulation()
     {

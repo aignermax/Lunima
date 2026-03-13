@@ -34,6 +34,13 @@ public class Component : ICloneable
     /// </summary>
     public bool IsLocked { get; set; }
 
+    /// <summary>
+    /// Reference to the parent ComponentGroup if this component is part of a group.
+    /// Null if this is a top-level component.
+    /// </summary>
+    [JsonIgnore]
+    public object? ParentGroup { get; set; }
+
     public Part[,] Parts { get; protected set; }
     public List<PhysicalPin> PhysicalPins { get; protected set; } = new();
     public Dictionary<int, SMatrix> WaveLengthToSMatrixMap { get; set; }
