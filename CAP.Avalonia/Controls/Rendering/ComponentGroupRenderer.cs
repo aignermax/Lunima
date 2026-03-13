@@ -15,6 +15,7 @@ public static class ComponentGroupRenderer
 {
     private static readonly Color BorderColor = Color.FromRgb(100, 149, 237); // CornflowerBlue #6495ED
     private static readonly Color HoverBorderColor = Color.FromRgb(65, 105, 225); // RoyalBlue #4169E1
+    private static readonly Color SelectedBorderColor = Color.FromRgb(0, 255, 255); // Cyan #00FFFF
     private static readonly Color ExternalPinColor = Color.FromRgb(144, 238, 144); // LightGreen
     private static readonly Color ExternalPinHoverColor = Color.FromRgb(255, 215, 0); // Gold
     private static readonly Color GroupHoverOverlay = Color.FromArgb(51, 255, 165, 0); // Orange overlay (20% opacity)
@@ -131,6 +132,19 @@ public static class ComponentGroupRenderer
         };
 
         context.DrawRectangle(null, dashedPen, bounds);
+    }
+
+    /// <summary>
+    /// Renders a solid selection border around the group bounds.
+    /// Used to indicate that the group is selected (distinct from hover).
+    /// </summary>
+    public static void RenderGroupSelectionBorder(DrawingContext context, Rect bounds, bool isDimmed = false)
+    {
+        byte alpha = (byte)(isDimmed ? 128 : 255);
+        var selectionColor = Color.FromArgb(alpha, SelectedBorderColor.R, SelectedBorderColor.G, SelectedBorderColor.B);
+        var selectionPen = new Pen(new SolidColorBrush(selectionColor), BorderThickness + 1);
+
+        context.DrawRectangle(null, selectionPen, bounds);
     }
 
     /// <summary>

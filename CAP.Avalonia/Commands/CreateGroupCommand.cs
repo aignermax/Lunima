@@ -179,6 +179,10 @@ public class CreateGroupCommand : IUndoableCommand
 
             // 8. Add group to canvas
             _groupViewModel = _canvas.AddComponent(_createdGroup);
+
+            // 9. Select the newly created group so user gets visual feedback
+            _canvas.Selection.SelectSingle(_groupViewModel);
+            _canvas.SelectedComponent = _groupViewModel;
         }
         finally
         {

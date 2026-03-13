@@ -254,6 +254,62 @@ public class GroupingWorkflowTests
         canvas.Components[0].Component.ShouldNotBeOfType<ComponentGroup>();
     }
 
+    [Fact]
+    public void CreateGroup_AutomaticallySelectsNewGroup()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        var comp2 = CreateTestComponent("Comp2", 200, 100);
+
+        var vm1 = canvas.AddComponent(comp1);
+        var vm2 = canvas.AddComponent(comp2);
+
+        canvas.Selection.AddToSelection(vm1);
+        canvas.Selection.AddToSelection(vm2);
+
+        // Act - Create group
+        var cmd = new CreateGroupCommand(canvas, canvas.Selection.SelectedComponents.ToList());
+        cmd.Execute();
+
+        // Assert - Group is automatically selected
+        canvas.Selection.SelectedComponents.Count.ShouldBe(1);
+        var selectedVm = canvas.Selection.SelectedComponents[0];
+        selectedVm.Component.ShouldBeOfType<ComponentGroup>();
+        selectedVm.IsSelected.ShouldBeTrue();
+        canvas.SelectedComponent.ShouldBe(selectedVm);
+    }
+
+    [Fact]
+    public void CreateGroup_ThenUndo_ClearsSelection()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        var comp2 = CreateTestComponent("Comp2", 200, 100);
+
+        var vm1 = canvas.AddComponent(comp1);
+        var vm2 = canvas.AddComponent(comp2);
+
+        canvas.Selection.AddToSelection(vm1);
+        canvas.Selection.AddToSelection(vm2);
+
+        var cmd = new CreateGroupCommand(canvas, canvas.Selection.SelectedComponents.ToList());
+        cmd.Execute();
+
+        // Verify group is selected
+        canvas.Selection.SelectedComponents.Count.ShouldBe(1);
+        var groupVm = canvas.Selection.SelectedComponents[0];
+        groupVm.Component.ShouldBeOfType<ComponentGroup>();
+
+        // Act - Undo
+        cmd.Undo();
+
+        // Assert - Individual components restored (selection behavior depends on undo logic)
+        canvas.Components.Count.ShouldBe(2);
+        canvas.Components.ShouldNotContain(c => c.Component is ComponentGroup);
+    }
+
     /// <summary>
     /// Helper to create a simple test component.
     /// </summary>

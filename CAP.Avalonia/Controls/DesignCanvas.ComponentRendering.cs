@@ -129,11 +129,19 @@ public partial class DesignCanvas
             ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath);
         }
 
-        // 3. Draw dashed border around group bounds (hide if this is the current edit group)
+        // 3. Draw border around group bounds (hide if this is the current edit group)
         var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
         if (!isCurrentEditGroup)
         {
-            ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, isDimmed);
+            // Draw selection border if selected (solid cyan), otherwise regular dashed border
+            if (isSelected)
+            {
+                ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds, isDimmed);
+            }
+            else
+            {
+                ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, isDimmed);
+            }
 
             // 4. Draw group name label at top-left
             ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed);
