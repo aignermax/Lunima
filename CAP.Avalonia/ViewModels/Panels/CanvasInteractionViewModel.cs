@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Creation;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
@@ -17,6 +18,7 @@ public enum InteractionMode
 {
     Select,
     PlaceComponent,
+    PlaceGroupTemplate,
     Connect,
     Delete
 }
@@ -39,6 +41,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     [ObservableProperty]
     private ComponentTemplate? _selectedTemplate;
+
+    [ObservableProperty]
+    private GroupTemplate? _selectedGroupTemplate;
 
     [ObservableProperty]
     private ComponentViewModel? _selectedComponent;
@@ -81,7 +86,18 @@ public partial class CanvasInteractionViewModel : ObservableObject
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceComponent;
+            SelectedGroupTemplate = null; // Deselect group template
             UpdateStatus?.Invoke($"Click on canvas to place: {value.Name}");
+        }
+    }
+
+    partial void OnSelectedGroupTemplateChanged(GroupTemplate? value)
+    {
+        if (value != null)
+        {
+            CurrentMode = InteractionMode.PlaceGroupTemplate;
+            SelectedTemplate = null; // Deselect component template
+            UpdateStatus?.Invoke($"Click on canvas to place group: {value.Name}");
         }
     }
 
@@ -95,6 +111,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
             InteractionMode.Select => "Select mode: Click to select, drag to move",
             InteractionMode.PlaceComponent when SelectedTemplate != null => $"Place mode: Click to place {SelectedTemplate.Name}",
             InteractionMode.PlaceComponent => "Place mode: Select a component from the library",
+            InteractionMode.PlaceGroupTemplate when SelectedGroupTemplate != null => $"Place mode: Click to place group {SelectedGroupTemplate.Name}",
+            InteractionMode.PlaceGroupTemplate => "Place mode: Select a group from Saved Groups",
             InteractionMode.Connect => "Connect mode: Move near a pin to start connection",
             InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
             _ => "Ready"
@@ -123,6 +141,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
         {
             case InteractionMode.PlaceComponent:
                 PlaceComponentAt(canvasX, canvasY);
+                break;
+            case InteractionMode.PlaceGroupTemplate:
+                PlaceGroupTemplateAt(canvasX, canvasY);
                 break;
             case InteractionMode.Select:
                 SelectAt(canvasX, canvasY);
@@ -228,6 +249,23 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
         _commandManager.ExecuteCommand(cmd);
         UpdateStatus?.Invoke($"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm");
+    }
+
+    private void PlaceGroupTemplateAt(double x, double y)
+    {
+        if (SelectedGroupTemplate == null || _libraryViewModel == null) return;
+
+        var libraryManager = _libraryViewModel.GetLibraryManager();
+        var cmd = PlaceGroupTemplateCommand.TryCreate(_canvas, libraryManager, SelectedGroupTemplate, x, y);
+
+        if (cmd == null)
+        {
+            UpdateStatus?.Invoke("No space available on chip for this group or template not loaded");
+            return;
+        }
+
+        _commandManager.ExecuteCommand(cmd);
+        UpdateStatus?.Invoke($"Placed group '{SelectedGroupTemplate.Name}' at ({x:F0}, {y:F0})µm");
     }
 
     private void SelectAt(double x, double y)
@@ -423,6 +461,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         CurrentMode = InteractionMode.Select;
         SelectedTemplate = null;
+        SelectedGroupTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -431,6 +470,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         CurrentMode = InteractionMode.Connect;
         SelectedTemplate = null;
+        SelectedGroupTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -439,6 +479,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         CurrentMode = InteractionMode.Delete;
         SelectedTemplate = null;
+        SelectedGroupTemplate = null;
         _connectionStartPin = null;
     }
 

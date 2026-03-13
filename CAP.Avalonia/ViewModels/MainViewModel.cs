@@ -182,6 +182,12 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
+        // Wire up group template selection from left panel to canvas interaction
+        LeftPanel.OnGroupTemplateSelected = template =>
+        {
+            CanvasInteraction.SelectedGroupTemplate = template;
+        };
+
         WireDesignValidation();
         WireHierarchyPanel();
         WireFileOperations();

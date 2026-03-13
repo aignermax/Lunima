@@ -62,6 +62,9 @@ public partial class LeftPanelViewModel : ObservableObject
     [ObservableProperty]
     private double _libraryScrollOffset = 0.0;
 
+    [ObservableProperty]
+    private GroupTemplate? _selectedGroupTemplate;
+
     private GridLength _leftPanelWidth = new GridLength(220);
     /// <summary>
     /// Width of the left panel in pixels. Persisted in user preferences.
@@ -92,6 +95,11 @@ public partial class LeftPanelViewModel : ObservableObject
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
 
+    /// <summary>
+    /// Callback invoked when a group template is selected for placement.
+    /// </summary>
+    public Action<GroupTemplate>? OnGroupTemplateSelected { get; set; }
+
     public LeftPanelViewModel(
         DesignCanvasViewModel canvas,
         GroupLibraryManager libraryManager,
@@ -120,6 +128,14 @@ public partial class LeftPanelViewModel : ObservableObject
     }
 
     partial void OnSearchTextChanged(string value) => FilterComponents();
+
+    partial void OnSelectedGroupTemplateChanged(GroupTemplate? value)
+    {
+        if (value != null)
+        {
+            OnGroupTemplateSelected?.Invoke(value);
+        }
+    }
 
     private void LoadComponentLibrary()
     {

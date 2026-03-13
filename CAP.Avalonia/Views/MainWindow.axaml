@@ -157,12 +157,15 @@
                             <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,5,0,3"
                                        IsVisible="{Binding GroupLibrary.UserGroups.Count}"/>
-                            <ItemsControl ItemsSource="{Binding GroupLibrary.UserGroups}"
-                                          MaxHeight="120">
-                                <ItemsControl.ItemTemplate>
+                            <ListBox ItemsSource="{Binding GroupLibrary.UserGroups}"
+                                     SelectedItem="{Binding SelectedGroupTemplate}"
+                                     Background="Transparent"
+                                     MaxHeight="120">
+                                <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="creation:GroupTemplate">
                                         <Border BorderBrush="#3e3e3e" BorderThickness="1" Margin="0,2"
-                                                Background="#1e1e1e" Padding="4" CornerRadius="3">
+                                                Background="#1e1e1e" Padding="4" CornerRadius="3"
+                                                Cursor="Hand">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                            FontSize="10" Foreground="White"/>
@@ -173,19 +176,22 @@
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
 
                             <!-- PDK Groups -->
                             <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,10,0,3"
                                        IsVisible="{Binding GroupLibrary.PdkGroups.Count}"/>
-                            <ItemsControl ItemsSource="{Binding GroupLibrary.PdkGroups}"
-                                          MaxHeight="120">
-                                <ItemsControl.ItemTemplate>
+                            <ListBox ItemsSource="{Binding GroupLibrary.PdkGroups}"
+                                     SelectedItem="{Binding SelectedGroupTemplate}"
+                                     Background="Transparent"
+                                     MaxHeight="120">
+                                <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="creation:GroupTemplate">
                                         <Border BorderBrush="#3e3e3e" BorderThickness="1" Margin="0,2"
-                                                Background="#1e1e1e" Padding="4" CornerRadius="3">
+                                                Background="#1e1e1e" Padding="4" CornerRadius="3"
+                                                Cursor="Hand">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                            FontSize="10" Foreground="White"/>
@@ -196,8 +202,8 @@
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </StackPanel>
                     </Expander>
 
