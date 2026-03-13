@@ -284,7 +284,19 @@
         </Grid>
 
         <!-- Right Panel - Properties -->
-        <Border DockPanel.Dock="Right" Width="250" Background="#252526">
+        <Grid DockPanel.Dock="Right" ColumnDefinitions="Auto,*">
+            <!-- GridSplitter for resizing right panel -->
+            <GridSplitter Grid.Column="0"
+                          Width="4"
+                          Background="#3d3d3d"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+
+            <Border Grid.Column="1"
+                    Width="{Binding RightPanel.RightPanelWidth, Mode=TwoWay}"
+                    MinWidth="200" MaxWidth="800"
+                    Background="#252526">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="Properties"
                            FontWeight="Bold" Margin="10" Foreground="White"/>
@@ -728,7 +740,8 @@
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
-        </Border>
+            </Border>
+        </Grid>
 
         <!-- Main Canvas -->
         <controls:DesignCanvas x:Name="DesignCanvasControl"

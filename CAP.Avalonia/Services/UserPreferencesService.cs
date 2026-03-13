@@ -135,6 +135,23 @@ public class UserPreferencesService
         _preferences.LeftPanelWidth = width;
         Save();
     }
+
+    /// <summary>
+    /// Gets the saved right panel width (default 250 pixels).
+    /// </summary>
+    public double GetRightPanelWidth()
+    {
+        return _preferences.RightPanelWidth;
+    }
+
+    /// <summary>
+    /// Sets the right panel width and saves.
+    /// </summary>
+    public void SetRightPanelWidth(double width)
+    {
+        _preferences.RightPanelWidth = width;
+        Save();
+    }
 }
 
 /// <summary>
@@ -156,4 +173,9 @@ public class UserPreferences
     /// Width of the left panel in pixels (default 220).
     /// </summary>
     public double LeftPanelWidth { get; set; } = 220;
+
+    /// <summary>
+    /// Width of the right panel in pixels (default 250).
+    /// </summary>
+    public double RightPanelWidth { get; set; } = 250;
 }

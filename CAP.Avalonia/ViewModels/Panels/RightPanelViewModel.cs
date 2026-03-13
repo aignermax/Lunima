@@ -14,6 +14,27 @@ namespace CAP.Avalonia.ViewModels.Panels;
 /// </summary>
 public partial class RightPanelViewModel : ObservableObject
 {
+    private readonly UserPreferencesService _preferencesService;
+
+    private double _rightPanelWidth = 250;
+    /// <summary>
+    /// Width of the right panel in pixels. Persisted in user preferences.
+    /// Clamped to [200, 800] range.
+    /// </summary>
+    public double RightPanelWidth
+    {
+        get => _rightPanelWidth;
+        set
+        {
+            // Clamp to reasonable values (min 200, max 800)
+            var clampedValue = Math.Max(200, Math.Min(800, value));
+            if (SetProperty(ref _rightPanelWidth, clampedValue))
+            {
+                SaveRightPanelWidth();
+            }
+        }
+    }
+
     /// <summary>
     /// ViewModel for parameter sweep analysis.
     /// </summary>
@@ -54,8 +75,10 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public CompressLayoutViewModel CompressLayout { get; }
 
-    public RightPanelViewModel(DesignCanvasViewModel canvas)
+    public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService)
     {
+        _preferencesService = preferencesService;
+
         Sweep = new ParameterSweepViewModel();
         RoutingDiagnostics = new RoutingDiagnosticsViewModel();
         DesignValidation = new DesignValidationViewModel();
@@ -69,5 +92,23 @@ public partial class RightPanelViewModel : ObservableObject
         RoutingDiagnostics.Configure(canvas);
         DimensionValidator.Configure(canvas);
         CompressLayout.Configure(canvas);
+    }
+
+    /// <summary>
+    /// Initializes the panel (loads saved width from preferences).
+    /// </summary>
+    public void Initialize()
+    {
+        RestoreRightPanelWidth();
+    }
+
+    private void RestoreRightPanelWidth()
+    {
+        RightPanelWidth = _preferencesService.GetRightPanelWidth();
+    }
+
+    private void SaveRightPanelWidth()
+    {
+        _preferencesService.SetRightPanelWidth(RightPanelWidth);
     }
 }
