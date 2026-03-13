@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Input;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Controls;
 
@@ -86,7 +87,20 @@ public partial class DesignCanvas
 
     private void HandleSelectModeClick(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
     {
-        _interactionState.DraggingComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
+        var hitComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
+
+        // If the hit component is part of a group, select the top-level group instead
+        if (hitComponent != null && hitComponent.Component.ParentGroup != null)
+        {
+            var topLevelGroup = GetTopLevelGroup(hitComponent.Component);
+            // Find the ComponentViewModel for the top-level group
+            _interactionState.DraggingComponent = vm.Components.FirstOrDefault(c => c.Component == topLevelGroup);
+        }
+        else
+        {
+            _interactionState.DraggingComponent = hitComponent;
+        }
+
         if (_interactionState.DraggingComponent != null)
         {
             HandleComponentSelection(e, canvasPoint, vm, mainVm);
@@ -207,6 +221,65 @@ public partial class DesignCanvas
                 InvalidateVisual();
             }
         }
+
+        // Update group hover highlighting
+        UpdateGroupHover(canvasPoint, vm);
+    }
+
+    /// <summary>
+    /// Updates group hover state when hovering over a component or group.
+    /// If hovering over a child component, highlights the entire parent group.
+    /// </summary>
+    private void UpdateGroupHover(Point canvasPoint, DesignCanvasViewModel vm)
+    {
+        var previousHoveredGroup = _interactionState.HoveredGroup;
+
+        var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
+
+        if (hoveredComponent != null)
+        {
+            // Check if this component is part of a group
+            var component = hoveredComponent.Component;
+            if (component.ParentGroup != null)
+            {
+                // Hover over a child - highlight the entire parent group
+                _interactionState.HoveredGroup = GetTopLevelGroup(component);
+            }
+            else if (component is ComponentGroup group)
+            {
+                // Hover directly over a group
+                _interactionState.HoveredGroup = group;
+            }
+            else
+            {
+                // Regular component, not part of a group
+                _interactionState.HoveredGroup = null;
+            }
+        }
+        else
+        {
+            _interactionState.HoveredGroup = null;
+        }
+
+        // Repaint if hover state changed
+        if (_interactionState.HoveredGroup != previousHoveredGroup)
+        {
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>
+    /// Gets the top-level group containing a component.
+    /// Traverses up the hierarchy until finding a group with no parent.
+    /// </summary>
+    private ComponentGroup GetTopLevelGroup(Component component)
+    {
+        var group = component.ParentGroup as ComponentGroup;
+        while (group?.ParentGroup != null)
+        {
+            group = group.ParentGroup as ComponentGroup;
+        }
+        return group!;
     }
 
     private void UpdatePinHighlighting(Point canvasPoint, DesignCanvasViewModel vm)
