@@ -6,6 +6,7 @@ using CAP_Core.Components.Core;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -29,6 +30,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly CommandManager _commandManager;
+    private readonly ComponentLibraryViewModel? _libraryViewModel;
+    private readonly GroupPreviewGenerator? _previewGenerator;
 
     [ObservableProperty]
     private InteractionMode _currentMode = InteractionMode.Select;
@@ -58,10 +61,16 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public Action<ComponentViewModel?>? OnSelectionChanged { get; set; }
 
-    public CanvasInteractionViewModel(DesignCanvasViewModel canvas, CommandManager commandManager)
+    public CanvasInteractionViewModel(
+        DesignCanvasViewModel canvas,
+        CommandManager commandManager,
+        ComponentLibraryViewModel? libraryViewModel = null,
+        GroupPreviewGenerator? previewGenerator = null)
     {
         _canvas = canvas;
         _commandManager = commandManager;
+        _libraryViewModel = libraryViewModel;
+        _previewGenerator = previewGenerator;
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -517,10 +526,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void CreateGroup()
     {
         var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
-        var cmd = new CreateGroupCommand(_canvas, selectedComponents);
+        var cmd = new CreateGroupCommand(_canvas, selectedComponents, _libraryViewModel, _previewGenerator);
         _commandManager.ExecuteCommand(cmd);
         _canvas.Selection.ClearSelection();
-        UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components");
+
+        var groupName = selectedComponents.Count > 0 ? "group" : "";
+        var savedMsg = _libraryViewModel != null ? " and saved to library" : "";
+        UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components{savedMsg}");
     }
 
     private bool CanCreateGroup()

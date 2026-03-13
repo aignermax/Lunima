@@ -58,6 +58,25 @@ public partial class LeftPanelViewModel : ObservableObject
     [ObservableProperty]
     private string _searchText = "";
 
+    private double _leftPanelWidth = 220;
+    /// <summary>
+    /// Width of the left panel in pixels. Persisted in user preferences.
+    /// Clamped to [200, 800] range.
+    /// </summary>
+    public double LeftPanelWidth
+    {
+        get => _leftPanelWidth;
+        set
+        {
+            // Clamp to reasonable values (min 200, max 800)
+            var clampedValue = Math.Max(200, Math.Min(800, value));
+            if (SetProperty(ref _leftPanelWidth, clampedValue))
+            {
+                SaveLeftPanelWidth();
+            }
+        }
+    }
+
     /// <summary>
     /// Callback to update status text in the UI.
     /// </summary>
@@ -92,6 +111,7 @@ public partial class LeftPanelViewModel : ObservableObject
     {
         LoadComponentLibrary();
         RestorePdkFilterState();
+        RestoreLeftPanelWidth();
     }
 
     partial void OnSearchTextChanged(string value) => FilterComponents();
@@ -200,6 +220,16 @@ public partial class LeftPanelViewModel : ObservableObject
     {
         var enabledPdks = PdkManager.GetEnabledPdkNames();
         _preferencesService.SetEnabledPdks(enabledPdks);
+    }
+
+    private void RestoreLeftPanelWidth()
+    {
+        LeftPanelWidth = _preferencesService.GetLeftPanelWidth();
+    }
+
+    private void SaveLeftPanelWidth()
+    {
+        _preferencesService.SetLeftPanelWidth(LeftPanelWidth);
     }
 
     [RelayCommand]

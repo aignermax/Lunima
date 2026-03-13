@@ -112,8 +112,12 @@
         </Border>
 
         <!-- Left Panel - Hierarchy + Component Library -->
-        <Border DockPanel.Dock="Left" Width="220" Background="#252526">
-            <Grid RowDefinitions="Auto,5,*">
+        <Grid DockPanel.Dock="Left" ColumnDefinitions="*,Auto">
+            <Border Grid.Column="0"
+                    Width="{Binding LeftPanel.LeftPanelWidth, Mode=TwoWay}"
+                    MinWidth="200" MaxWidth="800"
+                    Background="#252526">
+                <Grid RowDefinitions="Auto,5,*">
                 <!-- Hierarchy Panel -->
                 <views:HierarchyPanel Grid.Row="0"
                                       DataContext="{Binding HierarchyPanel}"
@@ -258,8 +262,17 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </DockPanel>
-            </Grid>
-        </Border>
+                </Grid>
+            </Border>
+
+            <!-- GridSplitter for resizing left panel -->
+            <GridSplitter Grid.Column="1"
+                          Width="4"
+                          Background="#3d3d3d"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+        </Grid>
 
         <!-- Right Panel - Properties -->
         <Border DockPanel.Dock="Right" Width="250" Background="#252526">
