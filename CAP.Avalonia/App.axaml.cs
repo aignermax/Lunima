@@ -26,6 +26,7 @@ public partial class App : Application
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
+        services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
 
         // Register application services
         services.AddSingleton<SimulationService>();
@@ -34,6 +35,7 @@ public partial class App : Application
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<ProjectPersistenceService>();
+        services.AddSingleton<Services.GroupPreviewGenerator>();
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();
