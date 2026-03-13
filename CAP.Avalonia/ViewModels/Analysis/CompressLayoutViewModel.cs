@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Analysis;
 using CAP.Avalonia.ViewModels.Canvas;
+using Avalonia.Threading;
 
 namespace CAP.Avalonia.ViewModels.Analysis;
 
@@ -12,6 +13,7 @@ namespace CAP.Avalonia.ViewModels.Analysis;
 public partial class CompressLayoutViewModel : ObservableObject
 {
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CompressLayoutCommand))]
     private bool _isCompressing;
 
     [ObservableProperty]
@@ -19,6 +21,12 @@ public partial class CompressLayoutViewModel : ObservableObject
 
     [ObservableProperty]
     private string _resultText = "";
+
+    [ObservableProperty]
+    private int _currentIteration;
+
+    [ObservableProperty]
+    private int _maxIterations = 100;
 
     private DesignCanvasViewModel? _canvas;
     private readonly LayoutCompressor _compressor = new();
@@ -36,7 +44,7 @@ public partial class CompressLayoutViewModel : ObservableObject
     /// <summary>
     /// Runs the layout compression algorithm.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanCompressLayout))]
     private async Task CompressLayout()
     {
         if (_canvas == null || _canvas.Components.Count == 0)
@@ -60,7 +68,10 @@ public partial class CompressLayoutViewModel : ObservableObject
             var originalPositions = _canvas.Components
                 .ToDictionary(c => c, c => (c.X, c.Y));
 
-            // Run compression
+            // Reset progress
+            CurrentIteration = 0;
+
+            // Run compression with progress updates
             await Task.Run(() =>
             {
                 var components = _canvas.Components
@@ -71,10 +82,25 @@ public partial class CompressLayoutViewModel : ObservableObject
                     .Select(c => c.Connection)
                     .ToList();
 
-                _compressor.CompressLayout(components, connections);
+                _compressor.CompressLayout(components, connections, (iteration, positions) =>
+                {
+                    // Update UI on the UI thread every 5 iterations
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        CurrentIteration = iteration;
+                        StatusText = $"Compressing layout... iteration {iteration}/{MaxIterations}";
+
+                        // Update component positions for animation
+                        foreach (var compVm in _canvas.Components)
+                        {
+                            compVm.X = compVm.Component.PhysicalX;
+                            compVm.Y = compVm.Component.PhysicalY;
+                        }
+                    });
+                });
             });
 
-            // Update ViewModel positions
+            // Final UI update
             foreach (var compVm in _canvas.Components)
             {
                 compVm.X = compVm.Component.PhysicalX;
@@ -99,6 +125,7 @@ public partial class CompressLayoutViewModel : ObservableObject
                 $"Area reduction: {areaReduction:F1}%";
 
             StatusText = $"Compression complete: {areaReduction:F1}% area reduction";
+            CurrentIteration = MaxIterations;
         }
         catch (Exception ex)
         {

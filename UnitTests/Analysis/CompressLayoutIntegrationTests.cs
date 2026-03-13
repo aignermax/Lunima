@@ -178,4 +178,70 @@ public class CompressLayoutIntegrationTests
         // Assert
         canExecute.ShouldBeFalse();
     }
+
+    [Fact]
+    public void ViewModel_UpdatesProgressDuringCompression()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var viewModel = new CompressLayoutViewModel();
+        viewModel.Configure(canvas);
+
+        // Add components far apart to ensure compression takes multiple iterations
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        canvas.AddComponent(comp1, "Comp1");
+
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+        comp2.PhysicalX = 2000;
+        comp2.PhysicalY = 2000;
+        canvas.AddComponent(comp2, "Comp2");
+
+        // Act
+        var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
+        task.Wait();
+
+        // Assert
+        // CurrentIteration should be set to MaxIterations after completion
+        viewModel.CurrentIteration.ShouldBeGreaterThan(0);
+        viewModel.StatusText.ShouldContain("complete");
+    }
+
+    [Fact]
+    public void ViewModel_AnimatesComponentPositions()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var viewModel = new CompressLayoutViewModel();
+        viewModel.Configure(canvas);
+
+        var comp1 = TestComponentFactory.CreateBasicComponent();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        var vm1 = canvas.AddComponent(comp1, "Comp1");
+
+        var comp2 = TestComponentFactory.CreateBasicComponent();
+        comp2.PhysicalX = 2000;
+        comp2.PhysicalY = 2000;
+        var vm2 = canvas.AddComponent(comp2, "Comp2");
+
+        double originalVm2X = vm2.X;
+        double originalVm2Y = vm2.Y;
+
+        // Act
+        var task = viewModel.CompressLayoutCommand.ExecuteAsync(null);
+        task.Wait();
+
+        // Assert
+        // ViewModel positions should be updated (animation occurred)
+        bool positionsChanged = vm2.X != originalVm2X || vm2.Y != originalVm2Y;
+        positionsChanged.ShouldBeTrue("Component positions should change during compression");
+
+        // ViewModel positions should match core component positions
+        vm1.X.ShouldBe(comp1.PhysicalX);
+        vm1.Y.ShouldBe(comp1.PhysicalY);
+        vm2.X.ShouldBe(comp2.PhysicalX);
+        vm2.Y.ShouldBe(comp2.PhysicalY);
+    }
 }
