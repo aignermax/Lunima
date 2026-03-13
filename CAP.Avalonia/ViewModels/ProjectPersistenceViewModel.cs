@@ -5,10 +5,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace CAP.Avalonia.ViewModels;
 
 /// <summary>
-/// ViewModel for file operations (save/load projects).
-/// Supports saving and loading projects with ComponentGroups.
+/// ViewModel for project persistence operations (save/load projects with ComponentGroups).
+/// Separate from Panels.FileOperationsViewModel which handles general file I/O.
 /// </summary>
-public partial class FileOperationsViewModel : ObservableObject
+public partial class ProjectPersistenceViewModel : ObservableObject
 {
     private readonly ProjectPersistenceService _persistenceService;
     private readonly IFileDialogService? _fileDialogService;
@@ -19,7 +19,7 @@ public partial class FileOperationsViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
-    public FileOperationsViewModel(
+    public ProjectPersistenceViewModel(
         ProjectPersistenceService persistenceService,
         IFileDialogService? fileDialogService = null)
     {
