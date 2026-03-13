@@ -107,9 +107,52 @@ public class PathfindingGrid
 
     /// <summary>
     /// Marks cells blocked by a component's bounding box (with padding).
+    /// For ComponentGroup instances, recursively adds obstacles for each child component
+    /// instead of blocking the entire group bounding box.
     /// Leaves corridors open at pin positions so waveguides can connect.
     /// </summary>
     public void AddComponentObstacle(Component component)
+    {
+        // Handle ComponentGroup specially - add obstacles for child components instead of group bounds
+        if (component is ComponentGroup group)
+        {
+            AddComponentGroupObstacle(group);
+            return;
+        }
+
+        // Regular component obstacle handling
+        AddSingleComponentObstacle(component);
+    }
+
+    /// <summary>
+    /// Adds obstacles for a ComponentGroup by recursively adding child component obstacles.
+    /// This allows waveguides to route through empty space between grouped components.
+    /// </summary>
+    private void AddComponentGroupObstacle(ComponentGroup group)
+    {
+        // Don't block the group bounding box - instead, recursively add obstacles for each child
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                // Recursively handle nested groups
+                AddComponentGroupObstacle(childGroup);
+            }
+            else
+            {
+                // Add obstacle for regular child component
+                AddSingleComponentObstacle(child);
+            }
+        }
+
+        // Track the group itself with an empty cell set (so RemoveComponentObstacle works)
+        _componentCells[group] = new HashSet<(int, int)>();
+    }
+
+    /// <summary>
+    /// Adds obstacle cells for a single (non-group) component.
+    /// </summary>
+    private void AddSingleComponentObstacle(Component component)
     {
         double padding = ObstaclePaddingMicrometers;
         double x1 = component.PhysicalX - padding;
@@ -180,9 +223,18 @@ public class PathfindingGrid
 
     /// <summary>
     /// Removes obstacle cells for a component (when deleted or moved).
+    /// For ComponentGroup instances, recursively removes child component obstacles.
     /// </summary>
     public void RemoveComponentObstacle(Component component)
     {
+        // Handle ComponentGroup specially - remove obstacles for all children
+        if (component is ComponentGroup group)
+        {
+            RemoveComponentGroupObstacle(group);
+            return;
+        }
+
+        // Regular component obstacle removal
         if (_componentCells.TryGetValue(component, out var cells))
         {
             foreach (var (gx, gy) in cells)
@@ -194,6 +246,39 @@ public class PathfindingGrid
             }
             _componentCells.Remove(component);
         }
+    }
+
+    /// <summary>
+    /// Removes obstacles for a ComponentGroup by recursively removing child component obstacles.
+    /// </summary>
+    private void RemoveComponentGroupObstacle(ComponentGroup group)
+    {
+        // Recursively remove obstacles for each child
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                RemoveComponentGroupObstacle(childGroup);
+            }
+            else
+            {
+                // Remove obstacle for regular child component
+                if (_componentCells.TryGetValue(child, out var cells))
+                {
+                    foreach (var (gx, gy) in cells)
+                    {
+                        if (IsInBounds(gx, gy))
+                        {
+                            _cells[gx, gy] = 0;
+                        }
+                    }
+                    _componentCells.Remove(child);
+                }
+            }
+        }
+
+        // Remove the group tracking entry
+        _componentCells.Remove(group);
     }
 
     /// <summary>
