@@ -118,6 +118,78 @@ public class ComponentGroupRendererTests
         });
     }
 
+    [Fact]
+    public void CalculateLabelBounds_EmptyGroup_ReturnsMinimumLabelSize()
+    {
+        // Arrange
+        var group = new ComponentGroup("Empty");
+
+        // Act
+        var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group);
+
+        // Assert
+        labelBounds.Width.ShouldBeGreaterThanOrEqualTo(60.0); // Minimum width
+        labelBounds.Height.ShouldBe(18.0); // Fixed label height
+    }
+
+    [Fact]
+    public void CalculateLabelBounds_GroupWithChildren_PositionsLabelAboveGroup()
+    {
+        // Arrange
+        var group = new ComponentGroup("Test Group");
+        var child = CreateTestComponent("Child", 100, 100, 50, 30);
+        group.AddChild(child);
+
+        // Act
+        var groupBounds = ComponentGroupRenderer.CalculateGroupBounds(group);
+        var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group);
+
+        // Assert
+        // Label should be positioned 20µm above the group border
+        labelBounds.Y.ShouldBe(groupBounds.Y - 20);
+        labelBounds.X.ShouldBe(groupBounds.X);
+        labelBounds.Height.ShouldBe(18.0);
+    }
+
+    [Fact]
+    public void CalculateLabelBounds_LongGroupName_AdjustsWidthForText()
+    {
+        // Arrange
+        var shortNameGroup = new ComponentGroup("AB");
+        var longNameGroup = new ComponentGroup("Very Long Group Name");
+
+        // Act
+        var shortLabelBounds = ComponentGroupRenderer.CalculateLabelBounds(shortNameGroup);
+        var longLabelBounds = ComponentGroupRenderer.CalculateLabelBounds(longNameGroup);
+
+        // Assert
+        // Longer name should result in wider label
+        longLabelBounds.Width.ShouldBeGreaterThan(shortLabelBounds.Width);
+        // Both should have same height
+        shortLabelBounds.Height.ShouldBe(longLabelBounds.Height);
+    }
+
+    [Fact]
+    public void CalculateLabelBounds_ConsistentWithGroupBounds_LabelsAlignCorrectly()
+    {
+        // Arrange
+        var group = new ComponentGroup("Test Group");
+        var child1 = CreateTestComponent("Child1", 100, 100, 50, 30);
+        var child2 = CreateTestComponent("Child2", 200, 150, 40, 25);
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        // Act
+        var groupBounds = ComponentGroupRenderer.CalculateGroupBounds(group);
+        var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group);
+
+        // Assert
+        // Label X should align with group X
+        labelBounds.X.ShouldBe(groupBounds.X);
+        // Label Y should be above group (20µm offset)
+        labelBounds.Y.ShouldBe(groupBounds.Y - 20);
+    }
+
     /// <summary>
     /// Creates a test component with specified position and dimensions.
     /// </summary>

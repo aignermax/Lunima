@@ -254,6 +254,120 @@ public class ComponentGroupInteractionTests
         canvas.BreadcrumbPath.Count.ShouldBe(0);
     }
 
+    [Fact]
+    public void HitTestGroupLabel_OnLabelArea_ReturnsGroup()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        var comp2 = CreateTestComponent("Comp2", 200, 100);
+
+        var group = new ComponentGroup("TestGroup")
+        {
+            PhysicalX = 100,
+            PhysicalY = 100
+        };
+        group.AddChild(comp1);
+        group.AddChild(comp2);
+
+        var groupVm = canvas.AddComponent(group, "GroupTemplate");
+
+        // Act - Hit test on the label area (positioned above group bounds at Y-20)
+        // Group bounds start at Y=90 (100-10 padding), label at Y=70 (90-20)
+        var hitPoint = new Point(95, 75); // Inside label bounds
+        var hitGroup = DesignCanvasHitTesting.HitTestGroupLabel(hitPoint, canvas);
+
+        // Assert - Should hit the group via its label
+        hitGroup.ShouldNotBeNull();
+        hitGroup.ShouldBe(group);
+    }
+
+    [Fact]
+    public void HitTestGroupLabel_OutsideLabelArea_ReturnsNull()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+
+        var group = new ComponentGroup("TestGroup")
+        {
+            PhysicalX = 100,
+            PhysicalY = 100
+        };
+        group.AddChild(comp1);
+
+        var groupVm = canvas.AddComponent(group, "GroupTemplate");
+
+        // Act - Hit test outside the label area
+        var hitPoint = new Point(50, 50); // Far from label
+        var hitGroup = DesignCanvasHitTesting.HitTestGroupLabel(hitPoint, canvas);
+
+        // Assert - Should not hit any label
+        hitGroup.ShouldBeNull();
+    }
+
+    [Fact]
+    public void HitTestGroupLabel_HasPriorityOverComponentHit()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+
+        var group = new ComponentGroup("TestGroup")
+        {
+            PhysicalX = 100,
+            PhysicalY = 100
+        };
+        group.AddChild(comp1);
+
+        var groupVm = canvas.AddComponent(group, "GroupTemplate");
+
+        // Act - Hit test on label area
+        var labelHitPoint = new Point(95, 75);
+        var labelHit = DesignCanvasHitTesting.HitTestGroupLabel(labelHitPoint, canvas);
+        var componentHit = DesignCanvasHitTesting.HitTestComponent(labelHitPoint, canvas);
+
+        // Assert - Label hit should succeed, component hit might be null or the group
+        labelHit.ShouldNotBeNull();
+        labelHit.ShouldBe(group);
+        // This demonstrates that label hit testing provides priority access to the group
+    }
+
+    [Fact]
+    public void ComponentGroup_LabelBounds_UpdatesAfterMoving()
+    {
+        // Arrange
+        var group = new ComponentGroup("TestGroup");
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        group.AddChild(comp1);
+
+        var initialLabelBounds = group.LabelBounds;
+
+        // Act - Move the group
+        group.MoveGroup(50, 30);
+
+        // Assert - Label bounds should be translated
+        var newLabelBounds = group.LabelBounds;
+        newLabelBounds.X.ShouldBe(initialLabelBounds.X + 50);
+        newLabelBounds.Y.ShouldBe(initialLabelBounds.Y + 30);
+        newLabelBounds.Width.ShouldBe(initialLabelBounds.Width);
+        newLabelBounds.Height.ShouldBe(initialLabelBounds.Height);
+    }
+
+    [Fact]
+    public void ComponentGroup_LabelBounds_CalculatedOnCreation()
+    {
+        // Arrange & Act
+        var group = new ComponentGroup("My Test Group");
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        group.AddChild(comp1);
+
+        // Assert - Label bounds should be set
+        var labelBounds = group.LabelBounds;
+        labelBounds.Width.ShouldBeGreaterThan(0);
+        labelBounds.Height.ShouldBe(18.0); // Fixed height
+    }
+
     /// <summary>
     /// Helper to create a simple test component.
     /// </summary>

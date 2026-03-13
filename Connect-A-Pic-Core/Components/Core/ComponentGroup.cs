@@ -45,6 +45,13 @@ public class ComponentGroup : Component
     public new ComponentGroup? ParentGroup { get; set; }
 
     /// <summary>
+    /// Bounding rectangle for the group label (used for hit testing).
+    /// Updated when the group bounds change.
+    /// </summary>
+    [JsonIgnore]
+    public (double X, double Y, double Width, double Height) LabelBounds { get; private set; }
+
+    /// <summary>
     /// Creates an empty ComponentGroup with default S-matrices.
     /// Use AddChild() and AddInternalPath() to populate the group.
     /// </summary>
@@ -173,6 +180,10 @@ public class ComponentGroup : Component
         {
             path.TranslateBy(deltaX, deltaY);
         }
+
+        // Update label bounds after moving
+        var (labelX, labelY, labelWidth, labelHeight) = LabelBounds;
+        LabelBounds = (labelX + deltaX, labelY + deltaY, labelWidth, labelHeight);
     }
 
     /// <summary>
@@ -275,6 +286,7 @@ public class ComponentGroup : Component
 
     /// <summary>
     /// Updates the group's bounding box based on child components.
+    /// Also updates the label bounds for hit testing.
     /// </summary>
     private void UpdateGroupBounds()
     {
@@ -282,6 +294,7 @@ public class ComponentGroup : Component
         {
             WidthMicrometers = 0;
             HeightMicrometers = 0;
+            LabelBounds = (PhysicalX, PhysicalY, 0, 0);
             return;
         }
 
@@ -292,6 +305,28 @@ public class ComponentGroup : Component
 
         WidthMicrometers = maxX - minX;
         HeightMicrometers = maxY - minY;
+
+        // Update label bounds (positioned at top-left with padding)
+        UpdateLabelBounds(minX, minY);
+    }
+
+    /// <summary>
+    /// Updates the label bounds based on group name and position.
+    /// Label is positioned above the group boundary with appropriate dimensions.
+    /// </summary>
+    private void UpdateLabelBounds(double groupMinX, double groupMinY)
+    {
+        const double BorderPadding = 10.0;
+        const double LabelHeight = 18.0;
+
+        // Estimate label width based on text (approximate 7 pixels per character + padding)
+        double estimatedLabelWidth = Math.Max(60, GroupName.Length * 7 + 8);
+
+        // Position label at top-left of group, above the border
+        double labelX = groupMinX - BorderPadding;
+        double labelY = groupMinY - BorderPadding - 20;
+
+        LabelBounds = (labelX, labelY, estimatedLabelWidth, LabelHeight);
     }
 
     /// <summary>

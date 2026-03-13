@@ -152,6 +152,14 @@ public static class ComponentGroupRenderer
     /// </summary>
     public static void RenderGroupNameLabel(DrawingContext context, Rect bounds, string groupName, bool isDimmed = false)
     {
+        RenderGroupNameLabel(context, bounds, groupName, isDimmed, false);
+    }
+
+    /// <summary>
+    /// Renders the group name label at the top-left of the group bounds with optional hover state.
+    /// </summary>
+    public static void RenderGroupNameLabel(DrawingContext context, Rect bounds, string groupName, bool isDimmed, bool isLabelHovered)
+    {
         byte alpha = (byte)(isDimmed ? 128 : 255);
         var labelText = new FormattedText(
             groupName,
@@ -166,9 +174,35 @@ public static class ComponentGroupRenderer
         double labelHeight = 18;
         var labelBg = new Rect(bounds.X, bounds.Y - 20, labelWidth, labelHeight);
 
-        var bgColor = Color.FromArgb(alpha, BorderColor.R, BorderColor.G, BorderColor.B);
+        // Use hover color if label is being hovered
+        var bgColor = isLabelHovered
+            ? Color.FromArgb(alpha, HoverBorderColor.R, HoverBorderColor.G, HoverBorderColor.B)
+            : Color.FromArgb(alpha, BorderColor.R, BorderColor.G, BorderColor.B);
         context.FillRectangle(new SolidColorBrush(bgColor), labelBg);
+
+        // Add subtle border on hover to indicate interactivity
+        if (isLabelHovered)
+        {
+            var hoverBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)), 1);
+            context.DrawRectangle(null, hoverBorderPen, labelBg);
+        }
+
         context.DrawText(labelText, new Point(bounds.X + 4, bounds.Y - 18));
+    }
+
+    /// <summary>
+    /// Calculates the actual label bounds for a ComponentGroup (used for hit testing).
+    /// Returns a rectangle representing the clickable label area.
+    /// </summary>
+    public static Rect CalculateLabelBounds(ComponentGroup group)
+    {
+        var groupBounds = CalculateGroupBounds(group);
+
+        // Estimate label width based on text (approximate 7 pixels per character + padding)
+        double labelWidth = Math.Max(60, group.GroupName.Length * 7 + 8);
+        double labelHeight = 18;
+
+        return new Rect(groupBounds.X, groupBounds.Y - 20, labelWidth, labelHeight);
     }
 
     /// <summary>

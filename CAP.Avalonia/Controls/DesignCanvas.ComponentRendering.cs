@@ -80,6 +80,7 @@ public partial class DesignCanvas
     {
         var vm = ViewModel;
         bool isHovered = _interactionState.HoveredGroup == group;
+        bool isLabelHovered = _interactionState.HoveredGroupLabel == group;
         bool isCurrentEditGroup = vm?.CurrentEditGroup == group;
 
         // 1. Render all child components recursively (transparent hierarchy)
@@ -143,8 +144,8 @@ public partial class DesignCanvas
                 ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, isDimmed);
             }
 
-            // 4. Draw group name label at top-left
-            ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed);
+            // 4. Draw group name label at top-left with hover state
+            ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed, isLabelHovered);
         }
 
         // 5. Draw external pins with distinct style

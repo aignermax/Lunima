@@ -1,4 +1,5 @@
 using Avalonia;
+using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
@@ -12,6 +13,32 @@ public class DesignCanvasHitTesting
 {
     private const double PinHitRadius = 15.0;
     private const double ConnectionHitTolerance = 10.0;
+
+    /// <summary>
+    /// Checks if a point is within a component group's label bounds.
+    /// Returns the group if the label is hit, null otherwise.
+    /// This should be checked BEFORE HitTestComponent for prioritized label interaction.
+    /// </summary>
+    public static ComponentGroup? HitTestGroupLabel(Point canvasPoint, DesignCanvasViewModel? vm)
+    {
+        if (vm == null) return null;
+
+        // Check all groups from top to bottom
+        for (int i = vm.Components.Count - 1; i >= 0; i--)
+        {
+            var comp = vm.Components[i];
+            if (comp.Component is ComponentGroup group)
+            {
+                var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group);
+                if (labelBounds.Contains(canvasPoint))
+                {
+                    return group;
+                }
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Finds the component at the given canvas point (topmost first).
