@@ -41,6 +41,32 @@ public class DesignCanvasHitTesting
     }
 
     /// <summary>
+    /// Checks if a point is within a component group's lock icon bounds.
+    /// Returns the group if the lock icon is hit, null otherwise.
+    /// This should be checked BEFORE HitTestGroupLabel for highest priority interaction.
+    /// </summary>
+    public static ComponentGroup? HitTestGroupLockIcon(Point canvasPoint, DesignCanvasViewModel? vm)
+    {
+        if (vm == null) return null;
+
+        // Check all groups from top to bottom
+        for (int i = vm.Components.Count - 1; i >= 0; i--)
+        {
+            var comp = vm.Components[i];
+            if (comp.Component is ComponentGroup group)
+            {
+                var lockIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(group);
+                if (lockIconBounds.Contains(canvasPoint))
+                {
+                    return group;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Finds the component at the given canvas point (topmost first).
     /// For ComponentGroups, checks if the point is within the group's bounding box.
     /// </summary>

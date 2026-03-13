@@ -190,6 +190,64 @@ public class ComponentGroupRendererTests
         labelBounds.Y.ShouldBe(groupBounds.Y - 20);
     }
 
+    [Fact]
+    public void CalculateLockIconBounds_GroupWithChildren_PositionsIconAtTopRight()
+    {
+        // Arrange
+        var group = new ComponentGroup("Test Group");
+        var child = CreateTestComponent("Child", 100, 100, 50, 30);
+        group.AddChild(child);
+
+        // Act
+        var groupBounds = ComponentGroupRenderer.CalculateGroupBounds(group);
+        var lockIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(group);
+
+        // Assert
+        // Icon should be at top-right corner with 4µm padding
+        const double IconSize = 16.0;
+        const double Padding = 4.0;
+        lockIconBounds.X.ShouldBe(groupBounds.Right - IconSize - Padding);
+        lockIconBounds.Y.ShouldBe(groupBounds.Top + Padding);
+        lockIconBounds.Width.ShouldBe(IconSize);
+        lockIconBounds.Height.ShouldBe(IconSize);
+    }
+
+    [Fact]
+    public void CalculateLockIconBounds_EmptyGroup_ReturnsValidBounds()
+    {
+        // Arrange
+        var group = new ComponentGroup("Empty Group");
+
+        // Act
+        var lockIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(group);
+
+        // Assert
+        lockIconBounds.Width.ShouldBe(16.0);
+        lockIconBounds.Height.ShouldBe(16.0);
+    }
+
+    [Fact]
+    public void CalculateLockIconBounds_DifferentGroupSizes_IconAlwaysSameSize()
+    {
+        // Arrange
+        var smallGroup = new ComponentGroup("Small");
+        var smallChild = CreateTestComponent("Small", 100, 100, 50, 30);
+        smallGroup.AddChild(smallChild);
+
+        var largeGroup = new ComponentGroup("Large");
+        var largeChild = CreateTestComponent("Large", 100, 100, 500, 300);
+        largeGroup.AddChild(largeChild);
+
+        // Act
+        var smallIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(smallGroup);
+        var largeIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(largeGroup);
+
+        // Assert - Icon size should be constant regardless of group size
+        smallIconBounds.Width.ShouldBe(largeIconBounds.Width);
+        smallIconBounds.Height.ShouldBe(largeIconBounds.Height);
+        smallIconBounds.Width.ShouldBe(16.0);
+    }
+
     /// <summary>
     /// Creates a test component with specified position and dimensions.
     /// </summary>

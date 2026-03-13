@@ -50,6 +50,9 @@ public class CanvasInteractionState
     // ComponentGroup label hover state
     public ComponentGroup? HoveredGroupLabel { get; set; }
 
+    // ComponentGroup lock icon hover state
+    public ComponentGroup? HoveredGroupLockIcon { get; set; }
+
     // Double-click detection state
     public DateTime LastClickTime { get; set; } = DateTime.MinValue;
     public ComponentViewModel? LastClickedComponent { get; set; }

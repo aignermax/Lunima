@@ -250,4 +250,119 @@ public static class ComponentGroupRenderer
         var rect = new Rect(x, y, width, height);
         context.FillRectangle(new SolidColorBrush(GroupHoverOverlay), rect);
     }
+
+    /// <summary>
+    /// Calculates the bounds of the lock icon for a ComponentGroup.
+    /// Lock icon is positioned at the top-right corner of the group bounds.
+    /// </summary>
+    public static Rect CalculateLockIconBounds(ComponentGroup group)
+    {
+        var bounds = CalculateGroupBounds(group);
+        const double IconSize = 16.0;
+        const double Padding = 4.0;
+
+        // Position at top-right corner
+        double iconX = bounds.Right - IconSize - Padding;
+        double iconY = bounds.Top + Padding;
+
+        return new Rect(iconX, iconY, IconSize, IconSize);
+    }
+
+    /// <summary>
+    /// Renders a lock icon for a ComponentGroup.
+    /// </summary>
+    /// <param name="context">Drawing context.</param>
+    /// <param name="group">The group to render the lock icon for.</param>
+    /// <param name="isHovered">Whether the lock icon is being hovered.</param>
+    public static void RenderGroupLockIcon(DrawingContext context, ComponentGroup group, bool isHovered)
+    {
+        var iconBounds = CalculateLockIconBounds(group);
+        const double IconSize = 16.0;
+        double scale = isHovered ? 1.125 : 1.0; // Scale up on hover (18px when hovered)
+        double scaledSize = IconSize * scale;
+
+        // Center the scaled icon
+        double centerX = iconBounds.X + iconBounds.Width / 2;
+        double centerY = iconBounds.Y + iconBounds.Height / 2;
+        double scaledX = centerX - scaledSize / 2;
+        double scaledY = centerY - scaledSize / 2;
+
+        // Draw semi-transparent background circle
+        var bgColor = isHovered ? Color.FromArgb(220, 60, 60, 60) : Color.FromArgb(180, 40, 40, 40);
+        var bgBrush = new SolidColorBrush(bgColor);
+        context.DrawEllipse(bgBrush, null, new Point(centerX, centerY), scaledSize / 2, scaledSize / 2);
+
+        // Draw lock icon shape
+        var lockColor = isHovered ? Color.FromRgb(255, 215, 0) : Color.FromRgb(255, 165, 0); // Gold on hover, orange otherwise
+        var lockBrush = new SolidColorBrush(lockColor);
+        var lockPen = new Pen(lockBrush, 1.5);
+
+        if (group.IsLocked)
+        {
+            // Draw closed lock (🔒)
+            // Lock body (filled rectangle)
+            double bodyWidth = scaledSize * 0.5;
+            double bodyHeight = scaledSize * 0.5;
+            double bodyX = scaledX + (scaledSize - bodyWidth) / 2;
+            double bodyY = scaledY + scaledSize * 0.5;
+            var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
+            context.DrawRectangle(lockBrush, null, bodyRect);
+
+            // Lock shackle (closed arc)
+            double shackleWidth = scaledSize * 0.4;
+            double shackleHeight = scaledSize * 0.3;
+            double shackleCenterX = centerX;
+            double shackleTopY = bodyY;
+
+            var shackleGeometry = new StreamGeometry();
+            using (var ctx = shackleGeometry.Open())
+            {
+                ctx.BeginFigure(new Point(shackleCenterX - shackleWidth / 2, shackleTopY), false);
+                ctx.ArcTo(
+                    new Point(shackleCenterX + shackleWidth / 2, shackleTopY),
+                    new Size(shackleWidth / 2, shackleHeight),
+                    0,
+                    false,
+                    SweepDirection.CounterClockwise);
+            }
+            context.DrawGeometry(null, lockPen, shackleGeometry);
+        }
+        else
+        {
+            // Draw open lock (🔓)
+            // Lock body (filled rectangle)
+            double bodyWidth = scaledSize * 0.5;
+            double bodyHeight = scaledSize * 0.5;
+            double bodyX = scaledX + (scaledSize - bodyWidth) / 2;
+            double bodyY = scaledY + scaledSize * 0.5;
+            var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
+            context.DrawRectangle(lockBrush, null, bodyRect);
+
+            // Lock shackle (open, offset to the right)
+            double shackleWidth = scaledSize * 0.4;
+            double shackleHeight = scaledSize * 0.35;
+            double shackleCenterX = centerX + scaledSize * 0.15; // Offset right for open look
+            double shackleTopY = bodyY - shackleHeight * 0.3;
+
+            var shackleGeometry = new StreamGeometry();
+            using (var ctx = shackleGeometry.Open())
+            {
+                ctx.BeginFigure(new Point(shackleCenterX - shackleWidth / 2, shackleTopY + shackleHeight), false);
+                ctx.ArcTo(
+                    new Point(shackleCenterX + shackleWidth / 2, shackleTopY),
+                    new Size(shackleWidth / 2, shackleHeight),
+                    0,
+                    false,
+                    SweepDirection.CounterClockwise);
+            }
+            context.DrawGeometry(null, lockPen, shackleGeometry);
+        }
+
+        // Draw hover border around icon background to indicate interactivity
+        if (isHovered)
+        {
+            var hoverBorderPen = new Pen(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 1);
+            context.DrawEllipse(null, hoverBorderPen, new Point(centerX, centerY), scaledSize / 2 + 1, scaledSize / 2 + 1);
+        }
+    }
 }

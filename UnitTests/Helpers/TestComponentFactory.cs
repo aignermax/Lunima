@@ -148,5 +148,35 @@ namespace UnitTests
 
             return connection;
         }
+
+        /// <summary>
+        /// Creates a ComponentGroup for testing with optional child components.
+        /// </summary>
+        /// <param name="groupName">Name of the group.</param>
+        /// <param name="addChildren">If true, adds two basic components to the group.</param>
+        public static ComponentGroup CreateComponentGroup(string groupName = "TestGroup", bool addChildren = false)
+        {
+            var group = new ComponentGroup(groupName)
+            {
+                PhysicalX = 0,
+                PhysicalY = 0,
+                Description = "Test component group"
+            };
+
+            if (addChildren)
+            {
+                var child1 = CreateBasicComponent();
+                child1.PhysicalX = 100;
+                child1.PhysicalY = 100;
+                group.AddChild(child1);
+
+                var child2 = CreateBasicComponent();
+                child2.PhysicalX = 400;
+                child2.PhysicalY = 100;
+                group.AddChild(child2);
+            }
+
+            return group;
+        }
     }
 }

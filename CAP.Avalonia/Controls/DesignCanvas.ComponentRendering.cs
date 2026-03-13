@@ -146,9 +146,13 @@ public partial class DesignCanvas
 
             // 4. Draw group name label at top-left with hover state
             ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed, isLabelHovered);
+
+            // 5. Draw lock icon at top-right (always visible for groups)
+            bool isLockIconHovered = _interactionState.HoveredGroupLockIcon == group;
+            ComponentGroupRenderer.RenderGroupLockIcon(context, group, isLockIconHovered);
         }
 
-        // 5. Draw external pins with distinct style
+        // 6. Draw external pins with distinct style
         foreach (var externalPin in group.ExternalPins)
         {
             ComponentGroupRenderer.RenderExternalPin(context, externalPin, group, isHovered);

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Input;
+using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Panels;
@@ -88,7 +89,17 @@ public partial class DesignCanvas
 
     private void HandleSelectModeClick(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
     {
-        // PRIORITY 1: Check if clicking on a group label (highest priority)
+        // PRIORITY 0: Check if clicking on a group lock icon (highest priority)
+        var hitLockIcon = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, vm);
+        if (hitLockIcon != null)
+        {
+            // Clicked on lock icon - toggle lock state
+            HandleLockIconClick(hitLockIcon, vm, mainVm);
+            e.Handled = true;
+            return;
+        }
+
+        // PRIORITY 1: Check if clicking on a group label (second priority)
         var hitGroupLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
         ComponentViewModel? hitComponent = null;
 
@@ -242,6 +253,30 @@ public partial class DesignCanvas
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// Handles clicking on a group's lock icon to toggle lock/unlock state.
+    /// </summary>
+    private void HandleLockIconClick(ComponentGroup group, DesignCanvasViewModel vm, MainViewModel? mainVm)
+    {
+        if (mainVm?.CommandManager == null) return;
+
+        // Toggle lock state using command for undo/redo support
+        var command = new ToggleGroupLockCommand(group);
+        mainVm.CommandManager.ExecuteCommand(command);
+
+        // Update status
+        string statusMessage = group.IsLocked
+            ? $"Locked group '{group.GroupName}'"
+            : $"Unlocked group '{group.GroupName}'";
+
+        if (mainVm != null)
+        {
+            mainVm.StatusText = statusMessage;
+        }
+
+        InvalidateVisual();
+    }
+
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
@@ -297,56 +332,75 @@ public partial class DesignCanvas
     /// <summary>
     /// Updates group hover state when hovering over a component or group.
     /// If hovering over a child component, highlights the entire parent group.
-    /// Also tracks label hover state separately for visual feedback.
+    /// Also tracks label hover state and lock icon hover state separately for visual feedback.
     /// </summary>
     private void UpdateGroupHover(Point canvasPoint, DesignCanvasViewModel vm)
     {
         var previousHoveredGroup = _interactionState.HoveredGroup;
         var previousHoveredLabel = _interactionState.HoveredGroupLabel;
+        var previousHoveredLockIcon = _interactionState.HoveredGroupLockIcon;
 
-        // Check if hovering over a group label (highest priority)
-        var hoveredLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
-        _interactionState.HoveredGroupLabel = hoveredLabel;
+        // Check if hovering over a group lock icon (highest priority)
+        var hoveredLockIcon = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, vm);
+        _interactionState.HoveredGroupLockIcon = hoveredLockIcon;
 
-        // If hovering over label, also set the group as hovered
-        if (hoveredLabel != null)
+        // If hovering over lock icon, don't process other hover states
+        if (hoveredLockIcon != null)
         {
-            _interactionState.HoveredGroup = hoveredLabel;
+            _interactionState.HoveredGroup = hoveredLockIcon;
+            _interactionState.HoveredGroupLabel = null;
+            Cursor = new Cursor(StandardCursorType.Hand);
         }
         else
         {
-            // Otherwise check component hover
-            var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
+            // Check if hovering over a group label (second priority)
+            var hoveredLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
+            _interactionState.HoveredGroupLabel = hoveredLabel;
 
-            if (hoveredComponent != null)
+            // If hovering over label, also set the group as hovered
+            if (hoveredLabel != null)
             {
-                // Check if this component is part of a group
-                var component = hoveredComponent.Component;
-                if (component.ParentGroup != null)
-                {
-                    // Hover over a child - highlight the entire parent group
-                    _interactionState.HoveredGroup = GetTopLevelGroup(component);
-                }
-                else if (component is ComponentGroup group)
-                {
-                    // Hover directly over a group
-                    _interactionState.HoveredGroup = group;
-                }
-                else
-                {
-                    // Regular component, not part of a group
-                    _interactionState.HoveredGroup = null;
-                }
+                _interactionState.HoveredGroup = hoveredLabel;
+                Cursor = new Cursor(StandardCursorType.Hand);
             }
             else
             {
-                _interactionState.HoveredGroup = null;
+                // Otherwise check component hover
+                var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
+
+                if (hoveredComponent != null)
+                {
+                    // Check if this component is part of a group
+                    var component = hoveredComponent.Component;
+                    if (component.ParentGroup != null)
+                    {
+                        // Hover over a child - highlight the entire parent group
+                        _interactionState.HoveredGroup = GetTopLevelGroup(component);
+                    }
+                    else if (component is ComponentGroup group)
+                    {
+                        // Hover directly over a group
+                        _interactionState.HoveredGroup = group;
+                    }
+                    else
+                    {
+                        // Regular component, not part of a group
+                        _interactionState.HoveredGroup = null;
+                    }
+                    Cursor = Cursor.Default;
+                }
+                else
+                {
+                    _interactionState.HoveredGroup = null;
+                    Cursor = Cursor.Default;
+                }
             }
         }
 
         // Repaint if hover state changed
         if (_interactionState.HoveredGroup != previousHoveredGroup ||
-            _interactionState.HoveredGroupLabel != previousHoveredLabel)
+            _interactionState.HoveredGroupLabel != previousHoveredLabel ||
+            _interactionState.HoveredGroupLockIcon != previousHoveredLockIcon)
         {
             InvalidateVisual();
         }
