@@ -103,12 +103,50 @@ public partial class DesignCanvas
 
         if (_interactionState.DraggingComponent != null)
         {
+            // Check for double-click on ComponentGroup
+            if (DetectDoubleClick(_interactionState.DraggingComponent) &&
+                _interactionState.DraggingComponent.Component is ComponentGroup clickedGroup)
+            {
+                // Enter group edit mode instead of dragging
+                vm.EnterGroupEditMode(clickedGroup);
+                mainVm?.HierarchyPanel?.RebuildTree();
+                _interactionState.DraggingComponent = null;
+                InvalidateVisual();
+                return;
+            }
+
             HandleComponentSelection(e, canvasPoint, vm, mainVm);
         }
         else
         {
+            // Check for double-click on background in edit mode
+            if (vm.IsInGroupEditMode && DetectDoubleClick(null))
+            {
+                vm.ExitGroupEditMode();
+                mainVm?.HierarchyPanel?.RebuildTree();
+                InvalidateVisual();
+                return;
+            }
+
             StartBoxSelection(canvasPoint, vm);
         }
+    }
+
+    /// <summary>
+    /// Detects if the current click is a double-click on the same component.
+    /// </summary>
+    private bool DetectDoubleClick(ComponentViewModel? component)
+    {
+        var now = DateTime.UtcNow;
+        var timeSinceLastClick = (now - _interactionState.LastClickTime).TotalMilliseconds;
+
+        bool isDoubleClick = timeSinceLastClick < CanvasInteractionState.DoubleClickMilliseconds &&
+                             _interactionState.LastClickedComponent == component;
+
+        _interactionState.LastClickTime = now;
+        _interactionState.LastClickedComponent = component;
+
+        return isDoubleClick;
     }
 
     private void HandleComponentSelection(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)

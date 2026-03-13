@@ -110,6 +110,50 @@ public partial class HierarchyPanelViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Synchronizes edit mode highlighting with canvas edit state.
+    /// Called when entering/exiting group edit mode.
+    /// </summary>
+    public void SyncEditModeFromCanvas(ComponentGroup? editGroup)
+    {
+        // Clear all edit mode flags
+        ClearAllEditModeFlags();
+
+        if (editGroup == null)
+            return;
+
+        // Find and highlight the edited group node
+        var node = FindNodeByComponent(editGroup);
+        if (node != null)
+        {
+            node.IsInEditMode = true;
+            ExpandParentsToNode(node);
+        }
+    }
+
+    /// <summary>
+    /// Clears all edit mode flags in the hierarchy tree.
+    /// </summary>
+    private void ClearAllEditModeFlags()
+    {
+        foreach (var rootNode in RootNodes)
+        {
+            ClearEditModeFlagsRecursive(rootNode);
+        }
+    }
+
+    /// <summary>
+    /// Recursively clears edit mode flags in a subtree.
+    /// </summary>
+    private void ClearEditModeFlagsRecursive(HierarchyNodeViewModel node)
+    {
+        node.IsInEditMode = false;
+        foreach (var child in node.Children)
+        {
+            ClearEditModeFlagsRecursive(child);
+        }
+    }
+
+    /// <summary>
     /// Finds a node in the tree by its component reference.
     /// </summary>
     private HierarchyNodeViewModel? FindNodeByComponent(Component component)
