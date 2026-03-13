@@ -22,10 +22,12 @@ public class LayoutCompressor
     /// </summary>
     /// <param name="components">List of components to compress.</param>
     /// <param name="connections">Waveguide connections between components.</param>
+    /// <param name="progressCallback">Optional callback invoked periodically with iteration number and current positions.</param>
     /// <returns>New positions for each component (X, Y in micrometers).</returns>
     public Dictionary<Component, (double X, double Y)> CompressLayout(
         List<Component> components,
-        List<WaveguideConnection> connections)
+        List<WaveguideConnection> connections,
+        Action<int, Dictionary<Component, (double X, double Y)>>? progressCallback = null)
     {
         if (components.Count == 0)
             return new Dictionary<Component, (double X, double Y)>();
@@ -73,6 +75,15 @@ public class LayoutCompressor
                 // Track convergence
                 double displacement = Math.Sqrt(vx * vx + vy * vy);
                 maxDisplacement = Math.Max(maxDisplacement, displacement);
+            }
+
+            // Report progress every 5 iterations for smooth animation
+            if (progressCallback != null && iteration % 5 == 0)
+            {
+                var currentPositions = components.ToDictionary(
+                    c => c,
+                    c => (c.PhysicalX, c.PhysicalY));
+                progressCallback(iteration, currentPositions);
             }
 
             // Check convergence
