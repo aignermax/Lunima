@@ -9,6 +9,7 @@ using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.Export;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -25,6 +26,11 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly ObservableCollection<ComponentTemplate> _componentLibrary;
 
     private string? _currentFilePath;
+
+    /// <summary>
+    /// ViewModel for GDS export functionality.
+    /// </summary>
+    public GdsExportViewModel GdsExport { get; }
 
     /// <summary>
     /// Callback to update status text in the UI.
@@ -50,12 +56,14 @@ public partial class FileOperationsViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
         SimpleNazcaExporter nazcaExporter,
-        ObservableCollection<ComponentTemplate> componentLibrary)
+        ObservableCollection<ComponentTemplate> componentLibrary,
+        GdsExportViewModel gdsExport)
     {
         _canvas = canvas;
         _commandManager = commandManager;
         _nazcaExporter = nazcaExporter;
         _componentLibrary = componentLibrary;
+        GdsExport = gdsExport;
     }
 
     [RelayCommand]
@@ -316,9 +324,25 @@ public partial class FileOperationsViewModel : ObservableObject
         {
             try
             {
+                // Export Python script
                 var nazcaCode = _nazcaExporter.Export(_canvas);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
-                UpdateStatus?.Invoke($"Exported to {Path.GetFileName(filePath)}");
+
+                // Attempt GDS generation if enabled
+                var result = await GdsExport.ExportScriptToGdsAsync(filePath);
+
+                if (result.Success && result.GdsPath != null)
+                {
+                    UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} and {Path.GetFileName(result.GdsPath)}");
+                }
+                else if (result.Success)
+                {
+                    UpdateStatus?.Invoke($"Exported to {Path.GetFileName(filePath)}");
+                }
+                else
+                {
+                    UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} (GDS generation failed: {result.ErrorMessage})");
+                }
             }
             catch (Exception ex)
             {

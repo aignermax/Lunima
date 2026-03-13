@@ -141,7 +141,8 @@ public partial class MainViewModel : ObservableObject
         UserPreferencesService preferencesService,
         CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager,
         Services.GroupPreviewGenerator previewGenerator,
-        Services.IInputDialogService inputDialogService)
+        Services.IInputDialogService inputDialogService,
+        CAP_Core.Export.GdsExportService gdsExportService)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -151,7 +152,8 @@ public partial class MainViewModel : ObservableObject
         // Initialize Panel ViewModels (order matters due to dependencies)
         LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService);
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates);
+        var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm);
         ViewportControl = new ViewportControlViewModel(_canvas);
         RightPanel = new RightPanelViewModel(_canvas, preferencesService);
         BottomPanel = new BottomPanelViewModel(_canvas, CommandManager);
@@ -229,6 +231,9 @@ public partial class MainViewModel : ObservableObject
             var (vpWidth, vpHeight) = ViewportControl.GetViewportSize?.Invoke() ?? (w, h);
             ViewportControl.ZoomToFit(vpWidth, vpHeight);
         };
+
+        // Auto-check Python/Nazca environment on startup
+        _ = FileOperations.GdsExport.CheckEnvironmentAsync();
     }
 
     // Canvas interaction delegates

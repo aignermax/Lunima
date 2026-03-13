@@ -6,6 +6,7 @@ using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.Views;
 using CAP_Contracts;
 using CAP_Core.Helpers;
+using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +28,7 @@ public partial class App : Application
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
         services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
+        services.AddSingleton<GdsExportService>();
 
         // Register application services
         services.AddSingleton<SimulationService>();
