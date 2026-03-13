@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using System.ComponentModel;
+using System.Linq;
 
 namespace CAP.Avalonia.Views;
 
@@ -57,40 +58,60 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Sets up panel resizing by listening to Border size changes when GridSplitter is dragged.
+    /// Sets up panel resizing by setting initial widths and listening to GridSplitter DragCompleted events.
     /// </summary>
     private void SetupPanelResizing(MainViewModel vm)
     {
-        // Left panel resizing
-        if (LeftPanelBorder != null)
+        // Set initial widths from saved preferences
+        if (LeftPanelGrid != null && LeftPanelGrid.ColumnDefinitions.Count > 0)
         {
-            LeftPanelBorder.PropertyChanged += (s, e) =>
+            LeftPanelGrid.ColumnDefinitions[0].Width = new GridLength(vm.LeftPanel.LeftPanelWidth.Value, GridUnitType.Pixel);
+        }
+
+        if (RightPanelGrid != null && RightPanelGrid.ColumnDefinitions.Count > 1)
+        {
+            RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(vm.RightPanel.RightPanelWidth.Value, GridUnitType.Pixel);
+        }
+
+        // Listen to GridSplitter drag events to save new widths
+        // Left panel resizing - we need to find the GridSplitter in LeftPanelGrid
+        if (LeftPanelGrid != null)
+        {
+            var leftSplitter = LeftPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
+            if (leftSplitter != null)
             {
-                if (e.Property.Name == nameof(Border.Bounds))
+                leftSplitter.DragCompleted += (s, e) =>
                 {
-                    var newWidth = LeftPanelBorder.Bounds.Width;
-                    if (newWidth > 0 && Math.Abs(vm.LeftPanel.LeftPanelWidth.Value - newWidth) > 1)
+                    if (LeftPanelGrid.ColumnDefinitions.Count > 0)
                     {
-                        vm.LeftPanel.LeftPanelWidth = new GridLength(newWidth);
+                        var newWidth = LeftPanelGrid.ColumnDefinitions[0].Width.Value;
+                        if (newWidth > 0)
+                        {
+                            vm.LeftPanel.LeftPanelWidth = new GridLength(newWidth);
+                        }
                     }
-                }
-            };
+                };
+            }
         }
 
         // Right panel resizing
-        if (RightPanelBorder != null)
+        if (RightPanelGrid != null)
         {
-            RightPanelBorder.PropertyChanged += (s, e) =>
+            var rightSplitter = RightPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
+            if (rightSplitter != null)
             {
-                if (e.Property.Name == nameof(Border.Bounds))
+                rightSplitter.DragCompleted += (s, e) =>
                 {
-                    var newWidth = RightPanelBorder.Bounds.Width;
-                    if (newWidth > 0 && Math.Abs(vm.RightPanel.RightPanelWidth.Value - newWidth) > 1)
+                    if (RightPanelGrid.ColumnDefinitions.Count > 1)
                     {
-                        vm.RightPanel.RightPanelWidth = new GridLength(newWidth);
+                        var newWidth = RightPanelGrid.ColumnDefinitions[1].Width.Value;
+                        if (newWidth > 0)
+                        {
+                            vm.RightPanel.RightPanelWidth = new GridLength(newWidth);
+                        }
                     }
-                }
-            };
+                };
+            }
         }
     }
 
