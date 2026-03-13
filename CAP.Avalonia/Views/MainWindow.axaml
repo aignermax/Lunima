@@ -5,6 +5,7 @@
         xmlns:creation="using:CAP_Core.Components.Creation"
         xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:views="using:CAP.Avalonia.Views"
+        xmlns:behaviors="using:CAP.Avalonia.Behaviors"
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Connect-A-PIC Pro"
@@ -253,7 +254,8 @@
 
                     <ScrollViewer x:Name="ComponentLibraryScroll"
                                   VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
                         <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
                                  SelectedItem="{Binding SelectedTemplate}"
                                  Background="Transparent" Foreground="White"

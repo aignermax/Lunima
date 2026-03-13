@@ -26,7 +26,7 @@ public class LeftPanelViewModelTests
         _preferencesService = new UserPreferencesService();
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LibraryScrollOffset_DefaultsToZero()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -34,7 +34,7 @@ public class LeftPanelViewModelTests
         vm.LibraryScrollOffset.ShouldBe(0.0);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LibraryScrollOffset_CanBeSet()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -44,7 +44,7 @@ public class LeftPanelViewModelTests
         vm.LibraryScrollOffset.ShouldBe(123.5);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LibraryScrollOffset_RaisesPropertyChanged()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -61,7 +61,7 @@ public class LeftPanelViewModelTests
         propertyChanged.ShouldBeTrue();
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LibraryScrollOffset_PreservesValue()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
