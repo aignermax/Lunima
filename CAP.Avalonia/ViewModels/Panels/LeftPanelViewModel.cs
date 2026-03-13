@@ -58,6 +58,9 @@ public partial class LeftPanelViewModel : ObservableObject
     [ObservableProperty]
     private string _searchText = "";
 
+    [ObservableProperty]
+    private double _libraryScrollOffset = 0.0;
+
     private double _leftPanelWidth = 220;
     /// <summary>
     /// Width of the left panel in pixels. Persisted in user preferences.

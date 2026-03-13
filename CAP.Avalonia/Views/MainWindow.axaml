@@ -240,27 +240,31 @@
                         </StackPanel>
                     </Expander>
 
-                    <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
-                             SelectedItem="{Binding SelectedTemplate}"
-                             Background="Transparent" Foreground="White"
-                             Margin="5">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vmLib:ComponentTemplate">
-                                <StackPanel Orientation="Horizontal" Margin="3">
-                                    <controls:ComponentPreview
-                                        Width="56" Height="36"
-                                        WidthMicrometers="{Binding WidthMicrometers}"
-                                        HeightMicrometers="{Binding HeightMicrometers}"
-                                        PinDefinitions="{Binding PinDefinitions}"
-                                        Margin="0,0,6,0"/>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
-                                        <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                    <ScrollViewer x:Name="ComponentLibraryScroll"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
+                                 SelectedItem="{Binding SelectedTemplate}"
+                                 Background="Transparent" Foreground="White"
+                                 Margin="5">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                                    <StackPanel Orientation="Horizontal" Margin="3">
+                                        <controls:ComponentPreview
+                                            Width="56" Height="36"
+                                            WidthMicrometers="{Binding WidthMicrometers}"
+                                            HeightMicrometers="{Binding HeightMicrometers}"
+                                            PinDefinitions="{Binding PinDefinitions}"
+                                            Margin="0,0,6,0"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                            <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
                 </DockPanel>
                 </Grid>
             </Border>
