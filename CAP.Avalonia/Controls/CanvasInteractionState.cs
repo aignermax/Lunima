@@ -47,6 +47,11 @@ public class CanvasInteractionState
     // ComponentGroup hover state
     public ComponentGroup? HoveredGroup { get; set; }
 
+    // Double-click detection state
+    public DateTime LastClickTime { get; set; } = DateTime.MinValue;
+    public ComponentViewModel? LastClickedComponent { get; set; }
+    public const int DoubleClickMilliseconds = 300;
+
     /// <summary>
     /// Resets all drag-related state.
     /// </summary>

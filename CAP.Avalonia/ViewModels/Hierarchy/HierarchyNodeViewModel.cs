@@ -40,6 +40,12 @@ public partial class HierarchyNodeViewModel : ObservableObject
     private bool _isSelected;
 
     /// <summary>
+    /// Whether this group is currently being edited (entered edit mode).
+    /// </summary>
+    [ObservableProperty]
+    private bool _isInEditMode;
+
+    /// <summary>
     /// Whether this component is a group (has children).
     /// </summary>
     public bool IsGroup => Component is ComponentGroup;

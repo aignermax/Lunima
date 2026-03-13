@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
@@ -136,6 +137,28 @@ public partial class DesignCanvasViewModel : ObservableObject
     public GridSnapSettings GridSnap { get; } = new();
 
     /// <summary>
+    /// The currently edited group (null if at root level).
+    /// When set, only components inside this group can be edited.
+    /// </summary>
+    [ObservableProperty]
+    private ComponentGroup? _currentEditGroup;
+
+    /// <summary>
+    /// Stack of groups for nested editing navigation (breadcrumb trail).
+    /// </summary>
+    private readonly Stack<ComponentGroup> _editModeStack = new();
+
+    /// <summary>
+    /// Whether currently in group edit mode (editing inside a group).
+    /// </summary>
+    public bool IsInGroupEditMode => CurrentEditGroup != null;
+
+    /// <summary>
+    /// Breadcrumb path from root to current edit group.
+    /// </summary>
+    public ObservableCollection<ComponentGroup> BreadcrumbPath { get; } = new();
+
+    /// <summary>
     /// Minimum bend radius for waveguides in micrometers.
     /// Depends on the fabrication process - typical values: 5-20µm for silicon photonics.
     /// Default: 10µm (conservative value for most foundries).
@@ -197,6 +220,106 @@ public partial class DesignCanvasViewModel : ObservableObject
     {
         // Initialize A* pathfinding by default
         InitializeAStarRouting();
+    }
+
+    /// <summary>
+    /// Enters edit mode for a ComponentGroup, allowing modification of its internal structure.
+    /// </summary>
+    public void EnterGroupEditMode(ComponentGroup group)
+    {
+        if (group == null)
+            throw new ArgumentNullException(nameof(group));
+
+        // Push current group to stack before entering
+        if (CurrentEditGroup != null)
+        {
+            _editModeStack.Push(CurrentEditGroup);
+        }
+
+        CurrentEditGroup = group;
+        UpdateBreadcrumbPath();
+        OnPropertyChanged(nameof(IsInGroupEditMode));
+    }
+
+    /// <summary>
+    /// Exits the current group edit mode, returning to the parent group (or root).
+    /// </summary>
+    public void ExitGroupEditMode()
+    {
+        if (CurrentEditGroup == null)
+            return;
+
+        if (_editModeStack.Count > 0)
+        {
+            CurrentEditGroup = _editModeStack.Pop();
+        }
+        else
+        {
+            CurrentEditGroup = null;
+        }
+
+        UpdateBreadcrumbPath();
+        OnPropertyChanged(nameof(IsInGroupEditMode));
+    }
+
+    /// <summary>
+    /// Exits all the way to root level (top-level canvas editing).
+    /// </summary>
+    [RelayCommand]
+    public void ExitToRoot()
+    {
+        CurrentEditGroup = null;
+        _editModeStack.Clear();
+        UpdateBreadcrumbPath();
+        OnPropertyChanged(nameof(IsInGroupEditMode));
+    }
+
+    /// <summary>
+    /// Jumps to a specific level in the breadcrumb path.
+    /// </summary>
+    [RelayCommand]
+    public void NavigateToBreadcrumbLevel(ComponentGroup? group)
+    {
+        if (group == null)
+        {
+            ExitToRoot();
+            return;
+        }
+
+        // Find the group in the breadcrumb path
+        var index = BreadcrumbPath.IndexOf(group);
+        if (index < 0)
+            return;
+
+        // Pop back to that level
+        while (_editModeStack.Count > BreadcrumbPath.Count - index - 2)
+        {
+            _editModeStack.Pop();
+        }
+
+        CurrentEditGroup = group;
+        UpdateBreadcrumbPath();
+        OnPropertyChanged(nameof(IsInGroupEditMode));
+    }
+
+    /// <summary>
+    /// Updates the breadcrumb path based on the current edit stack.
+    /// </summary>
+    private void UpdateBreadcrumbPath()
+    {
+        BreadcrumbPath.Clear();
+
+        // Build path from stack + current group
+        var tempStack = new Stack<ComponentGroup>(_editModeStack.Reverse());
+        while (tempStack.Count > 0)
+        {
+            BreadcrumbPath.Add(tempStack.Pop());
+        }
+
+        if (CurrentEditGroup != null)
+        {
+            BreadcrumbPath.Add(CurrentEditGroup);
+        }
     }
 
     /// <summary>

@@ -120,10 +120,12 @@ public static class ComponentGroupRenderer
     /// <summary>
     /// Renders a dashed border around the group bounds.
     /// </summary>
-    public static void RenderGroupBorder(DrawingContext context, Rect bounds, bool isHovered)
+    public static void RenderGroupBorder(DrawingContext context, Rect bounds, bool isHovered, bool isDimmed = false)
     {
+        byte alpha = (byte)(isDimmed ? 128 : 255);
         var borderColor = isHovered ? HoverBorderColor : BorderColor;
-        var dashedPen = new Pen(new SolidColorBrush(borderColor), BorderThickness)
+        var dimmedBorderColor = Color.FromArgb(alpha, borderColor.R, borderColor.G, borderColor.B);
+        var dashedPen = new Pen(new SolidColorBrush(dimmedBorderColor), BorderThickness)
         {
             DashStyle = new DashStyle(new[] { 4.0, 4.0 }, 0)
         };
@@ -134,22 +136,24 @@ public static class ComponentGroupRenderer
     /// <summary>
     /// Renders the group name label at the top-left of the group bounds.
     /// </summary>
-    public static void RenderGroupNameLabel(DrawingContext context, Rect bounds, string groupName)
+    public static void RenderGroupNameLabel(DrawingContext context, Rect bounds, string groupName, bool isDimmed = false)
     {
+        byte alpha = (byte)(isDimmed ? 128 : 255);
         var labelText = new FormattedText(
             groupName,
             CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),
             12,
-            Brushes.White
+            new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255))
         );
 
         double labelWidth = labelText.Width + 8;
         double labelHeight = 18;
         var labelBg = new Rect(bounds.X, bounds.Y - 20, labelWidth, labelHeight);
 
-        context.FillRectangle(new SolidColorBrush(BorderColor), labelBg);
+        var bgColor = Color.FromArgb(alpha, BorderColor.R, BorderColor.G, BorderColor.B);
+        context.FillRectangle(new SolidColorBrush(bgColor), labelBg);
         context.DrawText(labelText, new Point(bounds.X + 4, bounds.Y - 18));
     }
 

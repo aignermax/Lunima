@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:CAP.Avalonia.ViewModels.Canvas"
+             xmlns:core="clr-namespace:CAP_Core.Components.Core;assembly=CAP-Core"
+             x:Class="CAP.Avalonia.Views.BreadcrumbBar"
+             x:DataType="vm:DesignCanvasViewModel">
+
+  <Border Background="#2d2d30"
+          BorderBrush="#3d3d3d"
+          BorderThickness="0,0,0,1"
+          Padding="10,5"
+          IsVisible="{Binding IsInGroupEditMode}">
+    <StackPanel Orientation="Horizontal" Spacing="5">
+      <!-- Exit to Root button -->
+      <Button Content="⬅ Exit"
+              Background="#3d3d3d"
+              Foreground="LightBlue"
+              Padding="8,4"
+              ToolTip.Tip="Exit to root level (Esc)"
+              Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).ExitToRootCommand}" />
+
+      <TextBlock Text="📁" VerticalAlignment="Center" Foreground="LightGray" />
+
+      <!-- Root breadcrumb -->
+      <Button Content="Root"
+              Background="Transparent"
+              Foreground="LightGray"
+              Padding="5,2"
+              ToolTip.Tip="Return to root level"
+              Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).NavigateToBreadcrumbLevelCommand}"
+              CommandParameter="{x:Null}" />
+
+      <!-- Breadcrumb path -->
+      <ItemsControl ItemsSource="{Binding BreadcrumbPath}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="5" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="core:ComponentGroup">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="›" VerticalAlignment="Center" Foreground="LightGray" />
+              <Button Content="{Binding GroupName}"
+                      Background="Transparent"
+                      Foreground="White"
+                      FontWeight="SemiBold"
+                      Padding="5,2"
+                      ToolTip.Tip="{Binding Description}"
+                      Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).NavigateToBreadcrumbLevelCommand}"
+                      CommandParameter="{Binding}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Current edit indicator -->
+      <TextBlock Text="(editing)"
+                 VerticalAlignment="Center"
+                 Foreground="Orange"
+                 FontStyle="Italic"
+                 Margin="5,0,0,0" />
+    </StackPanel>
+  </Border>
+</UserControl>
