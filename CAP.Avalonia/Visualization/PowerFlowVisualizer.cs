@@ -47,14 +47,52 @@ public class PowerFlowVisualizer
 
     /// <summary>
     /// Updates the power flow data from simulation results.
+    /// Includes both regular connections and frozen paths inside groups.
     /// </summary>
     /// <param name="connections">Current waveguide connections.</param>
+    /// <param name="components">Current components (to extract frozen paths from groups).</param>
     /// <param name="fieldResults">Simulation field results mapping pin GUIDs to amplitudes.</param>
     public void UpdateFromSimulation(
         IReadOnlyList<WaveguideConnection> connections,
+        IReadOnlyList<Component> components,
         IReadOnlyDictionary<Guid, Complex> fieldResults)
     {
-        CurrentResult = _analyzer.Analyze(connections, fieldResults);
+        var frozenPaths = CollectAllFrozenPaths(components);
+        CurrentResult = _analyzer.Analyze(connections, frozenPaths, fieldResults);
+    }
+
+    /// <summary>
+    /// Collects all frozen waveguide paths from component groups (including nested groups).
+    /// </summary>
+    private static List<FrozenWaveguidePath> CollectAllFrozenPaths(IReadOnlyList<Component> components)
+    {
+        var frozenPaths = new List<FrozenWaveguidePath>();
+
+        foreach (var component in components)
+        {
+            if (component is ComponentGroup group)
+            {
+                CollectFrozenPathsRecursive(group, frozenPaths);
+            }
+        }
+
+        return frozenPaths;
+    }
+
+    /// <summary>
+    /// Recursively collects frozen paths from a group and its nested groups.
+    /// </summary>
+    private static void CollectFrozenPathsRecursive(ComponentGroup group, List<FrozenWaveguidePath> frozenPaths)
+    {
+        frozenPaths.AddRange(group.InternalPaths);
+
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+            {
+                CollectFrozenPathsRecursive(nestedGroup, frozenPaths);
+            }
+        }
     }
 
     /// <summary>

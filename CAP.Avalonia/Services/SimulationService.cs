@@ -71,8 +71,9 @@ public class SimulationService
             }
         }
 
+        var components = canvas.Components.Select(c => c.Component).ToList();
         canvas.PowerFlowVisualizer.UpdateFromSimulation(
-            canvas.ConnectionManager.Connections, allFieldResults);
+            canvas.ConnectionManager.Connections, components, allFieldResults);
 
         canvas.RefreshPowerFlowDisplay();
 

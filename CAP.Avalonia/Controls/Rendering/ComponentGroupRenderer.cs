@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Media;
+using CAP.Avalonia.Visualization;
 using CAP_Core.Components.Core;
+using CAP_Core.LightCalculation.PowerFlow;
 using CAP_Core.Routing;
 using System.Globalization;
 
@@ -51,14 +53,34 @@ public static class ComponentGroupRenderer
 
     /// <summary>
     /// Renders a frozen waveguide path from a ComponentGroup.
+    /// Applies power flow visualization if available.
     /// </summary>
-    public static void RenderFrozenWaveguidePath(DrawingContext context, FrozenWaveguidePath frozenPath)
+    /// <param name="context">Drawing context.</param>
+    /// <param name="frozenPath">The frozen path to render.</param>
+    /// <param name="powerFlowResult">Optional power flow result for color rendering.</param>
+    /// <param name="fadeThresholdDb">Threshold in dB for fading out weak connections.</param>
+    public static void RenderFrozenWaveguidePath(
+        DrawingContext context,
+        FrozenWaveguidePath frozenPath,
+        PowerFlowResult? powerFlowResult = null,
+        double fadeThresholdDb = -40.0)
     {
         if (frozenPath?.Path?.Segments == null || frozenPath.Path.Segments.Count == 0)
             return;
 
-        // Use a distinct color for frozen paths (slightly dimmed from normal connections)
-        var frozenPen = new Pen(new SolidColorBrush(Color.FromArgb(200, 255, 140, 0)), 2);
+        Pen frozenPen;
+
+        // Use power flow colors if available
+        if (powerFlowResult != null &&
+            powerFlowResult.ConnectionFlows.TryGetValue(frozenPath.PathId, out var flow))
+        {
+            frozenPen = PowerFlowRenderer.CreatePowerPen(flow, fadeThresholdDb);
+        }
+        else
+        {
+            // Default color for frozen paths (orange, slightly dimmed)
+            frozenPen = new Pen(new SolidColorBrush(Color.FromArgb(200, 255, 140, 0)), 2);
+        }
 
         foreach (var segment in frozenPath.Path.Segments)
         {

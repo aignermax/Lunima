@@ -125,9 +125,13 @@ public partial class DesignCanvas
         }
 
         // 2. Render frozen internal waveguide paths
+        var powerFlowResult = vm?.ShowPowerFlow == true ? vm.PowerFlowVisualizer.CurrentResult : null;
+        var fadeThreshold = vm?.PowerFlowVisualizer.FadeThresholdDb ?? -40.0;
+
         foreach (var frozenPath in group.InternalPaths)
         {
-            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath);
+            ComponentGroupRenderer.RenderFrozenWaveguidePath(
+                context, frozenPath, powerFlowResult, fadeThreshold);
         }
 
         // 3. Draw border around group bounds (hide if this is the current edit group)
