@@ -1,0 +1,553 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CAP_Core.Components;
+using CAP_Core.Components.Core;
+using CAP.Avalonia.Commands;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Library;
+
+namespace CAP.Avalonia.ViewModels.Panels;
+
+/// <summary>
+/// Interaction mode for the canvas.
+/// </summary>
+public enum InteractionMode
+{
+    Select,
+    PlaceComponent,
+    Connect,
+    Delete
+}
+
+/// <summary>
+/// ViewModel for canvas interaction logic.
+/// Handles user interactions: selection, placement, connection, deletion, and component manipulation.
+/// Max 250 lines per CLAUDE.md guideline.
+/// </summary>
+public partial class CanvasInteractionViewModel : ObservableObject
+{
+    private readonly DesignCanvasViewModel _canvas;
+    private readonly CommandManager _commandManager;
+
+    [ObservableProperty]
+    private InteractionMode _currentMode = InteractionMode.Select;
+
+    [ObservableProperty]
+    private ComponentTemplate? _selectedTemplate;
+
+    [ObservableProperty]
+    private ComponentViewModel? _selectedComponent;
+
+    [ObservableProperty]
+    private WaveguideConnectionViewModel? _selectedWaveguideConnection;
+
+    private PhysicalPin? _connectionStartPin;
+    private double _moveStartX;
+    private double _moveStartY;
+    private ComponentViewModel? _movingComponent;
+    private Dictionary<ComponentViewModel, (double x, double y)>? _groupMoveStartPositions;
+
+    /// <summary>
+    /// Callback to update status text in the UI.
+    /// </summary>
+    public Action<string>? UpdateStatus { get; set; }
+
+    /// <summary>
+    /// Callback to notify when selection changes (for syncing with hierarchy panel).
+    /// </summary>
+    public Action<ComponentViewModel?>? OnSelectionChanged { get; set; }
+
+    public CanvasInteractionViewModel(DesignCanvasViewModel canvas, CommandManager commandManager)
+    {
+        _canvas = canvas;
+        _commandManager = commandManager;
+    }
+
+    partial void OnSelectedTemplateChanged(ComponentTemplate? value)
+    {
+        if (value != null)
+        {
+            CurrentMode = InteractionMode.PlaceComponent;
+            UpdateStatus?.Invoke($"Click on canvas to place: {value.Name}");
+        }
+    }
+
+    partial void OnCurrentModeChanged(InteractionMode value)
+    {
+        _connectionStartPin = null;
+        _canvas.ClearPinHighlight();
+
+        var statusText = value switch
+        {
+            InteractionMode.Select => "Select mode: Click to select, drag to move",
+            InteractionMode.PlaceComponent when SelectedTemplate != null => $"Place mode: Click to place {SelectedTemplate.Name}",
+            InteractionMode.PlaceComponent => "Place mode: Select a component from the library",
+            InteractionMode.Connect => "Connect mode: Move near a pin to start connection",
+            InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
+            _ => "Ready"
+        };
+
+        UpdateStatus?.Invoke(statusText);
+    }
+
+    partial void OnSelectedComponentChanged(ComponentViewModel? value)
+    {
+        if (value?.IsLightSource == true)
+        {
+            var cfg = value.LaserConfig!;
+            UpdateStatus?.Invoke($"Selected: {value.Name} [{cfg.WavelengthLabel}, Power={cfg.InputPower:F2}]");
+        }
+
+        OnSelectionChanged?.Invoke(value);
+    }
+
+    /// <summary>
+    /// Handles canvas click events.
+    /// </summary>
+    public void CanvasClicked(double canvasX, double canvasY)
+    {
+        switch (CurrentMode)
+        {
+            case InteractionMode.PlaceComponent:
+                PlaceComponentAt(canvasX, canvasY);
+                break;
+            case InteractionMode.Select:
+                SelectAt(canvasX, canvasY);
+                break;
+            case InteractionMode.Connect:
+                var pin = _canvas.HighlightedPin?.Pin ?? _canvas.GetPinAt(canvasX, canvasY);
+                if (pin != null)
+                {
+                    HandlePinClickForConnection(pin);
+                }
+                break;
+            case InteractionMode.Delete:
+                DeleteAt(canvasX, canvasY);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Handles pin click events in Connect mode.
+    /// </summary>
+    public void PinClicked(PhysicalPin pin)
+    {
+        if (CurrentMode == InteractionMode.Connect)
+        {
+            HandlePinClickForConnection(pin);
+        }
+    }
+
+    /// <summary>
+    /// Handles mouse movement on canvas (for pin highlighting in Connect mode).
+    /// </summary>
+    public void CanvasMouseMove(double canvasX, double canvasY)
+    {
+        if (CurrentMode == InteractionMode.Connect)
+        {
+            var nearPin = _canvas.UpdatePinHighlight(canvasX, canvasY, _connectionStartPin);
+
+            if (nearPin != null)
+            {
+                var pinName = nearPin.Name;
+                var compName = nearPin.ParentComponentViewModel.Name;
+
+                if (_connectionStartPin != null)
+                {
+                    UpdateStatus?.Invoke($"Click to connect to {pinName} on {compName}");
+                }
+                else
+                {
+                    UpdateStatus?.Invoke($"Click {pinName} on {compName} to start connection");
+                }
+            }
+            else if (_connectionStartPin != null)
+            {
+                UpdateStatus?.Invoke($"Connection started from {_connectionStartPin.Name}. Move near a pin to connect.");
+            }
+            else
+            {
+                UpdateStatus?.Invoke("Connect mode: Move near a pin to start connection");
+            }
+        }
+        else
+        {
+            _canvas.ClearPinHighlight();
+        }
+    }
+
+    private void HandlePinClickForConnection(PhysicalPin pin)
+    {
+        if (_connectionStartPin == null)
+        {
+            _connectionStartPin = pin;
+            UpdateStatus?.Invoke($"Connection started from {pin.Name}. Click another pin to complete.");
+        }
+        else
+        {
+            if (_connectionStartPin != pin && _connectionStartPin.ParentComponent != pin.ParentComponent)
+            {
+                var cmd = new CreateConnectionCommand(_canvas, _connectionStartPin, pin);
+                _commandManager.ExecuteCommand(cmd);
+                UpdateStatus?.Invoke($"Connected {_connectionStartPin.Name} to {pin.Name}");
+            }
+            else
+            {
+                UpdateStatus?.Invoke("Cannot connect pin to itself or same component");
+            }
+            _connectionStartPin = null;
+        }
+    }
+
+    private void PlaceComponentAt(double x, double y)
+    {
+        if (SelectedTemplate == null) return;
+
+        double centeredX = x - SelectedTemplate.WidthMicrometers / 2;
+        double centeredY = y - SelectedTemplate.HeightMicrometers / 2;
+
+        var cmd = PlaceComponentCommand.TryCreate(_canvas, SelectedTemplate, centeredX, centeredY);
+        if (cmd == null)
+        {
+            UpdateStatus?.Invoke("No space available on chip for this component");
+            return;
+        }
+
+        _commandManager.ExecuteCommand(cmd);
+        UpdateStatus?.Invoke($"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm");
+    }
+
+    private void SelectAt(double x, double y)
+    {
+        // Deselect all
+        foreach (var comp in _canvas.Components)
+        {
+            comp.IsSelected = false;
+        }
+        foreach (var conn in _canvas.Connections)
+        {
+            conn.IsSelected = false;
+        }
+
+        // Find component at position
+        var component = _canvas.Components
+            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
+            .LastOrDefault();
+
+        if (component != null)
+        {
+            component.IsSelected = true;
+            SelectedComponent = component;
+            _canvas.SelectedComponent = component;
+            SelectedWaveguideConnection = null;
+            UpdateStatus?.Invoke($"Selected: {component.Name}");
+        }
+        else
+        {
+            var connection = FindConnectionAt(x, y);
+            if (connection != null)
+            {
+                connection.IsSelected = true;
+                SelectedWaveguideConnection = connection;
+                SelectedComponent = null;
+                _canvas.SelectedComponent = null;
+                UpdateStatus?.Invoke($"Selected connection: {connection.PathLength:F1}µm, Loss: {connection.LossDb:F2}dB");
+            }
+            else
+            {
+                SelectedComponent = null;
+                _canvas.SelectedComponent = null;
+                SelectedWaveguideConnection = null;
+            }
+        }
+    }
+
+    private void DeleteAt(double x, double y)
+    {
+        var component = _canvas.Components
+            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
+            .LastOrDefault();
+
+        if (component != null)
+        {
+            var name = component.Name;
+            var cmd = new DeleteComponentCommand(_canvas, component);
+            _commandManager.ExecuteCommand(cmd);
+            SelectedComponent = null;
+            UpdateStatus?.Invoke($"Deleted: {name}");
+            return;
+        }
+
+        var connection = FindConnectionAt(x, y);
+        if (connection != null)
+        {
+            var cmd = new DeleteConnectionCommand(_canvas, connection);
+            _commandManager.ExecuteCommand(cmd);
+            UpdateStatus?.Invoke("Deleted connection");
+        }
+    }
+
+    private WaveguideConnectionViewModel? FindConnectionAt(double x, double y)
+    {
+        const double hitTolerance = 10.0;
+
+        foreach (var conn in _canvas.Connections)
+        {
+            var distance = PointToLineDistance(x, y, conn.StartX, conn.StartY, conn.EndX, conn.EndY);
+            if (distance <= hitTolerance)
+            {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    private static double PointToLineDistance(double px, double py, double x1, double y1, double x2, double y2)
+    {
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        var lengthSq = dx * dx + dy * dy;
+
+        if (lengthSq < 0.0001)
+        {
+            return Math.Sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+        }
+
+        var t = Math.Max(0, Math.Min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
+        var projX = x1 + t * dx;
+        var projY = y1 + t * dy;
+
+        return Math.Sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
+    }
+
+    /// <summary>
+    /// Starts dragging a component.
+    /// </summary>
+    public void StartMoveComponent(ComponentViewModel component)
+    {
+        _movingComponent = component;
+        _moveStartX = component.X;
+        _moveStartY = component.Y;
+        _canvas.BeginDragComponent(component);
+    }
+
+    /// <summary>
+    /// Starts dragging multiple components as a group.
+    /// </summary>
+    public void StartGroupMove(IEnumerable<ComponentViewModel> components)
+    {
+        _groupMoveStartPositions = new Dictionary<ComponentViewModel, (double x, double y)>();
+        foreach (var comp in components)
+        {
+            _groupMoveStartPositions[comp] = (comp.X, comp.Y);
+        }
+
+        var firstComp = components.FirstOrDefault();
+        if (firstComp != null)
+        {
+            _canvas.BeginDragComponent(firstComp);
+        }
+    }
+
+    /// <summary>
+    /// Ends dragging a component and creates undo command.
+    /// </summary>
+    public void EndMoveComponent()
+    {
+        if (_movingComponent != null)
+        {
+            _canvas.EndDragComponent(_movingComponent);
+
+            if (Math.Abs(_movingComponent.X - _moveStartX) > 0.001 ||
+                Math.Abs(_movingComponent.Y - _moveStartY) > 0.001)
+            {
+                var cmd = new MoveComponentCommand(
+                    _canvas,
+                    _movingComponent,
+                    _moveStartX,
+                    _moveStartY,
+                    _movingComponent.X,
+                    _movingComponent.Y);
+                _commandManager.ExecuteCommand(cmd);
+            }
+        }
+        _movingComponent = null;
+    }
+
+    /// <summary>
+    /// Ends dragging multiple components and creates undo command.
+    /// </summary>
+    public void EndGroupMove(IEnumerable<ComponentViewModel> components)
+    {
+        if (_groupMoveStartPositions == null || !_groupMoveStartPositions.Any())
+            return;
+
+        var firstComp = _groupMoveStartPositions.Keys.FirstOrDefault();
+        if (firstComp == null)
+            return;
+
+        _canvas.EndDragComponent(firstComp);
+
+        var startPos = _groupMoveStartPositions[firstComp];
+        double deltaX = firstComp.X - startPos.x;
+        double deltaY = firstComp.Y - startPos.y;
+
+        if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
+        {
+            var cmd = new GroupMoveCommand(
+                _canvas,
+                _groupMoveStartPositions.Keys.ToList(),
+                deltaX,
+                deltaY);
+            _commandManager.ExecuteCommand(cmd);
+        }
+
+        _groupMoveStartPositions = null;
+    }
+
+    [RelayCommand]
+    private void SetSelectMode()
+    {
+        CurrentMode = InteractionMode.Select;
+        SelectedTemplate = null;
+        _connectionStartPin = null;
+    }
+
+    [RelayCommand]
+    private void SetConnectMode()
+    {
+        CurrentMode = InteractionMode.Connect;
+        SelectedTemplate = null;
+        _connectionStartPin = null;
+    }
+
+    [RelayCommand]
+    private void SetDeleteMode()
+    {
+        CurrentMode = InteractionMode.Delete;
+        SelectedTemplate = null;
+        _connectionStartPin = null;
+    }
+
+    [RelayCommand]
+    private void DeleteSelected()
+    {
+        var selection = _canvas.Selection;
+
+        if (selection.HasMultipleSelected)
+        {
+            int count = selection.SelectedComponents.Count;
+            var cmd = new GroupDeleteCommand(_canvas, selection.SelectedComponents.ToList());
+            _commandManager.ExecuteCommand(cmd);
+            selection.ClearSelection();
+            SelectedComponent = null;
+            UpdateStatus?.Invoke($"Deleted {count} components");
+            return;
+        }
+
+        if (SelectedComponent != null)
+        {
+            var name = SelectedComponent.Name;
+            var cmd = new DeleteComponentCommand(_canvas, SelectedComponent);
+            _commandManager.ExecuteCommand(cmd);
+            selection.ClearSelection();
+            SelectedComponent = null;
+            UpdateStatus?.Invoke($"Deleted: {name}");
+        }
+    }
+
+    [RelayCommand]
+    private void CopySelected()
+    {
+        var selection = _canvas.Selection;
+        if (!selection.HasSelection) return;
+
+        _canvas.Clipboard.Copy(
+            selection.SelectedComponents.ToList(),
+            _canvas.Connections);
+
+        UpdateStatus?.Invoke($"Copied {selection.SelectedComponents.Count} component(s)");
+    }
+
+    /// <summary>
+    /// Pastes components from clipboard at the specified position.
+    /// </summary>
+    public void PasteSelected(double? targetX = null, double? targetY = null)
+    {
+        if (!_canvas.Clipboard.HasContent) return;
+
+        var cmd = new PasteComponentsCommand(_canvas, _canvas.Clipboard, targetX, targetY);
+        _commandManager.ExecuteCommand(cmd);
+
+        if (cmd.Result != null)
+        {
+            _canvas.Selection.ClearSelection();
+            foreach (var comp in cmd.Result.Components)
+            {
+                comp.IsSelected = true;
+                _canvas.Selection.SelectedComponents.Add(comp);
+            }
+
+            _ = _canvas.RecalculateRoutesAsync();
+            UpdateStatus?.Invoke($"Pasted {cmd.Result.Components.Count} component(s)");
+        }
+    }
+
+    [RelayCommand]
+    private void PasteSelectedCommand()
+    {
+        PasteSelected();
+    }
+
+    [RelayCommand]
+    private void RotateSelected()
+    {
+        if (SelectedComponent != null)
+        {
+            var cmd = new RotateComponentCommand(_canvas, SelectedComponent);
+            _commandManager.ExecuteCommand(cmd);
+            UpdateStatus?.Invoke(cmd.WasApplied
+                ? $"Rotated: {SelectedComponent.Name}"
+                : $"Cannot rotate: {SelectedComponent.Name} would overlap another component");
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCreateGroup))]
+    private void CreateGroup()
+    {
+        var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
+        var cmd = new CreateGroupCommand(_canvas, selectedComponents);
+        _commandManager.ExecuteCommand(cmd);
+        _canvas.Selection.ClearSelection();
+        UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components");
+    }
+
+    private bool CanCreateGroup()
+    {
+        return _canvas.Selection.SelectedComponents.Count >= 2;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUngroup))]
+    private void Ungroup()
+    {
+        var selectedGroup = _canvas.Selection.SelectedComponents
+            .Select(c => c.Component)
+            .OfType<CAP_Core.Components.Core.ComponentGroup>()
+            .FirstOrDefault();
+
+        if (selectedGroup != null)
+        {
+            var cmd = new UngroupCommand(_canvas, selectedGroup);
+            _commandManager.ExecuteCommand(cmd);
+            _canvas.Selection.ClearSelection();
+            UpdateStatus?.Invoke($"Ungrouped: {selectedGroup.GroupName}");
+        }
+    }
+
+    private bool CanUngroup()
+    {
+        return _canvas.Selection.SelectedComponents.Count == 1 &&
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup;
+    }
+}
