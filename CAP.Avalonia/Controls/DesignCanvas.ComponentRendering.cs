@@ -4,6 +4,7 @@ using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Routing;
 using CAP_Core.Components.Core;
