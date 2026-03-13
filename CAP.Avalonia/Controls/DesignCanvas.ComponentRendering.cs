@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
+using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -16,6 +17,13 @@ public partial class DesignCanvas
 {
     private void DrawComponent(DrawingContext context, ComponentViewModel comp)
     {
+        // If this is a ComponentGroup, use specialized group rendering
+        if (comp.Component is ComponentGroup group)
+        {
+            DrawComponentGroup(context, group, comp.IsSelected);
+            return;
+        }
+
         var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
 
         var fillBrush = comp.IsSelected
@@ -35,6 +43,74 @@ public partial class DesignCanvas
         if (comp.IsLocked)
         {
             DrawLockIcon(context, comp);
+        }
+    }
+
+    /// <summary>
+    /// Renders a ComponentGroup with IPKISS-style transparent hierarchy.
+    /// Shows internal structure, dashed border, and external pins.
+    /// </summary>
+    private void DrawComponentGroup(DrawingContext context, ComponentGroup group, bool isSelected)
+    {
+        bool isHovered = _interactionState.HoveredGroup == group;
+
+        // 1. Render all child components recursively (transparent hierarchy)
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+            {
+                // Recursively render nested groups
+                DrawComponentGroup(context, nestedGroup, isSelected);
+            }
+            else
+            {
+                // Render normal components
+                var childRect = new Rect(child.PhysicalX, child.PhysicalY,
+                    child.WidthMicrometers, child.HeightMicrometers);
+
+                // Apply hover overlay if group is hovered
+                if (isHovered)
+                {
+                    ComponentGroupRenderer.RenderGroupHoverOverlay(
+                        context, child.PhysicalX, child.PhysicalY,
+                        child.WidthMicrometers, child.HeightMicrometers);
+                }
+
+                var fillBrush = new SolidColorBrush(Color.FromRgb(40, 50, 70));
+                context.FillRectangle(fillBrush, childRect);
+
+                var borderPen = new Pen(Brushes.Gray, 1);
+                context.DrawRectangle(borderPen, childRect);
+
+                // Draw child component name
+                var nameText = new FormattedText(
+                    child.Identifier,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    new Typeface("Arial"),
+                    10,
+                    Brushes.White);
+                context.DrawText(nameText, new Point(child.PhysicalX + 3, child.PhysicalY + 3));
+            }
+        }
+
+        // 2. Render frozen internal waveguide paths
+        foreach (var frozenPath in group.InternalPaths)
+        {
+            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath);
+        }
+
+        // 3. Draw dashed border around group bounds
+        var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
+        ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered);
+
+        // 4. Draw group name label at top-left
+        ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName);
+
+        // 5. Draw external pins with distinct style
+        foreach (var externalPin in group.ExternalPins)
+        {
+            ComponentGroupRenderer.RenderExternalPin(context, externalPin, group, isHovered);
         }
     }
 

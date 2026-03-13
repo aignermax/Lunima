@@ -44,6 +44,9 @@ public class CanvasInteractionState
     public WaveguideConnectionViewModel? HoveredConnection { get; set; }
     public Point LastCanvasPosition { get; set; }
 
+    // ComponentGroup hover state
+    public ComponentGroup? HoveredGroup { get; set; }
+
     /// <summary>
     /// Resets all drag-related state.
     /// </summary>
