@@ -5,6 +5,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Routing;
 using CAP_Core.Routing.AStarPathfinder;
 
@@ -47,9 +48,14 @@ public partial class DesignCanvas
             }
 
             // Draw connections first (behind components)
+            // Skip connections that are internal to groups (they're rendered as frozen paths inside the group)
+            var allGroups = WaveguideFilteringHelper.CollectAllGroups(vm.Components.Select(c => c.Component));
             foreach (var conn in vm.Connections)
             {
-                DrawWaveguideConnection(context, conn, vm);
+                if (!WaveguideFilteringHelper.IsConnectionInternalToAnyGroup(conn.Connection, allGroups))
+                {
+                    DrawWaveguideConnection(context, conn, vm);
+                }
             }
 
             // Draw power label on hovered connection
