@@ -529,7 +529,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void CreateGroup()
     {
         var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
-        var cmd = new CreateGroupCommand(_canvas, selectedComponents, _libraryViewModel, _previewGenerator);
+        var cmd = new CreateGroupCommand(_canvas, selectedComponents);
         _commandManager.ExecuteCommand(cmd);
         _canvas.Selection.ClearSelection();
 
@@ -647,8 +647,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
         var currentDescription = selectedGroup.Description ?? "";
 
         var result = await _inputDialogService.ShowMultiInputDialogAsync(
-            "Save Group As",
-            ("Name", currentName + "_Copy"),
+            "Save Group as Prefab",
+            ("Name", currentName),
             ("Description (optional)", currentDescription));
 
         if (result == null)
@@ -663,7 +663,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        var cmd = new SaveGroupToLibraryCommand(
+        var cmd = new SaveGroupAsPrefabCommand(
             _libraryViewModel,
             _previewGenerator ?? new GroupPreviewGenerator(),
             selectedGroup,
@@ -671,7 +671,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             string.IsNullOrWhiteSpace(newDescription) ? null : newDescription);
 
         _commandManager.ExecuteCommand(cmd);
-        UpdateStatus?.Invoke($"Saved group copy as '{newName}' to library");
+        UpdateStatus?.Invoke($"Saved group '{newName}' as prefab to library");
     }
 
     private bool CanSaveGroupAs()

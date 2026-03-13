@@ -185,7 +185,7 @@ public class GroupLibraryIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void CreateGroupCommand_WithLibraryViewModel_AutoSavesToLibrary()
+    public void CreateGroupCommand_DoesNotAutoSaveToLibrary()
     {
         // Arrange
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
@@ -195,41 +195,18 @@ public class GroupLibraryIntegrationTests : IDisposable
         var compVm2 = canvas.AddComponent(comp2);
 
         var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
-        var command = new CreateGroupCommand(canvas, selectedComponents, _libraryViewModel, _previewGenerator);
+        var command = new CreateGroupCommand(canvas, selectedComponents);
 
         // Act
         command.Execute();
 
-        // Assert - group should be auto-saved to library
-        _libraryViewModel.UserGroups.Count.ShouldBe(1);
-        var savedTemplate = _libraryViewModel.UserGroups.First();
-        savedTemplate.ComponentCount.ShouldBe(2);
-        savedTemplate.Source.ShouldBe("User");
-    }
-
-    [Fact]
-    public void CreateGroupCommand_WithoutLibraryViewModel_DoesNotSave()
-    {
-        // Arrange
-        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
-        var comp1 = CreateTestComponent("comp1");
-        var comp2 = CreateTestComponent("comp2");
-        var compVm1 = canvas.AddComponent(comp1);
-        var compVm2 = canvas.AddComponent(comp2);
-
-        var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
-        var command = new CreateGroupCommand(canvas, selectedComponents, null, null);
-
-        // Act
-        command.Execute();
-
-        // Assert - no crash, group is created but not saved to library
+        // Assert - group should NOT be auto-saved to library
         _libraryViewModel.UserGroups.Count.ShouldBe(0);
         canvas.Components.Count.ShouldBe(1); // Only the group component
     }
 
     [Fact]
-    public void CreateGroupCommand_Undo_RemovesSavedTemplate()
+    public void CreateGroupCommand_CreatesGroupOnCanvas()
     {
         // Arrange
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
@@ -239,17 +216,37 @@ public class GroupLibraryIntegrationTests : IDisposable
         var compVm2 = canvas.AddComponent(comp2);
 
         var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
-        var command = new CreateGroupCommand(canvas, selectedComponents, _libraryViewModel, _previewGenerator);
+        var command = new CreateGroupCommand(canvas, selectedComponents);
+
+        // Act
+        command.Execute();
+
+        // Assert - group is created on canvas but not saved to library
+        _libraryViewModel.UserGroups.Count.ShouldBe(0);
+        canvas.Components.Count.ShouldBe(1); // Only the group component
+    }
+
+    [Fact]
+    public void CreateGroupCommand_Undo_RestoresIndividualComponents()
+    {
+        // Arrange
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("comp1");
+        var comp2 = CreateTestComponent("comp2");
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
+        var command = new CreateGroupCommand(canvas, selectedComponents);
 
         command.Execute();
-        _libraryViewModel.UserGroups.Count.ShouldBe(1);
+        canvas.Components.Count.ShouldBe(1); // Group created
 
         // Act
         command.Undo();
 
-        // Assert - template removed from library
+        // Assert - individual components restored, no template in library
         _libraryViewModel.UserGroups.Count.ShouldBe(0);
-        // Individual components restored
         canvas.Components.Count.ShouldBe(2);
     }
 

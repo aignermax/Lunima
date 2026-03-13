@@ -38,6 +38,12 @@ public class ComponentGroup : Component
     public string Description { get; set; }
 
     /// <summary>
+    /// Indicates whether this group is saved as a reusable prefab/template in the library.
+    /// Only prefabs appear in the "Saved Groups" panel.
+    /// </summary>
+    public bool IsPrefab { get; set; }
+
+    /// <summary>
     /// Reference to parent group if this group is nested within another group.
     /// Null if this is a top-level group.
     /// </summary>

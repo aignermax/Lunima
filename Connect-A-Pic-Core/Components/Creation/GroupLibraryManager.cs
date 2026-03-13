@@ -63,6 +63,7 @@ public class GroupLibraryManager
 
     /// <summary>
     /// Saves a ComponentGroup as a template to the library.
+    /// Marks the group as a prefab (IsPrefab = true).
     /// </summary>
     /// <param name="group">The group to save.</param>
     /// <param name="name">Display name for the template.</param>
@@ -77,6 +78,9 @@ public class GroupLibraryManager
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Template name cannot be empty.", nameof(name));
+
+        // Mark group as prefab
+        group.IsPrefab = true;
 
         // Determine target folder
         var targetFolder = source == "User"

@@ -150,7 +150,7 @@
                         <StackPanel Margin="5">
                             <TextBlock Text="{Binding GroupLibrary.StatusText}"
                                        FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
-                            <TextBlock Text="ℹ️ Groups created with Ctrl+G are automatically saved here. Right-click a group to rename."
+                            <TextBlock Text="ℹ️ Right-click a group and select 'Save as Prefab...' to add it here as a reusable template."
                                        FontSize="9" Foreground="#87ceeb" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                             <!-- User Groups -->
@@ -778,7 +778,7 @@
                             <TextBlock Text="✏️" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Save Group As..." Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
+                    <MenuItem Header="Save as Prefab..." Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
                         <MenuItem.Icon>
                             <TextBlock Text="💾" FontSize="14"/>
                         </MenuItem.Icon>

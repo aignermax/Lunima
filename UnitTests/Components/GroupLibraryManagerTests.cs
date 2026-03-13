@@ -159,6 +159,43 @@ public class GroupLibraryManagerTests : IDisposable
         newManager.PdkTemplates.First().Name.ShouldBe("PDK Group");
     }
 
+    [Fact]
+    public void SaveTemplate_MarksGroupAsPrefab()
+    {
+        // Arrange
+        var group = CreateTestGroup("TestGroup", 2);
+        group.IsPrefab.ShouldBeFalse(); // Initially not a prefab
+
+        // Act
+        var template = _manager.SaveTemplate(group, "My Prefab Group");
+
+        // Assert
+        group.IsPrefab.ShouldBeTrue(); // Should be marked as prefab after saving
+    }
+
+    [Fact]
+    public void ComponentGroup_IsPrefabDefaultsFalse()
+    {
+        // Arrange & Act
+        var group = CreateTestGroup("TestGroup", 2);
+
+        // Assert
+        group.IsPrefab.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ComponentGroup_CanSetIsPrefab()
+    {
+        // Arrange
+        var group = CreateTestGroup("TestGroup", 2);
+
+        // Act
+        group.IsPrefab = true;
+
+        // Assert
+        group.IsPrefab.ShouldBeTrue();
+    }
+
     /// <summary>
     /// Creates a test ComponentGroup with the specified number of child components.
     /// </summary>
