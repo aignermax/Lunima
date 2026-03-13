@@ -26,12 +26,17 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var prefsFile = Path.Combine(_testPrefsPath, "user-preferences.json");
         _preferencesService = new UserPreferencesService();
 
-        // Use reflection to set the file path for testing
-        var field = typeof(UserPreferencesService).GetField("_preferencesFilePath",
+        // Use reflection to set the file path and reload preferences for testing
+        var pathField = typeof(UserPreferencesService).GetField("_preferencesFilePath",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        if (field != null)
+        var prefsField = typeof(UserPreferencesService).GetField("_preferences",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        if (pathField != null && prefsField != null)
         {
-            field.SetValue(_preferencesService, prefsFile);
+            pathField.SetValue(_preferencesService, prefsFile);
+            // Reset preferences to default (not loaded from disk)
+            prefsField.SetValue(_preferencesService, new UserPreferences());
         }
     }
 
