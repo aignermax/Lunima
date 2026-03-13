@@ -310,4 +310,168 @@ public class ComponentGroup : Component
         }
         return allComponents;
     }
+
+    /// <summary>
+    /// Creates a deep copy of this ComponentGroup with new unique identifiers for all components.
+    /// Used for instantiating group templates from the library.
+    /// </summary>
+    /// <returns>A new ComponentGroup instance with cloned children and paths.</returns>
+    public ComponentGroup DeepCopy()
+    {
+        // Create new group with unique identifier
+        var newGroup = new ComponentGroup(GroupName)
+        {
+            Description = Description,
+            Identifier = $"group_{Guid.NewGuid():N}",
+            PhysicalX = PhysicalX,
+            PhysicalY = PhysicalY,
+            WidthMicrometers = WidthMicrometers,
+            HeightMicrometers = HeightMicrometers,
+            Rotation90CounterClock = Rotation90CounterClock
+        };
+
+        // Map old component identifiers to new cloned components
+        var componentMap = new Dictionary<string, Component>();
+
+        // Deep copy child components
+        foreach (var child in ChildComponents)
+        {
+            Component clonedChild;
+            if (child is ComponentGroup childGroup)
+            {
+                // Recursively clone nested groups
+                clonedChild = childGroup.DeepCopy();
+            }
+            else
+            {
+                // Clone regular component
+                clonedChild = CloneComponent(child);
+            }
+
+            componentMap[child.Identifier] = clonedChild;
+            newGroup.AddChild(clonedChild);
+        }
+
+        // Clone frozen waveguide paths
+        foreach (var frozenPath in InternalPaths)
+        {
+            var startComp = componentMap[frozenPath.StartPin.ParentComponent.Identifier];
+            var endComp = componentMap[frozenPath.EndPin.ParentComponent.Identifier];
+
+            var newStartPin = startComp.PhysicalPins.First(p => p.Name == frozenPath.StartPin.Name);
+            var newEndPin = endComp.PhysicalPins.First(p => p.Name == frozenPath.EndPin.Name);
+
+            var clonedPath = new FrozenWaveguidePath
+            {
+                PathId = Guid.NewGuid(),
+                Path = CloneRoutedPath(frozenPath.Path),
+                StartPin = newStartPin,
+                EndPin = newEndPin
+            };
+
+            newGroup.AddInternalPath(clonedPath);
+        }
+
+        // Clone external pins
+        foreach (var externalPin in ExternalPins)
+        {
+            var internalComp = componentMap[externalPin.InternalPin.ParentComponent.Identifier];
+            var newInternalPin = internalComp.PhysicalPins.First(p => p.Name == externalPin.InternalPin.Name);
+
+            var clonedPin = new GroupPin
+            {
+                PinId = Guid.NewGuid(),
+                Name = externalPin.Name,
+                InternalPin = newInternalPin,
+                RelativeX = externalPin.RelativeX,
+                RelativeY = externalPin.RelativeY,
+                AngleDegrees = externalPin.AngleDegrees
+            };
+
+            newGroup.AddExternalPin(clonedPin);
+        }
+
+        return newGroup;
+    }
+
+    /// <summary>
+    /// Creates a shallow clone of a Component with a new unique identifier.
+    /// </summary>
+    private Component CloneComponent(Component source)
+    {
+        // Create new component with same S-matrix and structure
+        var cloned = new Component(
+            new Dictionary<int, SMatrix>(source.WaveLengthToSMatrixMap),
+            source.GetAllSliders().Select(s => new Slider(
+                Guid.NewGuid(),
+                s.Number,
+                s.Value,
+                s.MaxValue,
+                s.MinValue)).ToList(),
+            source.NazcaFunctionName,
+            source.NazcaFunctionParameters,
+            source.Parts,
+            source.TypeNumber,
+            $"{source.Identifier}_{Guid.NewGuid():N}",
+            source.Rotation90CounterClock,
+            source.PhysicalPins.Select(p => new PhysicalPin
+            {
+                Name = p.Name,
+                OffsetXMicrometers = p.OffsetXMicrometers,
+                OffsetYMicrometers = p.OffsetYMicrometers,
+                AngleDegrees = p.AngleDegrees,
+                LogicalPin = p.LogicalPin
+            }).ToList()
+        )
+        {
+            PhysicalX = source.PhysicalX,
+            PhysicalY = source.PhysicalY,
+            WidthMicrometers = source.WidthMicrometers,
+            HeightMicrometers = source.HeightMicrometers,
+            NazcaOriginOffsetX = source.NazcaOriginOffsetX,
+            NazcaOriginOffsetY = source.NazcaOriginOffsetY,
+            NazcaModuleName = source.NazcaModuleName,
+            IsLocked = false // Don't copy lock state
+        };
+
+        return cloned;
+    }
+
+    /// <summary>
+    /// Creates a deep clone of a RoutedPath.
+    /// </summary>
+    private RoutedPath CloneRoutedPath(RoutedPath source)
+    {
+        var cloned = new RoutedPath
+        {
+            IsBlockedFallback = source.IsBlockedFallback,
+            IsInvalidGeometry = source.IsInvalidGeometry
+        };
+
+        foreach (var segment in source.Segments)
+        {
+            if (segment is BendSegment bend)
+            {
+                cloned.Segments.Add(new BendSegment(
+                    bend.Center.X,
+                    bend.Center.Y,
+                    bend.RadiusMicrometers,
+                    bend.StartAngleDegrees,
+                    bend.SweepAngleDegrees
+                ));
+            }
+            else if (segment is StraightSegment straight)
+            {
+                cloned.Segments.Add(new StraightSegment(
+                    straight.StartPoint.X,
+                    straight.StartPoint.Y,
+                    straight.EndPoint.X,
+                    straight.EndPoint.Y,
+                    straight.StartAngleDegrees
+                ));
+            }
+        }
+
+        return cloned;
+    }
 }

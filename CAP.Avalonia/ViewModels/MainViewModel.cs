@@ -94,12 +94,14 @@ public partial class MainViewModel : ObservableObject
     public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
     public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
     public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
+    public ComponentLibraryViewModel GroupLibrary => LeftPanel.ComponentLibrary;
 
     public IFileDialogService? FileDialogService { get; set; }
 
     private readonly SimpleNazcaExporter _nazcaExporter;
     private readonly PdkLoader _pdkLoader;
     private readonly UserPreferencesService _preferencesService;
+    private readonly CAP_Core.Components.Creation.GroupLibraryManager _groupLibraryManager;
     private PhysicalPin? _connectionStartPin;
     private string? _currentFilePath;
     private bool _isSimulating;
@@ -117,18 +119,20 @@ public partial class MainViewModel : ObservableObject
         SimpleNazcaExporter nazcaExporter,
         PdkLoader pdkLoader,
         Commands.CommandManager commandManager,
-        UserPreferencesService preferencesService)
+        UserPreferencesService preferencesService,
+        CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager)
     {
         Simulation = simulationService;
         _nazcaExporter = nazcaExporter;
         _pdkLoader = pdkLoader;
         CommandManager = commandManager;
         _preferencesService = preferencesService;
+        _groupLibraryManager = groupLibraryManager;
         _canvas = new DesignCanvasViewModel();
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
 
         // Initialize Panel ViewModels
-        LeftPanel = new LeftPanelViewModel(_canvas);
+        LeftPanel = new LeftPanelViewModel(_canvas, _groupLibraryManager);
         RightPanel = new RightPanelViewModel(_canvas);
         BottomPanel = new BottomPanelViewModel(_canvas, CommandManager);
 

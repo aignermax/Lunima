@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Creation;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -22,10 +23,16 @@ public partial class LeftPanelViewModel : ObservableObject
     /// </summary>
     public PdkManagerViewModel PdkManager { get; }
 
-    public LeftPanelViewModel(DesignCanvasViewModel canvas)
+    /// <summary>
+    /// ViewModel for managing saved ComponentGroup templates.
+    /// </summary>
+    public ComponentLibraryViewModel ComponentLibrary { get; }
+
+    public LeftPanelViewModel(DesignCanvasViewModel canvas, GroupLibraryManager libraryManager)
     {
         HierarchyPanel = new HierarchyPanelViewModel(canvas);
         PdkManager = new PdkManagerViewModel();
+        ComponentLibrary = new ComponentLibraryViewModel(libraryManager);
     }
 
     /// <summary>

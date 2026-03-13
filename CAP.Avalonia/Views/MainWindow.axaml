@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels"
         xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
+        xmlns:creation="using:CAP_Core.Components.Creation"
         xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:views="using:CAP.Avalonia.Views"
         x:Class="CAP.Avalonia.Views.MainWindow"
@@ -135,6 +136,61 @@
                              BorderBrush="#3e3e3e"/>
                     <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
                                FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
+
+                    <!-- Saved Groups Section -->
+                    <Expander DockPanel.Dock="Top" Header="Saved Groups" IsExpanded="True"
+                              Margin="5,0,5,5" Background="#2d2d2d">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="{Binding GroupLibrary.StatusText}"
+                                       FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+
+                            <!-- User Groups -->
+                            <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
+                                       FontSize="10" Margin="0,5,0,3"
+                                       IsVisible="{Binding GroupLibrary.UserGroups.Count}"/>
+                            <ItemsControl ItemsSource="{Binding GroupLibrary.UserGroups}"
+                                          MaxHeight="120">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="creation:GroupTemplate">
+                                        <Border BorderBrush="#3e3e3e" BorderThickness="1" Margin="0,2"
+                                                Background="#1e1e1e" Padding="4" CornerRadius="3">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           FontSize="10" Foreground="White"/>
+                                                <TextBlock FontSize="9" Foreground="Gray">
+                                                    <Run Text="{Binding ComponentCount}"/>
+                                                    <Run Text="components"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- PDK Groups -->
+                            <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
+                                       FontSize="10" Margin="0,10,0,3"
+                                       IsVisible="{Binding GroupLibrary.PdkGroups.Count}"/>
+                            <ItemsControl ItemsSource="{Binding GroupLibrary.PdkGroups}"
+                                          MaxHeight="120">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="creation:GroupTemplate">
+                                        <Border BorderBrush="#3e3e3e" BorderThickness="1" Margin="0,2"
+                                                Background="#1e1e1e" Padding="4" CornerRadius="3">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           FontSize="10" Foreground="White"/>
+                                                <TextBlock FontSize="9" Foreground="Gray">
+                                                    <Run Text="{Binding ComponentCount}"/>
+                                                    <Run Text="components"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Expander>
 
                     <!-- PDK Management Panel -->
                     <Expander DockPanel.Dock="Top" Header="PDK Management" IsExpanded="False"
