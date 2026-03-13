@@ -51,21 +51,16 @@ public class UngroupCommand : IUndoableCommand
             }
 
             // 2. Convert frozen paths back to WaveguideConnections
+            // IMPORTANT: Do NOT use cached routes - they're from before group movement!
+            // The group may have been moved, rotated, or edited since grouping.
+            // We must recalculate routes to reflect current component positions.
             _restoredConnections.Clear();
             foreach (var frozenPath in _group.InternalPaths)
             {
-                // Create a new connection with the frozen path as its route
-                var connection = new WaveguideConnection
-                {
-                    StartPin = frozenPath.StartPin,
-                    EndPin = frozenPath.EndPin
-                };
-
-                // Add the connection with the cached route
-                _canvas.ConnectionManager.AddConnectionWithCachedRoute(
+                // Add connection without route - will be recalculated below
+                var connection = _canvas.ConnectionManager.AddConnectionDeferred(
                     frozenPath.StartPin,
-                    frozenPath.EndPin,
-                    frozenPath.Path
+                    frozenPath.EndPin
                 );
 
                 var connVm = new WaveguideConnectionViewModel(connection);
