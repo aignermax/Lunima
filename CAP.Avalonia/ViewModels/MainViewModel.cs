@@ -15,6 +15,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Hierarchy;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -92,6 +93,7 @@ public partial class MainViewModel : ObservableObject
     public SMatrixPerformanceViewModel SMatrixPerformance => RightPanel.SMatrixPerformance;
     public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
     public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
+    public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
 
     public IFileDialogService? FileDialogService { get; set; }
 
@@ -126,7 +128,7 @@ public partial class MainViewModel : ObservableObject
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
 
         // Initialize Panel ViewModels
-        LeftPanel = new LeftPanelViewModel();
+        LeftPanel = new LeftPanelViewModel(_canvas);
         RightPanel = new RightPanelViewModel(_canvas);
         BottomPanel = new BottomPanelViewModel(_canvas, CommandManager);
 
@@ -145,9 +147,19 @@ public partial class MainViewModel : ObservableObject
         };
 
         WireDesignValidation();
+        WireHierarchyPanel();
         LeftPanel.ConfigurePdkManager(FilterComponents);
         LoadComponentLibrary();
         RestorePdkFilterState();
+    }
+
+    /// <summary>
+    /// Wires up navigation and viewport callbacks for the HierarchyPanel ViewModel.
+    /// </summary>
+    private void WireHierarchyPanel()
+    {
+        HierarchyPanel.NavigateToPosition = NavigateCanvasTo;
+        HierarchyPanel.GetViewportSize = GetViewportSize;
     }
 
     private void LoadComponentLibrary()
@@ -298,6 +310,9 @@ public partial class MainViewModel : ObservableObject
         }
 
         Sweep.ConfigureForComponent(value, Canvas);
+
+        // Synchronize hierarchy panel selection
+        HierarchyPanel.SyncSelectionFromCanvas(value);
     }
 
     partial void OnSelectedWaveguideConnectionChanged(WaveguideConnectionViewModel? value)
@@ -1384,6 +1399,9 @@ public partial class MainViewModel : ObservableObject
                 _currentFilePath = filePath;
                 StatusText = $"Loaded {Path.GetFileName(filePath)} ({Canvas.Components.Count} components, {Canvas.Connections.Count} connections)";
                 CommandManager.NotifyStateChanged();
+
+                // Rebuild hierarchy tree after loading
+                HierarchyPanel.RebuildTree();
 
                 // Auto zoom-to-fit after loading
                 var (vpWidth, vpHeight) = GetViewportSize?.Invoke() ?? (900, 800);

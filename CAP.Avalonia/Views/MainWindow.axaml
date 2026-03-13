@@ -3,6 +3,7 @@
         xmlns:vm="using:CAP.Avalonia.ViewModels"
         xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
         xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:views="using:CAP.Avalonia.Views"
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Connect-A-PIC Pro"
@@ -109,85 +110,99 @@
             </StackPanel>
         </Border>
 
-        <!-- Left Panel - Component Library -->
+        <!-- Left Panel - Hierarchy + Component Library -->
         <Border DockPanel.Dock="Left" Width="220" Background="#252526">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Component Library"
-                           FontWeight="Bold" Margin="10,10,10,4" Foreground="White"/>
-                <TextBox DockPanel.Dock="Top" Watermark="Search components..."
-                         Text="{Binding SearchText}"
-                         Margin="10,0,10,6" FontSize="11"
-                         Background="#1e1e1e" Foreground="White"
-                         BorderBrush="#3e3e3e"/>
-                <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
-                           FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
+            <Grid RowDefinitions="Auto,5,*">
+                <!-- Hierarchy Panel -->
+                <views:HierarchyPanel Grid.Row="0"
+                                      DataContext="{Binding HierarchyPanel}"
+                                      Height="250"/>
 
-                <!-- PDK Management Panel -->
-                <Expander DockPanel.Dock="Top" Header="PDK Management" IsExpanded="False"
-                          Margin="5,0,5,5" Background="#2d2d2d">
-                    <StackPanel Margin="5">
-                        <TextBlock Text="{Binding PdkManager.StatusText}"
-                                   FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+                <!-- Splitter -->
+                <GridSplitter Grid.Row="1"
+                              Background="#3d3d3d"
+                              ResizeDirection="Rows"
+                              HorizontalAlignment="Stretch"/>
 
-                        <!-- PDK Filter List -->
-                        <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding PdkManager.LoadedPdks}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
-                                        <StackPanel Margin="0,3">
-                                            <StackPanel Orientation="Horizontal">
-                                                <CheckBox IsChecked="{Binding IsEnabled}"
-                                                          Content="{Binding Name}"
-                                                          FontSize="10"
-                                                          Margin="0,0,5,0"/>
+                <!-- Component Library -->
+                <DockPanel Grid.Row="2">
+                    <TextBlock DockPanel.Dock="Top" Text="Component Library"
+                               FontWeight="Bold" Margin="10,10,10,4" Foreground="White"/>
+                    <TextBox DockPanel.Dock="Top" Watermark="Search components..."
+                             Text="{Binding SearchText}"
+                             Margin="10,0,10,6" FontSize="11"
+                             Background="#1e1e1e" Foreground="White"
+                             BorderBrush="#3e3e3e"/>
+                    <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
+                               FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
+
+                    <!-- PDK Management Panel -->
+                    <Expander DockPanel.Dock="Top" Header="PDK Management" IsExpanded="False"
+                              Margin="5,0,5,5" Background="#2d2d2d">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="{Binding PdkManager.StatusText}"
+                                       FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+
+                            <!-- PDK Filter List -->
+                            <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding PdkManager.LoadedPdks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
+                                            <StackPanel Margin="0,3">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <CheckBox IsChecked="{Binding IsEnabled}"
+                                                              Content="{Binding Name}"
+                                                              FontSize="10"
+                                                              Margin="0,0,5,0"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                                                    <TextBlock Text="{Binding SourceBadge}"
+                                                               FontSize="9" Foreground="Gray" Margin="0,0,5,0"/>
+                                                    <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
+                                                               FontSize="9" Foreground="Gray"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-                                                <TextBlock Text="{Binding SourceBadge}"
-                                                           FontSize="9" Foreground="Gray" Margin="0,0,5,0"/>
-                                                <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
-                                                           FontSize="9" Foreground="Gray"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
 
-                        <!-- PDK Action Buttons -->
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
-                            <Button Content="Enable All" Command="{Binding PdkManager.EnableAllCommand}"
-                                    Width="75" Height="24" Margin="2" FontSize="10"
-                                    Background="#3d3d3d"/>
-                            <Button Content="Disable All" Command="{Binding PdkManager.DisableAllCommand}"
-                                    Width="75" Height="24" Margin="2" FontSize="10"
-                                    Background="#3d3d3d"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Expander>
-
-                <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
-                         SelectedItem="{Binding SelectedTemplate}"
-                         Background="Transparent" Foreground="White"
-                         Margin="5">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vmLib:ComponentTemplate">
-                            <StackPanel Orientation="Horizontal" Margin="3">
-                                <controls:ComponentPreview
-                                    Width="56" Height="36"
-                                    WidthMicrometers="{Binding WidthMicrometers}"
-                                    HeightMicrometers="{Binding HeightMicrometers}"
-                                    PinDefinitions="{Binding PinDefinitions}"
-                                    Margin="0,0,6,0"/>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
-                                    <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
-                                </StackPanel>
+                            <!-- PDK Action Buttons -->
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
+                                <Button Content="Enable All" Command="{Binding PdkManager.EnableAllCommand}"
+                                        Width="75" Height="24" Margin="2" FontSize="10"
+                                        Background="#3d3d3d"/>
+                                <Button Content="Disable All" Command="{Binding PdkManager.DisableAllCommand}"
+                                        Width="75" Height="24" Margin="2" FontSize="10"
+                                        Background="#3d3d3d"/>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
+                             SelectedItem="{Binding SelectedTemplate}"
+                             Background="Transparent" Foreground="White"
+                             Margin="5">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                                <StackPanel Orientation="Horizontal" Margin="3">
+                                    <controls:ComponentPreview
+                                        Width="56" Height="36"
+                                        WidthMicrometers="{Binding WidthMicrometers}"
+                                        HeightMicrometers="{Binding HeightMicrometers}"
+                                        PinDefinitions="{Binding PinDefinitions}"
+                                        Margin="0,0,6,0"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                        <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Grid>
         </Border>
 
         <!-- Right Panel - Properties -->
