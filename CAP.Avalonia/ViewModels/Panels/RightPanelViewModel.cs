@@ -54,11 +54,6 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public CompressLayoutViewModel CompressLayout { get; }
 
-    /// <summary>
-    /// ViewModel for hierarchical component grouping.
-    /// </summary>
-    public ComponentGroupViewModel ComponentGroup { get; }
-
     public RightPanelViewModel(DesignCanvasViewModel canvas)
     {
         Sweep = new ParameterSweepViewModel();
@@ -69,12 +64,10 @@ public partial class RightPanelViewModel : ObservableObject
         ExportValidation = new ExportValidationViewModel();
         SMatrixPerformance = new SMatrixPerformanceViewModel();
         CompressLayout = new CompressLayoutViewModel();
-        ComponentGroup = new ComponentGroupViewModel();
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
         DimensionValidator.Configure(canvas);
         CompressLayout.Configure(canvas);
-        ComponentGroup.ConfigureForCanvas(canvas);
     }
 }

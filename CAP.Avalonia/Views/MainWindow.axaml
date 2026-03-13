@@ -452,55 +452,6 @@
                         <TextBlock Text="{Binding Canvas.Connections.Count}" Foreground="White"/>
                     </StackPanel>
 
-                    <!-- Component Grouping -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Component Grouping:" Foreground="Aquamarine" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,10" TextWrapping="Wrap">
-                        Create hierarchical groups from selected components with frozen waveguide paths.
-                    </TextBlock>
-
-                    <!-- Group creation controls -->
-                    <TextBlock Text="Group Name:" Foreground="Gray" Margin="0,0,0,3"/>
-                    <TextBox Text="{Binding ComponentGroup.GroupName}"
-                             Watermark="Enter group name..."
-                             Width="180" Margin="0,0,0,8"/>
-
-                    <TextBlock Text="Description (optional):" Foreground="Gray" Margin="0,0,0,3"/>
-                    <TextBox Text="{Binding ComponentGroup.GroupDescription}"
-                             Watermark="Enter description..."
-                             Width="180" Height="50" Margin="0,0,0,8"
-                             TextWrapping="Wrap" AcceptsReturn="True"/>
-
-                    <Button Content="Create Group"
-                            Command="{Binding ComponentGroup.CreateGroupCommand}"
-                            Width="120" Margin="0,5,0,5" Background="#3d5d5d"
-                            IsEnabled="{Binding ComponentGroup.CanCreateGroup}"/>
-
-                    <TextBlock Text="{Binding ComponentGroup.StatusText}"
-                               Foreground="LightGreen" FontSize="10" Margin="0,5,0,5"
-                               TextWrapping="Wrap"
-                               IsVisible="{Binding ComponentGroup.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <!-- Group information display -->
-                    <ScrollViewer MaxHeight="150" Margin="0,5,0,0"
-                                  IsVisible="{Binding ComponentGroup.GroupInfoText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding ComponentGroup.GroupInfoText}"
-                                   Foreground="Aquamarine" FontFamily="Consolas" FontSize="10"
-                                   TextWrapping="Wrap"/>
-                    </ScrollViewer>
-
-                    <!-- Test controls -->
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="Test Move"
-                                Command="{Binding ComponentGroup.TestMoveGroupCommand}"
-                                Width="85" Margin="0,0,5,0" Background="#3d4d3d"
-                                FontSize="10"/>
-                        <Button Content="Test Rotate"
-                                Command="{Binding ComponentGroup.TestRotateGroupCommand}"
-                                Width="85" Margin="5,0,0,0" Background="#3d4d3d"
-                                FontSize="10"/>
-                    </StackPanel>
-
                     <!-- Routing Diagnostics -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Routing Diagnostics:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
