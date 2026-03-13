@@ -555,6 +555,13 @@ public partial class DesignCanvasViewModel : ObservableObject
         if (component.Component.IsLocked)
             return;
 
+        // If this is a ComponentGroup, use specialized group movement
+        if (component.Component is ComponentGroup group)
+        {
+            MoveComponentGroup(component, group, deltaX, deltaY);
+            return;
+        }
+
         double newX = component.X + deltaX;
         double newY = component.Y + deltaY;
 
@@ -592,6 +599,78 @@ public partial class DesignCanvasViewModel : ObservableObject
             // preventing threading issues from concurrent undo/redo operations
             _ = RecalculateRoutesAsync();
         }
+    }
+
+    /// <summary>
+    /// Moves a ComponentGroup and all its children together.
+    /// Uses ComponentGroup.MoveGroup() to maintain internal consistency.
+    /// </summary>
+    private void MoveComponentGroup(ComponentViewModel component, ComponentGroup group, double deltaX, double deltaY)
+    {
+        // Calculate new position
+        double newX = component.X + deltaX;
+        double newY = component.Y + deltaY;
+
+        // During drag or command execution: allow free movement (collision checked on drop or not applicable for undo/redo)
+        // Otherwise: check for overlap (check group bounds)
+        if (!_isDragging && !_isExecutingCommand)
+        {
+            var groupBounds = CalculateGroupBounds(group);
+            double testX = groupBounds.X + deltaX;
+            double testY = groupBounds.Y + deltaY;
+
+            if (!CanPlaceComponent(testX, testY, groupBounds.Width, groupBounds.Height, excludeComponent: component))
+            {
+                return;
+            }
+        }
+
+        // Update the ComponentViewModel position
+        component.X = newX;
+        component.Y = newY;
+
+        // Use the ComponentGroup's MoveGroup method to move all children and internal paths
+        group.MoveGroup(deltaX, deltaY);
+
+        // Update connections for the group's external pins
+        if (_isDragging)
+        {
+            // During drag: only update UI positions for external connections
+            foreach (var externalPin in group.ExternalPins)
+            {
+                foreach (var conn in Connections)
+                {
+                    if (conn.Connection.StartPin == externalPin.InternalPin ||
+                        conn.Connection.EndPin == externalPin.InternalPin)
+                    {
+                        conn.NotifyPathChanged();
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Not dragging: route async
+            _ = RecalculateRoutesAsync();
+        }
+    }
+
+    /// <summary>
+    /// Calculates the bounding rectangle for a ComponentGroup based on its children.
+    /// </summary>
+    private (double X, double Y, double Width, double Height) CalculateGroupBounds(ComponentGroup group)
+    {
+        if (group.ChildComponents.Count == 0)
+        {
+            return (group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
+        }
+
+        double minX = group.ChildComponents.Min(c => c.PhysicalX);
+        double minY = group.ChildComponents.Min(c => c.PhysicalY);
+        double maxX = group.ChildComponents.Max(c => c.PhysicalX + c.WidthMicrometers);
+        double maxY = group.ChildComponents.Max(c => c.PhysicalY + c.HeightMicrometers);
+
+        return (minX, minY, maxX - minX, maxY - minY);
     }
 
     public ComponentViewModel AddComponent(Component component, string? templateName = null)
@@ -957,6 +1036,11 @@ public partial class ComponentViewModel : ObservableObject
     public double Width => Component.WidthMicrometers;
     public double Height => Component.HeightMicrometers;
     public string Name => Component.Identifier;
+
+    /// <summary>
+    /// Whether this ComponentViewModel represents a ComponentGroup.
+    /// </summary>
+    public bool IsComponentGroup => Component is ComponentGroup;
 
     /// <summary>
     /// Whether this component has adjustable slider parameters.

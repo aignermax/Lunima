@@ -15,6 +15,7 @@ public class DesignCanvasHitTesting
 
     /// <summary>
     /// Finds the component at the given canvas point (topmost first).
+    /// For ComponentGroups, checks if the point is within the group's bounding box.
     /// </summary>
     public static ComponentViewModel? HitTestComponent(Point canvasPoint, DesignCanvasViewModel? vm)
     {
@@ -23,14 +24,45 @@ public class DesignCanvasHitTesting
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
-            var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
-            if (rect.Contains(canvasPoint))
+
+            // For ComponentGroups, check the group's calculated bounds
+            if (comp.Component is ComponentGroup group)
             {
-                return comp;
+                var groupRect = CalculateGroupBounds(group);
+                if (groupRect.Contains(canvasPoint))
+                {
+                    return comp;
+                }
+            }
+            else
+            {
+                var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
+                if (rect.Contains(canvasPoint))
+                {
+                    return comp;
+                }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Calculates the bounding rectangle for a ComponentGroup based on its children.
+    /// </summary>
+    private static Rect CalculateGroupBounds(ComponentGroup group)
+    {
+        if (group.ChildComponents.Count == 0)
+        {
+            return new Rect(group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
+        }
+
+        double minX = group.ChildComponents.Min(c => c.PhysicalX);
+        double minY = group.ChildComponents.Min(c => c.PhysicalY);
+        double maxX = group.ChildComponents.Max(c => c.PhysicalX + c.WidthMicrometers);
+        double maxY = group.ChildComponents.Max(c => c.PhysicalY + c.HeightMicrometers);
+
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 
     /// <summary>

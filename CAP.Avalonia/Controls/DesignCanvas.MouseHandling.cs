@@ -90,16 +90,32 @@ public partial class DesignCanvas
     {
         var hitComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
 
-        // If the hit component is part of a group, select the top-level group instead
-        if (hitComponent != null && hitComponent.Component.ParentGroup != null)
+        // Determine which component should be selected/dragged:
+        // 1. If hit component is a ComponentGroup directly, use it
+        // 2. If hit component is part of a group (ParentGroup != null), select the top-level group
+        // 3. Otherwise, use the hit component as-is
+        if (hitComponent != null)
         {
-            var topLevelGroup = GetTopLevelGroup(hitComponent.Component);
-            // Find the ComponentViewModel for the top-level group
-            _interactionState.DraggingComponent = vm.Components.FirstOrDefault(c => c.Component == topLevelGroup);
+            if (hitComponent.Component is ComponentGroup)
+            {
+                // Clicked directly on a group - select/drag the group
+                _interactionState.DraggingComponent = hitComponent;
+            }
+            else if (hitComponent.Component.ParentGroup != null)
+            {
+                // Clicked on a child component - select/drag the parent group
+                var topLevelGroup = GetTopLevelGroup(hitComponent.Component);
+                _interactionState.DraggingComponent = vm.Components.FirstOrDefault(c => c.Component == topLevelGroup);
+            }
+            else
+            {
+                // Regular component not in a group
+                _interactionState.DraggingComponent = hitComponent;
+            }
         }
         else
         {
-            _interactionState.DraggingComponent = hitComponent;
+            _interactionState.DraggingComponent = null;
         }
 
         if (_interactionState.DraggingComponent != null)
