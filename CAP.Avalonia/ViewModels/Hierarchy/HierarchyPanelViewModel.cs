@@ -1,0 +1,229 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CAP_Core.Components.Core;
+using CAP.Avalonia.ViewModels.Canvas;
+
+namespace CAP.Avalonia.ViewModels.Hierarchy;
+
+/// <summary>
+/// Manages the hierarchy tree view panel showing component structure.
+/// Displays a Figma-style tree with expand/collapse controls for ComponentGroups.
+/// Synchronizes selection with the canvas and supports navigation.
+/// </summary>
+public partial class HierarchyPanelViewModel : ObservableObject
+{
+    /// <summary>
+    /// Root-level nodes in the hierarchy (top-level components and groups).
+    /// </summary>
+    public ObservableCollection<HierarchyNodeViewModel> RootNodes { get; } = new();
+
+    /// <summary>
+    /// Reference to the canvas ViewModel for monitoring components and connections.
+    /// </summary>
+    private readonly DesignCanvasViewModel _canvas;
+
+    /// <summary>
+    /// Callback to navigate the canvas to a specific position (zoom to component).
+    /// Set by MainViewModel after initialization.
+    /// </summary>
+    public Action<double, double>? NavigateToPosition { get; set; }
+
+    /// <summary>
+    /// Callback to get the viewport size for zoom calculations.
+    /// </summary>
+    public Func<(double width, double height)>? GetViewportSize { get; set; }
+
+    public HierarchyPanelViewModel(DesignCanvasViewModel canvas)
+    {
+        _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
+
+        // Subscribe to canvas changes
+        _canvas.Components.CollectionChanged += (s, e) => RebuildTree();
+    }
+
+    /// <summary>
+    /// Rebuilds the entire hierarchy tree from the canvas components.
+    /// Called when components are added, removed, or grouped/ungrouped.
+    /// </summary>
+    public void RebuildTree()
+    {
+        RootNodes.Clear();
+
+        // Build tree from canvas components (only top-level components, not children of groups)
+        foreach (var compVm in _canvas.Components)
+        {
+            // Skip components that are children of a group (they'll be added recursively)
+            if (compVm.Component.ParentGroup != null)
+                continue;
+
+            var node = CreateNodeRecursive(compVm.Component, compVm);
+            RootNodes.Add(node);
+        }
+    }
+
+    /// <summary>
+    /// Recursively creates a hierarchy node and its children.
+    /// </summary>
+    private HierarchyNodeViewModel CreateNodeRecursive(Component component, ComponentViewModel? componentVm)
+    {
+        var node = new HierarchyNodeViewModel(component)
+        {
+            ComponentViewModel = componentVm,
+            FocusRequested = FocusOnComponent,
+            SelectionRequested = SelectComponent
+        };
+
+        // If this is a group, recursively add its children
+        if (component is ComponentGroup group)
+        {
+            foreach (var childComp in group.ChildComponents)
+            {
+                // Find the ComponentViewModel for this child
+                var childVm = _canvas.Components.FirstOrDefault(c => c.Component == childComp);
+                var childNode = CreateNodeRecursive(childComp, childVm);
+                node.Children.Add(childNode);
+            }
+        }
+
+        return node;
+    }
+
+    /// <summary>
+    /// Synchronizes hierarchy selection with canvas selection.
+    /// Called when a component is selected on the canvas.
+    /// </summary>
+    public void SyncSelectionFromCanvas(ComponentViewModel? selectedComponent)
+    {
+        // Clear all selections in the tree
+        ClearAllSelections();
+
+        if (selectedComponent == null)
+            return;
+
+        // Find and select the corresponding node
+        var node = FindNodeByComponent(selectedComponent.Component);
+        if (node != null)
+        {
+            node.IsSelected = true;
+            ExpandParentsToNode(node);
+        }
+    }
+
+    /// <summary>
+    /// Finds a node in the tree by its component reference.
+    /// </summary>
+    private HierarchyNodeViewModel? FindNodeByComponent(Component component)
+    {
+        foreach (var rootNode in RootNodes)
+        {
+            var found = rootNode.FindNodeByComponent(component);
+            if (found != null)
+                return found;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Expands all parent nodes to make a node visible.
+    /// </summary>
+    private void ExpandParentsToNode(HierarchyNodeViewModel node)
+    {
+        // Since we don't track parent references, we'll expand all groups containing the component
+        // This is a simplified approach - could be optimized with parent tracking
+        foreach (var rootNode in RootNodes)
+        {
+            ExpandIfContains(rootNode, node.Component);
+        }
+    }
+
+    /// <summary>
+    /// Recursively expands nodes that contain the target component.
+    /// </summary>
+    private bool ExpandIfContains(HierarchyNodeViewModel node, Component target)
+    {
+        if (node.Component == target)
+            return true;
+
+        foreach (var child in node.Children)
+        {
+            if (ExpandIfContains(child, target))
+            {
+                node.IsExpanded = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Clears all selections in the hierarchy tree.
+    /// </summary>
+    private void ClearAllSelections()
+    {
+        foreach (var rootNode in RootNodes)
+        {
+            ClearSelectionsRecursive(rootNode);
+        }
+    }
+
+    /// <summary>
+    /// Recursively clears selections in a subtree.
+    /// </summary>
+    private void ClearSelectionsRecursive(HierarchyNodeViewModel node)
+    {
+        node.IsSelected = false;
+        foreach (var child in node.Children)
+        {
+            ClearSelectionsRecursive(child);
+        }
+    }
+
+    /// <summary>
+    /// Handles focus request from a hierarchy node (zoom canvas to component).
+    /// </summary>
+    private void FocusOnComponent(HierarchyNodeViewModel node)
+    {
+        if (node.Component == null) return;
+
+        // Calculate center of component
+        double centerX = node.Component.PhysicalX + node.Component.WidthMicrometers / 2;
+        double centerY = node.Component.PhysicalY + node.Component.HeightMicrometers / 2;
+
+        // Navigate to this position
+        NavigateToPosition?.Invoke(centerX, centerY);
+    }
+
+    /// <summary>
+    /// Handles selection request from a hierarchy node (select on canvas).
+    /// </summary>
+    private void SelectComponent(HierarchyNodeViewModel node)
+    {
+        if (node.ComponentViewModel == null) return;
+
+        // Clear all canvas selections
+        _canvas.Selection.ClearSelection();
+        foreach (var comp in _canvas.Components)
+        {
+            comp.IsSelected = false;
+        }
+
+        // Select the component
+        node.ComponentViewModel.IsSelected = true;
+        _canvas.Selection.SelectedComponents.Add(node.ComponentViewModel);
+        _canvas.SelectedComponent = node.ComponentViewModel;
+
+        // Update hierarchy selection
+        ClearAllSelections();
+        node.IsSelected = true;
+    }
+
+    /// <summary>
+    /// Updates a node's display after its content changes (e.g., children added/removed).
+    /// </summary>
+    public void RefreshNode(Component component)
+    {
+        var node = FindNodeByComponent(component);
+        node?.RefreshDisplayName();
+    }
+}

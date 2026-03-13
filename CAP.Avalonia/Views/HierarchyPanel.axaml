@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Hierarchy"
+             x:Class="CAP.Avalonia.Views.HierarchyPanel"
+             x:DataType="vm:HierarchyPanelViewModel"
+             Background="#1e1e1e">
+
+    <DockPanel>
+        <!-- Header -->
+        <Border DockPanel.Dock="Top"
+                Background="#2d2d2d"
+                Padding="8,6"
+                BorderBrush="#3d3d3d"
+                BorderThickness="0,0,0,1">
+            <TextBlock Text="Hierarchy"
+                       FontWeight="SemiBold"
+                       FontSize="13"
+                       Foreground="LightBlue"/>
+        </Border>
+
+        <!-- Tree View -->
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <TreeView ItemsSource="{Binding RootNodes}"
+                      Background="Transparent"
+                      Padding="4">
+
+                <TreeView.Styles>
+                    <!-- Tree item style -->
+                    <Style Selector="TreeViewItem">
+                        <Setter Property="Padding" Value="2"/>
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    </Style>
+
+                    <!-- Selected item highlight -->
+                    <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+                        <Setter Property="Background" Value="#2d5a8f"/>
+                    </Style>
+
+                    <!-- Hover highlight -->
+                    <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
+                        <Setter Property="Background" Value="#3d3d3d"/>
+                    </Style>
+                </TreeView.Styles>
+
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate ItemsSource="{Binding Children}">
+                        <Border Padding="4,2"
+                                Background="Transparent"
+                                PointerPressed="TreeNode_PointerPressed">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <!-- Icon -->
+                                <TextBlock Text="{Binding IconGlyph}"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"/>
+
+                                <!-- Component Name -->
+                                <StackPanel Orientation="Vertical" Spacing="2">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontWeight="Medium"
+                                               FontSize="12"
+                                               Foreground="White"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding TypeLabel}"
+                                               FontSize="10"
+                                               Foreground="#999999"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Focus Button -->
+                                <Button Content="🎯"
+                                        Command="{Binding FocusCommand}"
+                                        Width="24"
+                                        Height="24"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontSize="12"
+                                        ToolTip.Tip="Zoom to component"
+                                        Margin="4,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
