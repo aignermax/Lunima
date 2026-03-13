@@ -245,6 +245,135 @@ public class CopyPasteWorkflowTests
             "Should create 2 new components from 2 paste operations");
     }
 
+    /// <summary>
+    /// Verifies that copying and pasting a ComponentGroup preserves all child components.
+    /// This is the integration test for issue #164.
+    /// </summary>
+    [Fact]
+    public void Paste_ComponentGroup_CopiesAllChildComponents()
+    {
+        var canvas = new DesignCanvasViewModel();
+
+        // Create a group with 2 child components
+        var group = TestComponentFactory.CreateComponentGroup("TestGroup", addChildren: true);
+        group.PhysicalX = 200;
+        group.PhysicalY = 200;
+
+        var groupVm = canvas.AddComponent(group);
+
+        int initialComponentCount = canvas.Components.Count;
+        int childCount = group.ChildComponents.Count;
+
+        // Copy the group
+        canvas.Clipboard.Copy(
+            new[] { groupVm },
+            canvas.Connections);
+
+        // Paste the group
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        cmd.Result.ShouldNotBeNull("Paste should succeed");
+        cmd.Result.Components.Count.ShouldBe(1, "Should paste exactly one component (the group)");
+
+        var pastedGroupVm = cmd.Result.Components[0];
+        pastedGroupVm.Component.ShouldBeOfType<ComponentGroup>("Pasted component should be a ComponentGroup");
+
+        var pastedGroup = (ComponentGroup)pastedGroupVm.Component;
+
+        // Verify child components were copied
+        pastedGroup.ChildComponents.Count.ShouldBe(childCount,
+            "Pasted group should have same number of children as original");
+
+        // Verify children are different instances
+        foreach (var pastedChild in pastedGroup.ChildComponents)
+        {
+            pastedChild.ShouldNotBeNull("Child component should not be null");
+            group.ChildComponents.ShouldNotContain(pastedChild,
+                "Pasted child should be a new instance, not a reference to original");
+        }
+
+        // Verify children have correct parent references
+        foreach (var pastedChild in pastedGroup.ChildComponents)
+        {
+            pastedChild.ParentGroup.ShouldBe(pastedGroup,
+                "Pasted child should reference the pasted group as parent");
+        }
+    }
+
+    /// <summary>
+    /// Verifies that pasting a group with internal connections preserves those connections.
+    /// Note: This test verifies the structure is preserved, even though the internal paths
+    /// list may be empty for groups created from TestComponentFactory.
+    /// </summary>
+    [Fact]
+    public void Paste_ComponentGroupWithInternalPaths_PreservesGroupStructure()
+    {
+        var canvas = new DesignCanvasViewModel();
+
+        // Create a simple group (internal paths would require more complex setup
+        // with properly initialized components having matching logical/physical pins)
+        var group = TestComponentFactory.CreateComponentGroup("ConnectedGroup", addChildren: true);
+        group.PhysicalX = 100;
+        group.PhysicalY = 100;
+
+        int childCount = group.ChildComponents.Count;
+        var groupVm = canvas.AddComponent(group);
+
+        // Copy and paste
+        canvas.Clipboard.Copy(new[] { groupVm }, canvas.Connections);
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        var pastedGroup = (ComponentGroup)cmd.Result.Components[0].Component;
+
+        // Verify the group structure is preserved
+        pastedGroup.ChildComponents.Count.ShouldBe(childCount,
+            "Pasted group should have all children");
+
+        // Verify children are independent copies
+        foreach (var pastedChild in pastedGroup.ChildComponents)
+        {
+            group.ChildComponents.ShouldNotContain(pastedChild,
+                "Pasted children should be new instances");
+            pastedChild.ParentGroup.ShouldBe(pastedGroup,
+                "Pasted children should reference the pasted group");
+        }
+    }
+
+    /// <summary>
+    /// Verifies that pasting a nested group (group within group) works correctly.
+    /// </summary>
+    [Fact]
+    public void Paste_NestedComponentGroup_CopiesAllLevels()
+    {
+        var canvas = new DesignCanvasViewModel();
+
+        var outerGroup = TestComponentFactory.CreateComponentGroup("OuterGroup", addChildren: false);
+        var innerGroup = TestComponentFactory.CreateComponentGroup("InnerGroup", addChildren: true);
+        outerGroup.AddChild(innerGroup);
+        outerGroup.PhysicalX = 300;
+        outerGroup.PhysicalY = 300;
+
+        var groupVm = canvas.AddComponent(outerGroup);
+
+        // Copy and paste
+        canvas.Clipboard.Copy(new[] { groupVm }, canvas.Connections);
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        var pastedOuter = (ComponentGroup)cmd.Result.Components[0].Component;
+
+        pastedOuter.ChildComponents.Count.ShouldBe(1, "Outer group should have one child");
+        var pastedInner = pastedOuter.ChildComponents[0] as ComponentGroup;
+
+        pastedInner.ShouldNotBeNull("Child should be a ComponentGroup");
+        pastedInner.ChildComponents.Count.ShouldBe(2,
+            "Inner group should have its 2 child components");
+        pastedInner.ParentGroup.ShouldBe(pastedOuter,
+            "Inner group should reference outer group as parent");
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

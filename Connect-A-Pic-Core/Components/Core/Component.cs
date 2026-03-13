@@ -274,7 +274,7 @@ public class Component : ICloneable
 
         return pinIdMapping;
     }
-    public object Clone()
+    public virtual object Clone()
     {
         var clonedParts = CloneParts();
         var clonedSliderMap = CloneSliders();

@@ -347,6 +347,16 @@ public class ComponentGroup : Component
     }
 
     /// <summary>
+    /// Overrides Component.Clone() to perform a deep copy of the ComponentGroup.
+    /// This ensures that copy/paste operations correctly clone child components and internal paths.
+    /// </summary>
+    /// <returns>A new ComponentGroup instance with cloned children and paths.</returns>
+    public override object Clone()
+    {
+        return DeepCopy();
+    }
+
+    /// <summary>
     /// Creates a deep copy of this ComponentGroup with new unique identifiers for all components.
     /// Used for instantiating group templates from the library.
     /// </summary>
