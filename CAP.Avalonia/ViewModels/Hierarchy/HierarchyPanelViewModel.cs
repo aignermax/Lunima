@@ -224,11 +224,15 @@ public partial class HierarchyPanelViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Handles focus request from a hierarchy node (zoom canvas to component).
+    /// Handles focus request from a hierarchy node (select and zoom canvas to component).
+    /// Selects the component on canvas and pans the view to center it.
     /// </summary>
     private void FocusOnComponent(HierarchyNodeViewModel node)
     {
         if (node.Component == null) return;
+
+        // First, select the component on the canvas
+        SelectComponent(node);
 
         // Calculate center of component
         double centerX = node.Component.PhysicalX + node.Component.WidthMicrometers / 2;

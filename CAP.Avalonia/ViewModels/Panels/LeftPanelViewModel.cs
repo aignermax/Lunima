@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia.Controls;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -58,6 +59,29 @@ public partial class LeftPanelViewModel : ObservableObject
     [ObservableProperty]
     private string _searchText = "";
 
+    [ObservableProperty]
+    private double _libraryScrollOffset = 0.0;
+
+    private GridLength _leftPanelWidth = new GridLength(220);
+    /// <summary>
+    /// Width of the left panel in pixels. Persisted in user preferences.
+    /// Clamped to [200, 800] range.
+    /// </summary>
+    public GridLength LeftPanelWidth
+    {
+        get => _leftPanelWidth;
+        set
+        {
+            // Clamp to reasonable values (min 200, max 800)
+            var clampedValue = Math.Max(200, Math.Min(800, value.Value));
+            var newGridLength = new GridLength(clampedValue);
+            if (SetProperty(ref _leftPanelWidth, newGridLength))
+            {
+                SaveLeftPanelWidth();
+            }
+        }
+    }
+
     /// <summary>
     /// Callback to update status text in the UI.
     /// </summary>
@@ -92,6 +116,7 @@ public partial class LeftPanelViewModel : ObservableObject
     {
         LoadComponentLibrary();
         RestorePdkFilterState();
+        RestoreLeftPanelWidth();
     }
 
     partial void OnSearchTextChanged(string value) => FilterComponents();
@@ -200,6 +225,17 @@ public partial class LeftPanelViewModel : ObservableObject
     {
         var enabledPdks = PdkManager.GetEnabledPdkNames();
         _preferencesService.SetEnabledPdks(enabledPdks);
+    }
+
+    private void RestoreLeftPanelWidth()
+    {
+        var width = _preferencesService.GetLeftPanelWidth();
+        LeftPanelWidth = new GridLength(width);
+    }
+
+    private void SaveLeftPanelWidth()
+    {
+        _preferencesService.SetLeftPanelWidth(LeftPanelWidth.Value);
     }
 
     [RelayCommand]

@@ -139,7 +139,9 @@ public partial class MainViewModel : ObservableObject
         PdkLoader pdkLoader,
         Commands.CommandManager commandManager,
         UserPreferencesService preferencesService,
-        CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager)
+        CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager,
+        Services.GroupPreviewGenerator previewGenerator,
+        Services.IInputDialogService inputDialogService)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -148,10 +150,10 @@ public partial class MainViewModel : ObservableObject
 
         // Initialize Panel ViewModels (order matters due to dependencies)
         LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService);
-        CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager);
+        CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates);
         ViewportControl = new ViewportControlViewModel(_canvas);
-        RightPanel = new RightPanelViewModel(_canvas);
+        RightPanel = new RightPanelViewModel(_canvas, preferencesService);
         BottomPanel = new BottomPanelViewModel(_canvas, CommandManager);
 
         // Wire up status callbacks
@@ -184,8 +186,9 @@ public partial class MainViewModel : ObservableObject
         WireHierarchyPanel();
         WireFileOperations();
 
-        // Initialize component library
+        // Initialize panels
         LeftPanel.Initialize();
+        RightPanel.Initialize();
     }
 
     private void UpdateStatusText(string text)

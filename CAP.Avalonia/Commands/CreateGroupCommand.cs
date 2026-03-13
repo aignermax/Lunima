@@ -1,4 +1,6 @@
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.Services;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
@@ -8,10 +10,13 @@ namespace CAP.Avalonia.Commands;
 /// <summary>
 /// Command to create a ComponentGroup from selected components.
 /// Captures current positions and waveguide paths as frozen geometry.
+/// Automatically saves the group to the component library.
 /// </summary>
 public class CreateGroupCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
+    private readonly ComponentLibraryViewModel? _libraryViewModel;
+    private readonly GroupPreviewGenerator? _previewGenerator;
     private readonly List<Component> _components;
     private ComponentGroup? _createdGroup;
     private ComponentViewModel? _groupViewModel;
@@ -19,10 +24,17 @@ public class CreateGroupCommand : IUndoableCommand
     private readonly List<WaveguideConnection> _externalConnections = new();
     private readonly List<WaveguideConnectionViewModel> _internalConnectionViewModels = new();
     private readonly Dictionary<Component, (double x, double y)> _originalPositions = new();
+    private CAP_Core.Components.Creation.GroupTemplate? _savedTemplate;
 
-    public CreateGroupCommand(DesignCanvasViewModel canvas, List<ComponentViewModel> components)
+    public CreateGroupCommand(
+        DesignCanvasViewModel canvas,
+        List<ComponentViewModel> components,
+        ComponentLibraryViewModel? libraryViewModel = null,
+        GroupPreviewGenerator? previewGenerator = null)
     {
         _canvas = canvas;
+        _libraryViewModel = libraryViewModel;
+        _previewGenerator = previewGenerator;
         _components = components.Select(c => c.Component).ToList();
 
         // Store original positions
@@ -167,6 +179,10 @@ public class CreateGroupCommand : IUndoableCommand
 
             // 8. Add group to canvas
             _groupViewModel = _canvas.AddComponent(_createdGroup);
+
+            // 9. Select the newly created group so user gets visual feedback
+            _canvas.Selection.SelectSingle(_groupViewModel);
+            _canvas.SelectedComponent = _groupViewModel;
         }
         finally
         {
@@ -176,6 +192,49 @@ public class CreateGroupCommand : IUndoableCommand
         // Recalculate routes for external connections
         _ = _canvas.RecalculateRoutesAsync();
         _canvas.InvalidateSimulation();
+
+        // Auto-save group to library
+        if (_libraryViewModel != null && _createdGroup != null)
+        {
+            SaveGroupToLibrary();
+        }
+    }
+
+    /// <summary>
+    /// Saves the created group to the component library.
+    /// </summary>
+    private void SaveGroupToLibrary()
+    {
+        if (_createdGroup == null || _libraryViewModel == null)
+            return;
+
+        try
+        {
+            var libraryManager = _libraryViewModel.GetLibraryManager();
+            _savedTemplate = libraryManager.SaveTemplate(
+                _createdGroup,
+                _createdGroup.GroupName,
+                _createdGroup.Description,
+                "User");
+
+            // Generate preview if generator is available
+            if (_previewGenerator != null)
+            {
+                var preview = _previewGenerator.GeneratePreview(_createdGroup);
+                if (preview != null)
+                {
+                    _savedTemplate.PreviewThumbnailBase64 = preview;
+                }
+            }
+
+            // Add to ViewModel collection to update UI
+            _libraryViewModel.AddTemplate(_savedTemplate);
+        }
+        catch
+        {
+            // If saving fails, continue - the group is still created on canvas
+            _savedTemplate = null;
+        }
     }
 
     public void Undo()
@@ -213,6 +272,13 @@ public class CreateGroupCommand : IUndoableCommand
         finally
         {
             _canvas.EndCommandExecution();
+        }
+
+        // Remove saved template from library
+        if (_savedTemplate != null && _libraryViewModel != null)
+        {
+            _libraryViewModel.RemoveTemplateCommand.Execute(_savedTemplate);
+            _savedTemplate = null;
         }
 
         // Recalculate routes

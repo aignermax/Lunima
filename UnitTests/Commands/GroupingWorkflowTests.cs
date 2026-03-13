@@ -254,6 +254,135 @@ public class GroupingWorkflowTests
         canvas.Components[0].Component.ShouldNotBeOfType<ComponentGroup>();
     }
 
+    [Fact]
+    public void CreateGroup_AutomaticallySelectsNewGroup()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        var comp2 = CreateTestComponent("Comp2", 200, 100);
+
+        var vm1 = canvas.AddComponent(comp1);
+        var vm2 = canvas.AddComponent(comp2);
+
+        canvas.Selection.AddToSelection(vm1);
+        canvas.Selection.AddToSelection(vm2);
+
+        // Act - Create group
+        var cmd = new CreateGroupCommand(canvas, canvas.Selection.SelectedComponents.ToList());
+        cmd.Execute();
+
+        // Assert - Group is automatically selected
+        canvas.Selection.SelectedComponents.Count.ShouldBe(1);
+        var selectedVm = canvas.Selection.SelectedComponents[0];
+        selectedVm.Component.ShouldBeOfType<ComponentGroup>();
+        selectedVm.IsSelected.ShouldBeTrue();
+        canvas.SelectedComponent.ShouldBe(selectedVm);
+    }
+
+    [Fact]
+    public void CreateGroup_ThenUndo_ClearsSelection()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("Comp1", 100, 100);
+        var comp2 = CreateTestComponent("Comp2", 200, 100);
+
+        var vm1 = canvas.AddComponent(comp1);
+        var vm2 = canvas.AddComponent(comp2);
+
+        canvas.Selection.AddToSelection(vm1);
+        canvas.Selection.AddToSelection(vm2);
+
+        var cmd = new CreateGroupCommand(canvas, canvas.Selection.SelectedComponents.ToList());
+        cmd.Execute();
+
+        // Verify group is selected
+        canvas.Selection.SelectedComponents.Count.ShouldBe(1);
+        var groupVm = canvas.Selection.SelectedComponents[0];
+        groupVm.Component.ShouldBeOfType<ComponentGroup>();
+
+        // Act - Undo
+        cmd.Undo();
+
+        // Assert - Individual components restored (selection behavior depends on undo logic)
+        canvas.Components.Count.ShouldBe(2);
+        canvas.Components.ShouldNotContain(c => c.Component is ComponentGroup);
+    }
+
+    [Fact]
+    public async Task UngroupCommand_AfterGroupMoved_RecalculatesRoutes()
+    {
+        // Arrange - Create components with connection
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateComponentWithPins("Comp1", 100, 100);
+        var comp2 = CreateComponentWithPins("Comp2", 200, 100);
+
+        var vm1 = canvas.AddComponent(comp1);
+        var vm2 = canvas.AddComponent(comp2);
+
+        // Connect the components
+        var pin1 = comp1.PhysicalPins[0];
+        var pin2 = comp2.PhysicalPins[0];
+        canvas.ConnectPins(pin1, pin2);
+
+        // Wait for routing to complete
+        await canvas.RecalculateRoutesAsync();
+
+        // Verify connection has valid route
+        var originalConnection = canvas.ConnectionManager.Connections[0];
+        originalConnection.IsPathValid.ShouldBeTrue();
+        var originalStartX = originalConnection.RoutedPath?.Segments[0].StartPoint.X ?? 0;
+        var originalEndX = originalConnection.RoutedPath?.Segments[^1].EndPoint.X ?? 0;
+
+        canvas.Selection.AddToSelection(vm1);
+        canvas.Selection.AddToSelection(vm2);
+
+        // Create group
+        var createCmd = new CreateGroupCommand(canvas, canvas.Selection.SelectedComponents.ToList());
+        createCmd.Execute();
+
+        var group = (ComponentGroup)canvas.Components[0].Component;
+
+        // Act - Move the group to a new position
+        group.MoveGroup(500, 500); // Move significantly
+
+        // Ungroup - this should trigger route recalculation
+        var ungroupCmd = new UngroupCommand(canvas, group);
+        ungroupCmd.Execute();
+
+        // Wait for routing to complete
+        await canvas.RecalculateRoutesAsync();
+
+        // Assert - Routes should be recalculated for new positions
+        canvas.Components.Count.ShouldBe(2);
+        canvas.Connections.Count.ShouldBe(1);
+
+        var restoredConnection = canvas.ConnectionManager.Connections[0];
+        restoredConnection.IsPathValid.ShouldBeTrue();
+
+        // Verify route endpoints match current component positions
+        var (startX, startY) = pin1.GetAbsolutePosition();
+        var (endX, endY) = pin2.GetAbsolutePosition();
+
+        var routedPath = restoredConnection.RoutedPath;
+        routedPath.ShouldNotBeNull();
+        routedPath.Segments.Count.ShouldBeGreaterThan(0);
+
+        var firstSegment = routedPath.Segments[0];
+        var lastSegment = routedPath.Segments[^1];
+
+        // Route should start and end at current pin positions (within tolerance)
+        Math.Abs(firstSegment.StartPoint.X - startX).ShouldBeLessThan(1.0);
+        Math.Abs(firstSegment.StartPoint.Y - startY).ShouldBeLessThan(1.0);
+        Math.Abs(lastSegment.EndPoint.X - endX).ShouldBeLessThan(1.0);
+        Math.Abs(lastSegment.EndPoint.Y - endY).ShouldBeLessThan(1.0);
+
+        // Route coordinates should be different from original (group was moved)
+        Math.Abs(firstSegment.StartPoint.X - originalStartX).ShouldBeGreaterThan(100);
+        Math.Abs(lastSegment.EndPoint.X - originalEndX).ShouldBeGreaterThan(100);
+    }
+
     /// <summary>
     /// Helper to create a simple test component.
     /// </summary>

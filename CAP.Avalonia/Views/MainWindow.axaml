@@ -10,6 +10,11 @@
         Title="Connect-A-PIC Pro"
         Width="1400" Height="900">
 
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+G" Command="{Binding CreateGroupCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+G" Command="{Binding UngroupCommand}" />
+    </Window.KeyBindings>
+
     <DockPanel>
         <!-- Toolbar -->
         <ScrollViewer DockPanel.Dock="Top"
@@ -36,8 +41,6 @@
                         Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Zoom to fit all components (F)"/>
                 <Button Content="1:1" Command="{Binding ResetZoomCommand}"
                         Width="35" Margin="2" ToolTip.Tip="Reset zoom to 100%"/>
-                <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
-                           VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
@@ -106,14 +109,19 @@
                 <TextBlock Text="{Binding StatusText}"
                            VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
                 <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
-                    <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste"/>
+                    <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+G=Group  Ctrl+Shift+G=Ungroup  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste"/>
                 </TextBlock>
             </StackPanel>
         </Border>
 
         <!-- Left Panel - Hierarchy + Component Library -->
-        <Border DockPanel.Dock="Left" Width="220" Background="#252526">
-            <Grid RowDefinitions="Auto,5,*">
+        <Grid DockPanel.Dock="Left" ColumnDefinitions="Auto,Auto">
+            <Border Grid.Column="0"
+                    Name="LeftPanelBorder"
+                    Width="{Binding LeftPanel.LeftPanelWidth.Value}"
+                    MinWidth="200" MaxWidth="800"
+                    Background="#252526">
+                <Grid RowDefinitions="Auto,5,*">
                 <!-- Hierarchy Panel -->
                 <views:HierarchyPanel Grid.Row="0"
                                       DataContext="{Binding HierarchyPanel}"
@@ -143,6 +151,8 @@
                         <StackPanel Margin="5">
                             <TextBlock Text="{Binding GroupLibrary.StatusText}"
                                        FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+                            <TextBlock Text="ℹ️ Groups created with Ctrl+G are automatically saved here. Right-click a group to rename."
+                                       FontSize="9" Foreground="#87ceeb" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                             <!-- User Groups -->
                             <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
@@ -236,33 +246,59 @@
                         </StackPanel>
                     </Expander>
 
-                    <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
-                             SelectedItem="{Binding SelectedTemplate}"
-                             Background="Transparent" Foreground="White"
-                             Margin="5">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vmLib:ComponentTemplate">
-                                <StackPanel Orientation="Horizontal" Margin="3">
-                                    <controls:ComponentPreview
-                                        Width="56" Height="36"
-                                        WidthMicrometers="{Binding WidthMicrometers}"
-                                        HeightMicrometers="{Binding HeightMicrometers}"
-                                        PinDefinitions="{Binding PinDefinitions}"
-                                        Margin="0,0,6,0"/>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
-                                        <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                    <ScrollViewer x:Name="ComponentLibraryScroll"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
+                                 SelectedItem="{Binding SelectedTemplate}"
+                                 Background="Transparent" Foreground="White"
+                                 Margin="5">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                                    <StackPanel Orientation="Horizontal" Margin="3">
+                                        <controls:ComponentPreview
+                                            Width="56" Height="36"
+                                            WidthMicrometers="{Binding WidthMicrometers}"
+                                            HeightMicrometers="{Binding HeightMicrometers}"
+                                            PinDefinitions="{Binding PinDefinitions}"
+                                            Margin="0,0,6,0"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                            <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
                 </DockPanel>
-            </Grid>
-        </Border>
+                </Grid>
+            </Border>
+
+            <!-- GridSplitter for resizing left panel -->
+            <GridSplitter Grid.Column="1"
+                          Width="4"
+                          Background="#3d3d3d"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+        </Grid>
 
         <!-- Right Panel - Properties -->
-        <Border DockPanel.Dock="Right" Width="250" Background="#252526">
+        <Grid DockPanel.Dock="Right" ColumnDefinitions="Auto,Auto">
+            <!-- GridSplitter for resizing right panel -->
+            <GridSplitter Grid.Column="0"
+                          Width="4"
+                          Background="#3d3d3d"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+
+            <Border Grid.Column="1"
+                    Name="RightPanelBorder"
+                    Width="{Binding RightPanel.RightPanelWidth.Value}"
+                    MinWidth="200" MaxWidth="800"
+                    Background="#252526">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="Properties"
                            FontWeight="Bold" Margin="10" Foreground="White"/>
@@ -706,7 +742,8 @@
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
-        </Border>
+            </Border>
+        </Grid>
 
         <!-- Main Canvas -->
         <controls:DesignCanvas x:Name="DesignCanvasControl"
@@ -723,6 +760,29 @@
                     <MenuItem Header="Paste" Command="{Binding PasteSelectedCommand}" InputGesture="Ctrl+V">
                         <MenuItem.Icon>
                             <TextBlock Text="📄" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Create Group" Command="{Binding CreateGroupCommand}" InputGesture="Ctrl+G">
+                        <MenuItem.Icon>
+                            <PathIcon Data="M4,4 L12,4 L12,12 L4,12 Z M6,6 L10,6 L10,10 L6,10 Z"
+                                      Width="16" Height="16" Foreground="LightBlue"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Ungroup" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G">
+                        <MenuItem.Icon>
+                            <PathIcon Data="M4,4 L6,4 L6,6 L4,6 Z M10,4 L12,4 L12,6 L10,6 Z M4,10 L6,10 L6,12 L4,12 Z M10,10 L12,10 L12,12 L10,12 Z"
+                                      Width="16" Height="16" Foreground="Orange"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Rename Group..." Command="{Binding CanvasInteraction.RenameGroupCommand}">
+                        <MenuItem.Icon>
+                            <TextBlock Text="✏️" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Save Group As..." Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
+                        <MenuItem.Icon>
+                            <TextBlock Text="💾" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <Separator/>

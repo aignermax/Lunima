@@ -184,6 +184,107 @@ public class GroupLibraryIntegrationTests : IDisposable
         _libraryViewModel.StatusText.ShouldContain("1 PDK macro");
     }
 
+    [Fact]
+    public void CreateGroupCommand_WithLibraryViewModel_AutoSavesToLibrary()
+    {
+        // Arrange
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("comp1");
+        var comp2 = CreateTestComponent("comp2");
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
+        var command = new CreateGroupCommand(canvas, selectedComponents, _libraryViewModel, _previewGenerator);
+
+        // Act
+        command.Execute();
+
+        // Assert - group should be auto-saved to library
+        _libraryViewModel.UserGroups.Count.ShouldBe(1);
+        var savedTemplate = _libraryViewModel.UserGroups.First();
+        savedTemplate.ComponentCount.ShouldBe(2);
+        savedTemplate.Source.ShouldBe("User");
+    }
+
+    [Fact]
+    public void CreateGroupCommand_WithoutLibraryViewModel_DoesNotSave()
+    {
+        // Arrange
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("comp1");
+        var comp2 = CreateTestComponent("comp2");
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
+        var command = new CreateGroupCommand(canvas, selectedComponents, null, null);
+
+        // Act
+        command.Execute();
+
+        // Assert - no crash, group is created but not saved to library
+        _libraryViewModel.UserGroups.Count.ShouldBe(0);
+        canvas.Components.Count.ShouldBe(1); // Only the group component
+    }
+
+    [Fact]
+    public void CreateGroupCommand_Undo_RemovesSavedTemplate()
+    {
+        // Arrange
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var comp1 = CreateTestComponent("comp1");
+        var comp2 = CreateTestComponent("comp2");
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        var selectedComponents = new List<CAP.Avalonia.ViewModels.Canvas.ComponentViewModel> { compVm1, compVm2 };
+        var command = new CreateGroupCommand(canvas, selectedComponents, _libraryViewModel, _previewGenerator);
+
+        command.Execute();
+        _libraryViewModel.UserGroups.Count.ShouldBe(1);
+
+        // Act
+        command.Undo();
+
+        // Assert - template removed from library
+        _libraryViewModel.UserGroups.Count.ShouldBe(0);
+        // Individual components restored
+        canvas.Components.Count.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Creates a simple test component with minimal configuration.
+    /// </summary>
+    private Component CreateTestComponent(string identifier)
+    {
+        return new Component(
+            new Dictionary<int, CAP_Core.LightCalculation.SMatrix>(),
+            new List<Slider>(),
+            "test_component",
+            "",
+            new Part[1, 1] { { new Part() } },
+            -1,
+            identifier,
+            DiscreteRotation.R0,
+            new List<PhysicalPin>
+            {
+                new PhysicalPin
+                {
+                    Name = "a0",
+                    OffsetXMicrometers = 0,
+                    OffsetYMicrometers = 0,
+                    AngleDegrees = 180
+                }
+            })
+        {
+            PhysicalX = 0,
+            PhysicalY = 0,
+            WidthMicrometers = 50,
+            HeightMicrometers = 30
+        };
+    }
+
     /// <summary>
     /// Creates a test ComponentGroup with the specified number of child components.
     /// </summary>

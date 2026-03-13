@@ -36,6 +36,7 @@ public partial class App : Application
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<ProjectPersistenceService>();
         services.AddSingleton<Services.GroupPreviewGenerator>();
+        services.AddSingleton<IInputDialogService, InputDialogService>();
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();

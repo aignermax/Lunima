@@ -3,11 +3,14 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
+using System.ComponentModel;
 
 namespace CAP.Avalonia.Views;
 
 public partial class MainWindow : Window
 {
+    private bool _isRestoringScrollPosition;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -43,8 +46,103 @@ public partial class MainWindow : Window
                         await clipboard.SetTextAsync(text);
                     }
                 };
+
+                // Wire up scroll position preservation for component library
+                SetupScrollPositionPreservation(vm);
+
+                // Wire up GridSplitter resize events
+                SetupPanelResizing(vm);
             }
         };
+    }
+
+    /// <summary>
+    /// Sets up panel resizing by listening to Border size changes when GridSplitter is dragged.
+    /// </summary>
+    private void SetupPanelResizing(MainViewModel vm)
+    {
+        // Left panel resizing
+        if (LeftPanelBorder != null)
+        {
+            LeftPanelBorder.PropertyChanged += (s, e) =>
+            {
+                if (e.Property.Name == nameof(Border.Bounds))
+                {
+                    var newWidth = LeftPanelBorder.Bounds.Width;
+                    if (newWidth > 0 && Math.Abs(vm.LeftPanel.LeftPanelWidth.Value - newWidth) > 1)
+                    {
+                        vm.LeftPanel.LeftPanelWidth = new GridLength(newWidth);
+                    }
+                }
+            };
+        }
+
+        // Right panel resizing
+        if (RightPanelBorder != null)
+        {
+            RightPanelBorder.PropertyChanged += (s, e) =>
+            {
+                if (e.Property.Name == nameof(Border.Bounds))
+                {
+                    var newWidth = RightPanelBorder.Bounds.Width;
+                    if (newWidth > 0 && Math.Abs(vm.RightPanel.RightPanelWidth.Value - newWidth) > 1)
+                    {
+                        vm.RightPanel.RightPanelWidth = new GridLength(newWidth);
+                    }
+                }
+            };
+        }
+    }
+
+    /// <summary>
+    /// Sets up scroll position preservation for the component library.
+    /// Saves scroll position before selection changes and restores it after.
+    /// </summary>
+    private void SetupScrollPositionPreservation(MainViewModel vm)
+    {
+        // Listen to scroll offset changes to save position
+        if (ComponentLibraryScroll != null)
+        {
+            ComponentLibraryScroll.PropertyChanged += (s, e) =>
+            {
+                if (e.Property.Name == nameof(ScrollViewer.Offset) && !_isRestoringScrollPosition)
+                {
+                    vm.LeftPanel.LibraryScrollOffset = ComponentLibraryScroll.Offset.Y;
+                }
+            };
+        }
+
+        // Listen to SelectedTemplate changes to restore scroll position
+        vm.CanvasInteraction.PropertyChanged += async (s, e) =>
+        {
+            if (e.PropertyName == nameof(vm.CanvasInteraction.SelectedTemplate))
+            {
+                // Restore scroll position after a short delay to allow UI to settle
+                await System.Threading.Tasks.Task.Delay(10);
+                RestoreLibraryScrollPosition(vm);
+            }
+        };
+    }
+
+    /// <summary>
+    /// Restores the component library scroll position.
+    /// </summary>
+    private void RestoreLibraryScrollPosition(MainViewModel vm)
+    {
+        if (ComponentLibraryScroll != null && !_isRestoringScrollPosition)
+        {
+            _isRestoringScrollPosition = true;
+            try
+            {
+                var savedOffset = vm.LeftPanel.LibraryScrollOffset;
+                var currentOffset = ComponentLibraryScroll.Offset;
+                ComponentLibraryScroll.Offset = currentOffset.WithY(savedOffset);
+            }
+            finally
+            {
+                _isRestoringScrollPosition = false;
+            }
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

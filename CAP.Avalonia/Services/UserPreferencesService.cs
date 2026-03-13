@@ -118,6 +118,40 @@ public class UserPreferencesService
             Save();
         }
     }
+
+    /// <summary>
+    /// Gets the saved left panel width (default 220 pixels).
+    /// </summary>
+    public double GetLeftPanelWidth()
+    {
+        return _preferences.LeftPanelWidth;
+    }
+
+    /// <summary>
+    /// Sets the left panel width and saves.
+    /// </summary>
+    public void SetLeftPanelWidth(double width)
+    {
+        _preferences.LeftPanelWidth = width;
+        Save();
+    }
+
+    /// <summary>
+    /// Gets the saved right panel width (default 250 pixels).
+    /// </summary>
+    public double GetRightPanelWidth()
+    {
+        return _preferences.RightPanelWidth;
+    }
+
+    /// <summary>
+    /// Sets the right panel width and saves.
+    /// </summary>
+    public void SetRightPanelWidth(double width)
+    {
+        _preferences.RightPanelWidth = width;
+        Save();
+    }
 }
 
 /// <summary>
@@ -134,4 +168,14 @@ public class UserPreferences
     /// List of user-loaded PDK file paths to auto-load at startup.
     /// </summary>
     public List<string> UserPdkPaths { get; set; } = new();
+
+    /// <summary>
+    /// Width of the left panel in pixels (default 220).
+    /// </summary>
+    public double LeftPanelWidth { get; set; } = 220;
+
+    /// <summary>
+    /// Width of the right panel in pixels (default 250).
+    /// </summary>
+    public double RightPanelWidth { get; set; } = 250;
 }

@@ -6,6 +6,7 @@ using CAP_Core.Components.Core;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -29,6 +30,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly CommandManager _commandManager;
+    private readonly ComponentLibraryViewModel? _libraryViewModel;
+    private readonly GroupPreviewGenerator? _previewGenerator;
+    private IInputDialogService? _inputDialogService;
 
     [ObservableProperty]
     private InteractionMode _currentMode = InteractionMode.Select;
@@ -58,10 +62,18 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public Action<ComponentViewModel?>? OnSelectionChanged { get; set; }
 
-    public CanvasInteractionViewModel(DesignCanvasViewModel canvas, CommandManager commandManager)
+    public CanvasInteractionViewModel(
+        DesignCanvasViewModel canvas,
+        CommandManager commandManager,
+        ComponentLibraryViewModel? libraryViewModel = null,
+        GroupPreviewGenerator? previewGenerator = null,
+        IInputDialogService? inputDialogService = null)
     {
         _canvas = canvas;
         _commandManager = commandManager;
+        _libraryViewModel = libraryViewModel;
+        _previewGenerator = previewGenerator;
+        _inputDialogService = inputDialogService;
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -517,10 +529,18 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void CreateGroup()
     {
         var selectedComponents = _canvas.Selection.SelectedComponents.ToList();
-        var cmd = new CreateGroupCommand(_canvas, selectedComponents);
+        var cmd = new CreateGroupCommand(_canvas, selectedComponents, _libraryViewModel, _previewGenerator);
         _commandManager.ExecuteCommand(cmd);
         _canvas.Selection.ClearSelection();
-        UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components");
+
+        if (_libraryViewModel != null)
+        {
+            UpdateStatus?.Invoke($"✓ Created group from {selectedComponents.Count} components and saved to 'Saved Groups' library");
+        }
+        else
+        {
+            UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components (not saved to library)");
+        }
     }
 
     private bool CanCreateGroup()
@@ -549,5 +569,116 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         return _canvas.Selection.SelectedComponents.Count == 1 &&
                _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRenameGroup))]
+    private async Task RenameGroup()
+    {
+        if (_inputDialogService == null || _libraryViewModel == null)
+        {
+            UpdateStatus?.Invoke("Rename not available (dialog service not configured)");
+            return;
+        }
+
+        var selectedGroup = _canvas.Selection.SelectedComponents
+            .Select(c => c.Component)
+            .OfType<CAP_Core.Components.Core.ComponentGroup>()
+            .FirstOrDefault();
+
+        if (selectedGroup == null)
+            return;
+
+        var currentName = selectedGroup.GroupName;
+        var currentDescription = selectedGroup.Description ?? "";
+
+        var result = await _inputDialogService.ShowMultiInputDialogAsync(
+            "Rename Group",
+            ("Name", currentName),
+            ("Description (optional)", currentDescription));
+
+        if (result == null)
+            return;
+
+        var newName = result["Name"].Trim();
+        var newDescription = result["Description (optional)"].Trim();
+
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            UpdateStatus?.Invoke("Group name cannot be empty");
+            return;
+        }
+
+        var cmd = new RenameGroupCommand(
+            selectedGroup,
+            _libraryViewModel,
+            newName,
+            string.IsNullOrWhiteSpace(newDescription) ? null : newDescription);
+
+        _commandManager.ExecuteCommand(cmd);
+        UpdateStatus?.Invoke($"Renamed group to '{newName}' and updated library");
+    }
+
+    private bool CanRenameGroup()
+    {
+        return _canvas.Selection.SelectedComponents.Count == 1 &&
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup &&
+               _libraryViewModel != null &&
+               _inputDialogService != null;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveGroupAs))]
+    private async Task SaveGroupAs()
+    {
+        if (_inputDialogService == null || _libraryViewModel == null)
+        {
+            UpdateStatus?.Invoke("Save not available (dialog service not configured)");
+            return;
+        }
+
+        var selectedGroup = _canvas.Selection.SelectedComponents
+            .Select(c => c.Component)
+            .OfType<CAP_Core.Components.Core.ComponentGroup>()
+            .FirstOrDefault();
+
+        if (selectedGroup == null)
+            return;
+
+        var currentName = selectedGroup.GroupName;
+        var currentDescription = selectedGroup.Description ?? "";
+
+        var result = await _inputDialogService.ShowMultiInputDialogAsync(
+            "Save Group As",
+            ("Name", currentName + "_Copy"),
+            ("Description (optional)", currentDescription));
+
+        if (result == null)
+            return;
+
+        var newName = result["Name"].Trim();
+        var newDescription = result["Description (optional)"].Trim();
+
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            UpdateStatus?.Invoke("Group name cannot be empty");
+            return;
+        }
+
+        var cmd = new SaveGroupToLibraryCommand(
+            _libraryViewModel,
+            _previewGenerator ?? new GroupPreviewGenerator(),
+            selectedGroup,
+            newName,
+            string.IsNullOrWhiteSpace(newDescription) ? null : newDescription);
+
+        _commandManager.ExecuteCommand(cmd);
+        UpdateStatus?.Invoke($"Saved group copy as '{newName}' to library");
+    }
+
+    private bool CanSaveGroupAs()
+    {
+        return _canvas.Selection.SelectedComponents.Count == 1 &&
+               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup &&
+               _libraryViewModel != null &&
+               _inputDialogService != null;
     }
 }
