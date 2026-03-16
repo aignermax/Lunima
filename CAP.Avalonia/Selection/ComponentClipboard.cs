@@ -100,8 +100,22 @@ public class ComponentClipboard
         foreach (var entry in _entries)
         {
             var cloned = (Component)entry.OriginalComponent.Clone();
-            cloned.PhysicalX = entry.OriginalX + offsetX;
-            cloned.PhysicalY = entry.OriginalY + offsetY;
+
+            double newX = entry.OriginalX + offsetX;
+            double newY = entry.OriginalY + offsetY;
+
+            // For ComponentGroups, use MoveGroup to move the entire group (children, pins, paths)
+            if (cloned is ComponentGroup group)
+            {
+                double deltaX = newX - group.PhysicalX;
+                double deltaY = newY - group.PhysicalY;
+                group.MoveGroup(deltaX, deltaY);
+            }
+            else
+            {
+                cloned.PhysicalX = newX;
+                cloned.PhysicalY = newY;
+            }
 
             clonedComps.Add(cloned);
             var vm = canvas.AddComponent(cloned, entry.TemplateName);
