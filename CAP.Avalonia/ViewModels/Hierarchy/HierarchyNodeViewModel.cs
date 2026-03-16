@@ -98,6 +98,24 @@ public partial class HierarchyNodeViewModel : ObservableObject
                 OnPropertyChanged(nameof(IconGlyph));
             }
         };
+
+        // Subscribe to ComponentGroup property changes for real-time updates
+        if (component is ComponentGroup group)
+        {
+            group.PropertyChanged += OnComponentGroupPropertyChanged;
+        }
+    }
+
+    /// <summary>
+    /// Handles property changes from the underlying ComponentGroup.
+    /// Updates the display when GroupName or child count changes.
+    /// </summary>
+    private void OnComponentGroupPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ComponentGroup.GroupName))
+        {
+            RefreshDisplayName();
+        }
     }
 
     /// <summary>

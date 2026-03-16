@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using CAP_Core.Components.Creation;
 using CAP_Core.LightCalculation;
@@ -10,7 +12,7 @@ namespace CAP_Core.Components.Core;
 /// Follows IPKISS-style transparent hierarchy where groups contain child components
 /// at fixed relative positions with frozen waveguide paths.
 /// </summary>
-public class ComponentGroup : Component
+public class ComponentGroup : Component, INotifyPropertyChanged
 {
     /// <summary>
     /// Child components contained in this group with relative positions.
@@ -30,12 +32,42 @@ public class ComponentGroup : Component
     /// <summary>
     /// Human-readable name for this group.
     /// </summary>
-    public string GroupName { get; set; }
+    private string _groupName = "";
+    public string GroupName
+    {
+        get => _groupName;
+        set
+        {
+            if (_groupName != value)
+            {
+                _groupName = value;
+                OnPropertyChanged();
+                UpdateLabelBoundsAfterNameChange();
+            }
+        }
+    }
 
     /// <summary>
     /// Optional description of this group's purpose.
     /// </summary>
-    public string Description { get; set; }
+    private string _description = "";
+    public string Description
+    {
+        get => _description;
+        set
+        {
+            if (_description != value)
+            {
+                _description = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Event raised when a property value changes.
+    /// </summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>
     /// Indicates whether this group is saved as a reusable prefab/template in the library.
@@ -74,8 +106,8 @@ public class ComponentGroup : Component
             new List<PhysicalPin>()
         )
     {
-        GroupName = groupName;
-        Description = "";
+        _groupName = groupName;
+        _description = "";
     }
 
     /// <summary>
@@ -602,5 +634,26 @@ public class ComponentGroup : Component
         }
 
         return cloned;
+    }
+
+    /// <summary>
+    /// Raises the PropertyChanged event.
+    /// </summary>
+    /// <param name="propertyName">Name of the property that changed.</param>
+    protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = "")
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    /// <summary>
+    /// Updates label bounds when the group name changes (affects label width).
+    /// </summary>
+    private void UpdateLabelBoundsAfterNameChange()
+    {
+        // Recalculate label bounds based on new name length
+        if (ChildComponents.Count > 0 || InternalPaths.Count > 0)
+        {
+            UpdateGroupBounds();
+        }
     }
 }

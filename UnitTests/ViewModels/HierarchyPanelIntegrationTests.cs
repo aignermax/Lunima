@@ -365,4 +365,93 @@ public class HierarchyPanelIntegrationTests
         navigatedX.ShouldNotBeNull();
         navigatedY.ShouldNotBeNull();
     }
+
+    [Fact]
+    public void RenameGroup_UpdatesHierarchyDisplayName_Immediately()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var child1 = TestComponentFactory.CreateStraightWaveGuide();
+        var child2 = TestComponentFactory.CreateStraightWaveGuide();
+
+        var group = new ComponentGroup("Original Name");
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        canvas.AddComponent(group, "Original Name");
+        hierarchy.RebuildTree();
+
+        var groupNode = hierarchy.RootNodes[0];
+        string initialDisplayName = groupNode.DisplayName;
+
+        // Act - Rename the group directly (simulating command execution)
+        group.GroupName = "Renamed Group";
+
+        // Assert - DisplayName should update immediately without rebuilding tree
+        groupNode.DisplayName.ShouldBe("Renamed Group (2)");
+        groupNode.DisplayName.ShouldNotBe(initialDisplayName);
+    }
+
+    [Fact]
+    public void RenameGroup_MultipleTimesInSession_UpdatesHierarchyEachTime()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var child = TestComponentFactory.CreateStraightWaveGuide();
+        var group = new ComponentGroup("Name1");
+        group.AddChild(child);
+
+        canvas.AddComponent(group, "Name1");
+        hierarchy.RebuildTree();
+
+        var groupNode = hierarchy.RootNodes[0];
+
+        // Act & Assert - Rename multiple times
+        group.GroupName = "Name2";
+        groupNode.DisplayName.ShouldBe("Name2 (1)");
+
+        group.GroupName = "Name3";
+        groupNode.DisplayName.ShouldBe("Name3 (1)");
+
+        group.GroupName = "Final Name";
+        groupNode.DisplayName.ShouldBe("Final Name (1)");
+    }
+
+    [Fact]
+    public void RenameGroup_WithPropertyChangedEvent_TriggersHierarchyUpdate()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var group = new ComponentGroup("Original");
+        var child = TestComponentFactory.CreateStraightWaveGuide();
+        group.AddChild(child);
+
+        canvas.AddComponent(group, "Original");
+        hierarchy.RebuildTree();
+
+        var groupNode = hierarchy.RootNodes[0];
+
+        // Monitor PropertyChanged events on the node
+        int displayNameChangedCount = 0;
+        groupNode.PropertyChanged += (sender, e) =>
+        {
+            if (e.PropertyName == nameof(groupNode.DisplayName))
+            {
+                displayNameChangedCount++;
+            }
+        };
+
+        // Act - Rename the group
+        group.GroupName = "New Name";
+
+        // Assert - PropertyChanged should have been raised on the node
+        displayNameChangedCount.ShouldBeGreaterThan(0);
+        groupNode.DisplayName.ShouldContain("New Name");
+    }
 }
