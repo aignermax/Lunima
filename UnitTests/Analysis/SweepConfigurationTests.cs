@@ -1,6 +1,7 @@
 using CAP_Core.Analysis;
 using CAP_Core.Components.ComponentHelpers;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Analysis;
 

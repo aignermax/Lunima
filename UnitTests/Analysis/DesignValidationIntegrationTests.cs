@@ -5,6 +5,7 @@ using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Analysis;
 

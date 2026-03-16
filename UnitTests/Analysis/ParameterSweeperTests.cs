@@ -4,6 +4,7 @@ using CAP_Core.LightCalculation;
 using Moq;
 using Shouldly;
 using System.Numerics;
+using Xunit;
 
 namespace UnitTests.Analysis;
 

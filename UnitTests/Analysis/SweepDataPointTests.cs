@@ -1,6 +1,7 @@
 using CAP_Core.Analysis;
 using Shouldly;
 using System.Numerics;
+using Xunit;
 
 namespace UnitTests.Analysis;
 
