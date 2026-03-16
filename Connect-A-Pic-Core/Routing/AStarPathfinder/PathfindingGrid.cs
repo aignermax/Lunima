@@ -31,7 +31,7 @@ public class PathfindingGrid
     public int Width { get; private set; }
     public int Height { get; private set; }
 
-    // Cell states: 0 = free, 1 = blocked by component, 2 = blocked by waveguide
+    // Cell states: 0 = free, 1 = blocked by component, 2 = blocked by waveguide, 3 = blocked by frozen path (permanent)
     private byte[,] _cells;
 
     // Track which components own which cells (for selective invalidation)
@@ -125,12 +125,16 @@ public class PathfindingGrid
     }
 
     /// <summary>
-    /// Adds obstacles for a ComponentGroup by recursively adding child component obstacles.
-    /// This allows waveguides to route through empty space between grouped components.
+    /// Adds obstacles for a ComponentGroup by recursively adding child component obstacles
+    /// and marking frozen waveguide paths as obstacles.
+    /// This allows waveguides to route through empty space between grouped components
+    /// but prevents routing through the group's internal connections.
     /// </summary>
     private void AddComponentGroupObstacle(ComponentGroup group)
     {
-        // Don't block the group bounding box - instead, recursively add obstacles for each child
+        var groupCells = new HashSet<(int, int)>();
+
+        // Add obstacles for child components
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup childGroup)
@@ -145,8 +149,81 @@ public class PathfindingGrid
             }
         }
 
-        // Track the group itself with an empty cell set (so RemoveComponentObstacle works)
-        _componentCells[group] = new HashSet<(int, int)>();
+        // Add obstacles for frozen waveguide paths (internal connections)
+        // These are stored in the group as FrozenWaveguidePath instances
+        foreach (var frozenPath in group.InternalPaths)
+        {
+            if (frozenPath?.Path?.Segments == null) continue;
+
+            // Convert RoutedPath segments to PathSegments
+            var pathSegments = new List<PathSegment>();
+            foreach (var segment in frozenPath.Path.Segments)
+            {
+                pathSegments.Add(segment);
+            }
+
+            // Mark these cells as frozen path obstacles (state=3) which are NEVER cleared by ClearPinCorridor
+            // This prevents external routing from going through internal group connections
+            var pathCells = GetWaveguidePathCells(pathSegments, 2.0); // 2µm waveguide width
+            foreach (var cell in pathCells)
+            {
+                if (IsInBounds(cell.Item1, cell.Item2))
+                {
+                    // Mark as frozen path obstacle (state=3) - permanent and never cleared
+                    // This takes precedence over component obstacles (state=1)
+                    if (_cells[cell.Item1, cell.Item2] != 3)
+                    {
+                        _cells[cell.Item1, cell.Item2] = 3; // Mark as frozen path obstacle (permanent)
+                    }
+                    groupCells.Add(cell);
+                }
+            }
+        }
+
+        // Track all cells occupied by this group (for removal)
+        _componentCells[group] = groupCells;
+    }
+
+    /// <summary>
+    /// Gets grid cells occupied by a waveguide path (with waveguide width).
+    /// </summary>
+    private HashSet<(int, int)> GetWaveguidePathCells(List<PathSegment> segments, double waveguideWidth)
+    {
+        var cells = new HashSet<(int, int)>();
+        double halfWidth = waveguideWidth / 2;
+
+        foreach (var segment in segments)
+        {
+            if (segment is StraightSegment straight)
+            {
+                MarkLineAsCells(straight.StartPoint.X, straight.StartPoint.Y,
+                    straight.EndPoint.X, straight.EndPoint.Y, halfWidth, cells);
+            }
+            else if (segment is BendSegment bend)
+            {
+                // Mark cells along arc - sample points along the arc
+                double startRad = bend.StartAngleDegrees * Math.PI / 180;
+                double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
+                int numSamples = Math.Max(10, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
+
+                for (int i = 0; i <= numSamples; i++)
+                {
+                    double t = (double)i / numSamples;
+                    double angle = startRad + sweepRad * t;
+
+                    // Point on arc
+                    double sign = Math.Sign(bend.SweepAngleDegrees);
+                    if (sign == 0) sign = 1;
+
+                    double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
+                    double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
+
+                    MarkCircleAsCells(px, py, halfWidth, cells);
+                }
+            }
+        }
+
+        return cells;
     }
 
     /// <summary>
@@ -249,7 +326,8 @@ public class PathfindingGrid
     }
 
     /// <summary>
-    /// Removes obstacles for a ComponentGroup by recursively removing child component obstacles.
+    /// Removes obstacles for a ComponentGroup by recursively removing child component obstacles
+    /// and clearing frozen waveguide path obstacles.
     /// </summary>
     private void RemoveComponentGroupObstacle(ComponentGroup group)
     {
@@ -273,6 +351,18 @@ public class PathfindingGrid
                         }
                     }
                     _componentCells.Remove(child);
+                }
+            }
+        }
+
+        // Remove the group's own cells (frozen paths marked with state=3)
+        if (_componentCells.TryGetValue(group, out var groupCells))
+        {
+            foreach (var (gx, gy) in groupCells)
+            {
+                if (IsInBounds(gx, gy) && _cells[gx, gy] == 3)
+                {
+                    _cells[gx, gy] = 0;
                 }
             }
         }
