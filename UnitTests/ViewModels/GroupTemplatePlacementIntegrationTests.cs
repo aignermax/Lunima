@@ -40,6 +40,12 @@ public class GroupTemplatePlacementIntegrationTests : IDisposable
             _libraryManager,
             new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader(),
             new CAP.Avalonia.Services.UserPreferencesService());
+
+        // Wire up the callback (simulating MainViewModel wiring)
+        _leftPanel.OnGroupTemplateSelected = template =>
+        {
+            _canvasInteraction.SelectedGroupTemplate = template;
+        };
     }
 
     public void Dispose()
@@ -244,6 +250,30 @@ public class GroupTemplatePlacementIntegrationTests : IDisposable
         var path = placedGroup.InternalPaths[0];
         path.StartPin.ParentComponent.ShouldBe(placedGroup.ChildComponents[0]);
         path.EndPin.ParentComponent.ShouldBe(placedGroup.ChildComponents[1]);
+    }
+
+    [Fact]
+    public void ClickGroupInLibrary_EntersPlacementMode()
+    {
+        // Arrange: Create and save a group template (simulating "Save as Prefab")
+        var group = CreateTestGroup("MyCircuit", 3);
+        var template = _libraryManager.SaveTemplate(group, "My Saved Group");
+        template.TemplateGroup = group; // In-memory template (as created by SaveGroupAsPrefabCommand)
+        _libraryViewModel.AddTemplate(template);
+
+        // Act: Simulate clicking on the group in the Saved Groups panel
+        // This is what happens when ListBox SelectedItem binding changes
+        _leftPanel.SelectedGroupTemplate = template;
+
+        // Assert: CanvasInteraction should enter placement mode
+        _canvasInteraction.SelectedGroupTemplate.ShouldBe(template);
+        _canvasInteraction.CurrentMode.ShouldBe(InteractionMode.PlaceGroupTemplate);
+
+        // Verify placement works
+        _canvasInteraction.CanvasClicked(500, 500);
+        _canvas.Components.Count.ShouldBe(1);
+        var placedGroup = (ComponentGroup)_canvas.Components[0].Component;
+        placedGroup.ChildComponents.Count.ShouldBe(3);
     }
 
     /// <summary>

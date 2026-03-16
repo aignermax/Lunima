@@ -151,31 +151,39 @@
                         <StackPanel Margin="5">
                             <TextBlock Text="{Binding GroupLibrary.StatusText}"
                                        FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
-                            <TextBlock Text="ℹ️ Right-click a group and select 'Save as Prefab...' to add it here as a reusable template."
-                                       FontSize="9" Foreground="#87ceeb" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="Click to select, then click canvas to place"
+                                       FontSize="10" Margin="0,0,0,5" Foreground="Gray" TextWrapping="Wrap"/>
 
                             <!-- User Groups -->
                             <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,5,0,3"
                                        IsVisible="{Binding GroupLibrary.UserGroups.Count}"/>
                             <ListBox ItemsSource="{Binding GroupLibrary.UserGroups}"
-                                     SelectedItem="{Binding SelectedGroupTemplate}"
+                                     SelectedItem="{Binding LeftPanel.SelectedGroupTemplate}"
                                      Background="Transparent"
-                                     MaxHeight="120">
+                                     MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="creation:GroupTemplate">
-                                        <Border BorderBrush="#3e3e3e" BorderThickness="1" Margin="0,2"
-                                                Background="#1e1e1e" Padding="4" CornerRadius="3"
-                                                Cursor="Hand">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                           FontSize="10" Foreground="White"/>
+                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand">
+                                            <!-- Placeholder preview icon - will be replaced with actual preview -->
+                                            <Border Width="56" Height="36"
+                                                    Background="#1e1e1e"
+                                                    BorderBrush="#3e3e3e"
+                                                    BorderThickness="1"
+                                                    CornerRadius="3"
+                                                    Margin="0,0,6,0">
+                                                <TextBlock Text="📦" FontSize="20"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
                                                 <TextBlock FontSize="9" Foreground="Gray">
                                                     <Run Text="{Binding ComponentCount}"/>
                                                     <Run Text="components"/>
                                                 </TextBlock>
                                             </StackPanel>
-                                        </Border>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
@@ -185,23 +193,31 @@
                                        FontSize="10" Margin="0,10,0,3"
                                        IsVisible="{Binding GroupLibrary.PdkGroups.Count}"/>
                             <ListBox ItemsSource="{Binding GroupLibrary.PdkGroups}"
-                                     SelectedItem="{Binding SelectedGroupTemplate}"
+                                     SelectedItem="{Binding LeftPanel.SelectedGroupTemplate}"
                                      Background="Transparent"
-                                     MaxHeight="120">
+                                     MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="creation:GroupTemplate">
-                                        <Border BorderBrush="#3e3e3e" BorderThickness="1" Margin="0,2"
-                                                Background="#1e1e1e" Padding="4" CornerRadius="3"
-                                                Cursor="Hand">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                           FontSize="10" Foreground="White"/>
+                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand">
+                                            <!-- Placeholder preview icon - will be replaced with actual preview -->
+                                            <Border Width="56" Height="36"
+                                                    Background="#1e1e1e"
+                                                    BorderBrush="#3e3e3e"
+                                                    BorderThickness="1"
+                                                    CornerRadius="3"
+                                                    Margin="0,0,6,0">
+                                                <TextBlock Text="📦" FontSize="20"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
                                                 <TextBlock FontSize="9" Foreground="Gray">
                                                     <Run Text="{Binding ComponentCount}"/>
                                                     <Run Text="components"/>
                                                 </TextBlock>
                                             </StackPanel>
-                                        </Border>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
