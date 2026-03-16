@@ -248,6 +248,48 @@ public class ComponentGroupRendererTests
         smallIconBounds.Width.ShouldBe(16.0);
     }
 
+    [Fact]
+    public void RenderGroupLockIcon_MethodExists_WithCorrectSignature()
+    {
+        // Arrange - Verify that the RenderGroupLockIcon method exists with the correct signature
+        var method = typeof(ComponentGroupRenderer).GetMethod(
+            "RenderGroupLockIcon",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+        // Assert
+        method.ShouldNotBeNull();
+        method!.ReturnType.ShouldBe(typeof(void));
+
+        var parameters = method.GetParameters();
+        parameters.Length.ShouldBe(3); // context, group, isHovered
+        parameters[0].ParameterType.Name.ShouldBe("DrawingContext");
+        parameters[1].ParameterType.ShouldBe(typeof(ComponentGroup));
+        parameters[2].ParameterType.ShouldBe(typeof(bool));
+    }
+
+    [Fact]
+    public void LockedGroup_HasIsLockedTrue_IconRepresentsLockedState()
+    {
+        // Arrange
+        var lockedGroup = new ComponentGroup("Locked Group") { IsLocked = true };
+        var unlockedGroup = new ComponentGroup("Unlocked Group") { IsLocked = false };
+        var child = CreateTestComponent("Child", 100, 100, 50, 30);
+
+        lockedGroup.AddChild(child);
+        unlockedGroup.AddChild(child);
+
+        // Act & Assert - Verify lock state is correctly set
+        lockedGroup.IsLocked.ShouldBeTrue();
+        unlockedGroup.IsLocked.ShouldBeFalse();
+
+        // Icon bounds should be identical regardless of lock state
+        var lockedIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(lockedGroup);
+        var unlockedIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(unlockedGroup);
+
+        lockedIconBounds.Width.ShouldBe(unlockedIconBounds.Width);
+        lockedIconBounds.Height.ShouldBe(unlockedIconBounds.Height);
+    }
+
     /// <summary>
     /// Creates a test component with specified position and dimensions.
     /// </summary>

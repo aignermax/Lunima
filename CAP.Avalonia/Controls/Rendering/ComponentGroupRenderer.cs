@@ -354,7 +354,8 @@ public static class ComponentGroupRenderer
     }
 
     /// <summary>
-    /// Renders a lock icon for a ComponentGroup.
+    /// Renders a lock icon for a ComponentGroup using a Material Design-style padlock icon.
+    /// Shows a closed padlock (🔒) when locked, open padlock (🔓) when unlocked.
     /// </summary>
     /// <param name="context">Drawing context.</param>
     /// <param name="group">The group to render the lock icon for.</param>
@@ -377,70 +378,21 @@ public static class ComponentGroupRenderer
         var bgBrush = new SolidColorBrush(bgColor);
         context.DrawEllipse(bgBrush, null, new Point(centerX, centerY), scaledSize / 2, scaledSize / 2);
 
-        // Draw lock icon shape
-        var lockColor = isHovered ? Color.FromRgb(255, 215, 0) : Color.FromRgb(255, 165, 0); // Gold on hover, orange otherwise
+        // Use red for locked (danger), green for unlocked (safe)
+        var lockColor = group.IsLocked
+            ? (isHovered ? Color.FromRgb(255, 100, 100) : Color.FromRgb(255, 107, 107)) // Red (#FF6B6B)
+            : (isHovered ? Color.FromRgb(100, 230, 200) : Color.FromRgb(78, 205, 196)); // Green (#4ECDC4)
+
         var lockBrush = new SolidColorBrush(lockColor);
-        var lockPen = new Pen(lockBrush, 1.5);
+        var lockStrokePen = new Pen(lockBrush, 1.5);
 
         if (group.IsLocked)
         {
-            // Draw closed lock (🔒)
-            // Lock body (filled rectangle)
-            double bodyWidth = scaledSize * 0.5;
-            double bodyHeight = scaledSize * 0.5;
-            double bodyX = scaledX + (scaledSize - bodyWidth) / 2;
-            double bodyY = scaledY + scaledSize * 0.5;
-            var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
-            context.DrawRectangle(lockBrush, null, bodyRect);
-
-            // Lock shackle (closed arc)
-            double shackleWidth = scaledSize * 0.4;
-            double shackleHeight = scaledSize * 0.3;
-            double shackleCenterX = centerX;
-            double shackleTopY = bodyY;
-
-            var shackleGeometry = new StreamGeometry();
-            using (var ctx = shackleGeometry.Open())
-            {
-                ctx.BeginFigure(new Point(shackleCenterX - shackleWidth / 2, shackleTopY), false);
-                ctx.ArcTo(
-                    new Point(shackleCenterX + shackleWidth / 2, shackleTopY),
-                    new Size(shackleWidth / 2, shackleHeight),
-                    0,
-                    false,
-                    SweepDirection.CounterClockwise);
-            }
-            context.DrawGeometry(null, lockPen, shackleGeometry);
+            RenderClosedPadlock(context, scaledX, scaledY, scaledSize, lockBrush, lockStrokePen);
         }
         else
         {
-            // Draw open lock (🔓)
-            // Lock body (filled rectangle)
-            double bodyWidth = scaledSize * 0.5;
-            double bodyHeight = scaledSize * 0.5;
-            double bodyX = scaledX + (scaledSize - bodyWidth) / 2;
-            double bodyY = scaledY + scaledSize * 0.5;
-            var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
-            context.DrawRectangle(lockBrush, null, bodyRect);
-
-            // Lock shackle (open, offset to the right)
-            double shackleWidth = scaledSize * 0.4;
-            double shackleHeight = scaledSize * 0.35;
-            double shackleCenterX = centerX + scaledSize * 0.15; // Offset right for open look
-            double shackleTopY = bodyY - shackleHeight * 0.3;
-
-            var shackleGeometry = new StreamGeometry();
-            using (var ctx = shackleGeometry.Open())
-            {
-                ctx.BeginFigure(new Point(shackleCenterX - shackleWidth / 2, shackleTopY + shackleHeight), false);
-                ctx.ArcTo(
-                    new Point(shackleCenterX + shackleWidth / 2, shackleTopY),
-                    new Size(shackleWidth / 2, shackleHeight),
-                    0,
-                    false,
-                    SweepDirection.CounterClockwise);
-            }
-            context.DrawGeometry(null, lockPen, shackleGeometry);
+            RenderOpenPadlock(context, scaledX, scaledY, scaledSize, lockBrush, lockStrokePen);
         }
 
         // Draw hover border around icon background to indicate interactivity
@@ -449,5 +401,132 @@ public static class ComponentGroupRenderer
             var hoverBorderPen = new Pen(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 1);
             context.DrawEllipse(null, hoverBorderPen, new Point(centerX, centerY), scaledSize / 2 + 1, scaledSize / 2 + 1);
         }
+    }
+
+    /// <summary>
+    /// Renders a closed padlock icon (🔒) using Material Design-style geometry.
+    /// </summary>
+    private static void RenderClosedPadlock(DrawingContext context, double x, double y, double size, Brush fillBrush, Pen strokePen)
+    {
+        // Lock body (rounded rectangle)
+        double bodyWidth = size * 0.6;
+        double bodyHeight = size * 0.5;
+        double bodyX = x + (size - bodyWidth) / 2;
+        double bodyY = y + size * 0.45;
+        double cornerRadius = size * 0.08;
+
+        var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
+        context.DrawRectangle(fillBrush, strokePen, bodyRect, cornerRadius, cornerRadius);
+
+        // Keyhole (small circle in center of body)
+        double keyholeRadius = size * 0.08;
+        double keyholeX = x + size / 2;
+        double keyholeY = bodyY + bodyHeight * 0.4;
+        var keyholeBrush = new SolidColorBrush(Color.FromArgb(200, 40, 40, 40));
+        context.DrawEllipse(keyholeBrush, null, new Point(keyholeX, keyholeY), keyholeRadius, keyholeRadius);
+
+        // Shackle (closed U-shape)
+        double shackleWidth = size * 0.45;
+        double shackleHeight = size * 0.35;
+        double shackleThickness = size * 0.08;
+        double shackleCenterX = x + size / 2;
+        double shackleBottomY = bodyY;
+
+        // Draw shackle as a thick arc
+        var shackleGeometry = new StreamGeometry();
+        using (var ctx = shackleGeometry.Open())
+        {
+            // Outer arc (top of shackle)
+            double outerRadius = shackleWidth / 2;
+            double innerRadius = outerRadius - shackleThickness;
+
+            // Left side of shackle (bottom to top)
+            ctx.BeginFigure(new Point(shackleCenterX - innerRadius, shackleBottomY), true);
+            ctx.LineTo(new Point(shackleCenterX - outerRadius, shackleBottomY));
+
+            // Top arc (outer)
+            ctx.ArcTo(
+                new Point(shackleCenterX + outerRadius, shackleBottomY),
+                new Size(outerRadius, shackleHeight),
+                0,
+                false,
+                SweepDirection.CounterClockwise);
+
+            // Right side down
+            ctx.LineTo(new Point(shackleCenterX + innerRadius, shackleBottomY));
+
+            // Top arc (inner) - going back
+            ctx.ArcTo(
+                new Point(shackleCenterX - innerRadius, shackleBottomY),
+                new Size(innerRadius, shackleHeight - shackleThickness),
+                0,
+                false,
+                SweepDirection.Clockwise);
+        }
+
+        context.DrawGeometry(fillBrush, strokePen, shackleGeometry);
+    }
+
+    /// <summary>
+    /// Renders an open padlock icon (🔓) using Material Design-style geometry.
+    /// </summary>
+    private static void RenderOpenPadlock(DrawingContext context, double x, double y, double size, Brush fillBrush, Pen strokePen)
+    {
+        // Lock body (rounded rectangle)
+        double bodyWidth = size * 0.6;
+        double bodyHeight = size * 0.5;
+        double bodyX = x + (size - bodyWidth) / 2;
+        double bodyY = y + size * 0.45;
+        double cornerRadius = size * 0.08;
+
+        var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
+        context.DrawRectangle(fillBrush, strokePen, bodyRect, cornerRadius, cornerRadius);
+
+        // Keyhole (small circle in center of body)
+        double keyholeRadius = size * 0.08;
+        double keyholeX = x + size / 2;
+        double keyholeY = bodyY + bodyHeight * 0.4;
+        var keyholeBrush = new SolidColorBrush(Color.FromArgb(200, 40, 40, 40));
+        context.DrawEllipse(keyholeBrush, null, new Point(keyholeX, keyholeY), keyholeRadius, keyholeRadius);
+
+        // Shackle (open, rotated to the right)
+        double shackleWidth = size * 0.45;
+        double shackleHeight = size * 0.35;
+        double shackleThickness = size * 0.08;
+        double shackleCenterX = x + size / 2 + size * 0.12; // Offset right for open appearance
+        double shackleBottomY = bodyY - size * 0.05;
+
+        // Draw open shackle (only left side and top arc, right side is "open")
+        var shackleGeometry = new StreamGeometry();
+        using (var ctx = shackleGeometry.Open())
+        {
+            double outerRadius = shackleWidth / 2;
+            double innerRadius = outerRadius - shackleThickness;
+
+            // Left vertical post (thick line)
+            ctx.BeginFigure(new Point(shackleCenterX - outerRadius, shackleBottomY), true);
+            ctx.LineTo(new Point(shackleCenterX - outerRadius, shackleBottomY - shackleHeight));
+
+            // Top arc (outer)
+            ctx.ArcTo(
+                new Point(shackleCenterX + outerRadius * 0.6, shackleBottomY - shackleHeight * 0.8),
+                new Size(outerRadius, shackleHeight * 0.9),
+                0,
+                false,
+                SweepDirection.CounterClockwise);
+
+            // Inner arc back
+            ctx.ArcTo(
+                new Point(shackleCenterX - innerRadius, shackleBottomY - shackleHeight + shackleThickness),
+                new Size(innerRadius, shackleHeight * 0.7),
+                0,
+                false,
+                SweepDirection.Clockwise);
+
+            // Close left post
+            ctx.LineTo(new Point(shackleCenterX - innerRadius, shackleBottomY));
+        }
+
+        context.DrawGeometry(fillBrush, strokePen, shackleGeometry);
     }
 }
