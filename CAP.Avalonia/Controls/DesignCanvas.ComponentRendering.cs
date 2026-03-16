@@ -157,9 +157,33 @@ public partial class DesignCanvas
         }
 
         // 6. Draw external pins with distinct style
-        foreach (var externalPin in group.ExternalPins)
+        // Outside edit mode: show only unoccupied pins (available for external connections)
+        // In edit mode: show all external pins for configuration
+        if (!isCurrentEditGroup && vm != null)
         {
-            ComponentGroupRenderer.RenderExternalPin(context, externalPin, group, isHovered);
+            // Get all connections for occupancy checking
+            var allConnections = vm.Connections.Select(c => c.Connection);
+            var unoccupiedPins = CAP_Core.Components.ComponentHelpers.GroupPinOccupancyChecker
+                .GetUnoccupiedPins(group, allConnections);
+
+            // Check if any pin is being hovered
+            var highlightedPin = vm.HighlightedPin?.Pin;
+
+            foreach (var externalPin in unoccupiedPins)
+            {
+                // Check if this pin is hovered (its InternalPin matches the highlighted pin)
+                bool isPinHovered = highlightedPin != null && externalPin.InternalPin == highlightedPin;
+
+                ComponentGroupRenderer.RenderUnoccupiedGroupPin(context, externalPin, group, isPinHovered);
+            }
+        }
+        else if (isCurrentEditGroup)
+        {
+            // In edit mode, show all external pins (for configuration)
+            foreach (var externalPin in group.ExternalPins)
+            {
+                ComponentGroupRenderer.RenderExternalPin(context, externalPin, group, isHovered);
+            }
         }
     }
 

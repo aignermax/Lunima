@@ -175,6 +175,7 @@ public class DesignCanvasHitTesting
     /// <summary>
     /// Finds the nearest pin within hit radius of the given canvas point.
     /// In group edit mode, only tests pins of child components in the current edit group.
+    /// Outside edit mode, also tests unoccupied group pins for external connections.
     /// </summary>
     public static PhysicalPin? HitTestPin(Point canvasPoint, DesignCanvasViewModel? vm)
     {
@@ -215,10 +216,67 @@ public class DesignCanvasHitTesting
                         nearestDistance = distance;
                     }
                 }
+
+                // Also test group pins (unoccupied external pins)
+                if (comp.Component is ComponentGroup group)
+                {
+                    var groupPinHit = HitTestGroupPin(canvasPoint, group, vm.Connections.Select(c => c.Connection));
+                    if (groupPinHit.Pin != null)
+                    {
+                        var distance = groupPinHit.Distance;
+                        if (distance < nearestDistance && distance <= PinHitRadius)
+                        {
+                            nearest = groupPinHit.Pin.InternalPin;
+                            nearestDistance = distance;
+                        }
+                    }
+                }
             }
         }
 
         return nearest;
+    }
+
+    /// <summary>
+    /// Hit tests group pins for a ComponentGroup.
+    /// Returns the nearest unoccupied GroupPin within hit radius.
+    /// </summary>
+    /// <param name="canvasPoint">Point to test in canvas coordinates.</param>
+    /// <param name="group">The component group.</param>
+    /// <param name="allConnections">All waveguide connections in the design.</param>
+    /// <returns>Tuple of (GroupPin, Distance) or (null, MaxValue) if no hit.</returns>
+    public static (GroupPin? Pin, double Distance) HitTestGroupPin(
+        Point canvasPoint,
+        ComponentGroup group,
+        IEnumerable<CAP_Core.Components.Connections.WaveguideConnection> allConnections)
+    {
+        if (group == null)
+            return (null, double.MaxValue);
+
+        GroupPin? nearestPin = null;
+        double nearestDistance = double.MaxValue;
+
+        // Get unoccupied pins
+        var unoccupiedPins = CAP_Core.Components.ComponentHelpers.GroupPinOccupancyChecker
+            .GetUnoccupiedPins(group, allConnections);
+
+        foreach (var pin in unoccupiedPins)
+        {
+            var (pinX, pinY) = CAP_Core.Components.ComponentHelpers.GroupPinOccupancyChecker
+                .GetAbsolutePosition(pin, group);
+
+            var distance = Math.Sqrt(
+                Math.Pow(canvasPoint.X - pinX, 2) +
+                Math.Pow(canvasPoint.Y - pinY, 2));
+
+            if (distance < nearestDistance)
+            {
+                nearestPin = pin;
+                nearestDistance = distance;
+            }
+        }
+
+        return (nearestPin, nearestDistance);
     }
 
     /// <summary>

@@ -265,6 +265,69 @@ public static class ComponentGroupRenderer
     }
 
     /// <summary>
+    /// Renders an unoccupied external pin for a ComponentGroup outside edit mode.
+    /// These pins are available for creating external connections.
+    /// </summary>
+    /// <param name="context">Drawing context.</param>
+    /// <param name="pin">The group pin to render.</param>
+    /// <param name="group">The parent component group.</param>
+    /// <param name="isHovered">Whether the pin is being hovered.</param>
+    public static void RenderUnoccupiedGroupPin(DrawingContext context, GroupPin pin, ComponentGroup group, bool isHovered)
+    {
+        // Calculate absolute pin position
+        double pinX = group.PhysicalX + pin.RelativeX;
+        double pinY = group.PhysicalY + pin.RelativeY;
+
+        double pinSize = isHovered ? HoveredPinSize : DefaultPinSize;
+        var pinColor = isHovered ? ExternalPinHoverColor : ExternalPinColor;
+
+        // Draw outer glow for visibility
+        if (isHovered)
+        {
+            var glowBrush = new SolidColorBrush(Color.FromArgb(100, pinColor.R, pinColor.G, pinColor.B));
+            context.DrawEllipse(glowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
+        }
+
+        // Draw main pin circle
+        context.DrawEllipse(
+            new SolidColorBrush(pinColor),
+            new Pen(Brushes.White, 2),
+            new Point(pinX, pinY),
+            pinSize / 2,
+            pinSize / 2
+        );
+
+        // Draw direction indicator (small line showing pin orientation)
+        double angle = pin.AngleDegrees * Math.PI / 180;
+        double dirLength = isHovered ? 20 : 15;
+        var dirPen = new Pen(
+            new SolidColorBrush(isHovered ? Color.FromRgb(255, 255, 255) : Color.FromRgb(200, 200, 200)),
+            isHovered ? 2 : 1
+        );
+
+        context.DrawLine(
+            dirPen,
+            new Point(pinX, pinY),
+            new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength)
+        );
+
+        // Draw pin name on hover
+        if (isHovered)
+        {
+            var nameText = new FormattedText(
+                pin.Name,
+                CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Arial"),
+                10,
+                Brushes.White
+            );
+
+            context.DrawText(nameText, new Point(pinX + 15, pinY - 15));
+        }
+    }
+
+    /// <summary>
     /// Renders a hover overlay on a component (gold/orange tint).
     /// </summary>
     public static void RenderGroupHoverOverlay(DrawingContext context, double x, double y, double width, double height)
