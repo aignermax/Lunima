@@ -2,6 +2,8 @@ using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Helpers;
 using CAP_Core.Tiles;
+using Shouldly;
+using Xunit;
 
 namespace UnitTests
 {
@@ -19,19 +21,19 @@ namespace UnitTests
             int Cycles2 = rotation90.CalculateCyclesTillTargetRotation( DiscreteRotation.R270);
             int Cycles3 = DiscreteRotationExtensions.CalculateCyclesTillTargetRotation(DiscreteRotation.R0, DiscreteRotation.R270);
             int Cycles4 = DiscreteRotationExtensions.CalculateCyclesTillTargetRotation(DiscreteRotation.R270, DiscreteRotation.R0);
-            Assert.True(Cycles0 == 0);
-            Assert.True(Cycles1 == 1);
-            Assert.True(Cycles2 == 2);
-            Assert.True(Cycles3 == 3);
-            Assert.True(Cycles4 == 1);
+            Cycles0.ShouldBe(0);
+            Cycles1.ShouldBe(1);
+            Cycles2.ShouldBe(2);
+            Cycles3.ShouldBe(3);
+            Cycles4.ShouldBe(1);
         }
         [Fact]
         public void Rotation90SideCorrelationTests()
         {
-            Assert.True((int)DiscreteRotation.R0 == (int)RectSide.Right);
-            Assert.True((int)DiscreteRotation.R90 == (int)RectSide.Down, "Because both the rotation and Orientation should be clockwise as it is in the Godot Engine to be easily compatible");
-            Assert.True((int)DiscreteRotation.R180 == (int)RectSide.Left);
-            Assert.True((int)DiscreteRotation.R270 == (int)RectSide.Up);
+            ((int)DiscreteRotation.R0).ShouldBe((int)RectSide.Right);
+            ((int)DiscreteRotation.R90).ShouldBe((int)RectSide.Down, "Because both the rotation and Orientation should be clockwise as it is in the Godot Engine to be easily compatible");
+            ((int)DiscreteRotation.R180).ShouldBe((int)RectSide.Left);
+            ((int)DiscreteRotation.R270).ShouldBe((int)RectSide.Up);
         }
        
     }

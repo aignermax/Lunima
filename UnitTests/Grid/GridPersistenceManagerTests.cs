@@ -6,6 +6,7 @@ using CAP_Core.Components.Creation;
 using CAP_Core.Grid;
 using CAP_Core.Helpers;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Grid
 {

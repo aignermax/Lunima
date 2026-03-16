@@ -4,6 +4,7 @@ using CAP_Core.Routing;
 using CAP_DataAccess.Persistence;
 using CAP_DataAccess.Persistence.DTOs;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Persistence;
 

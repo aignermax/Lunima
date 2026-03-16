@@ -1,6 +1,7 @@
 using CAP_Core.LightCalculation;
 using Shouldly;
 using System.Numerics;
+using Xunit;
 
 namespace UnitTests.LightCalculation;
 

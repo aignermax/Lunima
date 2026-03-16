@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using CAP.Avalonia.Behaviors;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Behaviors;
 

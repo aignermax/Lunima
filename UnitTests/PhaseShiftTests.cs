@@ -3,6 +3,7 @@ using CAP_Core.ExternalPorts;
 using System.Numerics;
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Grid;
+using Xunit;
 
 namespace UnitTests
 {

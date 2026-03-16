@@ -5,7 +5,9 @@ using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.ExternalPorts;
 using CAP_Core.Grid;
 using CAP_Core.Tiles;
+using Shouldly;
 using UnitTests.Grid;
+using Xunit;
 
 namespace UnitTests
 {
@@ -34,11 +36,11 @@ namespace UnitTests
             var orphanCellName = grid.TileManager.Tiles[orphan.GridXMainTile, orphan.GridYMainTile].GetComponentCellName();
             
             // assert if all components are in the string output
-            Assert.Contains(firstCellName, output);
-            Assert.Contains(secondCellName, output);
-            Assert.Contains(thirdCellName, output);
-            Assert.Contains(fourthCellName, output);
-            Assert.Contains(orphanCellName, output);
+            output.ShouldContain(firstCellName);
+            output.ShouldContain(secondCellName);
+            output.ShouldContain(thirdCellName);
+            output.ShouldContain(fourthCellName);
+            output.ShouldContain(orphanCellName);
         }
         
         [Fact]
@@ -60,9 +62,9 @@ namespace UnitTests
             Tile secondComponentMainTile = grid.TileManager.Tiles[secondComponent.GridXMainTile, secondComponent.GridYMainTile];
             Tile thirdComponentMainTile = grid.TileManager.Tiles[thirdComponent.GridXMainTile, thirdComponent.GridYMainTile];
             
-            Assert.Contains(secondComponentMainTile, grid.ComponentRelationshipManager.GetConnectedNeighborsOfComponent(firstComponent).Select(b=>b.Child));
-            Assert.Contains(thirdComponentMainTile, grid.ComponentRelationshipManager.GetConnectedNeighborsOfComponent(secondComponent).Select(b => b.Child));
-            Assert.Contains(firstComponentMainTile, grid.ComponentRelationshipManager.GetConnectedNeighborsOfComponent(secondComponent).Select(b => b.Child));
+            grid.ComponentRelationshipManager.GetConnectedNeighborsOfComponent(firstComponent).Select(b=>b.Child).ShouldContain(secondComponentMainTile);
+            grid.ComponentRelationshipManager.GetConnectedNeighborsOfComponent(secondComponent).Select(b => b.Child).ShouldContain(thirdComponentMainTile);
+            grid.ComponentRelationshipManager.GetConnectedNeighborsOfComponent(secondComponent).Select(b => b.Child).ShouldContain(firstComponentMainTile);
         }
         
         public static Component PlaceAndConcatenateComponent(GridManager grid, Component parentComponent)
