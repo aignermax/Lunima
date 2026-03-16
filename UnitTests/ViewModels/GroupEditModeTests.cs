@@ -337,4 +337,77 @@ public class GroupEditModeTests
         hitComponent.ShouldNotBeNull();
         hitComponent.Component.ShouldBe(group);
     }
+
+    [Fact]
+    public void ESC_ExitsGroupEditMode_WhenInEditMode()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var group = new ComponentGroup("TestGroup");
+        canvas.AddComponent(group);
+        canvas.EnterGroupEditMode(group);
+        canvas.IsInGroupEditMode.ShouldBeTrue();
+
+        // Act - Simulate ESC key behavior
+        canvas.ExitGroupEditMode();
+
+        // Assert
+        canvas.IsInGroupEditMode.ShouldBeFalse();
+        canvas.CurrentEditGroup.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ESC_ExitsNestedGroupEditMode_ReturnsToParent()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var parentGroup = new ComponentGroup("Parent");
+        var childGroup = new ComponentGroup("Child");
+        parentGroup.AddChild(childGroup);
+        canvas.AddComponent(parentGroup);
+
+        canvas.EnterGroupEditMode(parentGroup);
+        canvas.EnterGroupEditMode(childGroup);
+        canvas.CurrentEditGroup.ShouldBe(childGroup);
+
+        // Act - Simulate ESC key behavior (exit one level)
+        canvas.ExitGroupEditMode();
+
+        // Assert - Should return to parent group edit mode
+        canvas.IsInGroupEditMode.ShouldBeTrue();
+        canvas.CurrentEditGroup.ShouldBe(parentGroup);
+    }
+
+    [Fact]
+    public void ESC_ExitsLastGroupEditLevel_ReturnsToRootMode()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var group = new ComponentGroup("TestGroup");
+        canvas.AddComponent(group);
+        canvas.EnterGroupEditMode(group);
+
+        // Act - Simulate ESC key behavior (exit from single-level edit mode)
+        canvas.ExitGroupEditMode();
+
+        // Assert - Should return to root (normal canvas mode)
+        canvas.IsInGroupEditMode.ShouldBeFalse();
+        canvas.CurrentEditGroup.ShouldBeNull();
+        canvas.BreadcrumbPath.Count.ShouldBe(0);
+    }
+
+    [Fact]
+    public void ExitGroupEditMode_WhenNotInEditMode_DoesNothing()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        canvas.IsInGroupEditMode.ShouldBeFalse();
+
+        // Act - Simulate ESC when not in edit mode
+        canvas.ExitGroupEditMode();
+
+        // Assert - Should remain in normal mode (no exception)
+        canvas.IsInGroupEditMode.ShouldBeFalse();
+        canvas.CurrentEditGroup.ShouldBeNull();
+    }
 }
