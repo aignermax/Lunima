@@ -115,12 +115,19 @@ public partial class DesignCanvas
         }
 
         // Determine which component should be selected/dragged:
-        // 1. If hit component is a ComponentGroup directly, use it
-        // 2. If hit component is part of a group (ParentGroup != null), select the top-level group
-        // 3. Otherwise, use the hit component as-is
+        // 1. In group edit mode: allow direct interaction with child components
+        // 2. If hit component is a ComponentGroup directly, use it
+        // 3. If hit component is part of a group (ParentGroup != null), select the top-level group
+        // 4. Otherwise, use the hit component as-is
         if (hitComponent != null)
         {
-            if (hitComponent.Component is ComponentGroup)
+            if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
+            {
+                // In group edit mode: allow direct interaction with child components
+                // HitTestComponent already filtered to only return children, so use as-is
+                _interactionState.DraggingComponent = hitComponent;
+            }
+            else if (hitComponent.Component is ComponentGroup)
             {
                 // Clicked directly on a group - select/drag the group
                 _interactionState.DraggingComponent = hitComponent;

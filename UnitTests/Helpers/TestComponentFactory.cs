@@ -96,6 +96,38 @@ namespace UnitTests
         }
 
         /// <summary>
+        /// Creates a straight waveguide component with physical pins for testing.
+        /// </summary>
+        public static Component CreateStraightWaveGuideWithPhysicalPins()
+        {
+            var component = CreateStraightWaveGuide();
+
+            // Add physical pins
+            var inputPin = new PhysicalPin
+            {
+                Name = "in",
+                ParentComponent = component,
+                OffsetXMicrometers = 0,
+                OffsetYMicrometers = 125,
+                AngleDegrees = 180
+            };
+
+            var outputPin = new PhysicalPin
+            {
+                Name = "out",
+                ParentComponent = component,
+                OffsetXMicrometers = 250,
+                OffsetYMicrometers = 125,
+                AngleDegrees = 0
+            };
+
+            component.PhysicalPins.Add(inputPin);
+            component.PhysicalPins.Add(outputPin);
+
+            return component;
+        }
+
+        /// <summary>
         /// Creates a basic component for testing (uses CreateStraightWaveGuide).
         /// </summary>
         public static Component CreateBasicComponent()

@@ -191,4 +191,150 @@ public class GroupEditModeTests
         // Act & Assert
         Should.Throw<ArgumentNullException>(() => canvas.EnterGroupEditMode(null!));
     }
+
+    [Fact]
+    public void HitTestComponent_InEditMode_ReturnsChildComponent()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var child1 = TestComponentFactory.CreateStraightWaveGuide();
+        child1.PhysicalX = 100;
+        child1.PhysicalY = 100;
+        child1.WidthMicrometers = 50;
+        child1.HeightMicrometers = 50;
+
+        var child2 = TestComponentFactory.CreateStraightWaveGuide();
+        child2.PhysicalX = 200;
+        child2.PhysicalY = 200;
+        child2.WidthMicrometers = 50;
+        child2.HeightMicrometers = 50;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(child1);
+        group.AddChild(child2);
+        canvas.AddComponent(group);
+
+        canvas.EnterGroupEditMode(group);
+
+        // Act - Hit test a point inside child1
+        var hitPoint = new Avalonia.Point(125, 125);
+        var hitComponent = CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestComponent(hitPoint, canvas);
+
+        // Assert
+        hitComponent.ShouldNotBeNull();
+        hitComponent.Component.ShouldBe(child1);
+    }
+
+    [Fact]
+    public void HitTestComponent_InEditMode_IgnoresExternalComponents()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var internalChild = TestComponentFactory.CreateStraightWaveGuide();
+        internalChild.PhysicalX = 100;
+        internalChild.PhysicalY = 100;
+        internalChild.WidthMicrometers = 50;
+        internalChild.HeightMicrometers = 50;
+
+        var externalComponent = TestComponentFactory.CreateStraightWaveGuide();
+        externalComponent.PhysicalX = 100;
+        externalComponent.PhysicalY = 100;
+        externalComponent.WidthMicrometers = 50;
+        externalComponent.HeightMicrometers = 50;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(internalChild);
+        canvas.AddComponent(group);
+        canvas.AddComponent(externalComponent);
+
+        canvas.EnterGroupEditMode(group);
+
+        // Act - Hit test the same point (overlapping components)
+        var hitPoint = new Avalonia.Point(125, 125);
+        var hitComponent = CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestComponent(hitPoint, canvas);
+
+        // Assert - Should hit internal child, not external component
+        hitComponent.ShouldNotBeNull();
+        hitComponent.Component.ShouldBe(internalChild);
+    }
+
+    [Fact]
+    public void HitTestPin_InEditMode_ReturnsChildComponentPins()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var child = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        child.PhysicalX = 100;
+        child.PhysicalY = 100;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(child);
+        canvas.AddComponent(group);
+
+        canvas.EnterGroupEditMode(group);
+
+        // Act - Hit test near a pin of the child component
+        var pinPos = child.PhysicalPins[0].GetAbsolutePosition();
+        var hitPoint = new Avalonia.Point(pinPos.Item1, pinPos.Item2);
+        var hitPin = CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestPin(hitPoint, canvas);
+
+        // Assert
+        hitPin.ShouldNotBeNull();
+        hitPin.ParentComponent.ShouldBe(child);
+    }
+
+    [Fact]
+    public void HitTestPin_InEditMode_IgnoresExternalComponentPins()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var internalChild = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        internalChild.PhysicalX = 100;
+        internalChild.PhysicalY = 100;
+
+        var externalComponent = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        externalComponent.PhysicalX = 500;
+        externalComponent.PhysicalY = 500;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(internalChild);
+        canvas.AddComponent(group);
+        canvas.AddComponent(externalComponent);
+
+        canvas.EnterGroupEditMode(group);
+
+        // Act - Hit test near an external component pin
+        var externalPinPos = externalComponent.PhysicalPins[0].GetAbsolutePosition();
+        var hitPoint = new Avalonia.Point(externalPinPos.Item1, externalPinPos.Item2);
+        var hitPin = CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestPin(hitPoint, canvas);
+
+        // Assert - Should not hit external pins in edit mode
+        hitPin.ShouldBeNull();
+    }
+
+    [Fact]
+    public void HitTestComponent_NotInEditMode_ReturnsTopLevelComponents()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var child = TestComponentFactory.CreateStraightWaveGuide();
+        child.PhysicalX = 100;
+        child.PhysicalY = 100;
+        child.WidthMicrometers = 50;
+        child.HeightMicrometers = 50;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(child);
+        canvas.AddComponent(group);
+
+        // NOT in edit mode
+
+        // Act - Hit test a point inside the child
+        var hitPoint = new Avalonia.Point(125, 125);
+        var hitComponent = CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestComponent(hitPoint, canvas);
+
+        // Assert - Should return the group, not the child
+        hitComponent.ShouldNotBeNull();
+        hitComponent.Component.ShouldBe(group);
+    }
 }
