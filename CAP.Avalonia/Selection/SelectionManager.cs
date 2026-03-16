@@ -234,6 +234,7 @@ public class SelectionManager
     /// <summary>
     /// Checks placement for a single component, excluding all selected components
     /// from collision checks (since they all move together).
+    /// For ComponentGroups, uses child component and frozen path collision detection.
     /// </summary>
     private bool CanPlaceInGroup(
         DesignCanvasViewModel canvas,
@@ -250,7 +251,22 @@ public class SelectionManager
             return false;
         }
 
-        // Check overlap with non-selected components only
+        // For ComponentGroups, use specialized collision detection
+        if (component.Component is CAP_Core.Components.Core.ComponentGroup group)
+        {
+            // Get all components as Component instances
+            var allComponents = canvas.Components.Select(c => c.Component).ToList();
+
+            // Build exclusion set (all selected components move together)
+            var excludeSet = new HashSet<CAP_Core.Components.Core.Component>(
+                SelectedComponents.Select(c => c.Component));
+
+            // Use GroupCollisionDetector for precise collision detection
+            var detector = new CAP_Core.Grid.GroupCollisionDetector();
+            return detector.CanPlaceGroup(group, x, y, allComponents, excludeSet);
+        }
+
+        // Regular component - check bounding box overlap with non-selected components
         foreach (var other in canvas.Components)
         {
             if (other == component) continue;

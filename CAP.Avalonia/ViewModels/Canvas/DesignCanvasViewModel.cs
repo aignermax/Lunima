@@ -546,7 +546,42 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// </summary>
     public bool CanMoveComponentTo(ComponentViewModel component, double x, double y)
     {
+        // For ComponentGroups, use specialized collision detection
+        if (component.Component is ComponentGroup group)
+        {
+            return CanMoveGroupTo(group, x, y, excludeComponent: component);
+        }
+
         return CanPlaceComponent(x, y, component.Width, component.Height, excludeComponent: component);
+    }
+
+    /// <summary>
+    /// Checks if a ComponentGroup can be placed at the given position.
+    /// Uses child component and frozen path collision detection instead of bounding box.
+    /// </summary>
+    private bool CanMoveGroupTo(ComponentGroup group, double x, double y, ComponentViewModel? excludeComponent = null)
+    {
+        // Check chip boundaries using group bounding box
+        if (x < ChipMinX || y < ChipMinY ||
+            x + group.WidthMicrometers > ChipMaxX ||
+            y + group.HeightMicrometers > ChipMaxY)
+        {
+            return false;
+        }
+
+        // Get all components as Component instances (not ViewModels)
+        var allComponents = Components.Select(c => c.Component).ToList();
+
+        // Build exclusion set (the component being moved)
+        var excludeSet = new HashSet<Component>();
+        if (excludeComponent != null)
+        {
+            excludeSet.Add(excludeComponent.Component);
+        }
+
+        // Use GroupCollisionDetector for precise collision detection
+        var detector = new CAP_Core.Grid.GroupCollisionDetector();
+        return detector.CanPlaceGroup(group, x, y, allComponents, excludeSet);
     }
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
