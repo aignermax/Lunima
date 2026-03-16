@@ -55,8 +55,8 @@ public class GridPersistenceWithGroupsManager
 
                 if (component is ComponentGroup group)
                 {
-                    // Save as group
-                    saveData.Groups.Add(ComponentGroupSerializer.ToDto(group));
+                    // Save as group (and all nested groups recursively)
+                    SaveGroupsRecursive(group, saveData.Groups);
 
                     // Also save all child components' data
                     SaveChildComponentsRecursive(group, saveData.Components, savedComponents);
@@ -169,8 +169,14 @@ public class GridPersistenceWithGroupsManager
         foreach (var groupDto in groupDtos)
         {
             var group = ComponentGroupSerializer.FromDto(groupDto, componentLookup);
-            _gridManager.ComponentMover.PlaceComponent(groupDto.GridX, groupDto.GridY, group);
             componentLookup[group.Identifier] = group;
+
+            // Only place top-level groups (those without a parent) on the grid
+            // Nested groups are already added as children through ComponentGroupSerializer.FromDto
+            if (groupDto.ParentGroupId == null)
+            {
+                _gridManager.ComponentMover.PlaceComponent(groupDto.GridX, groupDto.GridY, group);
+            }
         }
 
         // After all groups are loaded, establish parent-child relationships for nested groups
@@ -234,6 +240,27 @@ public class GridPersistenceWithGroupsManager
     /// <summary>
     /// Recursively saves all child components of a group.
     /// </summary>
+    /// <summary>
+    /// Recursively saves a ComponentGroup and all nested groups to the Groups list.
+    /// </summary>
+    private void SaveGroupsRecursive(ComponentGroup group, List<ComponentGroupDto> groups)
+    {
+        // Save this group
+        groups.Add(ComponentGroupSerializer.ToDto(group));
+
+        // Recursively save any nested groups
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                SaveGroupsRecursive(childGroup, groups);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recursively saves all regular components (non-groups) within a ComponentGroup to the Components list.
+    /// </summary>
     private void SaveChildComponentsRecursive(
         ComponentGroup group,
         List<ComponentData> components,
@@ -241,8 +268,14 @@ public class GridPersistenceWithGroupsManager
     {
         foreach (var child in group.ChildComponents)
         {
-            if (!savedComponents.Contains(child.Identifier))
+            // Skip ComponentGroup children - they are saved in the Groups list, not Components list
+            if (child is ComponentGroup childGroup)
             {
+                SaveChildComponentsRecursive(childGroup, components, savedComponents);
+            }
+            else if (!savedComponents.Contains(child.Identifier))
+            {
+                // Only save regular components (not groups) to the Components list
                 components.Add(new ComponentData
                 {
                     Identifier = child.Identifier,
@@ -252,12 +285,6 @@ public class GridPersistenceWithGroupsManager
                     Y = child.GridYMainTile
                 });
                 savedComponents.Add(child.Identifier);
-            }
-
-            // If child is also a group, recursively save its children
-            if (child is ComponentGroup childGroup)
-            {
-                SaveChildComponentsRecursive(childGroup, components, savedComponents);
             }
         }
     }
