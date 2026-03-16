@@ -1,6 +1,7 @@
 using CAP_Core.Export;
 using CAP.Avalonia.ViewModels.Export;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Export;
 

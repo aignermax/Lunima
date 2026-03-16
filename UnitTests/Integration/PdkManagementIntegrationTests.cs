@@ -1,5 +1,6 @@
 using CAP.Avalonia.ViewModels.Library;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Integration;
 

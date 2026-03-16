@@ -1,5 +1,6 @@
 using CAP_Core.Export;
 using Shouldly;
+using Xunit;
 
 namespace UnitTests.Export;
 

@@ -9,6 +9,7 @@ using CAP_DataAccess.Persistence;
 using Moq;
 using Shouldly;
 using System.Text;
+using Xunit;
 
 namespace UnitTests.Integration;
 
