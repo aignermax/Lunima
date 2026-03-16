@@ -380,7 +380,14 @@ public class SimpleNazcaExporter
         sb.AppendLine("# Create and export the design");
         sb.AppendLine("design = create_design()");
         sb.AppendLine("design.put()");
-        sb.AppendLine("nd.export_gds()");
+        sb.AppendLine();
+        sb.AppendLine("# Export GDS with filename matching this script");
+        sb.AppendLine("import os");
+        sb.AppendLine("import sys");
+        sb.AppendLine("script_path = os.path.abspath(__file__)");
+        sb.AppendLine("gds_filename = os.path.splitext(script_path)[0] + '.gds'");
+        sb.AppendLine("nd.export_gds(filename=gds_filename)");
+        sb.AppendLine("print(f'GDS exported to: {gds_filename}')");
     }
 
     /// <summary>
