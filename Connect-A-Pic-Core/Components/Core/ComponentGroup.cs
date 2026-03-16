@@ -131,6 +131,7 @@ public class ComponentGroup : Component
             throw new ArgumentNullException(nameof(path));
 
         InternalPaths.Add(path);
+        UpdateGroupBounds();
     }
 
     /// <summary>
@@ -140,7 +141,12 @@ public class ComponentGroup : Component
     /// <returns>True if the path was removed.</returns>
     public bool RemoveInternalPath(FrozenWaveguidePath path)
     {
-        return InternalPaths.Remove(path);
+        bool removed = InternalPaths.Remove(path);
+        if (removed)
+        {
+            UpdateGroupBounds();
+        }
+        return removed;
     }
 
     /// <summary>
@@ -291,12 +297,12 @@ public class ComponentGroup : Component
     }
 
     /// <summary>
-    /// Updates the group's bounding box based on child components.
+    /// Updates the group's bounding box based on child components and frozen paths.
     /// Also updates the label bounds for hit testing.
     /// </summary>
     private void UpdateGroupBounds()
     {
-        if (ChildComponents.Count == 0)
+        if (ChildComponents.Count == 0 && InternalPaths.Count == 0)
         {
             WidthMicrometers = 0;
             HeightMicrometers = 0;
@@ -304,10 +310,43 @@ public class ComponentGroup : Component
             return;
         }
 
-        double minX = ChildComponents.Min(c => c.PhysicalX);
-        double minY = ChildComponents.Min(c => c.PhysicalY);
-        double maxX = ChildComponents.Max(c => c.PhysicalX + c.WidthMicrometers);
-        double maxY = ChildComponents.Max(c => c.PhysicalY + c.HeightMicrometers);
+        double minX = double.MaxValue;
+        double minY = double.MaxValue;
+        double maxX = double.MinValue;
+        double maxY = double.MinValue;
+
+        // Consider child components
+        foreach (var child in ChildComponents)
+        {
+            minX = Math.Min(minX, child.PhysicalX);
+            minY = Math.Min(minY, child.PhysicalY);
+            maxX = Math.Max(maxX, child.PhysicalX + child.WidthMicrometers);
+            maxY = Math.Max(maxY, child.PhysicalY + child.HeightMicrometers);
+        }
+
+        // Consider frozen path segments
+        foreach (var frozenPath in InternalPaths)
+        {
+            if (frozenPath?.Path?.Segments == null) continue;
+
+            foreach (var segment in frozenPath.Path.Segments)
+            {
+                var bounds = GetSegmentBounds(segment);
+                minX = Math.Min(minX, bounds.MinX);
+                minY = Math.Min(minY, bounds.MinY);
+                maxX = Math.Max(maxX, bounds.MaxX);
+                maxY = Math.Max(maxY, bounds.MaxY);
+            }
+        }
+
+        // If still at default values (no children or paths), reset to zero
+        if (minX == double.MaxValue)
+        {
+            WidthMicrometers = 0;
+            HeightMicrometers = 0;
+            LabelBounds = (PhysicalX, PhysicalY, 0, 0);
+            return;
+        }
 
         WidthMicrometers = maxX - minX;
         HeightMicrometers = maxY - minY;
@@ -333,6 +372,45 @@ public class ComponentGroup : Component
         double labelY = groupMinY - BorderPadding - 20;
 
         LabelBounds = (labelX, labelY, estimatedLabelWidth, LabelHeight);
+    }
+
+    /// <summary>
+    /// Gets the bounding box for a path segment (including waveguide width padding).
+    /// </summary>
+    /// <param name="segment">Path segment to calculate bounds for.</param>
+    /// <returns>Bounding box as (MinX, MinY, MaxX, MaxY).</returns>
+    private (double MinX, double MinY, double MaxX, double MaxY) GetSegmentBounds(PathSegment segment)
+    {
+        const double WaveguideWidthPadding = 2.0; // Typical waveguide width in micrometers
+
+        if (segment is StraightSegment straight)
+        {
+            double minX = Math.Min(straight.StartPoint.X, straight.EndPoint.X) - WaveguideWidthPadding;
+            double minY = Math.Min(straight.StartPoint.Y, straight.EndPoint.Y) - WaveguideWidthPadding;
+            double maxX = Math.Max(straight.StartPoint.X, straight.EndPoint.X) + WaveguideWidthPadding;
+            double maxY = Math.Max(straight.StartPoint.Y, straight.EndPoint.Y) + WaveguideWidthPadding;
+            return (minX, minY, maxX, maxY);
+        }
+        else if (segment is BendSegment bend)
+        {
+            // For arcs, the bounding box depends on which quadrants the arc passes through
+            // Conservative approach: use center +/- radius + padding
+            double minX = bend.Center.X - bend.RadiusMicrometers - WaveguideWidthPadding;
+            double minY = bend.Center.Y - bend.RadiusMicrometers - WaveguideWidthPadding;
+            double maxX = bend.Center.X + bend.RadiusMicrometers + WaveguideWidthPadding;
+            double maxY = bend.Center.Y + bend.RadiusMicrometers + WaveguideWidthPadding;
+
+            // Refine bounds by checking start and end points
+            minX = Math.Min(minX, Math.Min(bend.StartPoint.X, bend.EndPoint.X) - WaveguideWidthPadding);
+            minY = Math.Min(minY, Math.Min(bend.StartPoint.Y, bend.EndPoint.Y) - WaveguideWidthPadding);
+            maxX = Math.Max(maxX, Math.Max(bend.StartPoint.X, bend.EndPoint.X) + WaveguideWidthPadding);
+            maxY = Math.Max(maxY, Math.Max(bend.StartPoint.Y, bend.EndPoint.Y) + WaveguideWidthPadding);
+
+            return (minX, minY, maxX, maxY);
+        }
+
+        // Unknown segment type - return zero bounds
+        return (0, 0, 0, 0);
     }
 
     /// <summary>
