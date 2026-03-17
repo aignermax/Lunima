@@ -53,15 +53,13 @@ public partial class DesignCanvas
     }
 
     /// <summary>
-    /// Checks if a component should be dimmed in edit mode (outside current edit group).
+    /// Checks if a component should be dimmed.
+    /// Edit mode removed - components are never dimmed now (canvas is always flat).
     /// </summary>
     private bool IsComponentDimmedInEditMode(ComponentViewModel comp, DesignCanvasViewModel vm)
     {
-        if (!vm.IsInGroupEditMode || vm.CurrentEditGroup == null)
-            return false;
-
-        // Component should be dimmed if it's NOT inside the current edit group
-        return !IsComponentInGroup(comp.Component, vm.CurrentEditGroup);
+        // Edit mode removed - no components are dimmed
+        return false;
     }
 
     /// <summary>
@@ -81,7 +79,7 @@ public partial class DesignCanvas
         var vm = ViewModel;
         bool isHovered = _interactionState.HoveredGroup == group;
         bool isLabelHovered = _interactionState.HoveredGroupLabel == group;
-        bool isCurrentEditGroup = vm?.CurrentEditGroup == group;
+        // Edit mode removed - groups never appear on canvas (template-only)
 
         // 1. Render all child components recursively (transparent hierarchy)
         byte alpha = (byte)(isDimmed ? 128 : 255);
@@ -134,32 +132,29 @@ public partial class DesignCanvas
                 context, frozenPath, powerFlowResult, fadeThreshold);
         }
 
-        // 3. Draw border around group bounds (hide if this is the current edit group)
+        // 3. Draw border around group bounds
+        // Note: Groups should never appear on canvas (template-only), but keeping rendering for safety
         var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
-        if (!isCurrentEditGroup)
+
+        // Draw selection border if selected (solid cyan), otherwise regular dashed border
+        if (isSelected)
         {
-            // Draw selection border if selected (solid cyan), otherwise regular dashed border
-            if (isSelected)
-            {
-                ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds, isDimmed);
-            }
-            else
-            {
-                ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, isDimmed);
-            }
-
-            // 4. Draw group name label at top-left with hover state
-            ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed, isLabelHovered);
-
-            // 5. Draw lock icon at top-right (always visible for groups)
-            bool isLockIconHovered = _interactionState.HoveredGroupLockIcon == group;
-            ComponentGroupRenderer.RenderGroupLockIcon(context, group, isLockIconHovered);
+            ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds, isDimmed);
+        }
+        else
+        {
+            ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, isDimmed);
         }
 
-        // 6. Draw external pins with distinct style
-        // Outside edit mode: show only unoccupied pins (available for external connections)
-        // In edit mode: show all external pins for configuration
-        if (!isCurrentEditGroup && vm != null)
+        // 4. Draw group name label at top-left with hover state
+        ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed, isLabelHovered);
+
+        // 5. Draw lock icon at top-right (always visible for groups)
+        bool isLockIconHovered = _interactionState.HoveredGroupLockIcon == group;
+        ComponentGroupRenderer.RenderGroupLockIcon(context, group, isLockIconHovered);
+
+        // 6. Draw external pins - show only unoccupied pins
+        if (vm != null)
         {
             // Get all connections for occupancy checking
             var allConnections = vm.Connections.Select(c => c.Connection);
@@ -175,14 +170,6 @@ public partial class DesignCanvas
                 bool isPinHovered = highlightedPin != null && externalPin.InternalPin == highlightedPin;
 
                 ComponentGroupRenderer.RenderUnoccupiedGroupPin(context, externalPin, group, isPinHovered);
-            }
-        }
-        else if (isCurrentEditGroup)
-        {
-            // In edit mode, show all external pins (for configuration)
-            foreach (var externalPin in group.ExternalPins)
-            {
-                ComponentGroupRenderer.RenderExternalPin(context, externalPin, group, isHovered);
             }
         }
     }

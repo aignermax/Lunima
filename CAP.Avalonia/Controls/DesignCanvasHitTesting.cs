@@ -75,13 +75,7 @@ public class DesignCanvasHitTesting
     {
         if (vm == null) return null;
 
-        // In group edit mode, only test child components of the current edit group
-        if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
-        {
-            return HitTestGroupChildren(canvasPoint, vm.CurrentEditGroup, vm);
-        }
-
-        // Normal mode: test all top-level components
+        // Edit mode removed - canvas is always flat (test all components)
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
@@ -184,51 +178,31 @@ public class DesignCanvasHitTesting
         PhysicalPin? nearest = null;
         double nearestDistance = double.MaxValue;
 
-        // In group edit mode, only test pins of child components
-        if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
+        // Edit mode removed - test all component pins (canvas is always flat)
+        foreach (var comp in vm.Components)
         {
-            foreach (var child in vm.CurrentEditGroup.ChildComponents)
+            foreach (var pin in comp.Component.PhysicalPins)
             {
-                foreach (var pin in child.PhysicalPins)
+                var (pinX, pinY) = pin.GetAbsolutePosition();
+                var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
+                if (distance < nearestDistance && distance <= PinHitRadius)
                 {
-                    var (pinX, pinY) = pin.GetAbsolutePosition();
-                    var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
-                    if (distance < nearestDistance && distance <= PinHitRadius)
-                    {
-                        nearest = pin;
-                        nearestDistance = distance;
-                    }
+                    nearest = pin;
+                    nearestDistance = distance;
                 }
             }
-        }
-        else
-        {
-            // Normal mode: test all top-level component pins
-            foreach (var comp in vm.Components)
+
+            // Also test group pins (unoccupied external pins)
+            if (comp.Component is ComponentGroup group)
             {
-                foreach (var pin in comp.Component.PhysicalPins)
+                var groupPinHit = HitTestGroupPin(canvasPoint, group, vm.Connections.Select(c => c.Connection));
+                if (groupPinHit.Pin != null)
                 {
-                    var (pinX, pinY) = pin.GetAbsolutePosition();
-                    var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
+                    var distance = groupPinHit.Distance;
                     if (distance < nearestDistance && distance <= PinHitRadius)
                     {
-                        nearest = pin;
+                        nearest = groupPinHit.Pin.InternalPin;
                         nearestDistance = distance;
-                    }
-                }
-
-                // Also test group pins (unoccupied external pins)
-                if (comp.Component is ComponentGroup group)
-                {
-                    var groupPinHit = HitTestGroupPin(canvasPoint, group, vm.Connections.Select(c => c.Connection));
-                    if (groupPinHit.Pin != null)
-                    {
-                        var distance = groupPinHit.Distance;
-                        if (distance < nearestDistance && distance <= PinHitRadius)
-                        {
-                            nearest = groupPinHit.Pin.InternalPin;
-                            nearestDistance = distance;
-                        }
                     }
                 }
             }

@@ -163,16 +163,8 @@ public partial class MainWindow : Window
                 mainVm.DeleteSelectedCommand.Execute(null);
                 break;
             case Key.Escape:
-                // First priority: Exit group edit mode if active
-                if (mainVm.Canvas.IsInGroupEditMode)
-                {
-                    mainVm.Canvas.ExitGroupEditMode();
-                    mainVm.StatusText = "Exited group edit mode";
-                }
-                else
-                {
-                    mainVm.SetSelectModeCommand.Execute(null);
-                }
+                // Edit mode removed - ESC just switches to select mode
+                mainVm.SetSelectModeCommand.Execute(null);
                 break;
             case Key.Z:
                 if (ctrlPressed)

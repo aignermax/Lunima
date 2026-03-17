@@ -4,37 +4,32 @@ using CAP.Avalonia.Services;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
+using CAP_Core.LightCalculation;
 
 namespace CAP.Avalonia.Commands;
 
 /// <summary>
-/// Command to create a ComponentGroup from selected components.
-/// Captures current positions and waveguide paths as frozen geometry.
-/// Does NOT automatically save to library - use SaveGroupAsPrefabCommand for that.
+/// Command to create a ComponentGroup template from selected components.
+/// Captures component structure and connections as a reusable template (Unity Prefab pattern).
+/// The template is saved to the library and can be instantiated as ungrouped components.
+/// Does NOT create live groups on canvas - use PlaceTemplateCommand to place templates.
 /// </summary>
 public class CreateGroupCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly List<Component> _components;
-    private ComponentGroup? _createdGroup;
-    private ComponentViewModel? _groupViewModel;
+    private ComponentGroup? _createdTemplate;
     private readonly List<WaveguideConnection> _internalConnections = new();
-    private readonly List<WaveguideConnection> _externalConnections = new();
-    private readonly List<WaveguideConnectionViewModel> _internalConnectionViewModels = new();
-    private readonly Dictionary<Component, (double x, double y)> _originalPositions = new();
+    private readonly ComponentLibraryViewModel? _libraryViewModel;
 
     public CreateGroupCommand(
         DesignCanvasViewModel canvas,
-        List<ComponentViewModel> components)
+        List<ComponentViewModel> components,
+        ComponentLibraryViewModel? libraryViewModel = null)
     {
         _canvas = canvas;
         _components = components.Select(c => c.Component).ToList();
-
-        // Store original positions
-        foreach (var comp in _components)
-        {
-            _originalPositions[comp] = (comp.PhysicalX, comp.PhysicalY);
-        }
+        _libraryViewModel = libraryViewModel;
     }
 
     public string Description => $"Create group from {_components.Count} components";
@@ -51,13 +46,10 @@ public class CreateGroupCommand : IUndoableCommand
         // 1. Calculate bounding box for selected components
         double minX = _components.Min(c => c.PhysicalX);
         double minY = _components.Min(c => c.PhysicalY);
-        double maxX = _components.Max(c => c.PhysicalX + c.WidthMicrometers);
-        double maxY = _components.Max(c => c.PhysicalY + c.HeightMicrometers);
 
-        // 2. Identify internal vs external waveguide connections
+        // 2. Identify internal connections (connections between selected components)
         var componentSet = new HashSet<Component>(_components);
         _internalConnections.Clear();
-        _externalConnections.Clear();
 
         foreach (var conn in _canvas.ConnectionManager.Connections)
         {
@@ -68,24 +60,26 @@ public class CreateGroupCommand : IUndoableCommand
             {
                 _internalConnections.Add(conn);
             }
-            else if (startInGroup || endInGroup)
-            {
-                _externalConnections.Add(conn);
-            }
         }
 
-        // 3. Create ComponentGroup
-        _createdGroup = new ComponentGroup($"Group_{DateTime.Now:HHmmss}")
+        // 3. Create ComponentGroup template (not placed on canvas)
+        _createdTemplate = new ComponentGroup($"Template_{DateTime.Now:HHmmss}")
         {
             PhysicalX = minX,
             PhysicalY = minY,
-            Description = $"Group of {_components.Count} components"
+            Description = $"Template of {_components.Count} components",
+            IsPrefab = true // Mark as template
         };
 
-        // 4. Add child components to group
+        // 4. Clone components into template (deep copy to avoid canvas reference issues)
+        var componentMap = new Dictionary<Component, Component>();
+
         foreach (var comp in _components)
         {
-            _createdGroup.AddChild(comp);
+            // Create a shallow clone
+            var cloned = CloneComponent(comp);
+            componentMap[comp] = cloned;
+            _createdTemplate.AddChild(cloned);
         }
 
         // 5. Create frozen paths for internal connections
@@ -93,145 +87,97 @@ public class CreateGroupCommand : IUndoableCommand
         {
             if (conn.RoutedPath != null)
             {
+                var startCompClone = componentMap[conn.StartPin.ParentComponent];
+                var endCompClone = componentMap[conn.EndPin.ParentComponent];
+
+                var startPinClone = startCompClone.PhysicalPins.First(p => p.Name == conn.StartPin.Name);
+                var endPinClone = endCompClone.PhysicalPins.First(p => p.Name == conn.EndPin.Name);
+
                 var frozenPath = new FrozenWaveguidePath
                 {
                     Path = ClonePath(conn.RoutedPath),
-                    StartPin = conn.StartPin,
-                    EndPin = conn.EndPin
+                    StartPin = startPinClone,
+                    EndPin = endPinClone
                 };
-                _createdGroup.AddInternalPath(frozenPath);
+                _createdTemplate.AddInternalPath(frozenPath);
             }
         }
 
-        // 6. Create GroupPins for external connections
-        foreach (var conn in _externalConnections)
+        // 6. Update template bounds
+        _createdTemplate.UpdateGroupBounds();
+
+        // 7. Add template to library if library ViewModel is provided
+        if (_libraryViewModel != null)
         {
-            PhysicalPin internalPin;
-            if (componentSet.Contains(conn.StartPin.ParentComponent))
-                internalPin = conn.StartPin;
-            else
-                internalPin = conn.EndPin;
-
-            var (pinX, pinY) = internalPin.GetAbsolutePosition();
-            var groupPin = new GroupPin
-            {
-                Name = $"{internalPin.ParentComponent.Identifier}_{internalPin.Name}",
-                InternalPin = internalPin,
-                RelativeX = pinX - _createdGroup.PhysicalX,
-                RelativeY = pinY - _createdGroup.PhysicalY,
-                AngleDegrees = internalPin.GetAbsoluteAngle()
-            };
-            _createdGroup.AddExternalPin(groupPin);
+            var libraryManager = _libraryViewModel.GetLibraryManager();
+            var template = libraryManager.SaveTemplate(
+                _createdTemplate,
+                _createdTemplate.GroupName,
+                _createdTemplate.Description,
+                "User");
+            _libraryViewModel.AddTemplate(template);
         }
 
-        try
+        // NOTE: Components remain on canvas unchanged. Template is library-only.
+        // User can now drag template from library to instantiate as ungrouped components.
+    }
+
+    /// <summary>
+    /// Creates a shallow clone of a Component with a new unique identifier.
+    /// </summary>
+    private Component CloneComponent(Component source)
+    {
+        var cloned = new Component(
+            new Dictionary<int, SMatrix>(source.WaveLengthToSMatrixMap),
+            source.GetAllSliders().Select(s => new Slider(
+                Guid.NewGuid(),
+                s.Number,
+                s.Value,
+                s.MaxValue,
+                s.MinValue)).ToList(),
+            source.NazcaFunctionName,
+            source.NazcaFunctionParameters,
+            source.Parts,
+            source.TypeNumber,
+            $"{source.Identifier}_{Guid.NewGuid():N}",
+            source.Rotation90CounterClock,
+            source.PhysicalPins.Select(p => new PhysicalPin
+            {
+                Name = p.Name,
+                OffsetXMicrometers = p.OffsetXMicrometers,
+                OffsetYMicrometers = p.OffsetYMicrometers,
+                AngleDegrees = p.AngleDegrees,
+                LogicalPin = p.LogicalPin
+            }).ToList()
+        )
         {
-            _canvas.BeginCommandExecution();
+            PhysicalX = source.PhysicalX,
+            PhysicalY = source.PhysicalY,
+            WidthMicrometers = source.WidthMicrometers,
+            HeightMicrometers = source.HeightMicrometers,
+            NazcaOriginOffsetX = source.NazcaOriginOffsetX,
+            NazcaOriginOffsetY = source.NazcaOriginOffsetY,
+            NazcaModuleName = source.NazcaModuleName,
+            IsLocked = false
+        };
 
-            // 7. Remove individual components from canvas
-            var componentsToRemove = _canvas.Components
-                .Where(cvm => _components.Contains(cvm.Component))
-                .ToList();
-
-            // Store internal connection ViewModels before removing
-            _internalConnectionViewModels.Clear();
-            foreach (var conn in _internalConnections)
-            {
-                var connVm = _canvas.Connections.FirstOrDefault(c => c.Connection == conn);
-                if (connVm != null)
-                {
-                    _internalConnectionViewModels.Add(connVm);
-                }
-            }
-
-            // Remove internal connections from canvas (they're now frozen in the group)
-            foreach (var conn in _internalConnections)
-            {
-                var connVm = _canvas.Connections.FirstOrDefault(c => c.Connection == conn);
-                if (connVm != null)
-                {
-                    _canvas.Connections.Remove(connVm);
-                    _canvas.ConnectionManager.RemoveConnectionDeferred(conn);
-                }
-            }
-
-            foreach (var compVm in componentsToRemove)
-            {
-                // Remove pins from AllPins
-                var pinsToRemove = _canvas.AllPins
-                    .Where(p => p.ParentComponentViewModel == compVm)
-                    .ToList();
-                foreach (var pin in pinsToRemove)
-                {
-                    _canvas.AllPins.Remove(pin);
-                }
-
-                // Remove from Components collection
-                _canvas.Components.Remove(compVm);
-            }
-
-            // 8. Add group to canvas
-            _groupViewModel = _canvas.AddComponent(_createdGroup);
-
-            // 9. Select the newly created group so user gets visual feedback
-            _canvas.Selection.SelectSingle(_groupViewModel);
-            _canvas.SelectedComponent = _groupViewModel;
-        }
-        finally
-        {
-            _canvas.EndCommandExecution();
-        }
-
-        // Recalculate routes for external connections
-        _ = _canvas.RecalculateRoutesAsync();
-        _canvas.InvalidateSimulation();
-
-        // NOTE: Groups are NOT auto-saved to library anymore.
-        // User must explicitly use "Save as Prefab" action.
+        return cloned;
     }
 
     public void Undo()
     {
-        if (_createdGroup == null || _groupViewModel == null)
+        if (_createdTemplate == null)
             return;
 
-        try
+        // Remove template from library if library ViewModel is provided
+        if (_libraryViewModel != null)
         {
-            _canvas.BeginCommandExecution();
-
-            // Remove the group
-            _canvas.RemoveComponent(_groupViewModel);
-
-            // Restore individual components at their original positions
-            foreach (var comp in _components)
-            {
-                if (_originalPositions.TryGetValue(comp, out var pos))
-                {
-                    comp.PhysicalX = pos.x;
-                    comp.PhysicalY = pos.y;
-                }
-                comp.ParentGroup = null;
-                _canvas.AddComponent(comp);
-            }
-
-            // Restore internal connections
-            foreach (var conn in _internalConnections)
-            {
-                _canvas.ConnectionManager.AddExistingConnection(conn);
-                var connVm = new WaveguideConnectionViewModel(conn);
-                _canvas.Connections.Add(connVm);
-            }
-        }
-        finally
-        {
-            _canvas.EndCommandExecution();
+            _libraryViewModel.RemoveTemplateByName(_createdTemplate.GroupName);
         }
 
-        // No need to remove template from library since groups are not auto-saved
+        _createdTemplate = null;
 
-        // Recalculate routes
-        _ = _canvas.RecalculateRoutesAsync();
-        _canvas.InvalidateSimulation();
+        // NOTE: Canvas remains unchanged (components were never removed)
     }
 
     /// <summary>

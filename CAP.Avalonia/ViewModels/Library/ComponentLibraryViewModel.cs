@@ -100,6 +100,21 @@ public partial class ComponentLibraryViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Removes a group template from the library by name.
+    /// </summary>
+    /// <param name="templateName">The name of the template to remove.</param>
+    public void RemoveTemplateByName(string templateName)
+    {
+        var template = UserGroups.FirstOrDefault(t => t.Name == templateName)
+                      ?? PdkGroups.FirstOrDefault(t => t.Name == templateName);
+
+        if (template != null)
+        {
+            RemoveTemplate(template);
+        }
+    }
+
+    /// <summary>
     /// Duplicates a group template with a new name.
     /// </summary>
     /// <param name="template">The template to duplicate.</param>

@@ -117,17 +117,10 @@ public partial class DesignCanvas
         // Determine which component should be selected/dragged:
         // 1. In group edit mode: allow direct interaction with child components
         // 2. If hit component is a ComponentGroup directly, use it
-        // 3. If hit component is part of a group (ParentGroup != null), select the top-level group
-        // 4. Otherwise, use the hit component as-is
+        // Select/drag the hit component (edit mode removed - canvas is always flat)
         if (hitComponent != null)
         {
-            if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
-            {
-                // In group edit mode: allow direct interaction with child components
-                // HitTestComponent already filtered to only return children, so use as-is
-                _interactionState.DraggingComponent = hitComponent;
-            }
-            else if (hitComponent.Component is ComponentGroup)
+            if (hitComponent.Component is ComponentGroup)
             {
                 // Clicked directly on a group - select/drag the group
                 _interactionState.DraggingComponent = hitComponent;
@@ -151,31 +144,14 @@ public partial class DesignCanvas
 
         if (_interactionState.DraggingComponent != null)
         {
-            // Check for double-click on ComponentGroup
-            if (DetectDoubleClick(_interactionState.DraggingComponent) &&
-                _interactionState.DraggingComponent.Component is ComponentGroup clickedGroup)
-            {
-                // Enter group edit mode instead of dragging
-                vm.EnterGroupEditMode(clickedGroup);
-                mainVm?.HierarchyPanel?.RebuildTree();
-                _interactionState.DraggingComponent = null;
-                InvalidateVisual();
-                return;
-            }
+            // Edit mode removed - ComponentGroups should not appear on canvas (template-only)
+            // Double-click behavior removed
 
             HandleComponentSelection(e, canvasPoint, vm, mainVm);
         }
         else
         {
-            // Check for double-click on background in edit mode
-            if (vm.IsInGroupEditMode && DetectDoubleClick(null))
-            {
-                vm.ExitGroupEditMode();
-                mainVm?.HierarchyPanel?.RebuildTree();
-                InvalidateVisual();
-                return;
-            }
-
+            // Edit mode removed - just start box selection
             StartBoxSelection(canvasPoint, vm);
         }
     }

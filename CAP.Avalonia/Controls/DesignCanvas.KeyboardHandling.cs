@@ -177,19 +177,7 @@ public partial class DesignCanvas
 
     private void HandleEscapeKey(MainViewModel mainVm)
     {
-        var canvasVm = ViewModel;
-
-        // First priority: Exit group edit mode if active
-        if (canvasVm != null && canvasVm.IsInGroupEditMode)
-        {
-            canvasVm.ExitGroupEditMode();
-            if (mainVm != null)
-                mainVm.StatusText = "Exited group edit mode";
-        }
-        else
-        {
-            // Normal behavior: Switch to select mode
-            mainVm.SetSelectModeCommand.Execute(null);
-        }
+        // Edit mode removed - ESC just switches to select mode
+        mainVm.SetSelectModeCommand.Execute(null);
     }
 }

@@ -202,57 +202,21 @@ public class ComponentGroupInteractionTests
         connection.StartX.ShouldNotBe(200); // Pin should have moved
     }
 
+    // Edit mode tests removed - ComponentGroups are now template-only (prefab architecture)
+    // Groups do not appear on canvas; templates are instantiated as ungrouped components
+    /*
     [Fact]
     public void EnterGroupEditMode_OnComponentGroup_SetsCurrentEditGroup()
     {
-        // Arrange
-        var canvas = new DesignCanvasViewModel();
-        var comp1 = CreateTestComponent("Comp1", 100, 100);
-
-        var group = new ComponentGroup("TestGroup")
-        {
-            PhysicalX = 100,
-            PhysicalY = 100
-        };
-        group.AddChild(comp1);
-
-        var groupVm = canvas.AddComponent(group, "GroupTemplate");
-
-        // Act - Enter edit mode
-        canvas.EnterGroupEditMode(group);
-
-        // Assert - Edit mode active
-        canvas.IsInGroupEditMode.ShouldBeTrue();
-        canvas.CurrentEditGroup.ShouldBe(group);
-        canvas.BreadcrumbPath.Count.ShouldBe(1);
-        canvas.BreadcrumbPath[0].ShouldBe(group);
+        // OBSOLETE: Edit mode removed
     }
 
     [Fact]
     public void ExitGroupEditMode_ReturnsToRootLevel()
     {
-        // Arrange
-        var canvas = new DesignCanvasViewModel();
-        var comp1 = CreateTestComponent("Comp1", 100, 100);
-
-        var group = new ComponentGroup("TestGroup")
-        {
-            PhysicalX = 100,
-            PhysicalY = 100
-        };
-        group.AddChild(comp1);
-
-        canvas.AddComponent(group, "GroupTemplate");
-        canvas.EnterGroupEditMode(group);
-
-        // Act - Exit edit mode
-        canvas.ExitGroupEditMode();
-
-        // Assert - Back to root level
-        canvas.IsInGroupEditMode.ShouldBeFalse();
-        canvas.CurrentEditGroup.ShouldBeNull();
-        canvas.BreadcrumbPath.Count.ShouldBe(0);
+        // OBSOLETE: Edit mode removed
     }
+    */
 
     [Fact]
     public void HitTestGroupLabel_OnLabelArea_ReturnsGroup()

@@ -3,9 +3,12 @@ using CAP_Core.Routing;
 namespace CAP_Core.Components.Core;
 
 /// <summary>
-/// Represents a waveguide path that is frozen (fixed geometry).
-/// Unlike regular RoutedPath, these don't recalculate during group moves.
-/// The path geometry is stored in absolute coordinates and translated when the group moves.
+/// Represents a waveguide path stored in a ComponentGroup template.
+/// Used only for template storage - when templates are instantiated via PlaceTemplateCommand,
+/// these frozen paths become regular WaveguideConnections.
+///
+/// Note: This class is retained for template serialization but is no longer used for
+/// live groups on canvas (groups are now template-only, not live containers).
 /// </summary>
 public class FrozenWaveguidePath : ICloneable
 {

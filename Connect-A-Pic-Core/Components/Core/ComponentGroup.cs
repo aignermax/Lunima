@@ -8,9 +8,15 @@ using CAP_Core.Routing;
 namespace CAP_Core.Components.Core;
 
 /// <summary>
-/// Represents a hierarchical group of components with frozen waveguide paths.
-/// Follows IPKISS-style transparent hierarchy where groups contain child components
-/// at fixed relative positions with frozen waveguide paths.
+/// Represents a reusable template (prefab) for instantiating multiple components with connections.
+/// Follows Unity Prefab pattern: templates exist only in the library and are instantiated
+/// as ungrouped, top-level components when placed on canvas.
+///
+/// IMPORTANT: ComponentGroups are NOT live containers on the canvas.
+/// Use PlaceTemplateCommand to instantiate templates as individual components.
+///
+/// Legacy note: Previously supported live nested groups with edit mode. This has been
+/// simplified to template-only architecture to avoid phantom connections and complexity.
 /// </summary>
 public class ComponentGroup : Component, INotifyPropertyChanged
 {
