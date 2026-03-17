@@ -141,6 +141,46 @@ namespace UnitTests
         }
 
         /// <summary>
+        /// Creates a simple two-port component with physical pins for testing ComponentGroups.
+        /// </summary>
+        public static Component CreateSimpleTwoPortComponent()
+        {
+            var component = CreateStraightWaveGuide();
+            component.WidthMicrometers = 10;
+            component.HeightMicrometers = 1;
+
+            // Add physical pins with logical pin references
+            var logicalPin1 = component.Parts[0, 0].GetPinAt(RectSide.Left);
+            var logicalPin2 = component.Parts[0, 0].GetPinAt(RectSide.Right);
+
+            var physicalPin1 = new PhysicalPin
+            {
+                Name = "in",
+                ParentComponent = component,
+                OffsetXMicrometers = 0,
+                OffsetYMicrometers = 0.5,
+                AngleDegrees = 180,
+                LogicalPin = logicalPin1
+            };
+
+            var physicalPin2 = new PhysicalPin
+            {
+                Name = "out",
+                ParentComponent = component,
+                OffsetXMicrometers = 10,
+                OffsetYMicrometers = 0.5,
+                AngleDegrees = 0,
+                LogicalPin = logicalPin2
+            };
+
+            component.PhysicalPins.Clear();
+            component.PhysicalPins.Add(physicalPin1);
+            component.PhysicalPins.Add(physicalPin2);
+
+            return component;
+        }
+
+        /// <summary>
         /// Creates a WaveguideConnection between two components for testing.
         /// </summary>
         public static WaveguideConnection CreateConnection(Component startComponent, Component endComponent)

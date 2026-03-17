@@ -77,6 +77,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public CompressLayoutViewModel CompressLayout { get; }
 
+    /// <summary>
+    /// ViewModel for ComponentGroup S-Matrix diagnostics (shows matrix computation status).
+    /// </summary>
+    public GroupSMatrixViewModel GroupSMatrix { get; }
+
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService)
     {
         _preferencesService = preferencesService;
@@ -89,6 +94,7 @@ public partial class RightPanelViewModel : ObservableObject
         ExportValidation = new ExportValidationViewModel();
         SMatrixPerformance = new SMatrixPerformanceViewModel();
         CompressLayout = new CompressLayoutViewModel();
+        GroupSMatrix = new GroupSMatrixViewModel();
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

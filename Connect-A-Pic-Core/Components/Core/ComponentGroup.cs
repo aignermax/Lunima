@@ -90,6 +90,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     public (double X, double Y, double Width, double Height) LabelBounds { get; private set; }
 
     /// <summary>
+    /// Lazy-initialized S-Matrix builder for computing group S-Matrices.
+    /// </summary>
+    private ComponentGroupSMatrixBuilder? _sMatrixBuilder;
+
+    /// <summary>
     /// Creates an empty ComponentGroup with default S-matrices.
     /// Use AddChild() and AddInternalPath() to populate the group.
     /// </summary>
@@ -133,6 +138,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         ChildComponents.Add(component);
         UpdateGroupBounds();
+        InvalidateSMatrix();
     }
 
     /// <summary>
@@ -164,6 +170,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         InternalPaths.Add(path);
         UpdateGroupBounds();
+        InvalidateSMatrix();
     }
 
     /// <summary>
@@ -191,6 +198,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             throw new ArgumentNullException(nameof(pin));
 
         ExternalPins.Add(pin);
+        InvalidateSMatrix();
     }
 
     /// <summary>
@@ -654,6 +662,51 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         if (ChildComponents.Count > 0 || InternalPaths.Count > 0)
         {
             UpdateGroupBounds();
+        }
+    }
+
+    /// <summary>
+    /// Invalidates the cached S-Matrix, forcing recomputation on next access.
+    /// Called when group structure changes (children, paths, or external pins modified).
+    /// </summary>
+    private void InvalidateSMatrix()
+    {
+        // Clear the cached S-Matrix dictionary
+        WaveLengthToSMatrixMap.Clear();
+    }
+
+    /// <summary>
+    /// Computes or retrieves the S-Matrix for this group at all supported wavelengths.
+    /// The S-Matrix is cached until the group structure changes.
+    /// </summary>
+    public void ComputeSMatrix()
+    {
+        // Early exit if group has no external pins (can't participate in simulation)
+        if (ExternalPins.Count == 0)
+            return;
+
+        // Lazy-initialize the builder
+        _sMatrixBuilder ??= new ComponentGroupSMatrixBuilder();
+
+        // Build S-Matrices for all wavelengths
+        var matrices = _sMatrixBuilder.BuildGroupSMatrixAllWavelengths(this);
+
+        if (matrices != null)
+        {
+            // Update the component's S-Matrix dictionary
+            WaveLengthToSMatrixMap = matrices;
+        }
+    }
+
+    /// <summary>
+    /// Ensures the S-Matrix is computed and up-to-date.
+    /// Call this before using the group in simulation.
+    /// </summary>
+    public void EnsureSMatrixComputed()
+    {
+        if (WaveLengthToSMatrixMap.Count == 0 && ExternalPins.Count > 0)
+        {
+            ComputeSMatrix();
         }
     }
 }
