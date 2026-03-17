@@ -186,12 +186,32 @@ Follow this step-by-step when implementing a new analysis/diagnostic feature:
 
 ## Build and Verify
 
-Always run before creating a PR:
+**MANDATORY: You MUST run BOTH commands before finishing ANY task.**
 
 ```bash
 dotnet build
-dotnet test ./UnitTests/UnitTests.csproj --logger:trx
+dotnet run --project UnitTests -- -ctrf test-results.ctrf.json
 ```
+
+**This is NON-NEGOTIABLE.** Even if you did not write new tests, you MUST verify existing tests still pass.
+
+### Why CTRF JSON?
+
+- **Structured output**: JSON format is easy to parse (vs. thousands of text lines)
+- **Token efficient**: ~400 tokens vs. ~2000 tokens for console output
+- **Complete information**: Test names, status, duration, error messages, stack traces
+
+If tests fail, you MUST fix them before creating a PR. Do NOT skip tests.
+
+### Alternative: TRX XML (fallback)
+
+If CTRF fails for any reason, use TRX as fallback:
+
+```bash
+dotnet test --logger "trx;LogFileName=test-results.trx"
+```
+
+**Note:** Prefer CTRF over TRX (CTRF is more compact and structured).
 
 ## Branch and PR Conventions
 
