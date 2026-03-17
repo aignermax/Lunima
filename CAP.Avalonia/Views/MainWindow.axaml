@@ -793,6 +793,46 @@
                         </StackPanel>
                     </StackPanel>
 
+                    <!-- Template Origin Tracking -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Template Origin:" Foreground="Magenta" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Text="Shows components placed from templates. Select an instance to highlight all related components."
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+
+                    <Button Content="Refresh Template List"
+                            Command="{Binding TemplateOrigin.RefreshTemplateInstancesCommand}"
+                            MinWidth="140" Margin="0,5,0,5" Padding="8,4" Background="#4d3d5d"
+                            HorizontalAlignment="Stretch"/>
+
+                    <TextBlock Text="{Binding TemplateOrigin.TemplateInstances.Count, StringFormat='Found {0} template instance(s)'}"
+                               Foreground="LightBlue" FontSize="10" Margin="0,5,0,5"
+                               IsVisible="{Binding TemplateOrigin.HasTemplateInstances}"/>
+
+                    <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                                  IsVisible="{Binding TemplateOrigin.HasTemplateInstances}">
+                        <ItemsControl ItemsSource="{Binding TemplateOrigin.TemplateInstances}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,2,0,2" Background="#2d2d2d" Padding="5" CornerRadius="3">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DisplayText}" Foreground="White" FontSize="10"/>
+                                            <Button Content="Select All"
+                                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).TemplateOrigin.SelectTemplateInstanceCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Width="80" Margin="0,3,0,0" Padding="4,2"
+                                                    Background="#3d5d4d" FontSize="9"
+                                                    HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <TextBlock Text="No template instances found. Place a template from the library to see them here."
+                               Foreground="Gray" FontSize="9" Margin="0,5,0,0"
+                               IsVisible="{Binding !TemplateOrigin.HasTemplateInstances}"/>
+
                     <!-- GDS Export Configuration -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="GDS Export:" Foreground="LightGreen" Margin="0,0,0,5" FontWeight="SemiBold"/>
@@ -905,6 +945,15 @@
                     <MenuItem Header="Delete" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">
                         <MenuItem.Icon>
                             <TextBlock Text="🗑️" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+
+                    <Separator/>
+
+                    <MenuItem Header="Select Template Instance" Command="{Binding SelectTemplateInstanceCommand}"
+                              ToolTip.Tip="Select all components from the same template placement">
+                        <MenuItem.Icon>
+                            <TextBlock Text="🔗" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                 </ContextMenu>

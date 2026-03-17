@@ -1,0 +1,303 @@
+using CAP.Avalonia.Commands;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Diagnostics;
+using CAP.Avalonia.ViewModels.Library;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.Creation;
+using Shouldly;
+using Xunit;
+
+namespace UnitTests.Integration;
+
+/// <summary>
+/// Integration tests for template origin metadata tracking (Issue #218).
+/// Tests that components remember which template they came from and share instance IDs.
+/// </summary>
+public class TemplateOriginMetadataTests
+{
+    [Fact]
+    public void PlaceTemplate_SetsSourceTemplateAndInstanceId()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var libraryManager = new GroupLibraryManager();
+        var libraryViewModel = new ComponentLibraryViewModel(libraryManager);
+
+        // Create template with 2 components
+        var comp1 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+
+        var comp2 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        comp2.PhysicalX = 50;
+        comp2.PhysicalY = 0;
+
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        // Add connection (required for template creation)
+        var startPin = comp1.PhysicalPins.First();
+        var endPin = comp2.PhysicalPins.First();
+        canvas.ConnectionManager.AddConnection(startPin, endPin);
+
+        var createTemplateCmd = new CreateGroupCommand(
+            canvas,
+            new List<ComponentViewModel> { compVm1, compVm2 },
+            libraryViewModel
+        );
+        createTemplateCmd.Execute();
+
+        var template = libraryViewModel.UserGroups.First().TemplateGroup!;
+        canvas.Components.Clear();
+        canvas.Connections.Clear();
+        canvas.ConnectionManager.Clear();
+
+        // Act: Place template
+        var placeCmd = new PlaceTemplateCommand(canvas, template, 100, 100);
+        placeCmd.Execute();
+
+        // Assert: All components have source template set
+        canvas.Components.Count.ShouldBe(2);
+        foreach (var compVm in canvas.Components)
+        {
+            compVm.Component.SourceTemplate.ShouldNotBeNullOrEmpty("Should track source template");
+            compVm.Component.SourceTemplate.ShouldBe(template.GroupName);
+        }
+
+        // Assert: All components share the same instance ID
+        var instanceIds = canvas.Components.Select(c => c.Component.TemplateInstanceId).Distinct().ToList();
+        instanceIds.Count.ShouldBe(1, "All components from same placement should share instance ID");
+        instanceIds.First().ShouldNotBeNull("Instance ID should be set");
+    }
+
+    [Fact]
+    public void PlaceTemplate_MultipleTimes_HasUniqueInstanceIds()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var libraryManager = new GroupLibraryManager();
+        var libraryViewModel = new ComponentLibraryViewModel(libraryManager);
+
+        // Create template
+        var comp1 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+
+        var comp2 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        comp2.PhysicalX = 50;
+        comp2.PhysicalY = 0;
+
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        // Add connection (required for template creation)
+        var startPin = comp1.PhysicalPins.First();
+        var endPin = comp2.PhysicalPins.First();
+        canvas.ConnectionManager.AddConnection(startPin, endPin);
+
+        var createTemplateCmd = new CreateGroupCommand(
+            canvas,
+            new List<ComponentViewModel> { compVm1, compVm2 },
+            libraryViewModel
+        );
+        createTemplateCmd.Execute();
+
+        var template = libraryViewModel.UserGroups.First().TemplateGroup!;
+        canvas.Components.Clear();
+        canvas.Connections.Clear();
+        canvas.ConnectionManager.Clear();
+
+        // Act: Place template 3 times
+        var place1 = new PlaceTemplateCommand(canvas, template, 100, 100);
+        place1.Execute();
+
+        var place2 = new PlaceTemplateCommand(canvas, template, 300, 100);
+        place2.Execute();
+
+        var place3 = new PlaceTemplateCommand(canvas, template, 500, 100);
+        place3.Execute();
+
+        // Assert: Should have 3 unique instance IDs (one per placement)
+        var allInstanceIds = canvas.Components.Select(c => c.Component.TemplateInstanceId).ToList();
+        allInstanceIds.Count.ShouldBe(6, "Should have 6 components total");
+
+        var uniqueInstanceIds = allInstanceIds.Distinct().ToList();
+        uniqueInstanceIds.Count.ShouldBe(3, "Should have 3 unique instance IDs (one per placement)");
+
+        // Each instance should have exactly 2 components
+        foreach (var instanceId in uniqueInstanceIds)
+        {
+            var count = allInstanceIds.Count(id => id == instanceId);
+            count.ShouldBe(2, $"Instance {instanceId} should have 2 components");
+        }
+    }
+
+    [Fact]
+    public void ComponentViewModel_ExposesTemplateOriginProperties()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var libraryManager = new GroupLibraryManager();
+        var libraryViewModel = new ComponentLibraryViewModel(libraryManager);
+
+        // Create and place template with 2 components
+        var comp1 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        var comp2 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        comp2.PhysicalX = 50;
+        comp2.PhysicalY = 0;
+
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        // Add connection (required for template creation)
+        var startPin = comp1.PhysicalPins.First();
+        var endPin = comp2.PhysicalPins.First();
+        canvas.ConnectionManager.AddConnection(startPin, endPin);
+
+        var createTemplateCmd = new CreateGroupCommand(
+            canvas,
+            new List<ComponentViewModel> { compVm1, compVm2 },
+            libraryViewModel
+        );
+        createTemplateCmd.Execute();
+
+        var template = libraryViewModel.UserGroups.First().TemplateGroup!;
+        canvas.Components.Clear();
+        canvas.Connections.Clear();
+        canvas.ConnectionManager.Clear();
+
+        var placeCmd = new PlaceTemplateCommand(canvas, template, 100, 100);
+        placeCmd.Execute();
+
+        // Act & Assert
+        var placedVm = canvas.Components.First();
+        placedVm.IsFromTemplate.ShouldBeTrue("Should be from template");
+        placedVm.SourceTemplateName.ShouldNotBeNullOrEmpty("Should have template name");
+        placedVm.TemplateInstanceId.ShouldNotBeNull("Should have instance ID");
+        placedVm.TemplateOriginTooltip.ShouldContain("From template:");
+        placedVm.TemplateOriginTooltip.ShouldContain(template.GroupName);
+    }
+
+    [Fact]
+    public void ManuallyPlacedComponent_HasNoTemplateOrigin()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp = TestComponentFactory.CreateSimpleTwoPortComponent();
+
+        // Act: Place component manually (not from template)
+        var compVm = canvas.AddComponent(comp);
+
+        // Assert: Should not have template origin metadata
+        compVm.Component.SourceTemplate.ShouldBeNull("Manually placed component should not have template");
+        compVm.Component.TemplateInstanceId.ShouldBeNull("Manually placed component should not have instance ID");
+        compVm.IsFromTemplate.ShouldBeFalse("Should not be from template");
+        compVm.TemplateOriginTooltip.ShouldBeNull("Should not have tooltip");
+    }
+
+    [Fact]
+    public void TemplateOriginViewModel_TracksTemplateInstances()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var templateOriginVm = new TemplateOriginViewModel(canvas);
+        var libraryManager = new GroupLibraryManager();
+        var libraryViewModel = new ComponentLibraryViewModel(libraryManager);
+
+        // Create template
+        var comp1 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        var comp2 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        // Add connection (required for template creation)
+        var startPin = comp1.PhysicalPins.First();
+        var endPin = comp2.PhysicalPins.First();
+        canvas.ConnectionManager.AddConnection(startPin, endPin);
+
+        var createTemplateCmd = new CreateGroupCommand(
+            canvas,
+            new List<ComponentViewModel> { compVm1, compVm2 },
+            libraryViewModel
+        );
+        createTemplateCmd.Execute();
+
+        var template = libraryViewModel.UserGroups.First().TemplateGroup!;
+        canvas.Components.Clear();
+        canvas.Connections.Clear();
+        canvas.ConnectionManager.Clear();
+
+        // Place template twice
+        var place1 = new PlaceTemplateCommand(canvas, template, 100, 100);
+        place1.Execute();
+
+        var place2 = new PlaceTemplateCommand(canvas, template, 300, 100);
+        place2.Execute();
+
+        // Act: Refresh template instances
+        templateOriginVm.RefreshTemplateInstancesCommand.Execute(null);
+
+        // Assert
+        templateOriginVm.HasTemplateInstances.ShouldBeTrue("Should have template instances");
+        templateOriginVm.TemplateInstances.Count.ShouldBe(2, "Should track 2 template instances");
+
+        foreach (var instance in templateOriginVm.TemplateInstances)
+        {
+            instance.ComponentCount.ShouldBe(2, "Each instance should have 2 components");
+            instance.TemplateName.ShouldBe(template.GroupName);
+            instance.InstanceId.ShouldNotBe(Guid.Empty, "Should have valid instance ID");
+        }
+    }
+
+    [Fact]
+    public void TemplateOriginViewModel_SelectTemplateInstance_SelectsAllComponents()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var templateOriginVm = new TemplateOriginViewModel(canvas);
+        var libraryManager = new GroupLibraryManager();
+        var libraryViewModel = new ComponentLibraryViewModel(libraryManager);
+
+        // Create and place template
+        var comp1 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        var comp2 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        var compVm1 = canvas.AddComponent(comp1);
+        var compVm2 = canvas.AddComponent(comp2);
+
+        // Add connection (required for template creation)
+        var startPin = comp1.PhysicalPins.First();
+        var endPin = comp2.PhysicalPins.First();
+        canvas.ConnectionManager.AddConnection(startPin, endPin);
+
+        var createTemplateCmd = new CreateGroupCommand(
+            canvas,
+            new List<ComponentViewModel> { compVm1, compVm2 },
+            libraryViewModel
+        );
+        createTemplateCmd.Execute();
+
+        var template = libraryViewModel.UserGroups.First().TemplateGroup!;
+        canvas.Components.Clear();
+        canvas.Connections.Clear();
+        canvas.ConnectionManager.Clear();
+
+        var placeCmd = new PlaceTemplateCommand(canvas, template, 100, 100);
+        placeCmd.Execute();
+
+        templateOriginVm.RefreshTemplateInstancesCommand.Execute(null);
+        var instance = templateOriginVm.TemplateInstances.First();
+
+        // Act: Select template instance
+        templateOriginVm.SelectTemplateInstanceCommand.Execute(instance);
+
+        // Assert: All components from instance should be selected
+        canvas.Selection.SelectedComponents.Count.ShouldBe(2, "Should select all components from instance");
+
+        foreach (var comp in canvas.Selection.SelectedComponents)
+        {
+            comp.TemplateInstanceId.ShouldBe(instance.InstanceId, "Selected component should be from instance");
+        }
+    }
+}

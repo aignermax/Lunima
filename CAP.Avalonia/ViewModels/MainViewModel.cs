@@ -74,6 +74,7 @@ public partial class MainViewModel : ObservableObject
     public SMatrixPerformanceViewModel SMatrixPerformance => RightPanel.SMatrixPerformance;
     public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
     public GroupSMatrixViewModel GroupSMatrix => RightPanel.GroupSMatrix;
+    public TemplateOriginViewModel TemplateOrigin => RightPanel.TemplateOrigin;
     public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
     public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
     public ComponentLibraryViewModel GroupLibrary => LeftPanel.ComponentLibrary;
@@ -398,6 +399,33 @@ public partial class MainViewModel : ObservableObject
 
         DesignValidation.RunValidation(connections);
         StatusText = DesignValidation.StatusText;
+    }
+
+    /// <summary>
+    /// Selects all components from the same template instance as the currently selected component.
+    /// </summary>
+    [RelayCommand]
+    private void SelectTemplateInstance()
+    {
+        var selected = Canvas.Selection.SelectedComponents.FirstOrDefault();
+        if (selected == null || !selected.IsFromTemplate || selected.TemplateInstanceId == null)
+        {
+            StatusText = "No template instance to select (component not from template)";
+            return;
+        }
+
+        var instanceId = selected.TemplateInstanceId;
+        Canvas.Selection.ClearSelection();
+
+        foreach (var comp in Canvas.Components)
+        {
+            if (comp.TemplateInstanceId == instanceId)
+            {
+                Canvas.Selection.AddToSelection(comp);
+            }
+        }
+
+        StatusText = $"Selected all components from template: {selected.SourceTemplateName}";
     }
 }
 

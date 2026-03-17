@@ -48,6 +48,14 @@ public class Component : ICloneable
     /// </summary>
     public string? SourceTemplate { get; set; }
 
+    /// <summary>
+    /// Optional unique identifier to group components from the same template placement instance.
+    /// All components placed at the same time from the same template share this ID.
+    /// Null if component was placed individually, not from a template.
+    /// Used for "Select All from Template" and visual feedback features.
+    /// </summary>
+    public Guid? TemplateInstanceId { get; set; }
+
     public Part[,] Parts { get; protected set; }
     public List<PhysicalPin> PhysicalPins { get; protected set; } = new();
     public Dictionary<int, SMatrix> WaveLengthToSMatrixMap { get; set; }

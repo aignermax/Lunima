@@ -1008,6 +1008,27 @@ public partial class ComponentViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Whether this component was placed from a template.
+    /// </summary>
+    public bool IsFromTemplate => Component.SourceTemplate != null;
+
+    /// <summary>
+    /// Name of the template this component was instantiated from (null if not from template).
+    /// </summary>
+    public string? SourceTemplateName => Component.SourceTemplate;
+
+    /// <summary>
+    /// Unique ID shared by all components placed from the same template instance.
+    /// </summary>
+    public Guid? TemplateInstanceId => Component.TemplateInstanceId;
+
+    /// <summary>
+    /// Tooltip text showing template origin (null if not from template).
+    /// </summary>
+    public string? TemplateOriginTooltip =>
+        IsFromTemplate ? $"From template: {SourceTemplateName}" : null;
+
+    /// <summary>
     /// First slider's current value (get/set).
     /// </summary>
     /// <summary>

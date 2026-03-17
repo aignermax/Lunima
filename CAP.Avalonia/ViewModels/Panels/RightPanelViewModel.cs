@@ -82,6 +82,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public GroupSMatrixViewModel GroupSMatrix { get; }
 
+    /// <summary>
+    /// ViewModel for template origin tracking (shows which components came from templates).
+    /// </summary>
+    public TemplateOriginViewModel TemplateOrigin { get; }
+
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService)
     {
         _preferencesService = preferencesService;
@@ -95,6 +100,7 @@ public partial class RightPanelViewModel : ObservableObject
         SMatrixPerformance = new SMatrixPerformanceViewModel();
         CompressLayout = new CompressLayoutViewModel();
         GroupSMatrix = new GroupSMatrixViewModel();
+        TemplateOrigin = new TemplateOriginViewModel(canvas);
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

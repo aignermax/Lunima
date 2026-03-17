@@ -52,6 +52,9 @@ public class PlaceTemplateCommand : IUndoableCommand
             double offsetX = _placeX - templateCopy.PhysicalX;
             double offsetY = _placeY - templateCopy.PhysicalY;
 
+            // Generate unique instance ID for this template placement
+            var instanceId = Guid.NewGuid();
+
             // Extract all child components and place them at the target location
             foreach (var child in templateCopy.ChildComponents)
             {
@@ -64,6 +67,9 @@ public class PlaceTemplateCommand : IUndoableCommand
 
                 // Mark component with source template for reference
                 child.SourceTemplate = _template.GroupName;
+
+                // Assign shared instance ID to group components from same placement
+                child.TemplateInstanceId = instanceId;
 
                 // Add to canvas
                 var childVm = _canvas.AddComponent(child);
