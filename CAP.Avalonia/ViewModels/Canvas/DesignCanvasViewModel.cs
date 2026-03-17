@@ -522,6 +522,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// <summary>
     /// Moves a ComponentGroup and all its children together.
     /// Uses ComponentGroup.MoveGroup() to maintain internal consistency.
+    /// Updates A* pathfinding grid obstacles for frozen paths at new positions.
     /// </summary>
     private void MoveComponentGroup(ComponentViewModel component, ComponentGroup group, double deltaX, double deltaY)
     {
@@ -550,6 +551,15 @@ public partial class DesignCanvasViewModel : ObservableObject
         // Use the ComponentGroup's MoveGroup method to move all children and internal paths
         group.MoveGroup(deltaX, deltaY);
 
+        // Update A* pathfinding grid obstacles for the moved group
+        // Skip during drag for performance - EndDragComponent will rebuild the entire grid
+        if (!_isDragging && Router.PathfindingGrid != null)
+        {
+            // Remove old obstacles and re-add at new positions
+            // This ensures frozen paths are registered as obstacles at their new locations
+            Router.PathfindingGrid.UpdateComponentObstacle(group);
+        }
+
         // Update connections for the group's external pins
         if (_isDragging)
         {
@@ -568,7 +578,8 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
         else
         {
-            // Not dragging: route async
+            // Not dragging: recalculate routes asynchronously
+            // This will reroute all external waveguides around the new frozen path positions
             _ = RecalculateRoutesAsync();
         }
     }

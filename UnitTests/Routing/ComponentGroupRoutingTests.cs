@@ -3,6 +3,7 @@ using Shouldly;
 using CAP_Core.Routing.AStarPathfinder;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 
 namespace UnitTests.Routing;
 
@@ -247,5 +248,156 @@ public class ComponentGroupRoutingTests
         var (gxChild2, gyChild2) = grid.PhysicalToGrid(87, 92);
         grid.IsBlocked(gxChild1, gyChild1).ShouldBeTrue("Child1 should be blocked");
         grid.IsBlocked(gxChild2, gyChild2).ShouldBeTrue("Child2 should be blocked");
+    }
+
+    [Fact]
+    public void AddComponentObstacle_GroupWithFrozenPath_BlocksFrozenPathCells()
+    {
+        // Arrange
+        var grid = new PathfindingGrid(0, 0, 200, 200, cellSize: 1.0, padding: 0);
+
+        var group = new ComponentGroup("TestGroup");
+        var child1 = CreateMockComponentWithPin(40, 40, 10, 10, "Pin1");
+        var child2 = CreateMockComponentWithPin(80, 40, 10, 10, "Pin2");
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        // Create a frozen path between the children (horizontal straight line)
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(50, 45, 80, 45, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = path,
+            StartPin = child1.PhysicalPins[0],
+            EndPin = child2.PhysicalPins[0]
+        };
+        group.AddInternalPath(frozenPath);
+
+        // Act
+        grid.AddComponentObstacle(group);
+
+        // Assert - frozen path cells should be blocked with state=3 (permanent obstacle)
+        var (gxMid, gyMid) = grid.PhysicalToGrid(65, 45); // Middle of frozen path
+        var cellState = grid.GetCellState(gxMid, gyMid);
+        cellState.ShouldBe((byte)3, "Frozen path should be marked as permanent obstacle (state=3)");
+
+        grid.IsBlocked(gxMid, gyMid).ShouldBeTrue("Frozen path should block routing");
+    }
+
+    [Fact]
+    public void UpdateComponentObstacle_GroupWithFrozenPath_UpdatesFrozenPathObstacles()
+    {
+        // Arrange
+        var grid = new PathfindingGrid(0, 0, 300, 300, cellSize: 1.0, padding: 0);
+
+        var group = new ComponentGroup("TestGroup");
+        var child1 = CreateMockComponentWithPin(50, 50, 10, 10, "Pin1");
+        var child2 = CreateMockComponentWithPin(100, 50, 10, 10, "Pin2");
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        // Create a frozen path (horizontal line at Y=55)
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(60, 55, 100, 55, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = path,
+            StartPin = child1.PhysicalPins[0],
+            EndPin = child2.PhysicalPins[0]
+        };
+        group.AddInternalPath(frozenPath);
+
+        grid.AddComponentObstacle(group);
+
+        // Verify frozen path is blocked at original position
+        var (gxOld, gyOld) = grid.PhysicalToGrid(80, 55); // Middle of original frozen path
+        grid.GetCellState(gxOld, gyOld).ShouldBe((byte)3, "Original frozen path should be blocked");
+
+        // Act - Move the group (which moves frozen path)
+        group.MoveGroup(50, 30); // Move right by 50µm, down by 30µm
+
+        grid.UpdateComponentObstacle(group);
+
+        // Assert - old position should be free, new position should be blocked
+        grid.GetCellState(gxOld, gyOld).ShouldBe((byte)0, "Old frozen path position should be unblocked");
+
+        // New frozen path position: original (80, 55) + delta (50, 30) = (130, 85)
+        var (gxNew, gyNew) = grid.PhysicalToGrid(130, 85);
+        grid.GetCellState(gxNew, gyNew).ShouldBe((byte)3, "New frozen path position should be blocked");
+    }
+
+    [Fact]
+    public void RemoveComponentObstacle_GroupWithFrozenPath_RemovesFrozenPathObstacles()
+    {
+        // Arrange
+        var grid = new PathfindingGrid(0, 0, 200, 200, cellSize: 1.0, padding: 0);
+
+        var group = new ComponentGroup("TestGroup");
+        var child1 = CreateMockComponentWithPin(40, 40, 10, 10, "Pin1");
+        var child2 = CreateMockComponentWithPin(80, 40, 10, 10, "Pin2");
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        // Create a frozen path
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(50, 45, 80, 45, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = path,
+            StartPin = child1.PhysicalPins[0],
+            EndPin = child2.PhysicalPins[0]
+        };
+        group.AddInternalPath(frozenPath);
+
+        grid.AddComponentObstacle(group);
+
+        // Verify frozen path is blocked
+        var (gx, gy) = grid.PhysicalToGrid(65, 45);
+        grid.GetCellState(gx, gy).ShouldBe((byte)3, "Frozen path should be blocked before removal");
+
+        // Act
+        grid.RemoveComponentObstacle(group);
+
+        // Assert - frozen path should be unblocked
+        grid.GetCellState(gx, gy).ShouldBe((byte)0, "Frozen path should be unblocked after group removal");
+    }
+
+    /// <summary>
+    /// Creates a mock component with a physical pin at specified position.
+    /// </summary>
+    private static Component CreateMockComponentWithPin(double x, double y, double width, double height, string pinName)
+    {
+        var pin = new PhysicalPin
+        {
+            Name = pinName,
+            OffsetXMicrometers = width / 2,  // Pin at center
+            OffsetYMicrometers = height / 2,
+            AngleDegrees = 0
+        };
+
+        var component = new Component(
+            new Dictionary<int, SMatrix>(),
+            new List<Slider>(),
+            "test",
+            "",
+            new Part[1, 1] { { new Part() } },
+            -1,
+            Guid.NewGuid().ToString(),
+            new DiscreteRotation(),
+            new List<PhysicalPin> { pin }
+        )
+        {
+            PhysicalX = x,
+            PhysicalY = y,
+            WidthMicrometers = width,
+            HeightMicrometers = height
+        };
+        return component;
     }
 }

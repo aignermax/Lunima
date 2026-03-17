@@ -284,4 +284,142 @@ public class ComponentGroupMovementTests
 
         return component;
     }
+
+    [Fact]
+    public void MoveComponent_OnGroupWithFrozenPaths_UpdatesPathfindingGridObstacles()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var comp1 = CreateComponentWithPins("Comp1", 100, 100);
+        var comp2 = CreateComponentWithPins("Comp2", 200, 100);
+
+        // Create group with internal frozen path
+        var group = new ComponentGroup("TestGroup")
+        {
+            PhysicalX = 100,
+            PhysicalY = 100
+        };
+        group.AddChild(comp1);
+        group.AddChild(comp2);
+
+        // Create a frozen path between the components (horizontal straight line)
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(100, 115, 200, 115, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = path,
+            StartPin = comp1.PhysicalPins[0],
+            EndPin = comp2.PhysicalPins[0]
+        };
+        group.AddInternalPath(frozenPath);
+
+        var groupVm = canvas.AddComponent(group, "GroupTemplate");
+
+        // Verify initial frozen path is registered in A* grid as obstacle (state=3)
+        var initialSegment = (StraightSegment)frozenPath.Path.Segments[0];
+        var (gx1, gy1) = canvas.Router.PathfindingGrid!.PhysicalToGrid(150, 115); // Middle of initial frozen path
+        var initialState = canvas.Router.PathfindingGrid.GetCellState(gx1, gy1);
+        initialState.ShouldBe((byte)3, "Frozen path should be registered as obstacle (state=3) at initial position");
+
+        // Act - Move group by delta (50, 30)
+        canvas.MoveComponent(groupVm, 50, 30);
+
+        // Assert 1 - Frozen path translated to new position
+        var segment = (StraightSegment)frozenPath.Path.Segments[0];
+        segment.StartPoint.X.ShouldBe(150);
+        segment.StartPoint.Y.ShouldBe(145);
+        segment.EndPoint.X.ShouldBe(250);
+        segment.EndPoint.Y.ShouldBe(145);
+
+        // Assert 2 - Old frozen path position should be clear (state=0)
+        var oldState = canvas.Router.PathfindingGrid.GetCellState(gx1, gy1);
+        oldState.ShouldBe((byte)0, "Old frozen path position should be unblocked after group move");
+
+        // Assert 3 - New frozen path position should be blocked (state=3)
+        var (gx2, gy2) = canvas.Router.PathfindingGrid.PhysicalToGrid(200, 145); // Middle of new frozen path
+        var newState = canvas.Router.PathfindingGrid.GetCellState(gx2, gy2);
+        newState.ShouldBe((byte)3, "New frozen path position should be blocked (state=3) after group move");
+    }
+
+    [Fact]
+    public async Task MoveComponent_OnGroupWithFrozenPaths_TriggersExternalWaveguideRecalculation()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        canvas.InitializeAStarRouting();
+
+        var comp1 = CreateComponentWithPins("Comp1", 100, 100);
+        var comp2 = CreateComponentWithPins("Comp2", 200, 100);
+
+        // Create group with internal frozen path
+        var group = new ComponentGroup("TestGroup")
+        {
+            PhysicalX = 100,
+            PhysicalY = 100
+        };
+        group.AddChild(comp1);
+        group.AddChild(comp2);
+
+        // Create a frozen path between the components (horizontal at Y=115)
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(100, 115, 200, 115, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = path,
+            StartPin = comp1.PhysicalPins[0],
+            EndPin = comp2.PhysicalPins[0]
+        };
+        group.AddInternalPath(frozenPath);
+
+        var groupVm = canvas.AddComponent(group, "GroupTemplate");
+
+        // Create external components that will connect OUTSIDE the group
+        var external1 = CreateComponentWithPins("External1", 50, 200);
+        var external2 = CreateComponentWithPins("External2", 250, 200);
+        canvas.AddComponent(external1, "ExternalTemplate");
+        canvas.AddComponent(external2, "ExternalTemplate");
+
+        // Create external waveguide connection
+        var externalConnection = await canvas.ConnectPinsAsync(
+            external1.PhysicalPins[0],
+            external2.PhysicalPins[0]);
+
+        externalConnection.ShouldNotBeNull("External connection should be created");
+
+        // Wait for initial routing to complete
+        await Task.Delay(100);
+
+        // Act - Move group down by 150µm (from Y=100 to Y=250)
+        // This should cause the frozen path to intersect the external waveguide's path
+        canvas.BeginDragComponent(groupVm);
+        canvas.MoveComponent(groupVm, 0, 150);
+        canvas.EndDragComponent(groupVm);
+
+        // Wait for route recalculation to complete (EndDragComponent calls RecalculateRoutesAsync)
+        // Poll the IsRouting flag to ensure routing completes
+        int maxWaitMs = 2000;
+        int elapsedMs = 0;
+        while (canvas.IsRouting && elapsedMs < maxWaitMs)
+        {
+            await Task.Delay(50);
+            elapsedMs += 50;
+        }
+
+        // Additional small delay to ensure grid rebuild completes
+        await Task.Delay(100);
+
+        // Assert - The external waveguide should have been rerouted to avoid the moved frozen path
+        // We can't check the exact path without complex A* mocking, but we can verify:
+        // 1. The connection still exists
+        externalConnection.Connection.ShouldNotBeNull();
+
+        // 2. The frozen path is now registered at the new position
+        var (gx, gy) = canvas.Router.PathfindingGrid!.PhysicalToGrid(150, 265); // Middle of moved frozen path
+        var cellState = canvas.Router.PathfindingGrid.GetCellState(gx, gy);
+        cellState.ShouldBe((byte)3, "Moved frozen path should be registered as obstacle");
+    }
 }
