@@ -30,6 +30,53 @@ A complete vertical slice includes ALL of these layers:
   - No deep nesting (max 2-3 levels)
   - Prefer early returns over nested if/else
 
+## ComponentGroup System (Template-Only Architecture)
+
+**ComponentGroups are reusable templates stored in the library, NOT live containers on canvas.**
+
+This follows the **Unity Prefab pattern**: templates exist only in the library and are instantiated as ungrouped, top-level components when placed on canvas. The canvas is always flat with no nested groups.
+
+### Key Principles
+
+**DO:**
+- ✅ Store templates as ComponentGroups in the library (via `GroupLibraryManager`)
+- ✅ Use "Save Selection as Template" to create reusable component groups
+- ✅ Place templates via `PlaceTemplateCommand` which auto-ungroups into individual components
+- ✅ Keep canvas flat - all components are top-level
+- ✅ Use `FrozenWaveguidePath` for storing connection geometry in templates
+
+**DO NOT:**
+- ❌ Create live ComponentGroup containers on canvas
+- ❌ Implement nested group navigation or edit mode
+- ❌ Modify templates after placement (they are instantiated as separate components)
+- ❌ Try to re-group placed components (no live grouping on canvas)
+
+### Architecture Flow
+
+1. **Template Creation**: User selects components → "Save as Template" → `GroupLibraryManager.SaveTemplate()` → Stored as JSON with `FrozenWaveguidePath`s
+2. **Template Storage**: ComponentGroup with `IsPrefab = true` stored in library folder
+3. **Template Placement**: Drag from library → `PlaceTemplateCommand.Execute()` → Deep copy → Extract child components → Place as top-level components
+4. **Result**: Ungrouped components on canvas with auto-routed waveguide connections
+
+### Core Classes
+
+- **`ComponentGroup`** (`Connect-A-Pic-Core/Components/Core/ComponentGroup.cs`) — Template container with child components and frozen paths. Only used for library storage, never on canvas.
+- **`GroupLibraryManager`** (`Connect-A-Pic-Core/Components/Creation/GroupLibraryManager.cs`) — Manages template persistence (save/load/instantiate).
+- **`PlaceTemplateCommand`** (`CAP.Avalonia/Commands/PlaceTemplateCommand.cs`) — Instantiates templates as ungrouped components.
+- **`FrozenWaveguidePath`** (`Connect-A-Pic-Core/Components/Core/FrozenWaveguidePath.cs`) — Stores waveguide geometry in templates. Converted to `WaveguideConnection` on instantiation.
+
+### Why Template-Only?
+
+The previous architecture allowed live nested groups on canvas with edit mode. This caused:
+- Phantom connections when deleting grouped components (#215)
+- Invisible pins outside edit mode (#216)
+- Complex nested navigation and state management
+- Route recalculation issues (#217)
+
+The template-only system eliminates these issues by keeping the canvas flat and simple.
+
+**See `docs/ComponentGroup-Architecture.md` for detailed design rationale and migration guide.**
+
 ## Project Structure
 
 ```

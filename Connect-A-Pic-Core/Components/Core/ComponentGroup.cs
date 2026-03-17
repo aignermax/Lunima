@@ -16,22 +16,37 @@ namespace CAP_Core.Components.Core;
 /// Use PlaceTemplateCommand to instantiate templates as individual components.
 ///
 /// Legacy note: Previously supported live nested groups with edit mode. This has been
-/// simplified to template-only architecture to avoid phantom connections and complexity.
+/// simplified to template-only architecture to avoid phantom connections (#215), invisible
+/// pins (#216), and route recalculation bugs (#217).
+///
+/// Usage:
+/// 1. Create template: User selects components → Save as Template → GroupLibraryManager.SaveTemplate()
+/// 2. Store: JSON file in GroupLibrary/UserGroups/ or GroupLibrary/PdkGroups/
+/// 3. Place: Drag from library → PlaceTemplateCommand → Ungroup to top-level components
+///
+/// See docs/ComponentGroup-Architecture.md for detailed design documentation.
 /// </summary>
 public class ComponentGroup : Component, INotifyPropertyChanged
 {
     /// <summary>
-    /// Child components contained in this group with relative positions.
+    /// Child components contained in this template.
+    /// When the template is instantiated via PlaceTemplateCommand, these components
+    /// are deep-copied, positioned, and added to the canvas as top-level components.
     /// </summary>
     public List<Component> ChildComponents { get; private set; } = new();
 
     /// <summary>
-    /// Frozen waveguide paths between child components (don't recalculate during group moves).
+    /// Frozen waveguide paths between child components, stored for template persistence.
+    /// These paths preserve the exact connection geometry from template creation.
+    /// When the template is instantiated, PlaceTemplateCommand converts these frozen paths
+    /// to regular WaveguideConnections that are auto-routed on the canvas.
     /// </summary>
     public List<FrozenWaveguidePath> InternalPaths { get; private set; } = new();
 
     /// <summary>
     /// External pins exposed by this group for connections to outside components.
+    /// Currently unused in template-only architecture, but reserved for future
+    /// hierarchical designs where templates can expose interface pins.
     /// </summary>
     public List<GroupPin> ExternalPins { get; private set; } = new();
 
@@ -78,6 +93,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// <summary>
     /// Indicates whether this group is saved as a reusable prefab/template in the library.
     /// Only prefabs appear in the "Saved Groups" panel.
+    /// This is always true for ComponentGroups stored by GroupLibraryManager.
     /// </summary>
     public bool IsPrefab { get; set; }
 
@@ -210,6 +226,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// <summary>
     /// Moves the entire group and all children by the specified delta.
     /// Internal waveguide paths are translated, not re-routed.
+    /// NOTE: This method is only used during template creation/editing in the library,
+    /// NOT for live canvas groups (since templates are instantiated as ungrouped components).
     /// </summary>
     /// <param name="deltaX">X offset in micrometers.</param>
     /// <param name="deltaY">Y offset in micrometers.</param>
@@ -271,6 +289,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// <summary>
     /// Rotates the entire group and all children by 90 degrees counter-clockwise.
     /// Updates child positions and frozen path geometries.
+    /// NOTE: This method is only used during template creation/editing in the library,
+    /// NOT for live canvas groups (since templates are instantiated as ungrouped components).
     /// </summary>
     public void RotateGroupBy90CounterClockwise()
     {

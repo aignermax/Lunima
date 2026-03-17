@@ -4,37 +4,57 @@ namespace CAP_Core.Components.Core;
 
 /// <summary>
 /// Represents a waveguide path stored in a ComponentGroup template.
-/// Used only for template storage - when templates are instantiated via PlaceTemplateCommand,
-/// these frozen paths become regular WaveguideConnections.
+/// Used ONLY for template storage - when templates are instantiated via PlaceTemplateCommand,
+/// these frozen paths are converted to regular WaveguideConnections that are auto-routed.
 ///
-/// Note: This class is retained for template serialization but is no longer used for
-/// live groups on canvas (groups are now template-only, not live containers).
+/// Purpose:
+/// - Store connection topology in templates (which pins connect to which)
+/// - Preserve approximate path geometry for template preview
+/// - Enable template instantiation without re-computing connections from scratch
+///
+/// NOT USED FOR:
+/// - Live connections on canvas (use WaveguideConnection instead)
+/// - Runtime routing (frozen paths are discarded after instantiation)
+/// - Nested groups (groups are template-only, never live on canvas)
+///
+/// Lifecycle:
+/// 1. Template creation: WaveguideConnections → FrozenWaveguidePaths (stored in ComponentGroup)
+/// 2. Template storage: Serialized to JSON with ComponentGroup
+/// 3. Template instantiation: FrozenWaveguidePaths → WaveguideConnections (via PlaceTemplateCommand)
+///
+/// See docs/ComponentGroup-Architecture.md for detailed design documentation.
 /// </summary>
 public class FrozenWaveguidePath : ICloneable
 {
     /// <summary>
     /// The routed path segments with fixed geometry.
+    /// This stores the exact path shape from template creation, but when instantiated,
+    /// PlaceTemplateCommand creates new auto-routed connections (not using this geometry).
     /// </summary>
     public RoutedPath Path { get; set; }
 
     /// <summary>
-    /// Physical pin where this frozen path starts.
+    /// Physical pin where this frozen path starts (reference to component in template).
+    /// When instantiating, PlaceTemplateCommand finds the corresponding pin in placed components.
     /// </summary>
     public PhysicalPin StartPin { get; set; }
 
     /// <summary>
-    /// Physical pin where this frozen path ends.
+    /// Physical pin where this frozen path ends (reference to component in template).
+    /// When instantiating, PlaceTemplateCommand finds the corresponding pin in placed components.
     /// </summary>
     public PhysicalPin EndPin { get; set; }
 
     /// <summary>
-    /// Unique identifier for this frozen path.
+    /// Unique identifier for this frozen path (for template serialization).
     /// </summary>
     public Guid PathId { get; set; } = Guid.NewGuid();
 
     /// <summary>
     /// Translates all segments in the path by the specified delta.
-    /// Used when moving the containing ComponentGroup.
+    /// Used when moving the containing ComponentGroup during template creation/editing.
+    /// NOTE: This is only called during template manipulation in the library, NOT for
+    /// live canvas operations (since frozen paths are never on canvas).
     /// </summary>
     /// <param name="deltaX">X offset in micrometers.</param>
     /// <param name="deltaY">Y offset in micrometers.</param>
@@ -65,7 +85,10 @@ public class FrozenWaveguidePath : ICloneable
     }
 
     /// <summary>
-    /// Creates a clone of this frozen path with a new ID.
+    /// Creates a deep clone of this frozen path with a new PathId.
+    /// Used by ComponentGroup.DeepCopy() when instantiating templates.
+    /// The cloned path has copied segment geometry but StartPin and EndPin
+    /// references must be updated by the caller to point to cloned components.
     /// </summary>
     public object Clone()
     {

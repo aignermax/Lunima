@@ -8,6 +8,20 @@ namespace CAP.Avalonia.Commands;
 /// Command to place a ComponentGroup template on the canvas as ungrouped components.
 /// Implements the Unity Prefab pattern: templates are instantiated as individual components,
 /// not as live groups. This avoids edit mode complexity and keeps the canvas flat.
+///
+/// Workflow:
+/// 1. Deep copy template (new GUIDs for all components and paths)
+/// 2. Offset child components to placement position
+/// 3. Clear ParentGroup references (ungroup components)
+/// 4. Add metadata (SourceTemplate, TemplateInstanceId) for tracking
+/// 5. Add components to canvas as top-level elements
+/// 6. Convert FrozenWaveguideConnection to regular WaveguideConnections
+/// 7. Trigger auto-routing for connections
+///
+/// Result: Ungrouped, top-level components on canvas with waveguide connections.
+/// No ComponentGroup instance exists on canvas after this command.
+///
+/// See docs/ComponentGroup-Architecture.md for design details.
 /// </summary>
 public class PlaceTemplateCommand : IUndoableCommand
 {
@@ -21,10 +35,10 @@ public class PlaceTemplateCommand : IUndoableCommand
     /// <summary>
     /// Creates a command to place a template (ComponentGroup) as ungrouped components.
     /// </summary>
-    /// <param name="canvas">Target canvas</param>
-    /// <param name="template">Template to instantiate</param>
-    /// <param name="placeX">X position in micrometers</param>
-    /// <param name="placeY">Y position in micrometers</param>
+    /// <param name="canvas">Target canvas for component placement</param>
+    /// <param name="template">Template to instantiate (must have IsPrefab = true)</param>
+    /// <param name="placeX">X position in micrometers (template origin)</param>
+    /// <param name="placeY">Y position in micrometers (template origin)</param>
     public PlaceTemplateCommand(
         DesignCanvasViewModel canvas,
         ComponentGroup template,
@@ -45,42 +59,46 @@ public class PlaceTemplateCommand : IUndoableCommand
         {
             _canvas.BeginCommandExecution();
 
-            // Deep copy the template to get new component instances
+            // Step 1: Deep copy the template to get new component instances with unique GUIDs
             var templateCopy = _template.DeepCopy();
 
-            // Calculate offset from template origin to placement position
+            // Step 2: Calculate offset from template origin to placement position
             double offsetX = _placeX - templateCopy.PhysicalX;
             double offsetY = _placeY - templateCopy.PhysicalY;
 
-            // Generate unique instance ID for this template placement
+            // Step 3: Generate unique instance ID for this template placement
+            // (allows tracking which components came from the same template instance)
             var instanceId = Guid.NewGuid();
 
-            // Extract all child components and place them at the target location
+            // Step 4: Extract all child components and place them as top-level components
             foreach (var child in templateCopy.ChildComponents)
             {
                 // Apply offset to position child at final location
                 child.PhysicalX += offsetX;
                 child.PhysicalY += offsetY;
 
-                // Clear parent group reference (components are now top-level)
+                // CRITICAL: Clear parent group reference to ungroup components
+                // After this, components are independent top-level elements on canvas
                 child.ParentGroup = null;
 
-                // Mark component with source template for reference
+                // Optional metadata: Mark component with source template for traceability
                 child.SourceTemplate = _template.GroupName;
 
-                // Assign shared instance ID to group components from same placement
+                // Optional metadata: Assign shared instance ID to components from same placement
                 child.TemplateInstanceId = instanceId;
 
-                // Add to canvas
+                // Add to canvas as top-level component
                 var childVm = _canvas.AddComponent(child);
                 _placedComponents.Add(child);
                 _placedViewModels.Add(childVm);
             }
 
-            // Create waveguide connections from template's internal paths
+            // Step 5: Convert template's frozen waveguide paths to live canvas connections
             foreach (var frozenPath in templateCopy.InternalPaths)
             {
                 // Find the cloned pins in the placed components
+                // (FrozenWaveguidePath stores pin references from the template; we need to
+                // find corresponding pins in the newly placed component instances)
                 var startComp = _placedComponents.First(c =>
                     c.Identifier == frozenPath.StartPin.ParentComponent.Identifier);
                 var endComp = _placedComponents.First(c =>
@@ -91,18 +109,19 @@ public class PlaceTemplateCommand : IUndoableCommand
                 var endPin = endComp.PhysicalPins.First(p =>
                     p.Name == frozenPath.EndPin.Name);
 
-                // Add connection (will be auto-routed by RecalculateRoutesAsync)
+                // Add connection to canvas connection manager
+                // (will be auto-routed by RecalculateRoutesAsync, not using frozen geometry)
                 _canvas.ConnectionManager.AddConnection(startPin, endPin);
             }
 
-            // Select all placed components for visual feedback
+            // Step 6: Select all placed components for visual feedback
             _canvas.Selection.ClearSelection();
             foreach (var vm in _placedViewModels)
             {
                 _canvas.Selection.AddToSelection(vm);
             }
 
-            // Recalculate waveguide routes (async)
+            // Step 7: Trigger waveguide auto-routing and simulation update
             _ = _canvas.RecalculateRoutesAsync();
             _canvas.InvalidateSimulation();
         }

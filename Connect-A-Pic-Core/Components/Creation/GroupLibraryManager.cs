@@ -5,7 +5,20 @@ namespace CAP_Core.Components.Creation;
 
 /// <summary>
 /// Manages the library of saved ComponentGroup templates.
-/// Handles loading, saving, and instantiation of group templates.
+/// Handles loading, saving, and instantiation of group templates following the
+/// Unity Prefab pattern (templates in library, instantiated as ungrouped components).
+///
+/// Storage locations:
+/// - User templates: %LocalAppData%/ConnectAPICPro/GroupLibrary/UserGroups/
+/// - PDK templates: %LocalAppData%/ConnectAPICPro/GroupLibrary/PdkGroups/
+///
+/// Template lifecycle:
+/// 1. Creation: User selects components → "Save as Template" → SaveTemplate()
+/// 2. Storage: JSON file with metadata (name, description, component count)
+/// 3. Loading: LoadTemplates() reads all JSON files and creates GroupTemplate objects
+/// 4. Instantiation: PlaceTemplateCommand uses template.DeepCopy() to place on canvas
+///
+/// See docs/ComponentGroup-Architecture.md for detailed design documentation.
 /// </summary>
 public class GroupLibraryManager
 {
@@ -63,13 +76,22 @@ public class GroupLibraryManager
 
     /// <summary>
     /// Saves a ComponentGroup as a template to the library.
-    /// Marks the group as a prefab (IsPrefab = true).
+    /// Marks the group as a prefab (IsPrefab = true) and stores it as a JSON file.
+    ///
+    /// Typical usage:
+    /// 1. User selects multiple components on canvas
+    /// 2. Calls "Save Selection as Template"
+    /// 3. ViewModel creates ComponentGroup from selection
+    /// 4. Calls this method to persist template
+    ///
+    /// The template can later be instantiated via PlaceTemplateCommand, which
+    /// ungroups the components and places them as top-level elements on canvas.
     /// </summary>
-    /// <param name="group">The group to save.</param>
-    /// <param name="name">Display name for the template.</param>
-    /// <param name="description">Optional description.</param>
-    /// <param name="source">Source category ("User" or "PDK").</param>
-    /// <returns>The created GroupTemplate.</returns>
+    /// <param name="group">The group to save (with ChildComponents and InternalPaths populated)</param>
+    /// <param name="name">Display name for the template (shown in library panel)</param>
+    /// <param name="description">Optional description (shown in tooltip/preview)</param>
+    /// <param name="source">Source category ("User" for user-created, "PDK" for PDK macros)</param>
+    /// <returns>The created GroupTemplate object (added to Templates list)</returns>
     public GroupTemplate SaveTemplate(
         ComponentGroup group,
         string name,
@@ -159,11 +181,16 @@ public class GroupLibraryManager
 
     /// <summary>
     /// Creates a deep copy of a group template for instantiation on the canvas.
+    /// NOTE: PlaceTemplateCommand typically handles instantiation and ungrouping.
+    /// This method is useful for programmatic template instantiation outside the command pattern.
+    ///
+    /// The returned ComponentGroup is NOT added to canvas directly. Use PlaceTemplateCommand
+    /// to properly ungroup and place components as top-level elements.
     /// </summary>
-    /// <param name="template">The template to instantiate.</param>
-    /// <param name="x">X position for the new instance.</param>
-    /// <param name="y">Y position for the new instance.</param>
-    /// <returns>A new ComponentGroup instance with unique IDs.</returns>
+    /// <param name="template">The template to instantiate (must have TemplateGroup loaded)</param>
+    /// <param name="x">X position for the new instance origin (micrometers)</param>
+    /// <param name="y">Y position for the new instance origin (micrometers)</param>
+    /// <returns>A new ComponentGroup instance with unique GUIDs for all components/paths</returns>
     public ComponentGroup InstantiateTemplate(
         GroupTemplate template,
         double x,
