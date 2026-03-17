@@ -149,6 +149,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     private readonly Stack<ComponentGroup> _editModeStack = new();
 
     /// <summary>
+    /// Backup of root canvas state when entering edit mode (Unity-style sub-canvas).
+    /// </summary>
+    private CanvasState? _rootCanvasBackup = null;
+
+    /// <summary>
     /// Whether currently in group edit mode (editing inside a group).
     /// </summary>
     public bool IsInGroupEditMode => CurrentEditGroup != null;
@@ -223,39 +228,63 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Enters edit mode for a ComponentGroup, allowing modification of its internal structure.
+    /// Enters edit mode for a ComponentGroup (Unity-style sub-canvas approach).
+    /// Backs up root canvas, clears it, and populates only the group's children.
     /// </summary>
     public void EnterGroupEditMode(ComponentGroup group)
     {
         if (group == null)
             throw new ArgumentNullException(nameof(group));
 
-        // Push current group to stack before entering
-        if (CurrentEditGroup != null)
+        // If this is the first level of edit mode, backup root canvas
+        if (CurrentEditGroup == null)
         {
+            _rootCanvasBackup = BackupCanvasState();
+        }
+        else
+        {
+            // We're already in edit mode, push current group to stack
             _editModeStack.Push(CurrentEditGroup);
         }
 
         CurrentEditGroup = group;
+
+        // Clear canvas and populate with group's children (sub-canvas)
+        LoadGroupAsSubCanvas(group);
+
         UpdateBreadcrumbPath();
         OnPropertyChanged(nameof(IsInGroupEditMode));
     }
 
     /// <summary>
-    /// Exits the current group edit mode, returning to the parent group (or root).
+    /// Exits the current group edit mode (Unity-style).
+    /// Saves sub-canvas connections as frozen paths, then restores parent canvas.
     /// </summary>
     public void ExitGroupEditMode()
     {
         if (CurrentEditGroup == null)
             return;
 
+        // Save current sub-canvas connections as frozen paths
+        SaveSubCanvasToGroup(CurrentEditGroup);
+
+        // Check if we're exiting to parent group or to root
         if (_editModeStack.Count > 0)
         {
-            CurrentEditGroup = _editModeStack.Pop();
+            // Exit to parent group
+            var parentGroup = _editModeStack.Pop();
+            CurrentEditGroup = parentGroup;
+            LoadGroupAsSubCanvas(parentGroup);
         }
         else
         {
+            // Exit to root - restore backed up canvas
             CurrentEditGroup = null;
+            if (_rootCanvasBackup != null)
+            {
+                RestoreCanvasState(_rootCanvasBackup);
+                _rootCanvasBackup = null;
+            }
         }
 
         UpdateBreadcrumbPath();
@@ -263,12 +292,33 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Exits all the way to root level (top-level canvas editing).
+    /// Exits all the way to root level (Unity-style).
+    /// Saves all pending edits and restores root canvas.
     /// </summary>
     [RelayCommand]
     public void ExitToRoot()
     {
+        if (CurrentEditGroup == null)
+            return;
+
+        // Save current sub-canvas
+        SaveSubCanvasToGroup(CurrentEditGroup);
+
+        // Save all parent groups in stack
+        while (_editModeStack.Count > 0)
+        {
+            var parentGroup = _editModeStack.Pop();
+            // Parent groups don't have unsaved changes in our model
+        }
+
+        // Restore root canvas
         CurrentEditGroup = null;
+        if (_rootCanvasBackup != null)
+        {
+            RestoreCanvasState(_rootCanvasBackup);
+            _rootCanvasBackup = null;
+        }
+
         _editModeStack.Clear();
         UpdateBreadcrumbPath();
         OnPropertyChanged(nameof(IsInGroupEditMode));
@@ -1014,6 +1064,139 @@ public partial class DesignCanvasViewModel : ObservableObject
             Width = width;
             Height = height;
         }
+    }
+
+    // ====================================================================================
+    // Unity-Style Sub-Canvas for Group Edit Mode
+    // ====================================================================================
+
+    /// <summary>
+    /// Backs up the current canvas state before entering edit mode.
+    /// </summary>
+    private CanvasState BackupCanvasState()
+    {
+        return new CanvasState
+        {
+            Components = Components.ToList(),
+            Connections = Connections.ToList(),
+            AllPins = AllPins.ToList()
+        };
+    }
+
+    /// <summary>
+    /// Restores a previously backed up canvas state.
+    /// </summary>
+    private void RestoreCanvasState(CanvasState state)
+    {
+        try
+        {
+            BeginCommandExecution();
+
+            // Clear current canvas
+            Components.Clear();
+            Connections.Clear();
+            AllPins.Clear();
+
+            // Restore backed up state
+            foreach (var comp in state.Components)
+                Components.Add(comp);
+
+            foreach (var conn in state.Connections)
+                Connections.Add(conn);
+
+            foreach (var pin in state.AllPins)
+                AllPins.Add(pin);
+        }
+        finally
+        {
+            EndCommandExecution();
+        }
+
+        // Recalculate routes for restored connections
+        _ = RecalculateRoutesAsync();
+    }
+
+    /// <summary>
+    /// Loads a ComponentGroup as a sub-canvas (Unity-style).
+    /// Clears current canvas and populates only the group's children and frozen paths.
+    /// </summary>
+    private void LoadGroupAsSubCanvas(ComponentGroup group)
+    {
+        try
+        {
+            BeginCommandExecution();
+
+            // Clear canvas
+            Components.Clear();
+            Connections.Clear();
+            AllPins.Clear();
+
+            // Add group's children as components
+            foreach (var child in group.ChildComponents)
+            {
+                var childVm = AddComponent(child);
+                Components.Add(childVm);
+            }
+
+            // Add frozen paths as editable connections (already routed)
+            foreach (var frozenPath in group.InternalPaths)
+            {
+                // Use AddConnectionWithCachedRoute to avoid re-routing
+                var connection = ConnectionManager.AddConnectionWithCachedRoute(
+                    frozenPath.StartPin,
+                    frozenPath.EndPin,
+                    frozenPath.Path
+                );
+
+                var connVm = new WaveguideConnectionViewModel(connection);
+                Connections.Add(connVm);
+            }
+        }
+        finally
+        {
+            EndCommandExecution();
+        }
+    }
+
+    /// <summary>
+    /// Saves the current sub-canvas state back to the group.
+    /// All connections become frozen paths.
+    /// </summary>
+    private void SaveSubCanvasToGroup(ComponentGroup group)
+    {
+        // Clear existing frozen paths
+        group.InternalPaths.Clear();
+
+        // Convert all connections to frozen paths
+        foreach (var connVm in Connections.ToList())
+        {
+            var conn = connVm.Connection;
+
+            if (conn.RoutedPath != null)
+            {
+                var frozenPath = new CAP_Core.Components.Core.FrozenWaveguidePath
+                {
+                    StartPin = conn.StartPin,
+                    EndPin = conn.EndPin,
+                    Path = conn.RoutedPath
+                };
+
+                group.AddInternalPath(frozenPath);
+            }
+        }
+
+        // Update group bounds
+        group.UpdateGroupBounds();
+    }
+
+    /// <summary>
+    /// Canvas state backup for Unity-style sub-canvas editing.
+    /// </summary>
+    private class CanvasState
+    {
+        public List<ComponentViewModel> Components { get; set; } = new();
+        public List<WaveguideConnectionViewModel> Connections { get; set; } = new();
+        public List<PinViewModel> AllPins { get; set; } = new();
     }
 }
 

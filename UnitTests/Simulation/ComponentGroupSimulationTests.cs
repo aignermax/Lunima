@@ -1,3 +1,4 @@
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.ExternalPorts;
@@ -33,17 +34,14 @@ public class ComponentGroupSimulationTests
         group.AddChild(comp2);
 
         // Connect comp1 output to comp2 input internally
+        var frozenRoutedPath = new RoutedPath();
+        frozenRoutedPath.Segments.Add(new StraightSegment(10, 0, 20, 0, 0));
+
         var frozenPath = new FrozenWaveguidePath
         {
             StartPin = comp1.PhysicalPins[1],
             EndPin = comp2.PhysicalPins[0],
-            Path = new RoutedPath
-            {
-                Segments = new List<PathSegment>
-                {
-                    new StraightSegment(10, 0, 20, 0, 0)
-                }
-            }
+            Path = frozenRoutedPath
         };
         group.AddInternalPath(frozenPath);
 
@@ -76,7 +74,7 @@ public class ComponentGroupSimulationTests
         source.WidthMicrometers = 10;
         source.HeightMicrometers = 1;
 
-        var sourceLogicalPin = source.Parts[0, 0].GetPinAt(RectSide.Right);
+        var sourceLogicalPin = source.Parts[0, 0].GetPinAt(CAP_Core.Tiles.RectSide.Right);
         var sourcePhysicalPin = new PhysicalPin
         {
             Name = "out",
@@ -94,22 +92,24 @@ public class ComponentGroupSimulationTests
         tileManager.AddComponent(source);
         tileManager.AddComponent(group);
 
-        var connectionManager = new PhysicalWaveguideConnectionManager();
-        var connection = new WaveguideConnection
-        {
-            StartPin = sourcePhysicalPin,
-            EndPin = comp1.PhysicalPins[0],
-            ConnectionId = Guid.NewGuid()
-        };
-
+        var connectionManager = new WaveguideConnectionManager();
         var routedPath = new RoutedPath();
         routedPath.Segments.Add(new StraightSegment(-10, 0.5, 0, 0.5, 0));
-        connectionManager.AddConnection(connection, routedPath);
+
+        var connection = connectionManager.AddConnectionWithCachedRoute(
+            sourcePhysicalPin,
+            comp1.PhysicalPins[0],
+            routedPath);
 
         var portManager = new PhysicalExternalPortManager();
-        portManager.RegisterExternalInputPin(
-            sourcePhysicalPin,
-            new LaserType(StandardWaveLengths.RedNM, 1.0));
+        var laserType = new LaserType(CAP_Core.ExternalPorts.LightColor.Red);
+        var externalInput = new ExternalInput(
+            "TestSource",
+            laserType,
+            0,
+            new System.Numerics.Complex(1.0, 0),
+            true);
+        portManager.AddLightSource(externalInput, sourcePhysicalPin.LogicalPin.IDInFlow);
 
         var gridManager = GridManager.CreateForSimulation(
             tileManager, connectionManager, portManager);
@@ -119,7 +119,7 @@ public class ComponentGroupSimulationTests
         var calculator = new GridLightCalculator(builder, gridManager);
         var cts = new CancellationTokenSource();
 
-        var task = calculator.CalculateFieldPropagationAsync(cts, StandardWaveLengths.RedNM);
+        var task = calculator.CalculateFieldPropagationAsync(cts, laserType.WaveLengthInNm);
         task.Wait();
         var fields = task.Result;
 
@@ -155,7 +155,7 @@ public class ComponentGroupSimulationTests
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(group);
 
-        var connectionManager = new PhysicalWaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager();
         var portManager = new PhysicalExternalPortManager();
 
         var gridManager = GridManager.CreateForSimulation(
@@ -195,7 +195,7 @@ public class ComponentGroupSimulationTests
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(group);
 
-        var connectionManager = new PhysicalWaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager();
         var portManager = new PhysicalExternalPortManager();
 
         var gridManager = GridManager.CreateForSimulation(
@@ -253,7 +253,7 @@ public class ComponentGroupSimulationTests
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(outerGroup);
 
-        var connectionManager = new PhysicalWaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager();
         var portManager = new PhysicalExternalPortManager();
 
         var gridManager = GridManager.CreateForSimulation(

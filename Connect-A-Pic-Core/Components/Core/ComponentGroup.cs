@@ -340,7 +340,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// Updates the group's bounding box based on child components and frozen paths.
     /// Also updates the label bounds for hit testing.
     /// </summary>
-    private void UpdateGroupBounds()
+    public void UpdateGroupBounds()
     {
         if (ChildComponents.Count == 0 && InternalPaths.Count == 0)
         {

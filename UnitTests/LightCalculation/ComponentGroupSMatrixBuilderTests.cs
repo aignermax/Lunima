@@ -1,3 +1,4 @@
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
@@ -109,17 +110,14 @@ public class ComponentGroupSMatrixBuilderTests
         group.AddChild(child2);
 
         // Create frozen path connecting child1.pin[1] to child2.pin[0]
+        var routedPath = new RoutedPath();
+        routedPath.Segments.Add(new StraightSegment(10, 0, 20, 0, 0));
+
         var path = new FrozenWaveguidePath
         {
             StartPin = child1.PhysicalPins[1],
             EndPin = child2.PhysicalPins[0],
-            Path = new RoutedPath
-            {
-                Segments = new List<PathSegment>
-                {
-                    new StraightSegment(10, 0, 20, 0, 0)
-                }
-            }
+            Path = routedPath
         };
         group.AddInternalPath(path);
 
