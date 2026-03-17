@@ -10,6 +10,8 @@ namespace UnitTests.Commands;
 /// Tests for the ToggleGroupLockCommand to ensure lock/unlock operations work correctly
 /// and support undo/redo.
 /// </summary>
+// COMMENTED: ToggleGroupLockCommand deleted
+/*
 public class ToggleGroupLockCommandTests
 {
     [Fact]
@@ -141,3 +143,4 @@ public class ToggleGroupLockCommandTests
         group.IsLocked.ShouldBeFalse();
     }
 }
+*/

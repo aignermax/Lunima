@@ -1,12 +1,11 @@
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Core;
-using CAP_Core.Components.Connections;
 
 namespace CAP.Avalonia.Commands;
 
 /// <summary>
 /// Command to explode a ComponentGroup back to individual components.
-/// Unfreezes internal paths and restores waveguide connections.
+/// All waveguides remain as live connections and are recalculated after ungrouping.
 /// </summary>
 public class UngroupCommand : IUndoableCommand
 {
@@ -14,7 +13,6 @@ public class UngroupCommand : IUndoableCommand
     private readonly ComponentGroup _group;
     private ComponentViewModel? _groupViewModel;
     private readonly List<ComponentViewModel> _restoredComponentViewModels = new();
-    private readonly List<WaveguideConnection> _restoredConnections = new();
     private readonly double _groupX;
     private readonly double _groupY;
 
@@ -50,25 +48,7 @@ public class UngroupCommand : IUndoableCommand
                 _restoredComponentViewModels.Add(childVm);
             }
 
-            // 2. Convert frozen paths back to WaveguideConnections
-            // IMPORTANT: Do NOT use cached routes - they're from before group movement!
-            // The group may have been moved, rotated, or edited since grouping.
-            // We must recalculate routes to reflect current component positions.
-            _restoredConnections.Clear();
-            foreach (var frozenPath in _group.InternalPaths)
-            {
-                // Add connection without route - will be recalculated below
-                var connection = _canvas.ConnectionManager.AddConnectionDeferred(
-                    frozenPath.StartPin,
-                    frozenPath.EndPin
-                );
-
-                var connVm = new WaveguideConnectionViewModel(connection);
-                _canvas.Connections.Add(connVm);
-                _restoredConnections.Add(connection);
-            }
-
-            // 3. Remove the group from canvas
+            // 2. Remove the group from canvas
             _canvas.RemoveComponent(_groupViewModel);
         }
         finally
@@ -76,7 +56,7 @@ public class UngroupCommand : IUndoableCommand
             _canvas.EndCommandExecution();
         }
 
-        // Update routes for the restored connections
+        // 3. Recalculate all waveguide routes (both internal and external)
         _ = _canvas.RecalculateRoutesAsync();
         _canvas.InvalidateSimulation();
     }
@@ -89,17 +69,6 @@ public class UngroupCommand : IUndoableCommand
         try
         {
             _canvas.BeginCommandExecution();
-
-            // Remove restored connections
-            foreach (var conn in _restoredConnections)
-            {
-                var connVm = _canvas.Connections.FirstOrDefault(c => c.Connection == conn);
-                if (connVm != null)
-                {
-                    _canvas.Connections.Remove(connVm);
-                    _canvas.ConnectionManager.RemoveConnectionDeferred(conn);
-                }
-            }
 
             // Remove individual components
             foreach (var compVm in _restoredComponentViewModels)

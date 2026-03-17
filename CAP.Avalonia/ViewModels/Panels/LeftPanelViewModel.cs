@@ -62,8 +62,8 @@ public partial class LeftPanelViewModel : ObservableObject
     [ObservableProperty]
     private double _libraryScrollOffset = 0.0;
 
-    [ObservableProperty]
-    private GroupTemplate? _selectedGroupTemplate;
+    // [ObservableProperty]
+    // private GroupTemplate? _selectedGroupTemplate; // Removed - GroupTemplate doesn't exist
 
     private GridLength _leftPanelWidth = new GridLength(220);
     /// <summary>
@@ -95,14 +95,14 @@ public partial class LeftPanelViewModel : ObservableObject
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
 
-    /// <summary>
-    /// Callback invoked when a group template is selected for placement.
-    /// </summary>
-    public Action<GroupTemplate>? OnGroupTemplateSelected { get; set; }
+    // /// <summary>
+    // /// Callback invoked when a group template is selected for placement.
+    // /// </summary>
+    // public Action<GroupTemplate>? OnGroupTemplateSelected { get; set; } // Removed - GroupTemplate doesn't exist
 
     public LeftPanelViewModel(
         DesignCanvasViewModel canvas,
-        GroupLibraryManager libraryManager,
+        // GroupLibraryManager libraryManager, // Removed - doesn't exist
         PdkLoader pdkLoader,
         UserPreferencesService preferencesService)
     {
@@ -112,7 +112,7 @@ public partial class LeftPanelViewModel : ObservableObject
 
         HierarchyPanel = new HierarchyPanelViewModel(canvas);
         PdkManager = new PdkManagerViewModel();
-        ComponentLibrary = new ComponentLibraryViewModel(libraryManager);
+        ComponentLibrary = new ComponentLibraryViewModel(); // No longer needs libraryManager
 
         PdkManager.OnFilterChanged = FilterComponents;
     }
@@ -129,13 +129,13 @@ public partial class LeftPanelViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => FilterComponents();
 
-    partial void OnSelectedGroupTemplateChanged(GroupTemplate? value)
-    {
-        if (value != null)
-        {
-            OnGroupTemplateSelected?.Invoke(value);
-        }
-    }
+    // partial void OnSelectedGroupTemplateChanged(GroupTemplate? value) // Removed - GroupTemplate doesn't exist
+    // {
+    //     if (value != null)
+    //     {
+    //         OnGroupTemplateSelected?.Invoke(value);
+    //     }
+    // }
 
     private void LoadComponentLibrary()
     {

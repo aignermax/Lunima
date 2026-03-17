@@ -140,8 +140,8 @@ public partial class MainViewModel : ObservableObject
         PdkLoader pdkLoader,
         Commands.CommandManager commandManager,
         UserPreferencesService preferencesService,
-        CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager,
-        Services.GroupPreviewGenerator previewGenerator,
+        // CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager, // Removed - doesn't exist
+        // Services.GroupPreviewGenerator previewGenerator, // Removed - doesn't exist
         Services.IInputDialogService inputDialogService,
         CAP_Core.Export.GdsExportService gdsExportService)
     {
@@ -151,8 +151,8 @@ public partial class MainViewModel : ObservableObject
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
 
         // Initialize Panel ViewModels (order matters due to dependencies)
-        LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService);
-        CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
+        LeftPanel = new LeftPanelViewModel(_canvas, pdkLoader, preferencesService);
+        CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager);
         var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService);
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm);
         ViewportControl = new ViewportControlViewModel(_canvas);
@@ -185,11 +185,11 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
-        // Wire up group template selection from left panel to canvas interaction
-        LeftPanel.OnGroupTemplateSelected = template =>
-        {
-            CanvasInteraction.SelectedGroupTemplate = template;
-        };
+        // // Wire up group template selection from left panel to canvas interaction (Removed - GroupTemplate doesn't exist)
+        // LeftPanel.OnGroupTemplateSelected = template =>
+        // {
+        //     CanvasInteraction.SelectedGroupTemplate = template;
+        // };
 
         WireDesignValidation();
         WireHierarchyPanel();

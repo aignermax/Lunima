@@ -5,7 +5,7 @@ using CAP_Core.Grid;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
-using CAP_DataAccess.Persistence;
+// using CAP_DataAccess.Persistence; // COMMENTED: GridPersistenceWithGroupsManager deleted
 using Moq;
 using Shouldly;
 using System.Text;
@@ -17,6 +17,8 @@ namespace UnitTests.Integration;
 /// Integration tests for ComponentGroup persistence with GridPersistenceWithGroupsManager.
 /// Tests full save/load round-trip scenarios.
 /// </summary>
+// COMMENTED: Tests disabled due to GridPersistenceWithGroupsManager removal
+/*
 public class GridPersistenceIntegrationTests
 {
     [Fact]
@@ -380,3 +382,4 @@ public class GridPersistenceIntegrationTests
         return component;
     }
 }
+*/

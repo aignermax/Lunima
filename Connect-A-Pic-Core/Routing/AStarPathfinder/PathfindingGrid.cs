@@ -149,37 +149,6 @@ public class PathfindingGrid
             }
         }
 
-        // Add obstacles for frozen waveguide paths (internal connections)
-        // These are stored in the group as FrozenWaveguidePath instances
-        foreach (var frozenPath in group.InternalPaths)
-        {
-            if (frozenPath?.Path?.Segments == null) continue;
-
-            // Convert RoutedPath segments to PathSegments
-            var pathSegments = new List<PathSegment>();
-            foreach (var segment in frozenPath.Path.Segments)
-            {
-                pathSegments.Add(segment);
-            }
-
-            // Mark these cells as frozen path obstacles (state=3) which are NEVER cleared by ClearPinCorridor
-            // This prevents external routing from going through internal group connections
-            var pathCells = GetWaveguidePathCells(pathSegments, 2.0); // 2µm waveguide width
-            foreach (var cell in pathCells)
-            {
-                if (IsInBounds(cell.Item1, cell.Item2))
-                {
-                    // Mark as frozen path obstacle (state=3) - permanent and never cleared
-                    // This takes precedence over component obstacles (state=1)
-                    if (_cells[cell.Item1, cell.Item2] != 3)
-                    {
-                        _cells[cell.Item1, cell.Item2] = 3; // Mark as frozen path obstacle (permanent)
-                    }
-                    groupCells.Add(cell);
-                }
-            }
-        }
-
         // Track all cells occupied by this group (for removal)
         _componentCells[group] = groupCells;
     }

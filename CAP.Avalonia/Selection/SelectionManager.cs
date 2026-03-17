@@ -254,16 +254,25 @@ public class SelectionManager
         // For ComponentGroups, use specialized collision detection
         if (component.Component is CAP_Core.Components.Core.ComponentGroup group)
         {
-            // Get all components as Component instances
-            var allComponents = canvas.Components.Select(c => c.Component).ToList();
+            // Check each child component doesn't overlap with non-group components
+            var childSet = new HashSet<CAP_Core.Components.Core.Component>(group.GetAllComponentsRecursive());
+            foreach (var child in group.ChildComponents)
+            {
+                foreach (var other in canvas.Components)
+                {
+                    if (SelectedComponents.Contains(other)) continue;
+                    if (childSet.Contains(other.Component)) continue;
 
-            // Build exclusion set (all selected components move together)
-            var excludeSet = new HashSet<CAP_Core.Components.Core.Component>(
-                SelectedComponents.Select(c => c.Component));
+                    bool overlaps =
+                        child.PhysicalX - MinGap < other.X + other.Width &&
+                        child.PhysicalX + child.WidthMicrometers + MinGap > other.X &&
+                        child.PhysicalY - MinGap < other.Y + other.Height &&
+                        child.PhysicalY + child.HeightMicrometers + MinGap > other.Y;
 
-            // Use GroupCollisionDetector for precise collision detection
-            var detector = new CAP_Core.Grid.GroupCollisionDetector();
-            return detector.CanPlaceGroup(group, x, y, allComponents, excludeSet);
+                    if (overlaps) return false;
+                }
+            }
+            return true;
         }
 
         // Regular component - check bounding box overlap with non-selected components

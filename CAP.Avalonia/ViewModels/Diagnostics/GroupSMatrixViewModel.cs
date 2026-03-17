@@ -2,13 +2,13 @@ using System.Collections.ObjectModel;
 using CAP_Core.Components.Core;
 using CAP_Core.Grid;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.Diagnostics;
 
 /// <summary>
-/// ViewModel for displaying ComponentGroup S-Matrix computation status and diagnostics.
-/// Shows which groups have valid S-Matrices and which need recomputation.
+/// ViewModel for displaying ComponentGroup diagnostics.
+/// Shows basic group information (child count, group name).
+/// Groups no longer compute S-Matrices directly — all waveguides are recalculated live.
 /// </summary>
 public partial class GroupSMatrixViewModel : ObservableObject
 {
@@ -21,14 +21,11 @@ public partial class GroupSMatrixViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasGroups;
 
-    private GridManager? _grid;
-
     /// <summary>
     /// Updates the diagnostics display based on the current grid state.
     /// </summary>
     public void UpdateFromGrid(GridManager? grid)
     {
-        _grid = grid;
         GroupMatrices.Clear();
 
         if (grid == null)
@@ -56,78 +53,42 @@ public partial class GroupSMatrixViewModel : ObservableObject
             {
                 GroupName = group.GroupName,
                 ChildCount = group.ChildComponents.Count,
-                InternalPathCount = group.InternalPaths.Count,
-                ExternalPinCount = group.ExternalPins.Count,
-                HasSMatrix = group.WaveLengthToSMatrixMap.Count > 0,
-                WavelengthCount = group.WaveLengthToSMatrixMap.Count
             };
 
             GroupMatrices.Add(info);
         }
 
-        int validCount = GroupMatrices.Count(g => g.HasSMatrix);
-        StatusText = $"{validCount} of {groups.Count} groups have computed S-Matrices";
-    }
-
-    /// <summary>
-    /// Computes S-Matrices for all groups in the current design.
-    /// </summary>
-    [RelayCommand]
-    private void ComputeAllGroupMatrices()
-    {
-        if (_grid == null)
-            return;
-
-        var allComponents = _grid.TileManager.GetAllComponents();
-        var groups = allComponents.OfType<ComponentGroup>().ToList();
-
-        foreach (var group in groups)
-        {
-            if (group.ExternalPins.Count > 0)
-            {
-                group.ComputeSMatrix();
-            }
-        }
-
-        UpdateFromGrid(_grid);
-    }
-
-    /// <summary>
-    /// Clears all computed S-Matrices (for testing/debugging).
-    /// </summary>
-    [RelayCommand]
-    private void ClearAllGroupMatrices()
-    {
-        if (_grid == null)
-            return;
-
-        var allComponents = _grid.TileManager.GetAllComponents();
-        var groups = allComponents.OfType<ComponentGroup>().ToList();
-
-        foreach (var group in groups)
-        {
-            group.WaveLengthToSMatrixMap.Clear();
-        }
-
-        UpdateFromGrid(_grid);
+        StatusText = $"{groups.Count} group(s) in design";
     }
 }
 
 /// <summary>
-/// Information about a single ComponentGroup's S-Matrix status.
+/// Information about a single ComponentGroup.
 /// </summary>
 public class GroupMatrixInfo
 {
+    /// <summary>
+    /// The name of the group.
+    /// </summary>
     public string GroupName { get; set; } = "";
+
+    /// <summary>
+    /// Number of child components in the group.
+    /// </summary>
     public int ChildCount { get; set; }
-    public int InternalPathCount { get; set; }
-    public int ExternalPinCount { get; set; }
+
+    /// <summary>
+    /// Whether this group has a computed S-Matrix (always false in simplified model).
+    /// </summary>
     public bool HasSMatrix { get; set; }
+
+    /// <summary>
+    /// Number of wavelengths with S-Matrix data.
+    /// </summary>
     public int WavelengthCount { get; set; }
 
-    public string Status => HasSMatrix
-        ? $"✓ {WavelengthCount} wavelengths"
-        : ExternalPinCount > 0
-            ? "⚠ Not computed"
-            : "No external pins";
+    /// <summary>
+    /// Display status text.
+    /// </summary>
+    public string Status => $"{ChildCount} children";
 }

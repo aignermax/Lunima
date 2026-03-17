@@ -1,7 +1,7 @@
 using CAP_Contracts;
 using CAP_Core.Components.Creation;
 using CAP_Core.Grid;
-using CAP_DataAccess.Persistence;
+// using CAP_DataAccess.Persistence; // Namespace doesn't exist
 
 namespace CAP.Avalonia.Services;
 
@@ -32,8 +32,9 @@ public class ProjectPersistenceService
     /// <returns>True if save succeeded.</returns>
     public async Task<bool> SaveProjectAsync(string filePath)
     {
-        var persistence = new GridPersistenceWithGroupsManager(_gridManager, _dataAccessor);
-        return await persistence.SaveAsync(filePath);
+        // TODO: Implement persistence without GridPersistenceWithGroupsManager
+        await Task.CompletedTask;
+        throw new NotImplementedException("ProjectPersistenceService requires reimplementation after group edit mode removal");
     }
 
     /// <summary>
@@ -42,7 +43,8 @@ public class ProjectPersistenceService
     /// <param name="filePath">Path to the project file.</param>
     public async Task LoadProjectAsync(string filePath)
     {
-        var persistence = new GridPersistenceWithGroupsManager(_gridManager, _dataAccessor);
-        await persistence.LoadAsync(filePath, _componentFactory);
+        // TODO: Implement persistence without GridPersistenceWithGroupsManager
+        await Task.CompletedTask;
+        throw new NotImplementedException("ProjectPersistenceService requires reimplementation after group edit mode removal");
     }
 }

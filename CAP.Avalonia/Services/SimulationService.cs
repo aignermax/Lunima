@@ -40,11 +40,6 @@ public class SimulationService
         var tileManager = new ComponentListTileManager();
         foreach (var compVm in canvas.Components)
         {
-            // Ensure ComponentGroups have computed S-Matrices before simulation
-            if (compVm.Component is ComponentGroup group)
-            {
-                group.EnsureSMatrixComputed();
-            }
             tileManager.AddComponent(compVm.Component);
         }
 

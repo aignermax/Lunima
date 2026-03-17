@@ -27,7 +27,7 @@ public partial class App : Application
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
-        services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
+        // GroupLibraryManager removed (simplified group system)
         services.AddSingleton<GdsExportService>();
 
         // Register application services
@@ -37,7 +37,7 @@ public partial class App : Application
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<ProjectPersistenceService>();
-        services.AddSingleton<Services.GroupPreviewGenerator>();
+        // GroupPreviewGenerator removed (simplified group system)
         services.AddSingleton<IInputDialogService, InputDialogService>();
 
         // Register ViewModels

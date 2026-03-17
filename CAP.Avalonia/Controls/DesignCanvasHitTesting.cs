@@ -23,7 +23,6 @@ public class DesignCanvasHitTesting
     {
         if (vm == null) return null;
 
-        // Check all groups from top to bottom
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
@@ -41,52 +40,17 @@ public class DesignCanvasHitTesting
     }
 
     /// <summary>
-    /// Checks if a point is within a component group's lock icon bounds.
-    /// Returns the group if the lock icon is hit, null otherwise.
-    /// This should be checked BEFORE HitTestGroupLabel for highest priority interaction.
-    /// </summary>
-    public static ComponentGroup? HitTestGroupLockIcon(Point canvasPoint, DesignCanvasViewModel? vm)
-    {
-        if (vm == null) return null;
-
-        // Check all groups from top to bottom
-        for (int i = vm.Components.Count - 1; i >= 0; i--)
-        {
-            var comp = vm.Components[i];
-            if (comp.Component is ComponentGroup group)
-            {
-                var lockIconBounds = ComponentGroupRenderer.CalculateLockIconBounds(group);
-                if (lockIconBounds.Contains(canvasPoint))
-                {
-                    return group;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
     /// Finds the component at the given canvas point (topmost first).
     /// For ComponentGroups, checks if the point is within the group's bounding box.
-    /// In group edit mode, only tests child components of the current edit group.
     /// </summary>
     public static ComponentViewModel? HitTestComponent(Point canvasPoint, DesignCanvasViewModel? vm)
     {
         if (vm == null) return null;
 
-        // In group edit mode, only test child components of the current edit group
-        if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
-        {
-            return HitTestGroupChildren(canvasPoint, vm.CurrentEditGroup, vm);
-        }
-
-        // Normal mode: test all top-level components
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
 
-            // For ComponentGroups, check the group's calculated bounds
             if (comp.Component is ComponentGroup group)
             {
                 var groupRect = CalculateGroupBounds(group);
@@ -101,52 +65,6 @@ public class DesignCanvasHitTesting
                 if (rect.Contains(canvasPoint))
                 {
                     return comp;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Hit tests child components within a group (used in group edit mode).
-    /// </summary>
-    private static ComponentViewModel? HitTestGroupChildren(Point canvasPoint, ComponentGroup editGroup, DesignCanvasViewModel vm)
-    {
-        // Test children from topmost to bottom
-        for (int i = editGroup.ChildComponents.Count - 1; i >= 0; i--)
-        {
-            var child = editGroup.ChildComponents[i];
-
-            // For nested groups, check the group's calculated bounds
-            if (child is ComponentGroup childGroup)
-            {
-                var groupRect = CalculateGroupBounds(childGroup);
-                if (groupRect.Contains(canvasPoint))
-                {
-                    // Find the ComponentViewModel for this child
-                    var childVm = vm.Components.FirstOrDefault(c => c.Component == child);
-                    if (childVm == null)
-                    {
-                        // Child not in top-level collection, create temporary wrapper
-                        childVm = new ComponentViewModel(child);
-                    }
-                    return childVm;
-                }
-            }
-            else
-            {
-                var rect = new Rect(child.PhysicalX, child.PhysicalY, child.WidthMicrometers, child.HeightMicrometers);
-                if (rect.Contains(canvasPoint))
-                {
-                    // Find the ComponentViewModel for this child
-                    var childVm = vm.Components.FirstOrDefault(c => c.Component == child);
-                    if (childVm == null)
-                    {
-                        // Child not in top-level collection, create temporary wrapper
-                        childVm = new ComponentViewModel(child);
-                    }
-                    return childVm;
                 }
             }
         }
@@ -174,8 +92,7 @@ public class DesignCanvasHitTesting
 
     /// <summary>
     /// Finds the nearest pin within hit radius of the given canvas point.
-    /// In group edit mode, only tests pins of child components in the current edit group.
-    /// Outside edit mode, also tests unoccupied group pins for external connections.
+    /// Tests pins on all top-level components (individual components have pins, groups don't).
     /// </summary>
     public static PhysicalPin? HitTestPin(Point canvasPoint, DesignCanvasViewModel? vm)
     {
@@ -184,99 +101,21 @@ public class DesignCanvasHitTesting
         PhysicalPin? nearest = null;
         double nearestDistance = double.MaxValue;
 
-        // In group edit mode, only test pins of child components
-        if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
+        foreach (var comp in vm.Components)
         {
-            foreach (var child in vm.CurrentEditGroup.ChildComponents)
+            foreach (var pin in comp.Component.PhysicalPins)
             {
-                foreach (var pin in child.PhysicalPins)
+                var (pinX, pinY) = pin.GetAbsolutePosition();
+                var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
+                if (distance < nearestDistance && distance <= PinHitRadius)
                 {
-                    var (pinX, pinY) = pin.GetAbsolutePosition();
-                    var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
-                    if (distance < nearestDistance && distance <= PinHitRadius)
-                    {
-                        nearest = pin;
-                        nearestDistance = distance;
-                    }
-                }
-            }
-        }
-        else
-        {
-            // Normal mode: test all top-level component pins
-            foreach (var comp in vm.Components)
-            {
-                foreach (var pin in comp.Component.PhysicalPins)
-                {
-                    var (pinX, pinY) = pin.GetAbsolutePosition();
-                    var distance = Math.Sqrt(Math.Pow(canvasPoint.X - pinX, 2) + Math.Pow(canvasPoint.Y - pinY, 2));
-                    if (distance < nearestDistance && distance <= PinHitRadius)
-                    {
-                        nearest = pin;
-                        nearestDistance = distance;
-                    }
-                }
-
-                // Also test group pins (unoccupied external pins)
-                if (comp.Component is ComponentGroup group)
-                {
-                    var groupPinHit = HitTestGroupPin(canvasPoint, group, vm.Connections.Select(c => c.Connection));
-                    if (groupPinHit.Pin != null)
-                    {
-                        var distance = groupPinHit.Distance;
-                        if (distance < nearestDistance && distance <= PinHitRadius)
-                        {
-                            nearest = groupPinHit.Pin.InternalPin;
-                            nearestDistance = distance;
-                        }
-                    }
+                    nearest = pin;
+                    nearestDistance = distance;
                 }
             }
         }
 
         return nearest;
-    }
-
-    /// <summary>
-    /// Hit tests group pins for a ComponentGroup.
-    /// Returns the nearest unoccupied GroupPin within hit radius.
-    /// </summary>
-    /// <param name="canvasPoint">Point to test in canvas coordinates.</param>
-    /// <param name="group">The component group.</param>
-    /// <param name="allConnections">All waveguide connections in the design.</param>
-    /// <returns>Tuple of (GroupPin, Distance) or (null, MaxValue) if no hit.</returns>
-    public static (GroupPin? Pin, double Distance) HitTestGroupPin(
-        Point canvasPoint,
-        ComponentGroup group,
-        IEnumerable<CAP_Core.Components.Connections.WaveguideConnection> allConnections)
-    {
-        if (group == null)
-            return (null, double.MaxValue);
-
-        GroupPin? nearestPin = null;
-        double nearestDistance = double.MaxValue;
-
-        // Get unoccupied pins
-        var unoccupiedPins = CAP_Core.Components.ComponentHelpers.GroupPinOccupancyChecker
-            .GetUnoccupiedPins(group, allConnections);
-
-        foreach (var pin in unoccupiedPins)
-        {
-            var (pinX, pinY) = CAP_Core.Components.ComponentHelpers.GroupPinOccupancyChecker
-                .GetAbsolutePosition(pin, group);
-
-            var distance = Math.Sqrt(
-                Math.Pow(canvasPoint.X - pinX, 2) +
-                Math.Pow(canvasPoint.Y - pinY, 2));
-
-            if (distance < nearestDistance)
-            {
-                nearestPin = pin;
-                nearestDistance = distance;
-            }
-        }
-
-        return (nearestPin, nearestDistance);
     }
 
     /// <summary>

@@ -18,34 +18,28 @@ public partial class DesignCanvas
 {
     private void DrawComponent(DrawingContext context, ComponentViewModel comp)
     {
-        var vm = ViewModel;
-        bool isDimmed = vm != null && IsComponentDimmedInEditMode(comp, vm);
-
         // If this is a ComponentGroup, use specialized group rendering
         if (comp.Component is ComponentGroup group)
         {
-            DrawComponentGroup(context, group, comp.IsSelected, isDimmed);
+            DrawComponentGroup(context, group, comp.IsSelected);
             return;
         }
 
         var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
 
-        // Apply dimming if in edit mode and component is external
-        byte alpha = (byte)(isDimmed ? 128 : 255);
         var fillBrush = comp.IsSelected
-            ? new SolidColorBrush(Color.FromArgb(alpha, 60, 80, 120))
-            : new SolidColorBrush(Color.FromArgb(alpha, 40, 50, 70));
+            ? new SolidColorBrush(Color.FromRgb(60, 80, 120))
+            : new SolidColorBrush(Color.FromRgb(40, 50, 70));
         context.FillRectangle(fillBrush, rect);
 
         var borderPen = comp.IsSelected
-            ? new Pen(new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255)), 2)
-            : new Pen(new SolidColorBrush(Color.FromArgb(alpha, 128, 128, 128)), 1);
+            ? new Pen(new SolidColorBrush(Color.FromRgb(0, 255, 255)), 2)
+            : new Pen(new SolidColorBrush(Color.FromRgb(128, 128, 128)), 1);
         context.DrawRectangle(borderPen, rect);
 
-        DrawComponentPins(context, comp, isDimmed);
-        DrawComponentName(context, comp, isDimmed);
+        DrawComponentPins(context, comp);
+        DrawComponentName(context, comp);
 
-        // Draw lock icon for locked components
         if (comp.IsLocked)
         {
             DrawLockIcon(context, comp);
@@ -53,52 +47,25 @@ public partial class DesignCanvas
     }
 
     /// <summary>
-    /// Checks if a component should be dimmed in edit mode (outside current edit group).
+    /// Renders a ComponentGroup with bounding box and child components visible.
     /// </summary>
-    private bool IsComponentDimmedInEditMode(ComponentViewModel comp, DesignCanvasViewModel vm)
+    private void DrawComponentGroup(DrawingContext context, ComponentGroup group, bool isSelected)
     {
-        if (!vm.IsInGroupEditMode || vm.CurrentEditGroup == null)
-            return false;
-
-        // Component should be dimmed if it's NOT inside the current edit group
-        return !IsComponentInGroup(comp.Component, vm.CurrentEditGroup);
-    }
-
-    /// <summary>
-    /// Checks if a component is a direct child of the given group.
-    /// </summary>
-    private bool IsComponentInGroup(Component component, ComponentGroup group)
-    {
-        return group.ChildComponents.Contains(component);
-    }
-
-    /// <summary>
-    /// Renders a ComponentGroup with IPKISS-style transparent hierarchy.
-    /// Shows internal structure, dashed border, and external pins.
-    /// </summary>
-    private void DrawComponentGroup(DrawingContext context, ComponentGroup group, bool isSelected, bool isDimmed = false)
-    {
-        var vm = ViewModel;
         bool isHovered = _interactionState.HoveredGroup == group;
         bool isLabelHovered = _interactionState.HoveredGroupLabel == group;
-        bool isCurrentEditGroup = vm?.CurrentEditGroup == group;
 
         // 1. Render all child components recursively (transparent hierarchy)
-        byte alpha = (byte)(isDimmed ? 128 : 255);
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup nestedGroup)
             {
-                // Recursively render nested groups
-                DrawComponentGroup(context, nestedGroup, isSelected, isDimmed);
+                DrawComponentGroup(context, nestedGroup, isSelected);
             }
             else
             {
-                // Render normal components
                 var childRect = new Rect(child.PhysicalX, child.PhysicalY,
                     child.WidthMicrometers, child.HeightMicrometers);
 
-                // Apply hover overlay if group is hovered
                 if (isHovered)
                 {
                     ComponentGroupRenderer.RenderGroupHoverOverlay(
@@ -106,85 +73,36 @@ public partial class DesignCanvas
                         child.WidthMicrometers, child.HeightMicrometers);
                 }
 
-                var fillBrush = new SolidColorBrush(Color.FromArgb(alpha, 40, 50, 70));
+                var fillBrush = new SolidColorBrush(Color.FromRgb(40, 50, 70));
                 context.FillRectangle(fillBrush, childRect);
 
-                var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 128, 128, 128)), 1);
+                var borderPen = new Pen(new SolidColorBrush(Color.FromRgb(128, 128, 128)), 1);
                 context.DrawRectangle(borderPen, childRect);
 
-                // Draw child component name
                 var nameText = new FormattedText(
                     child.Identifier,
                     System.Globalization.CultureInfo.CurrentCulture,
                     FlowDirection.LeftToRight,
                     new Typeface("Arial"),
                     10,
-                    new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)));
+                    Brushes.White);
                 context.DrawText(nameText, new Point(child.PhysicalX + 3, child.PhysicalY + 3));
             }
         }
 
-        // 2. Render frozen internal waveguide paths
-        var powerFlowResult = vm?.ShowPowerFlow == true ? vm.PowerFlowVisualizer.CurrentResult : null;
-        var fadeThreshold = vm?.PowerFlowVisualizer.FadeThresholdDb ?? -40.0;
-
-        foreach (var frozenPath in group.InternalPaths)
-        {
-            ComponentGroupRenderer.RenderFrozenWaveguidePath(
-                context, frozenPath, powerFlowResult, fadeThreshold);
-        }
-
-        // 3. Draw border around group bounds (hide if this is the current edit group)
+        // 2. Draw border around group bounds
         var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
-        if (!isCurrentEditGroup)
+        if (isSelected)
         {
-            // Draw selection border if selected (solid cyan), otherwise regular dashed border
-            if (isSelected)
-            {
-                ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds, isDimmed);
-            }
-            else
-            {
-                ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, isDimmed);
-            }
-
-            // 4. Draw group name label at top-left with hover state
-            ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isDimmed, isLabelHovered);
-
-            // 5. Draw lock icon at top-right (always visible for groups)
-            bool isLockIconHovered = _interactionState.HoveredGroupLockIcon == group;
-            ComponentGroupRenderer.RenderGroupLockIcon(context, group, isLockIconHovered);
+            ComponentGroupRenderer.RenderGroupSelectionBorder(context, bounds);
+        }
+        else
+        {
+            ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered);
         }
 
-        // 6. Draw external pins with distinct style
-        // Outside edit mode: show only unoccupied pins (available for external connections)
-        // In edit mode: show all external pins for configuration
-        if (!isCurrentEditGroup && vm != null)
-        {
-            // Get all connections for occupancy checking
-            var allConnections = vm.Connections.Select(c => c.Connection);
-            var unoccupiedPins = CAP_Core.Components.ComponentHelpers.GroupPinOccupancyChecker
-                .GetUnoccupiedPins(group, allConnections);
-
-            // Check if any pin is being hovered
-            var highlightedPin = vm.HighlightedPin?.Pin;
-
-            foreach (var externalPin in unoccupiedPins)
-            {
-                // Check if this pin is hovered (its InternalPin matches the highlighted pin)
-                bool isPinHovered = highlightedPin != null && externalPin.InternalPin == highlightedPin;
-
-                ComponentGroupRenderer.RenderUnoccupiedGroupPin(context, externalPin, group, isPinHovered);
-            }
-        }
-        else if (isCurrentEditGroup)
-        {
-            // In edit mode, show all external pins (for configuration)
-            foreach (var externalPin in group.ExternalPins)
-            {
-                ComponentGroupRenderer.RenderExternalPin(context, externalPin, group, isHovered);
-            }
-        }
+        // 3. Draw group name label
+        ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, isLabelHovered);
     }
 
     /// <summary>
@@ -192,21 +110,17 @@ public partial class DesignCanvas
     /// </summary>
     private void DrawLockIcon(DrawingContext context, ComponentViewModel comp)
     {
-        // Position lock icon in bottom-right corner of component
         double iconSize = Math.Min(comp.Width, comp.Height) * 0.25;
         iconSize = Math.Clamp(iconSize, 12, 24);
 
         double iconX = comp.X + comp.Width - iconSize - 4;
         double iconY = comp.Y + comp.Height - iconSize - 4;
 
-        // Draw semi-transparent background circle
         var bgBrush = new SolidColorBrush(Color.FromArgb(180, 40, 40, 40));
         context.DrawEllipse(bgBrush, null, new Point(iconX + iconSize / 2, iconY + iconSize / 2), iconSize / 2, iconSize / 2);
 
-        // Draw lock icon (simplified padlock shape)
         var lockPen = new Pen(Brushes.Orange, 2);
 
-        // Lock body (rectangle)
         double bodyWidth = iconSize * 0.5;
         double bodyHeight = iconSize * 0.5;
         double bodyX = iconX + (iconSize - bodyWidth) / 2;
@@ -214,13 +128,11 @@ public partial class DesignCanvas
         var bodyRect = new Rect(bodyX, bodyY, bodyWidth, bodyHeight);
         context.DrawRectangle(Brushes.Orange, null, bodyRect);
 
-        // Lock shackle (arc)
         double shackleWidth = iconSize * 0.4;
         double shackleHeight = iconSize * 0.3;
         double shackleCenterX = iconX + iconSize / 2;
         double shackleTopY = bodyY;
 
-        // Draw shackle as a small arc (simplified)
         var shackleGeometry = new StreamGeometry();
         using (var ctx = shackleGeometry.Open())
         {
@@ -235,12 +147,11 @@ public partial class DesignCanvas
         context.DrawGeometry(null, lockPen, shackleGeometry);
     }
 
-    private void DrawComponentPins(DrawingContext context, ComponentViewModel comp, bool isDimmed = false)
+    private void DrawComponentPins(DrawingContext context, ComponentViewModel comp)
     {
         var mainVm = MainViewModel;
         bool isConnectMode = mainVm?.CurrentMode == InteractionMode.Connect;
         var highlightedPin = ViewModel?.HighlightedPin?.Pin;
-        byte alpha = (byte)(isDimmed ? 128 : 255);
 
         foreach (var pin in comp.Component.PhysicalPins)
         {
@@ -252,31 +163,31 @@ public partial class DesignCanvas
 
             if (isHighlighted)
             {
-                pinBrush = new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255));
+                pinBrush = new SolidColorBrush(Color.FromRgb(0, 255, 255));
                 pinSize = 12;
             }
             else if (isConnectMode)
             {
-                pinBrush = new SolidColorBrush(Color.FromArgb(alpha, 255, 200, 0));
+                pinBrush = new SolidColorBrush(Color.FromRgb(255, 200, 0));
             }
             else if (pin.LogicalPin != null)
             {
-                pinBrush = new SolidColorBrush(Color.FromArgb(alpha, 100, 200, 100));
+                pinBrush = new SolidColorBrush(Color.FromRgb(100, 200, 100));
             }
             else
             {
-                pinBrush = new SolidColorBrush(Color.FromArgb(alpha, 200, 100, 100));
+                pinBrush = new SolidColorBrush(Color.FromRgb(200, 100, 100));
             }
 
             if (isHighlighted)
             {
-                var glowBrush = new SolidColorBrush(Color.FromArgb((byte)(100 * alpha / 255), 0, 255, 255));
+                var glowBrush = new SolidColorBrush(Color.FromArgb(100, 0, 255, 255));
                 context.DrawEllipse(glowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
             }
 
             context.DrawEllipse(pinBrush, null, new Point(pinX, pinY), pinSize, pinSize);
 
-            DrawPinDirectionIndicator(context, pin, pinX, pinY, isHighlighted, isDimmed);
+            DrawPinDirectionIndicator(context, pin, pinX, pinY, isHighlighted);
 
             if (isHighlighted)
             {
@@ -286,18 +197,17 @@ public partial class DesignCanvas
                     FlowDirection.LeftToRight,
                     new Typeface("Arial"),
                     10,
-                    new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255)));
+                    new SolidColorBrush(Color.FromRgb(0, 255, 255)));
                 context.DrawText(pinText, new Point(pinX + 15, pinY - 15));
             }
         }
     }
 
-    private void DrawPinDirectionIndicator(DrawingContext context, PhysicalPin pin, double pinX, double pinY, bool isHighlighted, bool isDimmed = false)
+    private void DrawPinDirectionIndicator(DrawingContext context, PhysicalPin pin, double pinX, double pinY, bool isHighlighted)
     {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
-        var dirBrush = isHighlighted
-            ? new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255))
-            : new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255));
+        IBrush dirBrush = isHighlighted
+            ? new SolidColorBrush(Color.FromRgb(0, 255, 255))
+            : Brushes.White;
         var dirPen = new Pen(dirBrush, isHighlighted ? 2 : 1);
         double angle = pin.GetAbsoluteAngle() * Math.PI / 180;
         double dirLength = isHighlighted ? 20 : 15;
@@ -306,16 +216,15 @@ public partial class DesignCanvas
             new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength));
     }
 
-    private void DrawComponentName(DrawingContext context, ComponentViewModel comp, bool isDimmed = false)
+    private void DrawComponentName(DrawingContext context, ComponentViewModel comp)
     {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
         var text = new FormattedText(
             comp.Name,
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
             new Typeface("Arial"),
             12,
-            new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)));
+            Brushes.White);
 
         context.DrawText(text, new Point(comp.X + 5, comp.Y + 5));
     }

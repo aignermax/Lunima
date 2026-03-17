@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
-using CAP_Core.Components.Creation;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
@@ -18,7 +17,6 @@ public enum InteractionMode
 {
     Select,
     PlaceComponent,
-    PlaceGroupTemplate,
     Connect,
     Delete
 }
@@ -26,24 +24,17 @@ public enum InteractionMode
 /// <summary>
 /// ViewModel for canvas interaction logic.
 /// Handles user interactions: selection, placement, connection, deletion, and component manipulation.
-/// Max 250 lines per CLAUDE.md guideline.
 /// </summary>
 public partial class CanvasInteractionViewModel : ObservableObject
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly CommandManager _commandManager;
-    private readonly ComponentLibraryViewModel? _libraryViewModel;
-    private readonly GroupPreviewGenerator? _previewGenerator;
-    private IInputDialogService? _inputDialogService;
 
     [ObservableProperty]
     private InteractionMode _currentMode = InteractionMode.Select;
 
     [ObservableProperty]
     private ComponentTemplate? _selectedTemplate;
-
-    [ObservableProperty]
-    private GroupTemplate? _selectedGroupTemplate;
 
     [ObservableProperty]
     private ComponentViewModel? _selectedComponent;
@@ -69,16 +60,10 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     public CanvasInteractionViewModel(
         DesignCanvasViewModel canvas,
-        CommandManager commandManager,
-        ComponentLibraryViewModel? libraryViewModel = null,
-        GroupPreviewGenerator? previewGenerator = null,
-        IInputDialogService? inputDialogService = null)
+        CommandManager commandManager)
     {
         _canvas = canvas;
         _commandManager = commandManager;
-        _libraryViewModel = libraryViewModel;
-        _previewGenerator = previewGenerator;
-        _inputDialogService = inputDialogService;
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -86,18 +71,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceComponent;
-            SelectedGroupTemplate = null; // Deselect group template
             UpdateStatus?.Invoke($"Click on canvas to place: {value.Name}");
-        }
-    }
-
-    partial void OnSelectedGroupTemplateChanged(GroupTemplate? value)
-    {
-        if (value != null)
-        {
-            CurrentMode = InteractionMode.PlaceGroupTemplate;
-            SelectedTemplate = null; // Deselect component template
-            UpdateStatus?.Invoke($"Click on canvas to place group: {value.Name}");
         }
     }
 
@@ -111,8 +85,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
             InteractionMode.Select => "Select mode: Click to select, drag to move",
             InteractionMode.PlaceComponent when SelectedTemplate != null => $"Place mode: Click to place {SelectedTemplate.Name}",
             InteractionMode.PlaceComponent => "Place mode: Select a component from the library",
-            InteractionMode.PlaceGroupTemplate when SelectedGroupTemplate != null => $"Place mode: Click to place group {SelectedGroupTemplate.Name}",
-            InteractionMode.PlaceGroupTemplate => "Place mode: Select a group from Saved Groups",
             InteractionMode.Connect => "Connect mode: Move near a pin to start connection",
             InteractionMode.Delete => "Delete mode: Click on component or connection to delete",
             _ => "Ready"
@@ -141,9 +113,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
         {
             case InteractionMode.PlaceComponent:
                 PlaceComponentAt(canvasX, canvasY);
-                break;
-            case InteractionMode.PlaceGroupTemplate:
-                PlaceGroupTemplateAt(canvasX, canvasY);
                 break;
             case InteractionMode.Select:
                 SelectAt(canvasX, canvasY);
@@ -251,26 +220,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
         UpdateStatus?.Invoke($"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm");
     }
 
-    private void PlaceGroupTemplateAt(double x, double y)
-    {
-        if (SelectedGroupTemplate == null || _libraryViewModel == null) return;
-
-        var libraryManager = _libraryViewModel.GetLibraryManager();
-        var cmd = PlaceGroupTemplateCommand.TryCreate(_canvas, libraryManager, SelectedGroupTemplate, x, y);
-
-        if (cmd == null)
-        {
-            UpdateStatus?.Invoke("No space available on chip for this group or template not loaded");
-            return;
-        }
-
-        _commandManager.ExecuteCommand(cmd);
-        UpdateStatus?.Invoke($"Placed group '{SelectedGroupTemplate.Name}' at ({x:F0}, {y:F0})µm");
-    }
-
     private void SelectAt(double x, double y)
     {
-        // Deselect all
         foreach (var comp in _canvas.Components)
         {
             comp.IsSelected = false;
@@ -280,7 +231,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
             conn.IsSelected = false;
         }
 
-        // Find component at position
         var component = _canvas.Components
             .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
             .LastOrDefault();
@@ -461,7 +411,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         CurrentMode = InteractionMode.Select;
         SelectedTemplate = null;
-        SelectedGroupTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -470,7 +419,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         CurrentMode = InteractionMode.Connect;
         SelectedTemplate = null;
-        SelectedGroupTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -479,7 +427,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         CurrentMode = InteractionMode.Delete;
         SelectedTemplate = null;
-        SelectedGroupTemplate = null;
         _connectionStartPin = null;
     }
 
@@ -573,15 +520,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         var cmd = new CreateGroupCommand(_canvas, selectedComponents);
         _commandManager.ExecuteCommand(cmd);
         _canvas.Selection.ClearSelection();
-
-        if (_libraryViewModel != null)
-        {
-            UpdateStatus?.Invoke($"✓ Created group from {selectedComponents.Count} components and saved to 'Saved Groups' library");
-        }
-        else
-        {
-            UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components (not saved to library)");
-        }
+        UpdateStatus?.Invoke($"Created group from {selectedComponents.Count} components");
     }
 
     private bool CanCreateGroup()
@@ -594,7 +533,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         var selectedGroup = _canvas.Selection.SelectedComponents
             .Select(c => c.Component)
-            .OfType<CAP_Core.Components.Core.ComponentGroup>()
+            .OfType<ComponentGroup>()
             .FirstOrDefault();
 
         if (selectedGroup != null)
@@ -609,117 +548,6 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private bool CanUngroup()
     {
         return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup;
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRenameGroup))]
-    private async Task RenameGroup()
-    {
-        if (_inputDialogService == null || _libraryViewModel == null)
-        {
-            UpdateStatus?.Invoke("Rename not available (dialog service not configured)");
-            return;
-        }
-
-        var selectedGroup = _canvas.Selection.SelectedComponents
-            .Select(c => c.Component)
-            .OfType<CAP_Core.Components.Core.ComponentGroup>()
-            .FirstOrDefault();
-
-        if (selectedGroup == null)
-            return;
-
-        var currentName = selectedGroup.GroupName;
-        var currentDescription = selectedGroup.Description ?? "";
-
-        var result = await _inputDialogService.ShowMultiInputDialogAsync(
-            "Rename Group",
-            ("Name", currentName),
-            ("Description (optional)", currentDescription));
-
-        if (result == null)
-            return;
-
-        var newName = result["Name"].Trim();
-        var newDescription = result["Description (optional)"].Trim();
-
-        if (string.IsNullOrWhiteSpace(newName))
-        {
-            UpdateStatus?.Invoke("Group name cannot be empty");
-            return;
-        }
-
-        var cmd = new RenameGroupCommand(
-            selectedGroup,
-            _libraryViewModel,
-            newName,
-            string.IsNullOrWhiteSpace(newDescription) ? null : newDescription);
-
-        _commandManager.ExecuteCommand(cmd);
-        UpdateStatus?.Invoke($"Renamed group to '{newName}' and updated library");
-    }
-
-    private bool CanRenameGroup()
-    {
-        return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup &&
-               _libraryViewModel != null &&
-               _inputDialogService != null;
-    }
-
-    [RelayCommand(CanExecute = nameof(CanSaveGroupAs))]
-    private async Task SaveGroupAs()
-    {
-        if (_inputDialogService == null || _libraryViewModel == null)
-        {
-            UpdateStatus?.Invoke("Save not available (dialog service not configured)");
-            return;
-        }
-
-        var selectedGroup = _canvas.Selection.SelectedComponents
-            .Select(c => c.Component)
-            .OfType<CAP_Core.Components.Core.ComponentGroup>()
-            .FirstOrDefault();
-
-        if (selectedGroup == null)
-            return;
-
-        var currentName = selectedGroup.GroupName;
-        var currentDescription = selectedGroup.Description ?? "";
-
-        var result = await _inputDialogService.ShowMultiInputDialogAsync(
-            "Save Group as Prefab",
-            ("Name", currentName),
-            ("Description (optional)", currentDescription));
-
-        if (result == null)
-            return;
-
-        var newName = result["Name"].Trim();
-        var newDescription = result["Description (optional)"].Trim();
-
-        if (string.IsNullOrWhiteSpace(newName))
-        {
-            UpdateStatus?.Invoke("Group name cannot be empty");
-            return;
-        }
-
-        var cmd = new SaveGroupAsPrefabCommand(
-            _libraryViewModel,
-            _previewGenerator ?? new GroupPreviewGenerator(),
-            selectedGroup,
-            newName,
-            string.IsNullOrWhiteSpace(newDescription) ? null : newDescription);
-
-        _commandManager.ExecuteCommand(cmd);
-        UpdateStatus?.Invoke($"Saved group '{newName}' as prefab to library");
-    }
-
-    private bool CanSaveGroupAs()
-    {
-        return _canvas.Selection.SelectedComponents.Count == 1 &&
-               _canvas.Selection.SelectedComponents.First().Component is CAP_Core.Components.Core.ComponentGroup &&
-               _libraryViewModel != null &&
-               _inputDialogService != null;
+               _canvas.Selection.SelectedComponents.First().Component is ComponentGroup;
     }
 }

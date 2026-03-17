@@ -89,17 +89,7 @@ public partial class DesignCanvas
 
     private void HandleSelectModeClick(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
     {
-        // PRIORITY 0: Check if clicking on a group lock icon (highest priority)
-        var hitLockIcon = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, vm);
-        if (hitLockIcon != null)
-        {
-            // Clicked on lock icon - toggle lock state
-            HandleLockIconClick(hitLockIcon, vm, mainVm);
-            e.Handled = true;
-            return;
-        }
-
-        // PRIORITY 1: Check if clicking on a group label (second priority)
+        // PRIORITY 1: Check if clicking on a group label
         var hitGroupLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
         ComponentViewModel? hitComponent = null;
 
@@ -115,32 +105,22 @@ public partial class DesignCanvas
         }
 
         // Determine which component should be selected/dragged:
-        // 1. In group edit mode: allow direct interaction with child components
-        // 2. If hit component is a ComponentGroup directly, use it
-        // 3. If hit component is part of a group (ParentGroup != null), select the top-level group
-        // 4. Otherwise, use the hit component as-is
+        // 1. If hit component is a ComponentGroup directly, use it
+        // 2. If hit component is part of a group (ParentGroup != null), select the top-level group
+        // 3. Otherwise, use the hit component as-is
         if (hitComponent != null)
         {
-            if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
+            if (hitComponent.Component is ComponentGroup)
             {
-                // In group edit mode: allow direct interaction with child components
-                // HitTestComponent already filtered to only return children, so use as-is
-                _interactionState.DraggingComponent = hitComponent;
-            }
-            else if (hitComponent.Component is ComponentGroup)
-            {
-                // Clicked directly on a group - select/drag the group
                 _interactionState.DraggingComponent = hitComponent;
             }
             else if (hitComponent.Component.ParentGroup != null)
             {
-                // Clicked on a child component - select/drag the parent group
                 var topLevelGroup = GetTopLevelGroup(hitComponent.Component);
                 _interactionState.DraggingComponent = vm.Components.FirstOrDefault(c => c.Component == topLevelGroup);
             }
             else
             {
-                // Regular component not in a group
                 _interactionState.DraggingComponent = hitComponent;
             }
         }
@@ -151,50 +131,12 @@ public partial class DesignCanvas
 
         if (_interactionState.DraggingComponent != null)
         {
-            // Check for double-click on ComponentGroup
-            if (DetectDoubleClick(_interactionState.DraggingComponent) &&
-                _interactionState.DraggingComponent.Component is ComponentGroup clickedGroup)
-            {
-                // Enter group edit mode instead of dragging
-                vm.EnterGroupEditMode(clickedGroup);
-                mainVm?.HierarchyPanel?.RebuildTree();
-                _interactionState.DraggingComponent = null;
-                InvalidateVisual();
-                return;
-            }
-
             HandleComponentSelection(e, canvasPoint, vm, mainVm);
         }
         else
         {
-            // Check for double-click on background in edit mode
-            if (vm.IsInGroupEditMode && DetectDoubleClick(null))
-            {
-                vm.ExitGroupEditMode();
-                mainVm?.HierarchyPanel?.RebuildTree();
-                InvalidateVisual();
-                return;
-            }
-
             StartBoxSelection(canvasPoint, vm);
         }
-    }
-
-    /// <summary>
-    /// Detects if the current click is a double-click on the same component.
-    /// </summary>
-    private bool DetectDoubleClick(ComponentViewModel? component)
-    {
-        var now = DateTime.UtcNow;
-        var timeSinceLastClick = (now - _interactionState.LastClickTime).TotalMilliseconds;
-
-        bool isDoubleClick = timeSinceLastClick < CanvasInteractionState.DoubleClickMilliseconds &&
-                             _interactionState.LastClickedComponent == component;
-
-        _interactionState.LastClickTime = now;
-        _interactionState.LastClickedComponent = component;
-
-        return isDoubleClick;
     }
 
     private void HandleComponentSelection(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
@@ -260,30 +202,6 @@ public partial class DesignCanvas
         InvalidateVisual();
     }
 
-    /// <summary>
-    /// Handles clicking on a group's lock icon to toggle lock/unlock state.
-    /// </summary>
-    private void HandleLockIconClick(ComponentGroup group, DesignCanvasViewModel vm, MainViewModel? mainVm)
-    {
-        if (mainVm?.CommandManager == null) return;
-
-        // Toggle lock state using command for undo/redo support
-        var command = new ToggleGroupLockCommand(group);
-        mainVm.CommandManager.ExecuteCommand(command);
-
-        // Update status
-        string statusMessage = group.IsLocked
-            ? $"Locked group '{group.GroupName}'"
-            : $"Unlocked group '{group.GroupName}'";
-
-        if (mainVm != null)
-        {
-            mainVm.StatusText = statusMessage;
-        }
-
-        InvalidateVisual();
-    }
-
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
@@ -339,75 +257,52 @@ public partial class DesignCanvas
     /// <summary>
     /// Updates group hover state when hovering over a component or group.
     /// If hovering over a child component, highlights the entire parent group.
-    /// Also tracks label hover state and lock icon hover state separately for visual feedback.
     /// </summary>
     private void UpdateGroupHover(Point canvasPoint, DesignCanvasViewModel vm)
     {
         var previousHoveredGroup = _interactionState.HoveredGroup;
         var previousHoveredLabel = _interactionState.HoveredGroupLabel;
-        var previousHoveredLockIcon = _interactionState.HoveredGroupLockIcon;
 
-        // Check if hovering over a group lock icon (highest priority)
-        var hoveredLockIcon = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, vm);
-        _interactionState.HoveredGroupLockIcon = hoveredLockIcon;
+        // Check if hovering over a group label
+        var hoveredLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
+        _interactionState.HoveredGroupLabel = hoveredLabel;
 
-        // If hovering over lock icon, don't process other hover states
-        if (hoveredLockIcon != null)
+        if (hoveredLabel != null)
         {
-            _interactionState.HoveredGroup = hoveredLockIcon;
-            _interactionState.HoveredGroupLabel = null;
+            _interactionState.HoveredGroup = hoveredLabel;
             Cursor = new Cursor(StandardCursorType.Hand);
         }
         else
         {
-            // Check if hovering over a group label (second priority)
-            var hoveredLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
-            _interactionState.HoveredGroupLabel = hoveredLabel;
+            var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
 
-            // If hovering over label, also set the group as hovered
-            if (hoveredLabel != null)
+            if (hoveredComponent != null)
             {
-                _interactionState.HoveredGroup = hoveredLabel;
-                Cursor = new Cursor(StandardCursorType.Hand);
-            }
-            else
-            {
-                // Otherwise check component hover
-                var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
-
-                if (hoveredComponent != null)
+                var component = hoveredComponent.Component;
+                if (component.ParentGroup != null)
                 {
-                    // Check if this component is part of a group
-                    var component = hoveredComponent.Component;
-                    if (component.ParentGroup != null)
-                    {
-                        // Hover over a child - highlight the entire parent group
-                        _interactionState.HoveredGroup = GetTopLevelGroup(component);
-                    }
-                    else if (component is ComponentGroup group)
-                    {
-                        // Hover directly over a group
-                        _interactionState.HoveredGroup = group;
-                    }
-                    else
-                    {
-                        // Regular component, not part of a group
-                        _interactionState.HoveredGroup = null;
-                    }
-                    Cursor = Cursor.Default;
+                    _interactionState.HoveredGroup = GetTopLevelGroup(component);
+                }
+                else if (component is ComponentGroup group)
+                {
+                    _interactionState.HoveredGroup = group;
                 }
                 else
                 {
                     _interactionState.HoveredGroup = null;
-                    Cursor = Cursor.Default;
                 }
+                Cursor = Cursor.Default;
+            }
+            else
+            {
+                _interactionState.HoveredGroup = null;
+                Cursor = Cursor.Default;
             }
         }
 
         // Repaint if hover state changed
         if (_interactionState.HoveredGroup != previousHoveredGroup ||
-            _interactionState.HoveredGroupLabel != previousHoveredLabel ||
-            _interactionState.HoveredGroupLockIcon != previousHoveredLockIcon)
+            _interactionState.HoveredGroupLabel != previousHoveredLabel)
         {
             InvalidateVisual();
         }
