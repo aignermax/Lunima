@@ -15,7 +15,7 @@ public partial class DesignCanvasViewModel : ObservableObject
 {
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<WaveguideConnectionViewModel> Connections { get; } = new();
-    public ObservableCollection<PinViewModel> AllPins { get; } = new();
+    public ObservableCollection<IPinViewModel> AllPins { get; } = new();
 
     public WaveguideConnectionManager ConnectionManager { get; } = new();
 
@@ -106,7 +106,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// The currently highlighted pin (when mouse is near in Connect mode).
     /// </summary>
     [ObservableProperty]
-    private PinViewModel? _highlightedPin;
+    private IPinViewModel? _highlightedPin;
 
     /// <summary>
     /// Distance threshold for pin highlighting (in micrometers).
@@ -606,6 +606,16 @@ public partial class DesignCanvasViewModel : ObservableObject
             AllPins.Add(new PinViewModel(pin, vm));
         }
 
+        // For ComponentGroups, also add GroupPinViewModels for external pins
+        // This enables pin highlighting and connection creation for group pins
+        if (component is ComponentGroup group)
+        {
+            foreach (var groupPin in group.ExternalPins)
+            {
+                AllPins.Add(new GroupPinViewModel(groupPin, group, vm));
+            }
+        }
+
         return vm;
     }
 
@@ -616,7 +626,7 @@ public partial class DesignCanvasViewModel : ObservableObject
 
         ConnectionManager.RemoveConnectionsForComponent(component.Component);
 
-        // Remove pin ViewModels for this component
+        // Remove pin ViewModels for this component (including GroupPin ViewModels)
         var pinsToRemove = AllPins.Where(p => p.ParentComponentViewModel == component).ToList();
         foreach (var pin in pinsToRemove)
         {
@@ -721,7 +731,7 @@ public partial class DesignCanvasViewModel : ObservableObject
     /// <param name="y">Mouse Y position in micrometers</param>
     /// <param name="excludePin">Optional pin to exclude (e.g., the connection start pin)</param>
     /// <returns>The nearest pin if within highlight distance, otherwise null</returns>
-    public PinViewModel? UpdatePinHighlight(double x, double y, PhysicalPin? excludePin = null)
+    public IPinViewModel? UpdatePinHighlight(double x, double y, PhysicalPin? excludePin = null)
     {
         // Clear previous highlight
         if (HighlightedPin != null)
@@ -731,7 +741,7 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
 
         // Find nearest pin
-        PinViewModel? nearest = null;
+        IPinViewModel? nearest = null;
         double nearestDistance = double.MaxValue;
 
         foreach (var pinVm in AllPins)
@@ -743,7 +753,9 @@ public partial class DesignCanvasViewModel : ObservableObject
                 if (pinVm.Pin.ParentComponent == excludePin.ParentComponent) continue;
             }
 
-            var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
+            // Use ViewModel's X and Y properties (correct for both PhysicalPins and GroupPins)
+            double pinX = pinVm.X;
+            double pinY = pinVm.Y;
             double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
 
             if (dist < nearestDistance && dist <= PinHighlightDistance)
@@ -1096,7 +1108,7 @@ public partial class WaveguideConnectionViewModel : ObservableObject
 /// <summary>
 /// ViewModel for a physical pin with highlighting support.
 /// </summary>
-public partial class PinViewModel : ObservableObject
+public partial class PinViewModel : ObservableObject, IPinViewModel
 {
     public PhysicalPin Pin { get; }
     public ComponentViewModel ParentComponentViewModel { get; }
