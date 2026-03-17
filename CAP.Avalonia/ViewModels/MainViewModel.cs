@@ -194,10 +194,27 @@ public partial class MainViewModel : ObservableObject
         WireDesignValidation();
         WireHierarchyPanel();
         WireFileOperations();
+        WireCommandManager();
 
         // Initialize panels
         LeftPanel.Initialize();
         RightPanel.Initialize();
+    }
+
+    private void WireCommandManager()
+    {
+        // Wire CommandManager to notify RelayCommands when CanUndo/CanRedo changes
+        CommandManager.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(Commands.CommandManager.CanUndo))
+            {
+                UndoCommand.NotifyCanExecuteChanged();
+            }
+            else if (e.PropertyName == nameof(Commands.CommandManager.CanRedo))
+            {
+                RedoCommand.NotifyCanExecuteChanged();
+            }
+        };
     }
 
     private void UpdateStatusText(string text)
@@ -308,7 +325,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo()
     {
         if (CommandManager.Undo())
@@ -321,7 +338,9 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private bool CanUndo() => CommandManager.CanUndo;
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
     private void Redo()
     {
         if (CommandManager.Redo())
@@ -333,6 +352,8 @@ public partial class MainViewModel : ObservableObject
             StatusText = "Nothing to redo";
         }
     }
+
+    private bool CanRedo() => CommandManager.CanRedo;
 
     [RelayCommand]
     private async Task RunSimulation()
