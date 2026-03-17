@@ -166,23 +166,33 @@
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="creation:GroupTemplate">
-                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand">
-                                            <!-- Placeholder preview icon - will be replaced with actual preview -->
+                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand"
+                                                    ToolTip.Tip="{Binding Description}">
+                                            <!-- Preview box with component count and size info -->
                                             <Border Width="56" Height="36"
                                                     Background="#1e1e1e"
                                                     BorderBrush="#3e3e3e"
                                                     BorderThickness="1"
                                                     CornerRadius="3"
                                                     Margin="0,0,6,0">
-                                                <TextBlock Text="📦" FontSize="20"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ComponentCount}"
+                                                               FontSize="16" FontWeight="Bold"
+                                                               Foreground="#4CAF50"
+                                                               HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="comp" FontSize="7"
+                                                               Foreground="Gray"
+                                                               HorizontalAlignment="Center"
+                                                               Margin="0,-2,0,0"/>
+                                                </StackPanel>
                                             </Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
                                                 <TextBlock FontSize="9" Foreground="Gray">
-                                                    <Run Text="{Binding ComponentCount}"/>
-                                                    <Run Text="components"/>
+                                                    <Run Text="{Binding WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                    <Run Text="×"/>
+                                                    <Run Text="{Binding HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                    <Run Text="μm"/>
                                                 </TextBlock>
                                             </StackPanel>
                                         </StackPanel>
@@ -200,23 +210,33 @@
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="creation:GroupTemplate">
-                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand">
-                                            <!-- Placeholder preview icon - will be replaced with actual preview -->
+                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand"
+                                                    ToolTip.Tip="{Binding Description}">
+                                            <!-- Preview box with component count and size info -->
                                             <Border Width="56" Height="36"
                                                     Background="#1e1e1e"
                                                     BorderBrush="#3e3e3e"
                                                     BorderThickness="1"
                                                     CornerRadius="3"
                                                     Margin="0,0,6,0">
-                                                <TextBlock Text="📦" FontSize="20"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ComponentCount}"
+                                                               FontSize="16" FontWeight="Bold"
+                                                               Foreground="#4CAF50"
+                                                               HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="comp" FontSize="7"
+                                                               Foreground="Gray"
+                                                               HorizontalAlignment="Center"
+                                                               Margin="0,-2,0,0"/>
+                                                </StackPanel>
                                             </Border>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
                                                 <TextBlock FontSize="9" Foreground="Gray">
-                                                    <Run Text="{Binding ComponentCount}"/>
-                                                    <Run Text="components"/>
+                                                    <Run Text="{Binding WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                    <Run Text="×"/>
+                                                    <Run Text="{Binding HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                    <Run Text="μm"/>
                                                 </TextBlock>
                                             </StackPanel>
                                         </StackPanel>
