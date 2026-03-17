@@ -299,6 +299,9 @@ public partial class MainViewModel : ObservableObject
     private async Task LoadDesign() => await FileOperations.LoadDesignCommand.ExecuteAsync(null);
 
     [RelayCommand]
+    private async Task NewProject() => await FileOperations.NewProjectCommand.ExecuteAsync(null);
+
+    [RelayCommand]
     private async Task ExportNazca() => await FileOperations.ExportNazcaCommand.ExecuteAsync(null);
 
     [RelayCommand]

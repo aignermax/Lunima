@@ -81,6 +81,8 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- File Operations -->
+                <Button Content="📄" Command="{Binding NewProjectCommand}"
+                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="New project (Ctrl+N)"/>
                 <Button Content="📂" Command="{Binding LoadDesignCommand}"
                         Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Load design"/>
                 <Button Content="💾" Command="{Binding SaveDesignCommand}"

@@ -20,6 +20,7 @@ public partial class MainWindow : Window
             if (DataContext is MainViewModel vm)
             {
                 vm.FileDialogService = new FileDialogService(this);
+                vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.ViewportControl.GetViewportSize = () => (
@@ -125,6 +126,10 @@ public partial class MainWindow : Window
         // Global keyboard shortcuts that work regardless of focus
         switch (e.Key)
         {
+            case Key.N:
+                if (ctrlPressed)
+                    mainVm.NewProjectCommand.Execute(null);
+                break;
             case Key.S:
                 if (ctrlPressed)
                     mainVm.SaveDesignCommand.Execute(null);

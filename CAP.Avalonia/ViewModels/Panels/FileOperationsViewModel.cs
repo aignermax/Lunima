@@ -27,6 +27,9 @@ public partial class FileOperationsViewModel : ObservableObject
 
     private string? _currentFilePath;
 
+    [ObservableProperty]
+    private bool _hasUnsavedChanges;
+
     /// <summary>
     /// ViewModel for GDS export functionality.
     /// </summary>
@@ -52,6 +55,11 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
 
+    /// <summary>
+    /// Message box service for showing confirmation dialogs.
+    /// </summary>
+    public IMessageBoxService? MessageBoxService { get; set; }
+
     public FileOperationsViewModel(
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
@@ -64,6 +72,10 @@ public partial class FileOperationsViewModel : ObservableObject
         _nazcaExporter = nazcaExporter;
         _componentLibrary = componentLibrary;
         GdsExport = gdsExport;
+
+        // Track changes to mark project as unsaved
+        _canvas.Components.CollectionChanged += (s, e) => HasUnsavedChanges = true;
+        _canvas.Connections.CollectionChanged += (s, e) => HasUnsavedChanges = true;
     }
 
     [RelayCommand]
@@ -150,6 +162,7 @@ public partial class FileOperationsViewModel : ObservableObject
             });
             await File.WriteAllTextAsync(filePath, json);
             _currentFilePath = filePath;
+            HasUnsavedChanges = false;
             UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
         }
         catch (Exception ex)
@@ -284,6 +297,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 }
 
                 _currentFilePath = filePath;
+                HasUnsavedChanges = false;
                 UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections)");
                 _commandManager.NotifyStateChanged();
 
@@ -298,6 +312,60 @@ public partial class FileOperationsViewModel : ObservableObject
                 UpdateStatus?.Invoke($"Load failed: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Creates a new empty project, prompting to save if there are unsaved changes.
+    /// </summary>
+    [RelayCommand]
+    private async Task NewProject()
+    {
+        // Check if there are unsaved changes
+        if (HasUnsavedChanges && MessageBoxService != null)
+        {
+            var result = await MessageBoxService.ShowSavePromptAsync(
+                "Do you want to save your changes before creating a new project?",
+                "Save Changes?");
+
+            if (result == SavePromptResult.Save)
+            {
+                await SaveDesign();
+
+                // Check if save was actually performed (user might have cancelled)
+                if (HasUnsavedChanges)
+                {
+                    // User cancelled the save dialog, so cancel new project
+                    return;
+                }
+            }
+            else if (result == SavePromptResult.Cancel)
+            {
+                // User cancelled, do nothing
+                return;
+            }
+            // DontSave: continue to clear
+        }
+
+        // Clear the canvas
+        ClearCanvas();
+
+        _currentFilePath = null;
+        HasUnsavedChanges = false;
+        UpdateStatus?.Invoke("New project created");
+
+        // Rebuild hierarchy
+        RebuildHierarchy?.Invoke();
+    }
+
+    /// <summary>
+    /// Clears all components and connections from the canvas.
+    /// </summary>
+    private void ClearCanvas()
+    {
+        _canvas.Components.Clear();
+        _canvas.Connections.Clear();
+        _canvas.ConnectionManager.Clear();
+        _commandManager.ClearHistory();
     }
 
     [RelayCommand]
