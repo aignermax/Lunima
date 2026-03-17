@@ -66,3 +66,46 @@ The following v2 features are not available in v3, but were not used in our test
 - Some theory data attribute behaviors have subtle differences
 
 None of these affected our existing tests.
+
+## Microsoft Testing Platform v2 (MTP v2)
+
+### What is MTP v2?
+
+Microsoft Testing Platform v2 is the new test execution engine for .NET, replacing VSTest. It provides:
+- Structured test output (JSON/CTRF format)
+- Better performance and extensibility
+- Native integration with modern .NET tooling
+
+### Enabling MTP v2
+
+MTP v2 is now enabled in `global.json`:
+
+```json
+{
+  "sdk": {
+    "version": "8.0.100",
+    "rollForward": "latestMajor"
+  },
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
+  }
+}
+```
+
+### Benefits for CI/CD
+
+With MTP v2 enabled:
+- Tests produce structured CTRF output instead of verbose console logs
+- External tools (like MCP servers) can parse test results efficiently
+- Test execution is more reliable and consistent across environments
+
+### Developer Impact
+
+**Running tests locally:** No changes required
+```bash
+dotnet test
+```
+
+**Test output format:** You may notice different console formatting, but functionality remains identical.
+
+**Compatibility:** MTP v2 requires xUnit v3 (already migrated). All existing tests work without modification.
