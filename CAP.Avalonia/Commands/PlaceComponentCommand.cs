@@ -63,15 +63,28 @@ public class PlaceComponentCommand : IUndoableCommand
     {
         if (_isValid && _component != null)
         {
-            _createdViewModel = _canvas.AddComponent(_component, _template.Name);
+            // Check if component already exists in canvas (e.g. after Undo then Redo)
+            _createdViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _component);
+
+            if (_createdViewModel == null)
+            {
+                // Component not in canvas, add it
+                _createdViewModel = _canvas.AddComponent(_component, _template.Name);
+            }
         }
     }
 
     public void Undo()
     {
-        if (_createdViewModel != null)
+        if (_component != null)
         {
-            _canvas.RemoveComponent(_createdViewModel);
+            // Find the ComponentViewModel by the Component reference
+            // (The stored _createdViewModel might have been removed/re-added by other commands like CreateGroupCommand)
+            var viewModel = _canvas.Components.FirstOrDefault(c => c.Component == _component);
+            if (viewModel != null)
+            {
+                _canvas.RemoveComponent(viewModel);
+            }
             _createdViewModel = null;
         }
     }

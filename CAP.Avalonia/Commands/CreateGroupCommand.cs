@@ -49,6 +49,61 @@ public class CreateGroupCommand : IUndoableCommand
         if (_components.Any(c => c.IsLocked))
             return;
 
+        // If group already exists (Redo scenario), just re-add it to canvas
+        if (_createdGroup != null && _groupViewModel != null)
+        {
+            try
+            {
+                _canvas.BeginCommandExecution();
+
+                // Remove child components from canvas
+                var componentsToRemove = _canvas.Components
+                    .Where(cvm => _components.Contains(cvm.Component))
+                    .ToList();
+
+                foreach (var compVm in componentsToRemove)
+                {
+                    // Remove pins
+                    var pinsToRemove = _canvas.AllPins
+                        .Where(p => p.ParentComponentViewModel == compVm)
+                        .ToList();
+                    foreach (var pin in pinsToRemove)
+                    {
+                        _canvas.AllPins.Remove(pin);
+                    }
+                    _canvas.Components.Remove(compVm);
+                }
+
+                // Remove internal connections
+                foreach (var connVm in _internalConnectionViewModels)
+                {
+                    _canvas.Connections.Remove(connVm);
+                    _canvas.ConnectionManager.RemoveConnectionDeferred(connVm.Connection);
+                }
+
+                // Re-add the SAME group
+                _canvas.Components.Add(_groupViewModel);
+
+                // Re-add group pins
+                foreach (var pin in _createdGroup.ExternalPins)
+                {
+                    _canvas.AllPins.Add(new PinViewModel(pin.InternalPin, _groupViewModel));
+                }
+
+                _canvas.Selection.SelectSingle(_groupViewModel);
+                _canvas.SelectedComponent = _groupViewModel;
+            }
+            finally
+            {
+                _canvas.EndCommandExecution();
+            }
+
+            _ = _canvas.RecalculateRoutesAsync();
+            _canvas.InvalidateSimulation();
+            return;
+        }
+
+        // First execution: create new group
         // 1. Calculate bounding box for selected components
         double minX = _components.Min(c => c.PhysicalX);
         double minY = _components.Min(c => c.PhysicalY);
