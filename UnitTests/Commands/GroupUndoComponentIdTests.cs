@@ -19,17 +19,15 @@ public class GroupUndoComponentIdTests
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
 
-        // Act 1: Create 2 components and remember their identifiers
+        // Act 1: Create 2 components
         var comp1 = TestComponentFactory.CreateBasicComponent();
         comp1.PhysicalX = 0;
         comp1.PhysicalY = 0;
-        var comp1Id = comp1.Identifier;
         canvas.AddComponent(comp1);
 
         var comp2 = TestComponentFactory.CreateBasicComponent();
         comp2.PhysicalX = 100;
         comp2.PhysicalY = 0;
-        var comp2Id = comp2.Identifier;
         canvas.AddComponent(comp2);
 
         // Store original component references
@@ -53,8 +51,9 @@ public class GroupUndoComponentIdTests
         // Assert: Components should be the ORIGINAL instances, not new clones!
         canvas.Components.Count.ShouldBe(2, "Should have 2 components after undo");
 
-        var comp1AfterUndo = canvas.Components.FirstOrDefault(c => c.Component.Identifier == comp1Id)?.Component;
-        var comp2AfterUndo = canvas.Components.FirstOrDefault(c => c.Component.Identifier == comp2Id)?.Component;
+        // Find components after undo by direct reference lookup
+        var comp1AfterUndo = canvas.Components.FirstOrDefault(c => c.Component == originalComp1)?.Component;
+        var comp2AfterUndo = canvas.Components.FirstOrDefault(c => c.Component == originalComp2)?.Component;
 
         comp1AfterUndo.ShouldNotBeNull("Component 1 should exist");
         comp2AfterUndo.ShouldNotBeNull("Component 2 should exist");
@@ -115,7 +114,7 @@ public class GroupUndoComponentIdTests
     }
 
     [Fact]
-    public void ComponentIdentifiers_ShouldNotChange_AfterGroupingAndUndo()
+    public void ComponentInstances_ShouldNotChange_AfterGroupingAndUndo()
     {
         // Arrange
         var canvas = new DesignCanvasViewModel();
@@ -127,8 +126,8 @@ public class GroupUndoComponentIdTests
         canvas.AddComponent(comp1);
         canvas.AddComponent(comp2);
 
-        var comp1IdBefore = comp1.Identifier;
-        var comp2IdBefore = comp2.Identifier;
+        var originalComp1 = comp1;
+        var originalComp2 = comp2;
 
         // Act: Group and undo
         var vms = canvas.Components.ToList();
@@ -136,16 +135,16 @@ public class GroupUndoComponentIdTests
         commandManager.ExecuteCommand(createGroupCmd);
         commandManager.Undo();
 
-        // Assert: Identifiers should be unchanged
-        var comp1AfterUndo = canvas.Components.FirstOrDefault(c => c.Component.Identifier == comp1IdBefore);
-        var comp2AfterUndo = canvas.Components.FirstOrDefault(c => c.Component.Identifier == comp2IdBefore);
+        // Assert: Component instances should be unchanged (not clones)
+        var comp1AfterUndo = canvas.Components.FirstOrDefault(c => c.Component == originalComp1);
+        var comp2AfterUndo = canvas.Components.FirstOrDefault(c => c.Component == originalComp2);
 
-        comp1AfterUndo.ShouldNotBeNull($"Component with ID {comp1IdBefore} should exist");
-        comp2AfterUndo.ShouldNotBeNull($"Component with ID {comp2IdBefore} should exist");
+        comp1AfterUndo.ShouldNotBeNull("Component 1 instance should still exist");
+        comp2AfterUndo.ShouldNotBeNull("Component 2 instance should still exist");
 
-        comp1AfterUndo.Component.Identifier.ShouldBe(comp1IdBefore,
-            "Component 1 identifier should not have changed");
-        comp2AfterUndo.Component.Identifier.ShouldBe(comp2IdBefore,
-            "Component 2 identifier should not have changed");
+        ReferenceEquals(comp1AfterUndo.Component, originalComp1).ShouldBeTrue(
+            "Component 1 should be the same instance, not a clone");
+        ReferenceEquals(comp2AfterUndo.Component, originalComp2).ShouldBeTrue(
+            "Component 2 should be the same instance, not a clone");
     }
 }
