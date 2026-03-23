@@ -16,6 +16,7 @@ public class CreateGroupCommand : IUndoableCommand
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly List<Component> _components;
+    private readonly List<ComponentViewModel> _componentViewModels = new(); // STORE ViewModels!
     private ComponentGroup? _createdGroup;
     private ComponentViewModel? _groupViewModel;
     private readonly List<WaveguideConnection> _internalConnections = new();
@@ -128,10 +129,14 @@ public class CreateGroupCommand : IUndoableCommand
         {
             _canvas.BeginCommandExecution();
 
-            // 7. Remove individual components from canvas
+            // 7. Store and remove individual components from canvas
+            _componentViewModels.Clear();
             var componentsToRemove = _canvas.Components
                 .Where(cvm => _components.Contains(cvm.Component))
                 .ToList();
+
+            // Store ComponentViewModels so we can restore them in Undo!
+            _componentViewModels.AddRange(componentsToRemove);
 
             // Store internal connection ViewModels before removing
             _internalConnectionViewModels.Clear();
@@ -203,22 +208,31 @@ public class CreateGroupCommand : IUndoableCommand
             _canvas.RemoveComponent(_groupViewModel);
 
             // Restore individual components at their original positions
-            foreach (var comp in _components)
+            // CRITICAL: Re-add the SAME ComponentViewModels we removed!
+            foreach (var compVm in _componentViewModels)
             {
+                var comp = compVm.Component;
                 if (_originalPositions.TryGetValue(comp, out var pos))
                 {
                     comp.PhysicalX = pos.x;
                     comp.PhysicalY = pos.y;
                 }
                 comp.ParentGroup = null;
-                _canvas.AddComponent(comp);
+
+                // Restore the SAME ViewModel (not create a new one!)
+                _canvas.Components.Add(compVm);
+
+                // Re-add pins to AllPins
+                foreach (var pin in comp.PhysicalPins)
+                {
+                    _canvas.AllPins.Add(new PinViewModel(pin, compVm));
+                }
             }
 
             // Restore internal connections
-            foreach (var conn in _internalConnections)
+            foreach (var connVm in _internalConnectionViewModels)
             {
-                _canvas.ConnectionManager.AddExistingConnection(conn);
-                var connVm = new WaveguideConnectionViewModel(conn);
+                _canvas.ConnectionManager.AddExistingConnection(connVm.Connection);
                 _canvas.Connections.Add(connVm);
             }
         }
@@ -226,8 +240,6 @@ public class CreateGroupCommand : IUndoableCommand
         {
             _canvas.EndCommandExecution();
         }
-
-        // No need to remove template from library since groups are not auto-saved
 
         // Recalculate routes
         _ = _canvas.RecalculateRoutesAsync();
