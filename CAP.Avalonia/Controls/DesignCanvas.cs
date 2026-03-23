@@ -99,13 +99,27 @@ public partial class DesignCanvas : Control
         {
             oldCanvas.PropertyChanged -= OnCanvasViewModelPropertyChanged;
             oldCanvas.RepaintRequested = null;
+            oldCanvas.Components.CollectionChanged -= OnComponentsCollectionChanged;
+            oldCanvas.Connections.CollectionChanged -= OnConnectionsCollectionChanged;
         }
 
         if (e.NewValue is DesignCanvasViewModel newCanvas)
         {
             newCanvas.PropertyChanged += OnCanvasViewModelPropertyChanged;
             newCanvas.RepaintRequested = () => InvalidateVisual();
+            newCanvas.Components.CollectionChanged += OnComponentsCollectionChanged;
+            newCanvas.Connections.CollectionChanged += OnConnectionsCollectionChanged;
         }
+    }
+
+    private void OnComponentsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        InvalidateVisual();
+    }
+
+    private void OnConnectionsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        InvalidateVisual();
     }
 
     private void OnCanvasViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
