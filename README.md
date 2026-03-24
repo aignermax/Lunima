@@ -112,6 +112,7 @@ The router supports three strategies:
 ### Prerequisites
 - .NET 8.0 SDK
 - (Optional) Nazca Python for GDS export
+- (Optional) **OpenViking** for AI agent context management — see [docs/OPENVIKING_QUICKSTART.md](docs/OPENVIKING_QUICKSTART.md)
 
 ### Build Commands
 
@@ -134,6 +135,43 @@ dotnet test UnitTests/UnitTests.csproj
 # or
 make test
 ```
+
+## OpenViking Setup (Optional - For Contributors)
+
+**Why OpenViking?** When working with Claude Code or other AI agents, reading 152 files (76,000+ lines) every time is slow and expensive. OpenViking creates a semantic index that reduces context by 93%, making AI assistance faster and more effective.
+
+### Quick Setup - One Command! (Linux)
+
+```bash
+bash scripts/setup-openviking-linux.sh YOUR_OPENAI_API_KEY
+```
+
+That's it! The script:
+- ✅ Installs OpenViking
+- ✅ Creates config with your API key
+- ✅ Indexes the entire codebase (~30 seconds)
+- ✅ Shows you how to start the server
+
+**Cost:** ~€0.003 for initial indexing (less than 1 cent), ~€0.0001 per git pull update.
+
+### Start the Server
+
+```bash
+~/.local/bin/openviking-server
+```
+
+Or run in background:
+```bash
+nohup ~/.local/bin/openviking-server > ~/.openviking/server.log 2>&1 &
+```
+
+### Documentation
+
+- **Home Setup (Linux):** [docs/OPENVIKING_HOME_SETUP.md](docs/OPENVIKING_HOME_SETUP.md) ← **Start here!**
+- **Detailed Guide:** [docs/OPENVIKING_QUICKSTART.md](docs/OPENVIKING_QUICKSTART.md)
+- **MCP Integration:** [mcp-servers/openviking/README.md](mcp-servers/openviking/README.md)
+
+**Important:** OpenViking uses OpenAI only for embeddings (creating search vectors), NOT as the LLM. Claude Sonnet remains your AI assistant. This is 100% optional for contributors but highly recommended when working with AI agents.
 
 ## S-Matrix Simulation
 

@@ -1,0 +1,25 @@
+{
+  "storage": {
+    "workspace": "/tmp/openviking_workspace"
+  },
+  "log": {
+    "level": "INFO",
+    "output": "stdout"
+  },
+  "embedding": {
+    "dense": {
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "YOUR_OPENAI_API_KEY_HERE",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small"
+    },
+    "max_concurrent": 10
+  },
+  "vlm": {
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "YOUR_OPENAI_API_KEY_HERE",
+    "provider": "openai",
+    "model": "gpt-4o-mini"
+  }
+}
