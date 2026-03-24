@@ -417,3 +417,6 @@ FodyWeavers.xsd
 
 # Godot leftover files (project migrated from Godot to Avalonia)
 *.uid
+
+# OpenViking MCP server files (removed from project)
+.ovignore
