@@ -39,6 +39,12 @@ public class GridPersistenceIntegrationTests
         dataAccessor.Setup(d => d.ReadAsText(It.IsAny<string>()))
             .Returns(() => savedJson);
 
+        // Configure factory to recreate components when loading
+        componentFactory.Setup(f => f.CreateComponentByIdentifier("comp1"))
+            .Returns(() => CreateTestComponent("comp1"));
+        componentFactory.Setup(f => f.CreateComponentByIdentifier("comp2"))
+            .Returns(() => CreateTestComponent("comp2"));
+
         // Act - Save
         var saveResult = await persistence.SaveAsync("test.json");
 

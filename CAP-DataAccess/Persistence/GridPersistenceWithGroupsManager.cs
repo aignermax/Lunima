@@ -58,8 +58,8 @@ public class GridPersistenceWithGroupsManager
                     // Save as group
                     saveData.Groups.Add(ComponentGroupSerializer.ToDto(group));
 
-                    // Also save all child components' data
-                    SaveChildComponentsRecursive(group, saveData.Components, savedComponents);
+                    // Also save all child components' data (and nested groups)
+                    SaveChildComponentsRecursive(group, saveData.Components, saveData.Groups, savedComponents);
                 }
                 else
                 {
@@ -143,6 +143,7 @@ public class GridPersistenceWithGroupsManager
             if (!childComponentIds.Contains(data.Identifier))
             {
                 var component = componentFactory.CreateComponentByIdentifier(data.Identifier);
+                if (component == null) continue;
                 component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
                 LoadSliders(data, component);
                 _gridManager.ComponentMover.PlaceComponent(data.X, data.Y, component);
@@ -156,6 +157,7 @@ public class GridPersistenceWithGroupsManager
             if (childComponentIds.Contains(data.Identifier))
             {
                 var component = componentFactory.CreateComponentByIdentifier(data.Identifier);
+                if (component == null) continue;
                 component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
                 LoadSliders(data, component);
                 // Don't place in grid - they'll be children of groups
@@ -169,7 +171,13 @@ public class GridPersistenceWithGroupsManager
         foreach (var groupDto in groupDtos)
         {
             var group = ComponentGroupSerializer.FromDto(groupDto, componentLookup);
-            _gridManager.ComponentMover.PlaceComponent(groupDto.GridX, groupDto.GridY, group);
+
+            // Only place top-level groups on the grid; nested groups are children of other groups
+            if (!childComponentIds.Contains(groupDto.Identifier))
+            {
+                _gridManager.ComponentMover.PlaceComponent(groupDto.GridX, groupDto.GridY, group);
+            }
+
             componentLookup[group.Identifier] = group;
         }
 
@@ -233,15 +241,28 @@ public class GridPersistenceWithGroupsManager
 
     /// <summary>
     /// Recursively saves all child components of a group.
+    /// Child groups are serialized as group DTOs; regular components as ComponentData.
     /// </summary>
     private void SaveChildComponentsRecursive(
         ComponentGroup group,
         List<ComponentData> components,
+        List<ComponentGroupDto> groups,
         HashSet<string> savedComponents)
     {
         foreach (var child in group.ChildComponents)
         {
-            if (!savedComponents.Contains(child.Identifier))
+            if (savedComponents.Contains(child.Identifier)) continue;
+
+            if (child is ComponentGroup childGroup)
+            {
+                // Save nested group as a group DTO
+                groups.Add(ComponentGroupSerializer.ToDto(childGroup));
+                savedComponents.Add(child.Identifier);
+
+                // Recursively save the nested group's children
+                SaveChildComponentsRecursive(childGroup, components, groups, savedComponents);
+            }
+            else
             {
                 components.Add(new ComponentData
                 {
@@ -252,12 +273,6 @@ public class GridPersistenceWithGroupsManager
                     Y = child.GridYMainTile
                 });
                 savedComponents.Add(child.Identifier);
-            }
-
-            // If child is also a group, recursively save its children
-            if (child is ComponentGroup childGroup)
-            {
-                SaveChildComponentsRecursive(childGroup, components, savedComponents);
             }
         }
     }
