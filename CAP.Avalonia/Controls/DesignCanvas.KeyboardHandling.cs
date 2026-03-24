@@ -1,4 +1,5 @@
 using Avalonia.Input;
+using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 
@@ -179,10 +180,18 @@ public partial class DesignCanvas
     {
         var canvasVm = ViewModel;
 
-        // First priority: Exit group edit mode if active
+        // First priority: Exit group edit mode if active (via command for undo/redo)
         if (canvasVm != null && canvasVm.IsInGroupEditMode)
         {
-            canvasVm.ExitGroupEditMode();
+            if (mainVm?.CommandManager != null && canvasVm.CurrentEditGroup != null)
+            {
+                var cmd = new ExitGroupEditModeCommand(canvasVm, canvasVm.CurrentEditGroup);
+                mainVm.CommandManager.ExecuteCommand(cmd);
+            }
+            else
+            {
+                canvasVm.ExitGroupEditMode();
+            }
             if (mainVm != null)
                 mainVm.StatusText = "Exited group edit mode";
         }
