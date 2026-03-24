@@ -1,0 +1,23 @@
+# Binary and data files
+*.sparam
+*.dat
+*.sln
+*.csproj
+*.user
+*.suo
+*.cache
+
+# Build outputs
+bin/
+obj/
+.vs/
+*.dll
+*.exe
+*.pdb
+
+# IDE files
+.idea/
+.vscode/
+
+# Git
+.git/
