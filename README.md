@@ -273,6 +273,16 @@ The goal is to make Connect-A-PIC Pro usable with real foundry component data so
 - [ ] **Multi-chip interconnect** - Inter-chip optical cables between separate chip canvases
 - [ ] **Python PDK Extractor** - Tool to convert Nazca Python PDKs to JSON format
 
+## AI Code Assistant Integration
+
+This codebase uses [NetContextServer](https://github.com/willibrandon/NetContextServer) for deep .NET semantic understanding:
+- Roslyn-based C# code analysis (classes, methods, types, references)
+- NuGet dependency analysis
+- Test coverage parsing (Coverlet, LCOV, Cobertura)
+- Model Context Protocol (MCP) integration with Claude Code
+
+See [docs/NETCONTEXTSERVER_SETUP.md](docs/NETCONTEXTSERVER_SETUP.md) for setup instructions.
+
 ## Original Project
 
 Based on [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) by Akhetonics.
