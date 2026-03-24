@@ -514,6 +514,128 @@ public class ComponentGroupSerializationTests
     }
 
     /// <summary>
+    /// Test 7: Full user workflow for ComponentGroup serialization with internal connections.
+    /// Scenario: Create 2 components with in/out pins, connect them, group, save, load, verify.
+    /// Acceptance-criteria test for issue #237.
+    /// </summary>
+    [Fact]
+    public async Task ComponentGroup_WithInternalConnection_SaveAndLoad_PreservesStructure()
+    {
+        // Arrange - Create infrastructure
+        var (gridManager, dataAccessor, componentFactory) = CreateTestSetup();
+        var persistence = new GridPersistenceWithGroupsManager(gridManager, dataAccessor.Object);
+
+        // Step 1: Create 2 components with input and output pins
+        var comp1 = CreateTwoPortComponent("waveguide1", 0, 0);
+        var comp2 = CreateTwoPortComponent("waveguide2", 50, 0);
+
+        // Step 2: Simulate a waveguide connection between comp1.out and comp2.in
+        var outPin = comp1.PhysicalPins.First(p => p.Name == "out");
+        var inPin = comp2.PhysicalPins.First(p => p.Name == "in");
+        var routedPath = CreateSimpleRoutedPath(
+            comp1.PhysicalX + 10, comp1.PhysicalY + 0.5,
+            comp2.PhysicalX, comp2.PhysicalY + 0.5);
+
+        // Step 3: Group the 2 components (connection becomes internal frozen path)
+        var group = new ComponentGroup("TestCircuit")
+        {
+            PhysicalX = 0,
+            PhysicalY = 0,
+            Description = "Two waveguides connected internally"
+        };
+        group.AddChild(comp1);
+        group.AddChild(comp2);
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            Path = routedPath,
+            StartPin = outPin,
+            EndPin = inPin
+        };
+        group.AddInternalPath(frozenPath);
+
+        // Place group on grid
+        gridManager.ComponentMover.PlaceComponent(0, 0, group);
+
+        // Setup mock data accessor to capture/replay JSON
+        string savedJson = "";
+        dataAccessor.Setup(d => d.Write(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string>((p, content) => savedJson = content)
+            .ReturnsAsync(true);
+        dataAccessor.Setup(d => d.ReadAsText(It.IsAny<string>()))
+            .Returns(() => savedJson);
+
+        // Setup component factory to create matching components on load
+        componentFactory.Setup(f => f.CreateComponentByIdentifier("waveguide1"))
+            .Returns(() => CreateTwoPortComponent("waveguide1", 0, 0));
+        componentFactory.Setup(f => f.CreateComponentByIdentifier("waveguide2"))
+            .Returns(() => CreateTwoPortComponent("waveguide2", 50, 0));
+
+        // Step 4: Save the design to JSON
+        var saveResult = await persistence.SaveAsync("test_issue237.json");
+        saveResult.ShouldBeTrue("Save should succeed");
+        savedJson.ShouldNotBeNullOrEmpty("JSON should be produced");
+
+        // Step 5: Load the design from JSON (after clearing grid)
+        gridManager.ComponentMover.DeleteAllComponents();
+        await persistence.LoadAsync("test_issue237.json", componentFactory.Object);
+
+        // Step 6: Verify - Group exists at expected position
+        var loadedTile = gridManager.TileManager.Tiles[0, 0];
+        loadedTile.ShouldNotBeNull("Tile at (0,0) should have a component");
+        loadedTile.Component.ShouldBeOfType<ComponentGroup>("Component should be a group");
+
+        var loadedGroup = (ComponentGroup)loadedTile.Component;
+
+        // Verify group metadata
+        loadedGroup.GroupName.ShouldBe("TestCircuit");
+        loadedGroup.Description.ShouldBe("Two waveguides connected internally");
+
+        // Verify group contains exactly 2 child components
+        loadedGroup.ChildComponents.Count.ShouldBe(2,
+            "Group should contain exactly 2 child components");
+        loadedGroup.ChildComponents.ShouldContain(
+            c => c.Identifier == "waveguide1", "Child 'waveguide1' should exist");
+        loadedGroup.ChildComponents.ShouldContain(
+            c => c.Identifier == "waveguide2", "Child 'waveguide2' should exist");
+
+        // Verify internal connection exists between the components
+        loadedGroup.InternalPaths.Count.ShouldBe(1,
+            "Internal connection should be preserved after save/load");
+
+        var loadedFrozenPath = loadedGroup.InternalPaths[0];
+        loadedFrozenPath.Path.ShouldNotBeNull("Frozen path should have routed path");
+        loadedFrozenPath.Path.Segments.Count.ShouldBeGreaterThan(0,
+            "Path should have at least one segment");
+
+        // Verify pins are correctly linked to child components
+        loadedFrozenPath.StartPin.ShouldNotBeNull("Start pin should be restored");
+        loadedFrozenPath.EndPin.ShouldNotBeNull("End pin should be restored");
+        loadedFrozenPath.StartPin.Name.ShouldBe("out",
+            "Start pin should be the 'out' pin of waveguide1");
+        loadedFrozenPath.EndPin.Name.ShouldBe("in",
+            "End pin should be the 'in' pin of waveguide2");
+
+        // Verify pins reference the loaded child components (not stale references)
+        loadedFrozenPath.StartPin.ParentComponent.ShouldBe(
+            loadedGroup.ChildComponents.First(c => c.Identifier == "waveguide1"),
+            "Start pin should reference the loaded waveguide1 component");
+        loadedFrozenPath.EndPin.ParentComponent.ShouldBe(
+            loadedGroup.ChildComponents.First(c => c.Identifier == "waveguide2"),
+            "End pin should reference the loaded waveguide2 component");
+
+        // Verify external pins are empty (all connections are internal)
+        loadedGroup.ExternalPins.Count.ShouldBe(0,
+            "No external pins expected for fully internal group");
+
+        // Verify bounding box was recalculated
+        loadedGroup.WidthMicrometers.ShouldBeGreaterThan(0,
+            "Group width should be recalculated from children");
+        loadedGroup.HeightMicrometers.ShouldBeGreaterThan(0,
+            "Group height should be recalculated from children");
+    }
+
+    /// <summary>
     /// Creates a test setup with GridManager, mocked IDataAccessor, and mocked IComponentFactory.
     /// </summary>
     private (GridManager gridManager, Mock<IDataAccessor> dataAccessor, Mock<IComponentFactory> componentFactory)
@@ -527,7 +649,7 @@ public class ComponentGroupSerializationTests
     }
 
     /// <summary>
-    /// Creates a test component with a physical pin.
+    /// Creates a test component with a single physical pin.
     /// </summary>
     private Component CreateComponentWithPins(string identifier, double x, double y)
     {
@@ -540,7 +662,7 @@ public class ComponentGroupSerializationTests
         };
 
         var component = new Component(
-            new Dictionary<int, CAP_Core.LightCalculation.SMatrix>(),
+            new Dictionary<int, SMatrix>(),
             new List<Slider>(),
             "test_type",
             "",
@@ -558,6 +680,50 @@ public class ComponentGroupSerializationTests
         };
 
         pin.ParentComponent = component;
+        return component;
+    }
+
+    /// <summary>
+    /// Creates a two-port component with 'in' and 'out' physical pins for connection testing.
+    /// </summary>
+    private Component CreateTwoPortComponent(string identifier, double x, double y)
+    {
+        var inPin = new PhysicalPin
+        {
+            Name = "in",
+            OffsetXMicrometers = 0,
+            OffsetYMicrometers = 0.5,
+            AngleDegrees = 180
+        };
+
+        var outPin = new PhysicalPin
+        {
+            Name = "out",
+            OffsetXMicrometers = 10,
+            OffsetYMicrometers = 0.5,
+            AngleDegrees = 0
+        };
+
+        var component = new Component(
+            new Dictionary<int, SMatrix>(),
+            new List<Slider>(),
+            "test_waveguide",
+            "",
+            new Part[1, 1] { { new Part() } },
+            -1,
+            identifier,
+            new DiscreteRotation(),
+            new List<PhysicalPin> { inPin, outPin }
+        )
+        {
+            PhysicalX = x,
+            PhysicalY = y,
+            WidthMicrometers = 10,
+            HeightMicrometers = 1
+        };
+
+        inPin.ParentComponent = component;
+        outPin.ParentComponent = component;
         return component;
     }
 
