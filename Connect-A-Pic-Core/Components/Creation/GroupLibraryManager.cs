@@ -200,8 +200,7 @@ public class GroupLibraryManager
     }
 
     /// <summary>
-    /// Sets human-readable names for all child components in a group.
-    /// Keeps Identifier as GUID for persistence stability, but sets HumanReadableName for UI display.
+    /// Renames group names only. Component Identifiers remain as GUIDs for persistence stability.
     /// </summary>
     private void RenameComponentsWithSequentialNames(ComponentGroup group)
     {
@@ -210,17 +209,12 @@ public class GroupLibraryManager
         {
             if (child is ComponentGroup childGroup)
             {
-                // Recursively set names for nested groups
+                // Recursively rename nested groups
                 childGroup.GroupName = $"SubGroup_{componentIndex++}";
                 RenameComponentsWithSequentialNames(childGroup);
             }
-            else
-            {
-                // Keep Identifier as GUID (already set from template)
-                // Set HumanReadableName for UI display
-                var baseName = child.Identifier.Split('_')[0];
-                child.HumanReadableName = $"{baseName}_{componentIndex++}";
-            }
+            // Note: Individual component Identifiers are NOT changed - they remain as GUIDs
+            // This preserves persistence stability for save/load operations
         }
     }
 
