@@ -48,6 +48,15 @@ public partial class MainWindow : Window
 
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
+
+                // Wire up LeftPanel.SelectedGroupTemplate changes to update ListBox selections
+                vm.LeftPanel.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(vm.LeftPanel.SelectedGroupTemplate))
+                    {
+                        UpdateGroupTemplateListBoxSelections(vm.LeftPanel.SelectedGroupTemplate);
+                    }
+                };
             }
         };
     }
@@ -304,6 +313,121 @@ public partial class MainWindow : Window
         if (sender is Grid grid && grid.DataContext is GroupTemplateItemViewModel itemVm)
         {
             itemVm.IsHovered = false;
+        }
+    }
+
+    /// <summary>
+    /// Handles selection change in UserGroups ListBox.
+    /// Extracts the GroupTemplate from GroupTemplateItemViewModel and sets it in LeftPanel.
+    /// </summary>
+    private void OnUserGroupsSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (sender is not ListBox listBox) return;
+
+        if (listBox.SelectedItem is GroupTemplateItemViewModel itemVm)
+        {
+            vm.LeftPanel.SelectedGroupTemplate = itemVm.Template;
+            // Clear PDK groups selection
+            ClearPdkGroupsSelection();
+        }
+        else if (listBox.SelectedItem == null)
+        {
+            // Only clear if this was triggered by user action, not by code
+            if (e.RemovedItems.Count > 0 && e.AddedItems.Count == 0)
+            {
+                vm.LeftPanel.SelectedGroupTemplate = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles selection change in PdkGroups ListBox.
+    /// Extracts the GroupTemplate from GroupTemplateItemViewModel and sets it in LeftPanel.
+    /// </summary>
+    private void OnPdkGroupsSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (sender is not ListBox listBox) return;
+
+        if (listBox.SelectedItem is GroupTemplateItemViewModel itemVm)
+        {
+            vm.LeftPanel.SelectedGroupTemplate = itemVm.Template;
+            // Clear user groups selection
+            ClearUserGroupsSelection();
+        }
+        else if (listBox.SelectedItem == null)
+        {
+            // Only clear if this was triggered by user action, not by code
+            if (e.RemovedItems.Count > 0 && e.AddedItems.Count == 0)
+            {
+                vm.LeftPanel.SelectedGroupTemplate = null;
+            }
+        }
+    }
+
+    private void ClearUserGroupsSelection()
+    {
+        if (UserGroupsListBox != null)
+        {
+            UserGroupsListBox.SelectedItem = null;
+        }
+    }
+
+    private void ClearPdkGroupsSelection()
+    {
+        if (PdkGroupsListBox != null)
+        {
+            PdkGroupsListBox.SelectedItem = null;
+        }
+    }
+
+    /// <summary>
+    /// Clears both user and PDK group selections. Called from MainViewModel.
+    /// </summary>
+    public void ClearAllGroupSelections()
+    {
+        ClearUserGroupsSelection();
+        ClearPdkGroupsSelection();
+    }
+
+    /// <summary>
+    /// Updates ListBox selections to match the given GroupTemplate.
+    /// Finds the corresponding GroupTemplateItemViewModel and selects it.
+    /// </summary>
+    private void UpdateGroupTemplateListBoxSelections(CAP_Core.Components.Creation.GroupTemplate? template)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        if (template == null)
+        {
+            // Clear all selections
+            ClearAllGroupSelections();
+        }
+        else
+        {
+            // Find and select the matching item in UserGroups
+            var userItem = vm.GroupLibrary.UserGroups.FirstOrDefault(vm => vm.Template == template);
+            if (userItem != null)
+            {
+                if (UserGroupsListBox != null)
+                {
+                    UserGroupsListBox.SelectedItem = userItem;
+                }
+                ClearPdkGroupsSelection();
+                return;
+            }
+
+            // Find and select the matching item in PdkGroups
+            var pdkItem = vm.GroupLibrary.PdkGroups.FirstOrDefault(vm => vm.Template == template);
+            if (pdkItem != null)
+            {
+                if (PdkGroupsListBox != null)
+                {
+                    PdkGroupsListBox.SelectedItem = pdkItem;
+                }
+                ClearUserGroupsSelection();
+            }
         }
     }
 

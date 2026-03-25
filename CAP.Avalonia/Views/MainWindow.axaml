@@ -160,8 +160,9 @@
                             <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,5,0,3"
                                        IsVisible="{Binding GroupLibrary.UserGroups.Count}"/>
-                            <ListBox ItemsSource="{Binding GroupLibrary.UserGroups}"
-                                     SelectedItem="{Binding LeftPanel.SelectedGroupTemplate}"
+                            <ListBox x:Name="UserGroupsListBox"
+                                     ItemsSource="{Binding GroupLibrary.UserGroups}"
+                                     SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
@@ -224,8 +225,9 @@
                             <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,10,0,3"
                                        IsVisible="{Binding GroupLibrary.PdkGroups.Count}"/>
-                            <ListBox ItemsSource="{Binding GroupLibrary.PdkGroups}"
-                                     SelectedItem="{Binding LeftPanel.SelectedGroupTemplate}"
+                            <ListBox x:Name="PdkGroupsListBox"
+                                     ItemsSource="{Binding GroupLibrary.PdkGroups}"
+                                     SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
