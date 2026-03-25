@@ -161,6 +161,7 @@ public static class GroupTemplateSerializer
         {
             IsGroup = false,
             Identifier = comp.Identifier,
+            HumanReadableName = comp.HumanReadableName,
             NazcaFunctionName = comp.NazcaFunctionName,
             NazcaFunctionParameters = comp.NazcaFunctionParameters,
             NazcaModuleName = comp.NazcaModuleName,
@@ -202,7 +203,8 @@ public static class GroupTemplateSerializer
             PhysicalY = dto.PhysicalY,
             WidthMicrometers = dto.WidthMicrometers,
             HeightMicrometers = dto.HeightMicrometers,
-            NazcaModuleName = dto.NazcaModuleName
+            NazcaModuleName = dto.NazcaModuleName,
+            HumanReadableName = dto.HumanReadableName
         };
     }
 
@@ -390,6 +392,12 @@ public class ChildComponentDto
 {
     public bool IsGroup { get; set; }
     public string? Identifier { get; set; }
+
+    /// <summary>
+    /// Human-readable display name, separate from Identifier.
+    /// </summary>
+    public string? HumanReadableName { get; set; }
+
     public string? NazcaFunctionName { get; set; }
     public string? NazcaFunctionParameters { get; set; }
     public string? NazcaModuleName { get; set; }

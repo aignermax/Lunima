@@ -16,6 +16,14 @@ public class Component : ICloneable
     public int HeightInTiles => Parts.GetLength(1);
     public int TypeNumber { get; set; }
     public string Identifier{ get; set; }
+
+    /// <summary>
+    /// Human-readable display name for UI (e.g., "GratingCoupler_1").
+    /// Separate from <see cref="Identifier"/> to preserve persistence stability.
+    /// When null, the UI falls back to displaying <see cref="Identifier"/>.
+    /// </summary>
+    public string? HumanReadableName { get; set; }
+
     public bool IsPlacedInGrid { get; private set; }
     [JsonIgnore] public int GridXMainTile { get; protected set; }
     [JsonIgnore] public int GridYMainTile { get; protected set; }
@@ -324,6 +332,7 @@ public class Component : ICloneable
         clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
         clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
         clonedComponent.IsLocked = false;  // Cloned components should always be unlocked
+        clonedComponent.HumanReadableName = HumanReadableName;
 
         return clonedComponent;
     }

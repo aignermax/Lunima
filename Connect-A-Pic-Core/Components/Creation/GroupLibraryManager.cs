@@ -200,7 +200,8 @@ public class GroupLibraryManager
     }
 
     /// <summary>
-    /// Renames group names only. Component Identifiers remain as GUIDs for persistence stability.
+    /// Sets human-readable display names on child components using sequential numbering.
+    /// Component Identifiers remain as GUIDs for persistence stability.
     /// </summary>
     private void RenameComponentsWithSequentialNames(ComponentGroup group)
     {
@@ -209,12 +210,16 @@ public class GroupLibraryManager
         {
             if (child is ComponentGroup childGroup)
             {
-                // Recursively rename nested groups
                 childGroup.GroupName = $"SubGroup_{componentIndex++}";
                 RenameComponentsWithSequentialNames(childGroup);
             }
-            // Note: Individual component Identifiers are NOT changed - they remain as GUIDs
-            // This preserves persistence stability for save/load operations
+            else
+            {
+                var baseName = string.IsNullOrWhiteSpace(child.NazcaFunctionName)
+                    ? "Component"
+                    : child.NazcaFunctionName;
+                child.HumanReadableName = $"{baseName}_{componentIndex++}";
+            }
         }
     }
 
