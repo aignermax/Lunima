@@ -340,6 +340,219 @@ public class DesignFileGroupPersistenceTests
     }
 
     /// <summary>
+    /// Test for issue #253: Deeply nested groups (super-super-groups) should be saved and loaded correctly.
+    /// Tests 3 levels of nesting: components -> group -> super-group -> super-super-group.
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLoad_DeeplyNestedGroups_PreservesFullHierarchy()
+    {
+        // Arrange
+        var (saveVm, saveCanvas) = CreateFileOperationsSetup();
+        var tempFile = Path.Combine(Path.GetTempPath(), $"test_nested_{Guid.NewGuid()}.cappro");
+
+        try
+        {
+            // Level 1: Create 2 base MMI components (will be in Group A)
+            var mmiTemplate = _library.First(t => t.Name == "1x2 MMI Splitter");
+            var comp1 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 100, 100);
+            comp1.Identifier = "comp_1";
+            var comp2 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 300, 100);
+            comp2.Identifier = "comp_2";
+
+            // Level 2: Create Group A with 2 components
+            var groupA = new ComponentGroup("GroupA")
+            {
+                PhysicalX = 100,
+                PhysicalY = 100,
+                Description = "Base group level 1"
+            };
+            groupA.AddChild(comp1);
+            groupA.AddChild(comp2);
+
+            // Add internal connection in Group A
+            var pathA = new RoutedPath();
+            pathA.Segments.Add(new StraightSegment(180, 125.5, 300, 127.5, 0));
+            groupA.AddInternalPath(new FrozenWaveguidePath
+            {
+                Path = pathA,
+                StartPin = comp1.PhysicalPins.First(p => p.Name == "out1"),
+                EndPin = comp2.PhysicalPins.First(p => p.Name == "in")
+            });
+
+            // Level 2: Create Group B (copy of Group A structure)
+            var comp3 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 500, 100);
+            comp3.Identifier = "comp_3";
+            var comp4 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 700, 100);
+            comp4.Identifier = "comp_4";
+
+            var groupB = new ComponentGroup("GroupB")
+            {
+                PhysicalX = 500,
+                PhysicalY = 100,
+                Description = "Base group level 1 copy"
+            };
+            groupB.AddChild(comp3);
+            groupB.AddChild(comp4);
+
+            // Level 3: Create Super-Group C (contains Groups A and B)
+            var superGroupC = new ComponentGroup("SuperGroupC")
+            {
+                PhysicalX = 100,
+                PhysicalY = 100,
+                Description = "Super-group level 2"
+            };
+            superGroupC.AddChild(groupA);
+            superGroupC.AddChild(groupB);
+
+            // Level 3: Create Super-Group D (copy structure)
+            var comp5 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 100, 400);
+            comp5.Identifier = "comp_5";
+            var comp6 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 300, 400);
+            comp6.Identifier = "comp_6";
+
+            var groupE = new ComponentGroup("GroupE")
+            {
+                PhysicalX = 100,
+                PhysicalY = 400
+            };
+            groupE.AddChild(comp5);
+            groupE.AddChild(comp6);
+
+            var comp7 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 500, 400);
+            comp7.Identifier = "comp_7";
+            var comp8 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 700, 400);
+            comp8.Identifier = "comp_8";
+
+            var groupF = new ComponentGroup("GroupF")
+            {
+                PhysicalX = 500,
+                PhysicalY = 400
+            };
+            groupF.AddChild(comp7);
+            groupF.AddChild(comp8);
+
+            var superGroupD = new ComponentGroup("SuperGroupD")
+            {
+                PhysicalX = 100,
+                PhysicalY = 400,
+                Description = "Super-group level 2 copy"
+            };
+            superGroupD.AddChild(groupE);
+            superGroupD.AddChild(groupF);
+
+            // Level 4: Create Super-Super-Group E (contains Super-Groups C and D)
+            var superSuperGroupE = new ComponentGroup("SuperSuperGroupE")
+            {
+                PhysicalX = 50,
+                PhysicalY = 50,
+                Description = "Super-super-group level 3 - deeply nested"
+            };
+            superSuperGroupE.AddChild(superGroupC);
+            superSuperGroupE.AddChild(superGroupD);
+
+            // Add only the top-level super-super-group to canvas
+            saveCanvas.AddComponent(superSuperGroupE);
+
+            // Act - Save to file
+            var mockDialog = new Mock<IFileDialogService>();
+            mockDialog.Setup(f => f.ShowSaveFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile);
+            saveVm.FileDialogService = mockDialog.Object;
+
+            await saveVm.SaveDesignAsCommand.ExecuteAsync(null);
+
+            // Verify file was written
+            File.Exists(tempFile).ShouldBeTrue("Design file should be created");
+            var json = await File.ReadAllTextAsync(tempFile);
+
+            // Verify all groups are in the JSON
+            json.ShouldContain("GroupA");
+            json.ShouldContain("GroupB");
+            json.ShouldContain("SuperGroupC");
+            json.ShouldContain("SuperGroupD");
+            json.ShouldContain("SuperSuperGroupE");
+
+            // Verify all base components are in the JSON
+            json.ShouldContain("comp_1");
+            json.ShouldContain("comp_2");
+            json.ShouldContain("comp_3");
+            json.ShouldContain("comp_4");
+
+            // Act - Create new VM and load
+            var (loadVm, loadCanvas) = CreateFileOperationsSetup();
+            var loadDialog = new Mock<IFileDialogService>();
+            loadDialog.Setup(f => f.ShowOpenFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile);
+            loadVm.FileDialogService = loadDialog.Object;
+
+            await loadVm.LoadDesignCommand.ExecuteAsync(null);
+
+            // Assert - Canvas should have exactly 1 top-level component (the super-super-group)
+            loadCanvas.Components.Count.ShouldBe(1,
+                "Canvas should have exactly one top-level super-super-group");
+
+            var topLevelVm = loadCanvas.Components[0];
+            topLevelVm.Component.ShouldBeOfType<ComponentGroup>();
+
+            var loadedSuperSuperGroup = (ComponentGroup)topLevelVm.Component;
+            loadedSuperSuperGroup.GroupName.ShouldBe("SuperSuperGroupE");
+            loadedSuperSuperGroup.Description.ShouldBe("Super-super-group level 3 - deeply nested");
+
+            // Verify level 3: Super-Super-Group should contain 2 super-groups
+            loadedSuperSuperGroup.ChildComponents.Count.ShouldBe(2);
+            loadedSuperSuperGroup.ChildComponents.ShouldAllBe(c => c is ComponentGroup);
+
+            var loadedSuperGroupC = loadedSuperSuperGroup.ChildComponents
+                .OfType<ComponentGroup>()
+                .FirstOrDefault(g => g.GroupName == "SuperGroupC");
+            loadedSuperGroupC.ShouldNotBeNull("SuperGroupC should be loaded");
+            loadedSuperGroupC!.Description.ShouldBe("Super-group level 2");
+
+            var loadedSuperGroupD = loadedSuperSuperGroup.ChildComponents
+                .OfType<ComponentGroup>()
+                .FirstOrDefault(g => g.GroupName == "SuperGroupD");
+            loadedSuperGroupD.ShouldNotBeNull("SuperGroupD should be loaded");
+
+            // Verify level 2: Super-Groups should contain base groups
+            loadedSuperGroupC.ChildComponents.Count.ShouldBe(2);
+            loadedSuperGroupC.ChildComponents.ShouldAllBe(c => c is ComponentGroup);
+
+            var loadedGroupA = loadedSuperGroupC.ChildComponents
+                .OfType<ComponentGroup>()
+                .FirstOrDefault(g => g.GroupName == "GroupA");
+            loadedGroupA.ShouldNotBeNull("GroupA should be loaded");
+            loadedGroupA!.Description.ShouldBe("Base group level 1");
+
+            var loadedGroupB = loadedSuperGroupC.ChildComponents
+                .OfType<ComponentGroup>()
+                .FirstOrDefault(g => g.GroupName == "GroupB");
+            loadedGroupB.ShouldNotBeNull("GroupB should be loaded");
+
+            // Verify level 1: Base groups should contain components (not groups)
+            loadedGroupA.ChildComponents.Count.ShouldBe(2);
+            loadedGroupA.ChildComponents.ShouldAllBe(c => !(c is ComponentGroup));
+
+            loadedGroupA.ChildComponents
+                .Any(c => c.Identifier == "comp_1").ShouldBeTrue();
+            loadedGroupA.ChildComponents
+                .Any(c => c.Identifier == "comp_2").ShouldBeTrue();
+
+            // Verify internal paths are preserved
+            loadedGroupA.InternalPaths.Count.ShouldBe(1);
+            var loadedPath = loadedGroupA.InternalPaths[0];
+            loadedPath.StartPin.Name.ShouldBe("out1");
+            loadedPath.EndPin.Name.ShouldBe("in");
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
     /// Creates a FileOperationsViewModel with real component library for testing.
     /// </summary>
     private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateFileOperationsSetup()

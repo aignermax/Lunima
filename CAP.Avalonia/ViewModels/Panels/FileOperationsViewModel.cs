@@ -160,11 +160,14 @@ public partial class FileOperationsViewModel : ObservableObject
                 }).ToList()
             };
 
-            // Serialize groups
+            // Serialize groups (including nested groups recursively)
             if (groupComponents.Count > 0)
             {
-                designData.Groups = groupComponents.Select(gc =>
-                    SerializeGroupToDesignData(gc)).ToList();
+                designData.Groups = new List<DesignGroupData>();
+                foreach (var gc in groupComponents)
+                {
+                    SerializeGroupRecursively(gc, designData.Groups);
+                }
             }
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
@@ -203,54 +206,104 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Serializes a ComponentGroup ViewModel into a DesignGroupData for the design file.
+    /// Recursively serializes a ComponentGroup and all its nested child groups.
+    /// Adds each group (including nested ones) to the groups list.
     /// </summary>
-    private DesignGroupData SerializeGroupToDesignData(ComponentViewModel groupVm)
+    private void SerializeGroupRecursively(ComponentViewModel groupVm, List<DesignGroupData> groupsList)
     {
         var group = (ComponentGroup)groupVm.Component;
-        var groupDto = ComponentGroupSerializer.ToDto(group);
 
+        // First, recursively serialize any nested child groups
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                // Find the VM for this child group (if it exists on canvas)
+                // For nested groups, they won't have their own VM on canvas
+                // We'll create a minimal representation
+                var childVm = _canvas.Components.FirstOrDefault(c => c.Component == child);
+                if (childVm != null)
+                {
+                    SerializeGroupRecursively(childVm, groupsList);
+                }
+                else
+                {
+                    // Nested group - serialize it with its physical position
+                    SerializeNestedGroup(childGroup, groupsList);
+                }
+            }
+        }
+
+        // Then serialize this group itself
+        var groupDto = ComponentGroupSerializer.ToDto(group);
         var childDataList = new List<ChildComponentData>();
         CollectChildComponentData(group, childDataList);
 
-        return new DesignGroupData
+        groupsList.Add(new DesignGroupData
         {
             GroupDto = groupDto,
             ChildComponents = childDataList,
             CanvasX = groupVm.X,
             CanvasY = groupVm.Y
-        };
+        });
     }
 
     /// <summary>
-    /// Recursively collects child component data (with template names) from a group.
+    /// Serializes a nested ComponentGroup that doesn't have its own canvas VM.
+    /// </summary>
+    private void SerializeNestedGroup(ComponentGroup group, List<DesignGroupData> groupsList)
+    {
+        // First, recursively serialize any nested child groups
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                SerializeNestedGroup(childGroup, groupsList);
+            }
+        }
+
+        // Then serialize this group
+        var groupDto = ComponentGroupSerializer.ToDto(group);
+        var childDataList = new List<ChildComponentData>();
+        CollectChildComponentData(group, childDataList);
+
+        groupsList.Add(new DesignGroupData
+        {
+            GroupDto = groupDto,
+            ChildComponents = childDataList,
+            CanvasX = group.PhysicalX,
+            CanvasY = group.PhysicalY
+        });
+    }
+
+    /// <summary>
+    /// Collects child component data (with template names) from a group.
+    /// Only collects direct children that are NOT ComponentGroups (nested groups are serialized separately).
     /// </summary>
     private void CollectChildComponentData(
         ComponentGroup group, List<ChildComponentData> childDataList)
     {
         foreach (var child in group.ChildComponents)
         {
-            if (child is ComponentGroup childGroup)
+            if (child is ComponentGroup)
             {
-                // Nested groups are handled by their own DesignGroupData
-                CollectChildComponentData(childGroup, childDataList);
+                // Skip nested groups - they have their own DesignGroupData entry
+                continue;
             }
-            else
-            {
-                var templateName = FindTemplateName(child);
 
-                childDataList.Add(new ChildComponentData
-                {
-                    Identifier = child.Identifier,
-                    TemplateName = templateName,
-                    X = child.PhysicalX,
-                    Y = child.PhysicalY,
-                    Rotation = (int)child.Rotation90CounterClock,
-                    SliderValue = child.GetAllSliders().Count > 0
-                        ? child.GetSlider(0)?.Value : null,
-                    IsLocked = child.IsLocked ? true : null
-                });
-            }
+            var templateName = FindTemplateName(child);
+
+            childDataList.Add(new ChildComponentData
+            {
+                Identifier = child.Identifier,
+                TemplateName = templateName,
+                X = child.PhysicalX,
+                Y = child.PhysicalY,
+                Rotation = (int)child.Rotation90CounterClock,
+                SliderValue = child.GetAllSliders().Count > 0
+                    ? child.GetSlider(0)?.Value : null,
+                IsLocked = child.IsLocked ? true : null
+            });
         }
     }
 
@@ -479,20 +532,23 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Loads ComponentGroups from saved design data.
-    /// Creates child components, reconstructs groups, and adds them to the canvas.
+    /// Loads ComponentGroups from saved design data, handling nested groups correctly.
+    /// Creates child components first, then reconstructs groups in dependency order.
     /// </summary>
     private int LoadGroups(List<DesignGroupData> groupDataList)
     {
-        var loadedCount = 0;
+        // Build a global component lookup that will include both regular components and groups
+        var allComponents = new Dictionary<string, Component>();
 
+        // First pass: Create all non-group child components
         foreach (var groupData in groupDataList)
         {
-            var componentLookup = new Dictionary<string, Component>();
-
-            // Create child components from template (not added to canvas individually)
             foreach (var childData in groupData.ChildComponents)
             {
+                // Skip if already created (can happen with shared children)
+                if (allComponents.ContainsKey(childData.Identifier))
+                    continue;
+
                 var template = _componentLibrary.FirstOrDefault(t =>
                     t.Name.Equals(childData.TemplateName, StringComparison.OrdinalIgnoreCase));
 
@@ -521,24 +577,98 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (childData.IsLocked == true)
                     child.IsLocked = true;
 
-                componentLookup[child.Identifier] = child;
+                allComponents[child.Identifier] = child;
             }
-
-            // Reconstruct the group from DTO
-            var group = ComponentGroupSerializer.FromDto(
-                groupData.GroupDto, componentLookup);
-
-            // Add the group to the canvas as a ComponentViewModel
-            var groupVm = _canvas.AddComponent(group);
-            groupVm.X = groupData.CanvasX;
-            groupVm.Y = groupData.CanvasY;
-            group.PhysicalX = groupData.CanvasX;
-            group.PhysicalY = groupData.CanvasY;
-
-            loadedCount++;
         }
 
-        return loadedCount;
+        // Second pass: Reconstruct groups in dependency order (children before parents)
+        // Sort groups by their child component IDs to ensure child groups are loaded first
+        var orderedGroups = TopologicalSortGroups(groupDataList);
+
+        foreach (var groupData in orderedGroups)
+        {
+            // Reconstruct the group from DTO using the global component lookup
+            var group = ComponentGroupSerializer.FromDto(
+                groupData.GroupDto, allComponents);
+
+            // Add the reconstructed group to the global lookup
+            allComponents[group.Identifier] = group;
+
+            // Only add top-level groups (groups without a parent) to the canvas
+            if (groupData.GroupDto.ParentGroupId == null)
+            {
+                var groupVm = _canvas.AddComponent(group);
+                groupVm.X = groupData.CanvasX;
+                groupVm.Y = groupData.CanvasY;
+                group.PhysicalX = groupData.CanvasX;
+                group.PhysicalY = groupData.CanvasY;
+            }
+        }
+
+        return orderedGroups.Count;
+    }
+
+    /// <summary>
+    /// Sorts groups in topological order so that child groups are loaded before their parents.
+    /// This ensures that when we reconstruct a parent group, all its child groups are already available.
+    /// </summary>
+    private List<DesignGroupData> TopologicalSortGroups(List<DesignGroupData> groupDataList)
+    {
+        // Build dependency map: group ID -> list of group IDs that depend on it (parents)
+        var dependents = new Dictionary<string, List<string>>();
+        var inDegree = new Dictionary<string, int>();
+
+        foreach (var groupData in groupDataList)
+        {
+            var groupId = groupData.GroupDto.Identifier;
+            if (!inDegree.ContainsKey(groupId))
+                inDegree[groupId] = 0;
+
+            // Count how many child groups this group has (determines loading order)
+            foreach (var childId in groupData.GroupDto.ChildComponentIds)
+            {
+                // Check if this child is a group (appears as a group in the list)
+                var childGroup = groupDataList.FirstOrDefault(g => g.GroupDto.Identifier == childId);
+                if (childGroup != null)
+                {
+                    // This group depends on its child group being loaded first
+                    if (!dependents.ContainsKey(childId))
+                        dependents[childId] = new List<string>();
+                    dependents[childId].Add(groupId);
+                    inDegree[groupId]++;
+                }
+            }
+        }
+
+        // Kahn's algorithm for topological sort
+        var queue = new Queue<string>();
+        foreach (var groupData in groupDataList)
+        {
+            if (inDegree[groupData.GroupDto.Identifier] == 0)
+                queue.Enqueue(groupData.GroupDto.Identifier);
+        }
+
+        var sorted = new List<DesignGroupData>();
+        while (queue.Count > 0)
+        {
+            var currentId = queue.Dequeue();
+            var groupData = groupDataList.First(g => g.GroupDto.Identifier == currentId);
+            sorted.Add(groupData);
+
+            if (dependents.ContainsKey(currentId))
+            {
+                foreach (var dependentId in dependents[currentId])
+                {
+                    inDegree[dependentId]--;
+                    if (inDegree[dependentId] == 0)
+                        queue.Enqueue(dependentId);
+                }
+            }
+        }
+
+        // If we couldn't sort all groups, there's a cycle (shouldn't happen)
+        // Just return the original order as fallback
+        return sorted.Count == groupDataList.Count ? sorted : groupDataList;
     }
 
     /// <summary>
