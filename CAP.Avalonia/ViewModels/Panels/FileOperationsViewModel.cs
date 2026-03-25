@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_DataAccess.Persistence;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -122,20 +123,24 @@ public partial class FileOperationsViewModel : ObservableObject
     {
         try
         {
+            // Identify which components are groups vs standalone
+            var groupComponents = _canvas.Components
+                .Where(c => c.Component is ComponentGroup)
+                .ToList();
+            var childComponentIds = new HashSet<string>();
+            foreach (var gc in groupComponents)
+            {
+                CollectChildIds((ComponentGroup)gc.Component, childComponentIds);
+            }
+
             var designData = new DesignFileData
             {
-                Components = _canvas.Components.Select(c => new ComponentData
-                {
-                    TemplateName = c.TemplateName ?? c.Name,
-                    X = c.X,
-                    Y = c.Y,
-                    Identifier = c.Component.Identifier,
-                    Rotation = (int)c.Component.Rotation90CounterClock,
-                    SliderValue = c.HasSliders ? c.SliderValue : null,
-                    LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
-                    LaserPower = c.LaserConfig?.InputPower,
-                    IsLocked = c.Component.IsLocked ? true : null
-                }).ToList(),
+                // Only save non-group, non-child components in the main list
+                Components = _canvas.Components
+                    .Where(c => c.Component is not ComponentGroup
+                                && !childComponentIds.Contains(c.Component.Identifier))
+                    .Select(c => CreateComponentData(c))
+                    .ToList(),
                 Connections = _canvas.Connections.Select(c => new ConnectionData
                 {
                     StartComponentIndex = _canvas.Components.ToList().FindIndex(
@@ -155,6 +160,13 @@ public partial class FileOperationsViewModel : ObservableObject
                 }).ToList()
             };
 
+            // Serialize groups
+            if (groupComponents.Count > 0)
+            {
+                designData.Groups = groupComponents.Select(gc =>
+                    SerializeGroupToDesignData(gc)).ToList();
+            }
+
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
                 WriteIndented = true,
@@ -168,6 +180,121 @@ public partial class FileOperationsViewModel : ObservableObject
         catch (Exception ex)
         {
             UpdateStatus?.Invoke($"Save failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Creates a ComponentData DTO from a ComponentViewModel.
+    /// </summary>
+    private static ComponentData CreateComponentData(ComponentViewModel c)
+    {
+        return new ComponentData
+        {
+            TemplateName = c.TemplateName ?? c.Name,
+            X = c.X,
+            Y = c.Y,
+            Identifier = c.Component.Identifier,
+            Rotation = (int)c.Component.Rotation90CounterClock,
+            SliderValue = c.HasSliders ? c.SliderValue : null,
+            LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
+            LaserPower = c.LaserConfig?.InputPower,
+            IsLocked = c.Component.IsLocked ? true : null
+        };
+    }
+
+    /// <summary>
+    /// Serializes a ComponentGroup ViewModel into a DesignGroupData for the design file.
+    /// </summary>
+    private DesignGroupData SerializeGroupToDesignData(ComponentViewModel groupVm)
+    {
+        var group = (ComponentGroup)groupVm.Component;
+        var groupDto = ComponentGroupSerializer.ToDto(group);
+
+        var childDataList = new List<ChildComponentData>();
+        CollectChildComponentData(group, childDataList);
+
+        return new DesignGroupData
+        {
+            GroupDto = groupDto,
+            ChildComponents = childDataList,
+            CanvasX = groupVm.X,
+            CanvasY = groupVm.Y
+        };
+    }
+
+    /// <summary>
+    /// Recursively collects child component data (with template names) from a group.
+    /// </summary>
+    private void CollectChildComponentData(
+        ComponentGroup group, List<ChildComponentData> childDataList)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                // Nested groups are handled by their own DesignGroupData
+                CollectChildComponentData(childGroup, childDataList);
+            }
+            else
+            {
+                var templateName = FindTemplateName(child);
+
+                childDataList.Add(new ChildComponentData
+                {
+                    Identifier = child.Identifier,
+                    TemplateName = templateName,
+                    X = child.PhysicalX,
+                    Y = child.PhysicalY,
+                    Rotation = (int)child.Rotation90CounterClock,
+                    SliderValue = child.GetAllSliders().Count > 0
+                        ? child.GetSlider(0)?.Value : null,
+                    IsLocked = child.IsLocked ? true : null
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds the template name for a component by checking the canvas VMs
+    /// and falling back to matching against the component library by NazcaFunctionName.
+    /// </summary>
+    private string FindTemplateName(Component component)
+    {
+        // Check if the component has a VM on the canvas with a template name
+        var vm = _canvas.Components.FirstOrDefault(c => c.Component == component);
+        if (vm?.TemplateName != null)
+            return vm.TemplateName;
+
+        // Match by NazcaFunctionName against the component library
+        var nazcaFunc = component.NazcaFunctionName;
+        if (!string.IsNullOrEmpty(nazcaFunc))
+        {
+            var match = _componentLibrary.FirstOrDefault(t =>
+            {
+                var templateFunc = t.NazcaFunctionName
+                    ?? $"nazca_{t.Name.ToLower().Replace(" ", "_")}";
+                return templateFunc == nazcaFunc;
+            });
+            if (match != null)
+                return match.Name;
+        }
+
+        // Last resort: use identifier
+        return component.Identifier;
+    }
+
+    /// <summary>
+    /// Recursively collects all child component identifiers from a group.
+    /// </summary>
+    private static void CollectChildIds(ComponentGroup group, HashSet<string> ids)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            ids.Add(child.Identifier);
+            if (child is ComponentGroup nested)
+            {
+                CollectChildIds(nested, ids);
+            }
         }
     }
 
@@ -203,91 +330,23 @@ public partial class FileOperationsViewModel : ObservableObject
                 _canvas.ConnectionManager.Clear();
                 _commandManager.ClearHistory();
 
-                // Load components
+                // Load standalone components
                 foreach (var compData in designData.Components)
                 {
-                    var template = _componentLibrary.FirstOrDefault(t =>
-                        t.Name.Equals(compData.TemplateName, StringComparison.OrdinalIgnoreCase));
-
-                    if (template != null)
-                    {
-                        var component = ComponentTemplates.CreateFromTemplate(template, compData.X, compData.Y);
-
-                        // Apply rotation
-                        for (int i = 0; i < compData.Rotation; i++)
-                        {
-                            ApplyRotationToComponent(component);
-                        }
-
-                        var vm = _canvas.AddComponent(component, template.Name);
-
-                        // Restore slider value
-                        if (compData.SliderValue.HasValue && vm.HasSliders)
-                            vm.SliderValue = compData.SliderValue.Value;
-
-                        // Restore laser configuration
-                        if (vm.LaserConfig != null)
-                        {
-                            if (compData.LaserWavelengthNm.HasValue)
-                                vm.LaserConfig.WavelengthNm = compData.LaserWavelengthNm.Value;
-                            if (compData.LaserPower.HasValue)
-                                vm.LaserConfig.InputPower = compData.LaserPower.Value;
-                        }
-
-                        // Restore lock state
-                        if (compData.IsLocked == true)
-                            component.IsLocked = true;
-                    }
+                    LoadComponentFromData(compData);
                 }
 
-                // Load connections
+                // Load ComponentGroups
+                var groupCount = 0;
+                if (designData.Groups != null)
+                {
+                    groupCount = LoadGroups(designData.Groups);
+                }
+
+                // Load connections (index-based references to _canvas.Components)
                 foreach (var connData in designData.Connections)
                 {
-                    if (connData.StartComponentIndex >= 0 && connData.StartComponentIndex < _canvas.Components.Count &&
-                        connData.EndComponentIndex >= 0 && connData.EndComponentIndex < _canvas.Components.Count)
-                    {
-                        var startComp = _canvas.Components[connData.StartComponentIndex];
-                        var endComp = _canvas.Components[connData.EndComponentIndex];
-
-                        var startPin = startComp.Component.PhysicalPins
-                            .FirstOrDefault(p => p.Name == connData.StartPinName);
-                        var endPin = endComp.Component.PhysicalPins
-                            .FirstOrDefault(p => p.Name == connData.EndPinName);
-
-                        if (startPin != null && endPin != null)
-                        {
-                            var cachedPath = PathSegmentConverter.ToRoutedPath(
-                                connData.CachedSegments, connData.IsBlockedFallback ?? false);
-
-                            WaveguideConnectionViewModel? connVm = null;
-
-                            if (cachedPath != null && cachedPath.IsValid)
-                            {
-                                connVm = _canvas.ConnectPinsWithCachedRoute(startPin, endPin, cachedPath);
-                            }
-                            else
-                            {
-                                connVm = _canvas.ConnectPins(startPin, endPin);
-                            }
-
-                            // Restore lock state
-                            if (connVm != null && connData.IsLocked == true)
-                            {
-                                connVm.Connection.IsLocked = true;
-                            }
-
-                            // Restore target length configuration
-                            if (connVm != null)
-                            {
-                                if (connData.TargetLengthMicrometers.HasValue)
-                                    connVm.Connection.TargetLengthMicrometers = connData.TargetLengthMicrometers.Value;
-                                if (connData.IsTargetLengthEnabled == true)
-                                    connVm.Connection.IsTargetLengthEnabled = true;
-                                if (connData.LengthToleranceMicrometers.HasValue)
-                                    connVm.Connection.LengthToleranceMicrometers = connData.LengthToleranceMicrometers.Value;
-                            }
-                        }
-                    }
+                    LoadConnectionFromData(connData);
                 }
 
                 // Notify all connections about their paths for UI rendering
@@ -298,7 +357,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 _currentFilePath = filePath;
                 HasUnsavedChanges = false;
-                UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections)");
+                UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
                 _commandManager.NotifyStateChanged();
 
                 // Rebuild hierarchy tree after loading
@@ -366,6 +425,169 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas.Connections.Clear();
         _canvas.ConnectionManager.Clear();
         _commandManager.ClearHistory();
+    }
+
+    /// <summary>
+    /// Loads a single component from saved data and adds it to the canvas.
+    /// </summary>
+    private ComponentViewModel? LoadComponentFromData(ComponentData compData)
+    {
+        var template = _componentLibrary.FirstOrDefault(t =>
+            t.Name.Equals(compData.TemplateName, StringComparison.OrdinalIgnoreCase));
+
+        if (template == null)
+            return null;
+
+        var component = ComponentTemplates.CreateFromTemplate(template, compData.X, compData.Y);
+
+        // Restore identifier to preserve references
+        component.Identifier = compData.Identifier;
+
+        // Apply rotation
+        for (int i = 0; i < compData.Rotation; i++)
+        {
+            ApplyRotationToComponent(component);
+        }
+
+        var vm = _canvas.AddComponent(component, template.Name);
+
+        // Restore slider value
+        if (compData.SliderValue.HasValue && vm.HasSliders)
+            vm.SliderValue = compData.SliderValue.Value;
+
+        // Restore laser configuration
+        if (vm.LaserConfig != null)
+        {
+            if (compData.LaserWavelengthNm.HasValue)
+                vm.LaserConfig.WavelengthNm = compData.LaserWavelengthNm.Value;
+            if (compData.LaserPower.HasValue)
+                vm.LaserConfig.InputPower = compData.LaserPower.Value;
+        }
+
+        // Restore lock state
+        if (compData.IsLocked == true)
+            component.IsLocked = true;
+
+        return vm;
+    }
+
+    /// <summary>
+    /// Loads ComponentGroups from saved design data.
+    /// Creates child components, reconstructs groups, and adds them to the canvas.
+    /// </summary>
+    private int LoadGroups(List<DesignGroupData> groupDataList)
+    {
+        var loadedCount = 0;
+
+        foreach (var groupData in groupDataList)
+        {
+            var componentLookup = new Dictionary<string, Component>();
+
+            // Create child components from template (not added to canvas individually)
+            foreach (var childData in groupData.ChildComponents)
+            {
+                var template = _componentLibrary.FirstOrDefault(t =>
+                    t.Name.Equals(childData.TemplateName, StringComparison.OrdinalIgnoreCase));
+
+                if (template == null)
+                    continue;
+
+                var child = ComponentTemplates.CreateFromTemplate(
+                    template, childData.X, childData.Y);
+
+                // Restore original identifier for reference matching
+                child.Identifier = childData.Identifier;
+
+                // Apply rotation
+                for (int i = 0; i < childData.Rotation; i++)
+                {
+                    ApplyRotationToComponent(child);
+                }
+
+                // Restore slider
+                if (childData.SliderValue.HasValue && child.GetAllSliders().Count > 0)
+                {
+                    var slider = child.GetSlider(0);
+                    if (slider != null) slider.Value = childData.SliderValue.Value;
+                }
+
+                if (childData.IsLocked == true)
+                    child.IsLocked = true;
+
+                componentLookup[child.Identifier] = child;
+            }
+
+            // Reconstruct the group from DTO
+            var group = ComponentGroupSerializer.FromDto(
+                groupData.GroupDto, componentLookup);
+
+            // Add the group to the canvas as a ComponentViewModel
+            var groupVm = _canvas.AddComponent(group);
+            groupVm.X = groupData.CanvasX;
+            groupVm.Y = groupData.CanvasY;
+            group.PhysicalX = groupData.CanvasX;
+            group.PhysicalY = groupData.CanvasY;
+
+            loadedCount++;
+        }
+
+        return loadedCount;
+    }
+
+    /// <summary>
+    /// Loads a single connection from saved data.
+    /// </summary>
+    private void LoadConnectionFromData(ConnectionData connData)
+    {
+        if (connData.StartComponentIndex < 0 ||
+            connData.StartComponentIndex >= _canvas.Components.Count ||
+            connData.EndComponentIndex < 0 ||
+            connData.EndComponentIndex >= _canvas.Components.Count)
+        {
+            return;
+        }
+
+        var startComp = _canvas.Components[connData.StartComponentIndex];
+        var endComp = _canvas.Components[connData.EndComponentIndex];
+
+        var startPin = startComp.Component.PhysicalPins
+            .FirstOrDefault(p => p.Name == connData.StartPinName);
+        var endPin = endComp.Component.PhysicalPins
+            .FirstOrDefault(p => p.Name == connData.EndPinName);
+
+        if (startPin == null || endPin == null)
+            return;
+
+        var cachedPath = PathSegmentConverter.ToRoutedPath(
+            connData.CachedSegments, connData.IsBlockedFallback ?? false);
+
+        WaveguideConnectionViewModel? connVm;
+
+        if (cachedPath != null && cachedPath.IsValid)
+        {
+            connVm = _canvas.ConnectPinsWithCachedRoute(startPin, endPin, cachedPath);
+        }
+        else
+        {
+            connVm = _canvas.ConnectPins(startPin, endPin);
+        }
+
+        // Restore lock state
+        if (connVm != null && connData.IsLocked == true)
+        {
+            connVm.Connection.IsLocked = true;
+        }
+
+        // Restore target length configuration
+        if (connVm != null)
+        {
+            if (connData.TargetLengthMicrometers.HasValue)
+                connVm.Connection.TargetLengthMicrometers = connData.TargetLengthMicrometers.Value;
+            if (connData.IsTargetLengthEnabled == true)
+                connVm.Connection.IsTargetLengthEnabled = true;
+            if (connData.LengthToleranceMicrometers.HasValue)
+                connVm.Connection.LengthToleranceMicrometers = connData.LengthToleranceMicrometers.Value;
+        }
     }
 
     [RelayCommand]

@@ -427,6 +427,55 @@ public class DesignFileData
 {
     public List<ComponentData> Components { get; set; } = new();
     public List<ConnectionData> Connections { get; set; } = new();
+
+    /// <summary>
+    /// ComponentGroups with their hierarchical structure, frozen paths, and external pins.
+    /// </summary>
+    public List<DesignGroupData>? Groups { get; set; }
+}
+
+/// <summary>
+/// DTO for a ComponentGroup in the design file.
+/// Bridges the UI-layer (TemplateName-based) and core-layer (ComponentGroupDto) serialization.
+/// </summary>
+public class DesignGroupData
+{
+    /// <summary>
+    /// Group metadata serialized via ComponentGroupSerializer.
+    /// </summary>
+    public CAP_DataAccess.Persistence.DTOs.ComponentGroupDto GroupDto { get; set; } = new();
+
+    /// <summary>
+    /// Child component data with template names for recreation from the component library.
+    /// Maps child Identifier to TemplateName.
+    /// </summary>
+    public List<ChildComponentData> ChildComponents { get; set; } = new();
+
+    /// <summary>
+    /// Canvas X position of the group ViewModel.
+    /// </summary>
+    public double CanvasX { get; set; }
+
+    /// <summary>
+    /// Canvas Y position of the group ViewModel.
+    /// </summary>
+    public double CanvasY { get; set; }
+}
+
+/// <summary>
+/// DTO for a child component within a group, preserving template name for library lookup.
+/// </summary>
+public class ChildComponentData
+{
+    public string Identifier { get; set; } = "";
+    public string TemplateName { get; set; } = "";
+    public double X { get; set; }
+    public double Y { get; set; }
+    public int Rotation { get; set; }
+    public double? SliderValue { get; set; }
+    public int? LaserWavelengthNm { get; set; }
+    public double? LaserPower { get; set; }
+    public bool? IsLocked { get; set; }
 }
 
 public class ComponentData
