@@ -201,6 +201,21 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
+        // Wire up mode changes to deselect templates in left panel
+        CanvasInteraction.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(CanvasInteraction.CurrentMode))
+            {
+                var mode = CanvasInteraction.CurrentMode;
+                // Deselect templates when switching away from placement modes
+                if (mode != InteractionMode.PlaceComponent && mode != InteractionMode.PlaceGroupTemplate)
+                {
+                    LeftPanel.SelectedGroupTemplate = null;
+                    // Note: SelectedTemplate is automatically cleared via CanvasInteraction.OnCurrentModeChanged
+                }
+            }
+        };
+
         // Wire up group template selection from left panel to canvas interaction
         LeftPanel.OnGroupTemplateSelected = template =>
         {
