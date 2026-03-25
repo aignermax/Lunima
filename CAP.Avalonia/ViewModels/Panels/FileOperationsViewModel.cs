@@ -375,6 +375,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Creates a new empty project, prompting to save if there are unsaved changes.
+    /// Exits group edit mode if active before clearing the canvas.
     /// </summary>
     [RelayCommand]
     private async Task NewProject()
@@ -403,6 +404,12 @@ public partial class FileOperationsViewModel : ObservableObject
                 return;
             }
             // DontSave: continue to clear
+        }
+
+        // Exit group edit mode if active
+        if (_canvas.IsInGroupEditMode)
+        {
+            _canvas.ExitToRoot();
         }
 
         // Clear the canvas
