@@ -140,15 +140,20 @@ public class GroupLibraryManager
     /// <returns>True if successfully removed.</returns>
     public bool RemoveTemplate(GroupTemplate template)
     {
-        if (!_templates.Contains(template))
+        // Find the template by FilePath since object references may differ after reload
+        var templateToRemove = _templates.FirstOrDefault(t =>
+            t == template ||
+            (t.FilePath != null && t.FilePath == template.FilePath));
+
+        if (templateToRemove == null)
             return false;
 
         // Delete file if it exists
-        if (template.FilePath != null && File.Exists(template.FilePath))
+        if (templateToRemove.FilePath != null && File.Exists(templateToRemove.FilePath))
         {
             try
             {
-                File.Delete(template.FilePath);
+                File.Delete(templateToRemove.FilePath);
             }
             catch
             {
@@ -156,7 +161,7 @@ public class GroupLibraryManager
             }
         }
 
-        return _templates.Remove(template);
+        return _templates.Remove(templateToRemove);
     }
 
     /// <summary>

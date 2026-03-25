@@ -77,7 +77,7 @@ public class SaveGroupAsPrefabCommandTests : IDisposable
 
         // Assert
         _libraryViewModel.UserGroups.Count.ShouldBe(initialCount + 1);
-        _libraryViewModel.UserGroups.Last().Name.ShouldBe("My Prefab");
+        _libraryViewModel.UserGroups.Last().Template.Name.ShouldBe("My Prefab");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class SaveGroupAsPrefabCommandTests : IDisposable
         cmd.Execute();
 
         // Assert
-        var template = _libraryViewModel.UserGroups.Last();
+        var template = _libraryViewModel.UserGroups.Last().Template;
         template.Description.ShouldBe("This is a detailed description");
     }
 

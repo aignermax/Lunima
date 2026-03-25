@@ -55,7 +55,7 @@ public class RenameGroupCommandTests : IDisposable
         group.GroupName.ShouldBe("New Name");
         group.Description.ShouldBe("New description");
         _libraryViewModel.UserGroups.Count.ShouldBe(1);
-        _libraryViewModel.UserGroups.First().Name.ShouldBe("New Name");
+        _libraryViewModel.UserGroups.First().Template.Name.ShouldBe("New Name");
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class RenameGroupCommandTests : IDisposable
         group.GroupName.ShouldBe("Original");
         group.Description.ShouldBe("Original desc");
         _libraryViewModel.UserGroups.Count.ShouldBe(1);
-        _libraryViewModel.UserGroups.First().Name.ShouldBe("Original");
+        _libraryViewModel.UserGroups.First().Template.Name.ShouldBe("Original");
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public class RenameGroupCommandTests : IDisposable
         command.Execute();
 
         // Assert
-        _libraryViewModel.UserGroups.ShouldNotContain(t => t.Name == "OldName");
-        _libraryViewModel.UserGroups.ShouldContain(t => t.Name == "NewName");
+        _libraryViewModel.UserGroups.ShouldNotContain(t => t.Template.Name == "OldName");
+        _libraryViewModel.UserGroups.ShouldContain(t => t.Template.Name == "NewName");
     }
 
     [Fact]
