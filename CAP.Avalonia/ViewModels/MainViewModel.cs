@@ -201,7 +201,7 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
-        // Wire up mode changes to deselect templates in left panel
+        // Wire up mode changes and template selection to keep UI in sync
         CanvasInteraction.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(CanvasInteraction.CurrentMode))
@@ -213,6 +213,20 @@ public partial class MainViewModel : ObservableObject
                     LeftPanel.SelectedGroupTemplate = null;
                     // Note: SelectedTemplate is automatically cleared via CanvasInteraction.OnCurrentModeChanged
                 }
+            }
+            else if (e.PropertyName == nameof(CanvasInteraction.SelectedTemplate))
+            {
+                // When a component template is selected, deselect group template in left panel
+                if (CanvasInteraction.SelectedTemplate != null)
+                {
+                    LeftPanel.SelectedGroupTemplate = null;
+                }
+            }
+            else if (e.PropertyName == nameof(CanvasInteraction.SelectedGroupTemplate))
+            {
+                // When a group template is selected, deselect component template
+                // (SelectedTemplate is bound to MainViewModel.SelectedTemplate which wraps CanvasInteraction.SelectedTemplate,
+                // so it will automatically update the UI ListBox)
             }
         };
 
