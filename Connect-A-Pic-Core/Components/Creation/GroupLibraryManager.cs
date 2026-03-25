@@ -92,8 +92,9 @@ public class GroupLibraryManager
         var fileName = $"{safeName}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
         var filePath = Path.Combine(targetFolder, fileName);
 
-        // Create file data structure (minimal metadata only)
-        // Actual serialization will be handled by the persistence layer
+        // Serialize full group data so it can be reconstructed when loaded from disk
+        var groupDataJson = GroupTemplateSerializer.Serialize(group);
+
         var fileData = new GroupLibraryFileData
         {
             Name = name,
@@ -102,7 +103,8 @@ public class GroupLibraryManager
             CreatedAt = DateTime.Now,
             ComponentCount = group.ChildComponents.Count,
             WidthMicrometers = group.WidthMicrometers,
-            HeightMicrometers = group.HeightMicrometers
+            HeightMicrometers = group.HeightMicrometers,
+            GroupData = groupDataJson
         };
 
         var json = JsonSerializer.Serialize(fileData, new JsonSerializerOptions
@@ -217,6 +219,13 @@ public class GroupLibraryManager
                 if (fileData == null)
                     continue;
 
+                // Deserialize the full group data if available
+                ComponentGroup? templateGroup = null;
+                if (!string.IsNullOrWhiteSpace(fileData.GroupData))
+                {
+                    templateGroup = GroupTemplateSerializer.Deserialize(fileData.GroupData);
+                }
+
                 var template = new GroupTemplate
                 {
                     Name = fileData.Name,
@@ -228,8 +237,8 @@ public class GroupLibraryManager
                     HeightMicrometers = fileData.HeightMicrometers,
                     Source = source,
                     CreatedAt = fileData.CreatedAt,
-                    PreviewThumbnailBase64 = fileData.PreviewThumbnailBase64
-                    // Note: TemplateGroup is loaded on-demand when needed
+                    PreviewThumbnailBase64 = fileData.PreviewThumbnailBase64,
+                    TemplateGroup = templateGroup
                 };
 
                 _templates.Add(template);
@@ -253,7 +262,7 @@ public class GroupLibraryManager
 
 /// <summary>
 /// JSON file structure for saved group templates.
-/// Stores metadata only - the actual ComponentGroup is stored in TemplateGroup property.
+/// Stores metadata and the full serialized ComponentGroup data for reconstruction.
 /// </summary>
 public class GroupLibraryFileData
 {
@@ -265,4 +274,10 @@ public class GroupLibraryFileData
     public double WidthMicrometers { get; set; }
     public double HeightMicrometers { get; set; }
     public string? PreviewThumbnailBase64 { get; set; }
+
+    /// <summary>
+    /// Serialized ComponentGroup data (JSON string from GroupTemplateSerializer).
+    /// Contains all child components, frozen paths, and external pins.
+    /// </summary>
+    public string? GroupData { get; set; }
 }
