@@ -152,6 +152,23 @@ public class UserPreferencesService
         _preferences.RightPanelWidth = width;
         Save();
     }
+
+    /// <summary>
+    /// Gets the custom Python path, or null if using system default.
+    /// </summary>
+    public string? GetCustomPythonPath()
+    {
+        return _preferences.CustomPythonPath;
+    }
+
+    /// <summary>
+    /// Sets the custom Python path and saves.
+    /// </summary>
+    public void SetCustomPythonPath(string? pythonPath)
+    {
+        _preferences.CustomPythonPath = pythonPath;
+        Save();
+    }
 }
 
 /// <summary>
@@ -178,4 +195,10 @@ public class UserPreferences
     /// Width of the right panel in pixels (default 250).
     /// </summary>
     public double RightPanelWidth { get; set; } = 250;
+
+    /// <summary>
+    /// Custom Python executable path for Nazca/GDS export.
+    /// If null, system default (python3/python) will be used.
+    /// </summary>
+    public string? CustomPythonPath { get; set; }
 }
