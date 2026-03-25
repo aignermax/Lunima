@@ -69,7 +69,9 @@ public partial class HierarchyNodeViewModel : ObservableObject
                 int childCount = group.ChildComponents.Count;
                 return $"{group.GroupName} ({childCount})";
             }
-            return Component.Identifier;
+            return !string.IsNullOrWhiteSpace(Component.HumanReadableName)
+                ? Component.HumanReadableName
+                : Component.Identifier;
         }
     }
 
