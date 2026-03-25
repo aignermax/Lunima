@@ -106,6 +106,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
         _connectionStartPin = null;
         _canvas.ClearPinHighlight();
 
+        // Deselect templates when switching away from placement modes
+        if (value != InteractionMode.PlaceComponent && value != InteractionMode.PlaceGroupTemplate)
+        {
+            SelectedTemplate = null;
+            SelectedGroupTemplate = null;
+        }
+
         var statusText = value switch
         {
             InteractionMode.Select => "Select mode: Click to select, drag to move",
