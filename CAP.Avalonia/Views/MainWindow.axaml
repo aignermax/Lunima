@@ -941,12 +941,48 @@
             </Border>
         </Grid>
 
-        <!-- Main Canvas -->
-        <controls:DesignCanvas x:Name="DesignCanvasControl"
-                               ViewModel="{Binding Canvas}"
-                               Zoom="{Binding ZoomLevel, Mode=TwoWay}"
-                               MainViewModel="{Binding}">
-            <controls:DesignCanvas.ContextMenu>
+        <!-- Main Canvas with Edit Mode Banner -->
+        <DockPanel>
+            <!-- Edit Mode Banner (only visible when in edit mode) -->
+            <Border DockPanel.Dock="Top"
+                    Background="#FF6B35"
+                    IsVisible="{Binding Canvas.IsInGroupEditMode}"
+                    Padding="12,8"
+                    BorderBrush="#FF4520"
+                    BorderThickness="0,0,0,2">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Icon and Label -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="✏️" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="GROUP EDIT MODE" FontWeight="Bold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                        <TextBlock Text="—" Foreground="#FFB399" Margin="5,0" VerticalAlignment="Center"/>
+                        <TextBlock Foreground="White" FontSize="12" VerticalAlignment="Center">
+                            <Run Text="Editing:"/>
+                            <Run Text="{Binding Canvas.CurrentEditGroup.GroupName}" FontWeight="SemiBold"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Exit Button -->
+                    <Button Grid.Column="2"
+                            Content="Exit Edit Mode (ESC)"
+                            Command="{Binding Canvas.ExitToRootCommand}"
+                            Background="White"
+                            Foreground="#FF6B35"
+                            FontWeight="SemiBold"
+                            Padding="16,6"
+                            BorderThickness="0"
+                            CornerRadius="3"
+                            Cursor="Hand"
+                            ToolTip.Tip="Exit group edit mode and return to main canvas (ESC key)"/>
+                </Grid>
+            </Border>
+
+            <!-- Design Canvas -->
+            <controls:DesignCanvas x:Name="DesignCanvasControl"
+                                   ViewModel="{Binding Canvas}"
+                                   Zoom="{Binding ZoomLevel, Mode=TwoWay}"
+                                   MainViewModel="{Binding}">
+                <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon>
@@ -989,6 +1025,7 @@
                     </MenuItem>
                 </ContextMenu>
             </controls:DesignCanvas.ContextMenu>
-        </controls:DesignCanvas>
+            </controls:DesignCanvas>
+        </DockPanel>
     </DockPanel>
 </Window>
