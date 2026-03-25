@@ -164,6 +164,8 @@ public class GroupLibraryManager
         return _templates.Remove(templateToRemove);
     }
 
+    private static int _instanceCounter = 1;
+
     /// <summary>
     /// Creates a deep copy of a group template for instantiation on the canvas.
     /// </summary>
@@ -188,9 +190,36 @@ public class GroupLibraryManager
         // Use MoveGroup to properly move the entire group (including children, pins, and paths)
         deepCopy.MoveGroup(deltaX, deltaY);
 
-        deepCopy.GroupName = $"{template.Name}_{DateTime.Now:HHmmss}";
+        // Use incremental counter instead of timestamp for cleaner names
+        deepCopy.GroupName = $"{template.Name}_{_instanceCounter++}";
+
+        // Rename child components with clean sequential names
+        RenameComponentsWithSequentialNames(deepCopy);
 
         return deepCopy;
+    }
+
+    /// <summary>
+    /// Renames all child components in a group with clean sequential names instead of GUIDs.
+    /// </summary>
+    private void RenameComponentsWithSequentialNames(ComponentGroup group)
+    {
+        int componentIndex = 1;
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                // Recursively rename nested groups
+                childGroup.GroupName = $"SubGroup_{componentIndex++}";
+                RenameComponentsWithSequentialNames(childGroup);
+            }
+            else
+            {
+                // Remove GUID suffix from identifier, keep only base name and add sequential number
+                var baseName = child.Identifier.Split('_')[0];
+                child.Identifier = $"{baseName}_{componentIndex++}";
+            }
+        }
     }
 
     /// <summary>

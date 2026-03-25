@@ -125,8 +125,8 @@ public class GroupTemplateItemViewModelTests
         var libraryManager = new GroupLibraryManager();
         var library = new ComponentLibraryViewModel(libraryManager);
 
-        // Add template to library first
-        libraryManager.AddTemplate(template);
+        // Add template to library via ComponentLibraryViewModel
+        library.AddTemplate(template);
         library.UserGroups.Count.ShouldBe(1);
 
         var itemVm = new GroupTemplateItemViewModel(template, library);
