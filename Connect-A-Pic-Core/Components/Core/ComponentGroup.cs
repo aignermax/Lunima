@@ -95,6 +95,20 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     private ComponentGroupSMatrixBuilder? _sMatrixBuilder;
 
     /// <summary>
+    /// Offset from PhysicalX to the minimum X coordinate of child components.
+    /// Used by BoundingBoxCalculator to correctly position the group's bounding box.
+    /// </summary>
+    [JsonIgnore]
+    public double MinChildOffsetX { get; private set; }
+
+    /// <summary>
+    /// Offset from PhysicalY to the minimum Y coordinate of child components.
+    /// Used by BoundingBoxCalculator to correctly position the group's bounding box.
+    /// </summary>
+    [JsonIgnore]
+    public double MinChildOffsetY { get; private set; }
+
+    /// <summary>
     /// Creates an empty ComponentGroup with default S-matrices.
     /// Use AddChild() and AddInternalPath() to populate the group.
     /// </summary>
@@ -390,6 +404,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         WidthMicrometers = maxX - minX;
         HeightMicrometers = maxY - minY;
+
+        // Store the minimum corner offsets for bounding box calculation
+        // These are used by BoundingBoxCalculator to correctly position the group
+        MinChildOffsetX = minX - PhysicalX;
+        MinChildOffsetY = minY - PhysicalY;
 
         // Update label bounds (positioned at top-left with padding)
         UpdateLabelBounds(minX, minY);
