@@ -99,6 +99,11 @@ public partial class MainViewModel : ObservableObject
         get => CanvasInteraction.SelectedTemplate;
         set => CanvasInteraction.SelectedTemplate = value;
     }
+    public CAP_Core.Components.Creation.GroupTemplate? SelectedGroupTemplate
+    {
+        get => CanvasInteraction.SelectedGroupTemplate;
+        set => CanvasInteraction.SelectedGroupTemplate = value;
+    }
     public ComponentViewModel? SelectedComponent
     {
         get => CanvasInteraction.SelectedComponent;
@@ -178,6 +183,17 @@ public partial class MainViewModel : ObservableObject
             }
         };
 
+        // Wire up ZoomLevel property change forwarding from ViewportControl to MainViewModel
+        // This ensures that when ViewportControl.ZoomLevel changes (e.g., via ZoomToFit),
+        // the UI binding on MainViewModel.ZoomLevel gets notified
+        ViewportControl.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(ViewportControl.ZoomLevel))
+            {
+                OnPropertyChanged(nameof(ZoomLevel));
+            }
+        };
+
         // Wire up callbacks
         CanvasInteraction.OnSelectionChanged = comp =>
         {
@@ -185,9 +201,85 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
+        CanvasInteraction.ClearLeftPanelGroupSelection = () =>
+        {
+            LeftPanel.SelectedGroupTemplate = null;
+        };
+
+        CanvasInteraction.ClearComponentTemplateSelection = () =>
+        {
+            // Setting CanvasInteraction.SelectedTemplate to null will automatically update
+            // MainViewModel.SelectedTemplate (which is bound to the UI ListBox)
+            CanvasInteraction.SelectedTemplate = null;
+            // Force PropertyChanged notification on the wrapper property to ensure UI updates
+            OnPropertyChanged(nameof(SelectedTemplate));
+        };
+
+        // Wire up mode changes and template selection to keep UI in sync
+        CanvasInteraction.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(CanvasInteraction.CurrentMode))
+            {
+                var mode = CanvasInteraction.CurrentMode;
+                // Deselect templates when switching away from placement modes
+                if (mode != InteractionMode.PlaceComponent && mode != InteractionMode.PlaceGroupTemplate)
+                {
+                    LeftPanel.SelectedGroupTemplate = null;
+                    // Note: SelectedTemplate is automatically cleared via CanvasInteraction.OnCurrentModeChanged
+                }
+            }
+            else if (e.PropertyName == nameof(CanvasInteraction.SelectedTemplate))
+            {
+                // When a component template is selected, deselect group template in left panel
+                if (CanvasInteraction.SelectedTemplate != null)
+                {
+                    LeftPanel.SelectedGroupTemplate = null;
+                }
+            }
+            else if (e.PropertyName == nameof(CanvasInteraction.SelectedGroupTemplate))
+            {
+                // When a group template is selected, deselect component template
+                // (SelectedTemplate is bound to MainViewModel.SelectedTemplate which wraps CanvasInteraction.SelectedTemplate,
+                // so it will automatically update the UI ListBox)
+            }
+        };
+
         // Wire up group template selection from left panel to canvas interaction
         LeftPanel.OnGroupTemplateSelected = template =>
         {
+            // Ensure TemplateGroup is loaded before setting as selected
+            if (template.TemplateGroup == null && !string.IsNullOrEmpty(template.FilePath))
+            {
+                // Try to load the template group data from disk
+                try
+                {
+                    if (System.IO.File.Exists(template.FilePath))
+                    {
+                        var json = System.IO.File.ReadAllText(template.FilePath);
+                        var fileData = System.Text.Json.JsonSerializer.Deserialize<CAP_Core.Components.Creation.GroupLibraryFileData>(json);
+
+                        if (fileData != null && !string.IsNullOrWhiteSpace(fileData.GroupData))
+                        {
+                            var group = CAP_Core.Components.Creation.GroupTemplateSerializer.Deserialize(fileData.GroupData);
+                            if (group != null)
+                            {
+                                template.TemplateGroup = group;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    StatusText = $"Failed to load template '{template.Name}': {ex.Message}";
+                    return;
+                }
+
+                if (template.TemplateGroup == null)
+                {
+                    StatusText = $"Template '{template.Name}' could not be loaded - file may be corrupted";
+                    return;
+                }
+            }
             CanvasInteraction.SelectedGroupTemplate = template;
         };
 

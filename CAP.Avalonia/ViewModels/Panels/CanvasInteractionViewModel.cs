@@ -67,6 +67,16 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public Action<ComponentViewModel?>? OnSelectionChanged { get; set; }
 
+    /// <summary>
+    /// Callback to clear group template selection in left panel.
+    /// </summary>
+    public Action? ClearLeftPanelGroupSelection { get; set; }
+
+    /// <summary>
+    /// Callback to clear component template selection in main view.
+    /// </summary>
+    public Action? ClearComponentTemplateSelection { get; set; }
+
     public CanvasInteractionViewModel(
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
@@ -86,7 +96,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceComponent;
-            SelectedGroupTemplate = null; // Deselect group template
+            SelectedGroupTemplate = null; // Deselect group template in CanvasInteraction
+            ClearLeftPanelGroupSelection?.Invoke(); // Deselect group template in LeftPanel UI
             UpdateStatus?.Invoke($"Click on canvas to place: {value.Name}");
         }
     }
@@ -96,7 +107,8 @@ public partial class CanvasInteractionViewModel : ObservableObject
         if (value != null)
         {
             CurrentMode = InteractionMode.PlaceGroupTemplate;
-            SelectedTemplate = null; // Deselect component template
+            SelectedTemplate = null; // Deselect component template in CanvasInteraction
+            ClearComponentTemplateSelection?.Invoke(); // Deselect component template in UI ListBox
             UpdateStatus?.Invoke($"Click on canvas to place group: {value.Name}");
         }
     }
@@ -105,6 +117,22 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         _connectionStartPin = null;
         _canvas.ClearPinHighlight();
+
+        // Deselect templates when switching away from placement modes
+        if (value != InteractionMode.PlaceComponent && value != InteractionMode.PlaceGroupTemplate)
+        {
+            SelectedTemplate = null;
+            SelectedGroupTemplate = null;
+            // Clear UI selections as well
+            ClearComponentTemplateSelection?.Invoke();
+            ClearLeftPanelGroupSelection?.Invoke();
+        }
+
+        // Deselect canvas components when switching away from Select mode
+        if (value != InteractionMode.Select)
+        {
+            SelectedComponent = null;
+        }
 
         var statusText = value switch
         {
@@ -254,6 +282,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
     private void PlaceGroupTemplateAt(double x, double y)
     {
         if (SelectedGroupTemplate == null || _libraryViewModel == null) return;
+
+        // Debug: Check if TemplateGroup is loaded
+        if (SelectedGroupTemplate.TemplateGroup == null)
+        {
+            UpdateStatus?.Invoke($"ERROR: Template '{SelectedGroupTemplate.Name}' not loaded! TemplateGroup is null.");
+            return;
+        }
 
         var libraryManager = _libraryViewModel.GetLibraryManager();
         var cmd = PlaceGroupTemplateCommand.TryCreate(_canvas, libraryManager, SelectedGroupTemplate, x, y);

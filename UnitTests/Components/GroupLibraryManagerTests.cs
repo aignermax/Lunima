@@ -196,6 +196,71 @@ public class GroupLibraryManagerTests : IDisposable
         group.IsPrefab.ShouldBeTrue();
     }
 
+    [Fact]
+    public void RemoveTemplate_WithNonexistentTemplate_ReturnsFalse()
+    {
+        // Arrange
+        var group = CreateTestGroup("TestGroup", 1);
+        var template = new GroupTemplate
+        {
+            Name = "Nonexistent",
+            Source = "User"
+        };
+
+        // Act
+        var removed = _manager.RemoveTemplate(template);
+
+        // Assert
+        removed.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RemoveTemplate_WithNullFilePath_SuccessfullyRemovesTemplate()
+    {
+        // Arrange
+        var group = CreateTestGroup("TestGroup", 1);
+        var template = _manager.SaveTemplate(group, "Test Template");
+        template.FilePath = null; // Simulate template without file
+
+        // Act
+        var removed = _manager.RemoveTemplate(template);
+
+        // Assert
+        removed.ShouldBeTrue();
+        _manager.Templates.ShouldNotContain(template);
+    }
+
+    [Fact]
+    public void RemoveTemplate_Multiple_DeletesAllSpecifiedTemplates()
+    {
+        // Arrange
+        var group1 = CreateTestGroup("Group1", 1);
+        var group2 = CreateTestGroup("Group2", 2);
+        var group3 = CreateTestGroup("Group3", 3);
+
+        var template1 = _manager.SaveTemplate(group1, "Template 1");
+        var template2 = _manager.SaveTemplate(group2, "Template 2");
+        var template3 = _manager.SaveTemplate(group3, "Template 3");
+
+        _manager.Templates.Count.ShouldBe(3);
+
+        // Act - Remove template 2
+        var removed = _manager.RemoveTemplate(template2);
+
+        // Assert
+        removed.ShouldBeTrue();
+        _manager.Templates.Count.ShouldBe(2);
+        _manager.Templates.ShouldContain(template1);
+        _manager.Templates.ShouldNotContain(template2);
+        _manager.Templates.ShouldContain(template3);
+
+        // Verify file was deleted
+        if (template2.FilePath != null)
+        {
+            File.Exists(template2.FilePath).ShouldBeFalse();
+        }
+    }
+
     /// <summary>
     /// Creates a test ComponentGroup with the specified number of child components.
     /// </summary>

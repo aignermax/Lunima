@@ -43,7 +43,7 @@ public class RenameGroupCommand : IUndoableCommand
         // Find existing template for this group
         var libraryManager = _libraryViewModel.GetLibraryManager();
         _existingTemplate = _libraryViewModel.UserGroups
-            .FirstOrDefault(t => t.Name == _oldName);
+            .FirstOrDefault(t => t.Template.Name == _oldName)?.Template;
 
         // Update group properties
         _group.GroupName = _newName;
@@ -56,7 +56,12 @@ public class RenameGroupCommand : IUndoableCommand
         if (_existingTemplate != null)
         {
             libraryManager.RemoveTemplate(_existingTemplate);
-            _libraryViewModel.UserGroups.Remove(_existingTemplate);
+            var itemToRemove = _libraryViewModel.UserGroups
+                .FirstOrDefault(vm => vm.Template == _existingTemplate);
+            if (itemToRemove != null)
+            {
+                _libraryViewModel.UserGroups.Remove(itemToRemove);
+            }
         }
 
         // Save new template with updated name

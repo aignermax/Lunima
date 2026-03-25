@@ -140,15 +140,20 @@ public class GroupLibraryManager
     /// <returns>True if successfully removed.</returns>
     public bool RemoveTemplate(GroupTemplate template)
     {
-        if (!_templates.Contains(template))
+        // Find the template by FilePath since object references may differ after reload
+        var templateToRemove = _templates.FirstOrDefault(t =>
+            t == template ||
+            (t.FilePath != null && t.FilePath == template.FilePath));
+
+        if (templateToRemove == null)
             return false;
 
         // Delete file if it exists
-        if (template.FilePath != null && File.Exists(template.FilePath))
+        if (templateToRemove.FilePath != null && File.Exists(templateToRemove.FilePath))
         {
             try
             {
-                File.Delete(template.FilePath);
+                File.Delete(templateToRemove.FilePath);
             }
             catch
             {
@@ -156,8 +161,10 @@ public class GroupLibraryManager
             }
         }
 
-        return _templates.Remove(template);
+        return _templates.Remove(templateToRemove);
     }
+
+    private static int _instanceCounter = 1;
 
     /// <summary>
     /// Creates a deep copy of a group template for instantiation on the canvas.
@@ -175,11 +182,44 @@ public class GroupLibraryManager
             throw new InvalidOperationException("Template group is not loaded.");
 
         var deepCopy = template.TemplateGroup.DeepCopy();
-        deepCopy.PhysicalX = x;
-        deepCopy.PhysicalY = y;
-        deepCopy.GroupName = $"{template.Name}_{DateTime.Now:HHmmss}";
+
+        // Calculate the delta to move the group from its template position to the target position
+        double deltaX = x - deepCopy.PhysicalX;
+        double deltaY = y - deepCopy.PhysicalY;
+
+        // Use MoveGroup to properly move the entire group (including children, pins, and paths)
+        deepCopy.MoveGroup(deltaX, deltaY);
+
+        // Use incremental counter instead of timestamp for cleaner names
+        deepCopy.GroupName = $"{template.Name}_{_instanceCounter++}";
+
+        // Rename child components with clean sequential names
+        RenameComponentsWithSequentialNames(deepCopy);
 
         return deepCopy;
+    }
+
+    /// <summary>
+    /// Renames all child components in a group with clean sequential names instead of GUIDs.
+    /// </summary>
+    private void RenameComponentsWithSequentialNames(ComponentGroup group)
+    {
+        int componentIndex = 1;
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                // Recursively rename nested groups
+                childGroup.GroupName = $"SubGroup_{componentIndex++}";
+                RenameComponentsWithSequentialNames(childGroup);
+            }
+            else
+            {
+                // Remove GUID suffix from identifier, keep only base name and add sequential number
+                var baseName = child.Identifier.Split('_')[0];
+                child.Identifier = $"{baseName}_{componentIndex++}";
+            }
+        }
     }
 
     /// <summary>

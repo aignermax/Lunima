@@ -3,6 +3,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Creation;
 
 namespace CAP.Avalonia.Controls;
 
@@ -34,6 +35,11 @@ public class CanvasInteractionState
     public bool ShowPlacementPreview { get; set; }
     public ComponentTemplate? PlacementPreviewTemplate { get; set; }
     public Point PlacementPreviewPosition { get; set; }
+
+    // Group template placement preview state
+    public bool ShowGroupTemplatePlacementPreview { get; set; }
+    public GroupTemplate? GroupTemplatePlacementPreview { get; set; }
+    public Point GroupTemplatePlacementPreviewPosition { get; set; }
 
     // Panning state
     public bool IsPanning { get; set; }
@@ -84,5 +90,14 @@ public class CanvasInteractionState
     {
         ShowPlacementPreview = false;
         PlacementPreviewTemplate = null;
+    }
+
+    /// <summary>
+    /// Resets group template placement preview state.
+    /// </summary>
+    public void ResetGroupTemplatePlacementPreview()
+    {
+        ShowGroupTemplatePlacementPreview = false;
+        GroupTemplatePlacementPreview = null;
     }
 }

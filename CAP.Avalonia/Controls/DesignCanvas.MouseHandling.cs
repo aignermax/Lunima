@@ -50,6 +50,10 @@ public partial class DesignCanvas
         {
             HandlePlaceComponentClick(canvasPoint, vm, mainVm);
         }
+        else if (mainVm?.CurrentMode == InteractionMode.PlaceGroupTemplate)
+        {
+            HandlePlaceGroupTemplateClick(canvasPoint, vm, mainVm);
+        }
         else if (mainVm?.CurrentMode == InteractionMode.Delete)
         {
             HandleDeleteModeClick(canvasPoint, mainVm);
@@ -74,6 +78,14 @@ public partial class DesignCanvas
     }
 
     private void HandlePlaceComponentClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
+    {
+        var snapSettings = vm.GridSnap;
+        var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+        mainVm.CanvasClicked(placementX, placementY);
+        InvalidateVisual();
+    }
+
+    private void HandlePlaceGroupTemplateClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
     {
         var snapSettings = vm.GridSnap;
         var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
@@ -345,6 +357,27 @@ public partial class DesignCanvas
             if (_interactionState.ShowPlacementPreview)
             {
                 _interactionState.ShowPlacementPreview = false;
+                InvalidateVisual();
+            }
+        }
+
+        // Update group template placement preview
+        if (MainViewModel?.CurrentMode == InteractionMode.PlaceGroupTemplate &&
+            MainViewModel?.SelectedGroupTemplate != null)
+        {
+            _interactionState.ShowGroupTemplatePlacementPreview = true;
+            _interactionState.GroupTemplatePlacementPreview = MainViewModel.SelectedGroupTemplate;
+            var snapSettings = vm.GridSnap;
+
+            var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+            _interactionState.GroupTemplatePlacementPreviewPosition = new Point(snappedCenterX, snappedCenterY);
+            InvalidateVisual();
+        }
+        else
+        {
+            if (_interactionState.ShowGroupTemplatePlacementPreview)
+            {
+                _interactionState.ShowGroupTemplatePlacementPreview = false;
                 InvalidateVisual();
             }
         }

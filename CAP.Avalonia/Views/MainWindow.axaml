@@ -160,42 +160,67 @@
                             <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,5,0,3"
                                        IsVisible="{Binding GroupLibrary.UserGroups.Count}"/>
-                            <ListBox ItemsSource="{Binding GroupLibrary.UserGroups}"
-                                     SelectedItem="{Binding LeftPanel.SelectedGroupTemplate}"
+                            <ListBox x:Name="UserGroupsListBox"
+                                     ItemsSource="{Binding GroupLibrary.UserGroups}"
+                                     SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="creation:GroupTemplate">
-                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand"
-                                                    ToolTip.Tip="{Binding Description}">
-                                            <!-- Preview box with component count and size info -->
-                                            <Border Width="56" Height="36"
-                                                    Background="#1e1e1e"
-                                                    BorderBrush="#3e3e3e"
-                                                    BorderThickness="1"
-                                                    CornerRadius="3"
-                                                    Margin="0,0,6,0">
-                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding ComponentCount}"
-                                                               FontSize="16" FontWeight="Bold"
-                                                               Foreground="#4CAF50"
-                                                               HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="comp" FontSize="7"
-                                                               Foreground="Gray"
-                                                               HorizontalAlignment="Center"
-                                                               Margin="0,-2,0,0"/>
+                                    <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                                        <Border Margin="3" Cursor="Hand"
+                                                ToolTip.Tip="{Binding Template.Description}"
+                                                PointerEntered="OnGroupItemPointerEntered"
+                                                PointerExited="OnGroupItemPointerExited"
+                                                Background="Transparent"
+                                                ClipToBounds="False">
+                                            <Grid>
+                                            <StackPanel Orientation="Horizontal">
+                                                <!-- Preview box with component count and size info -->
+                                                <Border Width="56" Height="36"
+                                                        Background="#1e1e1e"
+                                                        BorderBrush="#3e3e3e"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3"
+                                                        Margin="0,0,6,0">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Template.ComponentCount}"
+                                                                   FontSize="16" FontWeight="Bold"
+                                                                   Foreground="#4CAF50"
+                                                                   HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="comp" FontSize="7"
+                                                                   Foreground="Gray"
+                                                                   HorizontalAlignment="Center"
+                                                                   Margin="0,-2,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
+                                                    <TextBlock FontSize="9" Foreground="Gray">
+                                                        <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="×"/>
+                                                        <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="μm"/>
+                                                    </TextBlock>
                                                 </StackPanel>
-                                            </Border>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
-                                                <TextBlock FontSize="9" Foreground="Gray">
-                                                    <Run Text="{Binding WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                                    <Run Text="×"/>
-                                                    <Run Text="{Binding HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                                    <Run Text="μm"/>
-                                                </TextBlock>
                                             </StackPanel>
-                                        </StackPanel>
+
+                                            <!-- Delete button (visible on hover) -->
+                                            <Button IsVisible="{Binding IsHovered}"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Width="18" Height="18"
+                                                    Padding="0"
+                                                    Margin="0,-6,-6,0"
+                                                    Background="#D32F2F"
+                                                    CornerRadius="9"
+                                                    Command="{Binding DeleteCommand}"
+                                                    ToolTip.Tip="Delete saved group">
+                                                <PathIcon Data="M 4,4 L 10,10 M 4,10 L 10,4"
+                                                          Width="10" Height="10"
+                                                          Foreground="White"/>
+                                            </Button>
+                                        </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
@@ -204,42 +229,67 @@
                             <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,10,0,3"
                                        IsVisible="{Binding GroupLibrary.PdkGroups.Count}"/>
-                            <ListBox ItemsSource="{Binding GroupLibrary.PdkGroups}"
-                                     SelectedItem="{Binding LeftPanel.SelectedGroupTemplate}"
+                            <ListBox x:Name="PdkGroupsListBox"
+                                     ItemsSource="{Binding GroupLibrary.PdkGroups}"
+                                     SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="creation:GroupTemplate">
-                                        <StackPanel Orientation="Horizontal" Margin="3" Cursor="Hand"
-                                                    ToolTip.Tip="{Binding Description}">
-                                            <!-- Preview box with component count and size info -->
-                                            <Border Width="56" Height="36"
-                                                    Background="#1e1e1e"
-                                                    BorderBrush="#3e3e3e"
-                                                    BorderThickness="1"
-                                                    CornerRadius="3"
-                                                    Margin="0,0,6,0">
-                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding ComponentCount}"
-                                                               FontSize="16" FontWeight="Bold"
-                                                               Foreground="#4CAF50"
-                                                               HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="comp" FontSize="7"
-                                                               Foreground="Gray"
-                                                               HorizontalAlignment="Center"
-                                                               Margin="0,-2,0,0"/>
+                                    <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                                        <Border Margin="3" Cursor="Hand"
+                                                ToolTip.Tip="{Binding Template.Description}"
+                                                PointerEntered="OnGroupItemPointerEntered"
+                                                PointerExited="OnGroupItemPointerExited"
+                                                Background="Transparent"
+                                                ClipToBounds="False">
+                                            <Grid>
+                                            <StackPanel Orientation="Horizontal">
+                                                <!-- Preview box with component count and size info -->
+                                                <Border Width="56" Height="36"
+                                                        Background="#1e1e1e"
+                                                        BorderBrush="#3e3e3e"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3"
+                                                        Margin="0,0,6,0">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Template.ComponentCount}"
+                                                                   FontSize="16" FontWeight="Bold"
+                                                                   Foreground="#4CAF50"
+                                                                   HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="comp" FontSize="7"
+                                                                   Foreground="Gray"
+                                                                   HorizontalAlignment="Center"
+                                                                   Margin="0,-2,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
+                                                    <TextBlock FontSize="9" Foreground="Gray">
+                                                        <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="×"/>
+                                                        <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                        <Run Text="μm"/>
+                                                    </TextBlock>
                                                 </StackPanel>
-                                            </Border>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
-                                                <TextBlock FontSize="9" Foreground="Gray">
-                                                    <Run Text="{Binding WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                                    <Run Text="×"/>
-                                                    <Run Text="{Binding HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                                    <Run Text="μm"/>
-                                                </TextBlock>
                                             </StackPanel>
-                                        </StackPanel>
+
+                                            <!-- Delete button (visible on hover) -->
+                                            <Button IsVisible="{Binding IsHovered}"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Width="18" Height="18"
+                                                    Padding="0"
+                                                    Margin="0,-6,-6,0"
+                                                    Background="#D32F2F"
+                                                    CornerRadius="9"
+                                                    Command="{Binding DeleteCommand}"
+                                                    ToolTip.Tip="Delete saved group">
+                                                <PathIcon Data="M 4,4 L 10,10 M 4,10 L 10,4"
+                                                          Width="10" Height="10"
+                                                          Foreground="White"/>
+                                            </Button>
+                                        </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>

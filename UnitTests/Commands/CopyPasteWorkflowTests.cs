@@ -374,6 +374,200 @@ public class CopyPasteWorkflowTests
             "Inner group should reference outer group as parent");
     }
 
+    // =========================================================================
+    // Integration tests for issue #271: Readable component names on paste
+    // =========================================================================
+
+    /// <summary>
+    /// Verifies that pasted components get readable incremental names instead of GUIDs.
+    /// This is the main integration test for issue #271.
+    /// </summary>
+    [Fact]
+    public void Paste_Component_GeneratesReadableIncrementalName()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateComponent(100, 50, 100, 100);
+        comp.Identifier = "MMI_1x2";
+        var vm = canvas.AddComponent(comp);
+
+        // Copy and paste
+        canvas.Clipboard.Copy(new[] { vm }, canvas.Connections);
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        cmd.Result.ShouldNotBeNull();
+        var pastedComp = cmd.Result.Components[0].Component;
+
+        // Should have readable name without GUID
+        pastedComp.Identifier.ShouldBe("MMI_1x2_1");
+        pastedComp.Identifier.Length.ShouldBeLessThan(20);
+        pastedComp.Identifier.ShouldNotContain("-"); // No GUID hyphens
+    }
+
+    /// <summary>
+    /// Verifies that multiple paste operations create incrementing suffixes.
+    /// </summary>
+    [Fact]
+    public void Paste_MultipleTimes_CreatesIncrementalSuffixes()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateComponent(100, 50, 100, 100);
+        comp.Identifier = "Detector";
+        var vm = canvas.AddComponent(comp);
+
+        canvas.Clipboard.Copy(new[] { vm }, canvas.Connections);
+
+        // Paste 3 times
+        var cmd1 = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd1.Execute();
+
+        var cmd2 = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd2.Execute();
+
+        var cmd3 = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd3.Execute();
+
+        // Verify all components have incremental names
+        canvas.Components.Count.ShouldBe(4); // Original + 3 copies
+        canvas.Components[0].Component.Identifier.ShouldBe("Detector");
+        canvas.Components[1].Component.Identifier.ShouldBe("Detector_1");
+        canvas.Components[2].Component.Identifier.ShouldBe("Detector_2");
+        canvas.Components[3].Component.Identifier.ShouldBe("Detector_3");
+    }
+
+    /// <summary>
+    /// Verifies that pasted groups get readable names.
+    /// </summary>
+    [Fact]
+    public void Paste_ComponentGroup_GeneratesReadableGroupName()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var group = TestComponentFactory.CreateComponentGroup("MyCircuit", addChildren: true);
+        group.PhysicalX = 200;
+        group.PhysicalY = 200;
+        var groupVm = canvas.AddComponent(group);
+
+        // Copy and paste
+        canvas.Clipboard.Copy(new[] { groupVm }, canvas.Connections);
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        var pastedGroup = (ComponentGroup)cmd.Result.Components[0].Component;
+
+        // Group should have readable name
+        pastedGroup.Identifier.ShouldStartWith("group_MyCircuit_");
+        pastedGroup.Identifier.Length.ShouldBeLessThan(30);
+        pastedGroup.Identifier.ShouldNotContain("group_group_"); // No duplicate "group_"
+
+        // Child components should also have readable names
+        foreach (var child in pastedGroup.ChildComponents)
+        {
+            child.Identifier.Length.ShouldBeLessThan(50);
+            child.Identifier.ShouldNotMatch(@"[0-9a-f]{32}"); // No full GUIDs
+        }
+    }
+
+    /// <summary>
+    /// Verifies that nested groups get readable names at all levels.
+    /// </summary>
+    [Fact]
+    public void Paste_NestedGroup_AllLevelsGetReadableNames()
+    {
+        var canvas = new DesignCanvasViewModel();
+
+        var outerGroup = TestComponentFactory.CreateComponentGroup("Outer", addChildren: false);
+        var innerGroup = TestComponentFactory.CreateComponentGroup("Inner", addChildren: true);
+        outerGroup.AddChild(innerGroup);
+        outerGroup.PhysicalX = 100;
+        outerGroup.PhysicalY = 100;
+
+        var groupVm = canvas.AddComponent(outerGroup);
+
+        // Copy and paste
+        canvas.Clipboard.Copy(new[] { groupVm }, canvas.Connections);
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        var pastedOuter = (ComponentGroup)cmd.Result.Components[0].Component;
+        var pastedInner = (ComponentGroup)pastedOuter.ChildComponents[0];
+
+        // Outer group should have readable name
+        pastedOuter.Identifier.ShouldStartWith("group_Outer_");
+        pastedOuter.Identifier.Length.ShouldBeLessThan(30);
+
+        // Inner group should have readable name
+        pastedInner.Identifier.ShouldStartWith("group_Inner_");
+        pastedInner.Identifier.Length.ShouldBeLessThan(30);
+
+        // Inner group's children should have readable names
+        foreach (var child in pastedInner.ChildComponents)
+        {
+            child.Identifier.Length.ShouldBeLessThan(50);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that pasting multiple different components preserves uniqueness.
+    /// </summary>
+    [Fact]
+    public void Paste_MultipleComponents_AllGetUniqueReadableNames()
+    {
+        var canvas = new DesignCanvasViewModel();
+
+        var comp1 = CreateComponent(100, 50, 100, 100);
+        comp1.Identifier = "Splitter";
+
+        var comp2 = CreateComponent(100, 50, 300, 100);
+        comp2.Identifier = "Combiner";
+
+        var vm1 = canvas.AddComponent(comp1);
+        var vm2 = canvas.AddComponent(comp2);
+
+        // Copy both
+        canvas.Clipboard.Copy(new[] { vm1, vm2 }, canvas.Connections);
+
+        // Paste
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        // Verify both pasted components have readable names
+        canvas.Components.Count.ShouldBe(4);
+        canvas.Components[2].Component.Identifier.ShouldBe("Splitter_1");
+        canvas.Components[3].Component.Identifier.ShouldBe("Combiner_1");
+    }
+
+    /// <summary>
+    /// Verifies that undo/redo preserves the readable names (no regeneration).
+    /// </summary>
+    [Fact]
+    public void Paste_UndoRedo_PreservesGeneratedNames()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateComponent(100, 50, 100, 100);
+        comp.Identifier = "Filter";
+        var vm = canvas.AddComponent(comp);
+
+        canvas.Clipboard.Copy(new[] { vm }, canvas.Connections);
+
+        var cmd = new PasteComponentsCommand(canvas, canvas.Clipboard);
+        cmd.Execute();
+
+        var originalPastedName = cmd.Result.Components[0].Component.Identifier;
+        originalPastedName.ShouldBe("Filter_1");
+
+        // Undo
+        cmd.Undo();
+        canvas.Components.Count.ShouldBe(1);
+
+        // Redo
+        cmd.Execute();
+        canvas.Components.Count.ShouldBe(2);
+        var redoPastedName = cmd.Result.Components[0].Component.Identifier;
+
+        // Name should be preserved (same object instance)
+        redoPastedName.ShouldBe(originalPastedName);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
