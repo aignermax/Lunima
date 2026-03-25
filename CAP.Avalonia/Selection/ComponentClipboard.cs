@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Creation;
 
 namespace CAP.Avalonia.Selection;
 
@@ -81,6 +82,11 @@ public class ComponentClipboard
         var newComponents = new List<ComponentViewModel>();
         var clonedComps = new List<Component>();
 
+        // Get existing component names for unique name generation
+        var existingNames = canvas.Components
+            .Select(c => c.Component.Identifier)
+            .ToList();
+
         // Calculate offset: either from cursor position or fixed offset
         double offsetX, offsetY;
         if (targetX.HasValue && targetY.HasValue)
@@ -101,15 +107,35 @@ public class ComponentClipboard
         {
             var cloned = (Component)entry.OriginalComponent.Clone();
 
+            // Generate readable name for pasted component
+            if (cloned is ComponentGroup group)
+            {
+                // For groups, use group-specific naming and rename children
+                cloned.Identifier = ComponentNameGenerator.GenerateGroupName(
+                    group.GroupName,
+                    existingNames);
+                RenameGroupChildren(group, existingNames);
+            }
+            else
+            {
+                // For regular components, generate incremental name
+                cloned.Identifier = ComponentNameGenerator.GenerateCopyName(
+                    entry.OriginalComponent.Identifier,
+                    existingNames);
+            }
+
+            // Add to list so subsequent components see it
+            existingNames.Add(cloned.Identifier);
+
             double newX = entry.OriginalX + offsetX;
             double newY = entry.OriginalY + offsetY;
 
             // For ComponentGroups, use MoveGroup to move the entire group (children, pins, paths)
-            if (cloned is ComponentGroup group)
+            if (cloned is ComponentGroup groupToMove)
             {
-                double deltaX = newX - group.PhysicalX;
-                double deltaY = newY - group.PhysicalY;
-                group.MoveGroup(deltaX, deltaY);
+                double deltaX = newX - groupToMove.PhysicalX;
+                double deltaY = newY - groupToMove.PhysicalY;
+                groupToMove.MoveGroup(deltaX, deltaY);
             }
             else
             {
@@ -147,6 +173,33 @@ public class ComponentClipboard
         }
 
         return new PasteResult(newComponents, newConnections);
+    }
+
+    /// <summary>
+    /// Recursively renames child components within a group to use readable names.
+    /// </summary>
+    private void RenameGroupChildren(ComponentGroup group, List<string> existingNames)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+            {
+                // Recursively rename nested groups
+                child.Identifier = ComponentNameGenerator.GenerateGroupName(
+                    childGroup.GroupName,
+                    existingNames);
+                existingNames.Add(child.Identifier);
+                RenameGroupChildren(childGroup, existingNames);
+            }
+            else
+            {
+                // Rename regular child component
+                child.Identifier = ComponentNameGenerator.GenerateCopyName(
+                    child.Identifier,
+                    existingNames);
+                existingNames.Add(child.Identifier);
+            }
+        }
     }
 
     /// <summary>
