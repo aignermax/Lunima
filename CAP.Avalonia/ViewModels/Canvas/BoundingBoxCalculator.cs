@@ -69,10 +69,26 @@ public static class BoundingBoxCalculator
 
         foreach (var comp in list)
         {
-            if (comp.X < minX) minX = comp.X;
-            if (comp.Y < minY) minY = comp.Y;
-            if (comp.X + comp.Width > maxX) maxX = comp.X + comp.Width;
-            if (comp.Y + comp.Height > maxY) maxY = comp.Y + comp.Height;
+            // For ComponentGroups, account for the offset between the group's position
+            // and the minimum corner of its children
+            double offsetX = 0;
+            double offsetY = 0;
+
+            if (comp.Component is CAP_Core.Components.Core.ComponentGroup group)
+            {
+                offsetX = group.MinChildOffsetX;
+                offsetY = group.MinChildOffsetY;
+            }
+
+            double compMinX = comp.X + offsetX;
+            double compMinY = comp.Y + offsetY;
+            double compMaxX = compMinX + comp.Width;
+            double compMaxY = compMinY + comp.Height;
+
+            if (compMinX < minX) minX = compMinX;
+            if (compMinY < minY) minY = compMinY;
+            if (compMaxX > maxX) maxX = compMaxX;
+            if (compMaxY > maxY) maxY = compMaxY;
         }
 
         return new BoundingBox(minX, minY, maxX, maxY);
