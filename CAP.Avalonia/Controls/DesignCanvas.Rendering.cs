@@ -76,6 +76,12 @@ public partial class DesignCanvas
                 DrawPlacementPreview(context, vm);
             }
 
+            // Draw group template placement preview
+            if (_interactionState.ShowGroupTemplatePlacementPreview && _interactionState.GroupTemplatePlacementPreview != null)
+            {
+                DrawGroupTemplatePlacementPreview(context, vm);
+            }
+
             // Draw drag preview
             if (_interactionState.ShowDragPreview && _interactionState.DraggingComponent != null)
             {
