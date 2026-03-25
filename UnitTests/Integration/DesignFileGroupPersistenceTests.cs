@@ -553,6 +553,90 @@ public class DesignFileGroupPersistenceTests
     }
 
     /// <summary>
+    /// Regression test for issue #279: Components from ungrouped UserGroup template are not persisted.
+    /// Steps: create components → group them → ungroup → save → load → assert components present.
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLoad_UngroupedComponents_ArePersistedCorrectly()
+    {
+        var (saveVm, saveCanvas) = CreateFileOperationsSetup();
+        var tempFile = Path.Combine(Path.GetTempPath(), $"test_ungroup_{Guid.NewGuid()}.cappro");
+
+        try
+        {
+            // Arrange: create 2 components from a known template
+            var mmiTemplate = _library.First(t => t.Name == "1x2 MMI Splitter");
+            var comp1 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 100, 100);
+            comp1.Identifier = "ug_comp_1";
+            var comp2 = ComponentTemplates.CreateFromTemplate(mmiTemplate, 300, 100);
+            comp2.Identifier = "ug_comp_2";
+
+            // Simulate UserGroup instantiation: children are inside a group, no TemplateName on their VMs
+            var group = new ComponentGroup("UngroupTestTemplate_1")
+            {
+                PhysicalX = 100,
+                PhysicalY = 100
+            };
+            group.AddChild(comp1);
+            group.AddChild(comp2);
+            saveCanvas.AddComponent(group);
+
+            // Ungroup via UngroupCommand (reproduces the actual user action)
+            var ungroupCmd = new UngroupCommand(saveCanvas, group);
+            ungroupCmd.Execute();
+
+            // Verify that after ungroup, TemplateName is NOT set on the restored VMs (the bug precondition)
+            saveCanvas.Components.Count.ShouldBe(2, "Canvas should have 2 standalone components after ungroup");
+            saveCanvas.Components.ShouldAllBe(c => !(c.Component is ComponentGroup));
+            var vm1 = saveCanvas.Components.First(c => c.Component.Identifier == "ug_comp_1");
+            var vm2 = saveCanvas.Components.First(c => c.Component.Identifier == "ug_comp_2");
+            vm1.TemplateName.ShouldBeNull("TemplateName is null after ungroup — this is the bug precondition");
+            vm2.TemplateName.ShouldBeNull("TemplateName is null after ungroup — this is the bug precondition");
+
+            // Act: Save the design
+            var mockDialog = new Mock<IFileDialogService>();
+            mockDialog.Setup(f => f.ShowSaveFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile);
+            saveVm.FileDialogService = mockDialog.Object;
+            await saveVm.SaveDesignAsCommand.ExecuteAsync(null);
+
+            // Verify the saved JSON resolves the correct template name
+            File.Exists(tempFile).ShouldBeTrue();
+            var json = await File.ReadAllTextAsync(tempFile);
+            json.ShouldContain("1x2 MMI Splitter"); // NazcaFunctionName lookup should resolve the template name
+
+            // Act: Load into a fresh canvas
+            var (loadVm, loadCanvas) = CreateFileOperationsSetup();
+            var loadDialog = new Mock<IFileDialogService>();
+            loadDialog.Setup(f => f.ShowOpenFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile);
+            loadVm.FileDialogService = loadDialog.Object;
+            await loadVm.LoadDesignCommand.ExecuteAsync(null);
+
+            // Assert: Both components must survive the round-trip
+            loadCanvas.Components.Count.ShouldBe(2,
+                "Both ungrouped components should be present after save/load");
+            loadCanvas.Components.ShouldAllBe(c => !(c.Component is ComponentGroup));
+            loadCanvas.Components.Any(c => c.Component.Identifier == "ug_comp_1")
+                .ShouldBeTrue("comp 1 should be present after load");
+            loadCanvas.Components.Any(c => c.Component.Identifier == "ug_comp_2")
+                .ShouldBeTrue("comp 2 should be present after load");
+
+            // Verify positions are preserved
+            var loadedComp1 = loadCanvas.Components.First(c => c.Component.Identifier == "ug_comp_1");
+            loadedComp1.X.ShouldBe(100.0, 1.0);
+            loadedComp1.Y.ShouldBe(100.0, 1.0);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
     /// Creates a FileOperationsViewModel with real component library for testing.
     /// </summary>
     private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateFileOperationsSetup()

@@ -188,12 +188,14 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Creates a ComponentData DTO from a ComponentViewModel.
+    /// Falls back to NazcaFunctionName library lookup when TemplateName is null,
+    /// which handles components restored after ungrouping (issue #279).
     /// </summary>
-    private static ComponentData CreateComponentData(ComponentViewModel c)
+    private ComponentData CreateComponentData(ComponentViewModel c)
     {
         return new ComponentData
         {
-            TemplateName = c.TemplateName ?? c.Name,
+            TemplateName = FindTemplateName(c.Component),
             X = c.X,
             Y = c.Y,
             Identifier = c.Component.Identifier,
