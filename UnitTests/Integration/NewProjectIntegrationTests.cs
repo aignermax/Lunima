@@ -182,4 +182,95 @@ public class NewProjectIntegrationTests
         // Verify connections are cleared
         mainVm.Canvas.Connections.Count.ShouldBe(0);
     }
+
+    [Fact]
+    public async Task NewProject_ExitsGroupEditMode()
+    {
+        var mainVm = new MainViewModel(
+            _simulationService,
+            _nazcaExporter,
+            _pdkLoader,
+            _commandManager,
+            _preferencesService,
+            _groupLibraryManager,
+            _previewGenerator,
+            _inputDialogService,
+            _gdsExportService);
+
+        // Create a group with some components
+        var comp1 = TestComponentFactory.CreateStraightWaveGuide();
+        var comp2 = TestComponentFactory.CreateStraightWaveGuide();
+        comp1.PhysicalX = 0;
+        comp1.PhysicalY = 0;
+        comp2.PhysicalX = 100;
+        comp2.PhysicalY = 0;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(comp1);
+        group.AddChild(comp2);
+
+        mainVm.Canvas.AddComponent(group);
+
+        // Enter group edit mode
+        mainVm.Canvas.EnterGroupEditMode(group);
+        mainVm.Canvas.IsInGroupEditMode.ShouldBeTrue();
+
+        // Mark as saved
+        mainVm.FileOperations.HasUnsavedChanges = false;
+
+        // Execute NewProject
+        await mainVm.NewProjectCommand.ExecuteAsync(null);
+
+        // Verify group edit mode is exited
+        mainVm.Canvas.IsInGroupEditMode.ShouldBeFalse();
+        mainVm.Canvas.CurrentEditGroup.ShouldBeNull();
+
+        // Verify canvas is cleared
+        mainVm.Canvas.Components.Count.ShouldBe(0);
+        mainVm.Canvas.Connections.Count.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task NewProject_ExitsNestedGroupEditMode()
+    {
+        var mainVm = new MainViewModel(
+            _simulationService,
+            _nazcaExporter,
+            _pdkLoader,
+            _commandManager,
+            _preferencesService,
+            _groupLibraryManager,
+            _previewGenerator,
+            _inputDialogService,
+            _gdsExportService);
+
+        // Create nested groups
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        var childGroup = new ComponentGroup("ChildGroup");
+        childGroup.AddChild(comp);
+
+        var parentGroup = new ComponentGroup("ParentGroup");
+        parentGroup.AddChild(childGroup);
+
+        mainVm.Canvas.AddComponent(parentGroup);
+
+        // Enter nested group edit mode
+        mainVm.Canvas.EnterGroupEditMode(parentGroup);
+        mainVm.Canvas.EnterGroupEditMode(childGroup);
+        mainVm.Canvas.IsInGroupEditMode.ShouldBeTrue();
+
+        // Mark as saved
+        mainVm.FileOperations.HasUnsavedChanges = false;
+
+        // Execute NewProject
+        await mainVm.NewProjectCommand.ExecuteAsync(null);
+
+        // Verify all group edit modes are exited
+        mainVm.Canvas.IsInGroupEditMode.ShouldBeFalse();
+        mainVm.Canvas.CurrentEditGroup.ShouldBeNull();
+        mainVm.Canvas.BreadcrumbPath.Count.ShouldBe(0);
+
+        // Verify canvas is cleared
+        mainVm.Canvas.Components.Count.ShouldBe(0);
+    }
 }
