@@ -1311,9 +1311,7 @@ public partial class ComponentViewModel : ObservableObject
 
     public double Width => Component.WidthMicrometers;
     public double Height => Component.HeightMicrometers;
-    public string Name => !string.IsNullOrWhiteSpace(Component.HumanReadableName)
-        ? Component.HumanReadableName
-        : Component.Identifier;
+    public string Name => Component.Identifier;
 
     /// <summary>
     /// Whether this ComponentViewModel represents a ComponentGroup.
