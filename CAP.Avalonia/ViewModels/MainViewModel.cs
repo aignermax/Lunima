@@ -159,6 +159,8 @@ public partial class MainViewModel : ObservableObject
         LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService);
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
         var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService);
+        gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
+        gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm);
         ViewportControl = new ViewportControlViewModel(_canvas);
         RightPanel = new RightPanelViewModel(_canvas, preferencesService);
@@ -343,7 +345,16 @@ public partial class MainViewModel : ObservableObject
         };
 
         // Auto-check Python/Nazca environment on startup
-        _ = FileOperations.GdsExport.CheckEnvironmentAsync();
+        // If no custom path is set, trigger auto-discovery
+        var gdsExport = FileOperations.GdsExport;
+        if (string.IsNullOrEmpty(gdsExport.CustomPythonPath))
+        {
+            _ = gdsExport.SearchForPythonAsync();
+        }
+        else
+        {
+            _ = gdsExport.CheckEnvironmentAsync();
+        }
     }
 
     // Canvas interaction delegates
