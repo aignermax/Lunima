@@ -123,6 +123,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
         {
             SelectedTemplate = null;
             SelectedGroupTemplate = null;
+            // Clear UI selections as well
+            ClearComponentTemplateSelection?.Invoke();
+            ClearLeftPanelGroupSelection?.Invoke();
         }
 
         // Deselect canvas components when switching away from Select mode
