@@ -200,15 +200,18 @@ public class GroupingWorkflowTests
         var cmd = new CreateGroupCommand(canvas, canvas.Selection.SelectedComponents.ToList());
         cmd.Execute();
 
-        // Assert - Group has external pin
+        // Assert - Group has external pins for all unoccupied pins
         canvas.Components.Count.ShouldBe(2); // Group + Comp3
         var group = canvas.Components
             .Where(c => c.Component is ComponentGroup)
             .Select(c => (ComponentGroup)c.Component)
             .First();
 
-        group.ExternalPins.Count.ShouldBe(1);
-        group.ExternalPins[0].InternalPin.ShouldBe(pin2);
+        // Both comp1's pin (unoccupied) and comp2's pin (external connection) should be exposed
+        group.ExternalPins.Count.ShouldBe(2);
+        var pin1 = comp1.PhysicalPins[0];
+        group.ExternalPins.ShouldContain(gp => gp.InternalPin == pin1);
+        group.ExternalPins.ShouldContain(gp => gp.InternalPin == pin2);
     }
 
     [Fact]
