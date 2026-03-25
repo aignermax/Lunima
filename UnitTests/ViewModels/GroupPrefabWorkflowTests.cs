@@ -98,7 +98,7 @@ public class GroupPrefabWorkflowTests : IDisposable
         // Assert 2 - Now in library and marked as prefab
         _libraryViewModel.UserGroups.Count.ShouldBe(initialLibraryCount + 1);
         group.IsPrefab.ShouldBeTrue();
-        _libraryViewModel.UserGroups.Last().Name.ShouldBe("My Reusable Prefab");
+        _libraryViewModel.UserGroups.Last().Template.Name.ShouldBe("My Reusable Prefab");
     }
 
     [Fact]

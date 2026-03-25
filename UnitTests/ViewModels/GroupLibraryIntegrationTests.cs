@@ -53,7 +53,7 @@ public class GroupLibraryIntegrationTests : IDisposable
 
         // Assert
         _libraryViewModel.UserGroups.Count.ShouldBe(1);
-        var template = _libraryViewModel.UserGroups.First();
+        var template = _libraryViewModel.UserGroups.First().Template;
         template.Name.ShouldBe("My Saved Group");
         template.Description.ShouldBe("A test group with 3 components");
         template.ComponentCount.ShouldBe(3);
@@ -106,14 +106,15 @@ public class GroupLibraryIntegrationTests : IDisposable
         var group = CreateTestGroup("Group to Remove", 1);
         _libraryManager.SaveTemplate(group, "Remove Me");
         _libraryViewModel.LoadGroupsCommand.Execute(null);
-        var template = _libraryViewModel.UserGroups.First();
+        var templateVm = _libraryViewModel.UserGroups.First();
+        var template = templateVm.Template;
         var filePath = template.FilePath;
 
         // Act
         _libraryViewModel.RemoveTemplateCommand.Execute(template);
 
         // Assert
-        _libraryViewModel.UserGroups.ShouldNotContain(template);
+        _libraryViewModel.UserGroups.ShouldNotContain(templateVm);
         if (filePath != null)
         {
             File.Exists(filePath).ShouldBeFalse();
@@ -127,7 +128,8 @@ public class GroupLibraryIntegrationTests : IDisposable
         var group = CreateTestGroup("Original", 2);
         _libraryManager.SaveTemplate(group, "Original Group", "Original description");
         _libraryViewModel.LoadGroupsCommand.Execute(null);
-        var original = _libraryViewModel.UserGroups.First();
+        var originalVm = _libraryViewModel.UserGroups.First();
+        var original = originalVm.Template;
         original.TemplateGroup = group; // Ensure template group is loaded
 
         // Act
@@ -135,9 +137,9 @@ public class GroupLibraryIntegrationTests : IDisposable
 
         // Assert
         _libraryViewModel.UserGroups.Count.ShouldBe(2);
-        var duplicate = _libraryViewModel.UserGroups.FirstOrDefault(t => t.Name.Contains("Copy"));
+        var duplicate = _libraryViewModel.UserGroups.FirstOrDefault(t => t.Template.Name.Contains("Copy"));
         duplicate.ShouldNotBeNull();
-        duplicate!.ComponentCount.ShouldBe(2);
+        duplicate!.Template.ComponentCount.ShouldBe(2);
     }
 
     [Fact]

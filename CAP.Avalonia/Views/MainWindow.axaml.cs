@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Library;
 using System.ComponentModel;
 using System.Linq;
 
@@ -256,6 +257,28 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm)
         {
             vm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
+        }
+    }
+
+    /// <summary>
+    /// Handles pointer entering a group template item (shows delete button).
+    /// </summary>
+    private void OnGroupItemPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is Grid grid && grid.DataContext is GroupTemplateItemViewModel itemVm)
+        {
+            itemVm.IsHovered = true;
+        }
+    }
+
+    /// <summary>
+    /// Handles pointer leaving a group template item (hides delete button).
+    /// </summary>
+    private void OnGroupItemPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (sender is Grid grid && grid.DataContext is GroupTemplateItemViewModel itemVm)
+        {
+            itemVm.IsHovered = false;
         }
     }
 

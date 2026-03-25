@@ -17,14 +17,14 @@ public partial class ComponentLibraryViewModel : ObservableObject
     private string _statusText = "No groups loaded";
 
     /// <summary>
-    /// User-created group templates.
+    /// User-created group templates (wrapped for UI interactions).
     /// </summary>
-    public ObservableCollection<GroupTemplate> UserGroups { get; } = new();
+    public ObservableCollection<GroupTemplateItemViewModel> UserGroups { get; } = new();
 
     /// <summary>
-    /// PDK-provided group templates (macros).
+    /// PDK-provided group templates (macros, wrapped for UI interactions).
     /// </summary>
-    public ObservableCollection<GroupTemplate> PdkGroups { get; } = new();
+    public ObservableCollection<GroupTemplateItemViewModel> PdkGroups { get; } = new();
 
     /// <summary>
     /// Currently selected group template for drag-and-drop.
@@ -55,12 +55,12 @@ public partial class ComponentLibraryViewModel : ObservableObject
 
         foreach (var template in _libraryManager.UserTemplates)
         {
-            UserGroups.Add(template);
+            UserGroups.Add(new GroupTemplateItemViewModel(template, this));
         }
 
         foreach (var template in _libraryManager.PdkTemplates)
         {
-            PdkGroups.Add(template);
+            PdkGroups.Add(new GroupTemplateItemViewModel(template, this));
         }
 
         UpdateStatus();
@@ -72,13 +72,15 @@ public partial class ComponentLibraryViewModel : ObservableObject
     /// <param name="template">The template to add.</param>
     public void AddTemplate(GroupTemplate template)
     {
+        var itemVm = new GroupTemplateItemViewModel(template, this);
+
         if (template.Source == "User")
         {
-            UserGroups.Add(template);
+            UserGroups.Add(itemVm);
         }
         else
         {
-            PdkGroups.Add(template);
+            PdkGroups.Add(itemVm);
         }
 
         UpdateStatus();
@@ -89,12 +91,27 @@ public partial class ComponentLibraryViewModel : ObservableObject
     /// </summary>
     /// <param name="template">The template to remove.</param>
     [RelayCommand]
-    private void RemoveTemplate(GroupTemplate template)
+    public void RemoveTemplate(GroupTemplate template)
     {
         if (_libraryManager.RemoveTemplate(template))
         {
-            UserGroups.Remove(template);
-            PdkGroups.Remove(template);
+            // Remove from wrapped collections by comparing FilePath since objects may differ after reload
+            var userItem = UserGroups.FirstOrDefault(vm =>
+                vm.Template == template ||
+                (vm.Template.FilePath != null && vm.Template.FilePath == template.FilePath));
+            if (userItem != null)
+            {
+                UserGroups.Remove(userItem);
+            }
+
+            var pdkItem = PdkGroups.FirstOrDefault(vm =>
+                vm.Template == template ||
+                (vm.Template.FilePath != null && vm.Template.FilePath == template.FilePath));
+            if (pdkItem != null)
+            {
+                PdkGroups.Remove(pdkItem);
+            }
+
             UpdateStatus();
         }
     }
