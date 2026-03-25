@@ -56,14 +56,9 @@ public class CreateGroupCommand : IUndoableCommand
             {
                 _canvas.BeginCommandExecution();
 
-                // Remove child components from canvas
-                var componentsToRemove = _canvas.Components
-                    .Where(cvm => _components.Contains(cvm.Component))
-                    .ToList();
-
-                foreach (var compVm in componentsToRemove)
+                // Remove child components from canvas (use stored VMs for identity)
+                foreach (var compVm in _componentViewModels)
                 {
-                    // Remove pins
                     var pinsToRemove = _canvas.AllPins
                         .Where(p => p.ParentComponentViewModel == compVm)
                         .ToList();
@@ -71,6 +66,7 @@ public class CreateGroupCommand : IUndoableCommand
                     {
                         _canvas.AllPins.Remove(pin);
                     }
+                    _canvas.Router.RemoveComponentObstacle(compVm.Component);
                     _canvas.Components.Remove(compVm);
                 }
 
@@ -81,8 +77,9 @@ public class CreateGroupCommand : IUndoableCommand
                     _canvas.ConnectionManager.RemoveConnectionDeferred(connVm.Connection);
                 }
 
-                // Re-add the SAME group
+                // Re-add the SAME group ViewModel and Router obstacle
                 _canvas.Components.Add(_groupViewModel);
+                _canvas.Router.AddComponentObstacle(_createdGroup);
 
                 // Re-add group pins
                 foreach (var pin in _createdGroup.ExternalPins)
@@ -271,11 +268,15 @@ public class CreateGroupCommand : IUndoableCommand
                 {
                     comp.PhysicalX = pos.x;
                     comp.PhysicalY = pos.y;
+                    // Sync the ViewModel's cached position with the model
+                    compVm.X = pos.x;
+                    compVm.Y = pos.y;
                 }
                 comp.ParentGroup = null;
 
                 // Restore the SAME ViewModel (not create a new one!)
                 _canvas.Components.Add(compVm);
+                _canvas.Router.AddComponentObstacle(comp);
 
                 // Re-add pins to AllPins
                 foreach (var pin in comp.PhysicalPins)
