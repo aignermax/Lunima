@@ -664,6 +664,12 @@ public partial class DesignCanvasViewModel : ObservableObject
         component.Component.PhysicalX = component.X;
         component.Component.PhysicalY = component.Y;
 
+        // If in edit mode, update external pin positions
+        if (IsInGroupEditMode && CurrentEditGroup != null)
+        {
+            UpdateExternalPinPositions(CurrentEditGroup);
+        }
+
         if (_isDragging)
         {
             // During drag: only update UI positions, no expensive routing
@@ -716,6 +722,12 @@ public partial class DesignCanvasViewModel : ObservableObject
 
         // Use the ComponentGroup's MoveGroup method to move all children and internal paths
         group.MoveGroup(deltaX, deltaY);
+
+        // If in edit mode and moving a child group, update parent's external pins
+        if (IsInGroupEditMode && CurrentEditGroup != null)
+        {
+            UpdateExternalPinPositions(CurrentEditGroup);
+        }
 
         // Update connections for the group's external pins
         if (_isDragging)
@@ -1066,6 +1078,20 @@ public partial class DesignCanvasViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Updates external pin positions for a group based on current child component positions.
+    /// Called when components are moved in edit mode to keep external pins in sync.
+    /// </summary>
+    private void UpdateExternalPinPositions(ComponentGroup group)
+    {
+        foreach (var externalPin in group.ExternalPins)
+        {
+            var (pinX, pinY) = externalPin.InternalPin.GetAbsolutePosition();
+            externalPin.RelativeX = pinX - group.PhysicalX;
+            externalPin.RelativeY = pinY - group.PhysicalY;
+        }
+    }
+
     // ====================================================================================
     // Unity-Style Sub-Canvas for Group Edit Mode
     // ====================================================================================
@@ -1140,11 +1166,10 @@ public partial class DesignCanvasViewModel : ObservableObject
             AllPins.Clear();
             ConnectionManager.Clear();
 
-            // Add group's children as components
+            // Add group's children as components (AddComponent already adds to Components)
             foreach (var child in group.ChildComponents)
             {
-                var childVm = AddComponent(child);
-                Components.Add(childVm);
+                AddComponent(child);
             }
 
             // Re-initialize A* grid for the sub-canvas component set
@@ -1172,10 +1197,28 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     /// <summary>
     /// Saves the current sub-canvas state back to the group.
-    /// All connections become frozen paths.
+    /// Updates ChildComponents and converts all connections to frozen paths.
     /// </summary>
     private void SaveSubCanvasToGroup(ComponentGroup group)
     {
+        // Sync ChildComponents: update with current canvas components
+        // Remove components no longer on canvas
+        var canvasComponents = Components.Select(c => c.Component).ToHashSet();
+        var childrenToRemove = group.ChildComponents.Where(c => !canvasComponents.Contains(c)).ToList();
+        foreach (var child in childrenToRemove)
+        {
+            group.RemoveChild(child);
+        }
+
+        // Add new components from canvas that aren't in group yet
+        foreach (var compVm in Components)
+        {
+            if (!group.ChildComponents.Contains(compVm.Component))
+            {
+                group.AddChild(compVm.Component);
+            }
+        }
+
         // Clear existing frozen paths
         group.InternalPaths.Clear();
 
