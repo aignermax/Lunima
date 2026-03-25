@@ -155,8 +155,16 @@ public partial class DesignCanvas
             if (DetectDoubleClick(_interactionState.DraggingComponent) &&
                 _interactionState.DraggingComponent.Component is ComponentGroup clickedGroup)
             {
-                // Enter group edit mode instead of dragging
-                vm.EnterGroupEditMode(clickedGroup);
+                // Enter group edit mode via command for undo/redo support
+                if (mainVm?.CommandManager != null)
+                {
+                    var cmd = new EnterGroupEditModeCommand(vm, clickedGroup);
+                    mainVm.CommandManager.ExecuteCommand(cmd);
+                }
+                else
+                {
+                    vm.EnterGroupEditMode(clickedGroup);
+                }
                 mainVm?.HierarchyPanel?.RebuildTree();
                 _interactionState.DraggingComponent = null;
                 InvalidateVisual();
@@ -170,7 +178,16 @@ public partial class DesignCanvas
             // Check for double-click on background in edit mode
             if (vm.IsInGroupEditMode && DetectDoubleClick(null))
             {
-                vm.ExitGroupEditMode();
+                // Exit group edit mode via command for undo/redo support
+                if (mainVm?.CommandManager != null && vm.CurrentEditGroup != null)
+                {
+                    var cmd = new ExitGroupEditModeCommand(vm, vm.CurrentEditGroup);
+                    mainVm.CommandManager.ExecuteCommand(cmd);
+                }
+                else
+                {
+                    vm.ExitGroupEditMode();
+                }
                 mainVm?.HierarchyPanel?.RebuildTree();
                 InvalidateVisual();
                 return;

@@ -163,10 +163,19 @@ public partial class MainWindow : Window
                 mainVm.DeleteSelectedCommand.Execute(null);
                 break;
             case Key.Escape:
-                // First priority: Exit group edit mode if active
+                // First priority: Exit group edit mode if active (via command for undo/redo)
                 if (mainVm.Canvas.IsInGroupEditMode)
                 {
-                    mainVm.Canvas.ExitGroupEditMode();
+                    if (mainVm.Canvas.CurrentEditGroup != null)
+                    {
+                        var exitCmd = new Commands.ExitGroupEditModeCommand(
+                            mainVm.Canvas, mainVm.Canvas.CurrentEditGroup);
+                        mainVm.CommandManager.ExecuteCommand(exitCmd);
+                    }
+                    else
+                    {
+                        mainVm.Canvas.ExitGroupEditMode();
+                    }
                     mainVm.StatusText = "Exited group edit mode";
                 }
                 else
