@@ -16,6 +16,13 @@ public class Component : ICloneable
     public int HeightInTiles => Parts.GetLength(1);
     public int TypeNumber { get; set; }
     public string Identifier{ get; set; }
+
+    /// <summary>
+    /// Human-readable name for display in the UI. Unlike Identifier (which is a GUID for persistence),
+    /// this property provides a user-friendly name like "GratingCoupler_1".
+    /// </summary>
+    public string? HumanReadableName { get; set; }
+
     public bool IsPlacedInGrid { get; private set; }
     [JsonIgnore] public int GridXMainTile { get; protected set; }
     [JsonIgnore] public int GridYMainTile { get; protected set; }
