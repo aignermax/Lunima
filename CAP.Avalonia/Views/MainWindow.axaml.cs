@@ -299,7 +299,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnGroupItemPointerEntered(object? sender, PointerEventArgs e)
     {
-        if (sender is Grid grid && grid.DataContext is GroupTemplateItemViewModel itemVm)
+        if (sender is Border border && border.DataContext is GroupTemplateItemViewModel itemVm)
         {
             itemVm.IsHovered = true;
         }
@@ -310,7 +310,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnGroupItemPointerExited(object? sender, PointerEventArgs e)
     {
-        if (sender is Grid grid && grid.DataContext is GroupTemplateItemViewModel itemVm)
+        if (sender is Border border && border.DataContext is GroupTemplateItemViewModel itemVm)
         {
             itemVm.IsHovered = false;
         }
