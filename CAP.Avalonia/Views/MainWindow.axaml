@@ -167,11 +167,12 @@
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
-                                        <Border Margin="3" Padding="0,3,3,0" Cursor="Hand"
+                                        <Border Margin="3" Cursor="Hand"
                                                 ToolTip.Tip="{Binding Template.Description}"
                                                 PointerEntered="OnGroupItemPointerEntered"
                                                 PointerExited="OnGroupItemPointerExited"
-                                                Background="Transparent">
+                                                Background="Transparent"
+                                                ClipToBounds="False">
                                             <Grid>
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Preview box with component count and size info -->
@@ -209,7 +210,7 @@
                                                     VerticalAlignment="Top"
                                                     Width="18" Height="18"
                                                     Padding="0"
-                                                    Margin="0"
+                                                    Margin="0,-6,-6,0"
                                                     Background="#D32F2F"
                                                     CornerRadius="9"
                                                     Command="{Binding DeleteCommand}"
@@ -235,11 +236,12 @@
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
-                                        <Border Margin="3" Padding="0,3,3,0" Cursor="Hand"
+                                        <Border Margin="3" Cursor="Hand"
                                                 ToolTip.Tip="{Binding Template.Description}"
                                                 PointerEntered="OnGroupItemPointerEntered"
                                                 PointerExited="OnGroupItemPointerExited"
-                                                Background="Transparent">
+                                                Background="Transparent"
+                                                ClipToBounds="False">
                                             <Grid>
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Preview box with component count and size info -->
@@ -277,7 +279,7 @@
                                                     VerticalAlignment="Top"
                                                     Width="18" Height="18"
                                                     Padding="0"
-                                                    Margin="0"
+                                                    Margin="0,-6,-6,0"
                                                     Background="#D32F2F"
                                                     CornerRadius="9"
                                                     Command="{Binding DeleteCommand}"
