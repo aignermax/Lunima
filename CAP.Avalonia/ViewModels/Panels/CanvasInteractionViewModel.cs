@@ -255,6 +255,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         if (SelectedGroupTemplate == null || _libraryViewModel == null) return;
 
+        // Debug: Check if TemplateGroup is loaded
+        if (SelectedGroupTemplate.TemplateGroup == null)
+        {
+            UpdateStatus?.Invoke($"ERROR: Template '{SelectedGroupTemplate.Name}' not loaded! TemplateGroup is null.");
+            return;
+        }
+
         var libraryManager = _libraryViewModel.GetLibraryManager();
         var cmd = PlaceGroupTemplateCommand.TryCreate(_canvas, libraryManager, SelectedGroupTemplate, x, y);
 

@@ -50,6 +50,10 @@ public partial class DesignCanvas
         {
             HandlePlaceComponentClick(canvasPoint, vm, mainVm);
         }
+        else if (mainVm?.CurrentMode == InteractionMode.PlaceGroupTemplate)
+        {
+            HandlePlaceGroupTemplateClick(canvasPoint, vm, mainVm);
+        }
         else if (mainVm?.CurrentMode == InteractionMode.Delete)
         {
             HandleDeleteModeClick(canvasPoint, mainVm);
@@ -74,6 +78,14 @@ public partial class DesignCanvas
     }
 
     private void HandlePlaceComponentClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
+    {
+        var snapSettings = vm.GridSnap;
+        var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+        mainVm.CanvasClicked(placementX, placementY);
+        InvalidateVisual();
+    }
+
+    private void HandlePlaceGroupTemplateClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
     {
         var snapSettings = vm.GridSnap;
         var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);

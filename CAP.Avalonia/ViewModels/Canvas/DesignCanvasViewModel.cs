@@ -266,7 +266,8 @@ public partial class DesignCanvasViewModel : ObservableObject
             return;
 
         // Save current sub-canvas connections as frozen paths
-        SaveSubCanvasToGroup(CurrentEditGroup);
+        var editedGroup = CurrentEditGroup;
+        SaveSubCanvasToGroup(editedGroup);
 
         // Check if we're exiting to parent group or to root
         if (_editModeStack.Count > 0)
@@ -287,6 +288,23 @@ public partial class DesignCanvasViewModel : ObservableObject
             }
         }
 
+        // Notify the ComponentViewModel that the group's dimensions and position have changed
+        // This ensures click detection uses the updated bounding box
+        var groupViewModel = Components.FirstOrDefault(c => c.Component == editedGroup);
+        if (groupViewModel != null)
+        {
+            groupViewModel.NotifyDimensionsChanged();
+
+            // Update position to match the calculated bounding box (from children)
+            if (editedGroup.ChildComponents.Count > 0)
+            {
+                double minX = editedGroup.ChildComponents.Min(c => c.PhysicalX);
+                double minY = editedGroup.ChildComponents.Min(c => c.PhysicalY);
+                groupViewModel.X = minX;
+                groupViewModel.Y = minY;
+            }
+        }
+
         UpdateBreadcrumbPath();
         OnPropertyChanged(nameof(IsInGroupEditMode));
     }
@@ -302,7 +320,8 @@ public partial class DesignCanvasViewModel : ObservableObject
             return;
 
         // Save current sub-canvas
-        SaveSubCanvasToGroup(CurrentEditGroup);
+        var editedGroup = CurrentEditGroup;
+        SaveSubCanvasToGroup(editedGroup);
 
         // Save all parent groups in stack
         while (_editModeStack.Count > 0)
@@ -317,6 +336,23 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             RestoreCanvasState(_rootCanvasBackup);
             _rootCanvasBackup = null;
+        }
+
+        // Notify the ComponentViewModel that the group's dimensions and position have changed
+        // This ensures click detection uses the updated bounding box
+        var groupViewModel = Components.FirstOrDefault(c => c.Component == editedGroup);
+        if (groupViewModel != null)
+        {
+            groupViewModel.NotifyDimensionsChanged();
+
+            // Update position to match the calculated bounding box (from children)
+            if (editedGroup.ChildComponents.Count > 0)
+            {
+                double minX = editedGroup.ChildComponents.Min(c => c.PhysicalX);
+                double minY = editedGroup.ChildComponents.Min(c => c.PhysicalY);
+                groupViewModel.X = minX;
+                groupViewModel.Y = minY;
+            }
         }
 
         _editModeStack.Clear();

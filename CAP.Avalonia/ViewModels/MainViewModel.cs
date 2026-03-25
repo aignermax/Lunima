@@ -204,6 +204,39 @@ public partial class MainViewModel : ObservableObject
         // Wire up group template selection from left panel to canvas interaction
         LeftPanel.OnGroupTemplateSelected = template =>
         {
+            // Ensure TemplateGroup is loaded before setting as selected
+            if (template.TemplateGroup == null && !string.IsNullOrEmpty(template.FilePath))
+            {
+                // Try to load the template group data from disk
+                try
+                {
+                    if (System.IO.File.Exists(template.FilePath))
+                    {
+                        var json = System.IO.File.ReadAllText(template.FilePath);
+                        var fileData = System.Text.Json.JsonSerializer.Deserialize<CAP_Core.Components.Creation.GroupLibraryFileData>(json);
+
+                        if (fileData != null && !string.IsNullOrWhiteSpace(fileData.GroupData))
+                        {
+                            var group = CAP_Core.Components.Creation.GroupTemplateSerializer.Deserialize(fileData.GroupData);
+                            if (group != null)
+                            {
+                                template.TemplateGroup = group;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    StatusText = $"Failed to load template '{template.Name}': {ex.Message}";
+                    return;
+                }
+
+                if (template.TemplateGroup == null)
+                {
+                    StatusText = $"Template '{template.Name}' could not be loaded - file may be corrupted";
+                    return;
+                }
+            }
             CanvasInteraction.SelectedGroupTemplate = template;
         };
 

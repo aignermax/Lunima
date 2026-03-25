@@ -175,8 +175,14 @@ public class GroupLibraryManager
             throw new InvalidOperationException("Template group is not loaded.");
 
         var deepCopy = template.TemplateGroup.DeepCopy();
-        deepCopy.PhysicalX = x;
-        deepCopy.PhysicalY = y;
+
+        // Calculate the delta to move the group from its template position to the target position
+        double deltaX = x - deepCopy.PhysicalX;
+        double deltaY = y - deepCopy.PhysicalY;
+
+        // Use MoveGroup to properly move the entire group (including children, pins, and paths)
+        deepCopy.MoveGroup(deltaX, deltaY);
+
         deepCopy.GroupName = $"{template.Name}_{DateTime.Now:HHmmss}";
 
         return deepCopy;
