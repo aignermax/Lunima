@@ -23,9 +23,7 @@ public partial class MainWindow : Window
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
-                vm.ViewportControl.GetViewportSize = () => (
-                    DesignCanvasControl.Bounds.Width,
-                    DesignCanvasControl.Bounds.Height);
+                vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RoutingDiagnostics.CopyToClipboard = async (text) =>
@@ -214,7 +212,10 @@ public partial class MainWindow : Window
                 break;
             case Key.F:
                 if (!ctrlPressed)
-                    mainVm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
+                {
+                    var (width, height) = GetActualViewportSize();
+                    mainVm.ZoomToFit(width, height);
+                }
                 break;
             case Key.P:
                 if (!ctrlPressed)
@@ -255,8 +256,32 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel vm)
         {
-            vm.ZoomToFit(DesignCanvasControl.Bounds.Width, DesignCanvasControl.Bounds.Height);
+            var (width, height) = GetActualViewportSize();
+            vm.ZoomToFit(width, height);
         }
+    }
+
+    /// <summary>
+    /// Gets the actual viewport size (visible area) independent of zoom level.
+    /// Uses the Window's client area bounds as the viewport.
+    /// </summary>
+    private (double width, double height) GetActualViewportSize()
+    {
+        // The viewport is the visible area of the window where the canvas is displayed.
+        // We use ClientSize (or Bounds) of the Window, which is independent of canvas zoom.
+        // This ensures ZoomToFit calculates correctly regardless of current zoom level.
+
+        // Use the window's client area size
+        var windowWidth = ClientSize.Width;
+        var windowHeight = ClientSize.Height;
+
+        // Fallback to reasonable defaults if window size is not available
+        if (windowWidth <= 0 || windowHeight <= 0)
+        {
+            return (1400, 900); // Default window size
+        }
+
+        return (windowWidth, windowHeight);
     }
 
 }

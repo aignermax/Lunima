@@ -178,6 +178,17 @@ public partial class MainViewModel : ObservableObject
             }
         };
 
+        // Wire up ZoomLevel property change forwarding from ViewportControl to MainViewModel
+        // This ensures that when ViewportControl.ZoomLevel changes (e.g., via ZoomToFit),
+        // the UI binding on MainViewModel.ZoomLevel gets notified
+        ViewportControl.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(ViewportControl.ZoomLevel))
+            {
+                OnPropertyChanged(nameof(ZoomLevel));
+            }
+        };
+
         // Wire up callbacks
         CanvasInteraction.OnSelectionChanged = comp =>
         {
