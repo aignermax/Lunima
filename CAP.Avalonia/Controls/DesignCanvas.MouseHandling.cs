@@ -349,6 +349,27 @@ public partial class DesignCanvas
             }
         }
 
+        // Update group template placement preview
+        if (MainViewModel?.CurrentMode == InteractionMode.PlaceGroupTemplate &&
+            MainViewModel?.SelectedGroupTemplate != null)
+        {
+            _interactionState.ShowGroupTemplatePlacementPreview = true;
+            _interactionState.GroupTemplatePlacementPreview = MainViewModel.SelectedGroupTemplate;
+            var snapSettings = vm.GridSnap;
+
+            var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
+            _interactionState.GroupTemplatePlacementPreviewPosition = new Point(snappedCenterX, snappedCenterY);
+            InvalidateVisual();
+        }
+        else
+        {
+            if (_interactionState.ShowGroupTemplatePlacementPreview)
+            {
+                _interactionState.ShowGroupTemplatePlacementPreview = false;
+                InvalidateVisual();
+            }
+        }
+
         // Update group hover highlighting
         UpdateGroupHover(canvasPoint, vm);
     }

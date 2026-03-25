@@ -46,6 +46,53 @@ public partial class DesignCanvas
         context.DrawText(nameText, new Point(x + 5, y + 5));
     }
 
+    private void DrawGroupTemplatePlacementPreview(DrawingContext context, DesignCanvasViewModel vm)
+    {
+        if (_interactionState.GroupTemplatePlacementPreview == null) return;
+
+        double width = _interactionState.GroupTemplatePlacementPreview.WidthMicrometers;
+        double height = _interactionState.GroupTemplatePlacementPreview.HeightMicrometers;
+        double x = _interactionState.GroupTemplatePlacementPreviewPosition.X - width / 2;
+        double y = _interactionState.GroupTemplatePlacementPreviewPosition.Y - height / 2;
+
+        bool canPlace = vm.CanPlaceComponent(x, y, width, height);
+
+        var fillColor = canPlace
+            ? Color.FromArgb(50, 150, 150, 255)
+            : Color.FromArgb(50, 255, 100, 100);
+
+        var borderColor = canPlace
+            ? Color.FromArgb(200, 150, 150, 255)
+            : Color.FromArgb(200, 255, 100, 100);
+
+        // Draw group bounds
+        var previewRect = new Rect(x, y, width, height);
+        context.FillRectangle(new SolidColorBrush(fillColor), previewRect);
+        context.DrawRectangle(null, new Pen(new SolidColorBrush(borderColor), 2), previewRect);
+
+        // Draw group name
+        var nameText = new FormattedText(
+            _interactionState.GroupTemplatePlacementPreview.Name,
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial", FontStyle.Normal, FontWeight.Bold),
+            12,
+            new SolidColorBrush(borderColor));
+
+        context.DrawText(nameText, new Point(x + 5, y + 5));
+
+        // Draw component count and size info
+        var infoText = new FormattedText(
+            $"{_interactionState.GroupTemplatePlacementPreview.ComponentCount} components | {width:F0}×{height:F0}µm",
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial"),
+            9,
+            new SolidColorBrush(borderColor));
+
+        context.DrawText(infoText, new Point(x + 5, y + height - 15));
+    }
+
     private void DrawDragPreview(DrawingContext context)
     {
         if (_interactionState.DraggingComponent == null) return;

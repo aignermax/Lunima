@@ -99,6 +99,11 @@ public partial class MainViewModel : ObservableObject
         get => CanvasInteraction.SelectedTemplate;
         set => CanvasInteraction.SelectedTemplate = value;
     }
+    public CAP_Core.Components.Creation.GroupTemplate? SelectedGroupTemplate
+    {
+        get => CanvasInteraction.SelectedGroupTemplate;
+        set => CanvasInteraction.SelectedGroupTemplate = value;
+    }
     public ComponentViewModel? SelectedComponent
     {
         get => CanvasInteraction.SelectedComponent;
