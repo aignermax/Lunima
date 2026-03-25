@@ -211,6 +211,8 @@ public partial class MainViewModel : ObservableObject
             // Setting CanvasInteraction.SelectedTemplate to null will automatically update
             // MainViewModel.SelectedTemplate (which is bound to the UI ListBox)
             CanvasInteraction.SelectedTemplate = null;
+            // Force PropertyChanged notification on the wrapper property to ensure UI updates
+            OnPropertyChanged(nameof(SelectedTemplate));
         };
 
         // Wire up mode changes and template selection to keep UI in sync
