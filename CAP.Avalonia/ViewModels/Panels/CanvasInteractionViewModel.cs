@@ -125,6 +125,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
             SelectedGroupTemplate = null;
         }
 
+        // Deselect canvas components when switching away from Select mode
+        if (value != InteractionMode.Select)
+        {
+            SelectedComponent = null;
+        }
+
         var statusText = value switch
         {
             InteractionMode.Select => "Select mode: Click to select, drag to move",
