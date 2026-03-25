@@ -1079,7 +1079,8 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             Components = Components.ToList(),
             Connections = Connections.ToList(),
-            AllPins = AllPins.ToList()
+            AllPins = AllPins.ToList(),
+            ManagerConnections = ConnectionManager.Connections.ToList()
         };
     }
 
@@ -1097,6 +1098,9 @@ public partial class DesignCanvasViewModel : ObservableObject
             Connections.Clear();
             AllPins.Clear();
 
+            // Clear stale sub-canvas connections from ConnectionManager
+            ConnectionManager.Clear();
+
             // Restore backed up state
             foreach (var comp in state.Components)
                 Components.Add(comp);
@@ -1106,6 +1110,10 @@ public partial class DesignCanvasViewModel : ObservableObject
 
             foreach (var pin in state.AllPins)
                 AllPins.Add(pin);
+
+            // Restore ConnectionManager connections from backup
+            foreach (var managerConn in state.ManagerConnections)
+                ConnectionManager.AddExistingConnection(managerConn);
         }
         finally
         {
@@ -1126,10 +1134,11 @@ public partial class DesignCanvasViewModel : ObservableObject
         {
             BeginCommandExecution();
 
-            // Clear canvas
+            // Clear canvas and ConnectionManager to remove stale state
             Components.Clear();
             Connections.Clear();
             AllPins.Clear();
+            ConnectionManager.Clear();
 
             // Add group's children as components
             foreach (var child in group.ChildComponents)
@@ -1137,6 +1146,9 @@ public partial class DesignCanvasViewModel : ObservableObject
                 var childVm = AddComponent(child);
                 Components.Add(childVm);
             }
+
+            // Re-initialize A* grid for the sub-canvas component set
+            InitializeAStarRouting();
 
             // Add frozen paths as editable connections (already routed)
             foreach (var frozenPath in group.InternalPaths)
@@ -1197,6 +1209,7 @@ public partial class DesignCanvasViewModel : ObservableObject
         public List<ComponentViewModel> Components { get; set; } = new();
         public List<WaveguideConnectionViewModel> Connections { get; set; } = new();
         public List<PinViewModel> AllPins { get; set; } = new();
+        public List<WaveguideConnection> ManagerConnections { get; set; } = new();
     }
 }
 
