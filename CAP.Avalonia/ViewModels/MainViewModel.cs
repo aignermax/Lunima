@@ -201,6 +201,11 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
+        CanvasInteraction.ClearLeftPanelGroupSelection = () =>
+        {
+            LeftPanel.SelectedGroupTemplate = null;
+        };
+
         // Wire up mode changes and template selection to keep UI in sync
         CanvasInteraction.PropertyChanged += (s, e) =>
         {
