@@ -870,11 +870,12 @@
                     <!-- Available Python Installations -->
                     <ItemsControl ItemsSource="{Binding FileOperations.GdsExport.AvailablePythons}"
                                   Margin="0,0,0,8"
+                                  x:Name="AvailablePythonsList"
                                   IsVisible="{Binding FileOperations.GdsExport.AvailablePythons.Count}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Content="{Binding DisplayText}"
-                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).FileOperations.GdsExport.SelectPythonCommand}"
+                                        Command="{Binding #AvailablePythonsList.DataContext.FileOperations.GdsExport.SelectPythonCommand}"
                                         CommandParameter="{Binding}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Margin="0,2,0,0" Padding="6,4" Background="#2d2d2d" FontSize="10"/>
