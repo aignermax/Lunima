@@ -1,11 +1,13 @@
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Commands;
 
 /// <summary>
 /// Command for pasting copied components onto the canvas.
-/// Supports undo by removing all pasted components.
+/// On first Execute, creates new clones via clipboard. On Redo, re-adds
+/// the same component instances to avoid creating shadow/duplicate components.
 /// </summary>
 public class PasteComponentsCommand : IUndoableCommand
 {
@@ -38,6 +40,14 @@ public class PasteComponentsCommand : IUndoableCommand
     /// <inheritdoc />
     public void Execute()
     {
+        // Redo scenario: re-add the SAME components instead of creating new clones
+        if (_result != null)
+        {
+            ReAddPastedComponents();
+            return;
+        }
+
+        // First execution: create new clones via clipboard
         _result = _clipboard.Paste(_canvas, _targetX, _targetY);
     }
 
@@ -53,11 +63,47 @@ public class PasteComponentsCommand : IUndoableCommand
             _canvas.Connections.Remove(conn);
         }
 
-        // Remove pasted components
+        // Remove pasted components (but keep _result so Redo can restore them)
         foreach (var comp in _result.Components)
         {
             _canvas.RemoveComponent(comp);
         }
+    }
+
+    /// <summary>
+    /// Re-adds previously pasted components on Redo, preserving object identity.
+    /// </summary>
+    private void ReAddPastedComponents()
+    {
+        try
+        {
+            _canvas.BeginCommandExecution();
+
+            foreach (var compVm in _result!.Components)
+            {
+                _canvas.Components.Add(compVm);
+                _canvas.Router.AddComponentObstacle(compVm.Component);
+
+                foreach (var pin in compVm.Component.PhysicalPins)
+                {
+                    _canvas.AllPins.Add(new PinViewModel(pin, compVm));
+                }
+            }
+
+            // Re-add connections
+            foreach (var connVm in _result.Connections)
+            {
+                _canvas.ConnectionManager.AddExistingConnection(connVm.Connection);
+                _canvas.Connections.Add(connVm);
+            }
+        }
+        finally
+        {
+            _canvas.EndCommandExecution();
+        }
+
+        _ = _canvas.RecalculateRoutesAsync();
+        _canvas.InvalidateSimulation();
     }
 
     /// <summary>

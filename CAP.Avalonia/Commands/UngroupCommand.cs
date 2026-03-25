@@ -7,6 +7,7 @@ namespace CAP.Avalonia.Commands;
 /// <summary>
 /// Command to explode a ComponentGroup back to individual components.
 /// Unfreezes internal paths and restores waveguide connections.
+/// Preserves object identity across undo/redo cycles to prevent shadow components.
 /// </summary>
 public class UngroupCommand : IUndoableCommand
 {
@@ -14,10 +15,14 @@ public class UngroupCommand : IUndoableCommand
     private readonly ComponentGroup _group;
     private ComponentViewModel? _groupViewModel;
     private readonly List<ComponentViewModel> _restoredComponentViewModels = new();
-    private readonly List<WaveguideConnection> _restoredConnections = new();
+    private readonly List<WaveguideConnectionViewModel> _restoredConnectionViewModels = new();
     private readonly double _groupX;
     private readonly double _groupY;
+    private bool _hasExecutedOnce;
 
+    /// <summary>
+    /// Creates an ungroup command for the given group.
+    /// </summary>
     public UngroupCommand(DesignCanvasViewModel canvas, ComponentGroup group)
     {
         _canvas = canvas;
@@ -26,11 +31,20 @@ public class UngroupCommand : IUndoableCommand
         _groupY = group.PhysicalY;
     }
 
+    /// <inheritdoc />
     public string Description => $"Ungroup {_group.GroupName}";
 
+    /// <inheritdoc />
     public void Execute()
     {
-        // Find the group's ViewModel
+        // On Redo, reuse stored ViewModels instead of creating new ones
+        if (_hasExecutedOnce)
+        {
+            ReAddRestoredComponents();
+            return;
+        }
+
+        // First execution
         _groupViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _group);
         if (_groupViewModel == null)
             return;
@@ -51,13 +65,9 @@ public class UngroupCommand : IUndoableCommand
             }
 
             // 2. Convert frozen paths back to WaveguideConnections
-            // IMPORTANT: Do NOT use cached routes - they're from before group movement!
-            // The group may have been moved, rotated, or edited since grouping.
-            // We must recalculate routes to reflect current component positions.
-            _restoredConnections.Clear();
+            _restoredConnectionViewModels.Clear();
             foreach (var frozenPath in _group.InternalPaths)
             {
-                // Add connection without route - will be recalculated below
                 var connection = _canvas.ConnectionManager.AddConnectionDeferred(
                     frozenPath.StartPin,
                     frozenPath.EndPin
@@ -65,7 +75,7 @@ public class UngroupCommand : IUndoableCommand
 
                 var connVm = new WaveguideConnectionViewModel(connection);
                 _canvas.Connections.Add(connVm);
-                _restoredConnections.Add(connection);
+                _restoredConnectionViewModels.Add(connVm);
             }
 
             // 3. Remove the group from canvas
@@ -76,11 +86,14 @@ public class UngroupCommand : IUndoableCommand
             _canvas.EndCommandExecution();
         }
 
+        _hasExecutedOnce = true;
+
         // Update routes for the restored connections
         _ = _canvas.RecalculateRoutesAsync();
         _canvas.InvalidateSimulation();
     }
 
+    /// <inheritdoc />
     public void Undo()
     {
         if (_groupViewModel == null)
@@ -91,23 +104,17 @@ public class UngroupCommand : IUndoableCommand
             _canvas.BeginCommandExecution();
 
             // Remove restored connections
-            foreach (var conn in _restoredConnections)
+            foreach (var connVm in _restoredConnectionViewModels)
             {
-                var connVm = _canvas.Connections.FirstOrDefault(c => c.Connection == conn);
-                if (connVm != null)
-                {
-                    _canvas.Connections.Remove(connVm);
-                    _canvas.ConnectionManager.RemoveConnectionDeferred(conn);
-                }
+                _canvas.Connections.Remove(connVm);
+                _canvas.ConnectionManager.RemoveConnectionDeferred(connVm.Connection);
             }
 
             // Remove individual components
             foreach (var compVm in _restoredComponentViewModels)
             {
-                // Set component back as child of group
                 compVm.Component.ParentGroup = _group;
 
-                // Remove pins
                 var pinsToRemove = _canvas.AllPins
                     .Where(p => p.ParentComponentViewModel == compVm)
                     .ToList();
@@ -116,20 +123,72 @@ public class UngroupCommand : IUndoableCommand
                     _canvas.AllPins.Remove(pin);
                 }
 
+                _canvas.Router.RemoveComponentObstacle(compVm.Component);
                 _canvas.Components.Remove(compVm);
             }
 
-            // Re-add the group
+            // Re-add the group using the SAME ViewModel
             _group.PhysicalX = _groupX;
             _group.PhysicalY = _groupY;
-            _groupViewModel = _canvas.AddComponent(_group);
+            _canvas.Components.Add(_groupViewModel);
+            _canvas.Router.AddComponentObstacle(_group);
+
+            foreach (var pin in _group.ExternalPins)
+            {
+                _canvas.AllPins.Add(new PinViewModel(pin.InternalPin, _groupViewModel));
+            }
         }
         finally
         {
             _canvas.EndCommandExecution();
         }
 
-        // Recalculate routes
+        _ = _canvas.RecalculateRoutesAsync();
+        _canvas.InvalidateSimulation();
+    }
+
+    /// <summary>
+    /// Re-adds previously restored child components on Redo, preserving object identity.
+    /// </summary>
+    private void ReAddRestoredComponents()
+    {
+        // Find the group's current ViewModel on canvas
+        _groupViewModel = _canvas.Components.FirstOrDefault(c => c.Component == _group);
+        if (_groupViewModel == null)
+            return;
+
+        try
+        {
+            _canvas.BeginCommandExecution();
+
+            // Re-add the SAME child ViewModels
+            foreach (var childVm in _restoredComponentViewModels)
+            {
+                childVm.Component.ParentGroup = null;
+                _canvas.Components.Add(childVm);
+                _canvas.Router.AddComponentObstacle(childVm.Component);
+
+                foreach (var pin in childVm.Component.PhysicalPins)
+                {
+                    _canvas.AllPins.Add(new PinViewModel(pin, childVm));
+                }
+            }
+
+            // Re-add the SAME connection ViewModels
+            foreach (var connVm in _restoredConnectionViewModels)
+            {
+                _canvas.ConnectionManager.AddExistingConnection(connVm.Connection);
+                _canvas.Connections.Add(connVm);
+            }
+
+            // Remove the group from canvas
+            _canvas.RemoveComponent(_groupViewModel);
+        }
+        finally
+        {
+            _canvas.EndCommandExecution();
+        }
+
         _ = _canvas.RecalculateRoutesAsync();
         _canvas.InvalidateSimulation();
     }
