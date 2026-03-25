@@ -206,6 +206,13 @@ public partial class MainViewModel : ObservableObject
             LeftPanel.SelectedGroupTemplate = null;
         };
 
+        CanvasInteraction.ClearComponentTemplateSelection = () =>
+        {
+            // Setting CanvasInteraction.SelectedTemplate to null will automatically update
+            // MainViewModel.SelectedTemplate (which is bound to the UI ListBox)
+            CanvasInteraction.SelectedTemplate = null;
+        };
+
         // Wire up mode changes and template selection to keep UI in sync
         CanvasInteraction.PropertyChanged += (s, e) =>
         {
