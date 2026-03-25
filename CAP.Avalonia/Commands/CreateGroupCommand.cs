@@ -68,6 +68,9 @@ public class CreateGroupCommand : IUndoableCommand
                     }
                     _canvas.Router.RemoveComponentObstacle(compVm.Component);
                     _canvas.Components.Remove(compVm);
+
+                    // Ensure child component is re-assigned to the group (in case undo cleared it)
+                    compVm.Component.ParentGroup = _createdGroup;
                 }
 
                 // Remove internal connections
@@ -80,6 +83,15 @@ public class CreateGroupCommand : IUndoableCommand
                 // Re-add the SAME group ViewModel and Router obstacle
                 _canvas.Components.Add(_groupViewModel);
                 _canvas.Router.AddComponentObstacle(_createdGroup);
+
+                // Clear any existing pins for the group (safety check to prevent duplicates)
+                var existingGroupPins = _canvas.AllPins
+                    .Where(p => p.ParentComponentViewModel == _groupViewModel)
+                    .ToList();
+                foreach (var existingPin in existingGroupPins)
+                {
+                    _canvas.AllPins.Remove(existingPin);
+                }
 
                 // Re-add group pins
                 foreach (var pin in _createdGroup.ExternalPins)
