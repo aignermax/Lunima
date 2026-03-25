@@ -773,6 +773,15 @@ public partial class DesignCanvasViewModel : ObservableObject
             AllPins.Add(new PinViewModel(pin, vm));
         }
 
+        // For ComponentGroups, also add external pins
+        if (component is ComponentGroup group)
+        {
+            foreach (var groupPin in group.ExternalPins)
+            {
+                AllPins.Add(new PinViewModel(groupPin.InternalPin, vm));
+            }
+        }
+
         return vm;
     }
 

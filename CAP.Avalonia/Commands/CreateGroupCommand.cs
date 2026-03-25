@@ -156,25 +156,35 @@ public class CreateGroupCommand : IUndoableCommand
             }
         }
 
-        // 6. Create GroupPins for external connections
-        foreach (var conn in _externalConnections)
-        {
-            PhysicalPin internalPin;
-            if (componentSet.Contains(conn.StartPin.ParentComponent))
-                internalPin = conn.StartPin;
-            else
-                internalPin = conn.EndPin;
+        // 6. Create GroupPins for ALL unoccupied pins
+        var occupiedPins = new HashSet<PhysicalPin>();
 
-            var (pinX, pinY) = internalPin.GetAbsolutePosition();
-            var groupPin = new GroupPin
+        // Mark pins that are occupied by internal connections
+        foreach (var conn in _internalConnections)
+        {
+            occupiedPins.Add(conn.StartPin);
+            occupiedPins.Add(conn.EndPin);
+        }
+
+        // Expose all unoccupied pins as external pins
+        foreach (var comp in _components)
+        {
+            foreach (var pin in comp.PhysicalPins)
             {
-                Name = $"{internalPin.ParentComponent.Identifier}_{internalPin.Name}",
-                InternalPin = internalPin,
-                RelativeX = pinX - _createdGroup.PhysicalX,
-                RelativeY = pinY - _createdGroup.PhysicalY,
-                AngleDegrees = internalPin.GetAbsoluteAngle()
-            };
-            _createdGroup.AddExternalPin(groupPin);
+                if (!occupiedPins.Contains(pin))
+                {
+                    var (pinX, pinY) = pin.GetAbsolutePosition();
+                    var groupPin = new GroupPin
+                    {
+                        Name = $"{pin.ParentComponent.Identifier}_{pin.Name}",
+                        InternalPin = pin,
+                        RelativeX = pinX - _createdGroup.PhysicalX,
+                        RelativeY = pinY - _createdGroup.PhysicalY,
+                        AngleDegrees = pin.GetAbsoluteAngle()
+                    };
+                    _createdGroup.AddExternalPin(groupPin);
+                }
+            }
         }
 
         try
