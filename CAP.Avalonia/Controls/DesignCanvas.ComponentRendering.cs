@@ -112,9 +112,10 @@ public partial class DesignCanvas
                 var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 128, 128, 128)), 1);
                 context.DrawRectangle(borderPen, childRect);
 
-                // Draw child component name
+                // Draw child component name (use HumanReadableName if available, fallback to Identifier)
+                var displayName = child.HumanReadableName ?? child.Identifier;
                 var nameText = new FormattedText(
-                    child.Identifier,
+                    displayName,
                     System.Globalization.CultureInfo.CurrentCulture,
                     FlowDirection.LeftToRight,
                     new Typeface("Arial"),

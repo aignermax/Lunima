@@ -579,6 +579,7 @@ public class ChildComponentData
     public int? LaserWavelengthNm { get; set; }
     public double? LaserPower { get; set; }
     public bool? IsLocked { get; set; }
+    public string? HumanReadableName { get; set; }
 }
 
 public class ComponentData
@@ -592,6 +593,7 @@ public class ComponentData
     public int? LaserWavelengthNm { get; set; }
     public double? LaserPower { get; set; }
     public bool? IsLocked { get; set; }
+    public string? HumanReadableName { get; set; }
 }
 
 public class ConnectionData

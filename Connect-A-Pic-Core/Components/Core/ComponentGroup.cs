@@ -536,7 +536,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 clonedChild = CloneComponent(child);
             }
 
-            componentMap[child.Identifier] = clonedChild;
+            // CRITICAL FIX: Give cloned child a new unique Identifier (GUID-based string)
+            // This prevents ID collisions when copying groups and then saving/loading
+            var originalIdentifier = child.Identifier;
+            clonedChild.Identifier = $"{originalIdentifier}_{Guid.NewGuid():N}";
+
+            componentMap[originalIdentifier] = clonedChild;
             newGroup.AddChild(clonedChild);
         }
 

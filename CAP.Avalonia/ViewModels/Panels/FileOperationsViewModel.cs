@@ -205,7 +205,8 @@ public partial class FileOperationsViewModel : ObservableObject
             SliderValue = c.HasSliders ? c.SliderValue : null,
             LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
             LaserPower = c.LaserConfig?.InputPower,
-            IsLocked = c.Component.IsLocked ? true : null
+            IsLocked = c.Component.IsLocked ? true : null,
+            HumanReadableName = c.Component.HumanReadableName
         };
     }
 
@@ -306,7 +307,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 Rotation = (int)child.Rotation90CounterClock,
                 SliderValue = child.GetAllSliders().Count > 0
                     ? child.GetSlider(0)?.Value : null,
-                IsLocked = child.IsLocked ? true : null
+                IsLocked = child.IsLocked ? true : null,
+                HumanReadableName = child.HumanReadableName
             });
         }
     }
@@ -537,6 +539,7 @@ public partial class FileOperationsViewModel : ObservableObject
     {
         _canvas.Components.Clear();
         _canvas.Connections.Clear();
+        _canvas.AllPins.Clear();
         _canvas.ConnectionManager.Clear();
         _commandManager.ClearHistory();
     }
@@ -556,6 +559,10 @@ public partial class FileOperationsViewModel : ObservableObject
 
         // Restore identifier to preserve references
         component.Identifier = compData.Identifier;
+
+        // Restore HumanReadableName
+        if (compData.HumanReadableName != null)
+            component.HumanReadableName = compData.HumanReadableName;
 
         // Apply rotation
         for (int i = 0; i < compData.Rotation; i++)
@@ -614,6 +621,10 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Restore original identifier for reference matching
                 child.Identifier = childData.Identifier;
+
+                // Restore HumanReadableName
+                if (childData.HumanReadableName != null)
+                    child.HumanReadableName = childData.HumanReadableName;
 
                 // Apply rotation
                 for (int i = 0; i < childData.Rotation; i++)
@@ -854,4 +865,5 @@ public partial class FileOperationsViewModel : ObservableObject
         comp.HeightMicrometers = width;
         comp.RotateBy90CounterClockwise();
     }
+
 }

@@ -42,8 +42,11 @@ public class DeleteComponentCommand : IUndoableCommand
         _deletedConnections.Clear();
         foreach (var connVm in _canvas.Connections.ToList())
         {
-            if (connVm.Connection.StartPin.ParentComponent == _component ||
-                connVm.Connection.EndPin.ParentComponent == _component)
+            // Check if connection is to regular pins or to GroupPins (ExternalPins)
+            bool startConnected = IsPinConnectedToComponent(connVm.Connection.StartPin, _component);
+            bool endConnected = IsPinConnectedToComponent(connVm.Connection.EndPin, _component);
+
+            if (startConnected || endConnected)
             {
                 _deletedConnections.Add((connVm.Connection, connVm));
             }
@@ -72,5 +75,29 @@ public class DeleteComponentCommand : IUndoableCommand
 
         // Invalidate simulation so power flow overlay updates with restored circuit
         _canvas.InvalidateSimulation();
+    }
+
+    /// <summary>
+    /// Checks if a PhysicalPin is connected to a component.
+    /// For ComponentGroups, also checks if the pin belongs to a GroupPin's InternalPin.
+    /// </summary>
+    private static bool IsPinConnectedToComponent(PhysicalPin pin, Component component)
+    {
+        // Direct connection to component's physical pin
+        if (pin.ParentComponent == component)
+            return true;
+
+        // Check if component is a ComponentGroup and pin is from a GroupPin's InternalPin
+        if (component is ComponentGroup group)
+        {
+            // Check if any ExternalPin's InternalPin matches this pin
+            foreach (var externalPin in group.ExternalPins)
+            {
+                if (externalPin.InternalPin == pin)
+                    return true;
+            }
+        }
+
+        return false;
     }
 }
