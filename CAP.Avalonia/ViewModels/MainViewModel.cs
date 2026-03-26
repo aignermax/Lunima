@@ -203,6 +203,14 @@ public partial class MainViewModel : ObservableObject
             HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
+        // Wire rename from hierarchy panel through undo-aware command manager
+        HierarchyPanel.RenameComponent = (component, newName) =>
+        {
+            var cmd = new Commands.RenameComponentCommand(component, newName);
+            CommandManager.ExecuteCommand(cmd);
+            HierarchyPanel.RefreshNode(component);
+        };
+
         CanvasInteraction.ClearLeftPanelGroupSelection = () =>
         {
             LeftPanel.SelectedGroupTemplate = null;

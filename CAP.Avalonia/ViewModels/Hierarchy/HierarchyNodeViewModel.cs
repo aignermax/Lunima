@@ -46,6 +46,24 @@ public partial class HierarchyNodeViewModel : ObservableObject
     private bool _isInEditMode;
 
     /// <summary>
+    /// Whether this node is in inline rename mode (showing a TextBox for editing).
+    /// </summary>
+    [ObservableProperty]
+    private bool _isRenaming;
+
+    /// <summary>
+    /// The name being edited during inline rename mode.
+    /// </summary>
+    [ObservableProperty]
+    private string _editName = string.Empty;
+
+    /// <summary>
+    /// Callback invoked when the user confirms a rename with the new name.
+    /// Set by <see cref="HierarchyPanelViewModel"/> during node creation.
+    /// </summary>
+    public Action<HierarchyNodeViewModel, string>? RenameConfirmed { get; set; }
+
+    /// <summary>
     /// Whether this component is a group (has children).
     /// </summary>
     public bool IsGroup => Component is ComponentGroup;
@@ -116,6 +134,47 @@ public partial class HierarchyNodeViewModel : ObservableObject
         {
             RefreshDisplayName();
         }
+    }
+
+    /// <summary>
+    /// Enters inline rename mode, pre-filling <see cref="EditName"/> with the current display name.
+    /// </summary>
+    [RelayCommand]
+    private void StartRename()
+    {
+        EditName = Component is ComponentGroup group
+            ? group.GroupName
+            : (Component.HumanReadableName ?? Component.Identifier);
+        IsRenaming = true;
+    }
+
+    /// <summary>
+    /// Confirms the rename, applying the new name via <see cref="RenameConfirmed"/>.
+    /// Exits rename mode. Does nothing if the edit name is empty.
+    /// </summary>
+    [RelayCommand]
+    private void ConfirmRename()
+    {
+        if (!IsRenaming) return;
+
+        var trimmed = EditName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            CancelRenameCommand.Execute(null);
+            return;
+        }
+
+        IsRenaming = false;
+        RenameConfirmed?.Invoke(this, trimmed);
+    }
+
+    /// <summary>
+    /// Cancels inline rename mode without applying any changes.
+    /// </summary>
+    [RelayCommand]
+    private void CancelRename()
+    {
+        IsRenaming = false;
     }
 
     /// <summary>
