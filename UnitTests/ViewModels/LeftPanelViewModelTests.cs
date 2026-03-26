@@ -72,7 +72,7 @@ public class LeftPanelViewModelTests
         savedValue.ShouldBe(250.75);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_ClampsToMinimum()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -82,7 +82,7 @@ public class LeftPanelViewModelTests
         vm.LeftPanelWidth.Value.ShouldBe(200);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_ClampsToMaximum()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -92,7 +92,7 @@ public class LeftPanelViewModelTests
         vm.LeftPanelWidth.Value.ShouldBe(800);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void Initialize_LoadsComponentLibrary()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -103,7 +103,7 @@ public class LeftPanelViewModelTests
         vm.FilteredTemplates.Count.ShouldBeGreaterThan(0);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void SearchText_FiltersComponents()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -119,7 +119,7 @@ public class LeftPanelViewModelTests
             .ShouldBeTrue();
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void SearchText_ClearedRestoresAllComponents()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);

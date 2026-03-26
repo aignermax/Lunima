@@ -26,7 +26,7 @@ public class PanelWidthPersistenceTests
         _preferencesService = new UserPreferencesService();
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_DefaultsTo220()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -34,7 +34,7 @@ public class PanelWidthPersistenceTests
         vm.LeftPanelWidth.Value.ShouldBe(220);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_DefaultsTo250()
     {
         var vm = new RightPanelViewModel(_canvas, _preferencesService);
@@ -42,7 +42,7 @@ public class PanelWidthPersistenceTests
         vm.RightPanelWidth.Value.ShouldBe(250);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_ClampsToMinimum200()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -52,7 +52,7 @@ public class PanelWidthPersistenceTests
         vm.LeftPanelWidth.Value.ShouldBe(200);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_ClampsToMaximum800()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -62,7 +62,7 @@ public class PanelWidthPersistenceTests
         vm.LeftPanelWidth.Value.ShouldBe(800);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_ClampsToMinimum200()
     {
         var vm = new RightPanelViewModel(_canvas, _preferencesService);
@@ -72,7 +72,7 @@ public class PanelWidthPersistenceTests
         vm.RightPanelWidth.Value.ShouldBe(200);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_ClampsToMaximum800()
     {
         var vm = new RightPanelViewModel(_canvas, _preferencesService);
@@ -82,7 +82,7 @@ public class PanelWidthPersistenceTests
         vm.RightPanelWidth.Value.ShouldBe(800);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_PersistsToPreferences()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -92,7 +92,7 @@ public class PanelWidthPersistenceTests
         _preferencesService.GetLeftPanelWidth().ShouldBe(350);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_PersistsToPreferences()
     {
         var vm = new RightPanelViewModel(_canvas, _preferencesService);
@@ -102,7 +102,7 @@ public class PanelWidthPersistenceTests
         _preferencesService.GetRightPanelWidth().ShouldBe(400);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_RestoresFromPreferences()
     {
         // Set a custom width
@@ -115,7 +115,7 @@ public class PanelWidthPersistenceTests
         vm.LeftPanelWidth.Value.ShouldBe(300);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_RestoresFromPreferences()
     {
         // Set a custom width
@@ -128,7 +128,7 @@ public class PanelWidthPersistenceTests
         vm.RightPanelWidth.Value.ShouldBe(450);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_RaisesPropertyChanged()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -145,7 +145,7 @@ public class PanelWidthPersistenceTests
         propertyChanged.ShouldBeTrue();
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_RaisesPropertyChanged()
     {
         var vm = new RightPanelViewModel(_canvas, _preferencesService);
@@ -162,7 +162,7 @@ public class PanelWidthPersistenceTests
         propertyChanged.ShouldBeTrue();
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void BothPanels_CanHaveIndependentWidths()
     {
         var leftVm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -177,7 +177,7 @@ public class PanelWidthPersistenceTests
         _preferencesService.GetRightPanelWidth().ShouldBe(500);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void LeftPanelWidth_AcceptsValidWidthInRange()
     {
         var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
@@ -187,7 +187,7 @@ public class PanelWidthPersistenceTests
         vm.LeftPanelWidth.Value.ShouldBe(350);
     }
 
-    [Fact(Skip="GridLength conversion pending")]
+    [Fact]
     public void RightPanelWidth_AcceptsValidWidthInRange()
     {
         var vm = new RightPanelViewModel(_canvas, _preferencesService);
