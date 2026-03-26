@@ -15,12 +15,30 @@ public class Component : ICloneable
     public int WidthInTiles => Parts.GetLength(0);
     public int HeightInTiles => Parts.GetLength(1);
     public int TypeNumber { get; set; }
-    public string Identifier{ get; set; }
 
     /// <summary>
-    /// Human-readable display name for UI (e.g., "GratingCoupler_1").
-    /// Separate from <see cref="Identifier"/> to preserve persistence stability.
-    /// When null, the UI falls back to displaying <see cref="Identifier"/>.
+    /// Globally unique identifier for this component instance.
+    /// Automatically assigned on construction; each Clone() gets a fresh Guid.
+    /// Used as the stable lookup key in persistence to avoid name-collision bugs.
+    /// </summary>
+    public Guid Id { get; private set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Human-readable name for this component (e.g., "MMI_1x2_1").
+    /// Can be changed freely without affecting lookup-by-Id.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Backward-compatible alias for <see cref="Name"/>.
+    /// Old code can still use Identifier to get/set the Name.
+    /// </summary>
+    public string Identifier { get => Name; set => Name = value; }
+
+    /// <summary>
+    /// Optional human-readable display name for UI (e.g., "MMI 2x2 Coupler 1").
+    /// When null, the UI should fall back to displaying <see cref="Name"/>.
+    /// This allows the PDK display name to be shown in UI while keeping Name as the unique identifier.
     /// </summary>
     public string? HumanReadableName { get; set; }
 
@@ -74,7 +92,7 @@ public class Component : ICloneable
     {
         Parts = parts;
         TypeNumber = typeNumber;
-        Identifier = identifier;
+        Name = identifier;
         _discreteRotation = rotationCounterClock;
         WaveLengthToSMatrixMap = laserWaveLengthToSMatrixMap;
         SliderMap = new();
@@ -319,7 +337,7 @@ public class Component : ICloneable
         // Clone physical pins
         var clonedPhysicalPins = ClonePhysicalPins(clonedPins);
 
-        var clonedComponent = new Component(clonedLaserSMatrixMap, clonedSliderMap.Values.ToList(), NazcaFunctionName, NazcaFunctionParameters, clonedParts, TypeNumber, Identifier, Rotation90CounterClock, clonedPhysicalPins);
+        var clonedComponent = new Component(clonedLaserSMatrixMap, clonedSliderMap.Values.ToList(), NazcaFunctionName, NazcaFunctionParameters, clonedParts, TypeNumber, Name, Rotation90CounterClock, clonedPhysicalPins);
 
         // Copy physical dimensions and position
         clonedComponent.WidthMicrometers = WidthMicrometers;
