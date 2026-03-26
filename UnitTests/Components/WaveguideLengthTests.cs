@@ -1,5 +1,6 @@
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing;
 using Shouldly;
 using Xunit;
 
@@ -56,7 +57,7 @@ public class WaveguideLengthTests
     public void LengthDifference_CalculatesCorrectly()
     {
         var connection = CreateTestConnection();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
         var targetLength = actualLength + 50.0;
@@ -83,7 +84,7 @@ public class WaveguideLengthTests
     public void IsLengthMatched_ReturnsTrueWhenWithinTolerance()
     {
         var connection = CreateTestConnection();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
 
@@ -98,7 +99,7 @@ public class WaveguideLengthTests
     public void IsLengthMatched_ReturnsFalseWhenOutsideTolerance()
     {
         var connection = CreateTestConnection();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
 
@@ -113,7 +114,7 @@ public class WaveguideLengthTests
     public void IsLengthMatched_RespectsCustomTolerance()
     {
         var connection = CreateTestConnection();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
 
@@ -128,7 +129,7 @@ public class WaveguideLengthTests
     public void LengthDifference_PositiveWhenActualIsLonger()
     {
         var connection = CreateTestConnection();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
         var targetLength = actualLength - 10.0;
@@ -146,7 +147,7 @@ public class WaveguideLengthTests
     public void LengthDifference_NegativeWhenActualIsShorter()
     {
         var connection = CreateTestConnection();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
         var targetLength = actualLength + 15.0;

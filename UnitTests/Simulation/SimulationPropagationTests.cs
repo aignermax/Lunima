@@ -6,6 +6,7 @@ using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.ExternalPorts;
 using CAP_Core.Grid;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
 using Xunit;
@@ -94,7 +95,7 @@ public class SimulationPropagationTests
         tileManager.AddComponent(gc);
         tileManager.AddComponent(dc);
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         connectionManager.AddExistingConnection(connection);
 
         var portManager = new PhysicalExternalPortManager();
@@ -224,7 +225,7 @@ public class SimulationPropagationTests
         tileManager.AddComponent(gc);
         tileManager.AddComponent(dc);
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         connectionManager.AddExistingConnection(connection);
 
         var portManager = new PhysicalExternalPortManager();

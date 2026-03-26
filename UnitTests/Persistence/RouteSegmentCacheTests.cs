@@ -150,7 +150,7 @@ public class RouteSegmentCacheTests
             PropagationLossDbPerCm = 2.0,
             BendLossDbPer90Deg = 0.1
         };
-        conn1.RecalculateTransmission();
+        conn1.RecalculateTransmission(new WaveguideRouter());
         var routedPath = conn1.RoutedPath;
 
         if (routedPath == null) return; // Router may not find path without grid
@@ -251,15 +251,14 @@ public class RouteSegmentCacheTests
     [Fact]
     public void AddConnectionWithCachedRoute_RegistersObstacle()
     {
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        router.InitializePathfindingGrid(-50, -50, 200, 100,
+            new[] { CreateTestComponent(0, 0), CreateTestComponent(100, 0) });
+        var manager = new WaveguideConnectionManager(router);
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(100, 0);
         var startPin = CreateOutputPin(startComp);
         var endPin = CreateInputPin(endComp);
-
-        var router = WaveguideConnection.SharedRouter;
-        router.InitializePathfindingGrid(-50, -50, 200, 100,
-            new[] { startComp, endComp });
 
         var cachedPath = new RoutedPath();
         cachedPath.Segments.Add(new StraightSegment(50, 25, 100, 25, 0));

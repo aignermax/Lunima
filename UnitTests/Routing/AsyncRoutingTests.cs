@@ -3,6 +3,7 @@ using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
 using Xunit;
@@ -17,13 +18,13 @@ public class AsyncRoutingTests
     [Fact]
     public async Task RecalculateAllTransmissionsAsync_CompletesSuccessfully()
     {
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
         var startPin = CreateOutputPin(startComp);
         var endPin = CreateInputPin(endComp);
 
-        var router = WaveguideConnection.SharedRouter;
         router.InitializePathfindingGrid(-50, -50, 300, 100,
             new[] { startComp, endComp });
 
@@ -38,7 +39,7 @@ public class AsyncRoutingTests
     [Fact]
     public async Task RecalculateAllTransmissionsAsync_Cancellation_ReturnsFalse()
     {
-        var manager = new WaveguideConnectionManager();
+        var manager = new WaveguideConnectionManager(new WaveguideRouter());
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
         var startPin = CreateOutputPin(startComp);
@@ -56,7 +57,7 @@ public class AsyncRoutingTests
     [Fact]
     public void AddConnectionDeferred_DoesNotRoute()
     {
-        var manager = new WaveguideConnectionManager();
+        var manager = new WaveguideConnectionManager(new WaveguideRouter());
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
         var startPin = CreateOutputPin(startComp);
@@ -74,7 +75,7 @@ public class AsyncRoutingTests
     [Fact]
     public void RemoveConnectionDeferred_DoesNotRecalculate()
     {
-        var manager = new WaveguideConnectionManager();
+        var manager = new WaveguideConnectionManager(new WaveguideRouter());
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
 
@@ -98,7 +99,7 @@ public class AsyncRoutingTests
     [Fact]
     public void RemoveConnectionsForComponent_Deferred_RemovesCorrectConnections()
     {
-        var manager = new WaveguideConnectionManager();
+        var manager = new WaveguideConnectionManager(new WaveguideRouter());
         var compA = CreateTestComponent(0, 0);
         var compB = CreateTestComponent(200, 0);
         var compC = CreateTestComponent(400, 0);
@@ -116,13 +117,13 @@ public class AsyncRoutingTests
     [Fact]
     public async Task RecalculateAllTransmissionsAsync_AfterDeferred_RoutesSuccessfully()
     {
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
         var startPin = CreateOutputPin(startComp);
         var endPin = CreateInputPin(endComp);
 
-        var router = WaveguideConnection.SharedRouter;
         router.InitializePathfindingGrid(-50, -50, 300, 100,
             new[] { startComp, endComp });
 
@@ -144,13 +145,13 @@ public class AsyncRoutingTests
     {
         // Simulates the crash scenario: multiple overlapping routing operations
         // Previously caused InvalidOperationException on Dictionary concurrent access
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
         var startPin = CreateOutputPin(startComp);
         var endPin = CreateInputPin(endComp);
 
-        var router = WaveguideConnection.SharedRouter;
         router.InitializePathfindingGrid(-50, -50, 300, 100,
             new[] { startComp, endComp });
 
@@ -173,13 +174,13 @@ public class AsyncRoutingTests
     public async Task CancelAndRestart_DoesNotThrowConcurrencyException()
     {
         // Simulates the exact user scenario: start routing, cancel, restart immediately
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
         var startPin = CreateOutputPin(startComp);
         var endPin = CreateInputPin(endComp);
 
-        var router = WaveguideConnection.SharedRouter;
         router.InitializePathfindingGrid(-50, -50, 300, 100,
             new[] { startComp, endComp });
 
@@ -204,11 +205,11 @@ public class AsyncRoutingTests
     public async Task RapidCancelRestart_StressTest()
     {
         // Stress test: rapidly cancel and restart routing 10 times
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var startComp = CreateTestComponent(0, 0);
         var endComp = CreateTestComponent(200, 0);
 
-        var router = WaveguideConnection.SharedRouter;
         router.InitializePathfindingGrid(-50, -50, 300, 100,
             new[] { startComp, endComp });
 
@@ -236,14 +237,13 @@ public class AsyncRoutingTests
     public void IncrementalRouting_PreservesValidRoutes()
     {
         // Setup: two connections, both routed successfully
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var compA = CreateTestComponent(0, 0);
         var compB = CreateTestComponent(200, 0);
         var compC = CreateTestComponent(0, 100);
         var compD = CreateTestComponent(200, 100);
 
-        var router = WaveguideConnection.SharedRouter;
-        // Reset router to known state (other tests may have changed settings)
         router.MinBendRadiusMicrometers = 10.0;
         router.AStarCellSize = 2.0;
         router.CostCalculator.MinStraightRunCells = 20;
@@ -279,14 +279,13 @@ public class AsyncRoutingTests
     public void IncrementalRouting_ReroutesOnlyAffectedConnections()
     {
         // Setup: two connections routed successfully
-        var manager = new WaveguideConnectionManager();
+        var router = new WaveguideRouter();
+        var manager = new WaveguideConnectionManager(router);
         var compA = CreateTestComponent(0, 0);
         var compB = CreateTestComponent(200, 0);
         var compC = CreateTestComponent(0, 100);
         var compD = CreateTestComponent(200, 100);
 
-        var router = WaveguideConnection.SharedRouter;
-        // Reset router to known state (other tests may have changed settings)
         router.MinBendRadiusMicrometers = 10.0;
         router.AStarCellSize = 2.0;
         router.CostCalculator.MinStraightRunCells = 20;

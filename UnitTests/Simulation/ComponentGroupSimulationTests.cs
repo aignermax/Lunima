@@ -92,7 +92,7 @@ public class ComponentGroupSimulationTests
         tileManager.AddComponent(source);
         tileManager.AddComponent(group);
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         var routedPath = new RoutedPath();
         routedPath.Segments.Add(new StraightSegment(-10, 0.5, 0, 0.5, 0));
 
@@ -159,7 +159,7 @@ public class ComponentGroupSimulationTests
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(group);
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         var portManager = new PhysicalExternalPortManager();
 
         var gridManager = GridManager.CreateForSimulation(
@@ -199,7 +199,7 @@ public class ComponentGroupSimulationTests
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(group);
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         var portManager = new PhysicalExternalPortManager();
 
         var gridManager = GridManager.CreateForSimulation(
@@ -257,7 +257,7 @@ public class ComponentGroupSimulationTests
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(outerGroup);
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         var portManager = new PhysicalExternalPortManager();
 
         var gridManager = GridManager.CreateForSimulation(

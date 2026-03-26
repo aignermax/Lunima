@@ -1,6 +1,7 @@
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing;
 using Shouldly;
 using Xunit;
 
@@ -63,7 +64,7 @@ public class WaveguideLengthIntegrationTests
     public void ViewModel_SetTargetToCurrentCommand_SetsCorrectValue()
     {
         var (connection, connVm) = CreateTestConnectionAndViewModel();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var vm = new WaveguideLengthViewModel
         {
@@ -83,7 +84,7 @@ public class WaveguideLengthIntegrationTests
     public void ViewModel_UpdatesLengthStatus_WithMatchedLength()
     {
         var (connection, connVm) = CreateTestConnectionAndViewModel();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
         connection.TargetLengthMicrometers = actualLength + 0.5;
@@ -104,7 +105,7 @@ public class WaveguideLengthIntegrationTests
     public void ViewModel_UpdatesLengthStatus_WithTooShortPath()
     {
         var (connection, connVm) = CreateTestConnectionAndViewModel();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
         connection.TargetLengthMicrometers = actualLength + 10.0;
@@ -125,7 +126,7 @@ public class WaveguideLengthIntegrationTests
     public void ViewModel_UpdatesLengthStatus_WithTooLongPath()
     {
         var (connection, connVm) = CreateTestConnectionAndViewModel();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         var actualLength = connection.PathLengthMicrometers;
         connection.TargetLengthMicrometers = actualLength - 10.0;
@@ -146,7 +147,7 @@ public class WaveguideLengthIntegrationTests
     public void ViewModel_ShowsCurrentLengthWhenTargetDisabled()
     {
         var (connection, connVm) = CreateTestConnectionAndViewModel();
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
         connection.IsTargetLengthEnabled = false;
 
         var vm = new WaveguideLengthViewModel
@@ -201,7 +202,7 @@ public class WaveguideLengthIntegrationTests
         connection.TargetLengthMicrometers = 400.0;
         connection.IsTargetLengthEnabled = true;
         connection.LengthToleranceMicrometers = 2.0;
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         connVm.IsTargetLengthEnabled.ShouldBeTrue();
         connVm.TargetLengthMicrometers.ShouldBe(400.0);

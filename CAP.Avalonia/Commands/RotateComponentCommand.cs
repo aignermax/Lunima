@@ -1,7 +1,6 @@
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
-using CAP_Core.Components.Connections;
 
 namespace CAP.Avalonia.Commands;
 
@@ -107,8 +106,7 @@ public class RotateComponentCommand : IUndoableCommand
         _component.NotifyDimensionsChanged();
 
         // Update obstacle in pathfinding grid
-        var router = WaveguideConnection.SharedRouter;
-        router.UpdateComponentObstacle(comp);
+        _canvas.Router.UpdateComponentObstacle(comp);
 
         // Recalculate paths asynchronously (pin angles change with rotation)
         _ = _canvas.RecalculateRoutesAsync();

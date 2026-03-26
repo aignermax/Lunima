@@ -284,38 +284,29 @@ public class RoutingEdgeCaseTests
         var comp1 = CreateTestComponent(0, 0);
         var comp2 = CreateTestComponent(150, 0);
 
-        // Configure the shared static router (reset to known state after test)
-        var router = WaveguideConnection.SharedRouter;
-        router.MinBendRadiusMicrometers = BendRadius;
-        router.MinWaveguideSpacingMicrometers = 2.0;
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = BendRadius,
+            MinWaveguideSpacingMicrometers = 2.0
+        };
         router.InitializePathfindingGrid(-50, -50, 300, 150, new[] { comp1, comp2 });
 
-        try
-        {
-            var pin1Start = CreatePin(comp1, 50, 15, 0);
-            var pin1End = CreatePin(comp2, 0, 15, 180);
-            var pin2Start = CreatePin(comp1, 50, 35, 0);
-            var pin2End = CreatePin(comp2, 0, 35, 180);
+        var pin1Start = CreatePin(comp1, 50, 15, 0);
+        var pin1End = CreatePin(comp2, 0, 15, 180);
+        var pin2Start = CreatePin(comp1, 50, 35, 0);
+        var pin2End = CreatePin(comp2, 0, 35, 180);
 
-            var connManager = new WaveguideConnectionManager { UseSequentialRouting = true };
-            var conn1 = connManager.AddConnection(pin1Start, pin1End);
-            var conn2 = connManager.AddConnection(pin2Start, pin2End);
+        var connManager = new WaveguideConnectionManager(router) { UseSequentialRouting = true };
+        var conn1 = connManager.AddConnection(pin1Start, pin1End);
+        var conn2 = connManager.AddConnection(pin2Start, pin2End);
 
-            conn1.RoutedPath.ShouldNotBeNull("Connection 1 should have a route");
-            conn2.RoutedPath.ShouldNotBeNull("Connection 2 should have a route");
-            conn1.RoutedPath.IsValid.ShouldBeTrue("Connection 1 path should be valid");
-            conn2.RoutedPath.IsValid.ShouldBeTrue("Connection 2 path should be valid");
+        conn1.RoutedPath.ShouldNotBeNull("Connection 1 should have a route");
+        conn2.RoutedPath.ShouldNotBeNull("Connection 2 should have a route");
+        conn1.RoutedPath.IsValid.ShouldBeTrue("Connection 1 path should be valid");
+        conn2.RoutedPath.IsValid.ShouldBeTrue("Connection 2 path should be valid");
 
-            DumpPath(conn1.RoutedPath, pin1Start, pin1End, "conn1");
-            DumpPath(conn2.RoutedPath, pin2Start, pin2End, "conn2");
-        }
-        finally
-        {
-            // Reset shared router to avoid interfering with other tests
-            router.MinBendRadiusMicrometers = 10.0;
-            router.MinWaveguideSpacingMicrometers = 2.0;
-            router.InitializePathfindingGrid(-100, -100, 400, 250, Array.Empty<Component>());
-        }
+        DumpPath(conn1.RoutedPath, pin1Start, pin1End, "conn1");
+        DumpPath(conn2.RoutedPath, pin2Start, pin2End, "conn2");
     }
 
     // ──────────────────────────────────────────────────────────────
