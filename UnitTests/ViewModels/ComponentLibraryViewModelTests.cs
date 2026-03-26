@@ -248,6 +248,95 @@ public class ComponentLibraryViewModelTests : IDisposable
         _viewModel.StatusText.ShouldBe("1 user group(s), 1 PDK macro(s)");
     }
 
+    [Fact]
+    public async Task RenameTemplate_UpdatesTemplateNameInCollection()
+    {
+        // Arrange - use AddTemplate to avoid stale reference after LoadGroupsCommand reload
+        var group = CreateTestGroup("OriginalGroup", 2);
+        var template = _libraryManager.SaveTemplate(group, "Original Name", "description", "User");
+        template.TemplateGroup = group;
+        _viewModel.AddTemplate(template);
+        _viewModel.UserGroups.Count.ShouldBe(1);
+
+        _viewModel.ShowRenameDialogAsync = _ => Task.FromResult<string?>("New Name");
+
+        // Act
+        await _viewModel.RenameTemplateCommand.ExecuteAsync(template);
+
+        // Assert
+        _viewModel.UserGroups.Count.ShouldBe(1);
+        _viewModel.UserGroups[0].Template.Name.ShouldBe("New Name");
+    }
+
+    [Fact]
+    public async Task RenameTemplate_DoesNothing_WhenDialogCancelled()
+    {
+        // Arrange
+        var group = CreateTestGroup("MyGroup", 1);
+        var template = _libraryManager.SaveTemplate(group, "My Template", null, "User");
+        template.TemplateGroup = group;
+        _viewModel.AddTemplate(template);
+
+        _viewModel.ShowRenameDialogAsync = _ => Task.FromResult<string?>(null);
+
+        // Act
+        await _viewModel.RenameTemplateCommand.ExecuteAsync(template);
+
+        // Assert - name unchanged
+        _viewModel.UserGroups.Count.ShouldBe(1);
+        _viewModel.UserGroups[0].Template.Name.ShouldBe("My Template");
+    }
+
+    [Fact]
+    public async Task RenameTemplate_DoesNothing_WhenNameUnchanged()
+    {
+        // Arrange
+        var group = CreateTestGroup("Group", 1);
+        var template = _libraryManager.SaveTemplate(group, "Same Name", null, "User");
+        template.TemplateGroup = group;
+        _viewModel.AddTemplate(template);
+
+        _viewModel.ShowRenameDialogAsync = _ => Task.FromResult<string?>("Same Name");
+
+        // Act
+        await _viewModel.RenameTemplateCommand.ExecuteAsync(template);
+
+        // Assert - still same name, no duplicate
+        _viewModel.UserGroups.Count.ShouldBe(1);
+        _viewModel.UserGroups[0].Template.Name.ShouldBe("Same Name");
+    }
+
+    [Fact]
+    public async Task RenameTemplate_DoesNothing_WhenNoDialogCallback()
+    {
+        // Arrange
+        var group = CreateTestGroup("Group", 1);
+        var template = _libraryManager.SaveTemplate(group, "Template", null, "User");
+        template.TemplateGroup = group;
+        _viewModel.AddTemplate(template);
+
+        // ShowRenameDialogAsync is null by default
+
+        // Act - should not throw
+        await _viewModel.RenameTemplateCommand.ExecuteAsync(template);
+
+        // Assert - unchanged
+        _viewModel.UserGroups.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void RenameCommand_IsAvailableOnGroupTemplateItemViewModel()
+    {
+        // Arrange
+        var group = CreateTestGroup("Group", 1);
+        var template = _libraryManager.SaveTemplate(group, "Test", null, "User");
+        var itemVm = new GroupTemplateItemViewModel(template, _viewModel);
+
+        // Act & Assert
+        itemVm.RenameCommand.ShouldNotBeNull();
+        itemVm.RenameCommand.CanExecute(null).ShouldBeTrue();
+    }
+
     /// <summary>
     /// Creates a test ComponentGroup with the specified number of child components.
     /// </summary>

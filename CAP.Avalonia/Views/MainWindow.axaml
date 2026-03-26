@@ -173,6 +173,12 @@
                                                 PointerExited="OnGroupItemPointerExited"
                                                 Background="Transparent"
                                                 ClipToBounds="False">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Rename" Command="{Binding RenameCommand}"/>
+                                                    <MenuItem Header="Delete" Command="{Binding DeleteCommand}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <Grid>
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Preview box with component count and size info -->
@@ -242,6 +248,12 @@
                                                 PointerExited="OnGroupItemPointerExited"
                                                 Background="Transparent"
                                                 ClipToBounds="False">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Rename" Command="{Binding RenameCommand}"/>
+                                                    <MenuItem Header="Delete" Command="{Binding DeleteCommand}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <Grid>
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Preview box with component count and size info -->

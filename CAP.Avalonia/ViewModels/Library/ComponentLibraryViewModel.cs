@@ -117,6 +117,52 @@ public partial class ComponentLibraryViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Callback to show a rename input dialog. Set by the View layer.
+    /// Takes the current template name, returns new name or null if cancelled.
+    /// </summary>
+    public Func<string, Task<string?>>? ShowRenameDialogAsync { get; set; }
+
+    /// <summary>
+    /// Renames a group template using the ShowRenameDialogAsync callback.
+    /// </summary>
+    /// <param name="template">The template to rename.</param>
+    [RelayCommand]
+    private async Task RenameTemplate(GroupTemplate template)
+    {
+        if (ShowRenameDialogAsync == null)
+            return;
+
+        var newName = await ShowRenameDialogAsync(template.Name);
+        if (string.IsNullOrWhiteSpace(newName) || newName.Trim() == template.Name)
+            return;
+
+        newName = newName.Trim();
+        var group = template.TemplateGroup;
+        if (group == null)
+            return;
+
+        var source = template.Source;
+        var description = template.Description;
+        var preview = template.PreviewThumbnailBase64;
+
+        _libraryManager.RemoveTemplate(template);
+
+        var userItem = UserGroups.FirstOrDefault(vm => vm.Template == template);
+        if (userItem != null)
+            UserGroups.Remove(userItem);
+
+        var pdkItem = PdkGroups.FirstOrDefault(vm => vm.Template == template);
+        if (pdkItem != null)
+            PdkGroups.Remove(pdkItem);
+
+        var newTemplate = _libraryManager.SaveTemplate(group, newName, description, source);
+        if (preview != null)
+            newTemplate.PreviewThumbnailBase64 = preview;
+
+        AddTemplate(newTemplate);
+    }
+
+    /// <summary>
     /// Duplicates a group template with a new name.
     /// </summary>
     /// <param name="template">The template to duplicate.</param>
