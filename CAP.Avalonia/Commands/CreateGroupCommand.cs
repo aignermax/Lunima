@@ -56,8 +56,14 @@ public class CreateGroupCommand : IUndoableCommand
             {
                 _canvas.BeginCommandExecution();
 
-                // Remove child components from canvas (use stored VMs for identity)
-                foreach (var compVm in _componentViewModels)
+                // Remove child components from canvas
+                // IMPORTANT: Find ViewModels by Core Component reference, not by stored ViewModel reference
+                // This handles the case where components were removed/re-added (creating new ViewModels)
+                var componentsToRemove = _canvas.Components
+                    .Where(cvm => _components.Contains(cvm.Component))
+                    .ToList();
+
+                foreach (var compVm in componentsToRemove)
                 {
                     var pinsToRemove = _canvas.AllPins
                         .Where(p => p.ParentComponentViewModel == compVm)
