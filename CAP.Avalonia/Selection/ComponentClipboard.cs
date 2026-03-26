@@ -1,3 +1,4 @@
+using System.Linq;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components;
@@ -110,18 +111,27 @@ public class ComponentClipboard
             // Generate readable name for pasted component
             if (cloned is ComponentGroup group)
             {
-                // For groups, use group-specific naming and rename children
-                cloned.Identifier = ComponentNameGenerator.GenerateGroupName(
-                    group.GroupName,
-                    existingNames);
-                RenameGroupChildren(group, existingNames);
+                // For groups, ComponentGroup.DeepCopy() already generated GUID-based unique IDs
+                // for the group itself and all child components. Those IDs are guaranteed unique
+                // and will survive save/load cycles.
+                // But we need to set HumanReadableName to something readable for the UI display
+                SetHumanReadableNamesForGroup(group, existingNames);
             }
             else
             {
                 // For regular components, generate incremental name
-                cloned.Identifier = ComponentNameGenerator.GenerateCopyName(
+                var newIdentifier = ComponentNameGenerator.GenerateCopyName(
                     entry.OriginalComponent.Identifier,
                     existingNames);
+                cloned.Identifier = newIdentifier;
+
+                // Also update HumanReadableName to match the new copy
+                if (entry.OriginalComponent.HumanReadableName != null)
+                {
+                    cloned.HumanReadableName = ComponentNameGenerator.GenerateCopyName(
+                        entry.OriginalComponent.HumanReadableName,
+                        existingNames);
+                }
             }
 
             // Add to list so subsequent components see it
@@ -176,30 +186,53 @@ public class ComponentClipboard
     }
 
     /// <summary>
-    /// Recursively renames child components within a group to use readable names.
+    /// Recursively sets HumanReadableName for child components within a group.
+    /// Identifiers remain GUID-based for uniqueness, but HumanReadableName is readable for UI.
     /// </summary>
-    private void RenameGroupChildren(ComponentGroup group, List<string> existingNames)
+    private void SetHumanReadableNamesForGroup(ComponentGroup group, List<string> existingNames)
     {
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup childGroup)
             {
-                // Recursively rename nested groups
-                child.Identifier = ComponentNameGenerator.GenerateGroupName(
+                // Recursively handle nested groups
+                childGroup.HumanReadableName = ComponentNameGenerator.GenerateGroupName(
                     childGroup.GroupName,
                     existingNames);
-                existingNames.Add(child.Identifier);
-                RenameGroupChildren(childGroup, existingNames);
+                existingNames.Add(childGroup.HumanReadableName);
+                SetHumanReadableNamesForGroup(childGroup, existingNames);
             }
             else
             {
-                // Rename regular child component
-                child.Identifier = ComponentNameGenerator.GenerateCopyName(
-                    child.Identifier,
+                // Generate readable name for child component
+                // Use the original name (strip GUID suffix from Identifier)
+                var baseName = ComponentNameGenerator.GenerateCopyName(
+                    ExtractBaseNameFromIdentifier(child.Identifier),
                     existingNames);
-                existingNames.Add(child.Identifier);
+                child.HumanReadableName = baseName;
+                existingNames.Add(baseName);
             }
         }
+    }
+
+    /// <summary>
+    /// Extracts base name by removing GUID suffix from Identifier.
+    /// Example: "MMI_1x2_abc123def456" -> "MMI_1x2"
+    /// </summary>
+    private static string ExtractBaseNameFromIdentifier(string identifier)
+    {
+        // Remove GUID suffix (32 hex chars)
+        var lastUnderscore = identifier.LastIndexOf('_');
+        if (lastUnderscore > 0)
+        {
+            var suffix = identifier.Substring(lastUnderscore + 1);
+            // Check if it's a GUID (all hex chars, length 32)
+            if (suffix.Length == 32 && suffix.All(c => "0123456789abcdefABCDEF".Contains(c)))
+            {
+                return identifier.Substring(0, lastUnderscore);
+            }
+        }
+        return identifier;
     }
 
     /// <summary>

@@ -143,11 +143,9 @@ public partial class FileOperationsViewModel : ObservableObject
                     .ToList(),
                 Connections = _canvas.Connections.Select(c => new ConnectionData
                 {
-                    StartComponentIndex = _canvas.Components.ToList().FindIndex(
-                        comp => comp.Component == c.Connection.StartPin.ParentComponent),
+                    StartComponentIndex = GetComponentIndexForPin(c.Connection.StartPin, _canvas.Components.ToList()),
                     StartPinName = c.Connection.StartPin.Name,
-                    EndComponentIndex = _canvas.Components.ToList().FindIndex(
-                        comp => comp.Component == c.Connection.EndPin.ParentComponent),
+                    EndComponentIndex = GetComponentIndexForPin(c.Connection.EndPin, _canvas.Components.ToList()),
                     EndPinName = c.Connection.EndPin.Name,
                     CachedSegments = c.Connection.RoutedPath != null
                         ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
@@ -201,7 +199,8 @@ public partial class FileOperationsViewModel : ObservableObject
             SliderValue = c.HasSliders ? c.SliderValue : null,
             LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
             LaserPower = c.LaserConfig?.InputPower,
-            IsLocked = c.Component.IsLocked ? true : null
+            IsLocked = c.Component.IsLocked ? true : null,
+            HumanReadableName = c.Component.HumanReadableName
         };
     }
 
@@ -302,7 +301,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 Rotation = (int)child.Rotation90CounterClock,
                 SliderValue = child.GetAllSliders().Count > 0
                     ? child.GetSlider(0)?.Value : null,
-                IsLocked = child.IsLocked ? true : null
+                IsLocked = child.IsLocked ? true : null,
+                HumanReadableName = child.HumanReadableName
             });
         }
     }
@@ -483,6 +483,7 @@ public partial class FileOperationsViewModel : ObservableObject
     {
         _canvas.Components.Clear();
         _canvas.Connections.Clear();
+        _canvas.AllPins.Clear();
         _canvas.ConnectionManager.Clear();
         _commandManager.ClearHistory();
     }
@@ -502,6 +503,10 @@ public partial class FileOperationsViewModel : ObservableObject
 
         // Restore identifier to preserve references
         component.Identifier = compData.Identifier;
+
+        // Restore HumanReadableName
+        if (compData.HumanReadableName != null)
+            component.HumanReadableName = compData.HumanReadableName;
 
         // Apply rotation
         for (int i = 0; i < compData.Rotation; i++)
@@ -560,6 +565,10 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Restore original identifier for reference matching
                 child.Identifier = childData.Identifier;
+
+                // Restore HumanReadableName
+                if (childData.HumanReadableName != null)
+                    child.HumanReadableName = childData.HumanReadableName;
 
                 // Apply rotation
                 for (int i = 0; i < childData.Rotation; i++)
@@ -687,10 +696,9 @@ public partial class FileOperationsViewModel : ObservableObject
         var startComp = _canvas.Components[connData.StartComponentIndex];
         var endComp = _canvas.Components[connData.EndComponentIndex];
 
-        var startPin = startComp.Component.PhysicalPins
-            .FirstOrDefault(p => p.Name == connData.StartPinName);
-        var endPin = endComp.Component.PhysicalPins
-            .FirstOrDefault(p => p.Name == connData.EndPinName);
+        // Find pins - check both PhysicalPins and ExternalPins (for ComponentGroups)
+        var startPin = FindPin(startComp.Component, connData.StartPinName);
+        var endPin = FindPin(endComp.Component, connData.EndPinName);
 
         if (startPin == null || endPin == null)
             return;
@@ -801,5 +809,53 @@ public partial class FileOperationsViewModel : ObservableObject
         comp.WidthMicrometers = height;
         comp.HeightMicrometers = width;
         comp.RotateBy90CounterClockwise();
+    }
+
+    /// <summary>
+    /// Finds a pin by name, checking both regular PhysicalPins and ExternalPins (for ComponentGroups).
+    /// For ComponentGroups, ExternalPins reference InternalPins, so we return the InternalPin reference.
+    /// </summary>
+    private static PhysicalPin? FindPin(Component component, string pinName)
+    {
+        // First check regular PhysicalPins
+        var pin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
+        if (pin != null)
+            return pin;
+
+        // If component is a ComponentGroup, check ExternalPins
+        if (component is ComponentGroup group)
+        {
+            var externalPin = group.ExternalPins.FirstOrDefault(ep => ep.Name == pinName);
+            if (externalPin != null)
+                return externalPin.InternalPin;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the component index for a pin. For GroupPins, returns the index of the owning ComponentGroup,
+    /// not the internal child component.
+    /// </summary>
+    private static int GetComponentIndexForPin(PhysicalPin pin, List<ComponentViewModel> components)
+    {
+        // First, check if this pin belongs to a ComponentGroup's ExternalPin
+        foreach (var compVm in components)
+        {
+            if (compVm.Component is ComponentGroup group)
+            {
+                foreach (var externalPin in group.ExternalPins)
+                {
+                    if (externalPin.InternalPin == pin)
+                    {
+                        // Pin belongs to this group's ExternalPin
+                        return components.IndexOf(compVm);
+                    }
+                }
+            }
+        }
+
+        // Otherwise, find the component that owns this pin directly
+        return components.FindIndex(comp => comp.Component == pin.ParentComponent);
     }
 }
