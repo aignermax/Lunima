@@ -518,8 +518,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             Rotation90CounterClock = Rotation90CounterClock
         };
 
-        // Map old component identifiers to new cloned components
-        var componentMap = new Dictionary<string, Component>();
+        // Map old component Ids (Guid) to new cloned components
+        var componentMap = new Dictionary<Guid, Component>();
 
         // Deep copy child components
         foreach (var child in ChildComponents)
@@ -536,20 +536,18 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 clonedChild = CloneComponent(child);
             }
 
-            // CRITICAL FIX: Give cloned child a new unique Identifier (GUID-based string)
+            // Use child.Id (Guid) as the key for the component map
             // This prevents ID collisions when copying groups and then saving/loading
-            var originalIdentifier = child.Identifier;
-            clonedChild.Identifier = $"{originalIdentifier}_{Guid.NewGuid():N}";
-
-            componentMap[originalIdentifier] = clonedChild;
+            // The cloned child already has a new Id from Clone()
+            componentMap[child.Id] = clonedChild;
             newGroup.AddChild(clonedChild);
         }
 
         // Clone frozen waveguide paths
         foreach (var frozenPath in InternalPaths)
         {
-            var startComp = componentMap[frozenPath.StartPin.ParentComponent.Identifier];
-            var endComp = componentMap[frozenPath.EndPin.ParentComponent.Identifier];
+            var startComp = componentMap[frozenPath.StartPin.ParentComponent.Id];
+            var endComp = componentMap[frozenPath.EndPin.ParentComponent.Id];
 
             var newStartPin = startComp.PhysicalPins.First(p => p.Name == frozenPath.StartPin.Name);
             var newEndPin = endComp.PhysicalPins.First(p => p.Name == frozenPath.EndPin.Name);
@@ -568,7 +566,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         // Clone external pins
         foreach (var externalPin in ExternalPins)
         {
-            var internalComp = componentMap[externalPin.InternalPin.ParentComponent.Identifier];
+            var internalComp = componentMap[externalPin.InternalPin.ParentComponent.Id];
             var newInternalPin = internalComp.PhysicalPins.First(p => p.Name == externalPin.InternalPin.Name);
 
             var clonedPin = new GroupPin

@@ -83,10 +83,16 @@ public class ComponentClipboard
         var newComponents = new List<ComponentViewModel>();
         var clonedComps = new List<Component>();
 
-        // Get existing component names for unique name generation
+        // Get existing component names for unique name generation.
+        // Include child identifiers from all groups so copy names don't collide.
         var existingNames = canvas.Components
             .Select(c => c.Component.Identifier)
             .ToList();
+        foreach (var comp in canvas.Components)
+        {
+            if (comp.Component is ComponentGroup grp)
+                CollectAllChildIdentifiers(grp, existingNames);
+        }
 
         // Calculate offset: either from cursor position or fixed offset
         double offsetX, offsetY;
@@ -197,8 +203,23 @@ public class ComponentClipboard
     }
 
     /// <summary>
-    /// Recursively renames child components within a group to have readable Identifiers and HumanReadableNames.
+    /// Recursively collects all child component identifiers from a group hierarchy.
+    /// Used to ensure pasted copy names don't collide with existing group children.
+    /// </summary>
+    private static void CollectAllChildIdentifiers(ComponentGroup group, List<string> names)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            names.Add(child.Identifier);
+            if (child is ComponentGroup nested)
+                CollectAllChildIdentifiers(nested, names);
+        }
+    }
+
+    /// <summary>
+    /// Recursively renames child components within a group to have readable Names.
     /// Builds a mapping of old Identifiers to new Component references for ExternalPin updates.
+    /// Note: Each component gets a fresh Id (Guid) automatically via Clone(), so Id collisions are impossible.
     /// </summary>
     private void RenameGroupChildren(ComponentGroup group, List<string> existingNames, Dictionary<string, Component> identifierMap)
     {

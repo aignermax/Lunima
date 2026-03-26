@@ -301,6 +301,7 @@ public partial class FileOperationsViewModel : ObservableObject
             childDataList.Add(new ChildComponentData
             {
                 Identifier = child.Identifier,
+                ComponentGuid = child.Id.ToString(),
                 TemplateName = templateName,
                 X = child.PhysicalX,
                 Y = child.PhysicalY,
@@ -598,16 +599,24 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     private int LoadGroups(List<DesignGroupData> groupDataList)
     {
-        // Build a global component lookup that will include both regular components and groups
-        var allComponents = new Dictionary<string, Component>();
+        // Primary lookup: by saved Guid (prevents name-collision bugs when copying groups).
+        // Fallback lookup: by Identifier string (for old files that predate Guid fields).
+        var guidLookup = new Dictionary<Guid, Component>();
+        var nameFallback = new Dictionary<string, Component>();
 
         // First pass: Create all non-group child components
         foreach (var groupData in groupDataList)
         {
             foreach (var childData in groupData.ChildComponents)
             {
-                // Skip if already created (can happen with shared children)
-                if (allComponents.ContainsKey(childData.Identifier))
+                // Determine the lookup key for this child
+                var hasGuid = childData.ComponentGuid != null
+                              && Guid.TryParse(childData.ComponentGuid, out var childGuid);
+
+                // Skip if already created under the same key
+                if (hasGuid && guidLookup.ContainsKey(Guid.Parse(childData.ComponentGuid!)))
+                    continue;
+                if (!hasGuid && nameFallback.ContainsKey(childData.Identifier))
                     continue;
 
                 var template = _componentLibrary.FirstOrDefault(t =>
@@ -619,7 +628,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 var child = ComponentTemplates.CreateFromTemplate(
                     template, childData.X, childData.Y);
 
-                // Restore original identifier for reference matching
+                // Restore human-readable name
                 child.Identifier = childData.Identifier;
 
                 // Restore HumanReadableName
@@ -642,22 +651,29 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (childData.IsLocked == true)
                     child.IsLocked = true;
 
-                allComponents[child.Identifier] = child;
+                // Index by saved Guid (primary) and by name (fallback for old files)
+                if (hasGuid)
+                    guidLookup[Guid.Parse(childData.ComponentGuid!)] = child;
+                nameFallback[child.Identifier] = child;
             }
         }
 
         // Second pass: Reconstruct groups in dependency order (children before parents)
-        // Sort groups by their child component IDs to ensure child groups are loaded first
         var orderedGroups = TopologicalSortGroups(groupDataList);
 
         foreach (var groupData in orderedGroups)
         {
-            // Reconstruct the group from DTO using the global component lookup
+            // Reconstruct the group using Guid-based lookup with name fallback
             var group = ComponentGroupSerializer.FromDto(
-                groupData.GroupDto, allComponents);
+                groupData.GroupDto, guidLookup, nameFallback);
 
-            // Add the reconstructed group to the global lookup
-            allComponents[group.Identifier] = group;
+            // Index the group itself so nested parents can find it
+            if (groupData.GroupDto.IdGuid != null
+                && Guid.TryParse(groupData.GroupDto.IdGuid, out var groupGuid))
+            {
+                guidLookup[groupGuid] = group;
+            }
+            nameFallback[group.Identifier] = group;
 
             // Only add top-level groups (groups without a parent) to the canvas
             if (groupData.GroupDto.ParentGroupId == null)

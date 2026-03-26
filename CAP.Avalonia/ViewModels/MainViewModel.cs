@@ -571,6 +571,13 @@ public class DesignGroupData
 public class ChildComponentData
 {
     public string Identifier { get; set; } = "";
+
+    /// <summary>
+    /// Guid string of the component instance (stable unique ID).
+    /// Used as the primary lookup key during load; falls back to Identifier for old files.
+    /// </summary>
+    public string? ComponentGuid { get; set; }
+
     public string TemplateName { get; set; } = "";
     public double X { get; set; }
     public double Y { get; set; }

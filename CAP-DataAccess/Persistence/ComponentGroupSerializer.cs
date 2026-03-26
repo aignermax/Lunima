@@ -25,18 +25,21 @@ public static class ComponentGroupSerializer
             GroupName = group.GroupName,
             Description = group.Description,
             Identifier = group.Identifier,
+            IdGuid = group.Id.ToString(),
             GridX = group.GridXMainTile,
             GridY = group.GridYMainTile,
             PhysicalX = group.PhysicalX,
             PhysicalY = group.PhysicalY,
             Rotation90CounterClock = (int)group.Rotation90CounterClock,
-            ParentGroupId = group.ParentGroup?.Identifier
+            ParentGroupId = group.ParentGroup?.Identifier,
+            ParentGroupIdGuid = group.ParentGroup?.Id.ToString()
         };
 
-        // Add child component IDs
+        // Add child component IDs (both name and Guid for forward/backward compat)
         foreach (var child in group.ChildComponents)
         {
             dto.ChildComponentIds.Add(child.Identifier);
+            dto.ChildComponentGuids.Add(child.Id.ToString());
         }
 
         // Serialize frozen paths
@@ -56,9 +59,10 @@ public static class ComponentGroupSerializer
 
     /// <summary>
     /// Reconstructs a ComponentGroup from a DTO after all individual components are loaded.
+    /// Uses name-based lookup (backward-compatible path for old files and grid persistence).
     /// </summary>
     /// <param name="dto">The DTO containing group data.</param>
-    /// <param name="componentLookup">Dictionary mapping component IDs to Component instances.</param>
+    /// <param name="componentLookup">Dictionary mapping component names to Component instances.</param>
     /// <returns>Reconstructed ComponentGroup.</returns>
     public static ComponentGroup FromDto(
         ComponentGroupDto dto,
@@ -69,6 +73,38 @@ public static class ComponentGroupSerializer
         if (componentLookup == null)
             throw new ArgumentNullException(nameof(componentLookup));
 
+        return FromDtoCore(dto, guidLookup: null, nameLookup: componentLookup);
+    }
+
+    /// <summary>
+    /// Reconstructs a ComponentGroup from a DTO using Guid-based lookup.
+    /// Falls back to name-based lookup for old files that predate Guid fields.
+    /// </summary>
+    /// <param name="dto">The DTO containing group data.</param>
+    /// <param name="guidLookup">Dictionary mapping saved component Guids to Component instances.</param>
+    /// <param name="nameFallback">Optional name-based fallback for old files.</param>
+    /// <returns>Reconstructed ComponentGroup.</returns>
+    public static ComponentGroup FromDto(
+        ComponentGroupDto dto,
+        Dictionary<Guid, Component> guidLookup,
+        Dictionary<string, Component>? nameFallback = null)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+        if (guidLookup == null)
+            throw new ArgumentNullException(nameof(guidLookup));
+
+        return FromDtoCore(dto, guidLookup, nameFallback);
+    }
+
+    /// <summary>
+    /// Core reconstruction logic shared by both FromDto overloads.
+    /// </summary>
+    private static ComponentGroup FromDtoCore(
+        ComponentGroupDto dto,
+        Dictionary<Guid, Component>? guidLookup,
+        Dictionary<string, Component>? nameLookup)
+    {
         // Create the group
         var group = new ComponentGroup(dto.GroupName)
         {
@@ -79,35 +115,69 @@ public static class ComponentGroupSerializer
             Rotation90CounterClock = (DiscreteRotation)dto.Rotation90CounterClock
         };
 
-        // Add child components
-        foreach (var childId in dto.ChildComponentIds)
+        // Add child components - prefer Guid lookup, fall back to name lookup
+        var useGuids = guidLookup != null && dto.ChildComponentGuids.Count == dto.ChildComponentIds.Count
+                       && dto.ChildComponentGuids.Count > 0;
+
+        for (int i = 0; i < dto.ChildComponentIds.Count; i++)
         {
-            if (componentLookup.TryGetValue(childId, out var childComponent))
+            var childId = dto.ChildComponentIds[i];
+            Component? childComponent = null;
+
+            if (useGuids && Guid.TryParse(dto.ChildComponentGuids[i], out var childGuid))
             {
-                group.AddChild(childComponent);
+                guidLookup!.TryGetValue(childGuid, out childComponent);
             }
-            else
+
+            if (childComponent == null && nameLookup != null)
+            {
+                nameLookup.TryGetValue(childId, out childComponent);
+            }
+
+            if (childComponent == null)
             {
                 throw new InvalidOperationException(
                     $"Child component '{childId}' not found in component lookup.");
             }
+
+            group.AddChild(childComponent);
         }
 
         // Reconstruct frozen paths
         foreach (var pathDto in dto.InternalPaths)
         {
-            var frozenPath = FromFrozenPathDto(pathDto, componentLookup);
+            var frozenPath = FromFrozenPathDto(pathDto, guidLookup, nameLookup);
             group.AddInternalPath(frozenPath);
         }
 
         // Reconstruct external pins
         foreach (var pinDto in dto.ExternalPins)
         {
-            var groupPin = FromGroupPinDto(pinDto, componentLookup);
+            var groupPin = FromGroupPinDto(pinDto, guidLookup, nameLookup);
             group.AddExternalPin(groupPin);
         }
 
         return group;
+    }
+
+    /// <summary>
+    /// Resolves a component from Guid or name lookup with fallback logic.
+    /// </summary>
+    private static Component ResolveComponent(
+        string? guidStr,
+        string nameId,
+        Dictionary<Guid, Component>? guidLookup,
+        Dictionary<string, Component>? nameLookup)
+    {
+        if (guidStr != null && guidLookup != null && Guid.TryParse(guidStr, out var guid))
+        {
+            if (guidLookup.TryGetValue(guid, out var byGuid)) return byGuid;
+        }
+
+        if (nameLookup != null && nameLookup.TryGetValue(nameId, out var byName)) return byName;
+
+        throw new InvalidOperationException(
+            $"Component '{nameId}' (Guid: {guidStr ?? "none"}) not found in lookup.");
     }
 
     /// <summary>
@@ -119,8 +189,10 @@ public static class ComponentGroupSerializer
         {
             PathId = frozenPath.PathId.ToString(),
             StartComponentId = frozenPath.StartPin.ParentComponent.Identifier,
+            StartComponentGuid = frozenPath.StartPin.ParentComponent.Id.ToString(),
             StartPinName = frozenPath.StartPin.Name,
             EndComponentId = frozenPath.EndPin.ParentComponent.Identifier,
+            EndComponentGuid = frozenPath.EndPin.ParentComponent.Id.ToString(),
             EndPinName = frozenPath.EndPin.Name,
             IsBlockedFallback = frozenPath.Path.IsBlockedFallback,
             IsInvalidGeometry = frozenPath.Path.IsInvalidGeometry
@@ -136,24 +208,23 @@ public static class ComponentGroupSerializer
     }
 
     /// <summary>
-    /// Reconstructs a FrozenWaveguidePath from a DTO.
+    /// Reconstructs a FrozenWaveguidePath from a DTO (name-based, backward-compat).
     /// </summary>
     private static FrozenWaveguidePath FromFrozenPathDto(
         FrozenPathDto dto,
         Dictionary<string, Component> componentLookup)
-    {
-        // Find start and end pins
-        if (!componentLookup.TryGetValue(dto.StartComponentId, out var startComp))
-        {
-            throw new InvalidOperationException(
-                $"Start component '{dto.StartComponentId}' not found.");
-        }
+        => FromFrozenPathDto(dto, null, componentLookup);
 
-        if (!componentLookup.TryGetValue(dto.EndComponentId, out var endComp))
-        {
-            throw new InvalidOperationException(
-                $"End component '{dto.EndComponentId}' not found.");
-        }
+    /// <summary>
+    /// Reconstructs a FrozenWaveguidePath from a DTO with dual-lookup support.
+    /// </summary>
+    private static FrozenWaveguidePath FromFrozenPathDto(
+        FrozenPathDto dto,
+        Dictionary<Guid, Component>? guidLookup,
+        Dictionary<string, Component>? nameLookup)
+    {
+        var startComp = ResolveComponent(dto.StartComponentGuid, dto.StartComponentId, guidLookup, nameLookup);
+        var endComp = ResolveComponent(dto.EndComponentGuid, dto.EndComponentId, guidLookup, nameLookup);
 
         var startPin = startComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.StartPinName);
         var endPin = endComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.EndPinName);
@@ -257,6 +328,7 @@ public static class ComponentGroupSerializer
             PinId = pin.PinId.ToString(),
             Name = pin.Name,
             InternalComponentId = pin.InternalPin.ParentComponent.Identifier,
+            InternalComponentGuid = pin.InternalPin.ParentComponent.Id.ToString(),
             InternalPinName = pin.InternalPin.Name,
             RelativeX = pin.RelativeX,
             RelativeY = pin.RelativeY,
@@ -265,17 +337,23 @@ public static class ComponentGroupSerializer
     }
 
     /// <summary>
-    /// Reconstructs a GroupPin from a DTO.
+    /// Reconstructs a GroupPin from a DTO (name-based, backward-compat).
     /// </summary>
     private static GroupPin FromGroupPinDto(
         GroupPinDto dto,
         Dictionary<string, Component> componentLookup)
+        => FromGroupPinDto(dto, null, componentLookup);
+
+    /// <summary>
+    /// Reconstructs a GroupPin from a DTO with dual-lookup support.
+    /// </summary>
+    private static GroupPin FromGroupPinDto(
+        GroupPinDto dto,
+        Dictionary<Guid, Component>? guidLookup,
+        Dictionary<string, Component>? nameLookup)
     {
-        if (!componentLookup.TryGetValue(dto.InternalComponentId, out var internalComp))
-        {
-            throw new InvalidOperationException(
-                $"Internal component '{dto.InternalComponentId}' not found for group pin.");
-        }
+        var internalComp = ResolveComponent(
+            dto.InternalComponentGuid, dto.InternalComponentId, guidLookup, nameLookup);
 
         var internalPin = internalComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.InternalPinName);
         if (internalPin == null)

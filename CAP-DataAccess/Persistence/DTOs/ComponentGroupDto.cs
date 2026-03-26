@@ -18,9 +18,27 @@ public class ComponentGroupDto
     public string Description { get; set; } = "";
 
     /// <summary>
-    /// Component identifier (inherited from Component base class).
+    /// Component identifier (human-readable name, for backward compat and display).
     /// </summary>
     public string Identifier { get; set; } = "";
+
+    /// <summary>
+    /// Stable unique ID (Guid string) for this group.
+    /// Used as the primary lookup key; falls back to Identifier for old files.
+    /// </summary>
+    public string? IdGuid { get; set; }
+
+    /// <summary>
+    /// Stable unique ID (Guid string) of parent group.
+    /// Falls back to ParentGroupId for old files.
+    /// </summary>
+    public string? ParentGroupIdGuid { get; set; }
+
+    /// <summary>
+    /// Guid-string IDs of child components, parallel to ChildComponentIds.
+    /// Used as the primary lookup key; falls back to ChildComponentIds for old files.
+    /// </summary>
+    public List<string> ChildComponentGuids { get; set; } = new();
 
     /// <summary>
     /// Grid X position of main tile.
@@ -80,9 +98,14 @@ public class FrozenPathDto
     public string PathId { get; set; } = "";
 
     /// <summary>
-    /// Identifier of the start pin's parent component.
+    /// Identifier of the start pin's parent component (human-readable, for old files).
     /// </summary>
     public string StartComponentId { get; set; } = "";
+
+    /// <summary>
+    /// Guid string of the start pin's parent component. Primary lookup key.
+    /// </summary>
+    public string? StartComponentGuid { get; set; }
 
     /// <summary>
     /// Name of the start pin on the start component.
@@ -90,9 +113,14 @@ public class FrozenPathDto
     public string StartPinName { get; set; } = "";
 
     /// <summary>
-    /// Identifier of the end pin's parent component.
+    /// Identifier of the end pin's parent component (human-readable, for old files).
     /// </summary>
     public string EndComponentId { get; set; } = "";
+
+    /// <summary>
+    /// Guid string of the end pin's parent component. Primary lookup key.
+    /// </summary>
+    public string? EndComponentGuid { get; set; }
 
     /// <summary>
     /// Name of the end pin on the end component.
@@ -192,9 +220,14 @@ public class GroupPinDto
     public string Name { get; set; } = "";
 
     /// <summary>
-    /// Identifier of the internal component that owns this pin.
+    /// Identifier of the internal component that owns this pin (human-readable, for old files).
     /// </summary>
     public string InternalComponentId { get; set; } = "";
+
+    /// <summary>
+    /// Guid string of the internal component. Primary lookup key.
+    /// </summary>
+    public string? InternalComponentGuid { get; set; }
 
     /// <summary>
     /// Name of the internal pin on the internal component.
