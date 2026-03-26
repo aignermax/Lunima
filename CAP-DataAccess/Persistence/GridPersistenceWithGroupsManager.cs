@@ -142,7 +142,13 @@ public class GridPersistenceWithGroupsManager
         {
             if (!childComponentIds.Contains(data.Identifier))
             {
-                var component = componentFactory.CreateComponentByIdentifier(data.Identifier);
+                // Extract template name from identifier (e.g., "MMI_1x2_1" -> "MMI_1x2")
+                var templateName = ExtractTemplateName(data.Identifier);
+                var component = componentFactory.CreateComponentByIdentifier(templateName);
+
+                // CRITICAL: Restore the saved Identifier to maintain uniqueness and readable naming
+                component.Identifier = data.Identifier;
+
                 component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
                 LoadSliders(data, component);
                 _gridManager.ComponentMover.PlaceComponent(data.X, data.Y, component);
@@ -155,7 +161,13 @@ public class GridPersistenceWithGroupsManager
         {
             if (childComponentIds.Contains(data.Identifier))
             {
-                var component = componentFactory.CreateComponentByIdentifier(data.Identifier);
+                // Extract template name from identifier (e.g., "MMI_1x2_1" -> "MMI_1x2")
+                var templateName = ExtractTemplateName(data.Identifier);
+                var component = componentFactory.CreateComponentByIdentifier(templateName);
+
+                // CRITICAL: Restore the saved Identifier to maintain uniqueness and readable naming
+                component.Identifier = data.Identifier;
+
                 component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
                 LoadSliders(data, component);
                 // Don't place in grid - they'll be children of groups
@@ -287,6 +299,32 @@ public class GridPersistenceWithGroupsManager
                 savedComponents.Add(child.Identifier);
             }
         }
+    }
+
+    /// <summary>
+    /// Extracts the template name from a component identifier.
+    /// Examples:
+    ///   "MMI_1x2_1" -> "MMI_1x2"
+    ///   "MMI_1x2_2" -> "MMI_1x2"
+    ///   "MMI_1x2" -> "MMI_1x2" (unchanged if no copy suffix)
+    /// </summary>
+    private static string ExtractTemplateName(string identifier)
+    {
+        // Try to find template name by removing the copy number suffix
+        // Pattern: "TemplateName_N" where N is a number
+        var lastUnderscore = identifier.LastIndexOf('_');
+        if (lastUnderscore > 0)
+        {
+            var suffix = identifier.Substring(lastUnderscore + 1);
+            // Check if suffix is a number (indicating a copy, e.g., "_1", "_2")
+            if (int.TryParse(suffix, out _))
+            {
+                return identifier.Substring(0, lastUnderscore);
+            }
+        }
+
+        // No copy suffix found - return as-is
+        return identifier;
     }
 
     /// <summary>
