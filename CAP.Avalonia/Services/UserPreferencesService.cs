@@ -20,6 +20,16 @@ public class UserPreferencesService
     }
 
     /// <summary>
+    /// Test constructor that uses a custom file path.
+    /// Used by unit tests to avoid polluting user preferences.
+    /// </summary>
+    internal UserPreferencesService(string testFilePath)
+    {
+        _preferencesFilePath = testFilePath;
+        _preferences = LoadPreferences();
+    }
+
+    /// <summary>
     /// Gets the app data directory for Connect-A-PIC Pro.
     /// </summary>
     private static string GetAppDataDirectory()
