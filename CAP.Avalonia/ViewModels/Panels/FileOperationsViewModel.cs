@@ -192,12 +192,14 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Creates a ComponentData DTO from a ComponentViewModel.
+    /// Uses FindTemplateName to resolve the correct library template name,
+    /// including components ungrouped from UserGroup templates (which have no TemplateName on the VM).
     /// </summary>
-    private static ComponentData CreateComponentData(ComponentViewModel c)
+    private ComponentData CreateComponentData(ComponentViewModel c)
     {
         return new ComponentData
         {
-            TemplateName = c.TemplateName ?? c.Name,
+            TemplateName = FindTemplateName(c.Component),
             X = c.X,
             Y = c.Y,
             Identifier = c.Component.Identifier,
