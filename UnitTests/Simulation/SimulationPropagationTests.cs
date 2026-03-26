@@ -288,4 +288,115 @@ public class SimulationPropagationTests
 
         return sMatrix;
     }
+
+    /// <summary>
+    /// Creates an MMI 1x2 S-Matrix: 1 input, 2 outputs, 50/50 split.
+    /// Tests bidirectional propagation with reciprocity.
+    /// </summary>
+    private static SMatrix CreateMMI1x2Matrix(List<Pin> pins)
+    {
+        var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+        var sMatrix = new SMatrix(pinIds, new());
+
+        if (pins.Count >= 3)
+        {
+            var amplitude = new Complex(0.707, 0); // sqrt(0.5) for 50/50 split
+
+            var transfers = new Dictionary<(Guid, Guid), Complex>
+            {
+                // Forward: in → out1, in → out2
+                { (pins[0].IDInFlow, pins[1].IDOutFlow), amplitude },
+                { (pins[0].IDInFlow, pins[2].IDOutFlow), amplitude },
+                // Reverse (reciprocity): out1 → in, out2 → in
+                { (pins[1].IDInFlow, pins[0].IDOutFlow), amplitude },
+                { (pins[2].IDInFlow, pins[0].IDOutFlow), amplitude }
+            };
+            sMatrix.SetValues(transfers);
+        }
+
+        return sMatrix;
+    }
+
+    /// <summary>
+    /// Test: GratingCoupler → MMI 1x2
+    /// Verifies that light from GC splits 50/50 to both MMI outputs.
+    /// </summary>
+    [Fact]
+    public async Task GratingCoupler_ToMMI1x2_SplitsLight()
+    {
+        // Create Grating Coupler
+        var gcPin = new Pin("opt", 0, MatterType.Light, RectSide.Right);
+        var gcParts = new Part[1, 1];
+        gcParts[0, 0] = new Part(new List<Pin> { gcPin });
+
+        var gcMatrix = CreateTerminalMatrix(new List<Pin> { gcPin }, 0.8); // 80% efficiency
+        var gc = new Component(
+            new Dictionary<int, SMatrix> { { 1550, gcMatrix } },
+            new List<Slider>(), "gc", "", gcParts, 0, "GC_1",
+            DiscreteRotation.R0, new List<PhysicalPin>
+            {
+                new() { Name = "opt", OffsetXMicrometers = 50, OffsetYMicrometers = 15, AngleDegrees = 0, LogicalPin = gcPin }
+            });
+        gc.PhysicalX = 0;
+        gc.PhysicalY = 0;
+
+        // Create MMI 1x2
+        var mmiIn = new Pin("in", 0, MatterType.Light, RectSide.Left);
+        var mmiOut1 = new Pin("out1", 1, MatterType.Light, RectSide.Right);
+        var mmiOut2 = new Pin("out2", 2, MatterType.Light, RectSide.Right);
+        var mmiPins = new List<Pin> { mmiIn, mmiOut1, mmiOut2 };
+
+        var mmiParts = new Part[1, 1];
+        mmiParts[0, 0] = new Part(mmiPins);
+
+        var mmiMatrix = CreateMMI1x2Matrix(mmiPins);
+        var mmi = new Component(
+            new Dictionary<int, SMatrix> { { 1550, mmiMatrix } },
+            new List<Slider>(), "mmi1x2", "", mmiParts, 0, "MMI_1",
+            DiscreteRotation.R0, new List<PhysicalPin>
+            {
+                new() { Name = "in", OffsetXMicrometers = 0, OffsetYMicrometers = 20, AngleDegrees = 180, LogicalPin = mmiIn },
+                new() { Name = "out1", OffsetXMicrometers = 100, OffsetYMicrometers = 10, AngleDegrees = 0, LogicalPin = mmiOut1 },
+                new() { Name = "out2", OffsetXMicrometers = 100, OffsetYMicrometers = 30, AngleDegrees = 0, LogicalPin = mmiOut2 }
+            });
+        mmi.PhysicalX = 100;
+        mmi.PhysicalY = 0;
+
+        // Create connection: GC.opt -> MMI.in
+        var connection = new WaveguideConnection
+        {
+            StartPin = gc.PhysicalPins[0],
+            EndPin = mmi.PhysicalPins[0]
+        };
+
+        // Setup simulation
+        var tileManager = new ComponentListTileManager();
+        tileManager.AddComponent(gc);
+        tileManager.AddComponent(mmi);
+
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
+        connectionManager.AddExistingConnection(connection);
+
+        var portManager = new PhysicalExternalPortManager();
+        portManager.AddLightSource(new ExternalInput("src", LaserType.Red, 0, new Complex(1.0, 0)), gcPin.IDInFlow);
+
+        var gridManager = GridManager.CreateForSimulation(tileManager, connectionManager, portManager);
+        var builder = new SystemMatrixBuilder(gridManager);
+        var calculator = new GridLightCalculator(builder, gridManager);
+        var cts = new CancellationTokenSource();
+        var fieldResults = await calculator.CalculateFieldPropagationAsync(cts, 1550);
+
+        // Verify: Light should propagate through entire chain
+        fieldResults[gcPin.IDOutFlow].Magnitude.ShouldBeGreaterThan(0, "No light at GC output");
+        fieldResults[mmiIn.IDInFlow].Magnitude.ShouldBeGreaterThan(0, "No light at MMI input");
+
+        var out1Power = fieldResults[mmiOut1.IDOutFlow].Magnitude;
+        var out2Power = fieldResults[mmiOut2.IDOutFlow].Magnitude;
+
+        out1Power.ShouldBeGreaterThan(0, "No light at MMI out1 - S-Matrix may be broken!");
+        out2Power.ShouldBeGreaterThan(0, "No light at MMI out2 - S-Matrix may be broken!");
+
+        // Should split approximately 50/50 (allowing for numerical error)
+        Math.Abs(out1Power - out2Power).ShouldBeLessThan(0.01, "MMI should split light equally");
+    }
 }
