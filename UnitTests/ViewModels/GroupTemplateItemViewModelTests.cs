@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Creation;
 using Shouldly;
 using Xunit;
+using UnitTests.Helpers;
 
 namespace UnitTests.ViewModels;
 
@@ -113,36 +114,59 @@ public class GroupTemplateItemViewModelTests
         itemVm.DeleteCommand.CanExecute(null).ShouldBeTrue("DeleteCommand should be executable");
     }
 
-    [Fact(Skip = "Requires file system integration - GroupLibraryManager.RemoveTemplate needs saved files")]
+    [Fact]
     public void DeleteCommand_CallsParentRemoveTemplate()
     {
-        // This test is skipped because:
-        // 1. GroupLibraryManager.RemoveTemplate requires templates to have FilePath (saved to disk)
-        // 2. There's no AddTemplate method - only SaveTemplate which writes to disk
-        // 3. This is actually an integration test, not a unit test
-        //
-        // TODO: Either convert to integration test with temp files, or mock GroupLibraryManager
+        // This is an integration test that uses the file system
+        // We need to create a real saved template to test deletion
 
-        // Arrange
-        var template = new GroupTemplate
+        // Arrange - Create temp directory for test
+        var tempDir = Path.Combine(Path.GetTempPath(), $"GroupLibraryTest_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
         {
-            Name = "TestGroup",
-            Source = "User"
-        };
-        var libraryManager = new GroupLibraryManager();
-        var library = new ComponentLibraryViewModel(libraryManager);
+            var libraryManager = new GroupLibraryManager(tempDir);
 
-        // Add template to library UI (ObservableCollection)
-        library.AddTemplate(template);
-        var countAfterAdd = library.UserGroups.Count;
-        countAfterAdd.ShouldBeGreaterThan(0, "Should have at least one template after adding");
+            // Create a simple test group with children
+            var testGroup = TestComponentFactory.CreateComponentGroup("TestGroup", addChildren: true);
 
-        var itemVm = new GroupTemplateItemViewModel(template, library);
+            // Save template (this creates the file)
+            var savedTemplate = libraryManager.SaveTemplate(
+                testGroup,
+                "TestGroup",
+                "Test description",
+                "User"
+            );
 
-        // Act
-        itemVm.DeleteCommand.Execute(null);
+            savedTemplate.ShouldNotBeNull("SaveTemplate should return a template");
+            savedTemplate.FilePath.ShouldNotBeNullOrEmpty("Saved template should have a FilePath");
 
-        // Assert
-        library.UserGroups.Count.ShouldBe(countAfterAdd - 1, "Template should be removed from library after delete");
+            // Create ComponentLibraryViewModel and load the saved template
+            var library = new ComponentLibraryViewModel(libraryManager);
+            library.LoadGroupsCommand.Execute(null);
+
+            var countBefore = library.UserGroups.Count;
+            countBefore.ShouldBeGreaterThan(0, "Should have at least one template after loading");
+
+            // Find the template item in the UI
+            var templateItem = library.UserGroups.FirstOrDefault(t => t.Template.Name == "TestGroup");
+            templateItem.ShouldNotBeNull("Template should be loaded into UI");
+
+            // Act - Execute delete command
+            templateItem.DeleteCommand.Execute(null);
+
+            // Assert - Template should be removed from UI and disk
+            library.UserGroups.Count.ShouldBe(countBefore - 1, "Template should be removed from library after delete");
+            File.Exists(savedTemplate.FilePath).ShouldBeFalse("Template file should be deleted from disk");
+        }
+        finally
+        {
+            // Cleanup - Delete temp directory
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
     }
 }
