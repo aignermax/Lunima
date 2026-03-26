@@ -51,6 +51,7 @@ public class SimpleNazcaExporter
     /// Generates standalone Nazca cell definitions for PDK components.
     /// Each unique PDK function used in the design gets a stub cell
     /// with correct dimensions and pin positions — no external PDK install needed.
+    /// ComponentGroups are flattened — stubs are generated for all child components.
     /// </summary>
     private static void AppendPdkComponentStubs(StringBuilder sb, DesignCanvasViewModel canvas)
     {
@@ -60,22 +61,34 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             var comp = compVm.Component;
-            var funcName = comp.NazcaFunctionName;
-            if (string.IsNullOrEmpty(funcName) || !RequiresStub(funcName))
-                continue;
-            if (!generated.Add(funcName))
-                continue; // already generated
-
-            // Check if this is a parametric straight waveguide
-            if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
+            if (comp is ComponentGroup group)
             {
-                AppendParametricStraightStub(sb, funcName, comp, ci);
+                foreach (var child in group.GetAllComponentsRecursive())
+                    AppendComponentStub(sb, child, generated, ci);
             }
             else
             {
-                AppendStandardComponentStub(sb, funcName, comp, ci);
+                AppendComponentStub(sb, comp, generated, ci);
             }
         }
+    }
+
+    /// <summary>
+    /// Generates a PDK stub for a single component if required.
+    /// </summary>
+    private static void AppendComponentStub(
+        StringBuilder sb, Component comp, HashSet<string> generated, CultureInfo ci)
+    {
+        var funcName = comp.NazcaFunctionName;
+        if (string.IsNullOrEmpty(funcName) || !RequiresStub(funcName))
+            return;
+        if (!generated.Add(funcName))
+            return;
+
+        if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
+            AppendParametricStraightStub(sb, funcName, comp, ci);
+        else
+            AppendStandardComponentStub(sb, funcName, comp, ci);
     }
 
     /// <summary>
@@ -185,57 +198,72 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             var comp = compVm.Component;
-            var varName = $"comp_{compIndex}";
-            componentNames[comp] = varName;
-
-            // Calculate origin offset based on component type:
-            // - PDK components (both real and demo_pdk): use NazcaOriginOffset (rotated if needed)
-            // - Parametric straights: calculate from first pin (rotated)
-            double originOffsetX = 0;
-            double originOffsetY = 0;
-
-            var funcName = comp.NazcaFunctionName;
-            if (!string.IsNullOrEmpty(funcName) && (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase)))
+            if (comp is ComponentGroup group)
             {
-                // PDK component (real or demo_pdk): use stored NazcaOriginOffset, accounting for rotation
-                double offsetX = comp.NazcaOriginOffsetX;
-                double offsetY = comp.NazcaOriginOffsetY;
-                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-
-                originOffsetX = offsetX * Math.Cos(rotRad) - offsetY * Math.Sin(rotRad);
-                originOffsetY = offsetX * Math.Sin(rotRad) + offsetY * Math.Cos(rotRad);
-            }
-            else if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
-            {
-                // Parametric straight: offset by rotated pin position
-                var firstPin = comp.PhysicalPins.FirstOrDefault();
-                if (firstPin != null)
-                {
-                    double pinLocalX = firstPin.OffsetXMicrometers;
-                    double pinLocalY = firstPin.OffsetYMicrometers;
-                    double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-
-                    originOffsetX = pinLocalX * Math.Cos(rotRad) - pinLocalY * Math.Sin(rotRad);
-                    originOffsetY = pinLocalX * Math.Sin(rotRad) + pinLocalY * Math.Cos(rotRad);
-                }
+                // Flatten group: export all child components at their absolute positions
+                foreach (var child in group.GetAllComponentsRecursive())
+                    AppendSingleComponent(sb, child, componentNames, ref compIndex, ci);
             }
             else
             {
-                // Fallback for legacy components: offset by height for Y-flip
-                originOffsetY = comp.HeightMicrometers;
+                AppendSingleComponent(sb, comp, componentNames, ref compIndex, ci);
             }
-
-            var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
-            var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
-            var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
-            var nazcaFunc = GetNazcaFunction(comp);
-
-            sb.AppendLine($"        {varName} = {nazcaFunc}.put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
-            compIndex++;
         }
 
         sb.AppendLine();
         return componentNames;
+    }
+
+    /// <summary>
+    /// Appends a single component placement to the Nazca script and records its variable name.
+    /// </summary>
+    private static void AppendSingleComponent(
+        StringBuilder sb, Component comp, Dictionary<Component, string> componentNames,
+        ref int compIndex, CultureInfo ci)
+    {
+        var varName = $"comp_{compIndex}";
+        componentNames[comp] = varName;
+
+        var (originOffsetX, originOffsetY) = CalculateOriginOffset(comp);
+
+        var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
+        var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
+        var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
+        var nazcaFunc = GetNazcaFunction(comp);
+
+        sb.AppendLine($"        {varName} = {nazcaFunc}.put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
+        compIndex++;
+    }
+
+    /// <summary>
+    /// Calculates the Nazca origin offset for a component based on its type.
+    /// </summary>
+    private static (double OffsetX, double OffsetY) CalculateOriginOffset(Component comp)
+    {
+        var funcName = comp.NazcaFunctionName;
+
+        if (!string.IsNullOrEmpty(funcName) && (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase)))
+        {
+            double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+            double offsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
+            double offsetY = comp.NazcaOriginOffsetX * Math.Sin(rotRad) + comp.NazcaOriginOffsetY * Math.Cos(rotRad);
+            return (offsetX, offsetY);
+        }
+
+        if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
+        {
+            var firstPin = comp.PhysicalPins.FirstOrDefault();
+            if (firstPin != null)
+            {
+                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
+                double offsetX = firstPin.OffsetXMicrometers * Math.Cos(rotRad) - firstPin.OffsetYMicrometers * Math.Sin(rotRad);
+                double offsetY = firstPin.OffsetXMicrometers * Math.Sin(rotRad) + firstPin.OffsetYMicrometers * Math.Cos(rotRad);
+                return (offsetX, offsetY);
+            }
+        }
+
+        // Fallback for legacy components: offset by height for Y-flip
+        return (0, comp.HeightMicrometers);
     }
 
     private static void AppendConnections(
@@ -243,25 +271,49 @@ public class SimpleNazcaExporter
         DesignCanvasViewModel canvas,
         Dictionary<Component, string> componentNames)
     {
-        if (canvas.Connections.Count == 0)
+        var hasFrozenPaths = canvas.Components.Any(vm => vm.Component is ComponentGroup);
+        if (canvas.Connections.Count == 0 && !hasFrozenPaths)
             return;
 
         sb.AppendLine("        # Waveguide Connections");
+
         foreach (var connVm in canvas.Connections)
         {
             var conn = connVm.Connection;
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-            {
                 AppendSegmentExport(sb, segments);
-            }
             else
-            {
                 AppendFallbackExport(sb, conn, componentNames);
-            }
         }
+
+        // Export frozen waveguide paths from ComponentGroups
+        foreach (var compVm in canvas.Components)
+        {
+            if (compVm.Component is ComponentGroup group)
+                AppendGroupFrozenPaths(sb, group);
+        }
+
         sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Exports all frozen waveguide paths from a ComponentGroup (and nested groups) as Nazca segments.
+    /// </summary>
+    private static void AppendGroupFrozenPaths(StringBuilder sb, ComponentGroup group)
+    {
+        foreach (var frozenPath in group.InternalPaths)
+        {
+            if (frozenPath?.Path?.Segments?.Count > 0)
+                AppendSegmentExport(sb, frozenPath.Path.Segments);
+        }
+
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+                AppendGroupFrozenPaths(sb, nestedGroup);
+        }
     }
 
     /// <summary>
