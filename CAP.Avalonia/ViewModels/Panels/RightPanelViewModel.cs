@@ -1,3 +1,4 @@
+using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Controls;
 using CAP.Avalonia.ViewModels.Analysis;
@@ -82,18 +83,19 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public GroupSMatrixViewModel GroupSMatrix { get; }
 
-    public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService)
+    /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
+    public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
     {
         _preferencesService = preferencesService;
 
-        Sweep = new ParameterSweepViewModel();
-        RoutingDiagnostics = new RoutingDiagnosticsViewModel();
+        Sweep = new ParameterSweepViewModel(errorConsole);
+        RoutingDiagnostics = new RoutingDiagnosticsViewModel(errorConsole);
         DesignValidation = new DesignValidationViewModel();
         DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(canvas);
         DimensionValidator = new ComponentDimensionViewModel();
-        ExportValidation = new ExportValidationViewModel();
-        SMatrixPerformance = new SMatrixPerformanceViewModel();
-        CompressLayout = new CompressLayoutViewModel();
+        ExportValidation = new ExportValidationViewModel(errorConsole);
+        SMatrixPerformance = new SMatrixPerformanceViewModel(errorConsole);
+        CompressLayout = new CompressLayoutViewModel(errorConsole);
         GroupSMatrix = new GroupSMatrixViewModel();
 
         // Configure ViewModels that need canvas reference

@@ -1,4 +1,5 @@
 using System.Text;
+using CAP_Core;
 using CAP_Core.Routing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,6 +14,14 @@ namespace CAP.Avalonia.ViewModels.Diagnostics;
 /// </summary>
 public partial class RoutingDiagnosticsViewModel : ObservableObject
 {
+    private readonly ErrorConsoleService? _errorConsole;
+
+    /// <summary>Initializes a new instance of <see cref="RoutingDiagnosticsViewModel"/>.</summary>
+    /// <param name="errorConsole">Optional service for error logging.</param>
+    public RoutingDiagnosticsViewModel(ErrorConsoleService? errorConsole = null)
+    {
+        _errorConsole = errorConsole;
+    }
     [ObservableProperty]
     private bool _isAnalyzing;
 
@@ -123,6 +132,7 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Routing diagnostics failed: {ex.Message}", ex);
             StatusText = $"Analysis failed: {ex.Message}";
         }
         finally
@@ -177,6 +187,7 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to export routing paths: {ex.Message}", ex);
             StatusText = $"Export failed: {ex.Message}";
         }
     }
@@ -225,6 +236,7 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to copy routing paths to clipboard: {ex.Message}", ex);
             StatusText = $"Copy failed: {ex.Message}";
         }
     }

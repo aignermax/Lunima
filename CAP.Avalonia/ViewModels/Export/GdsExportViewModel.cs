@@ -1,3 +1,4 @@
+using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Export;
@@ -57,10 +58,16 @@ public partial class GdsExportViewModel : ObservableObject
     /// </summary>
     public Action<string?>? OnPythonPathChanged { get; set; }
 
-    public GdsExportViewModel(GdsExportService exportService)
+    private readonly ErrorConsoleService? _errorConsole;
+
+    /// <summary>Initializes a new instance of <see cref="GdsExportViewModel"/>.</summary>
+    /// <param name="exportService">GDS export service.</param>
+    /// <param name="errorConsole">Optional service for error logging.</param>
+    public GdsExportViewModel(GdsExportService exportService, ErrorConsoleService? errorConsole = null)
     {
         _exportService = exportService;
         _discoveryService = new PythonDiscoveryService();
+        _errorConsole = errorConsole;
     }
 
     /// <summary>
@@ -170,6 +177,7 @@ public partial class GdsExportViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Python discovery failed: {ex.Message}", ex);
             PythonStatus = $"✗ Search failed: {ex.Message}";
         }
         finally

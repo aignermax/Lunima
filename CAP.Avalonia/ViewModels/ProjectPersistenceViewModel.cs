@@ -1,3 +1,4 @@
+using CAP_Core;
 using CAP.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,6 +13,7 @@ public partial class ProjectPersistenceViewModel : ObservableObject
 {
     private readonly ProjectPersistenceService _persistenceService;
     private readonly IFileDialogService? _fileDialogService;
+    private readonly ErrorConsoleService? _errorConsole;
 
     [ObservableProperty]
     private string _currentFilePath = "";
@@ -19,12 +21,15 @@ public partial class ProjectPersistenceViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
+    /// <summary>Initializes a new instance of <see cref="ProjectPersistenceViewModel"/>.</summary>
     public ProjectPersistenceViewModel(
         ProjectPersistenceService persistenceService,
-        IFileDialogService? fileDialogService = null)
+        IFileDialogService? fileDialogService = null,
+        ErrorConsoleService? errorConsole = null)
     {
         _persistenceService = persistenceService;
         _fileDialogService = fileDialogService;
+        _errorConsole = errorConsole;
     }
 
     /// <summary>
@@ -115,6 +120,7 @@ public partial class ProjectPersistenceViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to save project: {ex.Message}", ex);
             StatusMessage = $"Error saving project: {ex.Message}";
         }
     }
@@ -134,6 +140,7 @@ public partial class ProjectPersistenceViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to load project: {ex.Message}", ex);
             StatusMessage = $"Error loading project: {ex.Message}";
         }
     }

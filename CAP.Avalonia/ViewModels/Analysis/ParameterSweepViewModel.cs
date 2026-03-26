@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using CAP_Core;
 using CAP_Core.Analysis;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
@@ -38,9 +39,17 @@ public partial class ParameterSweepViewModel : ObservableObject
     [ObservableProperty]
     private string _statusText = "";
 
+    private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private ComponentViewModel? _targetComponent;
     private SweepResult? _lastResult;
+
+    /// <summary>Initializes a new instance of <see cref="ParameterSweepViewModel"/>.</summary>
+    /// <param name="errorConsole">Optional service for error logging.</param>
+    public ParameterSweepViewModel(ErrorConsoleService? errorConsole = null)
+    {
+        _errorConsole = errorConsole;
+    }
 
     /// <summary>
     /// File dialog service for CSV export. Set by MainViewModel.
@@ -120,8 +129,9 @@ public partial class ParameterSweepViewModel : ObservableObject
             ResultText = FormatResultsTable(_lastResult, pinNameMap);
             StatusText = $"Sweep complete: {dataPoints.Count} points";
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            _errorConsole?.LogError($"Parameter sweep failed: {ex.Message}", ex);
             StatusText = $"Sweep failed: {ex.Message}";
         }
         finally
@@ -160,6 +170,7 @@ public partial class ParameterSweepViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to export sweep results: {ex.Message}", ex);
             StatusText = $"Export failed: {ex.Message}";
         }
     }

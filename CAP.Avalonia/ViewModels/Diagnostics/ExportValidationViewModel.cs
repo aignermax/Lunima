@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP.Avalonia.Services;
@@ -40,11 +41,15 @@ public partial class ExportValidationViewModel : ObservableObject
 
     private readonly SimpleNazcaExporter _exporter;
     private readonly ExportValidator _validator;
+    private readonly ErrorConsoleService? _errorConsole;
 
-    public ExportValidationViewModel()
+    /// <summary>Initializes a new instance of <see cref="ExportValidationViewModel"/>.</summary>
+    /// <param name="errorConsole">Optional service for error logging.</param>
+    public ExportValidationViewModel(ErrorConsoleService? errorConsole = null)
     {
         _exporter = new SimpleNazcaExporter();
         _validator = new ExportValidator();
+        _errorConsole = errorConsole;
     }
 
     /// <summary>
@@ -79,6 +84,7 @@ public partial class ExportValidationViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Export validation failed: {ex.Message}", ex);
             ValidationStatus = $"Validation failed: {ex.Message}";
             HasResults = false;
         }
