@@ -29,8 +29,19 @@ public class GroupEditModeIntegrationTests
         var group = new ComponentGroup("TestGroup");
         group.AddChild(child1);
         group.AddChild(child2);
-        canvas.AddComponent(group);
+        var groupVm = canvas.AddComponent(group);
         hierarchy.RebuildTree();
+
+        // Verify group was added to canvas
+        canvas.Components.Count.ShouldBe(1, "Canvas should have 1 component (the group)");
+
+        // Debug: Check why RootNodes might be empty
+        if (hierarchy.RootNodes.Count == 0)
+        {
+            throw new Exception($"RootNodes is empty! Canvas.Components.Count={canvas.Components.Count}");
+        }
+
+        hierarchy.RootNodes.Count.ShouldBe(1, "Hierarchy should have 1 root node");
 
         // Act - Enter edit mode
         canvas.EnterGroupEditMode(group);
