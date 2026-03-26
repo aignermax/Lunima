@@ -33,6 +33,12 @@ public partial class HierarchyPanelViewModel : ObservableObject
     /// </summary>
     public Func<(double width, double height)>? GetViewportSize { get; set; }
 
+    /// <summary>
+    /// Callback to handle component rename, typically wired to the undo-aware command manager.
+    /// When null, the rename is applied directly without undo support.
+    /// </summary>
+    public Action<Component, string>? RenameComponent { get; set; }
+
     public HierarchyPanelViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -71,7 +77,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
         {
             ComponentViewModel = componentVm,
             FocusRequested = FocusOnComponent,
-            SelectionRequested = SelectComponent
+            SelectionRequested = SelectComponent,
+            RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName)
         };
 
         // If this is a group, recursively add its children
@@ -274,5 +281,30 @@ public partial class HierarchyPanelViewModel : ObservableObject
     {
         var node = FindNodeByComponent(component);
         node?.RefreshDisplayName();
+    }
+
+    /// <summary>
+    /// Applies a rename to the given component, using the <see cref="RenameComponent"/> callback
+    /// when set (for undo support), or falling back to a direct rename.
+    /// Always refreshes the node display afterward.
+    /// </summary>
+    private void ApplyRename(Component component, string newName)
+    {
+        if (RenameComponent != null)
+        {
+            RenameComponent(component, newName);
+        }
+        else
+        {
+            // Direct rename (no undo support) — used in tests and when no CommandManager is wired
+            if (component is ComponentGroup group)
+                group.GroupName = newName;
+            else
+                component.HumanReadableName = newName;
+        }
+
+        // Refresh display for regular components (groups auto-refresh via PropertyChanged)
+        if (component is not ComponentGroup)
+            RefreshNode(component);
     }
 }

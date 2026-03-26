@@ -54,13 +54,29 @@
                                            FontSize="14"
                                            VerticalAlignment="Center"/>
 
-                                <!-- Component Name -->
+                                <!-- Component Name (view/edit toggle) -->
                                 <StackPanel Orientation="Vertical" Spacing="2">
+
+                                    <!-- Normal display mode -->
                                     <TextBlock Text="{Binding DisplayName}"
+                                               IsVisible="{Binding !IsRenaming}"
                                                FontWeight="Medium"
                                                FontSize="12"
                                                Foreground="White"
                                                VerticalAlignment="Center"/>
+
+                                    <!-- Inline rename mode: TextBox -->
+                                    <TextBox Text="{Binding EditName, Mode=TwoWay}"
+                                             IsVisible="{Binding IsRenaming}"
+                                             FontSize="12"
+                                             Padding="2,1"
+                                             Background="#3c3c3c"
+                                             Foreground="White"
+                                             BorderBrush="#007acc"
+                                             BorderThickness="1"
+                                             MinWidth="80"
+                                             KeyDown="RenameTextBox_KeyDown"
+                                             LostFocus="RenameTextBox_LostFocus"/>
 
                                     <TextBlock Text="{Binding TypeLabel}"
                                                FontSize="10"
