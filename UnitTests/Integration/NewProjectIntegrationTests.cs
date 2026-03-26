@@ -54,7 +54,8 @@ public class NewProjectIntegrationTests
             _groupLibraryManager,
             _previewGenerator,
             _inputDialogService,
-            _gdsExportService);
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
 
         // Add a component to the canvas
         var component = TestComponentFactory.CreateStraightWaveGuide();
@@ -84,7 +85,8 @@ public class NewProjectIntegrationTests
             _groupLibraryManager,
             _previewGenerator,
             _inputDialogService,
-            _gdsExportService);
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
 
         var mockMessageBox = new Mock<IMessageBoxService>();
         mockMessageBox
@@ -124,7 +126,8 @@ public class NewProjectIntegrationTests
             _groupLibraryManager,
             _previewGenerator,
             _inputDialogService,
-            _gdsExportService);
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
 
         // Add component
         var component = TestComponentFactory.CreateStraightWaveGuide();
@@ -153,7 +156,8 @@ public class NewProjectIntegrationTests
             _groupLibraryManager,
             _previewGenerator,
             _inputDialogService,
-            _gdsExportService);
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
 
         // Add two components with physical pins
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
@@ -195,7 +199,8 @@ public class NewProjectIntegrationTests
             _groupLibraryManager,
             _previewGenerator,
             _inputDialogService,
-            _gdsExportService);
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
 
         // Create a group with some components
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
@@ -242,7 +247,8 @@ public class NewProjectIntegrationTests
             _groupLibraryManager,
             _previewGenerator,
             _inputDialogService,
-            _gdsExportService);
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
 
         // Create nested groups
         var comp = TestComponentFactory.CreateStraightWaveGuide();

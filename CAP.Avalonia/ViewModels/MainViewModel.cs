@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components.Core;
+using CAP_Core;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
@@ -78,6 +79,11 @@ public partial class MainViewModel : ObservableObject
     public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
     public ComponentLibraryViewModel GroupLibrary => LeftPanel.ComponentLibrary;
 
+    /// <summary>
+    /// ViewModel for the error console panel (collapsible, bottom of window).
+    /// </summary>
+    public ErrorConsoleViewModel ErrorConsole => BottomPanel.ErrorConsole;
+
     // Backward-compatible library properties
     public ObservableCollection<ComponentTemplate> ComponentLibrary => LeftPanel.AllTemplates;
     public ObservableCollection<ComponentTemplate> FilteredComponentLibrary => LeftPanel.FilteredTemplates;
@@ -148,7 +154,8 @@ public partial class MainViewModel : ObservableObject
         CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager,
         Services.GroupPreviewGenerator previewGenerator,
         Services.IInputDialogService inputDialogService,
-        CAP_Core.Export.GdsExportService gdsExportService)
+        CAP_Core.Export.GdsExportService gdsExportService,
+        ErrorConsoleService errorConsoleService)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -164,7 +171,7 @@ public partial class MainViewModel : ObservableObject
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm);
         ViewportControl = new ViewportControlViewModel(_canvas);
         RightPanel = new RightPanelViewModel(_canvas, preferencesService);
-        BottomPanel = new BottomPanelViewModel(_canvas, CommandManager);
+        BottomPanel = new BottomPanelViewModel(_canvas, CommandManager, errorConsoleService);
 
         // Wire up status callbacks
         CanvasInteraction.UpdateStatus = UpdateStatusText;
@@ -506,6 +513,8 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusText = $"Simulation error: {ex.Message}";
+            ErrorConsole.Log($"Simulation failed: {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
+
         }
         finally
         {

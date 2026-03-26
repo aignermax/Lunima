@@ -16,7 +16,7 @@ namespace UnitTests.ViewModels;
 public class ZoomToFitGroupsTests
 {
     private static MainViewModel CreateViewModel() =>
-        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager(), new UserPreferencesService(), new CAP_Core.Components.Creation.GroupLibraryManager(), new GroupPreviewGenerator(), new InputDialogService(), new GdsExportService());
+        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager(), new UserPreferencesService(), new CAP_Core.Components.Creation.GroupLibraryManager(), new GroupPreviewGenerator(), new InputDialogService(), new GdsExportService(), new CAP_Core.ErrorConsoleService());
 
     /// <summary>
     /// Regression test: Verifies that zoom-to-fit correctly includes components

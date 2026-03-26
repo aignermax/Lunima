@@ -22,7 +22,8 @@ public class ZoomToFitDebugTests
             new CAP_Core.Components.Creation.GroupLibraryManager(),
             new GroupPreviewGenerator(),
             new InputDialogService(),
-            new GdsExportService());
+            new GdsExportService(),
+            new CAP_Core.ErrorConsoleService());
 
         // Add component
         var comp = TestComponentFactory.CreateStraightWaveGuide();
