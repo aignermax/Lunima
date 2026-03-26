@@ -439,6 +439,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 // Clear current design
                 _canvas.Components.Clear();
                 _canvas.Connections.Clear();
+                _canvas.AllPins.Clear();
                 _canvas.ConnectionManager.Clear();
                 _commandManager.ClearHistory();
 
