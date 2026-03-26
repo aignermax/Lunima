@@ -102,14 +102,19 @@ namespace UnitTests
         {
             var component = CreateStraightWaveGuide();
 
-            // Add physical pins
+            // Get logical pins
+            var logicalPin1 = component.Parts[0, 0].GetPinAt(RectSide.Left);
+            var logicalPin2 = component.Parts[0, 0].GetPinAt(RectSide.Right);
+
+            // Add physical pins with logical pin references
             var inputPin = new PhysicalPin
             {
                 Name = "in",
                 ParentComponent = component,
                 OffsetXMicrometers = 0,
                 OffsetYMicrometers = 125,
-                AngleDegrees = 180
+                AngleDegrees = 180,
+                LogicalPin = logicalPin1
             };
 
             var outputPin = new PhysicalPin
@@ -118,7 +123,8 @@ namespace UnitTests
                 ParentComponent = component,
                 OffsetXMicrometers = 250,
                 OffsetYMicrometers = 125,
-                AngleDegrees = 0
+                AngleDegrees = 0,
+                LogicalPin = logicalPin2
             };
 
             component.PhysicalPins.Add(inputPin);

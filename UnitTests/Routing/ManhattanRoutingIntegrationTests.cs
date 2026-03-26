@@ -13,8 +13,19 @@ namespace UnitTests.Routing;
 /// Integration tests for Manhattan router obstacle registration and collision detection.
 /// Tests fix for issue #87: Manhattan router waveguides not registered in PathfindingGrid.
 /// </summary>
-public class ManhattanRoutingIntegrationTests
+public class ManhattanRoutingIntegrationTests : IDisposable
 {
+    /// <summary>
+    /// Cleanup after each test to prevent shared state pollution.
+    /// The SharedRouter is static, so we need to clean it up between tests.
+    /// </summary>
+    public void Dispose()
+    {
+        // Clear the shared router's pathfinding grid to prevent test interference
+        var router = WaveguideConnection.SharedRouter;
+        router.ClearPathfindingGrid();
+    }
+
     [Fact]
     public void ManhattanFallbackPath_RegisteredAsObstacle_BlocksSubsequentAStar()
     {

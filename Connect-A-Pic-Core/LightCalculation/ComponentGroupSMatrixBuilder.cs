@@ -113,10 +113,23 @@ public class ComponentGroupSMatrixBuilder
 
         foreach (var child in group.ChildComponents)
         {
-            foreach (var pin in child.PhysicalPins)
+            if (child is ComponentGroup childGroup)
             {
-                allChildPinIds.Add(pin.LogicalPin.IDInFlow);
-                allChildPinIds.Add(pin.LogicalPin.IDOutFlow);
+                // For nested groups, use their external pins
+                foreach (var groupPin in childGroup.ExternalPins)
+                {
+                    allChildPinIds.Add(groupPin.InternalPin.LogicalPin.IDInFlow);
+                    allChildPinIds.Add(groupPin.InternalPin.LogicalPin.IDOutFlow);
+                }
+            }
+            else
+            {
+                // For regular components, use physical pins
+                foreach (var pin in child.PhysicalPins)
+                {
+                    allChildPinIds.Add(pin.LogicalPin.IDInFlow);
+                    allChildPinIds.Add(pin.LogicalPin.IDOutFlow);
+                }
             }
         }
 

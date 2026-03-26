@@ -64,7 +64,7 @@ public class ComponentGroupSimulationTests
             AngleDegrees = 0
         });
 
-        // Compute S-Matrix
+        // Compute S-Matrix (this also populates group.PhysicalPins)
         group.ComputeSMatrix();
 
         // Create a light source component (grating coupler)
@@ -96,9 +96,12 @@ public class ComponentGroupSimulationTests
         var routedPath = new RoutedPath();
         routedPath.Segments.Add(new StraightSegment(-10, 0.5, 0, 0.5, 0));
 
+        // Connect to the GROUP's external pin, not the internal component's pin
+        var groupInputPin = group.PhysicalPins.First(p => p.Name == "GroupIn");
+
         var connection = connectionManager.AddConnectionWithCachedRoute(
             sourcePhysicalPin,
-            comp1.PhysicalPins[0],
+            groupInputPin,
             routedPath);
 
         var portManager = new PhysicalExternalPortManager();
@@ -128,7 +131,8 @@ public class ComponentGroupSimulationTests
         fields.Count.ShouldBeGreaterThan(0);
 
         // Verify that power propagated through the group
-        var groupOutputPin = comp2.PhysicalPins[1];
+        // Check the group's external output pin
+        var groupOutputPin = group.PhysicalPins.First(p => p.Name == "GroupOut");
         var groupOutputFlow = groupOutputPin.LogicalPin.IDOutFlow;
 
         fields.ShouldContainKey(groupOutputFlow);

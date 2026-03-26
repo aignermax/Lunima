@@ -81,6 +81,17 @@ public class WaveguideRouter
     }
 
     /// <summary>
+    /// Clears the pathfinding grid and hierarchical pathfinder.
+    /// Used for test cleanup to prevent shared state pollution.
+    /// </summary>
+    public void ClearPathfindingGrid()
+    {
+        PathfindingGrid = null;
+        _hierarchicalPathfinder = null;
+        CostCalculator.DistanceTransformGrid = null;
+    }
+
+    /// <summary>
     /// Builds the hierarchical pathfinding graph for fast long-distance routing.
     /// Only builds if UseHierarchicalPathfinding is enabled.
     /// </summary>

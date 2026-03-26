@@ -717,6 +717,33 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         {
             // Update the component's S-Matrix dictionary
             WaveLengthToSMatrixMap = matrices;
+
+            // Populate PhysicalPins from ExternalPins for simulation connectivity
+            SyncPhysicalPinsFromExternalPins();
+        }
+    }
+
+    /// <summary>
+    /// Synchronizes the PhysicalPins collection with ExternalPins.
+    /// This allows the simulation framework to connect to the group's external pins.
+    /// </summary>
+    private void SyncPhysicalPinsFromExternalPins()
+    {
+        PhysicalPins.Clear();
+
+        foreach (var externalPin in ExternalPins)
+        {
+            var physicalPin = new PhysicalPin
+            {
+                Name = externalPin.Name,
+                ParentComponent = this,
+                OffsetXMicrometers = externalPin.RelativeX,
+                OffsetYMicrometers = externalPin.RelativeY,
+                AngleDegrees = externalPin.AngleDegrees,
+                LogicalPin = externalPin.InternalPin.LogicalPin
+            };
+
+            PhysicalPins.Add(physicalPin);
         }
     }
 

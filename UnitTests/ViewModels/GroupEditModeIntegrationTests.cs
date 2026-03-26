@@ -34,13 +34,6 @@ public class GroupEditModeIntegrationTests
 
         // Verify group was added to canvas
         canvas.Components.Count.ShouldBe(1, "Canvas should have 1 component (the group)");
-
-        // Debug: Check why RootNodes might be empty
-        if (hierarchy.RootNodes.Count == 0)
-        {
-            throw new Exception($"RootNodes is empty! Canvas.Components.Count={canvas.Components.Count}");
-        }
-
         hierarchy.RootNodes.Count.ShouldBe(1, "Hierarchy should have 1 root node");
 
         // Act - Enter edit mode
@@ -48,9 +41,11 @@ public class GroupEditModeIntegrationTests
         hierarchy.SyncEditModeFromCanvas(group);
 
         // Assert - Edit mode active
+        // When in edit mode, the canvas shows the group's children, not the group itself
         canvas.IsInGroupEditMode.ShouldBeTrue();
         canvas.CurrentEditGroup.ShouldBe(group);
-        hierarchy.RootNodes[0].IsInEditMode.ShouldBeTrue();
+        canvas.Components.Count.ShouldBe(2, "Canvas should show 2 children in edit mode");
+        hierarchy.RootNodes.Count.ShouldBe(2, "Hierarchy should show 2 child nodes in edit mode");
 
         // Act - Exit edit mode
         canvas.ExitGroupEditMode();
@@ -59,7 +54,8 @@ public class GroupEditModeIntegrationTests
         // Assert - Edit mode exited
         canvas.IsInGroupEditMode.ShouldBeFalse();
         canvas.CurrentEditGroup.ShouldBeNull();
-        hierarchy.RootNodes[0].IsInEditMode.ShouldBeFalse();
+        canvas.Components.Count.ShouldBe(1, "Canvas should show the group again after exiting edit mode");
+        hierarchy.RootNodes.Count.ShouldBe(1, "Hierarchy should show 1 root node (the group) after exiting");
     }
 
     [Fact]

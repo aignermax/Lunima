@@ -53,7 +53,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
         foreach (var compVm in _canvas.Components)
         {
             // Skip components that are children of a group (they'll be added recursively)
-            if (compVm.Component.ParentGroup != null)
+            // UNLESS we're in group edit mode - then children of the current edit group should appear as root nodes
+            if (compVm.Component.ParentGroup != null && compVm.Component.ParentGroup != _canvas.CurrentEditGroup)
                 continue;
 
             var node = CreateNodeRecursive(compVm.Component, compVm);

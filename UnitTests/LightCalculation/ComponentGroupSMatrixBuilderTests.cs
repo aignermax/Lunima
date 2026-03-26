@@ -155,7 +155,7 @@ public class ComponentGroupSMatrixBuilderTests
     {
         // Arrange
         var group = new ComponentGroup("MultiWavelength");
-        var child = TestComponentFactory.CreateStraightWaveGuide();
+        var child = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         group.AddChild(child);
 
         group.AddExternalPin(new GroupPin
@@ -187,7 +187,7 @@ public class ComponentGroupSMatrixBuilderTests
     {
         // Arrange
         var group = new ComponentGroup("WavelengthFallback");
-        var child = TestComponentFactory.CreateStraightWaveGuide(); // Has 650, 550, 450 nm
+        var child = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins(); // Has 650, 550, 450 nm
         group.AddChild(child);
 
         group.AddExternalPin(new GroupPin

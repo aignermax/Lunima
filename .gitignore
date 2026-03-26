@@ -417,3 +417,4 @@ FodyWeavers.xsd
 
 # Godot leftover files (project migrated from Godot to Avalonia)
 *.uid.mcp.json
+.env
