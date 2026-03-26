@@ -133,28 +133,34 @@ public partial class FileOperationsViewModel : ObservableObject
                 CollectChildIds((ComponentGroup)gc.Component, childComponentIds);
             }
 
+            var componentsList = _canvas.Components.ToList();
             var designData = new DesignFileData
             {
                 // Only save non-group, non-child components in the main list
-                Components = _canvas.Components
+                Components = componentsList
                     .Where(c => c.Component is not ComponentGroup
                                 && !childComponentIds.Contains(c.Component.Identifier))
                     .Select(c => CreateComponentData(c))
                     .ToList(),
-                Connections = _canvas.Connections.Select(c => new ConnectionData
+                Connections = _canvas.Connections.Select(c =>
                 {
-                    StartComponentIndex = GetComponentIndexForPin(c.Connection.StartPin, _canvas.Components.ToList()),
-                    StartPinName = c.Connection.StartPin.Name,
-                    EndComponentIndex = GetComponentIndexForPin(c.Connection.EndPin, _canvas.Components.ToList()),
-                    EndPinName = c.Connection.EndPin.Name,
-                    CachedSegments = c.Connection.RoutedPath != null
-                        ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
-                        : null,
-                    IsBlockedFallback = c.Connection.IsBlockedFallback ? true : null,
-                    IsLocked = c.Connection.IsLocked ? true : null,
-                    TargetLengthMicrometers = c.Connection.TargetLengthMicrometers,
-                    IsTargetLengthEnabled = c.Connection.IsTargetLengthEnabled ? true : null,
-                    LengthToleranceMicrometers = c.Connection.IsTargetLengthEnabled ? c.Connection.LengthToleranceMicrometers : null
+                    var (startIdx, startPinName) = ResolveConnectionEndpoint(componentsList, c.Connection.StartPin);
+                    var (endIdx, endPinName) = ResolveConnectionEndpoint(componentsList, c.Connection.EndPin);
+                    return new ConnectionData
+                    {
+                        StartComponentIndex = startIdx,
+                        StartPinName = startPinName,
+                        EndComponentIndex = endIdx,
+                        EndPinName = endPinName,
+                        CachedSegments = c.Connection.RoutedPath != null
+                            ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
+                            : null,
+                        IsBlockedFallback = c.Connection.IsBlockedFallback ? true : null,
+                        IsLocked = c.Connection.IsLocked ? true : null,
+                        TargetLengthMicrometers = c.Connection.TargetLengthMicrometers,
+                        IsTargetLengthEnabled = c.Connection.IsTargetLengthEnabled ? true : null,
+                        LengthToleranceMicrometers = c.Connection.IsTargetLengthEnabled ? c.Connection.LengthToleranceMicrometers : null
+                    };
                 }).ToList()
             };
 
@@ -349,6 +355,56 @@ public partial class FileOperationsViewModel : ObservableObject
                 CollectChildIds(nested, ids);
             }
         }
+    }
+
+    /// <summary>
+    /// Resolves which canvas component and pin name to use when serializing a connection endpoint.
+    /// Handles both regular components (direct match) and group external pins (via InternalPin lookup).
+    /// </summary>
+    /// <param name="components">All top-level components on the canvas.</param>
+    /// <param name="pin">The physical pin on the connection endpoint.</param>
+    /// <returns>The component index and pin name to store in ConnectionData.</returns>
+    internal static (int index, string pinName) ResolveConnectionEndpoint(
+        List<ComponentViewModel> components, PhysicalPin pin)
+    {
+        // Direct match: pin belongs to a top-level canvas component
+        int directIndex = components.FindIndex(c => c.Component == pin.ParentComponent);
+        if (directIndex >= 0)
+            return (directIndex, pin.Name);
+
+        // Group match: pin is the InternalPin of a group's external pin
+        for (int i = 0; i < components.Count; i++)
+        {
+            if (components[i].Component is ComponentGroup group)
+            {
+                var match = group.ExternalPins.FirstOrDefault(ep => ep.InternalPin == pin);
+                if (match != null)
+                    return (i, match.Name);
+            }
+        }
+
+        return (-1, pin.Name);
+    }
+
+    /// <summary>
+    /// Resolves the physical pin to connect to on a component during load.
+    /// Handles both regular components (PhysicalPins lookup) and groups (ExternalPins lookup via external pin name).
+    /// </summary>
+    /// <param name="component">The component to find the pin on.</param>
+    /// <param name="pinName">The pin name stored in ConnectionData.</param>
+    /// <returns>The physical pin, or null if not found.</returns>
+    internal static PhysicalPin? ResolvePin(Component component, string pinName)
+    {
+        // For regular components: look up by physical pin name directly
+        var directPin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
+        if (directPin != null)
+            return directPin;
+
+        // For groups: look up by external pin name and return its InternalPin
+        if (component is ComponentGroup group)
+            return group.ExternalPins.FirstOrDefault(ep => ep.Name == pinName)?.InternalPin;
+
+        return null;
     }
 
     [RelayCommand]
@@ -696,9 +752,8 @@ public partial class FileOperationsViewModel : ObservableObject
         var startComp = _canvas.Components[connData.StartComponentIndex];
         var endComp = _canvas.Components[connData.EndComponentIndex];
 
-        // Find pins - check both PhysicalPins and ExternalPins (for ComponentGroups)
-        var startPin = FindPin(startComp.Component, connData.StartPinName);
-        var endPin = FindPin(endComp.Component, connData.EndPinName);
+        var startPin = ResolvePin(startComp.Component, connData.StartPinName);
+        var endPin = ResolvePin(endComp.Component, connData.EndPinName);
 
         if (startPin == null || endPin == null)
             return;
@@ -811,51 +866,4 @@ public partial class FileOperationsViewModel : ObservableObject
         comp.RotateBy90CounterClockwise();
     }
 
-    /// <summary>
-    /// Finds a pin by name, checking both regular PhysicalPins and ExternalPins (for ComponentGroups).
-    /// For ComponentGroups, ExternalPins reference InternalPins, so we return the InternalPin reference.
-    /// </summary>
-    private static PhysicalPin? FindPin(Component component, string pinName)
-    {
-        // First check regular PhysicalPins
-        var pin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
-        if (pin != null)
-            return pin;
-
-        // If component is a ComponentGroup, check ExternalPins
-        if (component is ComponentGroup group)
-        {
-            var externalPin = group.ExternalPins.FirstOrDefault(ep => ep.Name == pinName);
-            if (externalPin != null)
-                return externalPin.InternalPin;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Gets the component index for a pin. For GroupPins, returns the index of the owning ComponentGroup,
-    /// not the internal child component.
-    /// </summary>
-    private static int GetComponentIndexForPin(PhysicalPin pin, List<ComponentViewModel> components)
-    {
-        // First, check if this pin belongs to a ComponentGroup's ExternalPin
-        foreach (var compVm in components)
-        {
-            if (compVm.Component is ComponentGroup group)
-            {
-                foreach (var externalPin in group.ExternalPins)
-                {
-                    if (externalPin.InternalPin == pin)
-                    {
-                        // Pin belongs to this group's ExternalPin
-                        return components.IndexOf(compVm);
-                    }
-                }
-            }
-        }
-
-        // Otherwise, find the component that owns this pin directly
-        return components.FindIndex(comp => comp.Component == pin.ParentComponent);
-    }
 }

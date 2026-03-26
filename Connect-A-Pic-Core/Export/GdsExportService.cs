@@ -10,6 +10,7 @@ namespace CAP_Core.Export;
 public class GdsExportService
 {
     private const string MinimumNazcaVersion = "0.5.0";
+    private string? _customPythonPath;
 
     /// <summary>
     /// Result of a GDS export operation.
@@ -89,7 +90,25 @@ public class GdsExportService
     }
 
     /// <summary>
+    /// Sets a custom Python path to use instead of system default.
+    /// </summary>
+    /// <param name="pythonPath">Path to Python executable, or null to use system default.</param>
+    public void SetCustomPythonPath(string? pythonPath)
+    {
+        _customPythonPath = pythonPath;
+    }
+
+    /// <summary>
+    /// Gets the currently configured Python path (custom or default).
+    /// </summary>
+    public string GetCurrentPythonPath()
+    {
+        return _customPythonPath ?? GetPythonCommand();
+    }
+
+    /// <summary>
     /// Checks if Python and Nazca are available in the system.
+    /// Uses custom Python path if configured, otherwise uses system default.
     /// </summary>
     /// <returns>Environment information including versions.</returns>
     public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync()
@@ -284,9 +303,13 @@ public class GdsExportService
 
     /// <summary>
     /// Gets the Python command name for the current platform.
+    /// Returns custom path if set, otherwise returns system default.
     /// </summary>
-    private static string GetPythonCommand()
+    private string GetPythonCommand()
     {
+        if (!string.IsNullOrEmpty(_customPythonPath))
+            return _customPythonPath;
+
         // On Windows, try "python" first (most common)
         // On Unix-like systems, try "python3" first
         return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "python" : "python3";

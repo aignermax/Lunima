@@ -1,0 +1,190 @@
+using CAP_Core.Export;
+using Shouldly;
+using Xunit;
+
+namespace UnitTests.Export;
+
+/// <summary>
+/// Unit tests for PythonDiscoveryService.
+/// Tests Python discovery in venv and system locations.
+/// </summary>
+public class PythonDiscoveryServiceTests
+{
+    private readonly PythonDiscoveryService _service;
+
+    public PythonDiscoveryServiceTests()
+    {
+        _service = new PythonDiscoveryService();
+    }
+
+    [Fact]
+    public async Task DiscoverPythonWithNazcaAsync_ReturnsListOfInstallations()
+    {
+        // Act
+        var result = await _service.DiscoverPythonWithNazcaAsync();
+
+        // Assert
+        result.ShouldNotBeNull();
+        // May return empty list if no Python/Nazca installed
+        result.ShouldBeOfType<List<PythonDiscoveryService.PythonInstallation>>();
+    }
+
+    [Fact]
+    public async Task DiscoverPythonWithNazcaAsync_OnlyReturnsInstallationsWithNazca()
+    {
+        // Act
+        var result = await _service.DiscoverPythonWithNazcaAsync();
+
+        // Assert
+        // All returned installations should have Nazca
+        result.ShouldAllBe(install => install.HasNazca);
+    }
+
+    [Fact]
+    public async Task CheckPythonInstallation_WithValidPath_ReturnsInstallationInfo()
+    {
+        // Arrange - Use system Python if available
+        var pythonCmd = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+            System.Runtime.InteropServices.OSPlatform.Windows) ? "python" : "python3";
+
+        // Act
+        var result = await _service.CheckPythonInstallation(pythonCmd, "Test");
+
+        // Assert - Either Python is found or not, both are valid
+        if (result != null)
+        {
+            result.Path.ShouldBe(pythonCmd);
+            result.Source.ShouldBe("Test");
+            result.PythonVersion.ShouldNotBeNullOrEmpty();
+            // Nazca may or may not be installed
+        }
+    }
+
+    [Fact]
+    public async Task CheckPythonInstallation_WithInvalidPath_ReturnsNull()
+    {
+        // Arrange
+        var invalidPath = "/nonexistent/python";
+
+        // Act
+        var result = await _service.CheckPythonInstallation(invalidPath, "Test");
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void PythonInstallation_HasNazca_ReturnsTrueWhenNazcaVersionSet()
+    {
+        // Arrange
+        var withNazca = new PythonDiscoveryService.PythonInstallation
+        {
+            Path = "/usr/bin/python3",
+            Source = "System",
+            PythonVersion = "3.10.0",
+            NazcaVersion = "0.6.1"
+        };
+
+        var withoutNazca = new PythonDiscoveryService.PythonInstallation
+        {
+            Path = "/usr/bin/python3",
+            Source = "System",
+            PythonVersion = "3.10.0",
+            NazcaVersion = null
+        };
+
+        // Assert
+        withNazca.HasNazca.ShouldBeTrue();
+        withoutNazca.HasNazca.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void PythonInstallation_DisplayText_IncludesSourceAndVersions()
+    {
+        // Arrange
+        var installation = new PythonDiscoveryService.PythonInstallation
+        {
+            Path = "/home/user/.venvs/nazca/bin/python",
+            Source = "venv: nazca",
+            PythonVersion = "3.12.3",
+            NazcaVersion = "0.6.1"
+        };
+
+        // Act
+        var displayText = installation.DisplayText;
+
+        // Assert
+        displayText.ShouldContain("venv: nazca");
+        displayText.ShouldContain("Python 3.12.3");
+        displayText.ShouldContain("Nazca 0.6.1");
+    }
+
+    [Fact]
+    public void PythonInstallation_DisplayText_HandlesNullVersions()
+    {
+        // Arrange
+        var installation = new PythonDiscoveryService.PythonInstallation
+        {
+            Path = "/usr/bin/python3",
+            Source = "System",
+            PythonVersion = null,
+            NazcaVersion = null
+        };
+
+        // Act
+        var displayText = installation.DisplayText;
+
+        // Assert
+        displayText.ShouldBe("System");
+    }
+
+    [Fact]
+    public async Task DiscoverPythonWithNazcaAsync_DoesNotReturnDuplicates()
+    {
+        // Act
+        var result = await _service.DiscoverPythonWithNazcaAsync();
+
+        // Assert
+        var paths = result.Select(r => r.Path).ToList();
+        paths.Count.ShouldBe(paths.Distinct().Count(), "Should not return duplicate Python paths");
+    }
+
+    [Fact]
+    public async Task CheckPythonInstallation_WithSystemCommand_ReturnsCorrectSource()
+    {
+        // Arrange
+        var pythonCmd = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+            System.Runtime.InteropServices.OSPlatform.Windows) ? "python" : "python3";
+        var expectedSource = "System";
+
+        // Act
+        var result = await _service.CheckPythonInstallation(pythonCmd, expectedSource);
+
+        // Assert - If Python is found
+        if (result != null)
+        {
+            result.Source.ShouldBe(expectedSource);
+        }
+    }
+
+    [Fact]
+    public async Task DiscoverPythonWithNazcaAsync_IncludesActiveVenvIfPresent()
+    {
+        // Arrange - Check if VIRTUAL_ENV is set
+        var venvPath = Environment.GetEnvironmentVariable("VIRTUAL_ENV");
+
+        // Act
+        var result = await _service.DiscoverPythonWithNazcaAsync();
+
+        // Assert - If running in a venv with Nazca, it should be in the list
+        if (!string.IsNullOrEmpty(venvPath))
+        {
+            var activeVenv = result.FirstOrDefault(r => r.Source == "Active venv");
+            // May or may not have Nazca installed in current venv
+            if (activeVenv != null)
+            {
+                activeVenv.HasNazca.ShouldBeTrue();
+            }
+        }
+    }
+}

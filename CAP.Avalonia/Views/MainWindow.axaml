@@ -853,8 +853,38 @@
                               IsChecked="{Binding FileOperations.GdsExport.GenerateGdsEnabled}"
                               Foreground="White" Margin="0,0,0,8"/>
 
-                    <Button Content="Check Python Environment" Command="{Binding FileOperations.GdsExport.CheckEnvironmentCommand}"
-                            MinWidth="160" Margin="0,0,0,8" Padding="8,4" Background="#3d5d5d" HorizontalAlignment="Stretch"
+                    <!-- Python Configuration -->
+                    <TextBlock Text="Python Path:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                        <TextBox Grid.Column="0" Text="{Binding FileOperations.GdsExport.CustomPythonPath}"
+                                 Watermark="Auto-detect or enter path..." Margin="0,0,5,0"/>
+                        <Button Grid.Column="1" Content="🔍" Width="30" Padding="4"
+                                Command="{Binding FileOperations.GdsExport.SearchForPythonCommand}"
+                                ToolTip.Tip="Search for Python with Nazca"
+                                IsEnabled="{Binding FileOperations.GdsExport.IsSearching, Converter={x:Static BoolConverters.Not}}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding FileOperations.GdsExport.PythonPathSource}"
+                               Foreground="Gray" FontSize="10" Margin="0,0,0,8"
+                               IsVisible="{Binding FileOperations.GdsExport.PythonPathSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <!-- Available Python Installations -->
+                    <ItemsControl ItemsSource="{Binding FileOperations.GdsExport.AvailablePythons}"
+                                  Margin="0,0,0,8"
+                                  x:Name="AvailablePythonsList"
+                                  IsVisible="{Binding FileOperations.GdsExport.AvailablePythons.Count}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding DisplayText}"
+                                        Command="{Binding #AvailablePythonsList.DataContext.FileOperations.GdsExport.SelectPythonCommand}"
+                                        CommandParameter="{Binding}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                        Margin="0,2,0,0" Padding="6,4" Background="#2d2d2d" FontSize="10"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Content="Check Environment" Command="{Binding FileOperations.GdsExport.CheckEnvironmentCommand}"
+                            MinWidth="130" Margin="0,0,0,8" Padding="8,4" Background="#3d5d5d" HorizontalAlignment="Stretch"
                             IsEnabled="{Binding FileOperations.GdsExport.IsChecking, Converter={x:Static BoolConverters.Not}}"/>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
@@ -911,12 +941,48 @@
             </Border>
         </Grid>
 
-        <!-- Main Canvas -->
-        <controls:DesignCanvas x:Name="DesignCanvasControl"
-                               ViewModel="{Binding Canvas}"
-                               Zoom="{Binding ZoomLevel, Mode=TwoWay}"
-                               MainViewModel="{Binding}">
-            <controls:DesignCanvas.ContextMenu>
+        <!-- Main Canvas with Edit Mode Banner -->
+        <DockPanel>
+            <!-- Edit Mode Banner (only visible when in edit mode) -->
+            <Border DockPanel.Dock="Top"
+                    Background="#FF6B35"
+                    IsVisible="{Binding Canvas.IsInGroupEditMode}"
+                    Padding="12,8"
+                    BorderBrush="#FF4520"
+                    BorderThickness="0,0,0,2">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Icon and Label -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="✏️" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="GROUP EDIT MODE" FontWeight="Bold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                        <TextBlock Text="—" Foreground="#FFB399" Margin="5,0" VerticalAlignment="Center"/>
+                        <TextBlock Foreground="White" FontSize="12" VerticalAlignment="Center">
+                            <Run Text="Editing:"/>
+                            <Run Text="{Binding Canvas.CurrentEditGroup.GroupName}" FontWeight="SemiBold"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Exit Button -->
+                    <Button Grid.Column="2"
+                            Content="Exit Edit Mode (ESC)"
+                            Command="{Binding Canvas.ExitToRootCommand}"
+                            Background="White"
+                            Foreground="#FF6B35"
+                            FontWeight="SemiBold"
+                            Padding="16,6"
+                            BorderThickness="0"
+                            CornerRadius="3"
+                            Cursor="Hand"
+                            ToolTip.Tip="Exit group edit mode and return to main canvas (ESC key)"/>
+                </Grid>
+            </Border>
+
+            <!-- Design Canvas -->
+            <controls:DesignCanvas x:Name="DesignCanvasControl"
+                                   ViewModel="{Binding Canvas}"
+                                   Zoom="{Binding ZoomLevel, Mode=TwoWay}"
+                                   MainViewModel="{Binding}">
+                <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon>
@@ -959,6 +1025,7 @@
                     </MenuItem>
                 </ContextMenu>
             </controls:DesignCanvas.ContextMenu>
-        </controls:DesignCanvas>
+            </controls:DesignCanvas>
+        </DockPanel>
     </DockPanel>
 </Window>
