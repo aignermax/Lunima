@@ -79,10 +79,16 @@ namespace UnitTests.Components.Parametric
             var parametric = ParametricSMatrixMapper.MapToParametricSMatrix(draft);
             var results = parametric.EvaluateConnections();
 
-            results.Count.ShouldBe(1);
-            results[0].FromPin.ShouldBe("in");
-            results[0].ToPin.ShouldBe("out");
-            results[0].Value.Magnitude.ShouldBe(0.707, 1e-10);
+            // Should have 2 connections (forward + reciprocal)
+            results.Count.ShouldBe(2);
+
+            results.ShouldContain(c => c.FromPin == "in" && c.ToPin == "out");
+            var forward = results.First(c => c.FromPin == "in" && c.ToPin == "out");
+            forward.Value.Magnitude.ShouldBe(0.707, 1e-10);
+
+            results.ShouldContain(c => c.FromPin == "out" && c.ToPin == "in");
+            var reverse = results.First(c => c.FromPin == "out" && c.ToPin == "in");
+            reverse.Value.Magnitude.ShouldBe(0.707, 1e-10);
         }
 
         [Fact]
@@ -124,9 +130,19 @@ namespace UnitTests.Components.Parametric
             parametric.Parameters[0].DefaultValue.ShouldBe(0.5);
 
             var results = parametric.EvaluateConnections();
-            results.Count.ShouldBe(2);
-            results[0].Value.Magnitude.ShouldBe(Math.Sqrt(0.5), 1e-10);
-            results[1].Value.Magnitude.ShouldBe(Math.Sqrt(0.5), 1e-10);
+            // Should have 4 connections (2 forward + 2 reciprocal)
+            results.Count.ShouldBe(4);
+
+            // Check forward connections
+            var inToOut1 = results.First(c => c.FromPin == "in" && c.ToPin == "out1");
+            inToOut1.Value.Magnitude.ShouldBe(Math.Sqrt(0.5), 1e-10);
+
+            var inToOut2 = results.First(c => c.FromPin == "in" && c.ToPin == "out2");
+            inToOut2.Value.Magnitude.ShouldBe(Math.Sqrt(0.5), 1e-10);
+
+            // Check reciprocal connections
+            results.ShouldContain(c => c.FromPin == "out1" && c.ToPin == "in");
+            results.ShouldContain(c => c.FromPin == "out2" && c.ToPin == "in");
         }
 
         [Fact]
@@ -224,6 +240,91 @@ namespace UnitTests.Components.Parametric
 
             Should.Throw<InvalidOperationException>(
                 () => ParametricSMatrixMapper.Validate(draft, "TestComp", pins));
+        }
+
+        [Fact]
+        public void MapToParametricSMatrix_AutomaticallyAddsReverseConnections()
+        {
+            // Arrange: MMI 1x2 with only forward connections
+            var draft = new PdkSMatrixDraft
+            {
+                Connections = new List<SMatrixConnection>
+                {
+                    new() { FromPin = "in", ToPin = "out1", Magnitude = 0.707, PhaseDegrees = 0 },
+                    new() { FromPin = "in", ToPin = "out2", Magnitude = 0.707, PhaseDegrees = 0 }
+                }
+            };
+
+            // Act
+            var parametric = ParametricSMatrixMapper.MapToParametricSMatrix(draft);
+            var results = parametric.EvaluateConnections();
+
+            // Assert: Should have 4 connections (2 forward + 2 reverse)
+            results.Count.ShouldBe(4, "Should automatically add reciprocal connections");
+
+            // Check forward connections exist
+            results.ShouldContain(c => c.FromPin == "in" && c.ToPin == "out1");
+            results.ShouldContain(c => c.FromPin == "in" && c.ToPin == "out2");
+
+            // Check reverse connections were added
+            results.ShouldContain(c => c.FromPin == "out1" && c.ToPin == "in");
+            results.ShouldContain(c => c.FromPin == "out2" && c.ToPin == "in");
+
+            // Check magnitudes are preserved
+            var out1ToIn = results.First(c => c.FromPin == "out1" && c.ToPin == "in");
+            out1ToIn.Value.Magnitude.ShouldBe(0.707, 1e-10);
+        }
+
+        [Fact]
+        public void MapToParametricSMatrix_DoesNotDuplicateExistingReverseConnections()
+        {
+            // Arrange: Connection that already has both directions
+            var draft = new PdkSMatrixDraft
+            {
+                Connections = new List<SMatrixConnection>
+                {
+                    new() { FromPin = "a", ToPin = "b", Magnitude = 0.9, PhaseDegrees = 0 },
+                    new() { FromPin = "b", ToPin = "a", Magnitude = 0.9, PhaseDegrees = 0 }
+                }
+            };
+
+            // Act
+            var parametric = ParametricSMatrixMapper.MapToParametricSMatrix(draft);
+            var results = parametric.EvaluateConnections();
+
+            // Assert: Should still have exactly 2 connections (no duplicates)
+            results.Count.ShouldBe(2, "Should not duplicate existing reverse connections");
+        }
+
+        [Fact]
+        public void MapToParametricSMatrix_ReciprocityWorksWithFormulas()
+        {
+            // Arrange: Parametric connection with formula
+            var draft = new PdkSMatrixDraft
+            {
+                Parameters = new List<ParameterDefinitionDraft>
+                {
+                    new() { Name = "loss", DefaultValue = 0.01, MinValue = 0, MaxValue = 0.1 }
+                },
+                Connections = new List<SMatrixConnection>
+                {
+                    new()
+                    {
+                        FromPin = "in", ToPin = "out",
+                        MagnitudeFormula = "Sqrt(1 - loss)",
+                        PhaseDegreesFormula = "0"
+                    }
+                }
+            };
+
+            // Act
+            var parametric = ParametricSMatrixMapper.MapToParametricSMatrix(draft);
+            var results = parametric.EvaluateConnections();
+
+            // Assert: Should have 2 connections with same magnitude formula
+            results.Count.ShouldBe(2);
+            var reverse = results.First(c => c.FromPin == "out" && c.ToPin == "in");
+            reverse.Value.Magnitude.ShouldBe(Math.Sqrt(1 - 0.01), 1e-10);
         }
     }
 }

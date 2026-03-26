@@ -70,7 +70,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
         private static List<FormulaConnection> MapConnections(
             List<SMatrixConnection> connections)
         {
-            return connections.Select(c =>
+            var formulaConnections = connections.Select(c =>
             {
                 string magFormula = c.MagnitudeFormula
                     ?? c.Magnitude.ToString(
@@ -82,6 +82,45 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 return new FormulaConnection(
                     c.FromPin, c.ToPin, magFormula, phaseFormula);
             }).ToList();
+
+            // Enforce reciprocity: add reverse connections automatically
+            return EnforceReciprocity(formulaConnections);
+        }
+
+        /// <summary>
+        /// Ensures S-Matrix reciprocity by adding reverse connections.
+        /// For passive photonic components, S-Matrices must be symmetric (reciprocal).
+        /// If a connection A→B exists but B→A doesn't, we add B→A with the same magnitude and phase.
+        /// </summary>
+        private static List<FormulaConnection> EnforceReciprocity(
+            List<FormulaConnection> connections)
+        {
+            var result = new List<FormulaConnection>(connections);
+            var existingPairs = new HashSet<(string, string)>();
+
+            // Track existing connections
+            foreach (var conn in connections)
+            {
+                existingPairs.Add((conn.FromPin, conn.ToPin));
+            }
+
+            // Add missing reverse connections
+            foreach (var conn in connections)
+            {
+                var reversePair = (conn.ToPin, conn.FromPin);
+                if (!existingPairs.Contains(reversePair))
+                {
+                    // Add reciprocal connection with same magnitude and phase
+                    result.Add(new FormulaConnection(
+                        conn.ToPin,
+                        conn.FromPin,
+                        conn.MagnitudeFormula,
+                        conn.PhaseDegFormula));
+                    existingPairs.Add(reversePair);
+                }
+            }
+
+            return result;
         }
 
         private static void ValidateParameter(
