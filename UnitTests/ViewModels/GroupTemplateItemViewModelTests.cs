@@ -126,8 +126,9 @@ public class GroupTemplateItemViewModelTests
         var library = new ComponentLibraryViewModel(libraryManager);
 
         // Add template to library via ComponentLibraryViewModel
+        var countBefore = library.UserGroups.Count;
         library.AddTemplate(template);
-        library.UserGroups.Count.ShouldBe(1);
+        library.UserGroups.Count.ShouldBe(countBefore + 1, "Should have one more template after adding");
 
         var itemVm = new GroupTemplateItemViewModel(template, library);
 
@@ -135,6 +136,6 @@ public class GroupTemplateItemViewModelTests
         itemVm.DeleteCommand.Execute(null);
 
         // Assert
-        library.UserGroups.Count.ShouldBe(0, "Template should be removed from library after delete");
+        library.UserGroups.Count.ShouldBe(countBefore, "Template should be removed from library after delete");
     }
 }
