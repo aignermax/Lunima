@@ -41,4 +41,13 @@ public partial class GroupTemplateItemViewModel : ObservableObject
     {
         _parentViewModel.RemoveTemplateCommand.Execute(Template);
     }
+
+    /// <summary>
+    /// Renames this group template via a dialog prompt.
+    /// </summary>
+    [RelayCommand]
+    private void Rename()
+    {
+        _parentViewModel.RenameTemplateCommand.Execute(Template);
+    }
 }

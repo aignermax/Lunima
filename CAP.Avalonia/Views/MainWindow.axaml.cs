@@ -26,6 +26,13 @@ public partial class MainWindow : Window
                 vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
+                // Wire up rename dialog for group templates
+                vm.GroupLibrary.ShowRenameDialogAsync = async (currentName) =>
+                {
+                    var dialog = new RenameDialog(currentName);
+                    return await dialog.ShowDialog<string?>(this);
+                };
+
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {
