@@ -29,6 +29,7 @@ public partial class App : Application
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
         services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
         services.AddSingleton<GdsExportService>();
+        services.AddSingleton<CAP_Core.ErrorConsoleService>();
 
         // Register application services
         services.AddSingleton<SimulationService>();

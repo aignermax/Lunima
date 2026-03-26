@@ -46,6 +46,29 @@ public partial class MainWindow : Window
                     }
                 };
 
+                // Wire up clipboard for ErrorConsole
+                vm.ErrorConsole.CopyToClipboard = async (text) =>
+                {
+                    var clipboard = Clipboard;
+                    if (clipboard != null)
+                    {
+                        await clipboard.SetTextAsync(text);
+                    }
+                };
+
+                // Wire up auto-scroll: scroll to the newest entry when entries are added
+                vm.ErrorConsole.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(vm.ErrorConsole.EntryCount) && ErrorConsoleListBox != null)
+                    {
+                        var items = ErrorConsoleListBox.ItemsSource;
+                        if (items is System.Collections.IList list && list.Count > 0)
+                        {
+                            ErrorConsoleListBox.ScrollIntoView(list[list.Count - 1]);
+                        }
+                    }
+                };
+
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
 

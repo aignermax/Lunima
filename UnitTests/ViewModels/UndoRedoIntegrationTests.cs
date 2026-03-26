@@ -264,7 +264,8 @@ public class UndoRedoIntegrationTests
             groupLibraryManager,
             previewGenerator,
             inputDialogService,
-            gdsExportService
+            gdsExportService,
+            new CAP_Core.ErrorConsoleService()
         );
     }
 }
