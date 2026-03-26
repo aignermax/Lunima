@@ -10,20 +10,34 @@ namespace UnitTests.ViewModels;
 /// <summary>
 /// Unit tests for panel width persistence across left and right panels.
 /// Tests that panel widths are saved and restored correctly.
+/// Uses isolated test preferences to avoid polluting user settings.
 /// </summary>
-public class PanelWidthPersistenceTests
+public class PanelWidthPersistenceTests : IDisposable
 {
     private readonly DesignCanvasViewModel _canvas;
     private readonly GroupLibraryManager _libraryManager;
     private readonly PdkLoader _pdkLoader;
     private readonly UserPreferencesService _preferencesService;
+    private readonly string _testPreferencesPath;
 
     public PanelWidthPersistenceTests()
     {
         _canvas = new DesignCanvasViewModel();
         _libraryManager = new GroupLibraryManager();
         _pdkLoader = new PdkLoader();
-        _preferencesService = new UserPreferencesService();
+
+        // Use temporary file for test isolation
+        _testPreferencesPath = Path.Combine(Path.GetTempPath(), $"test-preferences-{Guid.NewGuid()}.json");
+        _preferencesService = new UserPreferencesService(_testPreferencesPath);
+    }
+
+    public void Dispose()
+    {
+        // Clean up test preferences file
+        if (File.Exists(_testPreferencesPath))
+        {
+            File.Delete(_testPreferencesPath);
+        }
     }
 
     [Fact]
