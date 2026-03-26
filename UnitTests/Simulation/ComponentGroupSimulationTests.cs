@@ -112,9 +112,11 @@ public class ComponentGroupSimulationTests
             0,
             new System.Numerics.Complex(1.0, 0),
             true);
-        // Light enters from the left side of the source and propagates forward (leftIn → rightOut)
-        var sourceLeftLogicalPin = source.Parts[0, 0].GetPinAt(CAP_Core.Tiles.RectSide.Left);
-        portManager.AddLightSource(externalInput, sourceLeftLogicalPin.IDInFlow);
+
+        // Inject laser at the source's LEFT pin: light flows left→right through the
+        // waveguide (Left.IDInFlow → Right.IDOutFlow) then into the group via the connection.
+        var sourceLaserLogicalPin = source.Parts[0, 0].GetPinAt(CAP_Core.Tiles.RectSide.Left);
+        portManager.AddLightSource(externalInput, sourceLaserLogicalPin.IDInFlow);
 
         var gridManager = GridManager.CreateForSimulation(
             tileManager, connectionManager, portManager);

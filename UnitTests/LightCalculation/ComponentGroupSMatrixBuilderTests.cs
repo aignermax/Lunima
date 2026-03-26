@@ -327,4 +327,108 @@ public class ComponentGroupSMatrixBuilderTests
         var secondMatrix = group.WaveLengthToSMatrixMap.Values.First();
         ReferenceEquals(firstMatrix, secondMatrix).ShouldBeTrue();
     }
+
+    [Fact]
+    public void FrozenPath_TransmissionCoefficient_IsOneForEmptyPath()
+    {
+        // Arrange
+        var path = new FrozenWaveguidePath
+        {
+            Path = new RoutedPath()
+        };
+
+        // Act & Assert
+        path.TransmissionCoefficient.ShouldBe(System.Numerics.Complex.One);
+    }
+
+    [Fact]
+    public void FrozenPath_TransmissionCoefficient_AppliesPropagationLoss()
+    {
+        // Arrange - 10 cm = 100,000 µm path at 2 dB/cm = 20 dB loss
+        var path = new FrozenWaveguidePath { PropagationLossDbPerCm = 2.0 };
+        var routedPath = new RoutedPath();
+        routedPath.Segments.Add(new StraightSegment(0, 0, 100_000, 0, 0)); // 100,000 µm = 10 cm
+        path.Path = routedPath;
+
+        // Act
+        var coeff = path.TransmissionCoefficient;
+
+        // Assert - 20 dB loss → amplitude = 10^(-20/20) = 0.1
+        coeff.Real.ShouldBe(0.1, tolerance: 1e-9);
+        coeff.Imaginary.ShouldBe(0.0, tolerance: 1e-9);
+    }
+
+    [Fact]
+    public void FrozenPath_TransmissionCoefficient_LowerLossForShorterPath()
+    {
+        // Arrange
+        var shortPath = new FrozenWaveguidePath { PropagationLossDbPerCm = 2.0 };
+        var shortRouted = new RoutedPath();
+        shortRouted.Segments.Add(new StraightSegment(0, 0, 1_000, 0, 0)); // 1 mm
+        shortPath.Path = shortRouted;
+
+        var longPath = new FrozenWaveguidePath { PropagationLossDbPerCm = 2.0 };
+        var longRouted = new RoutedPath();
+        longRouted.Segments.Add(new StraightSegment(0, 0, 10_000, 0, 0)); // 1 cm
+        longPath.Path = longRouted;
+
+        // Act
+        var shortCoeff = shortPath.TransmissionCoefficient;
+        var longCoeff = longPath.TransmissionCoefficient;
+
+        // Assert - longer path has more loss (lower amplitude)
+        shortCoeff.Real.ShouldBeGreaterThan(longCoeff.Real);
+    }
+
+    [Fact]
+    public void BuildGroupSMatrix_FrozenPath_LightPropagatesBetweenComponents()
+    {
+        // Arrange - Two components connected by an internal frozen path
+        var group = new ComponentGroup("LightFlow");
+        var child1 = TestComponentFactory.CreateSimpleTwoPortComponent();
+        var child2 = TestComponentFactory.CreateSimpleTwoPortComponent();
+
+        child1.PhysicalX = 0;
+        child1.PhysicalY = 0;
+        child2.PhysicalX = 20;
+        child2.PhysicalY = 0;
+
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        // Connect child1's output pin to child2's input pin via frozen path
+        var routedPath = new RoutedPath();
+        routedPath.Segments.Add(new StraightSegment(10, 0, 20, 0, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            StartPin = child1.PhysicalPins[1], // child1 output
+            EndPin = child2.PhysicalPins[0],   // child2 input
+            Path = routedPath
+        };
+        group.AddInternalPath(frozenPath);
+
+        // Expose child1 input as group input, child2 output as group output
+        group.AddExternalPin(new GroupPin { Name = "In", InternalPin = child1.PhysicalPins[0] });
+        group.AddExternalPin(new GroupPin { Name = "Out", InternalPin = child2.PhysicalPins[1] });
+
+        // Act
+        var result = _builder.BuildGroupSMatrixAllWavelengths(group);
+
+        // Assert - Matrix must exist and have non-zero transfer from In to Out
+        result.ShouldNotBeNull();
+        var matrix = result.Values.First();
+
+        var inPinInFlow = child1.PhysicalPins[0].LogicalPin.IDInFlow;
+        var outPinOutFlow = child2.PhysicalPins[1].LogicalPin.IDOutFlow;
+
+        matrix.PinReference.ShouldContainKey(inPinInFlow);
+        matrix.PinReference.ShouldContainKey(outPinOutFlow);
+
+        // Light should flow: InFlow → group → OutFlow (non-zero transfer)
+        int idxIn = matrix.PinReference[inPinInFlow];
+        int idxOut = matrix.PinReference[outPinOutFlow];
+        var transfer = matrix.SMat[idxOut, idxIn];
+        transfer.Magnitude.ShouldBeGreaterThan(0.0);
+    }
 }
