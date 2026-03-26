@@ -106,12 +106,6 @@ namespace CAP_Core.Components.Connections
         /// </summary>
         public double TotalLossDb { get; private set; }
 
-        /// <summary>
-        /// Shared router instance for all connections.
-        /// Public to allow initialization of A* pathfinding grid.
-        /// </summary>
-        public static WaveguideRouter SharedRouter { get; } = new();
-
         // Nazca-Export
         public string ExportToNazca()
         {
@@ -141,7 +135,8 @@ namespace CAP_Core.Components.Connections
         /// Recalculates the transmission coefficient based on current pin positions and loss parameters.
         /// Should be called whenever connected components are moved.
         /// </summary>
-        public void RecalculateTransmission()
+        /// <param name="router">The waveguide router to use for path calculation.</param>
+        public void RecalculateTransmission(WaveguideRouter router)
         {
             if (StartPin == null || EndPin == null)
             {
@@ -152,10 +147,10 @@ namespace CAP_Core.Components.Connections
             }
 
             // Update router settings
-            SharedRouter.MinBendRadiusMicrometers = BendRadiusMicrometers;
+            router.MinBendRadiusMicrometers = BendRadiusMicrometers;
 
             // Route the connection
-            RoutedPath = SharedRouter.Route(StartPin, EndPin);
+            RoutedPath = router.Route(StartPin, EndPin);
 
             // Calculate total loss from actual path
             double propagationLoss = (PathLengthMicrometers / 10000.0) * PropagationLossDbPerCm; // µm to cm

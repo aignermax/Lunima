@@ -1,6 +1,7 @@
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using System.ComponentModel;
 using Component = CAP_Core.Components.Core.Component;
@@ -58,7 +59,7 @@ namespace CAP_Core.Grid
             ComponentRotator = new ComponentRotator(TileManager,ComponentMover);
             ComponentRelationshipManager = new ComponentRelationshipManager(TileManager);
             LightManager = new LightManager();
-            WaveguideConnections = new WaveguideConnectionManager();
+            WaveguideConnections = new WaveguideConnectionManager(new WaveguideRouter());
         }
 
     }

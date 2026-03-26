@@ -246,7 +246,7 @@ public class HierarchicalPathfinderTests
     [Fact]
     public void WaveguideRouter_BuildHierarchicalGraph_IntegratesCorrectly()
     {
-        var router = WaveguideConnection.SharedRouter;
+        var router = new WaveguideRouter();
         var comp1 = CreateTestComponent(0, 0);
         var comp2 = CreateTestComponent(200, 0);
 

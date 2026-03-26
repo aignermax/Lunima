@@ -13,11 +13,29 @@ namespace CAP.Avalonia.ViewModels.Canvas;
 
 public partial class DesignCanvasViewModel : ObservableObject
 {
+    private readonly WaveguideRouter _router;
+
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<WaveguideConnectionViewModel> Connections { get; } = new();
     public ObservableCollection<PinViewModel> AllPins { get; } = new();
 
-    public WaveguideConnectionManager ConnectionManager { get; } = new();
+    public WaveguideConnectionManager ConnectionManager { get; }
+
+    /// <summary>
+    /// Initializes a new instance with a fresh <see cref="WaveguideRouter"/>.
+    /// </summary>
+    public DesignCanvasViewModel() : this(new WaveguideRouter()) { }
+
+    /// <summary>
+    /// Initializes a new instance with an injected <see cref="WaveguideRouter"/>.
+    /// </summary>
+    /// <param name="router">The waveguide router for A* pathfinding and obstacle management.</param>
+    public DesignCanvasViewModel(WaveguideRouter router)
+    {
+        _router = router;
+        ConnectionManager = new WaveguideConnectionManager(router);
+        InitializeAStarRouting();
+    }
 
     /// <summary>
     /// Manages multi-component selection state.
@@ -114,9 +132,9 @@ public partial class DesignCanvasViewModel : ObservableObject
     public double PinHighlightDistance { get; set; } = 15.0;
 
     /// <summary>
-    /// Gets the shared waveguide router for A* pathfinding configuration.
+    /// Gets the waveguide router for A* pathfinding configuration.
     /// </summary>
-    public WaveguideRouter Router => WaveguideConnection.SharedRouter;
+    public WaveguideRouter Router => _router;
 
     /// <summary>
     /// Whether A* pathfinding with obstacle avoidance is enabled.
@@ -220,12 +238,6 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     [ObservableProperty]
     private double _panY;
-
-    public DesignCanvasViewModel()
-    {
-        // Initialize A* pathfinding by default
-        InitializeAStarRouting();
-    }
 
     /// <summary>
     /// Enters edit mode for a ComponentGroup (Unity-style sub-canvas approach).

@@ -170,7 +170,7 @@ public class GroupEditModeRoutingTests
 
         canvas.EnterGroupEditMode(group);
 
-        WaveguideConnection.SharedRouter.PathfindingGrid.ShouldNotBeNull(
+        canvas.Router.PathfindingGrid.ShouldNotBeNull(
             "Pathfinding grid should be initialized after entering group edit mode");
     }
 

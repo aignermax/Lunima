@@ -6,6 +6,17 @@ namespace CAP_Core.Components.Connections;
 
 public class WaveguideConnectionManager
 {
+    private readonly WaveguideRouter _router;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="WaveguideConnectionManager"/> with the given router.
+    /// </summary>
+    /// <param name="router">The waveguide router used for path calculation and obstacle management.</param>
+    public WaveguideConnectionManager(WaveguideRouter router)
+    {
+        _router = router;
+    }
+
     public List<WaveguideConnection> Connections { get; } = new();
 
     /// <summary>
@@ -71,7 +82,7 @@ public class WaveguideConnectionManager
         Connections.Add(connection);
 
         // Register cached route as obstacle for future routing
-        var router = WaveguideConnection.SharedRouter;
+        var router = _router;
         if (UseSequentialRouting && router.PathfindingGrid != null &&
             connection.IsPathValid && connection.RoutedPath != null)
         {
@@ -125,7 +136,7 @@ public class WaveguideConnectionManager
     /// </summary>
     public void RemoveConnectionsForComponent(Component component)
     {
-        var router = WaveguideConnection.SharedRouter;
+        var router = _router;
         var connectionsToRemove = Connections
             .Where(c => c.StartPin.ParentComponent == component ||
                         c.EndPin.ParentComponent == component)
@@ -148,7 +159,7 @@ public class WaveguideConnectionManager
     public void RemoveConnection(WaveguideConnection connection)
     {
         // Remove waveguide obstacle from pathfinding grid
-        var router = WaveguideConnection.SharedRouter;
+        var router = _router;
         if (router.PathfindingGrid != null)
         {
             router.PathfindingGrid.RemoveWaveguideObstacle(connection.Id);
@@ -169,7 +180,7 @@ public class WaveguideConnectionManager
     /// </summary>
     public void RemoveConnectionDeferred(WaveguideConnection connection)
     {
-        var router = WaveguideConnection.SharedRouter;
+        var router = _router;
         if (router.PathfindingGrid != null)
         {
             router.PathfindingGrid.RemoveWaveguideObstacle(connection.Id);
@@ -206,7 +217,7 @@ public class WaveguideConnectionManager
         Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
-        var router = WaveguideConnection.SharedRouter;
+        var router = _router;
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
@@ -257,7 +268,7 @@ public class WaveguideConnectionManager
             foreach (var connection in Connections)
             {
                 if (cancellationToken.IsCancellationRequested) return;
-                connection.RecalculateTransmission();
+                connection.RecalculateTransmission(_router);
                 progressCallback?.Invoke();
             }
         }
@@ -321,7 +332,7 @@ public class WaveguideConnectionManager
             if (cancellationToken.IsCancellationRequested)
                 return (false, failedCount);
 
-            connection.RecalculateTransmission();
+            connection.RecalculateTransmission(_router);
             progressCallback?.Invoke();
 
             // Register ALL paths with valid geometry as obstacles, including blocked fallbacks.
@@ -404,7 +415,7 @@ public class WaveguideConnectionManager
             if (cancellationToken.IsCancellationRequested)
                 return (false, failedCount);
 
-            connection.RecalculateTransmission();
+            connection.RecalculateTransmission(_router);
             progressCallback?.Invoke();
 
             // Register ANY path with valid geometry as an obstacle, including blocked fallbacks.
@@ -525,7 +536,7 @@ public class WaveguideConnectionManager
     /// </summary>
     public void RecalculateTransmissionsForComponent(Component component)
     {
-        var router = WaveguideConnection.SharedRouter;
+        var router = _router;
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
@@ -541,7 +552,7 @@ public class WaveguideConnectionManager
                 if (connection.StartPin.ParentComponent == component ||
                     connection.EndPin.ParentComponent == component)
                 {
-                    connection.RecalculateTransmission();
+                    connection.RecalculateTransmission(_router);
                 }
             }
         }

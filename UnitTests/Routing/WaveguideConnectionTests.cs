@@ -3,6 +3,7 @@ using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
 using System.Numerics;
@@ -46,7 +47,7 @@ public class WaveguideConnectionTests
         };
 
         // Act
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         // Assert
         connection.RoutedPath.ShouldNotBeNull();
@@ -85,8 +86,9 @@ public class WaveguideConnectionTests
         };
 
         // Act
-        shortConnection.RecalculateTransmission();
-        longConnection.RecalculateTransmission();
+        var router = new WaveguideRouter();
+        shortConnection.RecalculateTransmission(router);
+        longConnection.RecalculateTransmission(router);
 
         // Assert
         longConnection.TotalLossDb.ShouldBeGreaterThan(shortConnection.TotalLossDb);
@@ -128,7 +130,7 @@ public class WaveguideConnectionTests
         };
 
         // Act
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         // Assert
         connection.BendCount.ShouldBeGreaterThan(0);
@@ -148,7 +150,7 @@ public class WaveguideConnectionTests
         };
 
         // Act
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         // Assert
         connection.RoutedPath.ShouldBeNull();
@@ -170,7 +172,7 @@ public class WaveguideConnectionTests
         };
 
         // Act
-        connection.RecalculateTransmission();
+        connection.RecalculateTransmission(new WaveguideRouter());
 
         // Assert
         connection.TransmissionCoefficient.Imaginary.ShouldBe(0);

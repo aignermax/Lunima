@@ -6,6 +6,7 @@ using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.ExternalPorts;
 using CAP_Core.Grid;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 
 namespace UnitTests.Simulation;
@@ -47,7 +48,7 @@ public static class IntegrationCircuitBuilder
             tileManager.AddComponent(c);
         }
 
-        var connectionManager = new WaveguideConnectionManager();
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
         AddConnection(connectionManager, gcInput.Pins["waveguide"], splitter.Pins["in1"]);
         AddConnection(connectionManager, splitter.Pins["out1"], dcTop.Pins["in1"]);
         AddConnection(connectionManager, splitter.Pins["out2"], dcBottom.Pins["in1"]);

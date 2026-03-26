@@ -3,6 +3,7 @@ using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
 using Xunit;
@@ -13,19 +14,8 @@ namespace UnitTests.Routing;
 /// Integration tests for Manhattan router obstacle registration and collision detection.
 /// Tests fix for issue #87: Manhattan router waveguides not registered in PathfindingGrid.
 /// </summary>
-public class ManhattanRoutingIntegrationTests : IDisposable
+public class ManhattanRoutingIntegrationTests
 {
-    /// <summary>
-    /// Cleanup after each test to prevent shared state pollution.
-    /// The SharedRouter is static, so we need to clean it up between tests.
-    /// </summary>
-    public void Dispose()
-    {
-        // Clear the shared router's pathfinding grid to prevent test interference
-        var router = WaveguideConnection.SharedRouter;
-        router.ClearPathfindingGrid();
-    }
-
     [Fact]
     public void ManhattanFallbackPath_RegisteredAsObstacle_BlocksSubsequentAStar()
     {
@@ -33,14 +23,12 @@ public class ManhattanRoutingIntegrationTests : IDisposable
         // 1. Create a Manhattan fallback connection
         // 2. Create a second A* connection that should avoid the first
 
-        var manager = new WaveguideConnectionManager
+        var router = new WaveguideRouter { MinBendRadiusMicrometers = 10.0 };
+        var manager = new WaveguideConnectionManager(router)
         {
             UseSequentialRouting = true,
             WaveguideWidthMicrometers = 4.0
         };
-
-        var router = WaveguideConnection.SharedRouter;
-        router.MinBendRadiusMicrometers = 10.0;
 
         // Components positioned so first connection uses Manhattan fallback
         var comp1 = CreateTestComponent(0, 0);
@@ -87,14 +75,12 @@ public class ManhattanRoutingIntegrationTests : IDisposable
     {
         // Arrange - Test that sequential routing registers all paths (A* or Manhattan)
 
-        var manager = new WaveguideConnectionManager
+        var router = new WaveguideRouter { MinBendRadiusMicrometers = 10.0 };
+        var manager = new WaveguideConnectionManager(router)
         {
             UseSequentialRouting = true,
             WaveguideWidthMicrometers = 4.0
         };
-
-        var router = WaveguideConnection.SharedRouter;
-        router.MinBendRadiusMicrometers = 10.0;
 
         var comp1 = CreateTestComponent(0, 0);
         var comp2 = CreateTestComponent(200, 0);
@@ -132,14 +118,12 @@ public class ManhattanRoutingIntegrationTests : IDisposable
     {
         // Arrange - A* connection first, then Manhattan that crosses it
 
-        var manager = new WaveguideConnectionManager
+        var router = new WaveguideRouter { MinBendRadiusMicrometers = 10.0 };
+        var manager = new WaveguideConnectionManager(router)
         {
             UseSequentialRouting = true,
             WaveguideWidthMicrometers = 4.0
         };
-
-        var router = WaveguideConnection.SharedRouter;
-        router.MinBendRadiusMicrometers = 10.0;
 
         var comp1 = CreateTestComponent(0, 50);
         var comp2 = CreateTestComponent(200, 50);
@@ -176,14 +160,12 @@ public class ManhattanRoutingIntegrationTests : IDisposable
     {
         // Arrange - Test that removing a Manhattan path clears its obstacles
 
-        var manager = new WaveguideConnectionManager
+        var router = new WaveguideRouter { MinBendRadiusMicrometers = 10.0 };
+        var manager = new WaveguideConnectionManager(router)
         {
             UseSequentialRouting = true,
             WaveguideWidthMicrometers = 4.0
         };
-
-        var router = WaveguideConnection.SharedRouter;
-        router.MinBendRadiusMicrometers = 10.0;
 
         var comp1 = CreateTestComponent(0, 0);
         var comp2 = CreateTestComponent(200, 100);
