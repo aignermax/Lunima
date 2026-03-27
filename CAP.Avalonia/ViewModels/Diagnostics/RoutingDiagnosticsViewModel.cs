@@ -1,5 +1,6 @@
 using System.Text;
 using CAP_Core;
+using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -59,7 +60,7 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Runs diagnostics on all routed connections.
+    /// Runs diagnostics on all routed connections, including paths inside ComponentGroups.
     /// </summary>
     [RelayCommand]
     private void RunDiagnostics()
@@ -74,7 +75,8 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         try
         {
             var connections = _canvas.Connections;
-            TotalConnections = connections.Count;
+            var frozenPaths = CollectFrozenPaths();
+            TotalConnections = connections.Count + frozenPaths.Count;
 
             if (TotalConnections == 0)
             {
@@ -100,29 +102,12 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
                     continue;
                 }
 
-                var report = diagnostics.Validate(path);
-                bool isOk = report.IsValid && !path.IsBlockedFallback;
+                AppendPathDiagnostics(sb, diagnostics, path, GetConnectionLabel(conn), ref valid, ref totalIssues);
+            }
 
-                if (isOk) valid++;
-
-                string status = isOk ? "OK" : "ISSUES";
-                sb.AppendLine($"  {GetConnectionLabel(conn)}: {status}");
-                sb.AppendLine($"    Length: {path.TotalLengthMicrometers:F1}µm");
-                sb.AppendLine($"    Segments: {path.Segments.Count}");
-                sb.AppendLine($"    Bends: {path.TotalEquivalent90DegreeBends:F1}×90°");
-
-                if (path.IsBlockedFallback)
-                    sb.AppendLine("    ⚠ Blocked fallback");
-                if (path.IsInvalidGeometry)
-                    sb.AppendLine("    ⚠ Invalid geometry");
-
-                foreach (var issue in report.Issues)
-                {
-                    sb.AppendLine($"    [{issue.Severity}] {issue.Message}");
-                    totalIssues++;
-                }
-
-                sb.AppendLine();
+            foreach (var frozen in frozenPaths)
+            {
+                AppendPathDiagnostics(sb, diagnostics, frozen.Path, GetFrozenPathLabel(frozen), ref valid, ref totalIssues);
             }
 
             ValidConnections = valid;
@@ -141,13 +126,42 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         }
     }
 
+    private static void AppendPathDiagnostics(StringBuilder sb, RoutingDiagnostics diagnostics,
+        RoutedPath path, string label, ref int valid, ref int totalIssues)
+    {
+        var report = diagnostics.Validate(path);
+        bool isOk = report.IsValid && !path.IsBlockedFallback;
+
+        if (isOk) valid++;
+
+        string status = isOk ? "OK" : "ISSUES";
+        sb.AppendLine($"  {label}: {status}");
+        sb.AppendLine($"    Length: {path.TotalLengthMicrometers:F1}µm");
+        sb.AppendLine($"    Segments: {path.Segments.Count}");
+        sb.AppendLine($"    Bends: {path.TotalEquivalent90DegreeBends:F1}×90°");
+
+        if (path.IsBlockedFallback)
+            sb.AppendLine("    ⚠ Blocked fallback");
+        if (path.IsInvalidGeometry)
+            sb.AppendLine("    ⚠ Invalid geometry");
+
+        foreach (var issue in report.Issues)
+        {
+            sb.AppendLine($"    [{issue.Severity}] {issue.Message}");
+            totalIssues++;
+        }
+
+        sb.AppendLine();
+    }
+
     /// <summary>
-    /// Exports all routed paths to a JSON file for external visualization.
+    /// Exports all routed paths to a JSON file for external visualization,
+    /// including paths inside ComponentGroups.
     /// </summary>
     [RelayCommand]
     private async Task ExportPathsJson()
     {
-        if (_canvas == null || _canvas.Connections.Count == 0)
+        if (_canvas == null)
         {
             StatusText = "No connections to export";
             return;
@@ -155,13 +169,12 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
 
         try
         {
-            var paths = new Dictionary<string, RoutedPath>();
-            foreach (var conn in _canvas.Connections)
+            var paths = CollectAllPaths();
+
+            if (paths.Count == 0)
             {
-                if (conn.Connection.RoutedPath != null)
-                {
-                    paths[GetConnectionLabel(conn)] = conn.Connection.RoutedPath;
-                }
+                StatusText = "No connections to export";
+                return;
             }
 
             var json = RoutedPathSerializer.ToJson(paths);
@@ -199,12 +212,13 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
     public Func<string, Task>? CopyToClipboard { get; set; }
 
     /// <summary>
-    /// Copies all routed paths as JSON to the clipboard.
+    /// Copies all routed paths as JSON to the clipboard,
+    /// including paths inside ComponentGroups.
     /// </summary>
     [RelayCommand]
     private async Task CopyPathsJsonToClipboard()
     {
-        if (_canvas == null || _canvas.Connections.Count == 0)
+        if (_canvas == null)
         {
             StatusText = "No connections to copy";
             return;
@@ -212,13 +226,12 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
 
         try
         {
-            var paths = new Dictionary<string, RoutedPath>();
-            foreach (var conn in _canvas.Connections)
+            var paths = CollectAllPaths();
+
+            if (paths.Count == 0)
             {
-                if (conn.Connection.RoutedPath != null)
-                {
-                    paths[GetConnectionLabel(conn)] = conn.Connection.RoutedPath;
-                }
+                StatusText = "No connections to copy";
+                return;
             }
 
             var json = RoutedPathSerializer.ToJson(paths);
@@ -248,5 +261,60 @@ public partial class RoutingDiagnosticsViewModel : ObservableObject
         var startId = start.ParentComponent?.Identifier ?? "?";
         var endId = end.ParentComponent?.Identifier ?? "?";
         return $"{startId}.{start.Name} -> {endId}.{end.Name}";
+    }
+
+    private static string GetFrozenPathLabel(FrozenWaveguidePath frozen)
+    {
+        var startId = frozen.StartPin?.ParentComponent?.Identifier ?? "?";
+        var startName = frozen.StartPin?.Name ?? "?";
+        var endId = frozen.EndPin?.ParentComponent?.Identifier ?? "?";
+        var endName = frozen.EndPin?.Name ?? "?";
+        return $"{startId}.{startName} -> {endId}.{endName} [group]";
+    }
+
+    /// <summary>
+    /// Collects all routed paths: canvas connections + frozen paths from ComponentGroups.
+    /// </summary>
+    private Dictionary<string, RoutedPath> CollectAllPaths()
+    {
+        var paths = new Dictionary<string, RoutedPath>();
+
+        foreach (var conn in _canvas!.Connections)
+        {
+            if (conn.Connection.RoutedPath != null)
+                paths[GetConnectionLabel(conn)] = conn.Connection.RoutedPath;
+        }
+
+        foreach (var frozen in CollectFrozenPaths())
+        {
+            if (frozen.Path != null)
+                paths[GetFrozenPathLabel(frozen)] = frozen.Path;
+        }
+
+        return paths;
+    }
+
+    /// <summary>
+    /// Recursively collects all frozen waveguide paths from ComponentGroups on the canvas.
+    /// </summary>
+    private List<FrozenWaveguidePath> CollectFrozenPaths()
+    {
+        var result = new List<FrozenWaveguidePath>();
+        foreach (var compVm in _canvas!.Components)
+        {
+            if (compVm.Component is ComponentGroup group)
+                CollectFrozenPathsRecursive(group, result);
+        }
+        return result;
+    }
+
+    private static void CollectFrozenPathsRecursive(ComponentGroup group, List<FrozenWaveguidePath> result)
+    {
+        result.AddRange(group.InternalPaths);
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+                CollectFrozenPathsRecursive(nestedGroup, result);
+        }
     }
 }
