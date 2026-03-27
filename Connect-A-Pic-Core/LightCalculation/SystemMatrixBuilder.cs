@@ -61,6 +61,14 @@ namespace CAP_Core.LightCalculation
             var allSMatrices = new List<SMatrix>();
             foreach (var component in allComponents)
             {
+                // ComponentGroups may not have their S-Matrix pre-computed (e.g. when using
+                // LightCalculationService or ParameterSweeper which bypass SimulationService).
+                // Auto-compute on demand so all simulation paths work correctly.
+                if (component is CAP_Core.Components.Core.ComponentGroup group && group.WaveLengthToSMatrixMap.Count == 0)
+                {
+                    group.EnsureSMatrixComputed();
+                }
+
                 if (component.WaveLengthToSMatrixMap.TryGetValue(waveLength, out var matrixFound))
                 {
                     allSMatrices.Add(matrixFound);
