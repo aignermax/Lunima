@@ -139,6 +139,124 @@ public class GroupPowerFlowIntegrationTests
     }
 
     /// <summary>
+    /// Regression test for issue #314: frozen paths showed gray (zero power) after simulation
+    /// because fieldResults from the global simulation only contains external group pin IDs,
+    /// not the internal frozen path pin IDs. The fix augments fieldResults by propagating
+    /// external amplitudes inward through the group's cached InternalSystemMatrix.
+    /// </summary>
+    [Fact]
+    public void UpdateFromSimulation_WhenFieldResultsOnlyHaveExternalGroupPins_FrozenPathsShowPower()
+    {
+        // Arrange: create a group with two components connected by a frozen path.
+        // Both components have real S-Matrices so InternalSystemMatrix is computed.
+        var (group, frozenPath, externalInputPinId) = CreateGroupWithSMatrixComponents();
+
+        var components = new List<Component> { group };
+        var connections = new List<WaveguideConnection>();
+
+        // Simulate what the real global simulation produces:
+        // fieldResults ONLY contains external group pin amplitudes — NOT internal frozen path pins.
+        var fieldResults = new Dictionary<Guid, Complex>
+        {
+            [externalInputPinId] = new Complex(1.0, 0)
+        };
+
+        var visualizer = new PowerFlowVisualizer();
+
+        // Act
+        visualizer.UpdateFromSimulation(connections, components, fieldResults);
+
+        // Assert: frozen path must show non-zero power (was always 0 before the fix)
+        var flow = visualizer.GetFlowForConnection(frozenPath.PathId);
+        flow.ShouldNotBeNull();
+        flow!.AveragePower.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// Creates a group with two components that have actual S-Matrices:
+    ///   Comp1: external pin A (left) → internal pin B (right, frozen path start)
+    ///   Comp2: internal pin C (left, frozen path end) → external pin D (right)
+    /// Returns the group, frozen path, and the IDInFlow of external pin A.
+    /// </summary>
+    private static (ComponentGroup group, FrozenWaveguidePath frozenPath, Guid externalInputPinId)
+        CreateGroupWithSMatrixComponents()
+    {
+        const int Wavelength = 1550;
+
+        var pinA = new Pin("pinA", 0, MatterType.Light, RectSide.Left);
+        var pinB = new Pin("pinB", 1, MatterType.Light, RectSide.Right);
+        var physPinA = new PhysicalPin { Name = "pinA", LogicalPin = pinA };
+        var physPinB = new PhysicalPin { Name = "pinB", LogicalPin = pinB };
+        var comp1 = CreatePassthroughComponent("comp1", pinA, pinB, physPinA, physPinB, Wavelength);
+
+        var pinC = new Pin("pinC", 0, MatterType.Light, RectSide.Left);
+        var pinD = new Pin("pinD", 1, MatterType.Light, RectSide.Right);
+        var physPinC = new PhysicalPin { Name = "pinC", LogicalPin = pinC };
+        var physPinD = new PhysicalPin { Name = "pinD", LogicalPin = pinD };
+        var comp2 = CreatePassthroughComponent("comp2", pinC, pinD, physPinC, physPinD, Wavelength);
+
+        var group = new ComponentGroup("BugReproGroup");
+        group.AddChild(comp1);
+        group.AddChild(comp2);
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = CreateSimpleStraightPath(),
+            StartPin = physPinB,
+            EndPin = physPinC
+        };
+        group.AddInternalPath(frozenPath);
+
+        group.AddExternalPin(new GroupPin { Name = "groupA", InternalPin = physPinA });
+        group.AddExternalPin(new GroupPin { Name = "groupD", InternalPin = physPinD });
+
+        // ComputeSMatrix caches InternalSystemMatrix — required for the fix to work
+        group.ComputeSMatrix();
+
+        return (group, frozenPath, pinA.IDInFlow);
+    }
+
+    /// <summary>
+    /// Creates a component whose S-Matrix transfers light from inPin's IDInFlow to outPin's IDOutFlow.
+    /// </summary>
+    private static Component CreatePassthroughComponent(
+        string id, Pin inPin, Pin outPin,
+        PhysicalPin physIn, PhysicalPin physOut,
+        int wavelength)
+    {
+        var pinIds = new List<Guid>
+        {
+            inPin.IDInFlow, inPin.IDOutFlow,
+            outPin.IDInFlow, outPin.IDOutFlow
+        };
+        var sMatrix = new SMatrix(pinIds, new());
+        sMatrix.SetValues(new Dictionary<(Guid, Guid), Complex>
+        {
+            { (inPin.IDInFlow, outPin.IDOutFlow), Complex.One }
+        });
+        var comp = new Component(
+            new Dictionary<int, SMatrix> { [wavelength] = sMatrix },
+            new List<Slider>(), "passthrough", "",
+            new Part[1, 1] { { new Part() } },
+            0, id, new DiscreteRotation(),
+            new List<PhysicalPin> { physIn, physOut });
+        physIn.ParentComponent = comp;
+        physOut.ParentComponent = comp;
+        return comp;
+    }
+
+    /// <summary>
+    /// Creates a simple single-segment straight path for frozen path geometry.
+    /// </summary>
+    private static RoutedPath CreateSimpleStraightPath()
+    {
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(0, 0, 100, 0, 0));
+        return path;
+    }
+
+    /// <summary>
     /// Helper method to create a test component group with a frozen path.
     /// </summary>
     private static (ComponentGroup group, FrozenWaveguidePath frozenPath)

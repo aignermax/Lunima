@@ -48,6 +48,9 @@ public class PowerFlowVisualizer
     /// <summary>
     /// Updates the power flow data from simulation results.
     /// Includes both regular connections and frozen paths inside groups.
+    /// Augments fieldResults with computed internal pin amplitudes so that frozen
+    /// paths (whose pins are absent from the global simulation's fieldResults) can
+    /// be visualized with correct power values.
     /// </summary>
     /// <param name="connections">Current waveguide connections.</param>
     /// <param name="components">Current components (to extract frozen paths from groups).</param>
@@ -58,7 +61,45 @@ public class PowerFlowVisualizer
         IReadOnlyDictionary<Guid, Complex> fieldResults)
     {
         var frozenPaths = CollectAllFrozenPaths(components);
-        CurrentResult = _analyzer.Analyze(connections, frozenPaths, fieldResults);
+        var augmentedFields = AugmentWithGroupInternalAmplitudes(components, fieldResults);
+        CurrentResult = _analyzer.Analyze(connections, frozenPaths, augmentedFields);
+    }
+
+    /// <summary>
+    /// Augments fieldResults with estimated amplitudes for all internal group pins.
+    /// The global simulation only produces amplitudes for external group pins; this method
+    /// propagates those amplitudes inward through each group's cached internal system matrix.
+    /// </summary>
+    private static Dictionary<Guid, Complex> AugmentWithGroupInternalAmplitudes(
+        IReadOnlyList<Component> components,
+        IReadOnlyDictionary<Guid, Complex> fieldResults)
+    {
+        var augmented = new Dictionary<Guid, Complex>(fieldResults);
+        foreach (var component in components)
+        {
+            if (component is ComponentGroup group)
+                AddGroupInternalAmplitudes(group, augmented);
+        }
+        return augmented;
+    }
+
+    /// <summary>
+    /// Adds estimated internal pin amplitudes for a group and its nested groups.
+    /// Outer groups are processed before inner groups so nested group external pins
+    /// are already populated when inner groups are processed.
+    /// </summary>
+    private static void AddGroupInternalAmplitudes(
+        ComponentGroup group,
+        Dictionary<Guid, Complex> fieldResults)
+    {
+        foreach (var (pinId, amplitude) in group.ComputeInternalPinAmplitudes(fieldResults))
+            fieldResults[pinId] = amplitude;
+
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+                AddGroupInternalAmplitudes(nestedGroup, fieldResults);
+        }
     }
 
     /// <summary>

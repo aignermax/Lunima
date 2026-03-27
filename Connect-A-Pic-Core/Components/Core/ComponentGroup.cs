@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using CAP_Core.Components.Creation;
@@ -107,6 +108,60 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// </summary>
     [JsonIgnore]
     public double MinChildOffsetY { get; private set; }
+
+    /// <summary>
+    /// Full internal system matrix including all child component pin IDs.
+    /// Cached by ComponentGroupSMatrixBuilder during ComputeSMatrix() to support
+    /// power flow visualization of frozen waveguide paths inside this group.
+    /// Null until ComputeSMatrix() has been called at least once.
+    /// </summary>
+    [JsonIgnore]
+    public SMatrix? InternalSystemMatrix { get; internal set; }
+
+    /// <summary>
+    /// Computes estimated light amplitudes for all internal pins (including frozen path pins)
+    /// based on the external group pin amplitudes present in simulation field results.
+    /// Used by PowerFlowVisualizer to show power flow through frozen waveguide paths.
+    /// </summary>
+    /// <param name="fieldResults">Simulation field results containing external pin amplitudes.</param>
+    /// <returns>Dictionary mapping internal pin IDs to their estimated complex amplitudes.</returns>
+    public Dictionary<Guid, Complex> ComputeInternalPinAmplitudes(
+        IReadOnlyDictionary<Guid, Complex> fieldResults)
+    {
+        var result = new Dictionary<Guid, Complex>();
+        if (InternalSystemMatrix == null) return result;
+
+        foreach (var (pinId, rowIdx) in InternalSystemMatrix.PinReference)
+        {
+            if (fieldResults.ContainsKey(pinId)) continue;
+            var amplitude = ComputePinAmplitudeFromExternalInputs(rowIdx, fieldResults);
+            if (amplitude != Complex.Zero)
+                result[pinId] = amplitude;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Computes the amplitude at a given matrix row index by applying the internal system
+    /// matrix to the external group pin inflow amplitudes from field results.
+    /// Only IDInFlow values of external pins are used as inputs (light entering from outside).
+    /// </summary>
+    private Complex ComputePinAmplitudeFromExternalInputs(
+        int rowIdx,
+        IReadOnlyDictionary<Guid, Complex> fieldResults)
+    {
+        var amplitude = Complex.Zero;
+        foreach (var extPin in ExternalPins)
+        {
+            if (extPin.InternalPin?.LogicalPin == null) continue;
+            var idInFlow = extPin.InternalPin.LogicalPin.IDInFlow;
+            if (!InternalSystemMatrix!.PinReference.TryGetValue(idInFlow, out int colIdx)) continue;
+            if (!fieldResults.TryGetValue(idInFlow, out var extAmp)) continue;
+            amplitude += InternalSystemMatrix.SMat[rowIdx, colIdx] * extAmp;
+        }
+        return amplitude;
+    }
 
     /// <summary>
     /// Creates an empty ComponentGroup with default S-matrices.

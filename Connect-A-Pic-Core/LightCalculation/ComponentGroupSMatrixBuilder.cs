@@ -173,6 +173,11 @@ public class ComponentGroupSMatrixBuilder
         // (M + M^2 + ... + M^N) accumulates multi-step paths.
         var systemMatrix = ComputeTransitiveMatrix(mergedMatrix, allChildPinIds.Count);
 
+        // Cache the full internal matrix (all child pins) so that frozen path power flow
+        // can be computed during visualization. ExtractExternalPinMatrix discards internal
+        // pins, making it impossible to look them up in fieldResults without this cache.
+        group.InternalSystemMatrix = systemMatrix;
+
         // Create the external pin mapping
         var externalPinIds = new List<Guid>();
         foreach (var extPin in group.ExternalPins)
