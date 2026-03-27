@@ -236,9 +236,10 @@ public class ComponentGroupSMatrixBuilder
             var endInFlow = frozenPath.EndPin.LogicalPin.IDInFlow;
             var endOutFlow = frozenPath.EndPin.LogicalPin.IDOutFlow;
 
-            // Connect start → end and end → start
-            connections[(startInFlow, endOutFlow)] = Complex.One;
-            connections[(endInFlow, startOutFlow)] = Complex.One;
+            // Forward: light flows from StartPin OutFlow to EndPin InFlow
+            connections[(startOutFlow, endInFlow)] = Complex.One;
+            // Reverse: light flows from EndPin OutFlow to StartPin InFlow (bidirectional)
+            connections[(endOutFlow, startInFlow)] = Complex.One;
         }
 
         if (connections.Count == 0)
@@ -251,15 +252,30 @@ public class ComponentGroupSMatrixBuilder
     }
 
     /// <summary>
-    /// Extracts a sub-matrix containing only the specified external pins.
-    /// This reduces the full system matrix to just the group's external interface.
+    /// Extracts an effective sub-matrix for the specified external pins by running
+    /// the internal system matrix through enough propagation steps to capture all
+    /// multi-hop paths (e.g. comp1 → internal connection → comp2).
     /// </summary>
     private SMatrix ExtractExternalPinMatrix(SMatrix systemMatrix, List<Guid> externalPinIds)
     {
+        // Compute the effective transfer: A + A^2 + ... + A^n
+        // This captures all multi-hop paths through the group's internal components.
+        // Single-hop read (A only) misses paths that go through intermediate pins.
+        int maxSteps = systemMatrix.PinReference.Count * 2;
+        var A = systemMatrix.SMat;
+        var runningPower = A;
+        var effectiveA = A.Clone();
+
+        for (int i = 1; i < maxSteps; i++)
+        {
+            runningPower = A * runningPower;
+            effectiveA += runningPower;
+        }
+
         var externalMatrix = new SMatrix(externalPinIds, new());
         var transfers = new Dictionary<(Guid, Guid), Complex>();
 
-        // Extract only the rows/columns for external pins
+        // Extract the effective transfers for external pins only
         foreach (var pinIn in externalPinIds)
         {
             foreach (var pinOut in externalPinIds)
@@ -270,7 +286,7 @@ public class ComponentGroupSMatrixBuilder
                 if (systemMatrix.PinReference.TryGetValue(pinIn, out int idxIn) &&
                     systemMatrix.PinReference.TryGetValue(pinOut, out int idxOut))
                 {
-                    var value = systemMatrix.SMat[idxOut, idxIn];
+                    var value = effectiveA[idxOut, idxIn];
                     if (value != Complex.Zero)
                     {
                         transfers[(pinIn, pinOut)] = value;

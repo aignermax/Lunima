@@ -112,7 +112,9 @@ public class ComponentGroupSimulationTests
             0,
             new System.Numerics.Complex(1.0, 0),
             true);
-        portManager.AddLightSource(externalInput, sourcePhysicalPin.LogicalPin.IDInFlow);
+        // Light enters from the left side of the source and propagates forward (leftIn → rightOut)
+        var sourceLeftLogicalPin = source.Parts[0, 0].GetPinAt(CAP_Core.Tiles.RectSide.Left);
+        portManager.AddLightSource(externalInput, sourceLeftLogicalPin.IDInFlow);
 
         var gridManager = GridManager.CreateForSimulation(
             tileManager, connectionManager, portManager);
