@@ -163,14 +163,14 @@ public partial class MainViewModel : ObservableObject
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
 
         // Initialize Panel ViewModels (order matters due to dependencies)
-        LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService);
+        LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService, errorConsoleService);
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
-        var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService);
+        var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService, errorConsoleService);
         gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
         gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, errorConsoleService);
         ViewportControl = new ViewportControlViewModel(_canvas);
-        RightPanel = new RightPanelViewModel(_canvas, preferencesService);
+        RightPanel = new RightPanelViewModel(_canvas, preferencesService, errorConsoleService);
         BottomPanel = new BottomPanelViewModel(_canvas, CommandManager, errorConsoleService);
 
         // Wire up status callbacks
@@ -288,6 +288,7 @@ public partial class MainViewModel : ObservableObject
                 catch (Exception ex)
                 {
                     StatusText = $"Failed to load template '{template.Name}': {ex.Message}";
+                    ErrorConsole.Log($"Failed to load template '{template.Name}': {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
                     return;
                 }
 

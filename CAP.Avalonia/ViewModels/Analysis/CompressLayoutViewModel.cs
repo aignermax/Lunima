@@ -1,3 +1,4 @@
+using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Analysis;
@@ -28,8 +29,16 @@ public partial class CompressLayoutViewModel : ObservableObject
     [ObservableProperty]
     private int _maxIterations = 100;
 
+    private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private readonly LayoutCompressor _compressor = new();
+
+    /// <summary>Initializes a new instance of <see cref="CompressLayoutViewModel"/>.</summary>
+    /// <param name="errorConsole">Optional service for error logging.</param>
+    public CompressLayoutViewModel(ErrorConsoleService? errorConsole = null)
+    {
+        _errorConsole = errorConsole;
+    }
 
     /// <summary>
     /// Configures the compressor for the given canvas.
@@ -129,6 +138,7 @@ public partial class CompressLayoutViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Layout compression failed: {ex.Message}", ex);
             StatusText = $"Compression failed: {ex.Message}";
             ResultText = "";
         }

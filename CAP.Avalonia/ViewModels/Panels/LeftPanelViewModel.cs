@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Avalonia.Controls;
@@ -25,6 +26,7 @@ public partial class LeftPanelViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private readonly PdkLoader _pdkLoader;
     private readonly UserPreferencesService _preferencesService;
+    private readonly ErrorConsoleService? _errorConsole;
 
     /// <summary>
     /// ViewModel for the hierarchy panel showing component tree structure.
@@ -100,15 +102,18 @@ public partial class LeftPanelViewModel : ObservableObject
     /// </summary>
     public Action<GroupTemplate>? OnGroupTemplateSelected { get; set; }
 
+    /// <summary>Initializes a new instance of <see cref="LeftPanelViewModel"/>.</summary>
     public LeftPanelViewModel(
         DesignCanvasViewModel canvas,
         GroupLibraryManager libraryManager,
         PdkLoader pdkLoader,
-        UserPreferencesService preferencesService)
+        UserPreferencesService preferencesService,
+        ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
         _pdkLoader = pdkLoader;
         _preferencesService = preferencesService;
+        _errorConsole = errorConsole;
 
         HierarchyPanel = new HierarchyPanelViewModel(canvas);
         PdkManager = new PdkManagerViewModel();
@@ -189,9 +194,9 @@ public partial class LeftPanelViewModel : ObservableObject
 
                 PdkManager.RegisterPdk(pdk.Name, pdkFile, true, componentCount);
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip malformed PDK files silently at startup
+                _errorConsole?.LogWarning($"Skipped malformed PDK file '{Path.GetFileName(pdkFile)}': {ex.Message}");
             }
         }
     }
@@ -299,6 +304,7 @@ public partial class LeftPanelViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to load PDK: {ex.Message}", ex);
             UpdateStatus?.Invoke($"Failed to load PDK: {ex.Message}");
         }
     }

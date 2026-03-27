@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
@@ -25,6 +26,7 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly CommandManager _commandManager;
     private readonly SimpleNazcaExporter _nazcaExporter;
     private readonly ObservableCollection<ComponentTemplate> _componentLibrary;
+    private readonly ErrorConsoleService? _errorConsole;
 
     private string? _currentFilePath;
 
@@ -61,18 +63,21 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     public IMessageBoxService? MessageBoxService { get; set; }
 
+    /// <summary>Initializes a new instance of <see cref="FileOperationsViewModel"/>.</summary>
     public FileOperationsViewModel(
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
         SimpleNazcaExporter nazcaExporter,
         ObservableCollection<ComponentTemplate> componentLibrary,
-        GdsExportViewModel gdsExport)
+        GdsExportViewModel gdsExport,
+        ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
         _commandManager = commandManager;
         _nazcaExporter = nazcaExporter;
         _componentLibrary = componentLibrary;
         GdsExport = gdsExport;
+        _errorConsole = errorConsole;
 
         // Track changes to mark project as unsaved
         _canvas.Components.CollectionChanged += (s, e) => HasUnsavedChanges = true;
@@ -186,6 +191,7 @@ public partial class FileOperationsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"Failed to save design: {ex.Message}", ex);
             UpdateStatus?.Invoke($"Save failed: {ex.Message}");
         }
     }
@@ -481,6 +487,7 @@ public partial class FileOperationsViewModel : ObservableObject
             }
             catch (Exception ex)
             {
+                _errorConsole?.LogError($"Failed to load design: {ex.Message}", ex);
                 UpdateStatus?.Invoke($"Load failed: {ex.Message}");
             }
         }
@@ -855,6 +862,7 @@ public partial class FileOperationsViewModel : ObservableObject
             }
             catch (Exception ex)
             {
+                _errorConsole?.LogError($"Failed to export Nazca design: {ex.Message}", ex);
                 UpdateStatus?.Invoke($"Export failed: {ex.Message}");
             }
         }

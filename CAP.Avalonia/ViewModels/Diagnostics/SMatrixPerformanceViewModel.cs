@@ -1,3 +1,4 @@
+using CAP_Core;
 using CAP_Core.LightCalculation;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,6 +12,14 @@ namespace CAP.Avalonia.ViewModels.Diagnostics;
 public partial class SMatrixPerformanceViewModel : ObservableObject
 {
     private readonly SMatrixStatisticsAnalyzer _analyzer = new();
+    private readonly ErrorConsoleService? _errorConsole;
+
+    /// <summary>Initializes a new instance of <see cref="SMatrixPerformanceViewModel"/>.</summary>
+    /// <param name="errorConsole">Optional service for error logging.</param>
+    public SMatrixPerformanceViewModel(ErrorConsoleService? errorConsole = null)
+    {
+        _errorConsole = errorConsole;
+    }
 
     [ObservableProperty]
     private string _matrixSizeText = "-";
@@ -70,6 +79,7 @@ public partial class SMatrixPerformanceViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _errorConsole?.LogError($"S-Matrix analysis failed: {ex.Message}", ex);
             StatusText = $"Analysis failed: {ex.Message}";
             ResetStatistics();
         }
