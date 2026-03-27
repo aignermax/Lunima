@@ -206,6 +206,135 @@ public class SimpleNazcaExporterTests
         return component;
     }
 
+    // ── ComponentGroup export tests ──────────────────────────────────────────
+
+    [Fact]
+    public void Export_ComponentGroupWithTwoChildren_ExportsBothChildren()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var group = CreateTestGroupWithTwoChildren();
+        canvas.Components.Add(new ComponentViewModel(group));
+
+        var exporter = new SimpleNazcaExporter();
+
+        // Act
+        var result = exporter.Export(canvas);
+
+        // Assert: both children appear as comp_0 and comp_1 placements
+        result.ShouldContain("comp_0 =");
+        result.ShouldContain("comp_1 =");
+        result.ShouldContain("splitter_1x2");
+        result.ShouldContain("grating_coupler");
+    }
+
+    [Fact]
+    public void Export_ComponentGroupWithFrozenPath_ExportsWaveguideSegments()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var group = CreateTestGroupWithFrozenPath();
+        canvas.Components.Add(new ComponentViewModel(group));
+
+        var exporter = new SimpleNazcaExporter();
+
+        // Act
+        var result = exporter.Export(canvas);
+
+        // Assert: frozen waveguide is exported as nd.strt segment
+        result.ShouldContain("nd.strt(");
+        result.ShouldContain("# Waveguide Connections");
+    }
+
+    [Fact]
+    public void Export_ComponentGroupChildren_AreNotExportedAsGroupItself()
+    {
+        // Arrange: a group should not appear as its own component (identifier "group")
+        var canvas = new DesignCanvasViewModel();
+        var group = CreateTestGroupWithTwoChildren();
+        canvas.Components.Add(new ComponentViewModel(group));
+
+        var exporter = new SimpleNazcaExporter();
+
+        // Act
+        var result = exporter.Export(canvas);
+
+        // The group identifier itself should not be placed, only its children
+        result.ShouldNotContain($"# {group.Identifier}");
+    }
+
+    [Fact]
+    public void Export_NestedComponentGroup_FlattensAllDescendants()
+    {
+        // Arrange: outer group contains an inner group with one child
+        var inner = CreateTestGroupWithTwoChildren();
+        inner.GroupName = "InnerGroup";
+
+        var outer = new ComponentGroup("OuterGroup");
+        outer.PhysicalX = 0;
+        outer.PhysicalY = 0;
+        outer.AddChild(inner);
+
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(outer));
+
+        var exporter = new SimpleNazcaExporter();
+
+        // Act
+        var result = exporter.Export(canvas);
+
+        // Both children of the inner group should be exported
+        result.ShouldContain("comp_0 =");
+        result.ShouldContain("comp_1 =");
+    }
+
+    private static ComponentGroup CreateTestGroupWithTwoChildren()
+    {
+        var group = new ComponentGroup("TestGroup");
+        group.PhysicalX = 100;
+        group.PhysicalY = 50;
+
+        var child1 = CreateComponentWithName("splitter_1x2");
+        child1.PhysicalX = 100;
+        child1.PhysicalY = 50;
+
+        var child2 = CreateComponentWithName("grating_coupler");
+        child2.PhysicalX = 200;
+        child2.PhysicalY = 50;
+
+        group.AddChild(child1);
+        group.AddChild(child2);
+
+        return group;
+    }
+
+    private static ComponentGroup CreateTestGroupWithFrozenPath()
+    {
+        var group = new ComponentGroup("GroupWithPath");
+        group.PhysicalX = 0;
+        group.PhysicalY = 0;
+
+        var child = CreateComponentWithName("splitter_1x2");
+        child.PhysicalX = 50;
+        child.PhysicalY = 50;
+        group.AddChild(child);
+
+        // Create a frozen path (straight segment from (50,50) to (150,50))
+        var routedPath = new RoutedPath();
+        routedPath.Segments.Add(new StraightSegment(50, 50, 150, 50, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            Path = routedPath,
+            StartPin = new PhysicalPin { Name = "b0", ParentComponent = child },
+            EndPin = new PhysicalPin { Name = "a0", ParentComponent = child }
+        };
+
+        group.AddInternalPath(frozenPath);
+
+        return group;
+    }
+
     private static int CountOccurrences(string text, string pattern)
     {
         int count = 0;
