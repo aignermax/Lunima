@@ -1327,6 +1327,11 @@ public partial class ComponentViewModel : ObservableObject
     public Component Component { get; }
 
     /// <summary>
+    /// Display name for UI - uses HumanReadableName if available, otherwise falls back to Name.
+    /// </summary>
+    public string DisplayName => Component.HumanReadableName ?? Component.Name;
+
+    /// <summary>
     /// The name of the template used to create this component.
     /// Used for save/load to recreate the component from the correct template.
     /// </summary>

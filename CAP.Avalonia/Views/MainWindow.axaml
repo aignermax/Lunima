@@ -486,7 +486,7 @@
                               HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="10">
                     <TextBlock Text="Selected Component:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Name, FallbackValue='None'}"
+                    <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.DisplayName, FallbackValue='None'}"
                                Foreground="White" FontWeight="SemiBold"/>
 
                     <TextBlock Text="Position:" Foreground="Gray" Margin="0,15,0,5"/>
