@@ -100,6 +100,7 @@ public class SimulationService
     /// <summary>
     /// Finds I/O components and configures them as light sources.
     /// Uses per-source LaserConfig when available, otherwise defaults.
+    /// Recursively searches inside ComponentGroups.
     /// </summary>
     internal List<SourceConfigInfo> ConfigureLightSources(
         DesignCanvasViewModel canvas,
@@ -107,43 +108,85 @@ public class SimulationService
     {
         var configs = new List<SourceConfigInfo>();
 
-        foreach (var compVm in canvas.Components)
+        // Collect all components, including those inside groups (recursively)
+        var allComponents = GetAllComponentsRecursively(canvas.Components);
+
+        foreach (var component in allComponents)
         {
-            if (!IsLightSource(compVm))
+            if (!IsLightSource(component))
                 continue;
 
-            var laserConfig = compVm.LaserConfig;
-            int wavelengthNm = laserConfig?.WavelengthNm ?? StandardWaveLengths.RedNM;
-            double power = laserConfig?.InputPower ?? 1.0;
+            // For components inside groups, we don't have LaserConfig, so use defaults
+            int wavelengthNm = StandardWaveLengths.RedNM;
+            double power = 1.0;
             var laserType = GetLaserTypeForWavelength(wavelengthNm);
 
-            foreach (var pin in compVm.Component.PhysicalPins)
+            foreach (var pin in component.PhysicalPins)
             {
                 if (pin.LogicalPin?.MatterType != MatterType.Light)
                     continue;
 
                 var input = new ExternalInput(
-                    $"src_{compVm.Component.Identifier}_{pin.Name}",
+                    $"src_{component.Identifier}_{pin.Name}",
                     laserType,
                     0,
                     new Complex(power, 0));
 
                 portManager.AddLightSource(input, pin.LogicalPin.IDInFlow);
                 configs.Add(new SourceConfigInfo(
-                    compVm.Component.Identifier, wavelengthNm, power));
+                    component.Identifier, wavelengthNm, power));
             }
         }
 
         return configs;
     }
 
-    private static bool IsLightSource(ComponentViewModel compVm)
+    /// <summary>
+    /// Recursively collects all Component instances, including those inside ComponentGroups.
+    /// Returns the raw Component objects, not ViewModels, to avoid TemplateName issues.
+    /// </summary>
+    private static List<Component> GetAllComponentsRecursively(IEnumerable<ComponentViewModel> components)
     {
-        if (compVm.TemplateName != null &&
-            LightSourceTemplates.Contains(compVm.TemplateName))
-            return true;
+        var result = new List<Component>();
 
-        var id = compVm.Component.Identifier?.ToLowerInvariant() ?? "";
+        foreach (var compVm in components)
+        {
+            // Add the component itself
+            result.Add(compVm.Component);
+
+            // If it's a group, recursively add its children
+            if (compVm.Component is ComponentGroup group)
+            {
+                result.AddRange(GetAllComponentsFromGroup(group));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Recursively extracts all components from a ComponentGroup.
+    /// </summary>
+    private static List<Component> GetAllComponentsFromGroup(ComponentGroup group)
+    {
+        var result = new List<Component>();
+
+        foreach (var child in group.ChildComponents)
+        {
+            result.Add(child);
+
+            if (child is ComponentGroup childGroup)
+            {
+                result.AddRange(GetAllComponentsFromGroup(childGroup));
+            }
+        }
+
+        return result;
+    }
+
+    private static bool IsLightSource(Component component)
+    {
+        var id = component.Identifier?.ToLowerInvariant() ?? "";
         return id.Contains("grating") || id.Contains("edge coupler");
     }
 

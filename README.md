@@ -1,16 +1,16 @@
-# Connect-A-PIC Pro
+# Lunima
 
-<img width="1407" height="932" alt="image" src="https://github.com/user-attachments/assets/a784b7f3-7300-453f-a6a8-12638367ef9a" />
+AI-collaborative photonic design system
 
-<img width="1534" height="475" alt="image" src="https://github.com/user-attachments/assets/80dcf0e1-1cbf-4709-ab79-5292cf3e415e" />
+<img width="1407" height="932" alt="Lunima photonic design canvas" src="https://github.com/user-attachments/assets/a784b7f3-7300-453f-a6a8-12638367ef9a" />
 
-> **An architecture-level photonic design tool for fast concept validation and system exploration.**
+<img width="1534" height="475" alt="Lunima component library and simulation panel" src="https://github.com/user-attachments/assets/80dcf0e1-1cbf-4709-ab79-5292cf3e415e" />
 
-Professional fork of [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) - optimized for **thinking**, not tape-out. See [PHILOSOPHY.md](PHILOSOPHY.md) for positioning.
+> Lunima is an AI-collaborative photonic design system for fast, physically grounded circuit exploration and optimization.
 
-## Key Differences from Connect-A-PIC
+## Key Differences
 
-Connect-A-PIC Pro extends the educational version with professional features:
+Lunima provides a physically grounded and architecture-level approach to photonic circuit design:
 
 - **Physical Coordinate System**: Components positioned in micrometers (µm) instead of fixed grid tiles
 - **Explicit Waveguide Routing**: Automatic routing with S-bends, straight segments, and manhattan routing
@@ -21,7 +21,7 @@ Connect-A-PIC Pro extends the educational version with professional features:
 ## Architecture
 
 ```
-Connect-A-PIC-Pro/
+Lunima/
 ├── CAP_Contracts/        # Shared interfaces
 ├── Connect-A-Pic-Core/   # Core simulation engine
 │   ├── Components/       # Component models, pins, S-matrices, parametric
@@ -177,7 +177,7 @@ nohup ~/.local/bin/openviking-server > ~/.openviking/server.log 2>&1 &
 
 ## S-Matrix Simulation
 
-The core S-Matrix light propagation simulation remains compatible with the original Connect-A-PIC:
+The core S-Matrix light propagation simulation is physically grounded and compatible with standard photonic compact model formats:
 
 - Components define wavelength-specific S-matrices
 - Light propagates through the system based on matrix multiplication
@@ -238,7 +238,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Path to Professional Use: Real PDK / CML Integration
 
-The goal is to make Connect-A-PIC Pro usable with real foundry component data so simulation results are physically meaningful.
+The goal is to make Lunima usable with real foundry component data so simulation results are physically meaningful.
 
 **Background:** Professional photonic design uses Compact Model Libraries (CMLs) — parameterized S-matrices calibrated to real fabrication data. Foundries ship CMLs with their PDKs. Major vendors (Ansys Lumerical, Synopsys) use proprietary encrypted formats. However, open PDKs exist and are widely used in research/education.
 
@@ -285,6 +285,6 @@ This codebase uses [NetContextServer](https://github.com/willibrandon/NetContext
 
 See [docs/NETCONTEXTSERVER_SETUP.md](docs/NETCONTEXTSERVER_SETUP.md) for setup instructions.
 
-## Original Project
+## Origins
 
-Based on [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) by Akhetonics.
+Lunima originated from [Connect-A-PIC](https://github.com/Akhetonics/Connect-A-PIC) and has evolved into a standalone photonic design system.

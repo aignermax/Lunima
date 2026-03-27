@@ -519,6 +519,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         };
 
         // Map old component Ids (Guid) to new cloned components
+        // IMPORTANT: This map must include ALL components recursively, not just direct children,
+        // because InternalPaths may reference pins from nested group children
         var componentMap = new Dictionary<Guid, Component>();
 
         // Deep copy child components
@@ -536,10 +538,16 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 clonedChild = CloneComponent(child);
             }
 
-            // Use child.Id (Guid) as the key for the component map
-            // This prevents ID collisions when copying groups and then saving/loading
-            // The cloned child already has a new Id from Clone()
+            // Add the direct child to the map
             componentMap[child.Id] = clonedChild;
+
+            // If the child is a group, also add all its descendants to the map
+            // This is needed because InternalPaths may reference pins from nested group children
+            if (child is ComponentGroup childGroupForMap && clonedChild is ComponentGroup clonedChildGroup)
+            {
+                AddDescendantsToMap(childGroupForMap, clonedChildGroup, componentMap);
+            }
+
             newGroup.AddChild(clonedChild);
         }
 
@@ -586,6 +594,32 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Recursively adds all descendants of a group to the component map.
+    /// This is needed because InternalPaths may reference pins from nested group children.
+    /// </summary>
+    /// <param name="originalGroup">The original group whose descendants to map.</param>
+    /// <param name="clonedGroup">The cloned group whose descendants to add to the map.</param>
+    /// <param name="componentMap">The map to populate with original ID -> cloned component.</param>
+    private void AddDescendantsToMap(ComponentGroup originalGroup, ComponentGroup clonedGroup, Dictionary<Guid, Component> componentMap)
+    {
+        // Map each child component by pairing original and cloned children by index
+        for (int i = 0; i < originalGroup.ChildComponents.Count; i++)
+        {
+            var originalChild = originalGroup.ChildComponents[i];
+            var clonedChild = clonedGroup.ChildComponents[i];
+
+            // Add this descendant to the map
+            componentMap[originalChild.Id] = clonedChild;
+
+            // If the child is a group, recursively add its descendants
+            if (originalChild is ComponentGroup originalChildGroup && clonedChild is ComponentGroup clonedChildGroup)
+            {
+                AddDescendantsToMap(originalChildGroup, clonedChildGroup, componentMap);
+            }
+        }
+    }
+
+    /// <summary>
     /// Creates a shallow clone of a Component with a new unique identifier.
     /// </summary>
     private Component CloneComponent(Component source)
@@ -622,6 +656,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             NazcaOriginOffsetX = source.NazcaOriginOffsetX,
             NazcaOriginOffsetY = source.NazcaOriginOffsetY,
             NazcaModuleName = source.NazcaModuleName,
+            HumanReadableName = source.HumanReadableName, // Preserve human-readable name
             IsLocked = false // Don't copy lock state
         };
 

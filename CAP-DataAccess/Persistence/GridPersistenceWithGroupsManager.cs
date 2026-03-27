@@ -69,6 +69,7 @@ public class GridPersistenceWithGroupsManager
                         saveData.Components.Add(new ComponentData
                         {
                             Identifier = component.Identifier,
+                            HumanReadableName = component.HumanReadableName,
                             Rotation = (int)component.Rotation90CounterClock,
                             Sliders = component.GetAllSliders(),
                             X = x,
@@ -149,6 +150,9 @@ public class GridPersistenceWithGroupsManager
                 // CRITICAL: Restore the saved Identifier to maintain uniqueness and readable naming
                 component.Identifier = data.Identifier;
 
+                // CRITICAL: Restore HumanReadableName if saved (for backward compatibility, fall back to Identifier)
+                component.HumanReadableName = data.HumanReadableName ?? data.Identifier;
+
                 component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
                 LoadSliders(data, component);
                 _gridManager.ComponentMover.PlaceComponent(data.X, data.Y, component);
@@ -167,6 +171,9 @@ public class GridPersistenceWithGroupsManager
 
                 // CRITICAL: Restore the saved Identifier to maintain uniqueness and readable naming
                 component.Identifier = data.Identifier;
+
+                // CRITICAL: Restore HumanReadableName if saved (for backward compatibility, fall back to Identifier)
+                component.HumanReadableName = data.HumanReadableName ?? data.Identifier;
 
                 component.Rotation90CounterClock = (DiscreteRotation)data.Rotation;
                 LoadSliders(data, component);
@@ -291,6 +298,7 @@ public class GridPersistenceWithGroupsManager
                 components.Add(new ComponentData
                 {
                     Identifier = child.Identifier,
+                    HumanReadableName = child.HumanReadableName,
                     Rotation = (int)child.Rotation90CounterClock,
                     Sliders = child.GetAllSliders(),
                     X = child.GridXMainTile,
@@ -374,6 +382,7 @@ public class GridPersistenceWithGroupsManager
         public int Y { get; set; }
         public int Rotation { get; set; }
         public string Identifier { get; set; } = "";
+        public string? HumanReadableName { get; set; }
         public List<Slider>? Sliders { get; set; }
     }
 }

@@ -119,8 +119,11 @@ public class ComponentGroupSMatrixBuilder
                 // For nested groups, use their external pins
                 foreach (var groupPin in childGroup.ExternalPins)
                 {
-                    allChildPinIds.Add(groupPin.InternalPin.LogicalPin.IDInFlow);
-                    allChildPinIds.Add(groupPin.InternalPin.LogicalPin.IDOutFlow);
+                    if (groupPin.InternalPin?.LogicalPin != null)
+                    {
+                        allChildPinIds.Add(groupPin.InternalPin.LogicalPin.IDInFlow);
+                        allChildPinIds.Add(groupPin.InternalPin.LogicalPin.IDOutFlow);
+                    }
                 }
             }
             else
@@ -128,8 +131,11 @@ public class ComponentGroupSMatrixBuilder
                 // For regular components, use physical pins
                 foreach (var pin in child.PhysicalPins)
                 {
-                    allChildPinIds.Add(pin.LogicalPin.IDInFlow);
-                    allChildPinIds.Add(pin.LogicalPin.IDOutFlow);
+                    if (pin.LogicalPin != null)
+                    {
+                        allChildPinIds.Add(pin.LogicalPin.IDInFlow);
+                        allChildPinIds.Add(pin.LogicalPin.IDOutFlow);
+                    }
                 }
             }
         }
@@ -171,8 +177,11 @@ public class ComponentGroupSMatrixBuilder
         var externalPinIds = new List<Guid>();
         foreach (var extPin in group.ExternalPins)
         {
-            externalPinIds.Add(extPin.InternalPin.LogicalPin.IDInFlow);
-            externalPinIds.Add(extPin.InternalPin.LogicalPin.IDOutFlow);
+            if (extPin.InternalPin?.LogicalPin != null)
+            {
+                externalPinIds.Add(extPin.InternalPin.LogicalPin.IDInFlow);
+                externalPinIds.Add(extPin.InternalPin.LogicalPin.IDOutFlow);
+            }
         }
 
         // Extract the sub-matrix for external pins only
@@ -236,6 +245,10 @@ public class ComponentGroupSMatrixBuilder
 
         foreach (var frozenPath in group.InternalPaths)
         {
+            // Skip paths where pins don't have LogicalPins (shouldn't happen in valid groups, but be defensive)
+            if (frozenPath.StartPin?.LogicalPin == null || frozenPath.EndPin?.LogicalPin == null)
+                continue;
+
             var startOutFlow = frozenPath.StartPin.LogicalPin.IDOutFlow;
             var startInFlow = frozenPath.StartPin.LogicalPin.IDInFlow;
             var endOutFlow = frozenPath.EndPin.LogicalPin.IDOutFlow;

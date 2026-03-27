@@ -46,8 +46,8 @@ public partial class ProjectPersistenceViewModel : ObservableObject
 
         var filePath = await _fileDialogService.ShowSaveFileDialogAsync(
             "Save Project",
-            "cappro",
-            "Connect-A-PIC Project|*.cappro");
+            "lun",
+            "Lunima Project|*.lun");
 
         if (string.IsNullOrEmpty(filePath))
         {
@@ -87,7 +87,7 @@ public partial class ProjectPersistenceViewModel : ObservableObject
 
         var filePath = await _fileDialogService.ShowOpenFileDialogAsync(
             "Open Project",
-            "Connect-A-PIC Project|*.cappro|All Files|*.*");
+            "Lunima Project|*.lun|All Files|*.*");
 
         if (string.IsNullOrEmpty(filePath))
         {
