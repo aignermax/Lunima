@@ -145,9 +145,11 @@ public class ComponentGroupSimulationTests
     }
 
     [Fact]
-    public void ComponentGroup_WithoutComputedSMatrix_ThrowsException()
+    public void ComponentGroup_WithoutExplicitCompute_AutoComputesSMatrix()
     {
-        // Arrange - Create a group WITHOUT computing S-Matrix
+        // Regression test for issue #305: SystemMatrixBuilder should auto-compute
+        // S-Matrix for ComponentGroups that haven't been pre-computed (e.g. when
+        // LightCalculationService or ParameterSweeper bypass SimulationService).
         var group = new ComponentGroup("NoMatrix");
         var comp = TestComponentFactory.CreateSimpleTwoPortComponent();
         group.AddChild(comp);
@@ -158,7 +160,7 @@ public class ComponentGroupSimulationTests
             InternalPin = comp.PhysicalPins[0]
         });
 
-        // Don't call group.ComputeSMatrix()
+        // Intentionally skip group.ComputeSMatrix() / EnsureSMatrixComputed()
 
         var tileManager = new ComponentListTileManager();
         tileManager.AddComponent(group);
@@ -169,13 +171,53 @@ public class ComponentGroupSimulationTests
         var gridManager = GridManager.CreateForSimulation(
             tileManager, connectionManager, portManager);
 
-        // Act & Assert - Building system matrix should throw
         var builder = new SystemMatrixBuilder(gridManager);
 
-        Should.Throw<InvalidDataException>(() =>
+        // Should NOT throw — SystemMatrixBuilder auto-computes the S-Matrix
+        var systemMatrix = builder.GetSystemSMatrix(StandardWaveLengths.RedNM);
+        systemMatrix.ShouldNotBeNull();
+
+        // Group's S-Matrix should now be populated
+        group.WaveLengthToSMatrixMap.Count.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void ComponentGroup_SMatrixAutoComputed_WorksFor1550nm()
+    {
+        // Regression test for issue #305: ComponentGroup S-Matrix must be available
+        // for wavelength 1550nm (StandardWaveLengths.RedNM).
+        var group = new ComponentGroup("Group1550");
+        var comp = TestComponentFactory.CreateSimpleTwoPortComponent();
+        group.AddChild(comp);
+
+        group.AddExternalPin(new GroupPin
         {
-            builder.GetSystemSMatrix(StandardWaveLengths.RedNM);
+            Name = "In",
+            InternalPin = comp.PhysicalPins[0]
         });
+
+        group.AddExternalPin(new GroupPin
+        {
+            Name = "Out",
+            InternalPin = comp.PhysicalPins[1]
+        });
+
+        // No pre-computation — rely on auto-compute in SystemMatrixBuilder
+        var tileManager = new ComponentListTileManager();
+        tileManager.AddComponent(group);
+
+        var connectionManager = new WaveguideConnectionManager(new WaveguideRouter());
+        var portManager = new PhysicalExternalPortManager();
+
+        var gridManager = GridManager.CreateForSimulation(
+            tileManager, connectionManager, portManager);
+
+        var builder = new SystemMatrixBuilder(gridManager);
+
+        // Must not throw InvalidDataException for 1550nm
+        var systemMatrix = builder.GetSystemSMatrix(1550);
+        systemMatrix.ShouldNotBeNull();
+        group.WaveLengthToSMatrixMap.ShouldContainKey(1550);
     }
 
     [Fact]
