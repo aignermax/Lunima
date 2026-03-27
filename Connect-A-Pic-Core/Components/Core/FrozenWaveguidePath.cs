@@ -1,3 +1,4 @@
+using System.Numerics;
 using CAP_Core.Routing;
 
 namespace CAP_Core.Components.Core;
@@ -28,6 +29,32 @@ public class FrozenWaveguidePath : ICloneable
     /// Unique identifier for this frozen path.
     /// </summary>
     public Guid PathId { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Propagation loss in dB per centimeter.
+    /// Default matches the standard waveguide loss used in WaveguideConnection.
+    /// </summary>
+    public double PropagationLossDbPerCm { get; set; } = 2.0;
+
+    /// <summary>
+    /// Amplitude transmission coefficient accounting for propagation loss.
+    /// Returns Complex.One when no path is available (conservative, no loss assumed).
+    /// Formula: amplitude = 10^(-loss_dB / 20), where loss_dB = PropagationLossDbPerCm * length_cm.
+    /// </summary>
+    public Complex TransmissionCoefficient
+    {
+        get
+        {
+            if (Path?.Segments == null || Path.Segments.Count == 0)
+                return Complex.One;
+
+            double lengthMicrometers = Path.TotalLengthMicrometers;
+            double lengthCm = lengthMicrometers / 10_000.0;
+            double lossDb = PropagationLossDbPerCm * lengthCm;
+            double amplitude = Math.Pow(10.0, -lossDb / 20.0);
+            return new Complex(amplitude, 0);
+        }
+    }
 
     /// <summary>
     /// Translates all segments in the path by the specified delta.

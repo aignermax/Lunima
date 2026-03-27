@@ -1,6 +1,7 @@
 using System.Numerics;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace CAP_Core.LightCalculation;
 
@@ -159,7 +160,12 @@ public class ComponentGroupSMatrixBuilder
             return null;
 
         // Combine all matrices into a system matrix
-        var systemMatrix = SMatrix.CreateSystemSMatrix(childMatrices);
+        var mergedMatrix = SMatrix.CreateSystemSMatrix(childMatrices);
+
+        // Compute transitive closure so light propagates through multi-hop chains.
+        // CreateSystemSMatrix only merges single-hop transfers; the Neumann series
+        // (M + M^2 + ... + M^N) accumulates multi-step paths.
+        var systemMatrix = ComputeTransitiveMatrix(mergedMatrix, allChildPinIds.Count);
 
         // Create the external pin mapping
         var externalPinIds = new List<Guid>();
@@ -230,16 +236,17 @@ public class ComponentGroupSMatrixBuilder
 
         foreach (var frozenPath in group.InternalPaths)
         {
-            // Frozen paths connect pins bidirectionally with unity transfer (no loss)
-            var startInFlow = frozenPath.StartPin.LogicalPin.IDInFlow;
             var startOutFlow = frozenPath.StartPin.LogicalPin.IDOutFlow;
-            var endInFlow = frozenPath.EndPin.LogicalPin.IDInFlow;
+            var startInFlow = frozenPath.StartPin.LogicalPin.IDInFlow;
             var endOutFlow = frozenPath.EndPin.LogicalPin.IDOutFlow;
+            var endInFlow = frozenPath.EndPin.LogicalPin.IDInFlow;
 
-            // Forward: light flows from StartPin OutFlow to EndPin InFlow
-            connections[(startOutFlow, endInFlow)] = Complex.One;
-            // Reverse: light flows from EndPin OutFlow to StartPin InFlow (bidirectional)
-            connections[(endOutFlow, startInFlow)] = Complex.One;
+            var transmission = frozenPath.TransmissionCoefficient;
+
+            // Forward: light exits StartPin (OutFlow) and enters EndPin (InFlow)
+            connections[(startOutFlow, endInFlow)] = transmission;
+            // Reverse: light exits EndPin (OutFlow) and enters StartPin (InFlow)
+            connections[(endOutFlow, startInFlow)] = transmission;
         }
 
         if (connections.Count == 0)
@@ -252,30 +259,63 @@ public class ComponentGroupSMatrixBuilder
     }
 
     /// <summary>
-    /// Extracts an effective sub-matrix for the specified external pins by running
-    /// the internal system matrix through enough propagation steps to capture all
-    /// multi-hop paths (e.g. comp1 → internal connection → comp2).
+    /// Computes the transitive S-Matrix via the Neumann series (M + M² + … + Mⁿ).
+    /// This is required because CreateSystemSMatrix only stores single-hop transfers.
+    /// Light traversing a chain of k components needs k matrix steps; summing the series
+    /// gives the complete multi-hop transfer in a single combined matrix.
+    /// Iteration stops early when the matrix power falls below numerical noise.
+    /// </summary>
+    /// <param name="singleHopMatrix">Merged single-hop S-Matrix for the group.</param>
+    /// <param name="maxSteps">Maximum number of steps (upper bound = total pin count).</param>
+    private SMatrix ComputeTransitiveMatrix(SMatrix singleHopMatrix, int maxSteps)
+    {
+        var pinIds = singleHopMatrix.PinReference.Keys.ToList();
+        int n = pinIds.Count;
+
+        if (n == 0 || maxSteps <= 0)
+            return singleHopMatrix;
+
+        var M = singleHopMatrix.SMat;
+        var transitiveS = M.Clone();
+        var Mk = M.Clone();
+
+        for (int k = 1; k < maxSteps; k++)
+        {
+            Mk = Mk.Multiply(M);
+            if (Mk.InfinityNorm() < 1e-15)
+                break;
+            transitiveS = transitiveS.Add(Mk);
+        }
+
+        // Rebuild an SMatrix from the accumulated values
+        var reversePinRef = singleHopMatrix.PinReference.ToDictionary(kv => kv.Value, kv => kv.Key);
+        var transfers = new Dictionary<(Guid, Guid), Complex>();
+
+        for (int iOut = 0; iOut < n; iOut++)
+        {
+            for (int iIn = 0; iIn < n; iIn++)
+            {
+                var val = transitiveS[iOut, iIn];
+                if (val != Complex.Zero)
+                    transfers[(reversePinRef[iIn], reversePinRef[iOut])] = val;
+            }
+        }
+
+        var result = new SMatrix(pinIds, new());
+        result.SetValues(transfers);
+        return result;
+    }
+
+    /// <summary>
+    /// Extracts a sub-matrix containing only the specified external pins.
+    /// This reduces the full system matrix to just the group's external interface.
     /// </summary>
     private SMatrix ExtractExternalPinMatrix(SMatrix systemMatrix, List<Guid> externalPinIds)
     {
-        // Compute the effective transfer: A + A^2 + ... + A^n
-        // This captures all multi-hop paths through the group's internal components.
-        // Single-hop read (A only) misses paths that go through intermediate pins.
-        int maxSteps = systemMatrix.PinReference.Count * 2;
-        var A = systemMatrix.SMat;
-        var runningPower = A;
-        var effectiveA = A.Clone();
-
-        for (int i = 1; i < maxSteps; i++)
-        {
-            runningPower = A * runningPower;
-            effectiveA += runningPower;
-        }
-
         var externalMatrix = new SMatrix(externalPinIds, new());
         var transfers = new Dictionary<(Guid, Guid), Complex>();
 
-        // Extract the effective transfers for external pins only
+        // Extract only the rows/columns for external pins
         foreach (var pinIn in externalPinIds)
         {
             foreach (var pinOut in externalPinIds)
@@ -286,7 +326,7 @@ public class ComponentGroupSMatrixBuilder
                 if (systemMatrix.PinReference.TryGetValue(pinIn, out int idxIn) &&
                     systemMatrix.PinReference.TryGetValue(pinOut, out int idxOut))
                 {
-                    var value = effectiveA[idxOut, idxIn];
+                    var value = systemMatrix.SMat[idxOut, idxIn];
                     if (value != Complex.Zero)
                     {
                         transfers[(pinIn, pinOut)] = value;
