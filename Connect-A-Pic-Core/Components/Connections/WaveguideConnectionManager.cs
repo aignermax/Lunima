@@ -21,8 +21,9 @@ public class WaveguideConnectionManager
 
     /// <summary>
     /// Default propagation loss applied to new connections (dB/cm).
+    /// Default: 0.5 dB/cm (high-quality strip waveguide)
     /// </summary>
-    public double DefaultPropagationLossDbPerCm { get; set; } = 2.0;
+    public double DefaultPropagationLossDbPerCm { get; set; } = 0.5;
 
     /// <summary>
     /// Default bend loss applied to new connections (dB per 90° bend).

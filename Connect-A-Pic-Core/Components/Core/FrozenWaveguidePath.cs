@@ -33,8 +33,9 @@ public class FrozenWaveguidePath : ICloneable
     /// <summary>
     /// Propagation loss in dB per centimeter.
     /// Default matches the standard waveguide loss used in WaveguideConnection.
+    /// Default: 0.5 dB/cm (high-quality strip waveguide)
     /// </summary>
-    public double PropagationLossDbPerCm { get; set; } = 2.0;
+    public double PropagationLossDbPerCm { get; set; } = 0.5;
 
     /// <summary>
     /// Amplitude transmission coefficient accounting for propagation loss.

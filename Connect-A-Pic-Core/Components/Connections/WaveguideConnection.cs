@@ -39,9 +39,14 @@ namespace CAP_Core.Components.Connections
         public double LengthToleranceMicrometers { get; set; } = 1.0;
 
         /// <summary>
-        /// Propagation loss in dB per centimeter. Typical values: 1-3 dB/cm for silicon photonics.
+        /// Propagation loss in dB per centimeter.
+        /// Typical values for silicon photonics:
+        /// - High-quality strip waveguides: 0.3-0.5 dB/cm
+        /// - Standard strip waveguides: 1-2 dB/cm
+        /// - Rib waveguides: 0.5-1 dB/cm
+        /// Default: 0.5 dB/cm (high-quality strip waveguide)
         /// </summary>
-        public double PropagationLossDbPerCm { get; set; } = 2.0;
+        public double PropagationLossDbPerCm { get; set; } = 0.5;
 
         /// <summary>
         /// Loss per 90-degree bend in dB. Typical values: 0.01-0.1 dB per bend.
