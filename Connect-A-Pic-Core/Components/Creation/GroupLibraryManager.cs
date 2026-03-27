@@ -196,6 +196,9 @@ public class GroupLibraryManager
         // Rename child components with clean sequential names
         RenameComponentsWithSequentialNames(deepCopy);
 
+        // Ensure S-Matrix is computed for all supported wavelengths
+        deepCopy.EnsureSMatrixComputed();
+
         return deepCopy;
     }
 
