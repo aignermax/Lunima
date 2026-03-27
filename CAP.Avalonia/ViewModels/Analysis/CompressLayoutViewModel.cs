@@ -48,6 +48,7 @@ public partial class CompressLayoutViewModel : ObservableObject
         _canvas = canvas;
         StatusText = "";
         ResultText = "";
+        CompressLayoutCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>

@@ -486,86 +486,86 @@
                               HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="10">
                     <TextBlock Text="Selected Component:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <TextBlock Text="{Binding SelectedComponent.Name, FallbackValue='None'}"
+                    <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Name, FallbackValue='None'}"
                                Foreground="White" FontWeight="SemiBold"/>
 
                     <TextBlock Text="Position:" Foreground="Gray" Margin="0,15,0,5"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="X: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"
+                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"
                                    Foreground="White"/>
                         <TextBlock Text=" um" Foreground="Gray"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Y: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"
+                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"
                                    Foreground="White"/>
                         <TextBlock Text=" um" Foreground="Gray"/>
                     </StackPanel>
 
                     <TextBlock Text="Dimensions:" Foreground="Gray" Margin="0,15,0,5"/>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"
+                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"
                                    Foreground="White"/>
                         <TextBlock Text=" x " Foreground="Gray"/>
-                        <TextBlock Text="{Binding SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"
+                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"
                                    Foreground="White"/>
                         <TextBlock Text=" um" Foreground="Gray"/>
                     </StackPanel>
 
                     <!-- Laser Configuration (visible only for light sources) -->
-                    <StackPanel IsVisible="{Binding SelectedComponent.IsLightSource, FallbackValue=False}">
+                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.IsLightSource, FallbackValue=False}">
                         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                         <TextBlock Text="Laser Configuration:" Foreground="Gold" Margin="0,0,0,5" FontWeight="SemiBold"/>
                         <TextBlock Text="Wavelength:" Foreground="Gray" Margin="0,5,0,3"/>
                         <ComboBox ItemsSource="{Binding WavelengthOptions}"
-                                  SelectedValue="{Binding SelectedComponent.LaserConfig.WavelengthNm}"
+                                  SelectedValue="{Binding CanvasInteraction.SelectedComponent.LaserConfig.WavelengthNm}"
                                   SelectedValueBinding="{Binding WavelengthNm}"
                                   DisplayMemberBinding="{Binding Label}"
                                   Width="180" Margin="0,0,0,10"/>
                         <TextBlock Text="Input Power:" Foreground="Gray" Margin="0,5,0,3"/>
                         <Slider Minimum="0" Maximum="1"
-                                Value="{Binding SelectedComponent.LaserConfig.InputPower}"
+                                Value="{Binding CanvasInteraction.SelectedComponent.LaserConfig.InputPower}"
                                 TickFrequency="0.1" IsSnapToTickEnabled="True"
                                 Width="180" Margin="0,0,0,3"/>
                         <TextBlock Foreground="White" Margin="0,0,0,5">
                             <Run Text="Power: "/>
-                            <Run Text="{Binding SelectedComponent.LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
+                            <Run Text="{Binding CanvasInteraction.SelectedComponent.LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
                         </TextBlock>
                     </StackPanel>
 
                     <!-- Component Parameter Slider (e.g., Phase Shifter) -->
-                    <StackPanel IsVisible="{Binding SelectedComponent.HasSliders, FallbackValue=False}">
+                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
                         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                         <TextBlock Text="Component Parameter:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SelectedComponent.SliderLabel}" Foreground="Gray" Margin="0,5,0,3"/>
-                        <Slider Minimum="{Binding SelectedComponent.SliderMin}"
-                                Maximum="{Binding SelectedComponent.SliderMax}"
-                                Value="{Binding SelectedComponent.SliderValue}"
+                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.SliderLabel}" Foreground="Gray" Margin="0,5,0,3"/>
+                        <Slider Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
+                                Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
+                                Value="{Binding CanvasInteraction.SelectedComponent.SliderValue}"
                                 Width="180" Margin="0,0,0,3"/>
                         <TextBlock Foreground="White" Margin="0,0,0,5">
-                            <Run Text="{Binding SelectedComponent.SliderLabel}"/>
+                            <Run Text="{Binding CanvasInteraction.SelectedComponent.SliderLabel}"/>
                             <Run Text=" "/>
-                            <Run Text="{Binding SelectedComponent.SliderValue, StringFormat={}{0:F1}}"/>
+                            <Run Text="{Binding CanvasInteraction.SelectedComponent.SliderValue, StringFormat={}{0:F1}}"/>
                         </TextBlock>
                     </StackPanel>
 
                     <!-- Parameter Sweep (visible when component has slider) -->
-                    <StackPanel IsVisible="{Binding SelectedComponent.HasSliders, FallbackValue=False}">
+                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
                         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                         <TextBlock Text="Parameter Sweep:" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
                             <TextBlock Text="Start:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
                             <NumericUpDown Value="{Binding Sweep.StartValue}"
-                                           Minimum="{Binding SelectedComponent.SliderMin}"
-                                           Maximum="{Binding SelectedComponent.SliderMax}"
+                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
+                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
                                            Increment="10" Width="130" FormatString="F0"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="End:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
                             <NumericUpDown Value="{Binding Sweep.EndValue}"
-                                           Minimum="{Binding SelectedComponent.SliderMin}"
-                                           Maximum="{Binding SelectedComponent.SliderMax}"
+                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
+                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
                                            Increment="10" Width="130" FormatString="F0"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
