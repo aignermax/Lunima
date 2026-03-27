@@ -289,6 +289,12 @@ public static class ComponentTemplates
         component.NazcaOriginOffsetY = template.NazcaOriginOffsetY;
         component.NazcaModuleName = template.NazcaModuleName;
 
+        // Set human-readable display name from the template's display name.
+        // This ensures components placed from the library show their PDK display name
+        // (e.g., "Grating Coupler TE 1550") rather than their NazcaFunctionName (e.g., "ebeam_gc_te1550")
+        // when grouped into prefabs and later instantiated.
+        component.HumanReadableName = template.Name;
+
         return component;
     }
 
