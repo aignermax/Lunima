@@ -215,12 +215,36 @@ public class GroupLibraryManager
             }
             else
             {
-                var baseName = string.IsNullOrWhiteSpace(child.NazcaFunctionName)
-                    ? "Component"
-                    : child.NazcaFunctionName;
+                // Use existing HumanReadableName as base (preserves PDK names like "Grating Coupler TE 1550")
+                // Fall back to NazcaFunctionName only if HumanReadableName is not set
+                var baseName = !string.IsNullOrWhiteSpace(child.HumanReadableName)
+                    ? StripNumberingSuffix(child.HumanReadableName)
+                    : (!string.IsNullOrWhiteSpace(child.NazcaFunctionName)
+                        ? child.NazcaFunctionName
+                        : "Component");
+
                 child.HumanReadableName = $"{baseName}_{componentIndex++}";
             }
         }
+    }
+
+    /// <summary>
+    /// Strips the numbering suffix from a component name.
+    /// E.g., "Grating Coupler TE 1550_1" -> "Grating Coupler TE 1550"
+    /// </summary>
+    private static string StripNumberingSuffix(string name)
+    {
+        var lastUnderscore = name.LastIndexOf('_');
+        if (lastUnderscore > 0)
+        {
+            var suffix = name.Substring(lastUnderscore + 1);
+            // Only strip if suffix is a number
+            if (int.TryParse(suffix, out _))
+            {
+                return name.Substring(0, lastUnderscore);
+            }
+        }
+        return name;
     }
 
     /// <summary>

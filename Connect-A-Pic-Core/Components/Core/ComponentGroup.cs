@@ -656,6 +656,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             NazcaOriginOffsetX = source.NazcaOriginOffsetX,
             NazcaOriginOffsetY = source.NazcaOriginOffsetY,
             NazcaModuleName = source.NazcaModuleName,
+            HumanReadableName = source.HumanReadableName, // Preserve human-readable name
             IsLocked = false // Don't copy lock state
         };
 
