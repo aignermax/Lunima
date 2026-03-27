@@ -1328,8 +1328,17 @@ public partial class ComponentViewModel : ObservableObject
 
     /// <summary>
     /// Display name for UI - uses HumanReadableName if available, otherwise falls back to Name.
+    /// For ComponentGroups, uses GroupName instead.
     /// </summary>
-    public string DisplayName => Component.HumanReadableName ?? Component.Name;
+    public string DisplayName
+    {
+        get
+        {
+            if (Component is ComponentGroup group)
+                return group.GroupName;
+            return Component.HumanReadableName ?? Component.Name;
+        }
+    }
 
     /// <summary>
     /// The name of the template used to create this component.
