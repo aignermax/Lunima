@@ -30,12 +30,12 @@ public class UserPreferencesService
     }
 
     /// <summary>
-    /// Gets the app data directory for Connect-A-PIC Pro.
+    /// Gets the app data directory for Lunima.
     /// </summary>
     private static string GetAppDataDirectory()
     {
         var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(baseDir, "Connect-A-PIC-Pro");
+        return Path.Combine(baseDir, "Lunima");
     }
 
     /// <summary>

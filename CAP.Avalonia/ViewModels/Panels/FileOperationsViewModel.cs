@@ -96,7 +96,7 @@ public partial class FileOperationsViewModel : ObservableObject
         var filePath = _currentFilePath ?? await FileDialogService.ShowSaveFileDialogAsync(
             "Save Design",
             "cappro",
-            "Connect-A-PIC Pro Files|*.cappro|All Files|*.*");
+            "Lunima Files|*.cappro|All Files|*.*");
 
         if (filePath != null)
         {
@@ -116,7 +116,7 @@ public partial class FileOperationsViewModel : ObservableObject
         var filePath = await FileDialogService.ShowSaveFileDialogAsync(
             "Save Design As",
             "cappro",
-            "Connect-A-PIC Pro Files|*.cappro|All Files|*.*");
+            "Lunima Files|*.cappro|All Files|*.*");
 
         if (filePath != null)
         {
@@ -427,7 +427,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
         var filePath = await FileDialogService.ShowOpenFileDialogAsync(
             "Load Design",
-            "Connect-A-PIC Pro Files|*.cappro|All Files|*.*");
+            "Lunima Files|*.cappro|All Files|*.*");
 
         if (filePath != null)
         {

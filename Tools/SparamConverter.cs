@@ -1,9 +1,9 @@
 #!/usr/bin/env dotnet-script
-// SiEPIC .sparam to Connect-A-PIC PDK JSON converter
+// SiEPIC .sparam to Lunima PDK JSON converter
 // Usage: dotnet script SparamConverter.cs
 //
 // Reads .sparam files from the sparam-data/ directory and produces
-// a siepic-ebeam-pdk.json file for use with Connect-A-PIC Pro.
+// a siepic-ebeam-pdk.json file for use with Lunima.
 //
 // The .sparam format (Lumerical Interconnect) consists of blocks:
 //   Header: ('port X','MODE',mode_id,'port Y',mode_id,'transmission')
