@@ -48,6 +48,8 @@ public class PowerFlowVisualizer
     /// <summary>
     /// Updates the power flow data from simulation results.
     /// Includes both regular connections and frozen paths inside groups.
+    /// When frozen path pins are absent from fieldResults (because they are internal to the
+    /// group's S-Matrix), their amplitudes are estimated from the parent group's external pins.
     /// </summary>
     /// <param name="connections">Current waveguide connections.</param>
     /// <param name="components">Current components (to extract frozen paths from groups).</param>
@@ -58,7 +60,100 @@ public class PowerFlowVisualizer
         IReadOnlyDictionary<Guid, Complex> fieldResults)
     {
         var frozenPaths = CollectAllFrozenPaths(components);
-        CurrentResult = _analyzer.Analyze(connections, frozenPaths, fieldResults);
+        var enhancedFields = BuildEnhancedFieldResults(components, fieldResults);
+        CurrentResult = _analyzer.Analyze(connections, frozenPaths, enhancedFields);
+    }
+
+    /// <summary>
+    /// Builds an enhanced field results dictionary by adding fallback amplitude estimates
+    /// for internal frozen path pins that are absent from the simulation results.
+    /// These pins are hidden inside the group's S-Matrix and do not appear in fieldResults.
+    /// The fallback uses the maximum amplitude found at the parent group's external pins.
+    /// </summary>
+    private static IReadOnlyDictionary<Guid, Complex> BuildEnhancedFieldResults(
+        IReadOnlyList<Component> components,
+        IReadOnlyDictionary<Guid, Complex> fieldResults)
+    {
+        var enhanced = new Dictionary<Guid, Complex>(fieldResults);
+
+        foreach (var component in components)
+        {
+            if (component is ComponentGroup group)
+                AddGroupPinFallbacksRecursive(group, fieldResults, enhanced);
+        }
+
+        return enhanced;
+    }
+
+    /// <summary>
+    /// Recursively adds fallback amplitude entries for each group's internal frozen path pins.
+    /// Uses the maximum amplitude from the group's external pins as the fallback value.
+    /// Only adds entries for GUIDs that are not already present in the enhanced dictionary.
+    /// </summary>
+    private static void AddGroupPinFallbacksRecursive(
+        ComponentGroup group,
+        IReadOnlyDictionary<Guid, Complex> originalFields,
+        Dictionary<Guid, Complex> enhanced)
+    {
+        var maxAmplitude = FindMaxExternalPinAmplitude(group, originalFields);
+
+        if (maxAmplitude != Complex.Zero)
+        {
+            foreach (var frozenPath in group.InternalPaths)
+            {
+                AddFallbackAmplitudeIfMissing(frozenPath.StartPin, maxAmplitude, enhanced);
+                AddFallbackAmplitudeIfMissing(frozenPath.EndPin, maxAmplitude, enhanced);
+            }
+        }
+
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+                AddGroupPinFallbacksRecursive(nestedGroup, originalFields, enhanced);
+        }
+    }
+
+    /// <summary>
+    /// Finds the maximum signal amplitude among a group's external pins.
+    /// Uses ExternalPins.InternalPin.LogicalPin to look up GUIDs in fieldResults,
+    /// since these are the same GUIDs present in the simulation output.
+    /// </summary>
+    private static Complex FindMaxExternalPinAmplitude(
+        ComponentGroup group,
+        IReadOnlyDictionary<Guid, Complex> fieldResults)
+    {
+        var maxAmplitude = Complex.Zero;
+
+        foreach (var externalPin in group.ExternalPins)
+        {
+            var logicalPin = externalPin.InternalPin?.LogicalPin;
+            if (logicalPin == null) continue;
+
+            if (fieldResults.TryGetValue(logicalPin.IDOutFlow, out var outAmp) &&
+                outAmp.Magnitude > maxAmplitude.Magnitude)
+                maxAmplitude = outAmp;
+
+            if (fieldResults.TryGetValue(logicalPin.IDInFlow, out var inAmp) &&
+                inAmp.Magnitude > maxAmplitude.Magnitude)
+                maxAmplitude = inAmp;
+        }
+
+        return maxAmplitude;
+    }
+
+    /// <summary>
+    /// Adds fallback amplitude entries for both IDOutFlow and IDInFlow of a physical pin's
+    /// logical pin, only if those GUIDs are not already present in the enhanced dictionary.
+    /// </summary>
+    private static void AddFallbackAmplitudeIfMissing(
+        PhysicalPin? pin,
+        Complex fallbackAmplitude,
+        Dictionary<Guid, Complex> enhanced)
+    {
+        if (pin?.LogicalPin == null) return;
+
+        enhanced.TryAdd(pin.LogicalPin.IDOutFlow, fallbackAmplitude);
+        enhanced.TryAdd(pin.LogicalPin.IDInFlow, fallbackAmplitude);
     }
 
     /// <summary>
