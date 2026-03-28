@@ -39,6 +39,18 @@ public partial class ParameterSweepViewModel : ObservableObject
     [ObservableProperty]
     private string _statusText = "";
 
+    /// <summary>Minimum value of the target component's slider. Used for range validation in the sweep panel.</summary>
+    [ObservableProperty]
+    private double _componentSliderMin;
+
+    /// <summary>Maximum value of the target component's slider. Used for range validation in the sweep panel.</summary>
+    [ObservableProperty]
+    private double _componentSliderMax = 360;
+
+    /// <summary>True when a component with sliders is configured for sweeping.</summary>
+    [ObservableProperty]
+    private bool _hasComponent;
+
     private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private ComponentViewModel? _targetComponent;
@@ -67,6 +79,10 @@ public partial class ParameterSweepViewModel : ObservableObject
         ResultText = "";
         StatusText = "";
         _lastResult = null;
+
+        HasComponent = component != null && component.HasSliders;
+        ComponentSliderMin = component?.SliderMin ?? 0;
+        ComponentSliderMax = component?.SliderMax ?? 360;
 
         if (component != null && component.HasSliders)
         {

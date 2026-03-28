@@ -46,6 +46,23 @@ public partial class DesignValidationViewModel : ObservableObject
     public Action<WaveguideConnection?>? HighlightConnection { get; set; }
 
     /// <summary>
+    /// Delegate that returns the current connections from the canvas.
+    /// Set by MainViewModel to allow the panel's RunChecksCommand to work standalone.
+    /// </summary>
+    public Func<IEnumerable<WaveguideConnection>>? GetConnections { get; set; }
+
+    /// <summary>
+    /// Runs design checks using the delegate provided via <see cref="GetConnections"/>.
+    /// Used by the extracted DesignValidationPanel UserControl.
+    /// </summary>
+    [RelayCommand]
+    private void RunChecks()
+    {
+        if (GetConnections == null) return;
+        RunValidation(GetConnections());
+    }
+
+    /// <summary>
     /// Gets a display string for the current navigation position.
     /// </summary>
     public string NavigationText => Issues.Count == 0

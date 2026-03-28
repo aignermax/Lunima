@@ -239,7 +239,7 @@ public partial class DesignCanvas
     private void DrawComponentPins(DrawingContext context, ComponentViewModel comp, bool isDimmed = false)
     {
         var mainVm = MainViewModel;
-        bool isConnectMode = mainVm?.CurrentMode == InteractionMode.Connect;
+        bool isConnectMode = mainVm?.CanvasInteraction.CurrentMode == InteractionMode.Connect;
         var highlightedPin = ViewModel?.HighlightedPin?.Pin;
         byte alpha = (byte)(isDimmed ? 128 : 255);
 

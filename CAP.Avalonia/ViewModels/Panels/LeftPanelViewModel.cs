@@ -67,6 +67,13 @@ public partial class LeftPanelViewModel : ObservableObject
     [ObservableProperty]
     private GroupTemplate? _selectedGroupTemplate;
 
+    /// <summary>
+    /// Currently selected component template in the library list.
+    /// Synced with CanvasInteractionViewModel.SelectedTemplate by MainViewModel.
+    /// </summary>
+    [ObservableProperty]
+    private ComponentTemplate? _selectedTemplate;
+
     private GridLength _leftPanelWidth = new GridLength(220);
     /// <summary>
     /// Width of the left panel in pixels. Persisted in user preferences.

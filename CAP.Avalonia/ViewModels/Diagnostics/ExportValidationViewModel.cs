@@ -42,6 +42,7 @@ public partial class ExportValidationViewModel : ObservableObject
     private readonly SimpleNazcaExporter _exporter;
     private readonly ExportValidator _validator;
     private readonly ErrorConsoleService? _errorConsole;
+    private DesignCanvasViewModel? _canvas;
 
     /// <summary>Initializes a new instance of <see cref="ExportValidationViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
@@ -51,6 +52,18 @@ public partial class ExportValidationViewModel : ObservableObject
         _validator = new ExportValidator();
         _errorConsole = errorConsole;
     }
+
+    /// <summary>
+    /// Configures the validator with a canvas reference so it can run without a CommandParameter.
+    /// </summary>
+    public void Configure(DesignCanvasViewModel canvas) => _canvas = canvas;
+
+    /// <summary>
+    /// Runs validation using the configured canvas (set via <see cref="Configure"/>).
+    /// Used by the extracted panel UserControl.
+    /// </summary>
+    [RelayCommand]
+    private void RunValidationFromCanvas() => RunValidation(_canvas);
 
     /// <summary>
     /// Runs end-to-end validation on the current design.

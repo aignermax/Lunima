@@ -20,11 +20,11 @@ public class ZoomToFitTests
     public void ZoomToFit_EmptyCanvas_DoesNotChangeZoom()
     {
         var vm = CreateViewModel();
-        double originalZoom = vm.ZoomLevel;
+        double originalZoom = vm.ViewportControl.ZoomLevel;
 
         vm.ZoomToFit(800, 600);
 
-        vm.ZoomLevel.ShouldBe(originalZoom);
+        vm.ViewportControl.ZoomLevel.ShouldBe(originalZoom);
         vm.StatusText.ShouldContain("No components");
     }
 
@@ -41,7 +41,7 @@ public class ZoomToFitTests
 
         vm.ZoomToFit(800, 600);
 
-        vm.ZoomLevel.ShouldBeGreaterThan(0);
+        vm.ViewportControl.ZoomLevel.ShouldBeGreaterThan(0);
         vm.StatusText.ShouldContain("Zoom to fit");
     }
 
@@ -49,22 +49,22 @@ public class ZoomToFitTests
     public void ZoomToFit_ZeroViewport_DoesNothing()
     {
         var vm = CreateViewModel();
-        double originalZoom = vm.ZoomLevel;
+        double originalZoom = vm.ViewportControl.ZoomLevel;
 
         vm.ZoomToFit(0, 0);
 
-        vm.ZoomLevel.ShouldBe(originalZoom);
+        vm.ViewportControl.ZoomLevel.ShouldBe(originalZoom);
     }
 
     [Fact]
     public void ZoomToFit_NegativeViewport_DoesNothing()
     {
         var vm = CreateViewModel();
-        double originalZoom = vm.ZoomLevel;
+        double originalZoom = vm.ViewportControl.ZoomLevel;
 
         vm.ZoomToFit(-100, -100);
 
-        vm.ZoomLevel.ShouldBe(originalZoom);
+        vm.ViewportControl.ZoomLevel.ShouldBe(originalZoom);
     }
 
     [Fact]
@@ -91,6 +91,6 @@ public class ZoomToFitTests
         // Bounding box: (0,0)-(1000,1000), with 10% padding: (-100,-100)-(1100,1100)
         // padded size: 1200x1200, viewport: 1000x1000
         // zoom = 1000/1200 ≈ 0.833
-        vm.ZoomLevel.ShouldBeInRange(0.8, 0.9);
+        vm.ViewportControl.ZoomLevel.ShouldBeInRange(0.8, 0.9);
     }
 }

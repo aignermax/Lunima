@@ -42,7 +42,7 @@ public class ZoomToFitGroupsTests
         // Padded: (-55, -25) relative to the bounding box origin
         // Padded width = 660, padded height = 300
         // Zoom = min(1000/660, 1000/300) = min(1.515, 3.333) ≈ 1.515
-        vm.ZoomLevel.ShouldBeInRange(1.0, 2.0, "Zoom should be calculated to fit the group");
+        vm.ViewportControl.ZoomLevel.ShouldBeInRange(1.0, 2.0, "Zoom should be calculated to fit the group");
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class ZoomToFitGroupsTests
         // With 10% padding: width=240, height=120
         // Zoom = min(1000/240, 1000/120) = min(4.17, 8.33) ≈ 4.17
         // But clamped to maxZoom=10
-        vm.ZoomLevel.ShouldBeGreaterThan(1.0, "Zoom should be calculated based on moved group position");
+        vm.ViewportControl.ZoomLevel.ShouldBeGreaterThan(1.0, "Zoom should be calculated based on moved group position");
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ public class ZoomToFitGroupsTests
 
         // Bounding box spans from (0, 0) to (900+width, 900+height)
         // This is a large area, so zoom should be small
-        vm.ZoomLevel.ShouldBeInRange(0.1, 2.0, "Zoom should fit both standalone and group");
+        vm.ViewportControl.ZoomLevel.ShouldBeInRange(0.1, 2.0, "Zoom should fit both standalone and group");
     }
 
     /// <summary>
@@ -154,6 +154,6 @@ public class ZoomToFitGroupsTests
         // Should not crash and should zoom to fit the regular component
         vm.ZoomToFit(1000, 1000);
 
-        vm.ZoomLevel.ShouldBeGreaterThan(0, "Zoom should be set based on non-empty components");
+        vm.ViewportControl.ZoomLevel.ShouldBeGreaterThan(0, "Zoom should be set based on non-empty components");
     }
 }

@@ -168,7 +168,7 @@ public partial class DesignCanvas
         var mainVm = MainViewModel;
         if (mainVm == null) return;
 
-        string modeText = mainVm.CurrentMode switch
+        string modeText = mainVm.CanvasInteraction.CurrentMode switch
         {
             InteractionMode.Select => "[S] Select",
             InteractionMode.PlaceComponent => "[P] Place",
@@ -177,7 +177,7 @@ public partial class DesignCanvas
             _ => ""
         };
 
-        var brush = mainVm.CurrentMode switch
+        var brush = mainVm.CanvasInteraction.CurrentMode switch
         {
             InteractionMode.Select => Brushes.LightBlue,
             InteractionMode.PlaceComponent => Brushes.LightGreen,

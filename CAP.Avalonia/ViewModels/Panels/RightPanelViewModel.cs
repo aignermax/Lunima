@@ -1,3 +1,4 @@
+using System.Linq;
 using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Controls;
@@ -108,6 +109,8 @@ public partial class RightPanelViewModel : ObservableObject
         RoutingDiagnostics.Configure(canvas);
         DimensionValidator.Configure(canvas);
         CompressLayout.Configure(canvas);
+        ExportValidation.Configure(canvas);
+        DesignValidation.GetConnections = () => canvas.Connections.Select(c => c.Connection);
     }
 
     /// <summary>
