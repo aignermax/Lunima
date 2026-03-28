@@ -27,6 +27,19 @@ A complete vertical slice includes ALL of these layers:
 
 **This is NON-NEGOTIABLE.** The human developer must be able to test the feature in the UI immediately after PR merge.
 
+### Exception: Debug and Testing Tools
+
+Tools that exist purely for automated testing, CI validation, or developer debugging do **NOT** require UI panels. These should include:
+
+- **Python scripts** in `Scripts/` folder
+- **Backend service classes** for script execution (e.g., `GdsCoordinateExtractor.cs`)
+- **Unit tests** demonstrating usage
+- **Documentation** in CLAUDE.md section 11 (GDS Export Testing & Debugging Tools)
+
+**Examples of debug tools**: GDS coordinate extractors, Nazca reference generators, coordinate comparison scripts.
+
+**When creating debug tools**: Keep backend + tests + documentation. Do NOT add UI panels to MainWindow.
+
 ---
 
 ## 1. Architecture Rules
