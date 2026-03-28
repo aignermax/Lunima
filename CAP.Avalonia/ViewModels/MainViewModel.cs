@@ -76,6 +76,7 @@ public partial class MainViewModel : ObservableObject
     public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
     public GroupSMatrixViewModel GroupSMatrix => RightPanel.GroupSMatrix;
     public ArchitectureReportViewModel ArchitectureReport => RightPanel.ArchitectureReport;
+    public CAP.Avalonia.ViewModels.Export.NazcaReferenceViewModel NazcaReference => RightPanel.NazcaReference;
     public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
     public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
     public ComponentLibraryViewModel GroupLibrary => LeftPanel.ComponentLibrary;
@@ -141,6 +142,7 @@ public partial class MainViewModel : ObservableObject
         {
             FileOperations.FileDialogService = value;
             LeftPanel.FileDialogService = value;
+            RightPanel.NazcaReference.FileDialogService = value;
         }
     }
 

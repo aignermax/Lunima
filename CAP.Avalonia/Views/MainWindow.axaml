@@ -1070,6 +1070,25 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+
+                    <!-- Nazca Reference Script Generator -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Nazca Reference Generator:" Foreground="LightSkyBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Text="Generate ground-truth GDS script for coordinate validation (Issue #329)."
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+                    <Button Content="Generate Reference Script"
+                            Command="{Binding NazcaReference.GenerateScriptCommand}"
+                            MinWidth="110" Margin="0,5,0,5" Padding="8,4"
+                            Background="#3d4d5d" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="{Binding NazcaReference.StatusText}"
+                               Foreground="LightBlue" FontSize="10" Margin="0,3,0,3" TextWrapping="Wrap"/>
+                    <ScrollViewer MaxHeight="150" Margin="0,3,0,0"
+                                  IsVisible="{Binding NazcaReference.HasScript}">
+                        <TextBlock Text="{Binding NazcaReference.CoordinatesText}"
+                                   Foreground="LightGray" FontSize="9"
+                                   FontFamily="Consolas,Courier New,monospace"
+                                   TextWrapping="Wrap"/>
+                    </ScrollViewer>
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
