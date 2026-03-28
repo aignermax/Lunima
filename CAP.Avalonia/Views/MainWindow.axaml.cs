@@ -245,7 +245,7 @@ public partial class MainWindow : Window
                     {
                         canvas.GridSnap.Toggle();
                         mainVm.StatusText = canvas.GridSnap.IsEnabled
-                            ? $"Grid snap ON ({canvas.GridSnap.GridSizeMicrometers}µm)"
+                            ? $"Grid snap ON ({canvas.GridSnap.GridSizeMicrometers}\u00b5m)"
                             : "Grid snap OFF";
                     }
                 }
@@ -303,25 +303,30 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Gets the actual viewport size (visible area) independent of zoom level.
-    /// Uses the Window's client area bounds as the viewport.
+    /// Uses the DesignCanvas control's own layout bounds, which correctly excludes
+    /// the left panel, right panel, and toolbar from the viewport dimensions.
+    /// The rendering coordinate space is the canvas local space, so ZoomToFit
+    /// must use canvas dimensions — not window dimensions — for correct centering.
     /// </summary>
     private (double width, double height) GetActualViewportSize()
     {
-        // The viewport is the visible area of the window where the canvas is displayed.
-        // We use ClientSize (or Bounds) of the Window, which is independent of canvas zoom.
-        // This ensures ZoomToFit calculates correctly regardless of current zoom level.
+        // Use the canvas control's actual layout bounds.
+        // This is correct because PanX/PanY are in canvas-local coordinates,
+        // and ZoomToFit computes pan as: vpWidth/2 - boxCenterX * zoom.
+        // Using window ClientSize (which includes sidebars) would shift the
+        // computed pan center by (windowWidth - canvasWidth) / 2, causing the
+        // "wrong position on first F-press" bug.
+        var canvasBounds = DesignCanvasControl.Bounds;
+        if (canvasBounds.Width > 0 && canvasBounds.Height > 0)
+            return (canvasBounds.Width, canvasBounds.Height);
 
-        // Use the window's client area size
+        // Fallback: if the canvas has not been laid out yet, use window client size.
         var windowWidth = ClientSize.Width;
         var windowHeight = ClientSize.Height;
+        if (windowWidth > 0 && windowHeight > 0)
+            return (windowWidth, windowHeight);
 
-        // Fallback to reasonable defaults if window size is not available
-        if (windowWidth <= 0 || windowHeight <= 0)
-        {
-            return (1400, 900); // Default window size
-        }
-
-        return (windowWidth, windowHeight);
+        return (1400, 900); // Last-resort default matching the initial window size
     }
 
     /// <summary>
