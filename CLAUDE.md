@@ -266,7 +266,58 @@ The core of this repository is photonic S-Matrix-based simulation.
 
 ---
 
-## Key File Reference
+## 11. GDS Export Testing & Debugging Tools
+
+**CRITICAL for Issue #329 and GDS coordinate bugs.**
+
+### Python Tools in `Scripts/` Folder
+
+These tools are **integrated with C# tests** to find GDS export bugs:
+
+| Script | Purpose | Used By |
+|--------|---------|---------|
+| `extract_gds_coords.py` | Extract all polygon/path coordinates from GDS to JSON | `GdsCoordinateExtractorTests.cs` |
+| `generate_reference_nazca.py` | Generate ground-truth GDS with known coordinates | `GdsGroundTruthTests.cs` |
+| `compare_gds_coords.py` | Compare two GDS files numerically, report deviations | `GdsCoordinateVerificationTests.cs` |
+
+### How to Use for Debugging
+
+**When you see GDS coordinate bugs (waveguides not connecting to pins):**
+
+```bash
+# 1. Generate reference (ground truth)
+python Scripts/generate_reference_nazca.py /tmp/ref.gds /tmp/ref_coords.json
+
+# 2. Export your design via C#
+dotnet test --filter "SimpleNazcaExporterTests"
+# Creates: /tmp/test.gds
+
+# 3. Extract coordinates
+python Scripts/extract_gds_coords.py /tmp/test.gds /tmp/test_coords.json
+
+# 4. Compare and find mismatches
+python Scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
+# Reports: ❌ MISMATCH ΔY = 9.50 µm → Bug found!
+```
+
+### Files to Check When GDS Bugs Found
+
+- `Connect-A-Pic-Core/Components/Core/PhysicalPin.cs` → `GetAbsoluteNazcaPosition()` method
+- `CAP.Avalonia/Services/SimpleNazcaExporter.cs` → Y-flip calculations
+- `Connect-A-Pic-Core/Export/NazcaReferenceGenerator.cs` → Ground truth constants
+
+### Nazca Coordinate Convention
+
+```
+Nazca Y = -(PhysicalY + NazcaOriginOffsetY)
+Pin stub local Y = ComponentHeight - PinOffsetY
+```
+
+**These tools saved us from the 9.5 µm grating coupler bug!**
+
+---
+
+## 12. Key File Reference
 
 | Purpose | Path |
 |---------|------|
@@ -276,6 +327,7 @@ The core of this repository is photonic S-Matrix-based simulation.
 | Example ViewModel | `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` |
 | Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
 | Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
+| GDS testing tools | `Scripts/extract_gds_coords.py`, `Scripts/compare_gds_coords.py` |
 
 ---
 
