@@ -48,15 +48,15 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Undo/Redo -->
-                <Button Content="↶" Command="{Binding UndoCommand}"
+                <Button Content="&#x21B6;" Command="{Binding UndoCommand}"
                         Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Undo (Ctrl+Z)"/>
-                <Button Content="↷" Command="{Binding RedoCommand}"
+                <Button Content="&#x21B7;" Command="{Binding RedoCommand}"
                         Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="Redo (Ctrl+Y)"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Actions -->
-                <Button Content="❌" Command="{Binding DeleteSelectedCommand}"
+                <Button Content="&#x274C;" Command="{Binding DeleteSelectedCommand}"
                         Width="36" Margin="2" Background="#4d3d3d" ToolTip.Tip="Delete Selected (Del)"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
@@ -83,21 +83,21 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- File Operations -->
-                <Button Content="📄" Command="{Binding NewProjectCommand}"
+                <Button Content="&#x1F4C4;" Command="{Binding NewProjectCommand}"
                         Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="New project (Ctrl+N)"/>
-                <Button Content="📂" Command="{Binding LoadDesignCommand}"
+                <Button Content="&#x1F4C2;" Command="{Binding LoadDesignCommand}"
                         Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Load design"/>
-                <Button Content="💾" Command="{Binding SaveDesignCommand}"
+                <Button Content="&#x1F4BE;" Command="{Binding SaveDesignCommand}"
                         Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design (Ctrl+S)"/>
-                <Button Content="💾+" Command="{Binding SaveDesignAsCommand}"
+                <Button Content="&#x1F4BE;+" Command="{Binding SaveDesignAsCommand}"
                         Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design as..."/>
-                <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
+                <Button Content="&#x1F40D; Export" Command="{Binding ExportNazcaCommand}"
                         MinWidth="75" Margin="2" Padding="8,4" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- PDK -->
-                <Button Content="📦 Load PDK" Command="{Binding LoadPdkCommand}"
+                <Button Content="&#x1F4E6; Load PDK" Command="{Binding LoadPdkCommand}"
                         MinWidth="95" Margin="2" Padding="8,4" Background="#3d3d5d" ToolTip.Tip="Load PDK component library"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
@@ -126,13 +126,13 @@
                 <DockPanel Height="26" Background="#252526">
                     <!-- Action buttons on the right -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
-                        <Button Content="📋"
+                        <Button Content="&#x1F4CB;"
                                 Command="{Binding ErrorConsole.CopyAllCommand}"
                                 Width="28" Height="20" Margin="2,0" Padding="0"
                                 Background="#3d3d3d" Foreground="LightGray"
                                 FontSize="11"
                                 ToolTip.Tip="Copy all entries to clipboard"/>
-                        <Button Content="✕"
+                        <Button Content="&#x2715;"
                                 Command="{Binding ErrorConsole.ClearCommand}"
                                 Width="24" Height="20" Margin="2,0" Padding="0"
                                 Background="#3d3d3d" Foreground="LightGray"
@@ -147,9 +147,9 @@
                             Height="26" Padding="8,0"
                             ToolTip.Tip="Toggle error console (F12)">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="▶" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
+                            <TextBlock Text="&#x25B6;" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
                                        IsVisible="{Binding ErrorConsole.IsVisible, Converter={x:Static BoolConverters.Not}}"/>
-                            <TextBlock Text="▼" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
+                            <TextBlock Text="&#x25BC;" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
                                        IsVisible="{Binding ErrorConsole.IsVisible}"/>
                             <TextBlock Text="Error Console" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
                             <!-- Error badge -->
@@ -277,9 +277,9 @@
                                                     <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
                                                     <TextBlock FontSize="9" Foreground="Gray">
                                                         <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="×"/>
+                                                        <Run Text="&#xD7;"/>
                                                         <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="μm"/>
+                                                        <Run Text="&#x3BC;m"/>
                                                     </TextBlock>
                                                 </StackPanel>
                                             </StackPanel>
@@ -352,9 +352,9 @@
                                                     <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
                                                     <TextBlock FontSize="9" Foreground="Gray">
                                                         <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="×"/>
+                                                        <Run Text="&#xD7;"/>
                                                         <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="μm"/>
+                                                        <Run Text="&#x3BC;m"/>
                                                     </TextBlock>
                                                 </StackPanel>
                                             </StackPanel>
@@ -550,44 +550,6 @@
                         </TextBlock>
                     </StackPanel>
 
-                    <!-- Parameter Sweep (visible when component has slider) -->
-                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
-                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                        <TextBlock Text="Parameter Sweep:" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                            <TextBlock Text="Start:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding Sweep.StartValue}"
-                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                           Increment="10" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="End:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding Sweep.EndValue}"
-                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                           Increment="10" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="Steps:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding Sweep.StepCount}"
-                                           Minimum="2" Maximum="100"
-                                           Increment="1" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <Button Content="Run Sweep" Command="{Binding Sweep.RunSweepCommand}"
-                                Width="120" Margin="0,5,0,5" Background="#3d5d3d"
-                                IsEnabled="{Binding Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
-                        <TextBlock Text="{Binding Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                                   IsVisible="{Binding Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                        <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                      IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding Sweep.ResultText}" Foreground="LightGreen"
-                                       FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
-                        </ScrollViewer>
-                        <Button Content="Export CSV" Command="{Binding Sweep.ExportCsvCommand}"
-                                Width="100" Margin="0,5,0,0" Background="#3d3d5d"
-                                IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    </StackPanel>
 
                     <!-- Waveguide Length Configuration (visible when connection is selected) -->
                     <StackPanel IsVisible="{Binding SelectedWaveguideConnection, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -599,7 +561,7 @@
                         <TextBlock Text="Current Length:" Foreground="Gray" Margin="0,5,0,3"/>
                         <TextBlock Foreground="White" Margin="0,0,0,5">
                             <Run Text="{Binding WaveguideLength.CurrentLengthMicrometers, StringFormat={}{0:F2}}"/>
-                            <Run Text=" µm" Foreground="Gray"/>
+                            <Run Text=" &#xB5;m" Foreground="Gray"/>
                         </TextBlock>
 
                         <CheckBox Content="Enable Target Length"
@@ -607,12 +569,12 @@
                                   Foreground="White" Margin="0,5,0,8"/>
 
                         <StackPanel IsVisible="{Binding WaveguideLength.IsTargetLengthEnabled}">
-                            <TextBlock Text="Target Length (µm):" Foreground="Gray" Margin="0,5,0,3"/>
+                            <TextBlock Text="Target Length (&#xB5;m):" Foreground="Gray" Margin="0,5,0,3"/>
                             <NumericUpDown Value="{Binding WaveguideLength.TargetLengthMicrometers}"
                                            Minimum="10" Maximum="10000"
                                            Increment="10" Width="180" FormatString="F2" Margin="0,0,0,5"/>
 
-                            <TextBlock Text="Tolerance (µm):" Foreground="Gray" Margin="0,5,0,3"/>
+                            <TextBlock Text="Tolerance (&#xB5;m):" Foreground="Gray" Margin="0,5,0,3"/>
                             <NumericUpDown Value="{Binding WaveguideLength.ToleranceMicrometers}"
                                            Minimum="0.1" Maximum="100"
                                            Increment="0.5" Width="180" FormatString="F2" Margin="0,0,0,8"/>
@@ -632,55 +594,6 @@
                                        FontSize="10" Margin="0,5,0,5"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
-                    </StackPanel>
-
-                    <!-- Layout Compression Panel -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Layout Compression:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Text="Minimize chip area while maintaining connectivity."
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                    <Button Content="Compress Layout"
-                            Command="{Binding CompressLayout.CompressLayoutCommand}"
-                            Width="160" Margin="0,5,0,5"
-                            Background="#3d5d5d"
-                            IsEnabled="{Binding CompressLayout.IsCompressing, Converter={x:Static BoolConverters.Not}}"/>
-
-                    <!-- Progress Bar -->
-                    <ProgressBar Value="{Binding CompressLayout.CurrentIteration}"
-                                 Maximum="{Binding CompressLayout.MaxIterations}"
-                                 Height="4" Margin="0,5,0,5"
-                                 IsVisible="{Binding CompressLayout.IsCompressing}"
-                                 Foreground="Cyan"/>
-
-                    <TextBlock Text="{Binding CompressLayout.StatusText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding CompressLayout.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <TextBlock Text="{Binding CompressLayout.ResultText}"
-                               Foreground="LightCyan" FontSize="10" Margin="0,5,0,5"
-                               TextWrapping="Wrap"
-                               IsVisible="{Binding CompressLayout.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <!-- Design Checks Panel -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Design Checks:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Run Design Checks"
-                            Command="{Binding RunDesignChecksCommand}"
-                            Width="160" Margin="0,5,0,5"
-                            Background="#5d3d3d"/>
-                    <TextBlock Text="{Binding DesignValidation.StatusText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5"
-                                IsVisible="{Binding DesignValidation.HasIssues}">
-                        <Button Content="&lt;&lt; Prev"
-                                Command="{Binding DesignValidation.PreviousIssueCommand}"
-                                Width="70" Margin="0,0,5,0" Background="#3d3d3d"/>
-                        <TextBlock Text="{Binding DesignValidation.NavigationText}"
-                                   Foreground="White" VerticalAlignment="Center"
-                                   Width="50" TextAlignment="Center"/>
-                        <Button Content="Next &gt;&gt;"
-                                Command="{Binding DesignValidation.NextIssueCommand}"
-                                Width="70" Margin="5,0,0,0" Background="#3d3d3d"/>
                     </StackPanel>
 
                     <!-- Element Lock Panel -->
@@ -744,7 +657,7 @@
                                        Minimum="1" Maximum="1000" Increment="10"
                                        Width="120" Margin="5,0,5,0"
                                        FormatString="F0"/>
-                        <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xB5;m" Foreground="Gray" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
@@ -755,48 +668,6 @@
                               Foreground="White" Margin="0,0,0,5"/>
                     <TextBlock Text="Shows cyan guide lines when pins align on same X or Y axis during dragging."
                                Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                    <!-- Routing Diagnostics -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Routing Diagnostics:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Analyze Routes" Command="{Binding RoutingDiagnostics.RunDiagnosticsCommand}"
-                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"
-                            IsEnabled="{Binding RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                        <Button Content="Export JSON" Command="{Binding RoutingDiagnostics.ExportPathsJsonCommand}"
-                                MinWidth="100" Margin="0,0,5,0" Padding="8,4" Background="#3d3d5d"/>
-                        <Button Content="📋" Command="{Binding RoutingDiagnostics.CopyPathsJsonToClipboardCommand}"
-                                Width="36" Background="#3d3d5d" ToolTip.Tip="Copy JSON to clipboard"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding RoutingDiagnostics.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
-                               IsVisible="{Binding RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5"
-                                IsVisible="{Binding RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Valid: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding RoutingDiagnostics.ValidConnections}" Foreground="LightGreen"/>
-                        <TextBlock Text="/" Foreground="Gray"/>
-                        <TextBlock Text="{Binding RoutingDiagnostics.TotalConnections}" Foreground="White"/>
-                        <TextBlock Text="  Issues: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding RoutingDiagnostics.IssueCount}" Foreground="Salmon"/>
-                    </StackPanel>
-                    <ScrollViewer MaxHeight="150" Margin="0,5,0,0"
-                                  IsVisible="{Binding RoutingDiagnostics.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding RoutingDiagnostics.ResultText}" Foreground="LightGray"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
-                    </ScrollViewer>
-
-                    <!-- Component Dimension Diagnostics -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Component Dimensions:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Check Dimensions" Command="{Binding DimensionDiagnostics.RefreshDiagnosticsCommand}"
-                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Validates that component dimensions in GDS export match the UI display."
-                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
-                    <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                  IsVisible="{Binding DimensionDiagnostics.DiagnosticsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
-                    </ScrollViewer>
 
                     <!-- GDS Export Configuration -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
@@ -813,7 +684,7 @@
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
                         <TextBox Grid.Column="0" Text="{Binding FileOperations.GdsExport.CustomPythonPath}"
                                  Watermark="Auto-detect or enter path..." Margin="0,0,5,0"/>
-                        <Button Grid.Column="1" Content="🔍" Width="30" Padding="4"
+                        <Button Grid.Column="1" Content="&#x1F50D;" Width="30" Padding="4"
                                 Command="{Binding FileOperations.GdsExport.SearchForPythonCommand}"
                                 ToolTip.Tip="Search for Python with Nazca"
                                 IsEnabled="{Binding FileOperations.GdsExport.IsSearching, Converter={x:Static BoolConverters.Not}}"/>
@@ -873,9 +744,9 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Icon and Label -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                        <TextBlock Text="✏️" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#x270F;&#xFE0F;" FontSize="16" VerticalAlignment="Center"/>
                         <TextBlock Text="GROUP EDIT MODE" FontWeight="Bold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Text="—" Foreground="#FFB399" Margin="5,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#x2014;" Foreground="#FFB399" Margin="5,0" VerticalAlignment="Center"/>
                         <TextBlock Foreground="White" FontSize="12" VerticalAlignment="Center">
                             <Run Text="Editing:"/>
                             <Run Text="{Binding Canvas.CurrentEditGroup.GroupName}" FontWeight="SemiBold"/>
@@ -906,12 +777,12 @@
                 <ContextMenu>
                     <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon>
-                            <TextBlock Text="📋" FontSize="14"/>
+                            <TextBlock Text="&#x1F4CB;" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="Paste" Command="{Binding PasteSelectedCommand}" InputGesture="Ctrl+V">
                         <MenuItem.Icon>
-                            <TextBlock Text="📄" FontSize="14"/>
+                            <TextBlock Text="&#x1F4C4;" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
@@ -929,18 +800,18 @@
                     </MenuItem>
                     <MenuItem Header="Rename Group..." Command="{Binding CanvasInteraction.RenameGroupCommand}">
                         <MenuItem.Icon>
-                            <TextBlock Text="✏️" FontSize="14"/>
+                            <TextBlock Text="&#x270F;&#xFE0F;" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="Save as Prefab..." Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
                         <MenuItem.Icon>
-                            <TextBlock Text="💾" FontSize="14"/>
+                            <TextBlock Text="&#x1F4BE;" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="Delete" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">
                         <MenuItem.Icon>
-                            <TextBlock Text="🗑️" FontSize="14"/>
+                            <TextBlock Text="&#x1F5D1;&#xFE0F;" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
                 </ContextMenu>
