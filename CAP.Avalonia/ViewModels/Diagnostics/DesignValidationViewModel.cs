@@ -5,6 +5,7 @@ using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ComponentGroup = CAP_Core.Components.Core.ComponentGroup;
 
 namespace CAP.Avalonia.ViewModels.Diagnostics;
 
@@ -54,15 +55,21 @@ public partial class DesignValidationViewModel : ObservableObject
 
     /// <summary>
     /// Runs design validation on the provided connections.
+    /// Detects invalid geometry, blocked paths, and overlaps with frozen group paths.
     /// </summary>
     /// <param name="connections">Waveguide connections to validate.</param>
-    public void RunValidation(IEnumerable<WaveguideConnection> connections)
+    /// <param name="groups">ComponentGroups whose frozen paths are checked for overlap. Optional.</param>
+    public void RunValidation(
+        IEnumerable<WaveguideConnection> connections,
+        IEnumerable<ComponentGroup>? groups = null)
     {
         Issues.Clear();
         CurrentIndex = -1;
         HighlightConnection?.Invoke(null);
 
-        var results = _validator.Validate(connections);
+        var results = groups is not null
+            ? _validator.Validate(connections, groups)
+            : _validator.Validate(connections);
 
         foreach (var issue in results)
         {

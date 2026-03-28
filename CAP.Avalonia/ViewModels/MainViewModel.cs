@@ -540,7 +540,12 @@ public partial class MainViewModel : ObservableObject
             .Select(c => c.Connection)
             .ToList();
 
-        DesignValidation.RunValidation(connections);
+        var groups = Canvas.Components
+            .Select(c => c.Component)
+            .OfType<CAP_Core.Components.Core.ComponentGroup>()
+            .ToList();
+
+        DesignValidation.RunValidation(connections, groups);
         StatusText = DesignValidation.StatusText;
     }
 }
