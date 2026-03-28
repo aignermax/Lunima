@@ -1071,32 +1071,6 @@
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <!-- GDS Coordinate Extraction (debugging tool for issue #329) -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="GDS Coordinate Extraction:" Foreground="LightSalmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Text="Extract polygon/path coordinates from a GDS file for numerical comparison."
-                               Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                    <TextBox Watermark="Path to .gds file..."
-                             Text="{Binding GdsCoordExtract.GdsFilePath}"
-                             Margin="0,0,0,5" FontSize="11"
-                             Background="#1e1e1e" Foreground="White" BorderBrush="#3e3e3e"/>
-                    <Button Content="Extract Coordinates"
-                            Command="{Binding GdsCoordExtract.ExtractCoordinatesCommand}"
-                            MinWidth="130" Margin="0,0,0,5" Padding="8,4"
-                            Background="#5d3d2d" HorizontalAlignment="Stretch"
-                            IsEnabled="{Binding GdsCoordExtract.IsExtracting, Converter={x:Static BoolConverters.Not}}"/>
-                    <TextBlock Text="{Binding GdsCoordExtract.StatusText}"
-                               Foreground="LightSalmon" FontSize="10" Margin="0,0,0,4" TextWrapping="Wrap"
-                               IsVisible="{Binding GdsCoordExtract.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <StackPanel IsVisible="{Binding GdsCoordExtract.HasResult}" Margin="0,4,0,0">
-                        <TextBlock Text="{Binding GdsCoordExtract.ResultSummary}"
-                                   Foreground="LightGreen" FontSize="10" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                            <TextBlock Text="JSON: " Foreground="Gray" FontSize="10"/>
-                            <TextBlock Text="{Binding GdsCoordExtract.OutputJsonPath}"
-                                       Foreground="LightBlue" FontSize="10" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </StackPanel>
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
