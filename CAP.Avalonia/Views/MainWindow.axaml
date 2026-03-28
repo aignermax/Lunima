@@ -986,6 +986,55 @@
                                Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
                                IsVisible="{Binding FileOperations.GdsExport.LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
+                    <!-- Architecture Report -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Architecture Report:" Foreground="Plum" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Text="Metrics, SOLID compliance, and refactoring recommendations"
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                    <Button Content="Load Metrics" Command="{Binding ArchitectureReport.LoadMetricsCommand}"
+                            MinWidth="110" Margin="0,0,0,8" Padding="8,4" Background="#4d3d5d" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="{Binding ArchitectureReport.StatusText}" Foreground="Plum" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"/>
+                    <StackPanel IsVisible="{Binding ArchitectureReport.HasMetrics}" Margin="0,5,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Maturity Score: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding ArchitectureReport.MaturityScore}" Foreground="White"/>
+                            <TextBlock Text=" / 5" Foreground="Gray"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="ViewModels: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding ArchitectureReport.ViewModelCount}" Foreground="White"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="Test Files: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding ArchitectureReport.TestFileCount}" Foreground="LightGreen"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="DI Services: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding ArchitectureReport.DiRegistrationCount}" Foreground="White"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                            <TextBlock Text="MainViewModel: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding ArchitectureReport.MainViewModelLines}" Foreground="Orange"/>
+                            <TextBlock Text=" lines" Foreground="Gray"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+                            <TextBlock Text="MainWindow: " Foreground="Gray" Width="110"/>
+                            <TextBlock Text="{Binding ArchitectureReport.MainWindowLines}" Foreground="Orange"/>
+                            <TextBlock Text=" lines" Foreground="Gray"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ArchitectureReport.PrismRecommendationText}"
+                                   Foreground="Cyan" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                        <TextBlock Text="Action Items:" Foreground="Gray" FontSize="10" Margin="0,0,0,3"/>
+                        <ItemsControl ItemsSource="{Binding ArchitectureReport.Recommendations}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="LightYellow" FontSize="9"
+                                               Margin="0,2,0,2" TextWrapping="Wrap"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
                     <!-- Export Validation (E2E Tests) -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Export Validation:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>

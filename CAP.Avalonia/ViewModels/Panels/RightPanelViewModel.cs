@@ -83,6 +83,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public GroupSMatrixViewModel GroupSMatrix { get; }
 
+    /// <summary>
+    /// ViewModel for the Architecture Report panel (metrics, SOLID compliance, recommendations).
+    /// </summary>
+    public ArchitectureReportViewModel ArchitectureReport { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
     {
@@ -97,6 +102,7 @@ public partial class RightPanelViewModel : ObservableObject
         SMatrixPerformance = new SMatrixPerformanceViewModel(errorConsole);
         CompressLayout = new CompressLayoutViewModel(errorConsole);
         GroupSMatrix = new GroupSMatrixViewModel();
+        ArchitectureReport = new ArchitectureReportViewModel();
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

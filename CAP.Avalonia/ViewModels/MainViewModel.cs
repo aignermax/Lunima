@@ -75,6 +75,7 @@ public partial class MainViewModel : ObservableObject
     public SMatrixPerformanceViewModel SMatrixPerformance => RightPanel.SMatrixPerformance;
     public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
     public GroupSMatrixViewModel GroupSMatrix => RightPanel.GroupSMatrix;
+    public ArchitectureReportViewModel ArchitectureReport => RightPanel.ArchitectureReport;
     public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
     public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
     public ComponentLibraryViewModel GroupLibrary => LeftPanel.ComponentLibrary;
