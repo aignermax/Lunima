@@ -97,6 +97,71 @@ public static class ComponentGroupRenderer
                 RenderBendSegment(context, frozenPen, bend);
             }
         }
+
+        // Render power loss label at midpoint when power flow visualization is active
+        if (powerFlowResult != null)
+        {
+            powerFlowResult.ConnectionFlows.TryGetValue(frozenPath.PathId, out var labelFlow);
+            var midPoint = CalculateFrozenPathMidpoint(frozenPath);
+            DrawFrozenPathLabel(context, labelFlow, midPoint);
+        }
+    }
+
+    /// <summary>
+    /// Calculates the visual midpoint of a frozen path from its first and last segment endpoints.
+    /// </summary>
+    private static Point CalculateFrozenPathMidpoint(FrozenWaveguidePath frozenPath)
+    {
+        var segments = frozenPath.Path.Segments;
+        var firstStart = segments[0].StartPoint;
+        var lastEnd = segments[^1].EndPoint;
+        return new Point(
+            (firstStart.X + lastEnd.X) / 2,
+            (firstStart.Y + lastEnd.Y) / 2
+        );
+    }
+
+    /// <summary>
+    /// Draws a power loss label at the specified midpoint position.
+    /// Shows dB and percentage when signal is present, "no signal" otherwise.
+    /// </summary>
+    private static void DrawFrozenPathLabel(
+        DrawingContext context,
+        ConnectionPowerFlow? flow,
+        Point midPoint)
+    {
+        string labelText;
+        IBrush labelBrush;
+
+        if (flow != null && flow.AveragePower > 0)
+        {
+            labelText = $"{flow.NormalizedPowerDb:F1}dB ({flow.NormalizedPowerFraction * 100:F0}%)";
+            var fraction = Math.Clamp(flow.NormalizedPowerFraction, 0, 1);
+            labelBrush = new SolidColorBrush(PowerFlowRenderer.InterpolatePowerColor(fraction));
+        }
+        else
+        {
+            labelText = "no signal";
+            labelBrush = new SolidColorBrush(Color.FromArgb(120, 150, 150, 150));
+        }
+
+        var labelPosition = new Point(midPoint.X, midPoint.Y - 15);
+        var formatted = new FormattedText(
+            labelText,
+            CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Arial"),
+            10,
+            labelBrush);
+
+        var textBounds = new Rect(
+            labelPosition.X - 2,
+            labelPosition.Y - 2,
+            formatted.Width + 4,
+            formatted.Height + 4);
+
+        context.FillRectangle(new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)), textBounds);
+        context.DrawText(formatted, labelPosition);
     }
 
     /// <summary>

@@ -11,21 +11,45 @@ Stability, clarity, and architectural discipline are more important than speed.
 
 ---
 
-## CRITICAL: Vertical Slice Requirement
+## Implementation Guidelines: When to Include UI
 
-**Every feature implementation MUST be a complete vertical slice.**
-Do NOT submit backend-only or core-only code. Every PR must include user-testable UI.
+**Determine the scope based on the issue type:**
 
-A complete vertical slice includes ALL of these layers:
+### **User-Facing Features (Full Vertical Slice Required)**
+When the issue explicitly requests a UI element or user interaction:
+- Keywords: "add button", "implement dialog", "user can", "add panel", "new UI"
+- Complete vertical slice includes ALL layers:
+  1. **Core logic** — New classes in `Connect-A-Pic-Core/`
+  2. **ViewModel** — `ObservableObject` in `CAP.Avalonia/ViewModels/` with `[ObservableProperty]` and `[RelayCommand]`
+  3. **View / AXAML** — UI panel in `CAP.Avalonia/Views/` or a new section in `MainWindow.axaml`
+  4. **DI wiring** — Register new services in `CAP.Avalonia/App.axaml.cs` if needed
+  5. **Unit tests** — xUnit tests in `UnitTests/` for core logic
+  6. **Integration tests** — Core + ViewModel integration tests in `UnitTests/`
 
-1. **Core logic** — New classes in `Connect-A-Pic-Core/` (concrete classes are fine, use interfaces only when multiple implementations are needed)
-2. **ViewModel** — `ObservableObject` in `CAP.Avalonia/ViewModels/` with `[ObservableProperty]` and `[RelayCommand]`
-3. **View / AXAML** — UI panel in `CAP.Avalonia/Views/` or a new section in `MainWindow.axaml`
-4. **DI wiring** — Register new services in `CAP.Avalonia/App.axaml.cs` if needed
-5. **Unit tests** — xUnit tests in `UnitTests/` for core logic
-6. **Integration tests** — Core + ViewModel integration tests in `UnitTests/` (place alongside related unit tests)
+### **Core Features / Bug Fixes / Tests (NO UI Required)**
+When the issue focuses on logic, testing, or investigation:
+- Keywords: "investigate", "add test", "fix bug", "verify", "improve algorithm", "optimize"
+- Implementation scope:
+  1. **Core logic only** — New/modified classes in `Connect-A-Pic-Core/`
+  2. **Unit tests** — Comprehensive xUnit tests
+  3. **Integration tests** — If needed to verify behavior
+  4. **NO ViewModel, NO View, NO UI** — unless explicitly requested
 
-**This is NON-NEGOTIABLE.** The human developer must be able to test the feature in the UI immediately after PR merge.
+**Default assumption:** If the issue doesn't explicitly mention UI, don't create UI.
+The human developer will ask for UI if needed.
+
+### Exception: Debug and Testing Tools
+
+Tools that exist purely for automated testing, CI validation, or developer debugging do **NOT** require UI panels. These should include:
+
+- **Python scripts** in `Scripts/` folder
+- **Backend service classes** for script execution (e.g., `GdsCoordinateExtractor.cs`)
+- **Unit tests** demonstrating usage
+- **Documentation** in CLAUDE.md section 11 (GDS Export Testing & Debugging Tools)
+
+**Examples of debug tools**: GDS coordinate extractors, Nazca reference generators, coordinate comparison scripts.
+
+**When creating debug tools**: Keep backend + tests + documentation. Do NOT add UI panels to MainWindow.
 
 ---
 
@@ -185,11 +209,12 @@ Reference: `UnitTests/Analysis/ParameterSweeperTests.cs`
 
 ---
 
-## 7. Recipe: Adding a New Feature
+## 7. Implementation Recipes
 
-Follow this checklist for EVERY new feature:
+### **Recipe A: User-Facing Feature (with UI)**
+When the issue explicitly requests UI ("add button", "user can", "implement dialog"):
 
-1. **Core class** in `Connect-A-Pic-Core/Analysis/` or appropriate folder (max 250 lines)
+1. **Core class** in `Connect-A-Pic-Core/` (max 250 lines)
 2. **ViewModel** in `CAP.Avalonia/ViewModels/MyFeatureViewModel.cs`
    - Inherit `ObservableObject`
    - Use `[ObservableProperty]` and `[RelayCommand]`
@@ -202,7 +227,15 @@ Follow this checklist for EVERY new feature:
 6. **Unit tests** for core class
 7. **Integration test** for Core→ViewModel flow
 
-**Do not skip ANY of these steps.**
+### **Recipe B: Core Feature / Bug Fix / Test (NO UI)**
+When the issue focuses on logic, tests, or investigation:
+
+1. **Core class** in `Connect-A-Pic-Core/` (max 250 lines)
+2. **Unit tests** for all new/modified logic
+3. **Integration tests** if needed to verify behavior
+4. **Stop here** - NO ViewModel, NO View, NO AXAML
+
+**The issue title determines which recipe to use.**
 
 ---
 
@@ -266,7 +299,58 @@ The core of this repository is photonic S-Matrix-based simulation.
 
 ---
 
-## Key File Reference
+## 11. GDS Export Testing & Debugging Tools
+
+**CRITICAL for Issue #329 and GDS coordinate bugs.**
+
+### Python Tools in `Scripts/` Folder
+
+These tools are **integrated with C# tests** to find GDS export bugs:
+
+| Script | Purpose | Used By |
+|--------|---------|---------|
+| `extract_gds_coords.py` | Extract all polygon/path coordinates from GDS to JSON | `GdsCoordinateExtractorTests.cs` |
+| `generate_reference_nazca.py` | Generate ground-truth GDS with known coordinates | `GdsGroundTruthTests.cs` |
+| `compare_gds_coords.py` | Compare two GDS files numerically, report deviations | `GdsCoordinateVerificationTests.cs` |
+
+### How to Use for Debugging
+
+**When you see GDS coordinate bugs (waveguides not connecting to pins):**
+
+```bash
+# 1. Generate reference (ground truth)
+python Scripts/generate_reference_nazca.py /tmp/ref.gds /tmp/ref_coords.json
+
+# 2. Export your design via C#
+dotnet test --filter "SimpleNazcaExporterTests"
+# Creates: /tmp/test.gds
+
+# 3. Extract coordinates
+python Scripts/extract_gds_coords.py /tmp/test.gds /tmp/test_coords.json
+
+# 4. Compare and find mismatches
+python Scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
+# Reports: ❌ MISMATCH ΔY = 9.50 µm → Bug found!
+```
+
+### Files to Check When GDS Bugs Found
+
+- `Connect-A-Pic-Core/Components/Core/PhysicalPin.cs` → `GetAbsoluteNazcaPosition()` method
+- `CAP.Avalonia/Services/SimpleNazcaExporter.cs` → Y-flip calculations
+- `Connect-A-Pic-Core/Export/NazcaReferenceGenerator.cs` → Ground truth constants
+
+### Nazca Coordinate Convention
+
+```
+Nazca Y = -(PhysicalY + NazcaOriginOffsetY)
+Pin stub local Y = ComponentHeight - PinOffsetY
+```
+
+**These tools saved us from the 9.5 µm grating coupler bug!**
+
+---
+
+## 12. Key File Reference
 
 | Purpose | Path |
 |---------|------|
@@ -276,6 +360,7 @@ The core of this repository is photonic S-Matrix-based simulation.
 | Example ViewModel | `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` |
 | Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
 | Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
+| GDS testing tools | `Scripts/extract_gds_coords.py`, `Scripts/compare_gds_coords.py` |
 
 ---
 

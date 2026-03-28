@@ -898,8 +898,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Attempts to open a file with the system's default application.
-    /// Uses Process.Start with UseShellExecute to trigger OS file association.
-    /// Silently fails if no default app is configured or opening fails.
+    /// If no default app exists, opens the file explorer and selects the file.
     /// </summary>
     /// <param name="filePath">Path to the file to open.</param>
     private void TryOpenFileWithDefaultApp(string filePath)
@@ -909,19 +908,69 @@ public partial class FileOperationsViewModel : ObservableObject
             if (!File.Exists(filePath))
                 return;
 
-            var startInfo = new System.Diagnostics.ProcessStartInfo
+            // Try to open with default application first
+            try
             {
-                FileName = filePath,
-                UseShellExecute = true  // Required to use OS file associations
-            };
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                };
 
-            System.Diagnostics.Process.Start(startInfo);
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch
+            {
+                // No default app - open file explorer and select the file
+                OpenFileExplorer(filePath);
+            }
         }
         catch (Exception ex)
         {
-            // Silently fail - no default app configured or opening failed
-            // We don't want to interrupt the export workflow with an error dialog
-            _errorConsole?.LogWarning($"Could not open GDS file with default application: {ex.Message}");
+            _errorConsole?.LogWarning($"Could not open GDS file: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Opens the file explorer and selects the specified file.
+    /// Works cross-platform (Windows, Linux, macOS).
+    /// </summary>
+    /// <param name="filePath">Path to the file to select.</param>
+    private void OpenFileExplorer(string filePath)
+    {
+        try
+        {
+            var absolutePath = Path.GetFullPath(filePath);
+
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows: explorer.exe /select,"path"
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{absolutePath}\"");
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                // Linux: Try xdg-open on the directory
+                var directory = Path.GetDirectoryName(absolutePath);
+                if (directory != null)
+                {
+                    var startInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "xdg-open",
+                        Arguments = $"\"{directory}\"",
+                        UseShellExecute = true
+                    };
+                    System.Diagnostics.Process.Start(startInfo);
+                }
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                // macOS: open -R "path"
+                System.Diagnostics.Process.Start("open", $"-R \"{absolutePath}\"");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorConsole?.LogWarning($"Could not open file explorer: {ex.Message}");
         }
     }
 

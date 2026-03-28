@@ -855,49 +855,6 @@
                                Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
                                IsVisible="{Binding FileOperations.GdsExport.LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                    <!-- PDK Consistency Panel (Issue #334) -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="PDK Consistency:" Foreground="Orchid" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Text="Validates JSON PDK definitions against built-in templates. Detects coordinate mismatches that cause GDS export offsets."
-                               Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                    <Button Content="Check PDKs"
-                            Command="{Binding PdkConsistency.CheckPdksCommand}"
-                            MinWidth="120" Margin="0,0,0,5" Padding="8,4"
-                            Background="#5d3d5d" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="{Binding PdkConsistency.StatusText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding PdkConsistency.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                               TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding PdkConsistency.SummaryText}"
-                               Foreground="Orchid" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,5"
-                               IsVisible="{Binding PdkConsistency.HasFindings}"/>
-                    <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                  IsVisible="{Binding PdkConsistency.HasFindings}">
-                        <ItemsControl ItemsSource="{Binding PdkConsistency.Findings}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,2,0,0" Padding="5,3" CornerRadius="3"
-                                            Background="#2d2d2d">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding SeverityLabel}"
-                                                           Foreground="{Binding SeverityColor}"
-                                                           FontSize="9" FontWeight="Bold" Width="50"/>
-                                                <TextBlock Text="{Binding ComponentName}"
-                                                           Foreground="White" FontSize="9" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding DeviationText}"
-                                                           Foreground="Gold" FontSize="9" Margin="5,0,0,0"/>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Message}"
-                                                       Foreground="LightGray" FontSize="8"
-                                                       TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
