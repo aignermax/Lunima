@@ -283,7 +283,7 @@ public class SimpleNazcaExporter
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-                AppendSegmentExport(sb, segments);
+                AppendSegmentExport(sb, segments, conn.StartPin);
             else
                 AppendFallbackExport(sb, conn, componentNames);
         }
@@ -306,7 +306,7 @@ public class SimpleNazcaExporter
         foreach (var frozenPath in group.InternalPaths)
         {
             if (frozenPath?.Path?.Segments?.Count > 0)
-                AppendSegmentExport(sb, frozenPath.Path.Segments);
+                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin);
         }
 
         foreach (var child in group.ChildComponents)
@@ -321,12 +321,13 @@ public class SimpleNazcaExporter
     /// First segment uses absolute .put(x, y, angle); subsequent segments
     /// chain with .put() so Nazca auto-connects them without gaps.
     /// </summary>
+    /// <param name="startPin">Optional start pin for correct Nazca coordinate calculation (Issue #329 fix)</param>
     internal static void AppendSegmentExport(
-        StringBuilder sb, IReadOnlyList<PathSegment> segments)
+        StringBuilder sb, IReadOnlyList<PathSegment> segments, PhysicalPin? startPin = null)
     {
         for (int i = 0; i < segments.Count; i++)
         {
-            sb.AppendLine(FormatSegment(segments[i], isFirst: i == 0));
+            sb.AppendLine(FormatSegment(segments[i], isFirst: i == 0, startPin: i == 0 ? startPin : null));
         }
     }
 
@@ -335,14 +336,15 @@ public class SimpleNazcaExporter
     /// </summary>
     /// <param name="segment">The path segment to format.</param>
     /// <param name="isFirst">If true, includes absolute coordinates; if false, chains with .put().</param>
-    internal static string FormatSegment(PathSegment segment, bool isFirst = true)
+    /// <param name="startPin">Optional start pin for correct Nazca coordinate calculation (Issue #329 fix)</param>
+    internal static string FormatSegment(PathSegment segment, bool isFirst = true, PhysicalPin? startPin = null)
     {
         var ci = CultureInfo.InvariantCulture;
 
         return segment switch
         {
-            StraightSegment straight => FormatStraightSegment(straight, ci, isFirst),
-            BendSegment bend => FormatBendSegment(bend, ci, isFirst),
+            StraightSegment straight => FormatStraightSegment(straight, ci, isFirst, startPin),
+            BendSegment bend => FormatBendSegment(bend, ci, isFirst, startPin),
             _ => $"        # Unknown segment type: {segment.GetType().Name}"
         };
     }
@@ -354,7 +356,7 @@ public class SimpleNazcaExporter
         value == 0.0 ? 0.0 : value;
 
     private static string FormatStraightSegment(
-        StraightSegment straight, CultureInfo ci, bool isFirst)
+        StraightSegment straight, CultureInfo ci, bool isFirst, PhysicalPin? startPin = null)
     {
         // For chained segments, use the forward-projected length instead of Euclidean
         // distance. Nazca's nd.strt() goes forward along the propagation direction,
@@ -367,7 +369,22 @@ public class SimpleNazcaExporter
         if (isFirst)
         {
             var x = straight.StartPoint.X.ToString("F2", ci);
-            var y = NormalizeZero(-straight.StartPoint.Y).ToString("F2", ci);
+
+            // FIXED (#329): Use correct Nazca pin position instead of naive Y-flip
+            double nazcaY;
+            if (startPin != null)
+            {
+                // Use GetAbsoluteNazcaPosition() which accounts for NazcaOriginOffset
+                var (_, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
+                nazcaY = pinNazcaY;
+            }
+            else
+            {
+                // Fallback: naive Y-flip (legacy behavior for connections without pin info)
+                nazcaY = -straight.StartPoint.Y;
+            }
+
+            var y = NormalizeZero(nazcaY).ToString("F2", ci);
             var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.strt(length={lengthStr}).put({x}, {y}, {angle})";
         }
@@ -389,7 +406,7 @@ public class SimpleNazcaExporter
         return Math.Max(0, projected);
     }
 
-    private static string FormatBendSegment(BendSegment bend, CultureInfo ci, bool isFirst)
+    private static string FormatBendSegment(BendSegment bend, CultureInfo ci, bool isFirst, PhysicalPin? startPin = null)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
         var sweepAngle = NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
@@ -397,7 +414,20 @@ public class SimpleNazcaExporter
         if (isFirst)
         {
             var x = bend.StartPoint.X.ToString("F2", ci);
-            var y = NormalizeZero(-bend.StartPoint.Y).ToString("F2", ci);
+
+            // FIXED (#329): Use correct Nazca pin position instead of naive Y-flip
+            double nazcaY;
+            if (startPin != null)
+            {
+                var (_, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
+                nazcaY = pinNazcaY;
+            }
+            else
+            {
+                nazcaY = -bend.StartPoint.Y;
+            }
+
+            var y = NormalizeZero(nazcaY).ToString("F2", ci);
             var angle = NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
         }
