@@ -89,6 +89,12 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public ArchitectureReportViewModel ArchitectureReport { get; }
 
+    /// <summary>
+    /// ViewModel for the PDK Consistency panel (validates JSON PDK definitions vs Nazca).
+    /// Issue #334: Investigate PDK JSON vs Nazca Python coordinate mismatch.
+    /// </summary>
+    public PdkConsistencyViewModel PdkConsistency { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
     {
@@ -104,6 +110,7 @@ public partial class RightPanelViewModel : ObservableObject
         CompressLayout = new CompressLayoutViewModel(errorConsole);
         GroupSMatrix = new GroupSMatrixViewModel();
         ArchitectureReport = new ArchitectureReportViewModel();
+        PdkConsistency = new PdkConsistencyViewModel();
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
