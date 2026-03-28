@@ -22,8 +22,6 @@ public partial class MainWindow : Window
             {
                 vm.FileDialogService = new FileDialogService(this);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
-                vm.Sweep.FileDialogService = vm.FileDialogService;
-                vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
                 // Wire up rename dialog for group templates
@@ -31,26 +29,6 @@ public partial class MainWindow : Window
                 {
                     var dialog = new RenameDialog(currentName);
                     return await dialog.ShowDialog<string?>(this);
-                };
-
-                // Wire up clipboard for RoutingDiagnostics
-                vm.RoutingDiagnostics.CopyToClipboard = async (text) =>
-                {
-                    var clipboard = Clipboard;
-                    if (clipboard != null)
-                    {
-                        await clipboard.SetTextAsync(text);
-                    }
-                };
-
-                // Wire up clipboard for DimensionValidator
-                vm.DimensionValidator.CopyToClipboard = async (text) =>
-                {
-                    var clipboard = Clipboard;
-                    if (clipboard != null)
-                    {
-                        await clipboard.SetTextAsync(text);
-                    }
                 };
 
                 // Wire up clipboard for ErrorConsole
