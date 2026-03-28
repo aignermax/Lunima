@@ -30,9 +30,10 @@ namespace CAP_Core.Components.Core
 
         /// <summary>
         /// Gets the absolute Nazca-coordinate position of this pin.
-        /// This accounts for the Y-flip and NazcaOriginOffset transformations.
+        /// Accounts for Y-flip, NazcaOriginOffset, and component rotation transformations.
         /// Used for GDS/Nazca export where waveguide coordinates must match stub pin positions.
-        /// Fix for Issue #329: Waveguides must start at global Nazca pin position, not naive Y-flip.
+        /// Fix for Issue #329: NazcaOriginOffset compensation.
+        /// Fix for Issue #338: Rotation transformation applied to local pin coordinates.
         /// </summary>
         public (double x, double y) GetAbsoluteNazcaPosition()
         {
@@ -41,14 +42,16 @@ namespace CAP_Core.Components.Core
             double nazcaCompX = ParentComponent.PhysicalX + originOffsetX;
             double nazcaCompY = -(ParentComponent.PhysicalY + originOffsetY);
 
-            // Pin local Nazca position (for stub-based components, this is in the stub)
+            // Local pin Nazca coordinates in unrotated component space
+            double localPinNazcaX = OffsetXMicrometers;
             double localPinNazcaY = ParentComponent.HeightMicrometers - OffsetYMicrometers;
 
-            // Global pin Nazca position
-            double globalPinNazcaX = nazcaCompX + OffsetXMicrometers;
-            double globalPinNazcaY = nazcaCompY + localPinNazcaY;
+            // Apply component rotation to local pin coordinates
+            double rotRad = ParentComponent.RotationDegrees * Math.PI / 180.0;
+            double rotatedPinX = localPinNazcaX * Math.Cos(rotRad) - localPinNazcaY * Math.Sin(rotRad);
+            double rotatedPinY = localPinNazcaX * Math.Sin(rotRad) + localPinNazcaY * Math.Cos(rotRad);
 
-            return (globalPinNazcaX, globalPinNazcaY);
+            return (nazcaCompX + rotatedPinX, nazcaCompY + rotatedPinY);
         }
 
         /// <summary>

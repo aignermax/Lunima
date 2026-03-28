@@ -368,22 +368,24 @@ public class SimpleNazcaExporter
 
         if (isFirst)
         {
-            var x = straight.StartPoint.X.ToString("F2", ci);
-
-            // FIXED (#329): Use correct Nazca pin position instead of naive Y-flip
+            double nazcaX;
             double nazcaY;
             if (startPin != null)
             {
-                // Use GetAbsoluteNazcaPosition() which accounts for NazcaOriginOffset
-                var (_, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
+                // FIXED (#329, #338): Use correct Nazca pin position accounting for
+                // NazcaOriginOffset and component rotation transformation.
+                var (pinNazcaX, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
+                nazcaX = pinNazcaX;
                 nazcaY = pinNazcaY;
             }
             else
             {
-                // Fallback: naive Y-flip (legacy behavior for connections without pin info)
+                // Fallback: naive coordinate flip (legacy behavior without pin info)
+                nazcaX = straight.StartPoint.X;
                 nazcaY = -straight.StartPoint.Y;
             }
 
+            var x = NormalizeZero(nazcaX).ToString("F2", ci);
             var y = NormalizeZero(nazcaY).ToString("F2", ci);
             var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.strt(length={lengthStr}).put({x}, {y}, {angle})";
@@ -413,20 +415,23 @@ public class SimpleNazcaExporter
 
         if (isFirst)
         {
-            var x = bend.StartPoint.X.ToString("F2", ci);
-
-            // FIXED (#329): Use correct Nazca pin position instead of naive Y-flip
+            double nazcaX;
             double nazcaY;
             if (startPin != null)
             {
-                var (_, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
+                // FIXED (#329, #338): Use correct Nazca pin position accounting for
+                // NazcaOriginOffset and component rotation transformation.
+                var (pinNazcaX, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
+                nazcaX = pinNazcaX;
                 nazcaY = pinNazcaY;
             }
             else
             {
+                nazcaX = bend.StartPoint.X;
                 nazcaY = -bend.StartPoint.Y;
             }
 
+            var x = NormalizeZero(nazcaX).ToString("F2", ci);
             var y = NormalizeZero(nazcaY).ToString("F2", ci);
             var angle = NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
