@@ -513,23 +513,28 @@ public class GdsCoordinateVerificationTests
         double localPinX = stubPin.X;
         double localPinY = stubPin.Y;
 
-        // Apply rotation (simplified for 90° increments)
+        // Apply Nazca rotation R(-RotationDegrees) to local pin coordinates.
+        // Nazca places cells with .put(x, y, -RotationDegrees), so pin world positions
+        // use R(-editorRotation) where R(θ) = [[cosθ,-sinθ],[sinθ,cosθ]].
         double rotatedLocalX = localPinX;
         double rotatedLocalY = localPinY;
         if (rotation == 90)
         {
-            rotatedLocalX = -localPinY;
-            rotatedLocalY = localPinX;
+            // R(-90°): rotX = +localY, rotY = -localX
+            rotatedLocalX = localPinY;
+            rotatedLocalY = -localPinX;
         }
         else if (rotation == 180)
         {
+            // R(-180°): rotX = -localX, rotY = -localY
             rotatedLocalX = -localPinX;
             rotatedLocalY = -localPinY;
         }
         else if (rotation == 270)
         {
-            rotatedLocalX = localPinY;
-            rotatedLocalY = -localPinX;
+            // R(-270°) = R(+90°): rotX = -localY, rotY = +localX
+            rotatedLocalX = -localPinY;
+            rotatedLocalY = localPinX;
         }
 
         double expectedX = gc1Placement.X + rotatedLocalX;

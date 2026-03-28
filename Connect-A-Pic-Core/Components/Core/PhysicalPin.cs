@@ -47,7 +47,9 @@ namespace CAP_Core.Components.Core
             double localPinNazcaY = ParentComponent.HeightMicrometers - OffsetYMicrometers;
 
             // Apply component rotation to local pin coordinates
-            double rotRad = ParentComponent.RotationDegrees * Math.PI / 180.0;
+            // Nazca places cells with .put(x, y, -RotationDegrees), so pin world positions
+            // must use the same negated rotation to match stub pin locations.
+            double rotRad = -ParentComponent.RotationDegrees * Math.PI / 180.0;
             double rotatedPinX = localPinNazcaX * Math.Cos(rotRad) - localPinNazcaY * Math.Sin(rotRad);
             double rotatedPinY = localPinNazcaX * Math.Sin(rotRad) + localPinNazcaY * Math.Cos(rotRad);
 

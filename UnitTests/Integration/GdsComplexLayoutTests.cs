@@ -141,9 +141,11 @@ public class GdsComplexLayoutTests
             {
                 var (globalX, globalY) = pin.GetAbsoluteNazcaPosition();
 
-                // Manual calculation
+                // Manual calculation for stub-based (legacy) component:
+                // The stub cell origin is at the bottom-left (Nazca y=0 = editor y=HeightMicrometers).
+                // NazcaOriginOffsetY applies to real PDK cells; legacy stubs use HeightMicrometers.
                 double compNazcaX = x + gcTemplate.NazcaOriginOffsetX;
-                double compNazcaY = -(y + gcTemplate.NazcaOriginOffsetY);
+                double compNazcaY = -(y + gcTemplate.HeightMicrometers);
                 double pinLocalNazcaY = gcTemplate.HeightMicrometers - pin.OffsetYMicrometers;
 
                 double expectedGlobalX = compNazcaX + pin.OffsetXMicrometers;
@@ -206,9 +208,15 @@ public class GdsComplexLayoutTests
             {
                 var (globalX, globalY) = pin.GetAbsoluteNazcaPosition();
 
-                // Calculate expected position
+                // Calculate expected position.
+                // "Grating Coupler" has no PDK function name → legacy stub with origin at bottom.
+                // Legacy fallback: CalculateOriginOffset returns (0, HeightMicrometers).
+                bool isPdkFunc = !string.IsNullOrEmpty(template.NazcaFunctionName) &&
+                    (template.NazcaFunctionName.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
+                     template.NazcaFunctionName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+                double effectiveOriginY = isPdkFunc ? template.NazcaOriginOffsetY : template.HeightMicrometers;
                 double compNazcaX = x + template.NazcaOriginOffsetX;
-                double compNazcaY = -(y + template.NazcaOriginOffsetY);
+                double compNazcaY = -(y + effectiveOriginY);
                 double pinLocalNazcaY = template.HeightMicrometers - pin.OffsetYMicrometers;
 
                 double expectedGlobalX = compNazcaX + pin.OffsetXMicrometers;
