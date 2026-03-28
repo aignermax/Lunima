@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
+using CAP.Avalonia.ViewModels.Export;
 
 namespace CAP.Avalonia.ViewModels;
 
