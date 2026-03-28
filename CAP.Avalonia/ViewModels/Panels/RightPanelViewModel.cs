@@ -5,7 +5,9 @@ using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Converters;
+using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.Services;
+using CAP_Core.Export;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -88,6 +90,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public ArchitectureReportViewModel ArchitectureReport { get; }
 
+    /// <summary>
+    /// ViewModel for the GDS coordinate extraction debugging tool (issue #329).
+    /// </summary>
+    public GdsCoordExtractViewModel GdsCoordExtract { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
     {
@@ -103,6 +110,7 @@ public partial class RightPanelViewModel : ObservableObject
         CompressLayout = new CompressLayoutViewModel(errorConsole);
         GroupSMatrix = new GroupSMatrixViewModel();
         ArchitectureReport = new ArchitectureReportViewModel();
+        GdsCoordExtract = new GdsCoordExtractViewModel(new GdsCoordinateExtractor());
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
