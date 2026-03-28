@@ -855,6 +855,57 @@
                                Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
                                IsVisible="{Binding FileOperations.GdsExport.LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
+                    <!-- GDS Coordinate Comparison (Issue #333) -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="GDS Coordinate Comparison:" Foreground="Yellow" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Text="Compare two coordinate JSON files and report µm deviations."
+                               Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                    <TextBlock Text="Reference JSON:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                        <TextBox Grid.Column="0" Text="{Binding GdsCoordinateComparison.ReferenceJsonPath}"
+                                 Watermark="Path to reference coords JSON…" FontSize="10" Margin="0,0,3,0"/>
+                        <Button Grid.Column="1" Content="…" Width="28" Padding="4"
+                                Command="{Binding GdsCoordinateComparison.BrowseReferenceCommand}"
+                                ToolTip.Tip="Browse for reference JSON"/>
+                    </Grid>
+
+                    <TextBlock Text="System JSON:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                        <TextBox Grid.Column="0" Text="{Binding GdsCoordinateComparison.SystemJsonPath}"
+                                 Watermark="Path to system coords JSON…" FontSize="10" Margin="0,0,3,0"/>
+                        <Button Grid.Column="1" Content="…" Width="28" Padding="4"
+                                Command="{Binding GdsCoordinateComparison.BrowseSystemCommand}"
+                                ToolTip.Tip="Browse for system JSON"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,5">
+                        <Button Content="Compare"
+                                Command="{Binding GdsCoordinateComparison.RunComparisonCommand}"
+                                MinWidth="90" Padding="8,4" Background="#5d5d3d"
+                                IsEnabled="{Binding GdsCoordinateComparison.IsComparing, Converter={x:Static BoolConverters.Not}}"/>
+                        <Button Content="Clear"
+                                Command="{Binding GdsCoordinateComparison.ClearResultsCommand}"
+                                MinWidth="60" Padding="8,4" Background="#3d3d3d"
+                                IsVisible="{Binding GdsCoordinateComparison.HasResults}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding GdsCoordinateComparison.ComparisonStatus}"
+                               Foreground="Gray" FontSize="10" Margin="0,0,0,3" TextWrapping="Wrap"
+                               IsVisible="{Binding GdsCoordinateComparison.ComparisonStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <StackPanel IsVisible="{Binding GdsCoordinateComparison.HasResults}">
+                        <TextBlock Text="{Binding GdsCoordinateComparison.MaxDeviationText}"
+                                   Foreground="White" FontSize="10" Margin="0,0,0,3" FontFamily="Consolas"/>
+                        <ScrollViewer MaxHeight="180" Margin="0,3,0,0">
+                            <TextBlock Text="{Binding GdsCoordinateComparison.ResultText}"
+                                       FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"
+                                       Foreground="{Binding GdsCoordinateComparison.Passed,
+                                           Converter={x:Static BoolConverters.Not},
+                                           ConverterParameter=Red}"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>

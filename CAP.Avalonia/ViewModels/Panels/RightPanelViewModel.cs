@@ -88,6 +88,12 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public ArchitectureReportViewModel ArchitectureReport { get; }
 
+    /// <summary>
+    /// ViewModel for GDS coordinate comparison (Issue #333).
+    /// Compares two extracted-coordinate JSON files and reports µm-level deviations.
+    /// </summary>
+    public GdsCoordinateComparisonViewModel GdsCoordinateComparison { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
     {
@@ -103,6 +109,7 @@ public partial class RightPanelViewModel : ObservableObject
         CompressLayout = new CompressLayoutViewModel(errorConsole);
         GroupSMatrix = new GroupSMatrixViewModel();
         ArchitectureReport = new ArchitectureReportViewModel();
+        GdsCoordinateComparison = new GdsCoordinateComparisonViewModel();
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
