@@ -38,6 +38,19 @@ When the issue focuses on logic, testing, or investigation:
 **Default assumption:** If the issue doesn't explicitly mention UI, don't create UI.
 The human developer will ask for UI if needed.
 
+### Exception: Debug and Testing Tools
+
+Tools that exist purely for automated testing, CI validation, or developer debugging do **NOT** require UI panels. These should include:
+
+- **Python scripts** in `Scripts/` folder
+- **Backend service classes** for script execution (e.g., `GdsCoordinateExtractor.cs`)
+- **Unit tests** demonstrating usage
+- **Documentation** in CLAUDE.md section 11 (GDS Export Testing & Debugging Tools)
+
+**Examples of debug tools**: GDS coordinate extractors, Nazca reference generators, coordinate comparison scripts.
+
+**When creating debug tools**: Keep backend + tests + documentation. Do NOT add UI panels to MainWindow.
+
 ---
 
 ## 1. Architecture Rules
