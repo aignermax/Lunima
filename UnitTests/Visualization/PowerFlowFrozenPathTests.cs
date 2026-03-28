@@ -100,6 +100,61 @@ public class PowerFlowFrozenPathTests
     }
 
     /// <summary>
+    /// Verifies that power flow data required for label rendering is available for frozen paths.
+    /// This ensures ComponentGroupRenderer can display loss labels like "-5.5dB (70%)".
+    /// </summary>
+    [Fact]
+    public void FrozenWaveguidePath_WithPowerFlow_HasLabelDataAvailable()
+    {
+        // Arrange
+        var analyzer = new PowerFlowAnalyzer();
+        var (frozenPath, fieldResults) = CreateTestFrozenPathWithFields(inputPower: 1.0);
+        var frozenPaths = new List<FrozenWaveguidePath> { frozenPath };
+
+        // Act
+        var result = analyzer.Analyze(new List<WaveguideConnection>(), frozenPaths, fieldResults);
+
+        // Assert: flow data required for rendering labels is present
+        result.ConnectionFlows.TryGetValue(frozenPath.PathId, out var flow).ShouldBeTrue();
+        flow.ShouldNotBeNull();
+        flow!.AveragePower.ShouldBeGreaterThan(0);
+        flow.NormalizedPowerFraction.ShouldBeInRange(0.0, 1.0);
+
+        // Verify the label text would be non-trivial (dB value is finite)
+        double.IsNegativeInfinity(flow.NormalizedPowerDb).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Verifies that frozen path midpoint calculation produces a point between start and end.
+    /// </summary>
+    [Fact]
+    public void FrozenWaveguidePath_Midpoint_IsBetweenStartAndEnd()
+    {
+        // Arrange: path from (0,0) to (100,0)
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(0, 0, 100, 0, 0));
+
+        var frozenPath = new FrozenWaveguidePath
+        {
+            PathId = Guid.NewGuid(),
+            Path = path,
+            StartPin = new PhysicalPin { Name = "s", OffsetXMicrometers = 0, OffsetYMicrometers = 0 },
+            EndPin = new PhysicalPin { Name = "e", OffsetXMicrometers = 100, OffsetYMicrometers = 0 }
+        };
+
+        var firstStart = frozenPath.Path.Segments[0].StartPoint;
+        var lastEnd = frozenPath.Path.Segments[^1].EndPoint;
+
+        // Act: calculate midpoint the same way ComponentGroupRenderer does
+        double midX = (firstStart.X + lastEnd.X) / 2;
+        double midY = (firstStart.Y + lastEnd.Y) / 2;
+
+        // Assert: midpoint should be at (50, 0)
+        midX.ShouldBe(50.0, tolerance: 0.001);
+        midY.ShouldBe(0.0, tolerance: 0.001);
+    }
+
+    /// <summary>
     /// Verifies that fade threshold works correctly for frozen paths.
     /// </summary>
     [Fact]

@@ -850,6 +850,9 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (result.Success && result.GdsPath != null)
                 {
                     UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} and {Path.GetFileName(result.GdsPath)}");
+
+                    // Try to open GDS file with default application
+                    TryOpenFileWithDefaultApp(result.GdsPath);
                 }
                 else if (result.Success)
                 {
@@ -891,6 +894,35 @@ public partial class FileOperationsViewModel : ObservableObject
         comp.WidthMicrometers = height;
         comp.HeightMicrometers = width;
         comp.RotateBy90CounterClockwise();
+    }
+
+    /// <summary>
+    /// Attempts to open a file with the system's default application.
+    /// Uses Process.Start with UseShellExecute to trigger OS file association.
+    /// Silently fails if no default app is configured or opening fails.
+    /// </summary>
+    /// <param name="filePath">Path to the file to open.</param>
+    private void TryOpenFileWithDefaultApp(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+                return;
+
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = filePath,
+                UseShellExecute = true  // Required to use OS file associations
+            };
+
+            System.Diagnostics.Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            // Silently fail - no default app configured or opening failed
+            // We don't want to interrupt the export workflow with an error dialog
+            _errorConsole?.LogWarning($"Could not open GDS file with default application: {ex.Message}");
+        }
     }
 
 }
