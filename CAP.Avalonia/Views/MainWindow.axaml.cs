@@ -22,19 +22,19 @@ public partial class MainWindow : Window
             {
                 vm.FileDialogService = new FileDialogService(this);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
-                vm.Sweep.FileDialogService = vm.FileDialogService;
-                vm.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
                 // Wire up rename dialog for group templates
-                vm.GroupLibrary.ShowRenameDialogAsync = async (currentName) =>
+                vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = async (currentName) =>
                 {
                     var dialog = new RenameDialog(currentName);
                     return await dialog.ShowDialog<string?>(this);
                 };
 
                 // Wire up clipboard for RoutingDiagnostics
-                vm.RoutingDiagnostics.CopyToClipboard = async (text) =>
+                vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
@@ -44,7 +44,7 @@ public partial class MainWindow : Window
                 };
 
                 // Wire up clipboard for DimensionValidator
-                vm.DimensionValidator.CopyToClipboard = async (text) =>
+                vm.RightPanel.DimensionValidator.CopyToClipboard = async (text) =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
@@ -54,7 +54,7 @@ public partial class MainWindow : Window
                 };
 
                 // Wire up clipboard for ErrorConsole
-                vm.ErrorConsole.CopyToClipboard = async (text) =>
+                vm.BottomPanel.ErrorConsole.CopyToClipboard = async (text) =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
@@ -64,9 +64,9 @@ public partial class MainWindow : Window
                 };
 
                 // Wire up auto-scroll: scroll to the newest entry when entries are added
-                vm.ErrorConsole.PropertyChanged += (s, e) =>
+                vm.BottomPanel.ErrorConsole.PropertyChanged += (s, e) =>
                 {
-                    if (e.PropertyName == nameof(vm.ErrorConsole.EntryCount) && ErrorConsoleListBox != null)
+                    if (e.PropertyName == nameof(vm.BottomPanel.ErrorConsole.EntryCount) && ErrorConsoleListBox != null)
                     {
                         var items = ErrorConsoleListBox.ItemsSource;
                         if (items is System.Collections.IList list && list.Count > 0)
@@ -442,7 +442,7 @@ public partial class MainWindow : Window
         else
         {
             // Find and select the matching item in UserGroups
-            var userItem = vm.GroupLibrary.UserGroups.FirstOrDefault(vm => vm.Template == template);
+            var userItem = vm.LeftPanel.ComponentLibrary.UserGroups.FirstOrDefault(vm => vm.Template == template);
             if (userItem != null)
             {
                 if (UserGroupsListBox != null)
@@ -454,7 +454,7 @@ public partial class MainWindow : Window
             }
 
             // Find and select the matching item in PdkGroups
-            var pdkItem = vm.GroupLibrary.PdkGroups.FirstOrDefault(vm => vm.Template == template);
+            var pdkItem = vm.LeftPanel.ComponentLibrary.PdkGroups.FirstOrDefault(vm => vm.Template == template);
             if (pdkItem != null)
             {
                 if (PdkGroupsListBox != null)

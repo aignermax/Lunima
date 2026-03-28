@@ -15,7 +15,7 @@
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+G" Command="{Binding CreateGroupCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+G" Command="{Binding UngroupCommand}" />
-        <KeyBinding Gesture="F12" Command="{Binding ErrorConsole.ToggleCommand}" />
+        <KeyBinding Gesture="F12" Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}" />
     </Window.KeyBindings>
 
     <DockPanel>
@@ -127,20 +127,20 @@
                     <!-- Action buttons on the right -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
                         <Button Content="📋"
-                                Command="{Binding ErrorConsole.CopyAllCommand}"
+                                Command="{Binding BottomPanel.ErrorConsole.CopyAllCommand}"
                                 Width="28" Height="20" Margin="2,0" Padding="0"
                                 Background="#3d3d3d" Foreground="LightGray"
                                 FontSize="11"
                                 ToolTip.Tip="Copy all entries to clipboard"/>
                         <Button Content="✕"
-                                Command="{Binding ErrorConsole.ClearCommand}"
+                                Command="{Binding BottomPanel.ErrorConsole.ClearCommand}"
                                 Width="24" Height="20" Margin="2,0" Padding="0"
                                 Background="#3d3d3d" Foreground="LightGray"
                                 FontSize="11"
                                 ToolTip.Tip="Clear console"/>
                     </StackPanel>
                     <!-- Toggle button fills remaining space -->
-                    <Button Command="{Binding ErrorConsole.ToggleCommand}"
+                    <Button Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}"
                             Background="Transparent"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
@@ -148,20 +148,20 @@
                             ToolTip.Tip="Toggle error console (F12)">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                             <TextBlock Text="▶" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
-                                       IsVisible="{Binding ErrorConsole.IsVisible, Converter={x:Static BoolConverters.Not}}"/>
+                                       IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible, Converter={x:Static BoolConverters.Not}}"/>
                             <TextBlock Text="▼" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
-                                       IsVisible="{Binding ErrorConsole.IsVisible}"/>
+                                       IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}"/>
                             <TextBlock Text="Error Console" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
                             <!-- Error badge -->
                             <Border Background="#5d2020" CornerRadius="8" Padding="5,1"
-                                    IsVisible="{Binding ErrorConsole.HasErrors}">
-                                <TextBlock Text="{Binding ErrorConsole.ErrorCount}"
+                                    IsVisible="{Binding BottomPanel.ErrorConsole.HasErrors}">
+                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.ErrorCount}"
                                            Foreground="#FF6B6B" FontSize="10" VerticalAlignment="Center"/>
                             </Border>
                             <!-- Warning badge -->
                             <Border Background="#5d4510" CornerRadius="8" Padding="5,1"
-                                    IsVisible="{Binding ErrorConsole.HasWarnings}">
-                                <TextBlock Text="{Binding ErrorConsole.WarningCount}"
+                                    IsVisible="{Binding BottomPanel.ErrorConsole.HasWarnings}">
+                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.WarningCount}"
                                            Foreground="#FFD93D" FontSize="10" VerticalAlignment="Center"/>
                             </Border>
                         </StackPanel>
@@ -169,9 +169,9 @@
                 </DockPanel>
 
                 <!-- Content area: only shown when IsVisible is true -->
-                <Border IsVisible="{Binding ErrorConsole.IsVisible}" Height="180" Background="#161616">
+                <Border IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}" Height="180" Background="#161616">
                     <ListBox x:Name="ErrorConsoleListBox"
-                             ItemsSource="{Binding ErrorConsole.DisplayEntries}"
+                             ItemsSource="{Binding BottomPanel.ErrorConsole.DisplayEntries}"
                              Background="Transparent"
                              BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -200,7 +200,7 @@
                 <Grid RowDefinitions="Auto,5,*">
                 <!-- Hierarchy Panel -->
                 <views:HierarchyPanel Grid.Row="0"
-                                      DataContext="{Binding HierarchyPanel}"
+                                      DataContext="{Binding LeftPanel.HierarchyPanel}"
                                       Height="250"/>
 
                 <!-- Splitter -->
@@ -214,7 +214,7 @@
                     <TextBlock DockPanel.Dock="Top" Text="Component Library"
                                FontWeight="Bold" Margin="10,10,10,4" Foreground="White"/>
                     <TextBox DockPanel.Dock="Top" Watermark="Search components..."
-                             Text="{Binding SearchText}"
+                             Text="{Binding LeftPanel.SearchText}"
                              Margin="10,0,10,6" FontSize="11"
                              Background="#1e1e1e" Foreground="White"
                              BorderBrush="#3e3e3e"/>
@@ -225,7 +225,7 @@
                     <Expander DockPanel.Dock="Top" Header="Saved Groups" IsExpanded="True"
                               Margin="5,0,5,5" Background="#2d2d2d">
                         <StackPanel Margin="5">
-                            <TextBlock Text="{Binding GroupLibrary.StatusText}"
+                            <TextBlock Text="{Binding LeftPanel.ComponentLibrary.StatusText}"
                                        FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
                             <TextBlock Text="Click to select, then click canvas to place"
                                        FontSize="10" Margin="0,0,0,5" Foreground="Gray" TextWrapping="Wrap"/>
@@ -233,9 +233,9 @@
                             <!-- User Groups -->
                             <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,5,0,3"
-                                       IsVisible="{Binding GroupLibrary.UserGroups.Count}"/>
+                                       IsVisible="{Binding LeftPanel.ComponentLibrary.UserGroups.Count}"/>
                             <ListBox x:Name="UserGroupsListBox"
-                                     ItemsSource="{Binding GroupLibrary.UserGroups}"
+                                     ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
                                      SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
@@ -308,9 +308,9 @@
                             <!-- PDK Groups -->
                             <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
                                        FontSize="10" Margin="0,10,0,3"
-                                       IsVisible="{Binding GroupLibrary.PdkGroups.Count}"/>
+                                       IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
                             <ListBox x:Name="PdkGroupsListBox"
-                                     ItemsSource="{Binding GroupLibrary.PdkGroups}"
+                                     ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
                                      SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
@@ -386,13 +386,13 @@
                     <Expander DockPanel.Dock="Top" Header="PDK Management" IsExpanded="False"
                               Margin="5,0,5,5" Background="#2d2d2d">
                         <StackPanel Margin="5">
-                            <TextBlock Text="{Binding PdkManager.StatusText}"
+                            <TextBlock Text="{Binding LeftPanel.PdkManager.StatusText}"
                                        FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
 
                             <!-- PDK Filter List -->
                             <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding PdkManager.LoadedPdks}">
+                                <ItemsControl ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
                                             <StackPanel Margin="0,3">
@@ -416,10 +416,10 @@
 
                             <!-- PDK Action Buttons -->
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
-                                <Button Content="Enable All" Command="{Binding PdkManager.EnableAllCommand}"
+                                <Button Content="Enable All" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
                                         Width="75" Height="24" Margin="2" FontSize="10"
                                         Background="#3d3d3d"/>
-                                <Button Content="Disable All" Command="{Binding PdkManager.DisableAllCommand}"
+                                <Button Content="Disable All" Command="{Binding LeftPanel.PdkManager.DisableAllCommand}"
                                         Width="75" Height="24" Margin="2" FontSize="10"
                                         Background="#3d3d3d"/>
                             </StackPanel>
@@ -430,8 +430,8 @@
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
-                        <ListBox ItemsSource="{Binding FilteredComponentLibrary}"
-                                 SelectedItem="{Binding SelectedTemplate}"
+                        <ListBox ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                                 SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
                                  Background="Transparent" Foreground="White"
                                  Margin="5">
                             <ListBox.ItemTemplate>
@@ -556,79 +556,79 @@
                         <TextBlock Text="Parameter Sweep:" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
                             <TextBlock Text="Start:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding Sweep.StartValue}"
+                            <NumericUpDown Value="{Binding RightPanel.Sweep.StartValue}"
                                            Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
                                            Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
                                            Increment="10" Width="130" FormatString="F0"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="End:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding Sweep.EndValue}"
+                            <NumericUpDown Value="{Binding RightPanel.Sweep.EndValue}"
                                            Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
                                            Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
                                            Increment="10" Width="130" FormatString="F0"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="Steps:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding Sweep.StepCount}"
+                            <NumericUpDown Value="{Binding RightPanel.Sweep.StepCount}"
                                            Minimum="2" Maximum="100"
                                            Increment="1" Width="130" FormatString="F0"/>
                         </StackPanel>
-                        <Button Content="Run Sweep" Command="{Binding Sweep.RunSweepCommand}"
+                        <Button Content="Run Sweep" Command="{Binding RightPanel.Sweep.RunSweepCommand}"
                                 Width="120" Margin="0,5,0,5" Background="#3d5d3d"
-                                IsEnabled="{Binding Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
-                        <TextBlock Text="{Binding Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                                   IsVisible="{Binding Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                IsEnabled="{Binding RightPanel.Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+                        <TextBlock Text="{Binding RightPanel.Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                                   IsVisible="{Binding RightPanel.Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                      IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding Sweep.ResultText}" Foreground="LightGreen"
+                                      IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding RightPanel.Sweep.ResultText}" Foreground="LightGreen"
                                        FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
                         </ScrollViewer>
-                        <Button Content="Export CSV" Command="{Binding Sweep.ExportCsvCommand}"
+                        <Button Content="Export CSV" Command="{Binding RightPanel.Sweep.ExportCsvCommand}"
                                 Width="100" Margin="0,5,0,0" Background="#3d3d5d"
-                                IsVisible="{Binding Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
 
                     <!-- Waveguide Length Configuration (visible when connection is selected) -->
-                    <StackPanel IsVisible="{Binding SelectedWaveguideConnection, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedWaveguideConnection, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                         <TextBlock Text="Waveguide Length:" Foreground="Magenta" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding WaveguideLength.ConnectionName}"
+                        <TextBlock Text="{Binding BottomPanel.WaveguideLength.ConnectionName}"
                                    Foreground="White" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                         <TextBlock Text="Current Length:" Foreground="Gray" Margin="0,5,0,3"/>
                         <TextBlock Foreground="White" Margin="0,0,0,5">
-                            <Run Text="{Binding WaveguideLength.CurrentLengthMicrometers, StringFormat={}{0:F2}}"/>
+                            <Run Text="{Binding BottomPanel.WaveguideLength.CurrentLengthMicrometers, StringFormat={}{0:F2}}"/>
                             <Run Text=" µm" Foreground="Gray"/>
                         </TextBlock>
 
                         <CheckBox Content="Enable Target Length"
-                                  IsChecked="{Binding WaveguideLength.IsTargetLengthEnabled}"
+                                  IsChecked="{Binding BottomPanel.WaveguideLength.IsTargetLengthEnabled}"
                                   Foreground="White" Margin="0,5,0,8"/>
 
-                        <StackPanel IsVisible="{Binding WaveguideLength.IsTargetLengthEnabled}">
+                        <StackPanel IsVisible="{Binding BottomPanel.WaveguideLength.IsTargetLengthEnabled}">
                             <TextBlock Text="Target Length (µm):" Foreground="Gray" Margin="0,5,0,3"/>
-                            <NumericUpDown Value="{Binding WaveguideLength.TargetLengthMicrometers}"
+                            <NumericUpDown Value="{Binding BottomPanel.WaveguideLength.TargetLengthMicrometers}"
                                            Minimum="10" Maximum="10000"
                                            Increment="10" Width="180" FormatString="F2" Margin="0,0,0,5"/>
 
                             <TextBlock Text="Tolerance (µm):" Foreground="Gray" Margin="0,5,0,3"/>
-                            <NumericUpDown Value="{Binding WaveguideLength.ToleranceMicrometers}"
+                            <NumericUpDown Value="{Binding BottomPanel.WaveguideLength.ToleranceMicrometers}"
                                            Minimum="0.1" Maximum="100"
                                            Increment="0.5" Width="180" FormatString="F2" Margin="0,0,0,8"/>
 
                             <Button Content="Set Target to Current"
-                                    Command="{Binding WaveguideLength.SetTargetToCurrentCommand}"
+                                    Command="{Binding BottomPanel.WaveguideLength.SetTargetToCurrentCommand}"
                                     Width="160" Margin="0,5,0,5"
                                     Background="#5d3d5d"/>
 
                             <Button Content="Apply"
-                                    Command="{Binding WaveguideLength.ApplyTargetLengthCommand}"
+                                    Command="{Binding BottomPanel.WaveguideLength.ApplyTargetLengthCommand}"
                                     Width="100" Margin="0,5,0,5"
                                     Background="#3d5d3d"/>
 
-                            <TextBlock Text="{Binding WaveguideLength.LengthStatusText}"
-                                       Foreground="{Binding WaveguideLength.LengthStatusColor}"
+                            <TextBlock Text="{Binding BottomPanel.WaveguideLength.LengthStatusText}"
+                                       Foreground="{Binding BottomPanel.WaveguideLength.LengthStatusColor}"
                                        FontSize="10" Margin="0,5,0,5"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
@@ -640,25 +640,25 @@
                     <TextBlock Text="Minimize chip area while maintaining connectivity."
                                Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
                     <Button Content="Compress Layout"
-                            Command="{Binding CompressLayout.CompressLayoutCommand}"
+                            Command="{Binding RightPanel.CompressLayout.CompressLayoutCommand}"
                             Width="160" Margin="0,5,0,5"
                             Background="#3d5d5d"
-                            IsEnabled="{Binding CompressLayout.IsCompressing, Converter={x:Static BoolConverters.Not}}"/>
+                            IsEnabled="{Binding RightPanel.CompressLayout.IsCompressing, Converter={x:Static BoolConverters.Not}}"/>
 
                     <!-- Progress Bar -->
-                    <ProgressBar Value="{Binding CompressLayout.CurrentIteration}"
-                                 Maximum="{Binding CompressLayout.MaxIterations}"
+                    <ProgressBar Value="{Binding RightPanel.CompressLayout.CurrentIteration}"
+                                 Maximum="{Binding RightPanel.CompressLayout.MaxIterations}"
                                  Height="4" Margin="0,5,0,5"
-                                 IsVisible="{Binding CompressLayout.IsCompressing}"
+                                 IsVisible="{Binding RightPanel.CompressLayout.IsCompressing}"
                                  Foreground="Cyan"/>
 
-                    <TextBlock Text="{Binding CompressLayout.StatusText}"
+                    <TextBlock Text="{Binding RightPanel.CompressLayout.StatusText}"
                                Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding CompressLayout.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <TextBlock Text="{Binding CompressLayout.ResultText}"
+                               IsVisible="{Binding RightPanel.CompressLayout.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding RightPanel.CompressLayout.ResultText}"
                                Foreground="LightCyan" FontSize="10" Margin="0,5,0,5"
                                TextWrapping="Wrap"
-                               IsVisible="{Binding CompressLayout.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                               IsVisible="{Binding RightPanel.CompressLayout.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                     <!-- Design Checks Panel -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
@@ -667,19 +667,19 @@
                             Command="{Binding RunDesignChecksCommand}"
                             Width="160" Margin="0,5,0,5"
                             Background="#5d3d3d"/>
-                    <TextBlock Text="{Binding DesignValidation.StatusText}"
+                    <TextBlock Text="{Binding RightPanel.DesignValidation.StatusText}"
                                Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                               IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,5"
-                                IsVisible="{Binding DesignValidation.HasIssues}">
+                                IsVisible="{Binding RightPanel.DesignValidation.HasIssues}">
                         <Button Content="&lt;&lt; Prev"
-                                Command="{Binding DesignValidation.PreviousIssueCommand}"
+                                Command="{Binding RightPanel.DesignValidation.PreviousIssueCommand}"
                                 Width="70" Margin="0,0,5,0" Background="#3d3d3d"/>
-                        <TextBlock Text="{Binding DesignValidation.NavigationText}"
+                        <TextBlock Text="{Binding RightPanel.DesignValidation.NavigationText}"
                                    Foreground="White" VerticalAlignment="Center"
                                    Width="50" TextAlignment="Center"/>
                         <Button Content="Next &gt;&gt;"
-                                Command="{Binding DesignValidation.NextIssueCommand}"
+                                Command="{Binding RightPanel.DesignValidation.NextIssueCommand}"
                                 Width="70" Margin="5,0,0,0" Background="#3d3d3d"/>
                     </StackPanel>
 
@@ -691,46 +691,46 @@
                     </TextBlock>
 
                     <!-- Selection-based lock controls -->
-                    <StackPanel IsVisible="{Binding ElementLock.HasSelection}">
+                    <StackPanel IsVisible="{Binding BottomPanel.ElementLock.HasSelection}">
                         <TextBlock Text="Selected Components:" Foreground="Gray" Margin="0,0,0,5"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                             <Button Content="Lock"
-                                    Command="{Binding ElementLock.LockSelectedComponentsCommand}"
+                                    Command="{Binding BottomPanel.ElementLock.LockSelectedComponentsCommand}"
                                     Width="80" Margin="0,0,5,0" Background="#5d3d3d"/>
                             <Button Content="Unlock"
-                                    Command="{Binding ElementLock.UnlockSelectedComponentsCommand}"
+                                    Command="{Binding BottomPanel.ElementLock.UnlockSelectedComponentsCommand}"
                                     Width="80" Margin="5,0,0,0" Background="#3d5d3d"/>
                         </StackPanel>
                     </StackPanel>
 
                     <!-- Global unlock controls -->
                     <Button Content="Unlock All Components"
-                            Command="{Binding ElementLock.UnlockAllComponentsCommand}"
+                            Command="{Binding BottomPanel.ElementLock.UnlockAllComponentsCommand}"
                             Width="160" Margin="0,5,0,5"
                             Background="#3d4d5d"/>
 
                     <Button Content="Unlock All Connections"
-                            Command="{Binding ElementLock.UnlockAllConnectionsCommand}"
+                            Command="{Binding BottomPanel.ElementLock.UnlockAllConnectionsCommand}"
                             Width="160" Margin="0,0,0,5"
                             Background="#3d4d5d"/>
 
                     <!-- Status display -->
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
                         <TextBlock Text="Locked: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding ElementLock.LockedComponentCount}" Foreground="Orange"/>
+                        <TextBlock Text="{Binding BottomPanel.ElementLock.LockedComponentCount}" Foreground="Orange"/>
                         <TextBlock Text=" components, " Foreground="Gray"/>
-                        <TextBlock Text="{Binding ElementLock.LockedConnectionCount}" Foreground="Orange"/>
+                        <TextBlock Text="{Binding BottomPanel.ElementLock.LockedConnectionCount}" Foreground="Orange"/>
                         <TextBlock Text=" connections" Foreground="Gray"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Binding ElementLock.StatusText}"
+                    <TextBlock Text="{Binding BottomPanel.ElementLock.StatusText}"
                                Foreground="LightGreen" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding ElementLock.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                               IsVisible="{Binding BottomPanel.ElementLock.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
                     <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <TextBlock Text="{Binding CurrentMode}" Foreground="Cyan" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding CanvasInteraction.CurrentMode}" Foreground="Cyan" FontWeight="Bold"/>
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
@@ -759,42 +759,42 @@
                     <!-- Routing Diagnostics -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Routing Diagnostics:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Analyze Routes" Command="{Binding RoutingDiagnostics.RunDiagnosticsCommand}"
+                    <Button Content="Analyze Routes" Command="{Binding RightPanel.RoutingDiagnostics.RunDiagnosticsCommand}"
                             MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"
-                            IsEnabled="{Binding RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
+                            IsEnabled="{Binding RightPanel.RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                        <Button Content="Export JSON" Command="{Binding RoutingDiagnostics.ExportPathsJsonCommand}"
+                        <Button Content="Export JSON" Command="{Binding RightPanel.RoutingDiagnostics.ExportPathsJsonCommand}"
                                 MinWidth="100" Margin="0,0,5,0" Padding="8,4" Background="#3d3d5d"/>
-                        <Button Content="📋" Command="{Binding RoutingDiagnostics.CopyPathsJsonToClipboardCommand}"
+                        <Button Content="📋" Command="{Binding RightPanel.RoutingDiagnostics.CopyPathsJsonToClipboardCommand}"
                                 Width="36" Background="#3d3d5d" ToolTip.Tip="Copy JSON to clipboard"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding RoutingDiagnostics.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
-                               IsVisible="{Binding RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
+                               IsVisible="{Binding RightPanel.RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,5"
-                                IsVisible="{Binding RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                IsVisible="{Binding RightPanel.RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                         <TextBlock Text="Valid: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding RoutingDiagnostics.ValidConnections}" Foreground="LightGreen"/>
+                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.ValidConnections}" Foreground="LightGreen"/>
                         <TextBlock Text="/" Foreground="Gray"/>
-                        <TextBlock Text="{Binding RoutingDiagnostics.TotalConnections}" Foreground="White"/>
+                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.TotalConnections}" Foreground="White"/>
                         <TextBlock Text="  Issues: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding RoutingDiagnostics.IssueCount}" Foreground="Salmon"/>
+                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.IssueCount}" Foreground="Salmon"/>
                     </StackPanel>
                     <ScrollViewer MaxHeight="150" Margin="0,5,0,0"
-                                  IsVisible="{Binding RoutingDiagnostics.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding RoutingDiagnostics.ResultText}" Foreground="LightGray"
+                                  IsVisible="{Binding RightPanel.RoutingDiagnostics.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.ResultText}" Foreground="LightGray"
                                    FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
                     </ScrollViewer>
 
                     <!-- Component Dimension Diagnostics -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
                     <TextBlock Text="Component Dimensions:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Check Dimensions" Command="{Binding DimensionDiagnostics.RefreshDiagnosticsCommand}"
+                    <Button Content="Check Dimensions" Command="{Binding RightPanel.DimensionDiagnostics.RefreshDiagnosticsCommand}"
                             MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Validates that component dimensions in GDS export match the UI display."
                                Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
                     <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                  IsVisible="{Binding DimensionDiagnostics.DiagnosticsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
+                                  IsVisible="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
                                    FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
                     </ScrollViewer>
 
@@ -900,7 +900,7 @@
             <!-- Design Canvas -->
             <controls:DesignCanvas x:Name="DesignCanvasControl"
                                    ViewModel="{Binding Canvas}"
-                                   Zoom="{Binding ZoomLevel, Mode=TwoWay}"
+                                   Zoom="{Binding ViewportControl.ZoomLevel, Mode=TwoWay}"
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
