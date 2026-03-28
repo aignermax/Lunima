@@ -89,11 +89,6 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public ArchitectureReportViewModel ArchitectureReport { get; }
 
-    /// <summary>
-    /// ViewModel for the Nazca reference script generator (GDS ground-truth tool, Issue #332).
-    /// </summary>
-    public NazcaReferenceViewModel NazcaReference { get; }
-
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
     {
@@ -109,7 +104,6 @@ public partial class RightPanelViewModel : ObservableObject
         CompressLayout = new CompressLayoutViewModel(errorConsole);
         GroupSMatrix = new GroupSMatrixViewModel();
         ArchitectureReport = new ArchitectureReportViewModel();
-        NazcaReference = new NazcaReferenceViewModel();
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
