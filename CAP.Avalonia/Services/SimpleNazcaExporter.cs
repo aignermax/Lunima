@@ -231,6 +231,20 @@ public class SimpleNazcaExporter
         var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
         var nazcaFunc = GetNazcaFunction(comp);
 
+        // Diagnostic logging (Issue #334): trace coordinate transform for each component.
+        // Format: # COORD: <id> editor=(<physX>,<physY>) originOffset=(<ox>,<oy>) nazca=(<nx>,<ny>) rot=<r>
+        sb.AppendLine($"        # COORD: {comp.Identifier} " +
+                      $"editor=({comp.PhysicalX.ToString("F2", ci)},{comp.PhysicalY.ToString("F2", ci)}) " +
+                      $"originOffset=({originOffsetX.ToString("F2", ci)},{originOffsetY.ToString("F2", ci)}) " +
+                      $"nazca=({nazcaX},{nazcaY}) rot={rot}");
+
+        // Pin coordinate diagnostics: show expected Nazca pin positions for alignment verification.
+        foreach (var pin in comp.PhysicalPins)
+        {
+            var (pinNazcaX, pinNazcaY) = pin.GetAbsoluteNazcaPosition();
+            sb.AppendLine($"        # PIN: {pin.Name} expected_nazca=({pinNazcaX.ToString("F2", ci)},{pinNazcaY.ToString("F2", ci)})");
+        }
+
         sb.AppendLine($"        {varName} = {nazcaFunc}.put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
         compIndex++;
     }
