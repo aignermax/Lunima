@@ -14,6 +14,7 @@ namespace CAP.Avalonia.Visualization;
 public class PowerFlowVisualizer
 {
     private readonly PowerFlowAnalyzer _analyzer = new();
+    private readonly InternalFieldCalculator _internalFieldCalculator = new();
 
     /// <summary>
     /// Whether power flow visualization is currently enabled.
@@ -48,8 +49,11 @@ public class PowerFlowVisualizer
     /// <summary>
     /// Updates the power flow data from simulation results.
     /// Includes both regular connections and frozen paths inside groups.
-    /// When frozen path pins are absent from fieldResults (because they are internal to the
-    /// group's S-Matrix), their amplitudes are estimated from the parent group's external pins.
+    ///
+    /// For frozen path pins that are absent from fieldResults (because they are internal
+    /// to the group's collapsed S-Matrix), their amplitudes are computed accurately by
+    /// propagating the known external pin boundary conditions through the group's full
+    /// internal structure using <see cref="InternalFieldCalculator"/>.
     /// </summary>
     /// <param name="connections">Current waveguide connections.</param>
     /// <param name="components">Current components (to extract frozen paths from groups).</param>
@@ -65,12 +69,15 @@ public class PowerFlowVisualizer
     }
 
     /// <summary>
-    /// Builds an enhanced field results dictionary by adding fallback amplitude estimates
-    /// for internal frozen path pins that are absent from the simulation results.
-    /// These pins are hidden inside the group's S-Matrix and do not appear in fieldResults.
-    /// The fallback uses the maximum amplitude found at the parent group's external pins.
+    /// Builds an enhanced field results dictionary that adds computed internal field
+    /// amplitudes for ComponentGroup frozen path pins that are absent from the global
+    /// simulation results (because they are collapsed into the group's S-Matrix).
+    ///
+    /// Uses <see cref="InternalFieldCalculator"/> to propagate known external pin
+    /// amplitudes through the group's internal structure, giving each frozen path
+    /// its own distinct amplitude rather than a uniform fallback.
     /// </summary>
-    private static IReadOnlyDictionary<Guid, Complex> BuildEnhancedFieldResults(
+    private IReadOnlyDictionary<Guid, Complex> BuildEnhancedFieldResults(
         IReadOnlyList<Component> components,
         IReadOnlyDictionary<Guid, Complex> fieldResults)
     {
@@ -79,44 +86,69 @@ public class PowerFlowVisualizer
         foreach (var component in components)
         {
             if (component is ComponentGroup group)
-                AddGroupPinFallbacksRecursive(group, fieldResults, enhanced);
+                AddInternalFieldsRecursive(group, fieldResults, enhanced);
         }
 
         return enhanced;
     }
 
     /// <summary>
-    /// Recursively adds fallback amplitude entries for each group's internal frozen path pins.
-    /// Uses the maximum amplitude from the group's external pins as the fallback value.
-    /// Only adds entries for GUIDs that are not already present in the enhanced dictionary.
+    /// Recursively computes and adds internal field amplitudes for a group and all its
+    /// nested groups. Uses <see cref="InternalFieldCalculator"/> for accurate per-pin
+    /// values. Falls back to the external-pin maximum if no internal matrix is available
+    /// (e.g., groups without wavelength-specific S-Matrices).
     /// </summary>
-    private static void AddGroupPinFallbacksRecursive(
+    private void AddInternalFieldsRecursive(
+        ComponentGroup group,
+        IReadOnlyDictionary<Guid, Complex> originalFields,
+        Dictionary<Guid, Complex> enhanced)
+    {
+        // Compute accurate internal fields by propagating boundary conditions
+        var internalFields = _internalFieldCalculator.ComputeInternalFields(group, originalFields);
+
+        if (internalFields.Count > 0)
+        {
+            // Add computed values, preserving simulation values that already exist
+            foreach (var (pinId, amplitude) in internalFields)
+                enhanced.TryAdd(pinId, amplitude);
+        }
+        else
+        {
+            // Fallback: use max external pin amplitude for groups with no child S-Matrices
+            AddFallbackFromExternalPins(group, originalFields, enhanced);
+        }
+
+        // Recurse into nested groups, seeding them with the now-enhanced fields
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+                AddInternalFieldsRecursive(nestedGroup, enhanced, enhanced);
+        }
+    }
+
+    /// <summary>
+    /// Fallback: adds the maximum external pin amplitude for all frozen path pins
+    /// in a group. Used when no internal S-Matrix is available.
+    /// </summary>
+    private static void AddFallbackFromExternalPins(
         ComponentGroup group,
         IReadOnlyDictionary<Guid, Complex> originalFields,
         Dictionary<Guid, Complex> enhanced)
     {
         var maxAmplitude = FindMaxExternalPinAmplitude(group, originalFields);
 
-        if (maxAmplitude != Complex.Zero)
-        {
-            foreach (var frozenPath in group.InternalPaths)
-            {
-                AddFallbackAmplitudeIfMissing(frozenPath.StartPin, maxAmplitude, enhanced);
-                AddFallbackAmplitudeIfMissing(frozenPath.EndPin, maxAmplitude, enhanced);
-            }
-        }
+        if (maxAmplitude == Complex.Zero)
+            return;
 
-        foreach (var child in group.ChildComponents)
+        foreach (var frozenPath in group.InternalPaths)
         {
-            if (child is ComponentGroup nestedGroup)
-                AddGroupPinFallbacksRecursive(nestedGroup, originalFields, enhanced);
+            AddFallbackAmplitudeIfMissing(frozenPath.StartPin, maxAmplitude, enhanced);
+            AddFallbackAmplitudeIfMissing(frozenPath.EndPin, maxAmplitude, enhanced);
         }
     }
 
     /// <summary>
     /// Finds the maximum signal amplitude among a group's external pins.
-    /// Uses ExternalPins.InternalPin.LogicalPin to look up GUIDs in fieldResults,
-    /// since these are the same GUIDs present in the simulation output.
     /// </summary>
     private static Complex FindMaxExternalPinAmplitude(
         ComponentGroup group,

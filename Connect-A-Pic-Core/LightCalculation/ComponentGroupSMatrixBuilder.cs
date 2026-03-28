@@ -75,9 +75,26 @@ public class ComponentGroupSMatrixBuilder
     }
 
     /// <summary>
+    /// Builds the full internal system matrix for a ComponentGroup at a specific wavelength.
+    /// Unlike <see cref="BuildGroupSMatrixAllWavelengths"/>, this retains ALL internal child
+    /// pin IDs — not just external-facing ones. Use this to propagate boundary conditions
+    /// from known external pin amplitudes to compute internal field values.
+    /// Returns null if no child pin IDs or matrices are available.
+    /// </summary>
+    /// <param name="group">The ComponentGroup to build the internal matrix for.</param>
+    /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+    public SMatrix? BuildFullInternalMatrix(ComponentGroup group, int wavelengthNm)
+    {
+        if (group == null)
+            throw new ArgumentNullException(nameof(group));
+
+        return BuildFullTransitiveMatrix(group, wavelengthNm);
+    }
+
+    /// <summary>
     /// Gets all wavelengths supported by child components in the group.
     /// </summary>
-    private HashSet<int> GetSupportedWavelengths(ComponentGroup group)
+    public HashSet<int> GetSupportedWavelengths(ComponentGroup group)
     {
         var wavelengths = new HashSet<int>();
 
@@ -104,12 +121,11 @@ public class ComponentGroupSMatrixBuilder
     }
 
     /// <summary>
-    /// Builds the S-Matrix for a specific wavelength.
-    /// Combines child S-Matrices and frozen path connections.
+    /// Collects all physical pin IDs from child components (both InFlow and OutFlow).
+    /// For nested groups, uses their external pins; for regular components, uses all physical pins.
     /// </summary>
-    private SMatrix? BuildSMatrixForWavelength(ComponentGroup group, int wavelengthNm)
+    private static List<Guid> CollectAllChildPinIds(ComponentGroup group)
     {
-        // Collect all physical pin IDs from child components
         var allChildPinIds = new List<Guid>();
 
         foreach (var child in group.ChildComponents)
@@ -140,10 +156,14 @@ public class ComponentGroupSMatrixBuilder
             }
         }
 
-        if (allChildPinIds.Count == 0)
-            return null;
+        return allChildPinIds;
+    }
 
-        // Create system matrix from all child components
+    /// <summary>
+    /// Collects child S-Matrices at the specified wavelength.
+    /// </summary>
+    private List<SMatrix> CollectChildMatrices(ComponentGroup group, int wavelengthNm)
+    {
         var childMatrices = new List<SMatrix>();
 
         foreach (var child in group.ChildComponents)
@@ -154,6 +174,23 @@ public class ComponentGroupSMatrixBuilder
                 childMatrices.Add(childMatrix);
             }
         }
+
+        return childMatrices;
+    }
+
+    /// <summary>
+    /// Builds the full transitive matrix with ALL internal pins retained.
+    /// This is the common implementation used by both the external-pin-projection path
+    /// and the full-internal-matrix path.
+    /// </summary>
+    private SMatrix? BuildFullTransitiveMatrix(ComponentGroup group, int wavelengthNm)
+    {
+        var allChildPinIds = CollectAllChildPinIds(group);
+
+        if (allChildPinIds.Count == 0)
+            return null;
+
+        var childMatrices = CollectChildMatrices(group, wavelengthNm);
 
         // Add connections from frozen internal paths
         var internalConnections = BuildInternalConnectionMatrix(group, allChildPinIds);
@@ -169,9 +206,17 @@ public class ComponentGroupSMatrixBuilder
         var mergedMatrix = SMatrix.CreateSystemSMatrix(childMatrices);
 
         // Compute transitive closure so light propagates through multi-hop chains.
-        // CreateSystemSMatrix only merges single-hop transfers; the Neumann series
-        // (M + M^2 + ... + M^N) accumulates multi-step paths.
-        var systemMatrix = ComputeTransitiveMatrix(mergedMatrix, allChildPinIds.Count);
+        return ComputeTransitiveMatrix(mergedMatrix, allChildPinIds.Count);
+    }
+
+    /// <summary>
+    /// Builds the S-Matrix for a specific wavelength (projected to external pins only).
+    /// </summary>
+    private SMatrix? BuildSMatrixForWavelength(ComponentGroup group, int wavelengthNm)
+    {
+        var fullMatrix = BuildFullTransitiveMatrix(group, wavelengthNm);
+        if (fullMatrix == null)
+            return null;
 
         // Create the external pin mapping
         var externalPinIds = new List<Guid>();
@@ -185,9 +230,7 @@ public class ComponentGroupSMatrixBuilder
         }
 
         // Extract the sub-matrix for external pins only
-        var groupMatrix = ExtractExternalPinMatrix(systemMatrix, externalPinIds);
-
-        return groupMatrix;
+        return ExtractExternalPinMatrix(fullMatrix, externalPinIds);
     }
 
     /// <summary>
