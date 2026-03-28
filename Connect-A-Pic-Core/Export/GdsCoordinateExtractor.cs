@@ -1,0 +1,185 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+namespace CAP_Core.Export;
+
+/// <summary>
+/// Runs the Python gdspy coordinate extraction script on a GDS file
+/// and returns structured JSON output for numerical comparison.
+/// Supports debugging coordinate mismatches between component pins
+/// and waveguide placements (issue #329).
+/// </summary>
+public class GdsCoordinateExtractor
+{
+    private const string ScriptRelativePath = "Scripts/extract_gds_coords.py";
+
+    private string? _customPythonPath;
+
+    /// <summary>Result of a coordinate extraction operation.</summary>
+    public class ExtractionResult
+    {
+        /// <summary>True if extraction completed successfully.</summary>
+        public bool Success { get; init; }
+
+        /// <summary>Path to the output JSON file.</summary>
+        public string? JsonOutputPath { get; init; }
+
+        /// <summary>Raw JSON string with extracted coordinates.</summary>
+        public string? JsonContent { get; init; }
+
+        /// <summary>Error message if extraction failed.</summary>
+        public string? ErrorMessage { get; init; }
+
+        /// <summary>Status message for UI display.</summary>
+        public string Status { get; init; } = string.Empty;
+    }
+
+    /// <summary>Sets a custom Python executable path to use instead of the system default.</summary>
+    /// <param name="pythonPath">Path to Python executable, or null to use system default.</param>
+    public void SetCustomPythonPath(string? pythonPath)
+    {
+        _customPythonPath = pythonPath;
+    }
+
+    /// <summary>
+    /// Extracts all polygon and path coordinates from a GDS file using the
+    /// Scripts/extract_gds_coords.py Python script.
+    /// </summary>
+    /// <param name="gdsPath">Path to the GDS file to analyze.</param>
+    /// <param name="outputJsonPath">Output JSON path; defaults to .coords.json alongside the GDS file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Extraction result containing the JSON coordinate data.</returns>
+    public async Task<ExtractionResult> ExtractAsync(
+        string gdsPath,
+        string? outputJsonPath = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(gdsPath))
+            return Failure($"GDS file not found: {gdsPath}");
+
+        var scriptPath = FindScriptPath();
+        if (scriptPath == null)
+            return Failure($"Extraction script not found. Expected at: {ScriptRelativePath}");
+
+        var jsonPath = outputJsonPath ?? Path.ChangeExtension(gdsPath, ".coords.json");
+
+        try
+        {
+            var python = GetPythonCommand();
+            var args = $"\"{scriptPath}\" \"{gdsPath}\" \"{jsonPath}\"";
+            var (exitCode, stdout, stderr) = await RunCommandAsync(python, args, cancellationToken);
+
+            if (exitCode != 0)
+            {
+                var msg = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
+                return Failure($"Script failed (exit {exitCode}): {msg}");
+            }
+
+            if (!File.Exists(jsonPath))
+                return Failure("Script ran but no output JSON was created.");
+
+            var content = await File.ReadAllTextAsync(jsonPath, cancellationToken);
+            return new ExtractionResult
+            {
+                Success = true,
+                JsonOutputPath = jsonPath,
+                JsonContent = content,
+                Status = $"Extracted to {Path.GetFileName(jsonPath)}"
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            return Failure("Extraction was cancelled.");
+        }
+        catch (Exception ex)
+        {
+            return Failure($"Error running extraction script: {ex.Message}");
+        }
+    }
+
+    /// <summary>Checks whether Python is available for running the extraction script.</summary>
+    /// <returns>True if Python is available.</returns>
+    public async Task<bool> IsPythonAvailableAsync()
+    {
+        try
+        {
+            var (exitCode, _, _) = await RunCommandAsync(GetPythonCommand(), "--version", CancellationToken.None);
+            return exitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Resolves the path to the extraction script.
+    /// Searches relative to the executable, current directory, and walks up
+    /// the directory tree to locate the repository root (useful in test contexts).
+    /// </summary>
+    public static string? FindScriptPath()
+    {
+        var candidateDirs = new[]
+        {
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory()
+        };
+
+        foreach (var dir in candidateDirs)
+        {
+            // Direct match
+            var direct = Path.Combine(dir, ScriptRelativePath);
+            if (File.Exists(direct))
+                return direct;
+
+            // Walk up to find a directory containing the Scripts folder
+            var current = dir;
+            for (var i = 0; i < 8; i++)
+            {
+                var candidate = Path.Combine(current, ScriptRelativePath);
+                if (File.Exists(candidate))
+                    return candidate;
+                var parent = Path.GetDirectoryName(current);
+                if (parent == null || parent == current)
+                    break;
+                current = parent;
+            }
+        }
+
+        return null;
+    }
+
+    private static ExtractionResult Failure(string message) =>
+        new() { Success = false, ErrorMessage = message, Status = message };
+
+    private string GetPythonCommand()
+    {
+        if (!string.IsNullOrEmpty(_customPythonPath))
+            return _customPythonPath;
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "python" : "python3";
+    }
+
+    private static async Task<(int exitCode, string output, string error)> RunCommandAsync(
+        string fileName, string arguments, CancellationToken cancellationToken)
+    {
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        process.Start();
+
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        return (process.ExitCode, await outputTask, await errorTask);
+    }
+}
