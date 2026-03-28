@@ -1,0 +1,242 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Panels"
+             xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+             x:Class="CAP.Avalonia.Views.Panels.ComponentLibraryPanel"
+             x:DataType="vm:LeftPanelViewModel">
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="Component Library"
+                   FontWeight="Bold" Margin="10,10,10,4" Foreground="White"/>
+        <TextBox DockPanel.Dock="Top" Watermark="Search components..."
+                 Text="{Binding SearchText}"
+                 Margin="10,0,10,6" FontSize="11"
+                 Background="#1e1e1e" Foreground="White"
+                 BorderBrush="#3e3e3e"/>
+        <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
+                   FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
+
+        <!-- Saved Groups Section -->
+        <Expander DockPanel.Dock="Top" Header="Saved Groups" IsExpanded="True"
+                  Margin="5,0,5,5" Background="#2d2d2d">
+            <StackPanel Margin="5">
+                <TextBlock Text="{Binding ComponentLibrary.StatusText}"
+                           FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+                <TextBlock Text="Click to select, then click canvas to place"
+                           FontSize="10" Margin="0,0,0,5" Foreground="Gray" TextWrapping="Wrap"/>
+
+                <!-- User Groups -->
+                <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
+                           FontSize="10" Margin="0,5,0,3"
+                           IsVisible="{Binding ComponentLibrary.UserGroups.Count}"/>
+                <ListBox x:Name="UserGroupsListBox"
+                         ItemsSource="{Binding ComponentLibrary.UserGroups}"
+                         SelectionChanged="OnUserGroupsSelectionChanged"
+                         Background="Transparent"
+                         MaxHeight="150">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                            <Border Margin="3" Cursor="Hand"
+                                    ToolTip.Tip="{Binding Template.Description}"
+                                    PointerEntered="OnGroupItemPointerEntered"
+                                    PointerExited="OnGroupItemPointerExited"
+                                    Background="Transparent"
+                                    ClipToBounds="False">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Rename" Command="{Binding RenameCommand}"/>
+                                        <MenuItem Header="Delete" Command="{Binding DeleteCommand}"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Grid>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="56" Height="36"
+                                            Background="#1e1e1e"
+                                            BorderBrush="#3e3e3e"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Margin="0,0,6,0">
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Template.ComponentCount}"
+                                                       FontSize="16" FontWeight="Bold"
+                                                       Foreground="#4CAF50"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="comp" FontSize="7"
+                                                       Foreground="Gray"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,-2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
+                                        <TextBlock FontSize="9" Foreground="Gray">
+                                            <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                            <Run Text="×"/>
+                                            <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                            <Run Text="μm"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button IsVisible="{Binding IsHovered}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Width="18" Height="18"
+                                        Padding="0"
+                                        Margin="0,-6,-6,0"
+                                        Background="#D32F2F"
+                                        CornerRadius="9"
+                                        Command="{Binding DeleteCommand}"
+                                        ToolTip.Tip="Delete saved group">
+                                    <PathIcon Data="M 4,4 L 10,10 M 4,10 L 10,4"
+                                              Width="10" Height="10"
+                                              Foreground="White"/>
+                                </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- PDK Groups -->
+                <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
+                           FontSize="10" Margin="0,10,0,3"
+                           IsVisible="{Binding ComponentLibrary.PdkGroups.Count}"/>
+                <ListBox x:Name="PdkGroupsListBox"
+                         ItemsSource="{Binding ComponentLibrary.PdkGroups}"
+                         SelectionChanged="OnPdkGroupsSelectionChanged"
+                         Background="Transparent"
+                         MaxHeight="150">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                            <Border Margin="3" Cursor="Hand"
+                                    ToolTip.Tip="{Binding Template.Description}"
+                                    PointerEntered="OnGroupItemPointerEntered"
+                                    PointerExited="OnGroupItemPointerExited"
+                                    Background="Transparent"
+                                    ClipToBounds="False">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Rename" Command="{Binding RenameCommand}"/>
+                                        <MenuItem Header="Delete" Command="{Binding DeleteCommand}"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Grid>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="56" Height="36"
+                                            Background="#1e1e1e"
+                                            BorderBrush="#3e3e3e"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Margin="0,0,6,0">
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Template.ComponentCount}"
+                                                       FontSize="16" FontWeight="Bold"
+                                                       Foreground="#4CAF50"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="comp" FontSize="7"
+                                                       Foreground="Gray"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,-2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
+                                        <TextBlock FontSize="9" Foreground="Gray">
+                                            <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                            <Run Text="×"/>
+                                            <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                            <Run Text="μm"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button IsVisible="{Binding IsHovered}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Width="18" Height="18"
+                                        Padding="0"
+                                        Margin="0,-6,-6,0"
+                                        Background="#D32F2F"
+                                        CornerRadius="9"
+                                        Command="{Binding DeleteCommand}"
+                                        ToolTip.Tip="Delete saved group">
+                                    <PathIcon Data="M 4,4 L 10,10 M 4,10 L 10,4"
+                                              Width="10" Height="10"
+                                              Foreground="White"/>
+                                </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Expander>
+
+        <!-- PDK Management Panel -->
+        <Expander DockPanel.Dock="Top" Header="PDK Management" IsExpanded="False"
+                  Margin="5,0,5,5" Background="#2d2d2d">
+            <StackPanel Margin="5">
+                <TextBlock Text="{Binding PdkManager.StatusText}"
+                           FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding PdkManager.LoadedPdks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
+                                <StackPanel Margin="0,3">
+                                    <StackPanel Orientation="Horizontal">
+                                        <CheckBox IsChecked="{Binding IsEnabled}"
+                                                  Content="{Binding Name}"
+                                                  FontSize="10"
+                                                  Margin="0,0,5,0"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                                        <TextBlock Text="{Binding SourceBadge}"
+                                                   FontSize="9" Foreground="Gray" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
+                                                   FontSize="9" Foreground="Gray"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
+                    <Button Content="Enable All" Command="{Binding PdkManager.EnableAllCommand}"
+                            Width="75" Height="24" Margin="2" FontSize="10"
+                            Background="#3d3d3d"/>
+                    <Button Content="Disable All" Command="{Binding PdkManager.DisableAllCommand}"
+                            Width="75" Height="24" Margin="2" FontSize="10"
+                            Background="#3d3d3d"/>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+        <ScrollViewer x:Name="ComponentLibraryScroll"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LibraryScrollOffset, Mode=TwoWay}">
+            <ListBox ItemsSource="{Binding FilteredTemplates}"
+                     SelectedItem="{Binding SelectedTemplate}"
+                     Background="Transparent" Foreground="White"
+                     Margin="5">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                        <StackPanel Orientation="Horizontal" Margin="3">
+                            <controls:ComponentPreview
+                                Width="56" Height="36"
+                                WidthMicrometers="{Binding WidthMicrometers}"
+                                HeightMicrometers="{Binding HeightMicrometers}"
+                                PinDefinitions="{Binding PinDefinitions}"
+                                Margin="0,0,6,0"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

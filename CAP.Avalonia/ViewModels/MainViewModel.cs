@@ -62,73 +62,6 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public BottomPanelViewModel BottomPanel { get; }
 
-    // Backward-compatible properties - delegate to Panel ViewModels
-    // TODO: Update XAML bindings and remove these properties
-    public ParameterSweepViewModel Sweep => RightPanel.Sweep;
-    public RoutingDiagnosticsViewModel RoutingDiagnostics => RightPanel.RoutingDiagnostics;
-    public DesignValidationViewModel DesignValidation => RightPanel.DesignValidation;
-    public PdkManagerViewModel PdkManager => LeftPanel.PdkManager;
-    public ComponentDimensionDiagnosticsViewModel? DimensionDiagnostics => RightPanel.DimensionDiagnostics;
-    public ElementLockViewModel ElementLock => BottomPanel.ElementLock;
-    public ComponentDimensionViewModel DimensionValidator => RightPanel.DimensionValidator;
-    public ExportValidationViewModel ExportValidation => RightPanel.ExportValidation;
-    public SMatrixPerformanceViewModel SMatrixPerformance => RightPanel.SMatrixPerformance;
-    public CompressLayoutViewModel CompressLayout => RightPanel.CompressLayout;
-    public GroupSMatrixViewModel GroupSMatrix => RightPanel.GroupSMatrix;
-    public ArchitectureReportViewModel ArchitectureReport => RightPanel.ArchitectureReport;
-    public WaveguideLengthViewModel WaveguideLength => BottomPanel.WaveguideLength;
-    public HierarchyPanelViewModel HierarchyPanel => LeftPanel.HierarchyPanel;
-    public ComponentLibraryViewModel GroupLibrary => LeftPanel.ComponentLibrary;
-
-    /// <summary>
-    /// ViewModel for the error console panel (collapsible, bottom of window).
-    /// </summary>
-    public ErrorConsoleViewModel ErrorConsole => BottomPanel.ErrorConsole;
-
-    // Backward-compatible library properties
-    public ObservableCollection<ComponentTemplate> ComponentLibrary => LeftPanel.AllTemplates;
-    public ObservableCollection<ComponentTemplate> FilteredComponentLibrary => LeftPanel.FilteredTemplates;
-    public ObservableCollection<string> Categories => LeftPanel.Categories;
-    public string SearchText
-    {
-        get => LeftPanel.SearchText;
-        set => LeftPanel.SearchText = value;
-    }
-
-    // Backward-compatible interaction properties
-    public InteractionMode CurrentMode
-    {
-        get => CanvasInteraction.CurrentMode;
-        set => CanvasInteraction.CurrentMode = value;
-    }
-    public ComponentTemplate? SelectedTemplate
-    {
-        get => CanvasInteraction.SelectedTemplate;
-        set => CanvasInteraction.SelectedTemplate = value;
-    }
-    public CAP_Core.Components.Creation.GroupTemplate? SelectedGroupTemplate
-    {
-        get => CanvasInteraction.SelectedGroupTemplate;
-        set => CanvasInteraction.SelectedGroupTemplate = value;
-    }
-    public ComponentViewModel? SelectedComponent
-    {
-        get => CanvasInteraction.SelectedComponent;
-        set => CanvasInteraction.SelectedComponent = value;
-    }
-    public WaveguideConnectionViewModel? SelectedWaveguideConnection
-    {
-        get => CanvasInteraction.SelectedWaveguideConnection;
-        set => CanvasInteraction.SelectedWaveguideConnection = value;
-    }
-
-    // Backward-compatible zoom property
-    public double ZoomLevel
-    {
-        get => ViewportControl.ZoomLevel;
-        set => ViewportControl.ZoomLevel = value;
-    }
-
     /// <summary>
     /// Available wavelength options for the laser configuration dropdown.
     /// </summary>
@@ -193,30 +126,19 @@ public partial class MainViewModel : ObservableObject
             }
         };
 
-        // Wire up ZoomLevel property change forwarding from ViewportControl to MainViewModel
-        // This ensures that when ViewportControl.ZoomLevel changes (e.g., via ZoomToFit),
-        // the UI binding on MainViewModel.ZoomLevel gets notified
-        ViewportControl.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(ViewportControl.ZoomLevel))
-            {
-                OnPropertyChanged(nameof(ZoomLevel));
-            }
-        };
-
         // Wire up callbacks
         CanvasInteraction.OnSelectionChanged = comp =>
         {
-            Sweep.ConfigureForComponent(comp, Canvas);
-            HierarchyPanel.SyncSelectionFromCanvas(comp);
+            RightPanel.Sweep.ConfigureForComponent(comp, Canvas);
+            LeftPanel.HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
 
         // Wire rename from hierarchy panel through undo-aware command manager
-        HierarchyPanel.RenameComponent = (component, newName) =>
+        LeftPanel.HierarchyPanel.RenameComponent = (component, newName) =>
         {
             var cmd = new Commands.RenameComponentCommand(component, newName);
             CommandManager.ExecuteCommand(cmd);
-            HierarchyPanel.RefreshNode(component);
+            LeftPanel.HierarchyPanel.RefreshNode(component);
         };
 
         CanvasInteraction.ClearLeftPanelGroupSelection = () =>
@@ -226,11 +148,7 @@ public partial class MainViewModel : ObservableObject
 
         CanvasInteraction.ClearComponentTemplateSelection = () =>
         {
-            // Setting CanvasInteraction.SelectedTemplate to null will automatically update
-            // MainViewModel.SelectedTemplate (which is bound to the UI ListBox)
             CanvasInteraction.SelectedTemplate = null;
-            // Force PropertyChanged notification on the wrapper property to ensure UI updates
-            OnPropertyChanged(nameof(SelectedTemplate));
         };
 
         // Wire up mode changes and template selection to keep UI in sync
@@ -248,18 +166,28 @@ public partial class MainViewModel : ObservableObject
             }
             else if (e.PropertyName == nameof(CanvasInteraction.SelectedTemplate))
             {
+                // Sync to LeftPanel so ComponentLibraryPanel can bind to it
+                if (LeftPanel.SelectedTemplate != CanvasInteraction.SelectedTemplate)
+                    LeftPanel.SelectedTemplate = CanvasInteraction.SelectedTemplate;
                 // When a component template is selected, deselect group template in left panel
                 if (CanvasInteraction.SelectedTemplate != null)
                 {
                     LeftPanel.SelectedGroupTemplate = null;
                 }
             }
-            else if (e.PropertyName == nameof(CanvasInteraction.SelectedGroupTemplate))
+            else if (e.PropertyName == nameof(CanvasInteraction.SelectedWaveguideConnection))
             {
-                // When a group template is selected, deselect component template
-                // (SelectedTemplate is bound to MainViewModel.SelectedTemplate which wraps CanvasInteraction.SelectedTemplate,
-                // so it will automatically update the UI ListBox)
+                // Sync selected connection to WaveguideLengthViewModel so it can show length info
+                BottomPanel.WaveguideLength.SelectedConnection = CanvasInteraction.SelectedWaveguideConnection;
             }
+        };
+
+        // Sync LeftPanel.SelectedTemplate → CanvasInteraction.SelectedTemplate
+        LeftPanel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(LeftPanel.SelectedTemplate) &&
+                LeftPanel.SelectedTemplate != CanvasInteraction.SelectedTemplate)
+                CanvasInteraction.SelectedTemplate = LeftPanel.SelectedTemplate;
         };
 
         // Wire up group template selection from left panel to canvas interaction
@@ -289,7 +217,7 @@ public partial class MainViewModel : ObservableObject
                 catch (Exception ex)
                 {
                     StatusText = $"Failed to load template '{template.Name}': {ex.Message}";
-                    ErrorConsole.Log($"Failed to load template '{template.Name}': {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
+                    BottomPanel.ErrorConsole.Log($"Failed to load template '{template.Name}': {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
                     return;
                 }
 
@@ -336,14 +264,14 @@ public partial class MainViewModel : ObservableObject
 
     private void WireHierarchyPanel()
     {
-        HierarchyPanel.NavigateToPosition = ViewportControl.NavigateCanvasTo;
-        HierarchyPanel.GetViewportSize = ViewportControl.GetViewportSize;
+        LeftPanel.HierarchyPanel.NavigateToPosition = ViewportControl.NavigateCanvasTo;
+        LeftPanel.HierarchyPanel.GetViewportSize = ViewportControl.GetViewportSize;
     }
 
     private void WireDesignValidation()
     {
-        DesignValidation.NavigateToPosition = ViewportControl.NavigateCanvasTo;
-        DesignValidation.HighlightConnection = (connection) =>
+        RightPanel.DesignValidation.NavigateToPosition = ViewportControl.NavigateCanvasTo;
+        RightPanel.DesignValidation.HighlightConnection = (connection) =>
         {
             foreach (var conn in Canvas.Connections)
             {
@@ -354,7 +282,7 @@ public partial class MainViewModel : ObservableObject
 
     private void WireFileOperations()
     {
-        FileOperations.RebuildHierarchy = HierarchyPanel.RebuildTree;
+        FileOperations.RebuildHierarchy = LeftPanel.HierarchyPanel.RebuildTree;
         FileOperations.ZoomToFitAfterLoad = (w, h) =>
         {
             var (vpWidth, vpHeight) = ViewportControl.GetViewportSize?.Invoke() ?? (w, h);
@@ -512,7 +440,7 @@ public partial class MainViewModel : ObservableObject
 
                 if (result.SystemMatrix != null)
                 {
-                    SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
+                    RightPanel.SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
                 }
             }
             else
@@ -523,7 +451,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusText = $"Simulation error: {ex.Message}";
-            ErrorConsole.Log($"Simulation failed: {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
+            BottomPanel.ErrorConsole.Log($"Simulation failed: {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
 
         }
         finally
@@ -532,16 +460,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void RunDesignChecks()
-    {
-        var connections = Canvas.Connections
-            .Select(c => c.Connection)
-            .ToList();
-
-        DesignValidation.RunValidation(connections);
-        StatusText = DesignValidation.StatusText;
-    }
 }
 
 // Data classes for serialization (used by FileOperationsViewModel)

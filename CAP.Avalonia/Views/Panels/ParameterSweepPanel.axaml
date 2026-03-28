@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Analysis"
+             x:Class="CAP.Avalonia.Views.Panels.ParameterSweepPanel"
+             x:DataType="vm:ParameterSweepViewModel">
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Parameter Sweep:" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+            <TextBlock Text="Start:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+            <NumericUpDown Value="{Binding StartValue}"
+                           Minimum="{Binding ComponentSliderMin}"
+                           Maximum="{Binding ComponentSliderMax}"
+                           Increment="10" Width="130" FormatString="F0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+            <TextBlock Text="End:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+            <NumericUpDown Value="{Binding EndValue}"
+                           Minimum="{Binding ComponentSliderMin}"
+                           Maximum="{Binding ComponentSliderMax}"
+                           Increment="10" Width="130" FormatString="F0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+            <TextBlock Text="Steps:" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+            <NumericUpDown Value="{Binding StepCount}"
+                           Minimum="2" Maximum="100"
+                           Increment="1" Width="130" FormatString="F0"/>
+        </StackPanel>
+        <Button Content="Run Sweep" Command="{Binding RunSweepCommand}"
+                Width="120" Margin="0,5,0,5" Background="#3d5d3d"
+                IsEnabled="{Binding IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+        <TextBlock Text="{Binding StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                   IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                      IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding ResultText}" Foreground="LightGreen"
+                       FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
+        </ScrollViewer>
+        <Button Content="Export CSV" Command="{Binding ExportCsvCommand}"
+                Width="100" Margin="0,5,0,0" Background="#3d3d5d"
+                IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </StackPanel>
+</UserControl>

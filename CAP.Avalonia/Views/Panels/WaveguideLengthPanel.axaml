@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Canvas"
+             x:Class="CAP.Avalonia.Views.Panels.WaveguideLengthPanel"
+             x:DataType="vm:WaveguideLengthViewModel">
+    <StackPanel IsVisible="{Binding HasConnection}">
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Waveguide Length:" Foreground="Magenta" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding ConnectionName}"
+                   Foreground="White" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
+        <TextBlock Text="Current Length:" Foreground="Gray" Margin="0,5,0,3"/>
+        <TextBlock Foreground="White" Margin="0,0,0,5">
+            <Run Text="{Binding CurrentLengthMicrometers, StringFormat={}{0:F2}}"/>
+            <Run Text=" µm" Foreground="Gray"/>
+        </TextBlock>
+        <CheckBox Content="Enable Target Length"
+                  IsChecked="{Binding IsTargetLengthEnabled}"
+                  Foreground="White" Margin="0,5,0,8"/>
+        <StackPanel IsVisible="{Binding IsTargetLengthEnabled}">
+            <TextBlock Text="Target Length (µm):" Foreground="Gray" Margin="0,5,0,3"/>
+            <NumericUpDown Value="{Binding TargetLengthMicrometers}"
+                           Minimum="10" Maximum="10000"
+                           Increment="10" Width="180" FormatString="F2" Margin="0,0,0,5"/>
+            <TextBlock Text="Tolerance (µm):" Foreground="Gray" Margin="0,5,0,3"/>
+            <NumericUpDown Value="{Binding ToleranceMicrometers}"
+                           Minimum="0.1" Maximum="100"
+                           Increment="0.5" Width="180" FormatString="F2" Margin="0,0,0,8"/>
+            <Button Content="Set Target to Current"
+                    Command="{Binding SetTargetToCurrentCommand}"
+                    Width="160" Margin="0,5,0,5"
+                    Background="#5d3d5d"/>
+            <Button Content="Apply"
+                    Command="{Binding ApplyTargetLengthCommand}"
+                    Width="100" Margin="0,5,0,5"
+                    Background="#3d5d3d"/>
+            <TextBlock Text="{Binding LengthStatusText}"
+                       Foreground="{Binding LengthStatusColor}"
+                       FontSize="10" Margin="0,5,0,5"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Diagnostics"
+             x:Class="CAP.Avalonia.Views.Panels.GroupSMatrixPanel"
+             x:DataType="vm:GroupSMatrixViewModel">
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Group S-Matrix:" Foreground="Gold" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Compute S-Matrices for ComponentGroups to enable simulation."
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding StatusText}"
+                   Foreground="LightBlue" FontSize="10" Margin="0,5,0,5"/>
+        <StackPanel IsVisible="{Binding HasGroups}" Margin="0,5,0,0">
+            <Button Content="Compute All S-Matrices"
+                    Command="{Binding ComputeAllGroupMatricesCommand}"
+                    Width="160" Margin="0,0,0,5"
+                    Background="#5d4d3d"/>
+            <ItemsControl ItemsSource="{Binding GroupMatrices}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,5,0,5" Background="#2d2d2d" Padding="5">
+                            <StackPanel>
+                                <TextBlock Text="{Binding GroupName}"
+                                           Foreground="White" FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Children: " Foreground="Gray" Width="80"/>
+                                    <TextBlock Text="{Binding ChildCount}" Foreground="White"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Paths: " Foreground="Gray" Width="80"/>
+                                    <TextBlock Text="{Binding InternalPathCount}" Foreground="White"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Ext. Pins: " Foreground="Gray" Width="80"/>
+                                    <TextBlock Text="{Binding ExternalPinCount}" Foreground="White"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="Status: " Foreground="Gray" Width="80"/>
+                                    <TextBlock Text="{Binding Status}" Foreground="LightGreen"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

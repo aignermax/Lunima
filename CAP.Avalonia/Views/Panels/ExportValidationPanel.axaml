@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Diagnostics"
+             x:Class="CAP.Avalonia.Views.Panels.ExportValidationPanel"
+             x:DataType="vm:ExportValidationViewModel">
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Export Validation:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <Button Content="Validate Export" Command="{Binding RunValidationFromCanvasCommand}"
+                MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#3d5d5d" HorizontalAlignment="Stretch"/>
+        <TextBlock Text="End-to-end validation: UI → Backend → Nazca code → Pin positions"
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding ValidationStatus}" Foreground="LightBlue" FontSize="10" Margin="0,5,0,3"
+                   IsVisible="{Binding HasResults}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,5"
+                    IsVisible="{Binding HasResults}">
+            <TextBlock Text="Passed: " Foreground="Gray"/>
+            <TextBlock Text="{Binding PassedChecks}" Foreground="LightGreen"/>
+            <TextBlock Text="/" Foreground="Gray"/>
+            <TextBlock Text="{Binding TotalChecks}" Foreground="White"/>
+            <TextBlock Text="  Errors: " Foreground="Gray"/>
+            <TextBlock Text="{Binding FailedChecks}" Foreground="Salmon"/>
+            <TextBlock Text="  Warnings: " Foreground="Gray"/>
+            <TextBlock Text="{Binding WarningCount}" Foreground="Orange"/>
+        </StackPanel>
+        <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                      IsVisible="{Binding HasResults}">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Margin="0,1">
+                            <Run Text="{Binding Severity}" FontWeight="SemiBold"/>
+                            <Run Text=": "/>
+                            <Run Text="{Binding Message}"/>
+                        </TextBlock>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </StackPanel>
+</UserControl>

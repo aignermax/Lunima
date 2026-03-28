@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Diagnostics"
+             x:Class="CAP.Avalonia.Views.Panels.SMatrixPerformancePanel"
+             x:DataType="vm:SMatrixPerformanceViewModel">
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="S-Matrix Performance:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Shows sparsity statistics and memory usage of the system S-Matrix."
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding StatusText}" Foreground="LightBlue" FontSize="10" Margin="0,5,0,3"/>
+        <StackPanel Margin="0,5,0,0" IsVisible="{Binding HasAnalysis}">
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Matrix Size: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding MatrixSizeText}" Foreground="White"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Total Elements: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding TotalElementsText}" Foreground="White"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Non-Zero: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding NonZeroElementsText}" Foreground="LightGreen"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Sparsity: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding SparsityText}" Foreground="Cyan"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Storage Type: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding StorageTypeText}" Foreground="White"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Memory Usage: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding MemoryUsageText}" Foreground="Orange"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="Memory Savings: " Foreground="Gray" Width="110"/>
+                <TextBlock Text="{Binding MemorySavingsText}" Foreground="LightGreen"/>
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

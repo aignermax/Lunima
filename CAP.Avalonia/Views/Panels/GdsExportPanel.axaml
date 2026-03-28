@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels.Export"
+             x:Class="CAP.Avalonia.Views.Panels.GdsExportPanel"
+             x:DataType="vm:GdsExportViewModel">
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="GDS Export:" Foreground="LightGreen" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Automatically generate GDS from exported Python scripts"
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+        <CheckBox Content="Generate GDS file (requires Python + Nazca)"
+                  IsChecked="{Binding GenerateGdsEnabled}"
+                  Foreground="White" Margin="0,0,0,8"/>
+
+        <TextBlock Text="Python Path:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+            <TextBox Grid.Column="0" Text="{Binding CustomPythonPath}"
+                     Watermark="Auto-detect or enter path..." Margin="0,0,5,0"/>
+            <Button Grid.Column="1" Content="🔍" Width="30" Padding="4"
+                    Command="{Binding SearchForPythonCommand}"
+                    ToolTip.Tip="Search for Python with Nazca"
+                    IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"/>
+        </Grid>
+        <TextBlock Text="{Binding PythonPathSource}"
+                   Foreground="Gray" FontSize="10" Margin="0,0,0,8"
+                   IsVisible="{Binding PythonPathSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <ItemsControl x:Name="AvailablePythonsList"
+                      ItemsSource="{Binding AvailablePythons}"
+                      Margin="0,0,0,8"
+                      IsVisible="{Binding AvailablePythons.Count}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Content="{Binding DisplayText}"
+                            Command="{Binding #AvailablePythonsList.DataContext.SelectPythonCommand}"
+                            CommandParameter="{Binding}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            Margin="0,2,0,0" Padding="6,4" Background="#2d2d2d" FontSize="10"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Button Content="Check Environment" Command="{Binding CheckEnvironmentCommand}"
+                MinWidth="130" Margin="0,0,0,8" Padding="8,4" Background="#3d5d5d" HorizontalAlignment="Stretch"
+                IsEnabled="{Binding IsChecking, Converter={x:Static BoolConverters.Not}}"/>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+            <TextBlock Text="Python: " Foreground="Gray" Width="70"/>
+            <TextBlock Text="{Binding PythonStatus}" Foreground="White"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="Nazca: " Foreground="Gray" Width="70"/>
+            <TextBlock Text="{Binding NazcaStatus}" Foreground="White"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding LastExportStatus}"
+                   Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </StackPanel>
+</UserControl>
