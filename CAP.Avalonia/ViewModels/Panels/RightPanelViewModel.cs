@@ -5,6 +5,7 @@ using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Converters;
+using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;
