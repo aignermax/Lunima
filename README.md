@@ -232,6 +232,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] **Parameter Sweep** - Systematic analysis of component parameter variations
 - [x] **Element Locking** - Lock components/connections to prevent accidental modification
 - [x] **Incremental Routing** - Preserve valid routes when circuit changes
+- [x] **ComponentGroups & Prefabs** - Reusable component groups with external pins, frozen waveguide paths, and hierarchical editing
 
 ### High Priority
 - [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
@@ -260,7 +261,6 @@ The goal is to make Lunima usable with real foundry component data so simulation
 - [ ] **Wavelength sweep / spectral response** - Run simulation across a wavelength range, plot transmission vs wavelength at output ports
 - [ ] **Design Rule Checking** - Min bend radius, spacing violations, pin angle mismatches
 - [ ] **Direct GDS Export** - Export layout polygons without Nazca intermediate step
-- [ ] **Hierarchical Designs** - Sub-circuits as reusable blocks
 
 ### Nice to Have
 - [x] **Component Preview Graphics** - Miniature schematics with pin positions in the component library
