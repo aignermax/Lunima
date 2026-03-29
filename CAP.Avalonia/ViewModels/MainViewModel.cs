@@ -567,6 +567,19 @@ public class ConnectionData
     public string StartPinName { get; set; } = "";
     public int EndComponentIndex { get; set; }
     public string EndPinName { get; set; } = "";
+
+    /// <summary>
+    /// Stable component identifier for the start endpoint (preferred over StartComponentIndex).
+    /// Populated in new saves; null in old files (fall back to StartComponentIndex).
+    /// </summary>
+    public string? StartComponentId { get; set; }
+
+    /// <summary>
+    /// Stable component identifier for the end endpoint (preferred over EndComponentIndex).
+    /// Populated in new saves; null in old files (fall back to EndComponentIndex).
+    /// </summary>
+    public string? EndComponentId { get; set; }
+
     public List<PathSegmentData>? CachedSegments { get; set; }
     public bool? IsBlockedFallback { get; set; }
     public bool? IsLocked { get; set; }
