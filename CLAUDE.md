@@ -1,55 +1,18 @@
 # Agent Instructions for Connect-A-PIC-Pro
 
-**NOTE:** This is an example `CLAUDE.md` file configured for **Connect-A-PIC-Pro** (C# / Avalonia / MVVM project).
-
-If you're using the Autonomous Issue Agent for a different project, adapt this file to your tech stack, architecture patterns, and coding standards.
-
----
-
-This repository is maintained with the help of an autonomous AI agent.
-Stability, clarity, and architectural discipline are more important than speed.
+C# / Avalonia / MVVM photonic simulation tool. Stability, clarity, and architectural discipline are more important than speed.
 
 ---
 
 ## Implementation Guidelines: When to Include UI
 
-**Determine the scope based on the issue type:**
+**User-Facing Features (with UI):** Keywords: "add button", "implement dialog", "user can", "add panel"
+- Full stack: Core class → ViewModel (`[ObservableProperty]`, `[RelayCommand]`) → AXAML panel → DI wiring → Tests
 
-### **User-Facing Features (Full Vertical Slice Required)**
-When the issue explicitly requests a UI element or user interaction:
-- Keywords: "add button", "implement dialog", "user can", "add panel", "new UI"
-- Complete vertical slice includes ALL layers:
-  1. **Core logic** — New classes in `Connect-A-Pic-Core/`
-  2. **ViewModel** — `ObservableObject` in `CAP.Avalonia/ViewModels/` with `[ObservableProperty]` and `[RelayCommand]`
-  3. **View / AXAML** — UI panel in `CAP.Avalonia/Views/` or a new section in `MainWindow.axaml`
-  4. **DI wiring** — Register new services in `CAP.Avalonia/App.axaml.cs` if needed
-  5. **Unit tests** — xUnit tests in `UnitTests/` for core logic
-  6. **Integration tests** — Core + ViewModel integration tests in `UnitTests/`
+**Core Features / Bug Fixes (NO UI):** Keywords: "investigate", "add test", "fix bug", "verify", "optimize"
+- Core class → Tests → **STOP** (no ViewModel/View unless explicitly requested)
 
-### **Core Features / Bug Fixes / Tests (NO UI Required)**
-When the issue focuses on logic, testing, or investigation:
-- Keywords: "investigate", "add test", "fix bug", "verify", "improve algorithm", "optimize"
-- Implementation scope:
-  1. **Core logic only** — New/modified classes in `Connect-A-Pic-Core/`
-  2. **Unit tests** — Comprehensive xUnit tests
-  3. **Integration tests** — If needed to verify behavior
-  4. **NO ViewModel, NO View, NO UI** — unless explicitly requested
-
-**Default assumption:** If the issue doesn't explicitly mention UI, don't create UI.
-The human developer will ask for UI if needed.
-
-### Exception: Debug and Testing Tools
-
-Tools that exist purely for automated testing, CI validation, or developer debugging do **NOT** require UI panels. These should include:
-
-- **Python scripts** in `Scripts/` folder
-- **Backend service classes** for script execution (e.g., `GdsCoordinateExtractor.cs`)
-- **Unit tests** demonstrating usage
-- **Documentation** in CLAUDE.md section 11 (GDS Export Testing & Debugging Tools)
-
-**Examples of debug tools**: GDS coordinate extractors, Nazca reference generators, coordinate comparison scripts.
-
-**When creating debug tools**: Keep backend + tests + documentation. Do NOT add UI panels to MainWindow.
+**Debug Tools (NO UI):** Python scripts in `Scripts/`, backend service classes, tests, documentation only
 
 ---
 
@@ -83,47 +46,9 @@ When in doubt: choose the simplest correct solution.
 
 ### Folder Organization
 
-**Keep folders organized and logically structured.**
-
-- **Maximum 8-10 files per folder** before creating subfolders
-- Group related classes into meaningful subfolders
-- Use clear, descriptive subfolder names that reflect their purpose
-
-**Examples:**
-
-If `CAP.Avalonia/ViewModels/` has many files, organize by feature:
-```
-CAP.Avalonia/ViewModels/
-  Analysis/
-    ParameterSweepViewModel.cs
-    OptimizationViewModel.cs
-  Components/
-    ComponentLibraryViewModel.cs
-    PdkManagerViewModel.cs
-  Layout/
-    DesignCanvasViewModel.cs
-    RoutingViewModel.cs
-```
-
-If `Connect-A-Pic-Core/Components/` grows large:
-```
-Connect-A-Pic-Core/Components/
-  Waveguides/
-    WaveguideConnection.cs
-    WaveguideRouter.cs
-  Couplers/
-    GratingCoupler.cs
-    DirectionalCoupler.cs
-  PDK/
-    PdkInfo.cs
-    PdkLoader.cs
-```
-
-**When adding new features:**
-- Check if the target folder already has 8+ files
-- If yes, create or use an appropriate subfolder
-- Follow existing subfolder patterns in the codebase
-- Don't create subfolders with only 1-2 files (wait until there's 3+)
+- **Max 8-10 files per folder** → create subfolders
+- Group by feature (e.g., `ViewModels/Analysis/`, `ViewModels/Components/`)
+- Don't create subfolders with <3 files
 
 ---
 
@@ -184,26 +109,10 @@ Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
 
 ## 6. Testing
 
-- Write unit tests for all new logic.
-- Test file naming: `{ClassName}Tests.cs`
-- Use xUnit with `[Fact]` and `[Theory]` attributes
-- Shouldly for assertions: `result.ShouldBe(expected)`, `value.ShouldBeGreaterThan(0)`
-- Moq for mocking: `new Mock<IService>()`
-- Tests must be independent and deterministic.
-- Cover edge cases and failure scenarios.
-- Do not remove existing tests unless explicitly required.
-
-**Integration tests** (Core + ViewModel):
-```csharp
-[Fact]
-public void ViewModel_ReflectsCoreAnalysisResults()
-{
-    var coreService = new MyAnalyzer();
-    var vm = new MyFeatureViewModel(coreService);
-    vm.RunAnalysisCommand.Execute(null);
-    vm.ResultText.ShouldNotBeNullOrEmpty();
-}
-```
+- Write unit tests for all new logic (`{ClassName}Tests.cs`)
+- xUnit: `[Fact]`, `[Theory]` | Shouldly: `result.ShouldBe(expected)` | Moq: `new Mock<IService>()`
+- Tests must be independent and deterministic
+- Cover edge cases, don't remove existing tests
 
 Reference: `UnitTests/Analysis/ParameterSweeperTests.cs`
 
@@ -211,31 +120,10 @@ Reference: `UnitTests/Analysis/ParameterSweeperTests.cs`
 
 ## 7. Implementation Recipes
 
-### **Recipe A: User-Facing Feature (with UI)**
-When the issue explicitly requests UI ("add button", "user can", "implement dialog"):
+**Recipe A (User-Facing Feature with UI):** Core class → ViewModel (`[ObservableProperty]`, `[RelayCommand]`) → AXAML panel → Tests
+**Recipe B (Core/Bug Fix - NO UI):** Core class → Tests → **STOP** (no ViewModel/View)
 
-1. **Core class** in `Connect-A-Pic-Core/` (max 250 lines)
-2. **ViewModel** in `CAP.Avalonia/ViewModels/MyFeatureViewModel.cs`
-   - Inherit `ObservableObject`
-   - Use `[ObservableProperty]` and `[RelayCommand]`
-3. **Add ViewModel property** to `MainViewModel`:
-   ```csharp
-   public MyFeatureViewModel MyFeature { get; } = new();
-   ```
-4. **Add AXAML panel** in `MainWindow.axaml` (right panel section)
-5. **Register in DI** if needed (`App.axaml.cs`)
-6. **Unit tests** for core class
-7. **Integration test** for Core→ViewModel flow
-
-### **Recipe B: Core Feature / Bug Fix / Test (NO UI)**
-When the issue focuses on logic, tests, or investigation:
-
-1. **Core class** in `Connect-A-Pic-Core/` (max 250 lines)
-2. **Unit tests** for all new/modified logic
-3. **Integration tests** if needed to verify behavior
-4. **Stop here** - NO ViewModel, NO View, NO AXAML
-
-**The issue title determines which recipe to use.**
+Issue title determines which recipe to use.
 
 ---
 
@@ -253,103 +141,42 @@ Before finishing work:
 
 ### Testing: Use `smart_test.py` (MANDATORY)
 
-**⚠️ YOU MUST use `smart_test.py` - NOT `dotnet test`!**
-
-`dotnet test` produces massive output (100K+ characters) that wastes tokens. Use the Python wrapper instead:
+**⚠️ avoid using `dotnet test` directly - it outputs 100K+ chars!**
 
 ```bash
-# Run all tests (concise output)
-python3 tools/smart_test.py
-
-# Run specific test pattern
-python3 tools/smart_test.py FrozenPathObstacle
-
-# Run tests in specific file
-python3 tools/smart_test.py --file ParameterSweeperTests.cs
-
-# Full output if needed
-python3 tools/smart_test.py --verbose
+python3 tools/smart_test.py                     # All tests
+python3 tools/smart_test.py FrozenPathObstacle  # Pattern match
+python3 tools/smart_test.py --file MyTests.cs   # Specific file
 ```
 
-**Why `smart_test.py` is REQUIRED:**
-- 📉 **90% less output** - only shows summary + failures (vs 100K+ chars from `dotnet test`)
-- 🎯 **Agent-friendly** - structured format, easy to parse
-- ⚡ **Faster** - minimal verbosity, quick feedback
-- 💾 **Token-efficient** - doesn't spam build warnings
-
-**NEVER use `dotnet test` directly** - it will overflow your context window!
+**Why:** 90% less output, agent-friendly format, prevents context overflow.
 
 ---
 
 ## 8.1. REQUIRED Python Tools (Token Optimization)
 
-**⚠️ CRITICAL: You MUST use these Python tools. DO NOT use MCP tools.**
+**⚠️ MANDATORY: Use Python tools in `tools/` - NOT MCP (doesn't work in headless mode)!**
 
-**MCP does NOT work:**
-- MCP is unavailable in headless mode
-- MCP is NOT accessible to autonomous agents working on this project
-- You MUST use the Python scripts in `tools/` instead
+### 🔍 Semantic Search (`semantic_search.py`)
 
-These Python scripts are **mandatory** for **dramatically reducing token usage**:
-
-### 🔍 **Semantic Code Search** (`semantic_search.py`)
-
-**Use instead of:** Grep, file browsing, reading multiple files to find implementations
+Intent-based code discovery - use instead of grep/reading multiple files:
 
 ```bash
-# Find ViewModel implementations for analysis features
 python3 tools/semantic_search.py "ViewModel for analysis features"
-
-# Find routing obstacle code
-python3 tools/semantic_search.py "pathfinding grid obstacle detection"
-
-# Find similar test patterns
-python3 tools/semantic_search.py "integration test for component serialization"
+python3 tools/semantic_search.py "pathfinding grid obstacle"
+python3 tools/semantic_search.py --rebuild  # After major refactoring
 ```
 
-**Benefits:**
-- 🎯 **Intent-based search** - understands what you're looking for, not just keywords
-- ⚡ **Sub-second results** - cached embeddings, nearly instant
-- 💾 **90% token savings** - returns top 5 matches instead of reading 50+ files
-- 🧠 **Smart matching** - finds semantically similar code, not just string matches
+**Benefits:** Sub-second results, 90% token savings (top 5 matches vs 50+ file reads), smart semantic matching
 
-**When to use:**
-- "Find all classes that do X"
-- "Where is feature Y implemented?"
-- "Show me examples of Z pattern"
-- Exploring unfamiliar codebase areas
+**Use when:** Finding classes/implementations, exploring unfamiliar areas, looking for examples
 
-**When to rebuild index:**
-```bash
-# After major refactoring or adding many files
-python3 tools/semantic_search.py --rebuild
+### 📊 Tool Usage Reporting (REQUIRED)
+
+Report at end of each issue:
 ```
-
-### 🧪 **Smart Test Runner** (`smart_test.py`)
-
-Already covered in Section 8 - use for all test runs to save tokens.
-
-### 📊 **Tool Usage Reporting (REQUIRED)**
-
-**You MUST report tool usage** at the end of each issue to verify compliance.
-
-**Example:**
+✅ Complete! Tools: semantic_search.py (3 searches, ~15K saved), smart_test.py (~100K saved)
 ```
-✅ Implementation complete!
-
-Python Tools used:
-- semantic_search.py: Found 3 similar ViewModel patterns (saved ~15K tokens vs grep/read)
-- smart_test.py: Ran 47 tests, concise output (saved ~100K tokens vs dotnet test)
-
-Total token savings: ~85% compared to traditional file reading/testing
-```
-
-**Why this matters:**
-- Verifies you actually used the required tools
-- Shows efficiency gains
-- Helps optimize future agent runs
-
-**If you did NOT use these tools** - explain why! The tools are always available in `tools/`.
 
 ---
 
@@ -374,54 +201,26 @@ The core of this repository is photonic S-Matrix-based simulation.
 
 ---
 
-## 11. GDS Export Testing & Debugging Tools
+## 11. GDS Export Debugging (Issue #329)
 
-**CRITICAL for Issue #329 and GDS coordinate bugs.**
+**Python tools in `Scripts/` for GDS coordinate bugs:**
 
-### Python Tools in `Scripts/` Folder
+| Script | Purpose |
+|--------|---------|
+| `extract_gds_coords.py` | Extract polygon/path coordinates to JSON |
+| `generate_reference_nazca.py` | Generate ground-truth GDS |
+| `compare_gds_coords.py` | Compare two GDS, report deviations |
 
-These tools are **integrated with C# tests** to find GDS export bugs:
-
-| Script | Purpose | Used By |
-|--------|---------|---------|
-| `extract_gds_coords.py` | Extract all polygon/path coordinates from GDS to JSON | `GdsCoordinateExtractorTests.cs` |
-| `generate_reference_nazca.py` | Generate ground-truth GDS with known coordinates | `GdsGroundTruthTests.cs` |
-| `compare_gds_coords.py` | Compare two GDS files numerically, report deviations | `GdsCoordinateVerificationTests.cs` |
-
-### How to Use for Debugging
-
-**When you see GDS coordinate bugs (waveguides not connecting to pins):**
-
+**Debugging workflow:**
 ```bash
-# 1. Generate reference (ground truth)
 python Scripts/generate_reference_nazca.py /tmp/ref.gds /tmp/ref_coords.json
-
-# 2. Export your design via C#
-dotnet test --filter "SimpleNazcaExporterTests"
-# Creates: /tmp/test.gds
-
-# 3. Extract coordinates
 python Scripts/extract_gds_coords.py /tmp/test.gds /tmp/test_coords.json
-
-# 4. Compare and find mismatches
 python Scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
-# Reports: ❌ MISMATCH ΔY = 9.50 µm → Bug found!
 ```
 
-### Files to Check When GDS Bugs Found
+**Files to check:** `PhysicalPin.cs::GetAbsoluteNazcaPosition()`, `SimpleNazcaExporter.cs`, `NazcaReferenceGenerator.cs`
 
-- `Connect-A-Pic-Core/Components/Core/PhysicalPin.cs` → `GetAbsoluteNazcaPosition()` method
-- `CAP.Avalonia/Services/SimpleNazcaExporter.cs` → Y-flip calculations
-- `Connect-A-Pic-Core/Export/NazcaReferenceGenerator.cs` → Ground truth constants
-
-### Nazca Coordinate Convention
-
-```
-Nazca Y = -(PhysicalY + NazcaOriginOffsetY)
-Pin stub local Y = ComponentHeight - PinOffsetY
-```
-
-**These tools saved us from the 9.5 µm grating coupler bug!**
+**Convention:** `Nazca Y = -(PhysicalY + NazcaOriginOffsetY)` | `Pin stub local Y = ComponentHeight - PinOffsetY`
 
 ---
 
