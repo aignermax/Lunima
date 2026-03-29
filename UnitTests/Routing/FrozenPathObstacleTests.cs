@@ -498,4 +498,5 @@ public class FrozenPathObstacleTests
         router.PathfindingGrid!.GetBlockedCellCount().ShouldBeGreaterThan(0,
             "Grid should have blocked cells after loading frozen path groups");
     }
+
 }
