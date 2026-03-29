@@ -34,14 +34,14 @@ public class ZoomToFitDebugTests
         vm.Canvas.AddComponent(comp);
 
         // Simulate manual zoom (like mouse wheel)
-        vm.ZoomLevel = 3.0;
-        vm.ZoomLevel.ShouldBe(3.0, "Manual zoom should be applied");
+        vm.ViewportControl.ZoomLevel = 3.0;
+        vm.ViewportControl.ZoomLevel.ShouldBe(3.0, "Manual zoom should be applied");
 
         // Now call ZoomToFit
         vm.ZoomToFit(800, 600);
 
         // Zoom should have changed from 3.0 to something else
-        vm.ZoomLevel.ShouldNotBe(3.0, "ZoomToFit should change the zoom level!");
-        vm.ZoomLevel.ShouldBeInRange(0.3, 1.0, "Zoom should fit the 1000x1000 component in 800x600 viewport");
+        vm.ViewportControl.ZoomLevel.ShouldNotBe(3.0, "ZoomToFit should change the zoom level!");
+        vm.ViewportControl.ZoomLevel.ShouldBeInRange(0.3, 1.0, "Zoom should fit the 1000x1000 component in 800x600 viewport");
     }
 }

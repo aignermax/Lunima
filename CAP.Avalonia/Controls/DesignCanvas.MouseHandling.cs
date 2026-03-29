@@ -42,19 +42,19 @@ public partial class DesignCanvas
 
     private void HandleLeftButtonPressed(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
     {
-        if (mainVm?.CurrentMode == InteractionMode.Connect)
+        if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.Connect)
         {
             HandleConnectModeClick(e, canvasPoint, vm, mainVm);
         }
-        else if (mainVm?.CurrentMode == InteractionMode.PlaceComponent)
+        else if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.PlaceComponent)
         {
             HandlePlaceComponentClick(canvasPoint, vm, mainVm);
         }
-        else if (mainVm?.CurrentMode == InteractionMode.PlaceGroupTemplate)
+        else if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.PlaceGroupTemplate)
         {
             HandlePlaceGroupTemplateClick(canvasPoint, vm, mainVm);
         }
-        else if (mainVm?.CurrentMode == InteractionMode.Delete)
+        else if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.Delete)
         {
             HandleDeleteModeClick(canvasPoint, mainVm);
         }
@@ -177,7 +177,7 @@ public partial class DesignCanvas
                 {
                     vm.EnterGroupEditMode(clickedGroup);
                 }
-                mainVm?.HierarchyPanel?.RebuildTree();
+                mainVm?.LeftPanel.HierarchyPanel?.RebuildTree();
                 _interactionState.DraggingComponent = null;
                 InvalidateVisual();
                 return;
@@ -200,7 +200,7 @@ public partial class DesignCanvas
                 {
                     vm.ExitGroupEditMode();
                 }
-                mainVm?.HierarchyPanel?.RebuildTree();
+                mainVm?.LeftPanel.HierarchyPanel?.RebuildTree();
                 InvalidateVisual();
                 return;
             }
@@ -341,11 +341,11 @@ public partial class DesignCanvas
 
     private void UpdatePlacementPreview(Point canvasPoint, DesignCanvasViewModel vm)
     {
-        if (MainViewModel?.CurrentMode == InteractionMode.PlaceComponent &&
-            MainViewModel?.SelectedTemplate != null)
+        if (MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.PlaceComponent &&
+            MainViewModel?.CanvasInteraction.SelectedTemplate != null)
         {
             _interactionState.ShowPlacementPreview = true;
-            _interactionState.PlacementPreviewTemplate = MainViewModel.SelectedTemplate;
+            _interactionState.PlacementPreviewTemplate = MainViewModel.CanvasInteraction.SelectedTemplate;
             var snapSettings = vm.GridSnap;
 
             var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
@@ -362,11 +362,11 @@ public partial class DesignCanvas
         }
 
         // Update group template placement preview
-        if (MainViewModel?.CurrentMode == InteractionMode.PlaceGroupTemplate &&
-            MainViewModel?.SelectedGroupTemplate != null)
+        if (MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.PlaceGroupTemplate &&
+            MainViewModel?.CanvasInteraction.SelectedGroupTemplate != null)
         {
             _interactionState.ShowGroupTemplatePlacementPreview = true;
-            _interactionState.GroupTemplatePlacementPreview = MainViewModel.SelectedGroupTemplate;
+            _interactionState.GroupTemplatePlacementPreview = MainViewModel.CanvasInteraction.SelectedGroupTemplate;
             var snapSettings = vm.GridSnap;
 
             var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
@@ -479,7 +479,7 @@ public partial class DesignCanvas
 
     private void UpdatePinHighlighting(Point canvasPoint, DesignCanvasViewModel vm)
     {
-        if (MainViewModel?.CurrentMode == InteractionMode.Connect)
+        if (MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.Connect)
         {
             if (_interactionState.ConnectionDragStartPin != null)
             {
@@ -533,7 +533,7 @@ public partial class DesignCanvas
 
     private void UpdateComponentDrag(Point delta, Point canvasPoint, DesignCanvasViewModel vm)
     {
-        if (_interactionState.DraggingComponent != null && MainViewModel?.CurrentMode == InteractionMode.Select)
+        if (_interactionState.DraggingComponent != null && MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.Select)
         {
             double deltaX = delta.X / Zoom;
             double deltaY = delta.Y / Zoom;
