@@ -15,7 +15,13 @@ public enum DesignIssueType
     /// <summary>
     /// Path could not be routed around obstacles; fallback straight-line path used.
     /// </summary>
-    BlockedPath
+    BlockedPath,
+
+    /// <summary>
+    /// Two waveguide paths physically overlap, which causes fabrication errors.
+    /// This includes regular connections crossing frozen group paths.
+    /// </summary>
+    OverlappingPaths
 }
 
 /// <summary>
@@ -30,9 +36,10 @@ public class DesignIssue
     public DesignIssueType Type { get; }
 
     /// <summary>
-    /// The affected waveguide connection.
+    /// The affected waveguide connection, if applicable.
+    /// Null for issues involving only frozen group paths.
     /// </summary>
-    public WaveguideConnection Connection { get; }
+    public WaveguideConnection? Connection { get; }
 
     /// <summary>
     /// X coordinate of the issue midpoint (average of start/end pins) in micrometers.
@@ -50,16 +57,16 @@ public class DesignIssue
     public string Description { get; }
 
     /// <summary>
-    /// Creates a new design issue.
+    /// Creates a new design issue with an associated connection.
     /// </summary>
     /// <param name="type">The issue type.</param>
-    /// <param name="connection">The affected connection.</param>
-    /// <param name="x">Midpoint X in micrometers.</param>
-    /// <param name="y">Midpoint Y in micrometers.</param>
+    /// <param name="connection">The affected connection (may be null for frozen-path-only overlaps).</param>
+    /// <param name="x">Location X in micrometers.</param>
+    /// <param name="y">Location Y in micrometers.</param>
     /// <param name="description">Human-readable description.</param>
     public DesignIssue(
         DesignIssueType type,
-        WaveguideConnection connection,
+        WaveguideConnection? connection,
         double x,
         double y,
         string description)

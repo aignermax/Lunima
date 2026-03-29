@@ -5,12 +5,16 @@ namespace CAP_Core.Analysis;
 
 /// <summary>
 /// Validates waveguide connections in a design and reports issues
-/// such as invalid geometry (bend radius violations) and blocked paths.
+/// such as invalid geometry (bend radius violations), blocked paths,
+/// and overlapping waveguides including frozen group paths.
 /// </summary>
 public class DesignValidator
 {
+    private readonly WaveguideOverlapDetector _overlapDetector = new();
+
     /// <summary>
     /// Validates all provided waveguide connections and returns any issues found.
+    /// Does not include frozen path overlap detection (use the overload with groups for that).
     /// </summary>
     /// <param name="connections">The connections to validate.</param>
     /// <returns>A list of design issues, empty if all connections are valid.</returns>
@@ -18,13 +22,33 @@ public class DesignValidator
     {
         ArgumentNullException.ThrowIfNull(connections);
 
+        var connectionList = connections.ToList();
         var issues = new List<DesignIssue>();
 
-        foreach (var connection in connections)
+        foreach (var connection in connectionList)
         {
             CheckConnection(connection, issues);
         }
 
+        return issues;
+    }
+
+    /// <summary>
+    /// Validates waveguide connections and detects overlaps with frozen paths in ComponentGroups.
+    /// </summary>
+    /// <param name="connections">Regular waveguide connections to validate.</param>
+    /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
+    /// <returns>A list of all design issues found, empty if the design is valid.</returns>
+    public List<DesignIssue> Validate(
+        IEnumerable<WaveguideConnection> connections,
+        IEnumerable<ComponentGroup> groups)
+    {
+        ArgumentNullException.ThrowIfNull(connections);
+        ArgumentNullException.ThrowIfNull(groups);
+
+        var connectionList = connections.ToList();
+        var issues = Validate(connectionList);
+        issues.AddRange(_overlapDetector.DetectOverlaps(connectionList, groups));
         return issues;
     }
 
