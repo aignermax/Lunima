@@ -115,7 +115,6 @@ public static class ComponentTemplates
                 // NOTE: No NazcaFunctionName → legacy stub → uses HeightMicrometers as origin
                 Name = "Grating Coupler",
                 Category = "I/O",
-                NazcaFunctionName = "demo_pdk.io",
                 WidthMicrometers = 100,
                 HeightMicrometers = 19,
                 NazcaOriginOffsetX = 0,
