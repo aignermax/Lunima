@@ -256,7 +256,15 @@ public class SimpleNazcaExporter
     {
         var funcName = comp.NazcaFunctionName;
 
-        if (!string.IsNullOrEmpty(funcName) && (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase)))
+        bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) &&
+            (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+
+        // Also use explicit NazcaOriginOffset when set (non-zero), regardless of function name.
+        // Fixes components with auto-generated names (e.g. "nazca_grating_coupler") that still
+        // have a physical Nazca origin offset. Issue #355.
+        bool hasExplicitOriginOffset = comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0;
+
+        if (hasPdkFunctionName || hasExplicitOriginOffset)
         {
             double rotRad = comp.RotationDegrees * Math.PI / 180.0;
             double offsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
@@ -276,7 +284,7 @@ public class SimpleNazcaExporter
             }
         }
 
-        // Fallback for legacy components: offset by height for Y-flip
+        // Fallback for legacy components with no explicit Nazca origin offset
         return (0, comp.HeightMicrometers);
     }
 
@@ -297,7 +305,7 @@ public class SimpleNazcaExporter
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-                AppendSegmentExport(sb, segments, conn.StartPin);
+                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin);
             else
                 AppendFallbackExport(sb, conn, componentNames);
         }
@@ -320,7 +328,7 @@ public class SimpleNazcaExporter
         foreach (var frozenPath in group.InternalPaths)
         {
             if (frozenPath?.Path?.Segments?.Count > 0)
-                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin);
+                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin, frozenPath.EndPin);
         }
 
         foreach (var child in group.ChildComponents)
@@ -334,15 +342,53 @@ public class SimpleNazcaExporter
     /// Appends segment-by-segment Nazca export for a routed connection.
     /// First segment uses absolute .put(x, y, angle); subsequent segments
     /// chain with .put() so Nazca auto-connects them without gaps.
+    /// For single straight segments, both start and end Nazca pin positions are used directly
+    /// to correct for NazcaOriginOffset differences between components (Issue #355 fix).
     /// </summary>
     /// <param name="startPin">Optional start pin for correct Nazca coordinate calculation (Issue #329 fix)</param>
+    /// <param name="endPin">Optional end pin for correct Nazca endpoint calculation (Issue #355 fix)</param>
     internal static void AppendSegmentExport(
-        StringBuilder sb, IReadOnlyList<PathSegment> segments, PhysicalPin? startPin = null)
+        StringBuilder sb, IReadOnlyList<PathSegment> segments,
+        PhysicalPin? startPin = null, PhysicalPin? endPin = null)
     {
+        // Fix #355: For single straight segments, compute geometry from Nazca pin positions.
+        // The path is routed in editor coordinates, but components with NazcaOriginOffsetY ≠ Height
+        // have different Nazca Y positions, causing end pin misalignment.
+        if (segments.Count == 1 && segments[0] is StraightSegment && startPin != null && endPin != null)
+        {
+            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin));
+            return;
+        }
+
         for (int i = 0; i < segments.Count; i++)
         {
             sb.AppendLine(FormatSegment(segments[i], isFirst: i == 0, startPin: i == 0 ? startPin : null));
         }
+    }
+
+    /// <summary>
+    /// Formats a straight waveguide segment using absolute Nazca pin positions.
+    /// Computes length and angle from start pin to end pin in Nazca coordinates,
+    /// ensuring the waveguide reaches the end pin exactly regardless of NazcaOriginOffset.
+    /// Fix for Issue #355: end pin misalignment when NazcaOriginOffsetY ≠ HeightMicrometers.
+    /// </summary>
+    private static string FormatStraightSegmentFromPins(PhysicalPin startPin, PhysicalPin endPin)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var (sx, sy) = startPin.GetAbsoluteNazcaPosition();
+        var (ex, ey) = endPin.GetAbsoluteNazcaPosition();
+
+        double dx = ex - sx;
+        double dy = ey - sy;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+
+        var x = NormalizeZero(sx).ToString("F2", ci);
+        var y = NormalizeZero(sy).ToString("F2", ci);
+        var a = NormalizeZero(angleDeg).ToString("F2", ci);
+        var l = length.ToString("F2", ci);
+
+        return $"        nd.strt(length={l}).put({x}, {y}, {a})";
     }
 
     /// <summary>

@@ -58,15 +58,25 @@ namespace CAP_Core.Components.Core
 
         /// <summary>
         /// Calculates the Nazca origin offset for a component (same logic as SimpleNazcaExporter).
+        /// Uses NazcaOriginOffset when explicitly set (non-zero) or for known PDK function names.
+        /// Fallback: height-based offset for legacy components with no explicit origin.
+        /// Fix for Issue #355: components with explicit NazcaOriginOffset but non-PDK function names
+        /// (e.g., auto-generated names like "nazca_grating_coupler") now use the correct offset.
         /// </summary>
         private static (double OffsetX, double OffsetY) CalculateOriginOffset(Component comp)
         {
             var funcName = comp.NazcaFunctionName;
 
-            // For PDK components, use NazcaOriginOffset with rotation
-            if (!string.IsNullOrEmpty(funcName) &&
+            bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) &&
                 (funcName.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-                 funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase)))
+                 funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+
+            // Also use PDK formula when explicit NazcaOriginOffset is set (non-zero).
+            // This handles components with auto-generated function names that still have
+            // a physical Nazca origin offset defined (e.g., grating couplers loaded from templates).
+            bool hasExplicitOriginOffset = comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0;
+
+            if (hasPdkFunctionName || hasExplicitOriginOffset)
             {
                 double rotRad = comp.RotationDegrees * Math.PI / 180.0;
                 double offsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
@@ -74,7 +84,7 @@ namespace CAP_Core.Components.Core
                 return (offsetX, offsetY);
             }
 
-            // Fallback for legacy components
+            // Fallback for legacy components with no explicit Nazca origin offset
             return (0, comp.HeightMicrometers);
         }
 
