@@ -159,11 +159,12 @@ python3 tools/smart_test.py --file MyTests.cs   # Specific file
 
 ### Tool Location
 
-1. **Check project `tools/` folder first**
-2. **If not found:** Check `~/tools/` (home directory)
-3. **If still not found:** Download from GitHub releases:
-   - https://github.com/aignermax/autonomous-issue-agent/releases
-   - Or clone: https://github.com/aignermax/autonomous-issue-agent/tree/main/tools
+**Tools are located in:** `~/.cap-tools/`
+
+```bash
+python3 ~/.cap-tools/smart_test.py
+python3 ~/.cap-tools/semantic_search.py
+```
 
 ### 🔍 Semantic Search (`semantic_search.py`)
 
