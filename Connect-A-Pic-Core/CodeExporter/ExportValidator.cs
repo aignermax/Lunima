@@ -190,22 +190,24 @@ public class ExportValidator
 
     /// <summary>
     /// Calculates the expected Nazca position for a component.
+    /// Uses NazcaOriginOffset when explicitly set (non-zero) or for known PDK function names.
+    /// Mirrors the logic in SimpleNazcaExporter.CalculateOriginOffset (Issue #355 fix).
     /// </summary>
     private (double X, double Y) CalculateExpectedNazcaPosition(Component comp)
     {
-        // Apply origin offset transformation
+        var funcName = comp.NazcaFunctionName;
+
+        bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName);
+        bool hasExplicitOriginOffset = comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0;
+
         double originOffsetX = 0;
         double originOffsetY = 0;
 
-        var funcName = comp.NazcaFunctionName;
-        if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
+        if (hasPdkFunctionName || hasExplicitOriginOffset)
         {
-            double offsetX = comp.NazcaOriginOffsetX;
-            double offsetY = comp.NazcaOriginOffsetY;
             double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-
-            originOffsetX = offsetX * Math.Cos(rotRad) - offsetY * Math.Sin(rotRad);
-            originOffsetY = offsetX * Math.Sin(rotRad) + offsetY * Math.Cos(rotRad);
+            originOffsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
+            originOffsetY = comp.NazcaOriginOffsetX * Math.Sin(rotRad) + comp.NazcaOriginOffsetY * Math.Cos(rotRad);
         }
         else
         {
