@@ -1,3 +1,4 @@
+using CAP_Core.Analysis;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
@@ -382,6 +383,78 @@ public class FrozenPathObstacleTests
             path.Segments, router.PathfindingGrid!);
         crossesFrozen.ShouldBeFalse(
             "C→D route must not pass through frozen A→B path cells");
+    }
+
+    /// <summary>
+    /// High-level integration test: Uses DesignValidator (same as "Run Design Checks" button)
+    /// to verify that routes avoiding frozen paths don't trigger validation errors.
+    /// This tests the user-facing workflow, not just grid internals.
+    /// Issue #360: Tests should use DesignValidator instead of just segment counting.
+    /// </summary>
+    [Fact]
+    public void DesignValidator_NewRoute_DoesNotReportOverlapWithFrozenPath()
+    {
+        // Arrange: Create group with frozen A→B path
+        var group = CreateGroupWithHorizontalFrozenPath(
+            fromX: 20, toX: 180, frozenY: 50);
+
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = MinBendRadius,
+            MinWaveguideSpacingMicrometers = 2.0,
+            AStarCellSize = CellSize
+        };
+        router.InitializePathfindingGrid(-50, -50, 300, 200,
+            new Component[] { group }, CellSize);
+
+        // Create C and D on opposite sides of frozen path
+        var compC = CreateComponent(x: 90, y: 0);   // above frozen path
+        var compD = CreateComponent(x: 90, y: 90);  // below frozen path
+
+        var pinC = new PhysicalPin
+        {
+            Name = "out",
+            ParentComponent = compC,
+            OffsetXMicrometers = 10,
+            OffsetYMicrometers = 20,
+            AngleDegrees = 270  // exits south
+        };
+        var pinD = new PhysicalPin
+        {
+            Name = "in",
+            ParentComponent = compD,
+            OffsetXMicrometers = 10,
+            OffsetYMicrometers = 0,
+            AngleDegrees = 90  // exits north
+        };
+
+        // Act: Route C→D (should avoid frozen A→B path)
+        var path = router.Route(pinC, pinD);
+        path.ShouldNotBeNull("Router should find a path avoiding frozen path");
+
+        // Create WaveguideConnection for validation
+        var connection = new WaveguideConnection
+        {
+            StartPin = pinC,
+            EndPin = pinD
+        };
+        connection.RestoreCachedPath(path);
+
+        // Use DesignValidator - same code path as "Run Design Checks" button!
+        var validator = new DesignValidator();
+        var issues = validator.Validate(
+            new[] { connection },
+            new[] { group });
+
+        // Assert: No validation errors (especially no overlapping paths)
+        issues.ShouldBeEmpty(
+            "Router should avoid frozen paths - no validation errors expected");
+
+        // Also verify specifically no overlap warnings
+        var overlaps = issues.Where(i =>
+            i.Type == DesignIssueType.OverlappingPaths).ToList();
+        overlaps.ShouldBeEmpty(
+            "C→D route must not trigger overlapping path warnings");
     }
 
     // -----------------------------------------------------------------------
