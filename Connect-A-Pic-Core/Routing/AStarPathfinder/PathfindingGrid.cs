@@ -163,8 +163,12 @@ public class PathfindingGrid
             }
 
             // Mark these cells as frozen path obstacles (state=3) which are NEVER cleared by ClearPinCorridor
-            // This prevents external routing from going through internal group connections
-            var pathCells = GetWaveguidePathCells(pathSegments, 2.0); // 2µm waveguide width
+            // This prevents external routing from going through internal group connections.
+            // Use at least CellSizeMicrometers as width to guarantee cells are always marked:
+            // a circle-based mark only covers a cell if the cell center is within the radius,
+            // so the radius must be >= CellSizeMicrometers/2 to cover the containing cell.
+            double frozenPathMarkWidth = Math.Max(2.0, CellSizeMicrometers);
+            var pathCells = GetWaveguidePathCells(pathSegments, frozenPathMarkWidth);
             foreach (var cell in pathCells)
             {
                 if (IsInBounds(cell.Item1, cell.Item2))

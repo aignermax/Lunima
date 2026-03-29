@@ -122,16 +122,61 @@ public class WaveguideOverlapDetector
 
     /// <summary>
     /// Checks a pair of segments for overlap.
-    /// Straight–straight uses exact intersection; any bend uses AABB proximity.
+    /// Straight–straight uses exact intersection.
+    /// Bend–straight uses precise arc sampling to avoid false positives from AABB.
+    /// Bend–bend falls back to AABB (acceptable approximation).
     /// </summary>
     private static (double X, double Y)? CheckSegmentPairOverlap(PathSegment a, PathSegment b)
     {
         if (a is StraightSegment sa && b is StraightSegment sb)
             return StraightStraightIntersection(sa, sb);
 
+        if (a is BendSegment bendA && b is StraightSegment straightB)
+            return ArcStraightIntersection(bendA, straightB);
+
+        if (a is StraightSegment straightA && b is BendSegment bendB)
+            return ArcStraightIntersection(bendB, straightA);
+
         if (SegmentBoundsOverlap(a, b))
             return ((a.StartPoint.X + b.StartPoint.X) / 2.0,
                     (a.StartPoint.Y + b.StartPoint.Y) / 2.0);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks if a bend arc intersects a straight segment using arc sampling.
+    /// Samples the arc into small chords and tests each chord against the straight segment.
+    /// This avoids false positives that occur with the coarser AABB approach.
+    /// </summary>
+    private static (double X, double Y)? ArcStraightIntersection(BendSegment bend, StraightSegment straight)
+    {
+        double startRad = bend.StartAngleDegrees * Math.PI / 180;
+        double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
+        double sign = Math.Sign(bend.SweepAngleDegrees);
+        if (sign == 0) sign = 1;
+
+        int numSamples = Math.Max(20, (int)(Math.Abs(bend.SweepAngleDegrees) / 3));
+
+        double prevX = 0, prevY = 0;
+        for (int i = 0; i <= numSamples; i++)
+        {
+            double t = (double)i / numSamples;
+            double angle = startRad + sweepRad * t;
+            double px = bend.Center.X + bend.RadiusMicrometers * Math.Cos(angle - Math.PI / 2 * sign);
+            double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
+
+            if (i > 0)
+            {
+                var chord = new StraightSegment(prevX, prevY, px, py, angleDegrees: 0);
+                var intersection = StraightStraightIntersection(chord, straight);
+                if (intersection.HasValue)
+                    return intersection;
+            }
+
+            prevX = px;
+            prevY = py;
+        }
 
         return null;
     }
