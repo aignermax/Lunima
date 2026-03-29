@@ -7,6 +7,7 @@
         xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:views="using:CAP.Avalonia.Views"
         xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Connect-A-PIC Pro"
@@ -635,53 +636,10 @@
                     </StackPanel>
 
                     <!-- Layout Compression Panel -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Layout Compression:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Text="Minimize chip area while maintaining connectivity."
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                    <Button Content="Compress Layout"
-                            Command="{Binding RightPanel.CompressLayout.CompressLayoutCommand}"
-                            Width="160" Margin="0,5,0,5"
-                            Background="#3d5d5d"
-                            IsEnabled="{Binding RightPanel.CompressLayout.IsCompressing, Converter={x:Static BoolConverters.Not}}"/>
-
-                    <!-- Progress Bar -->
-                    <ProgressBar Value="{Binding RightPanel.CompressLayout.CurrentIteration}"
-                                 Maximum="{Binding RightPanel.CompressLayout.MaxIterations}"
-                                 Height="4" Margin="0,5,0,5"
-                                 IsVisible="{Binding RightPanel.CompressLayout.IsCompressing}"
-                                 Foreground="Cyan"/>
-
-                    <TextBlock Text="{Binding RightPanel.CompressLayout.StatusText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding RightPanel.CompressLayout.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <TextBlock Text="{Binding RightPanel.CompressLayout.ResultText}"
-                               Foreground="LightCyan" FontSize="10" Margin="0,5,0,5"
-                               TextWrapping="Wrap"
-                               IsVisible="{Binding RightPanel.CompressLayout.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <panels:LayoutCompressionPanel/>
 
                     <!-- Design Checks Panel -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Design Checks:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Run Design Checks"
-                            Command="{Binding RunDesignChecksCommand}"
-                            Width="160" Margin="0,5,0,5"
-                            Background="#5d3d3d"/>
-                    <TextBlock Text="{Binding RightPanel.DesignValidation.StatusText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                               IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5"
-                                IsVisible="{Binding RightPanel.DesignValidation.HasIssues}">
-                        <Button Content="&lt;&lt; Prev"
-                                Command="{Binding RightPanel.DesignValidation.PreviousIssueCommand}"
-                                Width="70" Margin="0,0,5,0" Background="#3d3d3d"/>
-                        <TextBlock Text="{Binding RightPanel.DesignValidation.NavigationText}"
-                                   Foreground="White" VerticalAlignment="Center"
-                                   Width="50" TextAlignment="Center"/>
-                        <Button Content="Next &gt;&gt;"
-                                Command="{Binding RightPanel.DesignValidation.NextIssueCommand}"
-                                Width="70" Margin="5,0,0,0" Background="#3d3d3d"/>
-                    </StackPanel>
+                    <panels:DesignChecksPanel/>
 
                     <!-- Element Lock Panel -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
@@ -757,103 +715,13 @@
                                Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                     <!-- Routing Diagnostics -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Routing Diagnostics:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Analyze Routes" Command="{Binding RightPanel.RoutingDiagnostics.RunDiagnosticsCommand}"
-                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"
-                            IsEnabled="{Binding RightPanel.RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                        <Button Content="Export JSON" Command="{Binding RightPanel.RoutingDiagnostics.ExportPathsJsonCommand}"
-                                MinWidth="100" Margin="0,0,5,0" Padding="8,4" Background="#3d3d5d"/>
-                        <Button Content="📋" Command="{Binding RightPanel.RoutingDiagnostics.CopyPathsJsonToClipboardCommand}"
-                                Width="36" Background="#3d3d5d" ToolTip.Tip="Copy JSON to clipboard"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"
-                               IsVisible="{Binding RightPanel.RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5"
-                                IsVisible="{Binding RightPanel.RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="Valid: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.ValidConnections}" Foreground="LightGreen"/>
-                        <TextBlock Text="/" Foreground="Gray"/>
-                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.TotalConnections}" Foreground="White"/>
-                        <TextBlock Text="  Issues: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.IssueCount}" Foreground="Salmon"/>
-                    </StackPanel>
-                    <ScrollViewer MaxHeight="150" Margin="0,5,0,0"
-                                  IsVisible="{Binding RightPanel.RoutingDiagnostics.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.ResultText}" Foreground="LightGray"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
-                    </ScrollViewer>
+                    <panels:RoutingDiagnosticsPanel/>
 
                     <!-- Component Dimension Diagnostics -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Component Dimensions:" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <Button Content="Check Dimensions" Command="{Binding RightPanel.DimensionDiagnostics.RefreshDiagnosticsCommand}"
-                            MinWidth="110" Margin="0,5,0,5" Padding="8,4" Background="#5d3d3d" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Validates that component dimensions in GDS export match the UI display."
-                               Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
-                    <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                  IsVisible="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                        <TextBlock Text="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
-                    </ScrollViewer>
+                    <panels:ComponentDimensionDiagnosticsPanel/>
 
                     <!-- GDS Export Configuration -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="GDS Export:" Foreground="LightGreen" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Text="Automatically generate GDS from exported Python scripts"
-                               Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
-
-                    <CheckBox Content="Generate GDS file (requires Python + Nazca)"
-                              IsChecked="{Binding FileOperations.GdsExport.GenerateGdsEnabled}"
-                              Foreground="White" Margin="0,0,0,8"/>
-
-                    <!-- Python Configuration -->
-                    <TextBlock Text="Python Path:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                        <TextBox Grid.Column="0" Text="{Binding FileOperations.GdsExport.CustomPythonPath}"
-                                 Watermark="Auto-detect or enter path..." Margin="0,0,5,0"/>
-                        <Button Grid.Column="1" Content="🔍" Width="30" Padding="4"
-                                Command="{Binding FileOperations.GdsExport.SearchForPythonCommand}"
-                                ToolTip.Tip="Search for Python with Nazca"
-                                IsEnabled="{Binding FileOperations.GdsExport.IsSearching, Converter={x:Static BoolConverters.Not}}"/>
-                    </Grid>
-                    <TextBlock Text="{Binding FileOperations.GdsExport.PythonPathSource}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,8"
-                               IsVisible="{Binding FileOperations.GdsExport.PythonPathSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <!-- Available Python Installations -->
-                    <ItemsControl ItemsSource="{Binding FileOperations.GdsExport.AvailablePythons}"
-                                  Margin="0,0,0,8"
-                                  x:Name="AvailablePythonsList"
-                                  IsVisible="{Binding FileOperations.GdsExport.AvailablePythons.Count}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding DisplayText}"
-                                        Command="{Binding #AvailablePythonsList.DataContext.FileOperations.GdsExport.SelectPythonCommand}"
-                                        CommandParameter="{Binding}"
-                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                        Margin="0,2,0,0" Padding="6,4" Background="#2d2d2d" FontSize="10"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <Button Content="Check Environment" Command="{Binding FileOperations.GdsExport.CheckEnvironmentCommand}"
-                            MinWidth="130" Margin="0,0,0,8" Padding="8,4" Background="#3d5d5d" HorizontalAlignment="Stretch"
-                            IsEnabled="{Binding FileOperations.GdsExport.IsChecking, Converter={x:Static BoolConverters.Not}}"/>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                        <TextBlock Text="Python: " Foreground="Gray" Width="70"/>
-                        <TextBlock Text="{Binding FileOperations.GdsExport.PythonStatus}" Foreground="White"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="Nazca: " Foreground="Gray" Width="70"/>
-                        <TextBlock Text="{Binding FileOperations.GdsExport.NazcaStatus}" Foreground="White"/>
-                    </StackPanel>
-
-                    <TextBlock Text="{Binding FileOperations.GdsExport.LastExportStatus}"
-                               Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
-                               IsVisible="{Binding FileOperations.GdsExport.LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <panels:GdsExportPanel/>
 
                 </StackPanel>
                 </ScrollViewer>
