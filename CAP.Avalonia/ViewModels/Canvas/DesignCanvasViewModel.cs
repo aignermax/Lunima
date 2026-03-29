@@ -818,9 +818,9 @@ public partial class DesignCanvasViewModel : ObservableObject
         return (minX, minY, maxX - minX, maxY - minY);
     }
 
-    public ComponentViewModel AddComponent(Component component, string? templateName = null)
+    public ComponentViewModel AddComponent(Component component, string? templateName = null, string? templatePdkSource = null)
     {
-        var vm = new ComponentViewModel(component, templateName);
+        var vm = new ComponentViewModel(component, templateName, templatePdkSource);
         vm.OnSliderChanged = () => RequestResimulation();
         Components.Add(vm);
 
@@ -1346,6 +1346,13 @@ public partial class ComponentViewModel : ObservableObject
     /// </summary>
     public string? TemplateName { get; set; }
 
+    /// <summary>
+    /// The PDK source of the template (e.g. "Built-in", "Demo PDK").
+    /// Used together with TemplateName to uniquely identify the correct template during load,
+    /// preventing size corruption when multiple PDKs share the same component name.
+    /// </summary>
+    public string? TemplatePdkSource { get; set; }
+
     [ObservableProperty]
     private double _x;
 
@@ -1432,10 +1439,11 @@ public partial class ComponentViewModel : ObservableObject
     public double SliderMin => Component.GetSlider(0)?.MinValue ?? 0;
     public double SliderMax => Component.GetSlider(0)?.MaxValue ?? 1;
 
-    public ComponentViewModel(Component component, string? templateName = null)
+    public ComponentViewModel(Component component, string? templateName = null, string? templatePdkSource = null)
     {
         Component = component;
         TemplateName = templateName;
+        TemplatePdkSource = templatePdkSource;
         _x = component.PhysicalX;
         _y = component.PhysicalY;
 

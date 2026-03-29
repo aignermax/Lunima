@@ -206,6 +206,7 @@ public partial class FileOperationsViewModel : ObservableObject
         return new ComponentData
         {
             TemplateName = FindTemplateName(c.Component),
+            PdkSource = c.TemplatePdkSource ?? FindTemplatePdkSource(c.Component),
             X = c.X,
             Y = c.Y,
             Identifier = c.Component.Identifier,
@@ -216,6 +217,25 @@ public partial class FileOperationsViewModel : ObservableObject
             IsLocked = c.Component.IsLocked ? true : null,
             HumanReadableName = c.Component.HumanReadableName
         };
+    }
+
+    /// <summary>
+    /// Finds the PDK source for a component by matching its NazcaFunctionName against the library.
+    /// Returns null if no match is found.
+    /// </summary>
+    private string? FindTemplatePdkSource(Component component)
+    {
+        var nazcaFunc = component.NazcaFunctionName;
+        if (string.IsNullOrEmpty(nazcaFunc))
+            return null;
+
+        var match = _componentLibrary.FirstOrDefault(t =>
+        {
+            var templateFunc = t.NazcaFunctionName
+                ?? $"nazca_{t.Name.ToLower().Replace(" ", "_")}";
+            return templateFunc == nazcaFunc;
+        });
+        return match?.PdkSource;
     }
 
     /// <summary>
@@ -305,12 +325,14 @@ public partial class FileOperationsViewModel : ObservableObject
             }
 
             var templateName = FindTemplateName(child);
+            var pdkSource = FindTemplatePdkSource(child);
 
             childDataList.Add(new ChildComponentData
             {
                 Identifier = child.Identifier,
                 ComponentGuid = child.Id.ToString(),
                 TemplateName = templateName,
+                PdkSource = pdkSource,
                 X = child.PhysicalX,
                 Y = child.PhysicalY,
                 Rotation = (int)child.Rotation90CounterClock,
@@ -556,12 +578,30 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Finds a template by name and optional PDK source.
+    /// When PdkSource is provided, prefers an exact match; falls back to name-only for old files.
+    /// </summary>
+    private ComponentTemplate? FindTemplate(string templateName, string? pdkSource)
+    {
+        if (!string.IsNullOrEmpty(pdkSource))
+        {
+            var exact = _componentLibrary.FirstOrDefault(t =>
+                t.Name.Equals(templateName, StringComparison.OrdinalIgnoreCase)
+                && t.PdkSource.Equals(pdkSource, StringComparison.OrdinalIgnoreCase));
+            if (exact != null)
+                return exact;
+        }
+
+        return _componentLibrary.FirstOrDefault(t =>
+            t.Name.Equals(templateName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Loads a single component from saved data and adds it to the canvas.
     /// </summary>
     private ComponentViewModel? LoadComponentFromData(ComponentData compData)
     {
-        var template = _componentLibrary.FirstOrDefault(t =>
-            t.Name.Equals(compData.TemplateName, StringComparison.OrdinalIgnoreCase));
+        var template = FindTemplate(compData.TemplateName, compData.PdkSource);
 
         if (template == null)
             return null;
@@ -581,7 +621,7 @@ public partial class FileOperationsViewModel : ObservableObject
             ApplyRotationToComponent(component);
         }
 
-        var vm = _canvas.AddComponent(component, template.Name);
+        var vm = _canvas.AddComponent(component, template.Name, template.PdkSource);
 
         // Restore slider value
         if (compData.SliderValue.HasValue && vm.HasSliders)
@@ -629,8 +669,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (!hasGuid && nameFallback.ContainsKey(childData.Identifier))
                     continue;
 
-                var template = _componentLibrary.FirstOrDefault(t =>
-                    t.Name.Equals(childData.TemplateName, StringComparison.OrdinalIgnoreCase));
+                var template = FindTemplate(childData.TemplateName, childData.PdkSource);
 
                 if (template == null)
                     continue;

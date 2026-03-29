@@ -69,7 +69,7 @@ public class PlaceComponentCommand : IUndoableCommand
             if (_createdViewModel == null)
             {
                 // Component not in canvas, add it
-                _createdViewModel = _canvas.AddComponent(_component, _template.Name);
+                _createdViewModel = _canvas.AddComponent(_component, _template.Name, _template.PdkSource);
             }
         }
     }

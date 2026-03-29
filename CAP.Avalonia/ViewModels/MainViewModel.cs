@@ -522,6 +522,13 @@ public class ChildComponentData
     public string? ComponentGuid { get; set; }
 
     public string TemplateName { get; set; } = "";
+
+    /// <summary>
+    /// PDK source name used to disambiguate templates with the same name.
+    /// Null in old files — falls back to name-only lookup.
+    /// </summary>
+    public string? PdkSource { get; set; }
+
     public double X { get; set; }
     public double Y { get; set; }
     public int Rotation { get; set; }
@@ -535,6 +542,14 @@ public class ChildComponentData
 public class ComponentData
 {
     public string TemplateName { get; set; } = "";
+
+    /// <summary>
+    /// PDK source name (e.g. "Built-in", "Demo PDK").
+    /// Used to disambiguate templates with the same name from different PDKs.
+    /// Null in old files — falls back to name-only lookup.
+    /// </summary>
+    public string? PdkSource { get; set; }
+
     public double X { get; set; }
     public double Y { get; set; }
     public string Identifier { get; set; } = "";
