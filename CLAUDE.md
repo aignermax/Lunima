@@ -244,37 +244,106 @@ When the issue focuses on logic, tests, or investigation:
 Before finishing work:
 
 1. Run `dotnet build`
-2. Run `dotnet test`
+2. **Run tests using `smart_test.py`** (preferred) or `dotnet test` (fallback)
 3. Fix all build errors.
 4. Fix all failing tests.
 5. Ensure no new warnings are introduced unnecessarily.
 
 **Do not stop until build AND tests pass.**
 
+### Testing Best Practices
+
+**Use `smart_test.py` for autonomous agents** - it filters output to prevent token overflow:
+
+```bash
+# Run all tests (concise output)
+python3 tools/smart_test.py
+
+# Run specific test pattern
+python3 tools/smart_test.py FrozenPathObstacle
+
+# Run tests in specific file
+python3 tools/smart_test.py --file ParameterSweeperTests.cs
+
+# Full output if needed
+python3 tools/smart_test.py --verbose
+```
+
+**Benefits over `dotnet test`:**
+- 📉 **90% less output** - only shows summary + failures
+- 🎯 **Agent-friendly** - structured format, easy to parse
+- ⚡ **Faster** - minimal verbosity, quick feedback
+- 💾 **Token-efficient** - doesn't spam build warnings
+
+**Fallback to `dotnet test` only when:**
+- `smart_test.py` is not available
+- You need raw dotnet output for debugging
+- Integration with CI/CD requires it
+
 ---
 
-## 8.1. MCP Tool Usage Reporting
+## 8.1. Available Python Tools (Token Optimization)
 
-When you complete an issue, include a brief summary in your final message about which MCP tools you used:
+Use these Python scripts in `tools/` to **dramatically reduce token usage** when working on issues:
+
+### 🔍 **Semantic Code Search** (`semantic_search.py`)
+
+**Use instead of:** Grep, file browsing, reading multiple files to find implementations
+
+```bash
+# Find ViewModel implementations for analysis features
+python3 tools/semantic_search.py "ViewModel for analysis features"
+
+# Find routing obstacle code
+python3 tools/semantic_search.py "pathfinding grid obstacle detection"
+
+# Find similar test patterns
+python3 tools/semantic_search.py "integration test for component serialization"
+```
+
+**Benefits:**
+- 🎯 **Intent-based search** - understands what you're looking for, not just keywords
+- ⚡ **Sub-second results** - cached embeddings, nearly instant
+- 💾 **90% token savings** - returns top 5 matches instead of reading 50+ files
+- 🧠 **Smart matching** - finds semantically similar code, not just string matches
+
+**When to use:**
+- "Find all classes that do X"
+- "Where is feature Y implemented?"
+- "Show me examples of Z pattern"
+- Exploring unfamiliar codebase areas
+
+**When to rebuild index:**
+```bash
+# After major refactoring or adding many files
+python3 tools/semantic_search.py --rebuild
+```
+
+### 🧪 **Smart Test Runner** (`smart_test.py`)
+
+Already covered in Section 8 - use for all test runs to save tokens.
+
+### 📊 **Tool Usage Reporting**
+
+When you complete an issue, report which tools you used:
 
 **Example:**
 ```
 ✅ Implementation complete!
 
-MCP Tools used:
-- OpenViking: Used semantic search to find similar routing implementations (3 searches)
-- NetContextServer: Analyzed project dependencies for Grid module
-- dotnet-test-mcp: Ran 47 unit tests, all passing
+Tools used:
+- semantic_search.py: Found 3 similar ViewModel patterns (saved ~15K tokens vs reading files)
+- smart_test.py: Ran 47 tests, concise output (saved ~8K tokens vs dotnet test)
 
-Token savings: Estimated ~85% reduction using semantic search vs full file reads.
+Total token savings: ~85% compared to traditional file reading/testing
 ```
 
 **Why this matters:**
-- Helps verify MCP servers are working correctly
-- Shows token optimization effectiveness
-- Provides feedback for improving the agent setup
+- Helps verify tools are working
+- Demonstrates efficiency gains
+- Guides future optimization
 
-If you didn't use any MCP tools, that's also valuable information to report.
+**If tools aren't available or don't work** - that's also valuable feedback to report!
 
 ---
 
