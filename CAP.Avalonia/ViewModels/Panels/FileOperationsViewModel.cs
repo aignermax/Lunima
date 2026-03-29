@@ -157,6 +157,8 @@ public partial class FileOperationsViewModel : ObservableObject
                         StartPinName = startPinName,
                         EndComponentIndex = endIdx,
                         EndPinName = endPinName,
+                        StartComponentId = startIdx >= 0 ? componentsList[startIdx].Component.Identifier : null,
+                        EndComponentId = endIdx >= 0 ? componentsList[endIdx].Component.Identifier : null,
                         CachedSegments = c.Connection.RoutedPath != null
                             ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
                             : null,
@@ -802,20 +804,33 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Finds a canvas component by identifier string (preferred) or by index (fallback for old files).
+    /// Returns null if the component cannot be found.
+    /// </summary>
+    private ComponentViewModel? ResolveComponentForLoad(string? componentId, int fallbackIndex)
+    {
+        if (!string.IsNullOrEmpty(componentId))
+            return _canvas.Components.FirstOrDefault(c => c.Component.Identifier == componentId);
+
+        if (fallbackIndex >= 0 && fallbackIndex < _canvas.Components.Count)
+            return _canvas.Components[fallbackIndex];
+
+        return null;
+    }
+
+    /// <summary>
     /// Loads a single connection from saved data.
+    /// Prefers identifier-based lookup (StartComponentId/EndComponentId) over index-based
+    /// to correctly handle mixed standalone+group designs where load order differs from save order.
+    /// Falls back to index-based for old files that predate the identifier fields.
     /// </summary>
     private void LoadConnectionFromData(ConnectionData connData)
     {
-        if (connData.StartComponentIndex < 0 ||
-            connData.StartComponentIndex >= _canvas.Components.Count ||
-            connData.EndComponentIndex < 0 ||
-            connData.EndComponentIndex >= _canvas.Components.Count)
-        {
-            return;
-        }
+        var startComp = ResolveComponentForLoad(connData.StartComponentId, connData.StartComponentIndex);
+        var endComp = ResolveComponentForLoad(connData.EndComponentId, connData.EndComponentIndex);
 
-        var startComp = _canvas.Components[connData.StartComponentIndex];
-        var endComp = _canvas.Components[connData.EndComponentIndex];
+        if (startComp == null || endComp == null)
+            return;
 
         var startPin = ResolvePin(startComp.Component, connData.StartPinName);
         var endPin = ResolvePin(endComp.Component, connData.EndPinName);
