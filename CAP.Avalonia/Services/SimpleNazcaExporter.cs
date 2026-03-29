@@ -340,30 +340,134 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Appends segment-by-segment Nazca export for a routed connection.
-    /// First segment uses absolute .put(x, y, angle); subsequent segments
-    /// chain with .put() so Nazca auto-connects them without gaps.
-    /// For single straight segments, both start and end Nazca pin positions are used directly
-    /// to correct for NazcaOriginOffset differences between components (Issue #355 fix).
+    /// Uses absolute .put(x, y, angle) for EVERY segment to avoid coordinate accumulation errors
+    /// that occur with Nazca's chaining syntax (.put() without coordinates).
+    ///
+    /// Fix #355 (single straight): direct pin-to-pin geometry avoids NazcaOriginOffset mismatch.
+    /// Fix #366 (multi-segment): absolute positioning for each segment, with the last straight
+    /// segment pinned to endPin.GetAbsoluteNazcaPosition() for exact endpoint alignment.
     /// </summary>
-    /// <param name="startPin">Optional start pin for correct Nazca coordinate calculation (Issue #329 fix)</param>
-    /// <param name="endPin">Optional end pin for correct Nazca endpoint calculation (Issue #355 fix)</param>
+    /// <param name="startPin">Start pin for correct Nazca coordinate calculation.</param>
+    /// <param name="endPin">End pin for exact endpoint alignment on the last straight segment.</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
         PhysicalPin? startPin = null, PhysicalPin? endPin = null)
     {
-        // Fix #355: For single straight segments, compute geometry from Nazca pin positions.
-        // The path is routed in editor coordinates, but components with NazcaOriginOffsetY ≠ Height
-        // have different Nazca Y positions, causing end pin misalignment.
+        // Single straight segment: compute geometry directly from both pin positions.
         if (segments.Count == 1 && segments[0] is StraightSegment && startPin != null && endPin != null)
         {
             sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin));
             return;
         }
 
+        // Multi-segment: use absolute Nazca coordinates for every segment.
+        // Compute an offset that maps the path's editor start point to nazcaPin1.
+        // This shifts the entire routed path so that segment 1 starts at the correct Nazca pin.
+        var (deltaX, deltaY) = ComputePathNazcaOffset(startPin, segments);
+
         for (int i = 0; i < segments.Count; i++)
         {
-            sb.AppendLine(FormatSegment(segments[i], isFirst: i == 0, startPin: i == 0 ? startPin : null));
+            var (nX, nY) = ApplyNazcaOffset(segments[i].StartPoint, deltaX, deltaY);
+            bool isLast = (i == segments.Count - 1);
+
+            // Last straight segment: go from computed Nazca start directly to endPin.
+            // This corrects any residual offset when start/end components have different
+            // NazcaOriginOffset values (e.g. Grating Coupler → MMI 2x2).
+            if (isLast && segments[i] is StraightSegment && endPin != null)
+            {
+                sb.AppendLine(FormatStraightToPin(nX, nY, endPin));
+            }
+            else
+            {
+                sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
+            }
         }
+    }
+
+    /// <summary>
+    /// Computes the (deltaX, deltaY) offset that maps the path's first editor point to the
+    /// correct Nazca pin position. Applying this offset to every segment start converts
+    /// editor-space coordinates (Y-down, no origin correction) into Nazca-space coordinates
+    /// (Y-up, with pin origin correction).
+    /// </summary>
+    private static (double DeltaX, double DeltaY) ComputePathNazcaOffset(
+        PhysicalPin? startPin, IReadOnlyList<PathSegment> segments)
+    {
+        if (startPin == null || segments.Count == 0)
+            return (0, 0);
+
+        var (nazcaX, nazcaY) = startPin.GetAbsoluteNazcaPosition();
+        var editorStart = segments[0].StartPoint;
+        return (nazcaX - editorStart.X, nazcaY - (-editorStart.Y));
+    }
+
+    /// <summary>
+    /// Converts an editor-space point to Nazca coordinates by applying Y-flip and the
+    /// precomputed path offset.
+    /// </summary>
+    private static (double X, double Y) ApplyNazcaOffset(
+        (double X, double Y) editorPoint, double deltaX, double deltaY) =>
+        (editorPoint.X + deltaX, -editorPoint.Y + deltaY);
+
+    /// <summary>
+    /// Formats a straight waveguide segment from an absolute Nazca start position to the
+    /// exact Nazca position of endPin. Used for the last segment of a multi-segment path.
+    /// </summary>
+    private static string FormatStraightToPin(double startX, double startY, PhysicalPin endPin)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var (ex, ey) = endPin.GetAbsoluteNazcaPosition();
+        double dx = ex - startX;
+        double dy = ey - startY;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+        var x = NormalizeZero(startX).ToString("F2", ci);
+        var y = NormalizeZero(startY).ToString("F2", ci);
+        var a = NormalizeZero(angleDeg).ToString("F2", ci);
+        var l = length.ToString("F2", ci);
+        return $"        nd.strt(length={l}).put({x}, {y}, {a})";
+    }
+
+    /// <summary>
+    /// Formats a path segment (straight or bend) with an absolute Nazca start position.
+    /// </summary>
+    private static string FormatSegmentAbsolute(PathSegment segment, double nazcaX, double nazcaY)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        return segment switch
+        {
+            StraightSegment straight => FormatStraightAbsolute(straight, nazcaX, nazcaY, ci),
+            BendSegment bend => FormatBendAbsolute(bend, nazcaX, nazcaY, ci),
+            _ => $"        # Unknown segment type: {segment.GetType().Name}"
+        };
+    }
+
+    /// <summary>
+    /// Formats a straight segment with absolute Nazca start position.
+    /// </summary>
+    private static string FormatStraightAbsolute(
+        StraightSegment straight, double nazcaX, double nazcaY, CultureInfo ci)
+    {
+        var length = straight.LengthMicrometers.ToString("F2", ci);
+        var x = NormalizeZero(nazcaX).ToString("F2", ci);
+        var y = NormalizeZero(nazcaY).ToString("F2", ci);
+        var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
+        return $"        nd.strt(length={length}).put({x}, {y}, {angle})";
+    }
+
+    /// <summary>
+    /// Formats a bend segment with absolute Nazca start position.
+    /// The radius is invariant under Y-flip; the sweep angle and start angle are negated.
+    /// </summary>
+    private static string FormatBendAbsolute(
+        BendSegment bend, double nazcaX, double nazcaY, CultureInfo ci)
+    {
+        var radius = bend.RadiusMicrometers.ToString("F2", ci);
+        var sweepAngle = NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
+        var x = NormalizeZero(nazcaX).ToString("F2", ci);
+        var y = NormalizeZero(nazcaY).ToString("F2", ci);
+        var angle = NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
+        return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
     }
 
     /// <summary>

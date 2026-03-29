@@ -76,33 +76,45 @@ public class SimpleNazcaExporterTests
     }
 
     [Fact]
-    public void AppendSegmentExport_MixedSegments_FirstHasCoordsRestChained()
+    public void AppendSegmentExport_MixedSegments_AllHaveAbsoluteCoords()
     {
+        // Fix #366: all segments use absolute .put(x, y, angle), no chaining.
+        // Geometrically consistent path: right → bend-down → down (Y-down editor).
+        // Seg1: (0,0)→(100,0), angle=0
+        // Bend: center=(100,50), R=50, startAngle=0°, sweep=+90° → CW turn in Y-down
+        //   BendSegment StartPoint = center + R*(cos(startAngle-π/2), sin(startAngle-π/2)) = (100,0)
+        //   BendSegment EndPoint   = (150, 50), endAngle = 90°
+        // Seg2: (150,50)→(150,150), angle=90°
         var segments = new List<PathSegment>
         {
-            new StraightSegment(0, 0, 50, 0, 0),
-            new BendSegment(50, 50, 50, 0, 90),
-            new StraightSegment(50, 100, 50, 200, 90)
+            new StraightSegment(0, 0, 100, 0, 0),
+            new BendSegment(100, 50, 50, 0, 90),
+            new StraightSegment(150, 50, 150, 150, 90)
         };
         var sb = new System.Text.StringBuilder();
 
         SimpleNazcaExporter.AppendSegmentExport(sb, segments);
         var result = sb.ToString();
 
-        // First segment should have coordinates (Y=0 negated is still 0)
-        result.ShouldContain("nd.strt(length=");
-        result.ShouldContain(".put(0.00, 0.00, 0.00)");
-
-        // Subsequent segments should chain
         var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         lines.Length.ShouldBe(3);
 
-        // Line 0: first segment with coords
+        // All segments must have explicit coordinates — no empty .put()
+        foreach (var line in lines)
+            line.Trim().ShouldNotEndWith(".put()", $"Segment must not chain: {line}");
+
+        // Seg1: start at editor (0,0) → Nazca (0, 0)
+        lines[0].ShouldContain("nd.strt(");
         lines[0].ShouldContain(".put(0.00, 0.00, 0.00)");
 
-        // Lines 1 & 2: chained with empty .put()
-        lines[1].Trim().ShouldEndWith(".put()");
-        lines[2].Trim().ShouldEndWith(".put()");
+        // Bend: StartPoint = (100, 0) → Nazca (100, 0), angle = -0 = 0°, sweep = -90°
+        lines[1].ShouldContain("nd.bend(");
+        lines[1].ShouldContain(".put(100.00, 0.00,");
+        lines[1].ShouldContain("angle=-90.00");
+
+        // Seg2: start at editor (150, 50) → Nazca (150, -50), angle = -90°
+        lines[2].ShouldContain("nd.strt(");
+        lines[2].ShouldContain(".put(150.00, -50.00, -90.00)");
     }
 
     [Fact]
