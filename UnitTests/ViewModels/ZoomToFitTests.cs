@@ -122,7 +122,7 @@ public class ZoomToFitTests
         // Verify: boxCenter * zoom + pan = vpCenter
         double centerX = 100;
         double centerY = 100;
-        var zoom = vm.ZoomLevel;
+        var zoom = vm.ViewportControl.ZoomLevel;
         var panX = vm.Canvas.PanX;
         var panY = vm.Canvas.PanY;
 
