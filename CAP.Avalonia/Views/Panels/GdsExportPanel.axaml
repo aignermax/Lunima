@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.GdsExportPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="GDS Export:" Foreground="LightGreen" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Automatically generate GDS from exported Python scripts"
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+        <CheckBox Content="Generate GDS file (requires Python + Nazca)"
+                  IsChecked="{Binding FileOperations.GdsExport.GenerateGdsEnabled}"
+                  Foreground="White" Margin="0,0,0,8"/>
+
+        <TextBlock Text="Python Path:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+            <TextBox Grid.Column="0" Text="{Binding FileOperations.GdsExport.CustomPythonPath}"
+                     Watermark="Auto-detect or enter path..." Margin="0,0,5,0"/>
+            <Button Grid.Column="1" Content="🔍" Width="30" Padding="4"
+                    Command="{Binding FileOperations.GdsExport.SearchForPythonCommand}"
+                    ToolTip.Tip="Search for Python with Nazca"
+                    IsEnabled="{Binding FileOperations.GdsExport.IsSearching, Converter={x:Static BoolConverters.Not}}"/>
+        </Grid>
+        <TextBlock Text="{Binding FileOperations.GdsExport.PythonPathSource}"
+                   Foreground="Gray" FontSize="10" Margin="0,0,0,8"
+                   IsVisible="{Binding FileOperations.GdsExport.PythonPathSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <ItemsControl ItemsSource="{Binding FileOperations.GdsExport.AvailablePythons}"
+                      Margin="0,0,0,8"
+                      x:Name="AvailablePythonsList"
+                      IsVisible="{Binding FileOperations.GdsExport.AvailablePythons.Count}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Content="{Binding DisplayText}"
+                            Command="{Binding #AvailablePythonsList.DataContext.FileOperations.GdsExport.SelectPythonCommand}"
+                            CommandParameter="{Binding}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            Margin="0,2,0,0" Padding="6,4" Background="#2d2d2d" FontSize="10"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Button Content="Check Environment"
+                Command="{Binding FileOperations.GdsExport.CheckEnvironmentCommand}"
+                MinWidth="130" Margin="0,0,0,8" Padding="8,4"
+                Background="#3d5d5d" HorizontalAlignment="Stretch"
+                IsEnabled="{Binding FileOperations.GdsExport.IsChecking, Converter={x:Static BoolConverters.Not}}"/>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+            <TextBlock Text="Python: " Foreground="Gray" Width="70"/>
+            <TextBlock Text="{Binding FileOperations.GdsExport.PythonStatus}" Foreground="White"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="Nazca: " Foreground="Gray" Width="70"/>
+            <TextBlock Text="{Binding FileOperations.GdsExport.NazcaStatus}" Foreground="White"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding FileOperations.GdsExport.LastExportStatus}"
+                   Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding FileOperations.GdsExport.LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </StackPanel>
+
+</UserControl>
