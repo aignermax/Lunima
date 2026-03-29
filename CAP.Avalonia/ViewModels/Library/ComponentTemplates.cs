@@ -112,6 +112,7 @@ public static class ComponentTemplates
             {
                 // demo.io(): bbox (0, -9.5, 100, 9.5) = 100×19
                 // Pins: a0=(0,0) fiber side, b0=(100,0) waveguide side
+                // NOTE: No NazcaFunctionName → legacy stub → uses HeightMicrometers as origin
                 Name = "Grating Coupler",
                 Category = "I/O",
                 WidthMicrometers = 100,
