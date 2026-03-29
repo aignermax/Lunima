@@ -155,7 +155,15 @@ python3 tools/smart_test.py --file MyTests.cs   # Specific file
 
 ## 8.1. REQUIRED Python Tools (Token Optimization)
 
-**⚠️ MANDATORY: Use Python tools in `tools/` - NOT MCP (doesn't work in headless mode)!**
+**⚠️ MANDATORY: Use Python tools - NOT MCP (doesn't work in headless mode)!**
+
+### Tool Location
+
+1. **Check project `tools/` folder first**
+2. **If not found:** Check `~/tools/` (home directory)
+3. **If still not found:** Download from GitHub releases:
+   - https://github.com/aignermax/autonomous-issue-agent/releases
+   - Or clone: https://github.com/aignermax/autonomous-issue-agent/tree/main/tools
 
 ### 🔍 Semantic Search (`semantic_search.py`)
 
