@@ -236,6 +236,62 @@ public class NewProjectIntegrationTests
     }
 
     [Fact]
+    public async Task NewProject_ClearsCurrentFilePath_SaveOpensDialogInsteadOfOverwriting()
+    {
+        var mainVm = new MainViewModel(
+            _simulationService,
+            _nazcaExporter,
+            _pdkLoader,
+            _commandManager,
+            _preferencesService,
+            _groupLibraryManager,
+            _previewGenerator,
+            _inputDialogService,
+            _gdsExportService,
+            new CAP_Core.ErrorConsoleService());
+
+        var tempFile = Path.Combine(Path.GetTempPath(), $"test_cap_{Guid.NewGuid()}.lun");
+
+        try
+        {
+            var mockFileDialog = new Mock<IFileDialogService>();
+            mockFileDialog
+                .SetupSequence(d => d.ShowSaveFileDialogAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile)   // First call: initial save
+                .ReturnsAsync(tempFile);  // Second call: save after NewProject (must open dialog)
+
+            mainVm.FileOperations.FileDialogService = mockFileDialog.Object;
+            mainVm.FileOperations.HasUnsavedChanges = false;
+
+            // Step 1: Save the design — sets _currentFilePath
+            await mainVm.FileOperations.SaveDesignCommand.ExecuteAsync(null);
+            mockFileDialog.Verify(
+                d => d.ShowSaveFileDialogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+                Times.Once,
+                "Expected file dialog to open on first save");
+
+            // Step 2: Click New — must clear _currentFilePath
+            await mainVm.NewProjectCommand.ExecuteAsync(null);
+
+            mainVm.Canvas.Components.Count.ShouldBe(0);
+            mainVm.FileOperations.HasUnsavedChanges.ShouldBeFalse();
+
+            // Step 3: Save again — dialog MUST open (not silently overwrite the old file)
+            await mainVm.FileOperations.SaveDesignCommand.ExecuteAsync(null);
+            mockFileDialog.Verify(
+                d => d.ShowSaveFileDialogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+                Times.Exactly(2),
+                "Expected file dialog to open again after NewProject (file path must have been cleared)");
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
     public async Task NewProject_ExitsNestedGroupEditMode()
     {
         var mainVm = new MainViewModel(
