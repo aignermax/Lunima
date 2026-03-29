@@ -244,16 +244,18 @@ When the issue focuses on logic, tests, or investigation:
 Before finishing work:
 
 1. Run `dotnet build`
-2. **Run tests using `smart_test.py`** (preferred) or `dotnet test` (fallback)
+2. **REQUIRED: Run tests using `python3 tools/smart_test.py`** (NOT `dotnet test`!)
 3. Fix all build errors.
 4. Fix all failing tests.
 5. Ensure no new warnings are introduced unnecessarily.
 
 **Do not stop until build AND tests pass.**
 
-### Testing Best Practices
+### Testing: Use `smart_test.py` (MANDATORY)
 
-**Use `smart_test.py` for autonomous agents** - it filters output to prevent token overflow:
+**⚠️ YOU MUST use `smart_test.py` - NOT `dotnet test`!**
+
+`dotnet test` produces massive output (100K+ characters) that wastes tokens. Use the Python wrapper instead:
 
 ```bash
 # Run all tests (concise output)
@@ -269,22 +271,26 @@ python3 tools/smart_test.py --file ParameterSweeperTests.cs
 python3 tools/smart_test.py --verbose
 ```
 
-**Benefits over `dotnet test`:**
-- 📉 **90% less output** - only shows summary + failures
+**Why `smart_test.py` is REQUIRED:**
+- 📉 **90% less output** - only shows summary + failures (vs 100K+ chars from `dotnet test`)
 - 🎯 **Agent-friendly** - structured format, easy to parse
 - ⚡ **Faster** - minimal verbosity, quick feedback
 - 💾 **Token-efficient** - doesn't spam build warnings
 
-**Fallback to `dotnet test` only when:**
-- `smart_test.py` is not available
-- You need raw dotnet output for debugging
-- Integration with CI/CD requires it
+**NEVER use `dotnet test` directly** - it will overflow your context window!
 
 ---
 
-## 8.1. Available Python Tools (Token Optimization)
+## 8.1. REQUIRED Python Tools (Token Optimization)
 
-Use these Python scripts in `tools/` to **dramatically reduce token usage** when working on issues:
+**⚠️ CRITICAL: You MUST use these Python tools. DO NOT use MCP tools.**
+
+**MCP does NOT work:**
+- MCP is unavailable in headless mode
+- MCP is NOT accessible to autonomous agents working on this project
+- You MUST use the Python scripts in `tools/` instead
+
+These Python scripts are **mandatory** for **dramatically reducing token usage**:
 
 ### 🔍 **Semantic Code Search** (`semantic_search.py`)
 
@@ -323,27 +329,27 @@ python3 tools/semantic_search.py --rebuild
 
 Already covered in Section 8 - use for all test runs to save tokens.
 
-### 📊 **Tool Usage Reporting**
+### 📊 **Tool Usage Reporting (REQUIRED)**
 
-When you complete an issue, report which tools you used:
+**You MUST report tool usage** at the end of each issue to verify compliance.
 
 **Example:**
 ```
 ✅ Implementation complete!
 
-Tools used:
-- semantic_search.py: Found 3 similar ViewModel patterns (saved ~15K tokens vs reading files)
-- smart_test.py: Ran 47 tests, concise output (saved ~8K tokens vs dotnet test)
+Python Tools used:
+- semantic_search.py: Found 3 similar ViewModel patterns (saved ~15K tokens vs grep/read)
+- smart_test.py: Ran 47 tests, concise output (saved ~100K tokens vs dotnet test)
 
 Total token savings: ~85% compared to traditional file reading/testing
 ```
 
 **Why this matters:**
-- Helps verify tools are working
-- Demonstrates efficiency gains
-- Guides future optimization
+- Verifies you actually used the required tools
+- Shows efficiency gains
+- Helps optimize future agent runs
 
-**If tools aren't available or don't work** - that's also valuable feedback to report!
+**If you did NOT use these tools** - explain why! The tools are always available in `tools/`.
 
 ---
 
