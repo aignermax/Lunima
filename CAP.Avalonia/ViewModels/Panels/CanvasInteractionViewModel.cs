@@ -185,6 +185,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 else
                 {
                     CurrentMode = InteractionMode.Select;
+                    _canvas.ClearPinHighlight();
                 }
                 break;
             case InteractionMode.Delete:
