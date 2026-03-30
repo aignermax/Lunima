@@ -499,54 +499,16 @@ public class GdsCoordinateVerificationTests
             return;
         }
 
-        var stubPin = parsed.PinDefinitions.FirstOrDefault(p => p.Name == "waveguide");
-        if (stubPin == null)
-        {
-            _output.WriteLine($"SKIP: Stub pin not found for rotation {rotation}°");
-            return;
-        }
-
-        var gc1Placement = parsed.Components.First();
-
-        // For rotated components, need to apply rotation transformation to local pin
-        // This is simplified - actual rotation math may differ
-        double localPinX = stubPin.X;
-        double localPinY = stubPin.Y;
-
-        // Apply Nazca rotation R(-RotationDegrees) to local pin coordinates.
-        // Nazca places cells with .put(x, y, -RotationDegrees), so pin world positions
-        // use R(-editorRotation) where R(θ) = [[cosθ,-sinθ],[sinθ,cosθ]].
-        double rotatedLocalX = localPinX;
-        double rotatedLocalY = localPinY;
-        if (rotation == 90)
-        {
-            // R(-90°): rotX = +localY, rotY = -localX
-            rotatedLocalX = localPinY;
-            rotatedLocalY = -localPinX;
-        }
-        else if (rotation == 180)
-        {
-            // R(-180°): rotX = -localX, rotY = -localY
-            rotatedLocalX = -localPinX;
-            rotatedLocalY = -localPinY;
-        }
-        else if (rotation == 270)
-        {
-            // R(-270°) = R(+90°): rotX = -localY, rotY = +localX
-            rotatedLocalX = -localPinY;
-            rotatedLocalY = localPinX;
-        }
-
-        double expectedX = gc1Placement.X + rotatedLocalX;
-        double expectedY = gc1Placement.Y + rotatedLocalY;
+        // Use the pin's GetAbsoluteNazcaPosition() method which correctly handles
+        // rotation and NazcaOriginOffset transformations
+        var (expectedX, expectedY) = pin1.GetAbsoluteNazcaPosition();
 
         var wg = parsed.WaveguideStubs.First();
         double xDev = Math.Abs(expectedX - wg.StartX);
         double yDev = Math.Abs(expectedY - wg.StartY);
 
         _output.WriteLine($"Rotation: {rotation}°, Position: ({posX}, {posY})");
-        _output.WriteLine($"GC1 placement: ({gc1Placement.X:F2}, {gc1Placement.Y:F2}, {gc1Placement.RotationDegrees}°)");
-        _output.WriteLine($"Expected global pin: ({expectedX:F2}, {expectedY:F2})");
+        _output.WriteLine($"Expected pin (Nazca): ({expectedX:F2}, {expectedY:F2})");
         _output.WriteLine($"Waveguide start: ({wg.StartX:F2}, {wg.StartY:F2})");
         _output.WriteLine($"Deviation: X={xDev:F4} µm, Y={yDev:F4} µm");
 

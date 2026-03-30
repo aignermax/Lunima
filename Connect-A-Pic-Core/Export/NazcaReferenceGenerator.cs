@@ -45,7 +45,10 @@ public class NazcaReferenceGenerator
     public const double WaveguideLength = Component2X - ComponentWidth; // 200.0
 
     // ── Derived Nazca coordinate values ──────────────────────────────────
-    // Nazca Y = -(PhysicalY + ComponentHeight) due to Y-axis flip.
+    // With NazcaOriginOffset=(0, ComponentHeight), pin Nazca positions account for the shifted origin:
+    // Component Nazca Y = -(PhysicalY + ComponentHeight)
+    // Pin local Y in stub = (ComponentHeight - PinOffsetY) - ComponentHeight = -PinOffsetY
+    // Pin absolute Nazca Y = Component Y + Pin local Y = -ComponentHeight + (-PinOffsetY) = -(ComponentHeight + PinOffsetY)
 
     /// <summary>Nazca Y for component 1 placement.</summary>
     public const double NazcaComp1Y = -(Component1Y + ComponentHeight); // -50.0
@@ -56,8 +59,8 @@ public class NazcaReferenceGenerator
     /// <summary>Nazca X for waveguide start point.</summary>
     public const double NazcaWgStartX = Component1X + PinOffsetX;      // 100.0
 
-    /// <summary>Nazca Y for waveguide start point.</summary>
-    public const double NazcaWgStartY = -(Component1Y + PinOffsetY);   // -25.0
+    /// <summary>Nazca Y for waveguide start point (with NazcaOriginOffset=(0,ComponentHeight)).</summary>
+    public const double NazcaWgStartY = -(Component1Y + ComponentHeight + PinOffsetY);   // -(0 + 50 + 25) = -75.0
 
     // ── Public API ────────────────────────────────────────────────────────
 
