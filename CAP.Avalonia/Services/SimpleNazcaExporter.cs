@@ -154,12 +154,15 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Generates a standard non-parametric component stub using a polygon box.
+    /// When NazcaOriginOffset is set, the polygon box is shifted so that the cell's
+    /// (0,0) origin is at the offset position, not the bottom-left corner.
+    /// This ensures component boxes appear in the correct location in KLayout/GDS viewers.
     /// </summary>
     private static void AppendStandardComponentStub(
         StringBuilder sb, string funcName, Component comp, CultureInfo ci)
     {
-        var w = comp.WidthMicrometers.ToString("F2", ci);
-        var h = comp.HeightMicrometers.ToString("F2", ci);
+        var w = comp.WidthMicrometers;
+        var h = comp.HeightMicrometers;
 
         // Sanitize function name for valid Python identifier (replace dots with underscores)
         var pythonFuncName = funcName.Replace(".", "_");
@@ -167,13 +170,62 @@ public class SimpleNazcaExporter
         // Define cell once, return cached instance on each call
         sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
         sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
-        sb.AppendLine($"    nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1).put(0, 0)");
 
-        // Generate pins with Nazca coordinates (Y-up: nazca_y = height - editor_y)
+        // When NazcaOriginOffset is set, the cell origin (0,0) is NOT at the bottom-left corner.
+        // The polygon must be shifted so it appears at the correct position relative to the origin.
+        // Example: GC with offset (15, 30) → polygon from (-15, -30) to (15, 0)
+        // This matches the real PDK behavior where .put() places the origin, not the box corner.
+        double offsetX = comp.NazcaOriginOffsetX;
+        double offsetY = comp.NazcaOriginOffsetY;
+
+        // Check if this component actually uses NazcaOriginOffset
+        bool usesOriginOffset = (offsetX != 0 || offsetY != 0) ||
+                               (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+
+        if (usesOriginOffset && (offsetX != 0 || offsetY != 0))
+        {
+            // Shifted polygon: corner is at (-offsetX, -offsetY) relative to cell origin
+            double x0 = -offsetX;
+            double y0 = -offsetY;
+            double x1 = w - offsetX;
+            double y1 = h - offsetY;
+
+            var px0 = NormalizeZero(x0).ToString("F2", ci);
+            var py0 = NormalizeZero(y0).ToString("F2", ci);
+            var px1 = NormalizeZero(x1).ToString("F2", ci);
+            var py1 = NormalizeZero(y1).ToString("F2", ci);
+
+            sb.AppendLine($"    nd.Polygon(points=[({px0},{py0}),({px1},{py0}),({px1},{py1}),({px0},{py1})], layer=1).put(0, 0)");
+        }
+        else
+        {
+            // Legacy/simple components: box at (0,0) to (w,h)
+            var ws = w.ToString("F2", ci);
+            var hs = h.ToString("F2", ci);
+            sb.AppendLine($"    nd.Polygon(points=[(0,0),({ws},0),({ws},{hs}),(0,{hs})], layer=1).put(0, 0)");
+        }
+
+        // Generate pins with Nazca coordinates
+        // Pin positions must be relative to the cell origin (which may be shifted)
         foreach (var pin in comp.PhysicalPins)
         {
-            var px = pin.OffsetXMicrometers.ToString("F2", ci);
-            var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
+            double pinX, pinY;
+
+            if (usesOriginOffset && (offsetX != 0 || offsetY != 0))
+            {
+                // Pin position relative to shifted origin
+                pinX = pin.OffsetXMicrometers - offsetX;
+                pinY = (comp.HeightMicrometers - pin.OffsetYMicrometers) - offsetY;
+            }
+            else
+            {
+                // Legacy: pin position in standard Nazca Y-up coordinates
+                pinX = pin.OffsetXMicrometers;
+                pinY = comp.HeightMicrometers - pin.OffsetYMicrometers;
+            }
+
+            var px = NormalizeZero(pinX).ToString("F2", ci);
+            var py = NormalizeZero(pinY).ToString("F2", ci);
             var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
             sb.AppendLine($"    nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
         }
@@ -361,34 +413,93 @@ public class SimpleNazcaExporter
         }
 
         // Multi-segment: use absolute Nazca coordinates for every segment.
-        // Compute an offset that maps the path's editor start point to nazcaPin1.
-        // This shifts the entire routed path so that segment 1 starts at the correct Nazca pin.
-        var (deltaX, deltaY) = ComputePathNazcaOffset(startPin, segments);
+        // For mixed-PDK designs, we can't use a single global offset because each component
+        // has its own NazcaOriginOffset.
+
+        // Strategy: Use pin positions for first and last segments, derive others from segment geometry
 
         for (int i = 0; i < segments.Count; i++)
         {
-            var (nX, nY) = ApplyNazcaOffset(segments[i].StartPoint, deltaX, deltaY);
             bool isLast = (i == segments.Count - 1);
+            bool isFirst = (i == 0);
 
-            // Last straight segment: go from computed Nazca start directly to endPin.
-            // This corrects any residual offset when start/end components have different
-            // NazcaOriginOffset values (e.g. Grating Coupler → MMI 2x2).
-            if (isLast && segments[i] is StraightSegment && endPin != null)
+            double nX, nY;
+
+            if (isFirst && startPin != null)
             {
-                sb.AppendLine(FormatStraightToPin(nX, nY, endPin));
+                // First segment: Start at the StartPin's Nazca position
+                (nX, nY) = startPin.GetAbsoluteNazcaPosition();
+            }
+            else if (isLast && endPin != null && segments[i] is StraightSegment lastStraight)
+            {
+                // Last straight segment: Calculate start position so it ends exactly at EndPin
+                var (endNazcaX, endNazcaY) = endPin.GetAbsoluteNazcaPosition();
+                double angleRad = -lastStraight.StartAngleDegrees * Math.PI / 180.0;
+                nX = endNazcaX - lastStraight.LengthMicrometers * Math.Cos(angleRad);
+                nY = endNazcaY - lastStraight.LengthMicrometers * Math.Sin(angleRad);
             }
             else
             {
-                sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
+                // Middle segments: Simple Y-flip
+                // TODO: This assumes segments connect properly in editor space
+                nX = segments[i].StartPoint.X;
+                nY = -segments[i].StartPoint.Y;
+            }
+
+            // Export the segment with its correct Nazca coordinates
+            sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
+
+            // VALIDATION: Check if last segment actually ends at the endPin
+            if (isLast && segments[i] is StraightSegment straight && endPin != null)
+            {
+                var (expectedEndX, expectedEndY) = endPin.GetAbsoluteNazcaPosition();
+
+                // Calculate where this segment actually ends
+                double angleRad = -straight.StartAngleDegrees * Math.PI / 180.0;
+                double actualEndX = nX + straight.LengthMicrometers * Math.Cos(angleRad);
+                double actualEndY = nY + straight.LengthMicrometers * Math.Sin(angleRad);
+
+                double errorX = Math.Abs(actualEndX - expectedEndX);
+                double errorY = Math.Abs(actualEndY - expectedEndY);
+
+                const double tolerance = 0.5; // 0.5 µm tolerance (relaxed for debugging)
+
+                if (errorX > tolerance || errorY > tolerance)
+                {
+                    var startPinPos = startPin?.GetAbsolutePosition() ?? (0, 0);
+                    var endPinPos = endPin.GetAbsolutePosition();
+                    var startComp = startPin?.ParentComponent;
+                    var endComp = endPin.ParentComponent;
+
+                    // Get origin offsets for both components
+                    var (startOriginOffsetX, startOriginOffsetY) = startComp != null ? CalculateOriginOffset(startComp) : (0, 0);
+                    var (endOriginOffsetX, endOriginOffsetY) = CalculateOriginOffset(endComp);
+
+                    // Calculate expected segment endpoint in editor space
+                    double segmentEndEditorX = segments[i].StartPoint.X - straight.LengthMicrometers * Math.Cos(straight.StartAngleDegrees * Math.PI / 180.0);
+                    double segmentEndEditorY = segments[i].StartPoint.Y - straight.LengthMicrometers * Math.Sin(straight.StartAngleDegrees * Math.PI / 180.0);
+
+                    throw new InvalidOperationException(
+                        $"WAVEGUIDE ENDPOINT MISMATCH:\n" +
+                        $"  Exported Nazca: Last segment ends at ({actualEndX:F2}, {actualEndY:F2})\n" +
+                        $"  Expected: EndPin at ({expectedEndX:F2}, {expectedEndY:F2})\n" +
+                        $"  Error: ΔX={errorX:F4} µm, ΔY={errorY:F4} µm\n" +
+                        $"\n" +
+                        $"Editor: Segment {segmentEndEditorX:F2},{segmentEndEditorY:F2} → Pin {endPinPos.Item1:F2},{endPinPos.Item2:F2}\n" +
+                        $"Components: Start {startComp?.Identifier} offset ({startOriginOffsetX:F2},{startOriginOffsetY:F2}), " +
+                        $"End {endComp.Identifier} offset ({endOriginOffsetX:F2},{endOriginOffsetY:F2})\n" +
+                        $"\n" +
+                        $"Mixed-PDK issue: Different NazcaOriginOffsets prevent simple coordinate mapping.\n" +
+                        $"Delete and re-route this connection.");
+                }
             }
         }
     }
 
     /// <summary>
-    /// Computes the (deltaX, deltaY) offset that maps the path's first editor point to the
-    /// correct Nazca pin position. Applying this offset to every segment start converts
-    /// editor-space coordinates (Y-down, no origin correction) into Nazca-space coordinates
-    /// (Y-up, with pin origin correction).
+    /// Computes the (deltaX, deltaY) offset that maps editor-space segment coordinates
+    /// to Nazca-space coordinates. This handles the Y-flip and any coordinate adjustments
+    /// needed to align segments with pin positions.
     /// </summary>
     private static (double DeltaX, double DeltaY) ComputePathNazcaOffset(
         PhysicalPin? startPin, IReadOnlyList<PathSegment> segments)
@@ -396,8 +507,14 @@ public class SimpleNazcaExporter
         if (startPin == null || segments.Count == 0)
             return (0, 0);
 
+        // Get where the pin actually is in Nazca coordinates
         var (nazcaX, nazcaY) = startPin.GetAbsoluteNazcaPosition();
+
+        // Get where the first segment starts in editor coordinates
         var editorStart = segments[0].StartPoint;
+
+        // The delta maps from editor-space segment position to Nazca-space pin position
+        // Note: Y-flip is just negation, so nazca_y = -(editor_y + offset)
         return (nazcaX - editorStart.X, nazcaY - (-editorStart.Y));
     }
 
