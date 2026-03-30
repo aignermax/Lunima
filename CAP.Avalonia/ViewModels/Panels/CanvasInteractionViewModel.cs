@@ -182,6 +182,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 {
                     HandlePinClickForConnection(pin);
                 }
+                else
+                {
+                    CurrentMode = InteractionMode.Select;
+                    _canvas.ClearPinHighlight();
+                }
                 break;
             case InteractionMode.Delete:
                 DeleteAt(canvasX, canvasY);

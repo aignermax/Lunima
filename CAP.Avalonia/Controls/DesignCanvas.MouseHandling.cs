@@ -75,6 +75,13 @@ public partial class DesignCanvas
             InvalidateVisual();
             e.Handled = true;
         }
+        else
+        {
+            // No pin at click position — switch back to Select mode so user can drag components
+            mainVm.CanvasInteraction.CurrentMode = InteractionMode.Select;
+            vm.ClearPinHighlight();
+            InvalidateVisual();
+        }
     }
 
     private void HandlePlaceComponentClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
