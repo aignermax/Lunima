@@ -138,10 +138,12 @@ public class NazcaExportEndToEndTests
     [Fact]
     public void Export_ComponentDimensions_MatchStubDefinition()
     {
-        // Arrange: Create component with specific dimensions
+        // Arrange: Use demo_pdk component with no origin offset
         var canvas = new DesignCanvasViewModel();
         var component = CreateTestComponent("MMI_2x2", 0, 0, 120, 50);
-        component.NazcaFunctionName = "ebeam_mmi_2x2";
+        component.NazcaFunctionName = "demo_pdk.mmi_test"; // demo_pdk → generates stub
+        component.NazcaOriginOffsetX = 0;
+        component.NazcaOriginOffsetY = 0; // No offset
         canvas.AddComponent(component, "MMI_2x2");
 
         // Act: Export
@@ -151,17 +153,19 @@ public class NazcaExportEndToEndTests
         // Assert: Check dimensions in stub comment
         nazcaCode.ShouldContain("(120x50 µm)");
 
-        // Check polygon dimensions in stub
+        // Check polygon dimensions in stub: with no offset, box is at origin
         nazcaCode.ShouldContain("nd.Polygon(points=[(0,0),(120.00,0),(120.00,50.00),(0,50.00)], layer=1)");
     }
 
     [Fact]
     public void Export_PinPositions_CorrectInStubDefinition()
     {
-        // Arrange: Component with multiple pins
+        // Arrange: Use demo_pdk.mmi2x2 which has NazcaOriginOffset=(0,0) (no offset)
         var canvas = new DesignCanvasViewModel();
         var component = CreateTestComponent("MMI_2x2", 0, 0, 120, 50);
-        component.NazcaFunctionName = "ebeam_mmi_2x2";
+        component.NazcaFunctionName = "demo_pdk.mmi2x2";
+        component.NazcaOriginOffsetX = 0;
+        component.NazcaOriginOffsetY = 0; // Demo PDK MMI has no offset
 
         component.PhysicalPins.Add(new PhysicalPin
         {
@@ -192,7 +196,8 @@ public class NazcaExportEndToEndTests
 
         parsed.PinDefinitions.Count.ShouldBeGreaterThanOrEqualTo(2);
 
-        // Find a0 pin (Y-flipped: 50 - 12.5 = 37.5, angle inverted)
+        // Find a0 pin: With NazcaOriginOffset=(0,0) and demo_pdk prefix, pin coordinates are:
+        // Pin at editor offset (0, 12.5) → Nazca stub coordinates: (0-0, (50-12.5)-0) = (0, 37.5)
         var a0Pin = parsed.PinDefinitions.FirstOrDefault(p => p.Name == "a0");
         a0Pin.ShouldNotBeNull();
         a0Pin.X.ShouldBe(0.00, tolerance: 0.01);

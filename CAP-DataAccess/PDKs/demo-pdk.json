@@ -32,6 +32,7 @@
       "nazcaFunction": "demo_pdk.mmi2x2",
       "widthMicrometers": 120,
       "heightMicrometers": 50,
+      "nazcaOriginOffset": { "x": 0, "y": 12.5 },
       "pins": [
         { "name": "a0", "offsetXMicrometers": 0, "offsetYMicrometers": 12.5, "angleDegrees": 180 },
         { "name": "a1", "offsetXMicrometers": 0, "offsetYMicrometers": 37.5, "angleDegrees": 180 },

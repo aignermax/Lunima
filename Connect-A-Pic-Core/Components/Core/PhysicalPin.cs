@@ -43,8 +43,9 @@ namespace CAP_Core.Components.Core
             double nazcaCompY = -(ParentComponent.PhysicalY + originOffsetY);
 
             // Local pin Nazca coordinates in unrotated component space
-            double localPinNazcaX = OffsetXMicrometers;
-            double localPinNazcaY = ParentComponent.HeightMicrometers - OffsetYMicrometers;
+            // When NazcaOriginOffset is set, pins are positioned relative to the shifted origin
+            double localPinNazcaX = OffsetXMicrometers - originOffsetX;
+            double localPinNazcaY = (ParentComponent.HeightMicrometers - OffsetYMicrometers) - originOffsetY;
 
             // Apply component rotation to local pin coordinates
             // Nazca places cells with .put(x, y, -RotationDegrees), so pin world positions

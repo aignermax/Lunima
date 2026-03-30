@@ -317,10 +317,11 @@ public class SiepicGratingCouplerExportTests
         var result = exporter.Export(canvas);
 
         // Assert - Check stub definition has correct pin positions
-        // Port 1: (15, 30) in Avalonia → (15, 30-30=0) in Nazca, angle 90° → -90° with Y-flip
-        result.ShouldContain("nd.Pin('port 1').put(15.00, 0.00, -90)");
+        // With NazcaOriginOffset=(15,30):
+        // Port 1: editor (15,30) → stub: (15-15, (30-30)-30) = (0, -30)
+        result.ShouldContain("nd.Pin('port 1').put(0.00, -30.00, -90)");
 
-        // Port 2: (30, 15) in Avalonia → (30, 30-15=15) in Nazca, angle 0° → 0° with Y-flip
-        result.ShouldContain("nd.Pin('port 2').put(30.00, 15.00, 0)");
+        // Port 2: editor (30,15) → stub: (30-15, (30-15)-30) = (15, -15)
+        result.ShouldContain("nd.Pin('port 2').put(15.00, -15.00, 0)");
     }
 }

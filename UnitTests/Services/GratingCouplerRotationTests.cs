@@ -72,8 +72,9 @@ public class GratingCouplerRotationTests
         var result = exporter.Export(canvas);
 
         // Assert
-        // The stub should define the pin with angle -0 = 0 (Y-flip)
-        result.ShouldContain("nd.Pin('opt').put(50.00, 15.00, 0)");
+        // With NazcaOriginOffset=(50,15), pin at editor (50,15) → stub coordinates:
+        // pinX = 50-50 = 0, pinY = (30-15)-15 = 0
+        result.ShouldContain("nd.Pin('opt').put(0.00, 0.00, 0)");
 
         // The component instance should be placed with rotation -0 = 0
         // With NazcaOriginOffset (50, 15), the placement is at:
@@ -94,8 +95,8 @@ public class GratingCouplerRotationTests
         var result = exporter.Export(canvas);
 
         // Assert
-        // The stub pin definition should be the same (defined once)
-        result.ShouldContain("nd.Pin('opt').put(50.00, 15.00, 0)");
+        // The stub pin definition should be the same (defined once) - at (0,0) with new coordinate system
+        result.ShouldContain("nd.Pin('opt').put(0.00, 0.00, 0)");
 
         // The component instance should be rotated: -180 = -180 (or 180)
         // In Nazca, -180 and 180 are equivalent
@@ -133,8 +134,8 @@ public class GratingCouplerRotationTests
         var result = exporter.Export(canvas);
 
         // Assert
-        // Pin at (50, 15) in Avalonia (Y-down) should be at (50, 30-15=15) in Nazca (Y-up)
-        result.ShouldContain("nd.Pin('opt').put(50.00, 15.00, 0)");
+        // With NazcaOriginOffset=(50,15), pin at editor (50,15) → stub coordinates (0,0)
+        result.ShouldContain("nd.Pin('opt').put(0.00, 0.00, 0)");
     }
 
     [Theory]
