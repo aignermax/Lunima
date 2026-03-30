@@ -81,32 +81,35 @@ public partial class MainViewModel : ObservableObject
     private bool _isSimulating;
 
     public MainViewModel(
+        DesignCanvasViewModel canvas,
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
-        PdkLoader pdkLoader,
         Commands.CommandManager commandManager,
         UserPreferencesService preferencesService,
-        CAP_Core.Components.Creation.GroupLibraryManager groupLibraryManager,
         Services.GroupPreviewGenerator previewGenerator,
         Services.IInputDialogService inputDialogService,
         CAP_Core.Export.GdsExportService gdsExportService,
-        ErrorConsoleService errorConsoleService)
+        ErrorConsoleService errorConsoleService,
+        LeftPanelViewModel leftPanel,
+        RightPanelViewModel rightPanel,
+        BottomPanelViewModel bottomPanel)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
-        _canvas = new DesignCanvasViewModel();
+        _canvas = canvas;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
 
-        // Initialize Panel ViewModels (order matters due to dependencies)
-        LeftPanel = new LeftPanelViewModel(_canvas, groupLibraryManager, pdkLoader, preferencesService, errorConsoleService);
+        // Wire panel ViewModels (injected via DI)
+        LeftPanel = leftPanel;
+        RightPanel = rightPanel;
+        BottomPanel = bottomPanel;
+
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
         var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService, errorConsoleService);
         gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
         gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, errorConsoleService);
         ViewportControl = new ViewportControlViewModel(_canvas);
-        RightPanel = new RightPanelViewModel(_canvas, preferencesService, errorConsoleService);
-        BottomPanel = new BottomPanelViewModel(_canvas, CommandManager, errorConsoleService);
 
         // Wire up status callbacks
         CanvasInteraction.UpdateStatus = UpdateStatusText;

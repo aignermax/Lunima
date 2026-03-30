@@ -5,6 +5,7 @@ using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_Core.Components.Creation;
 using Shouldly;
+using UnitTests.Helpers;
 using Xunit;
 using Moq;
 
@@ -243,29 +244,6 @@ public class UndoRedoIntegrationTests
         mainVm.Canvas.Components[0].Name.ShouldBe(originalName, "Restored component should have same name");
     }
 
-    private MainViewModel CreateMainViewModel()
-    {
-        var simulationService = new SimulationService();
-        var nazcaExporter = new SimpleNazcaExporter();
-        var pdkLoader = new PdkLoader();
-        var commandManager = new CommandManager();
-        var preferencesService = new UserPreferencesService();
-        var groupLibraryManager = new GroupLibraryManager();
-        var previewGenerator = new GroupPreviewGenerator();
-        var inputDialogService = Mock.Of<IInputDialogService>();
-        var gdsExportService = new CAP_Core.Export.GdsExportService();
-
-        return new MainViewModel(
-            simulationService,
-            nazcaExporter,
-            pdkLoader,
-            commandManager,
-            preferencesService,
-            groupLibraryManager,
-            previewGenerator,
-            inputDialogService,
-            gdsExportService,
-            new CAP_Core.ErrorConsoleService()
-        );
-    }
+    private static MainViewModel CreateMainViewModel() =>
+        MainViewModelTestHelper.CreateMainViewModel();
 }

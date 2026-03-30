@@ -1,4 +1,3 @@
-using CAP_Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Controls;
 using CAP.Avalonia.ViewModels.Analysis;
@@ -96,21 +95,34 @@ public partial class RightPanelViewModel : ObservableObject
     public PdkConsistencyViewModel PdkConsistency { get; }
 
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
-    public RightPanelViewModel(DesignCanvasViewModel canvas, UserPreferencesService preferencesService, ErrorConsoleService? errorConsole = null)
+    public RightPanelViewModel(
+        DesignCanvasViewModel canvas,
+        UserPreferencesService preferencesService,
+        ParameterSweepViewModel sweep,
+        RoutingDiagnosticsViewModel routingDiagnostics,
+        DesignValidationViewModel designValidation,
+        ComponentDimensionDiagnosticsViewModel dimensionDiagnostics,
+        ComponentDimensionViewModel dimensionValidator,
+        ExportValidationViewModel exportValidation,
+        SMatrixPerformanceViewModel sMatrixPerformance,
+        CompressLayoutViewModel compressLayout,
+        GroupSMatrixViewModel groupSMatrix,
+        ArchitectureReportViewModel architectureReport,
+        PdkConsistencyViewModel pdkConsistency)
     {
         _preferencesService = preferencesService;
 
-        Sweep = new ParameterSweepViewModel(errorConsole);
-        RoutingDiagnostics = new RoutingDiagnosticsViewModel(errorConsole);
-        DesignValidation = new DesignValidationViewModel();
-        DimensionDiagnostics = new ComponentDimensionDiagnosticsViewModel(canvas);
-        DimensionValidator = new ComponentDimensionViewModel();
-        ExportValidation = new ExportValidationViewModel(errorConsole);
-        SMatrixPerformance = new SMatrixPerformanceViewModel(errorConsole);
-        CompressLayout = new CompressLayoutViewModel(errorConsole);
-        GroupSMatrix = new GroupSMatrixViewModel();
-        ArchitectureReport = new ArchitectureReportViewModel();
-        PdkConsistency = new PdkConsistencyViewModel();
+        Sweep = sweep;
+        RoutingDiagnostics = routingDiagnostics;
+        DesignValidation = designValidation;
+        DimensionDiagnostics = dimensionDiagnostics;
+        DimensionValidator = dimensionValidator;
+        ExportValidation = exportValidation;
+        SMatrixPerformance = sMatrixPerformance;
+        CompressLayout = compressLayout;
+        GroupSMatrix = groupSMatrix;
+        ArchitectureReport = architectureReport;
+        PdkConsistency = pdkConsistency;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

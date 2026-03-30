@@ -1,5 +1,7 @@
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Hierarchy;
+using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_Core.Components.Creation;
@@ -40,10 +42,17 @@ public class LeftPanelViewModelTests : IDisposable
         }
     }
 
+    /// <summary>Creates a LeftPanelViewModel with all required sub-VM dependencies.</summary>
+    private LeftPanelViewModel CreateLeftPanelViewModel() =>
+        new(_canvas, _libraryManager, _pdkLoader, _preferencesService,
+            new HierarchyPanelViewModel(_canvas),
+            new PdkManagerViewModel(),
+            new ComponentLibraryViewModel(_libraryManager));
+
     [Fact]
     public void LibraryScrollOffset_DefaultsToZero()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LibraryScrollOffset.ShouldBe(0.0);
     }
@@ -51,7 +60,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void LibraryScrollOffset_CanBeSet()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LibraryScrollOffset = 123.5;
 
@@ -61,7 +70,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void LibraryScrollOffset_RaisesPropertyChanged()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
         bool propertyChanged = false;
 
         vm.PropertyChanged += (s, e) =>
@@ -78,7 +87,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void LibraryScrollOffset_PreservesValue()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LibraryScrollOffset = 250.75;
         var savedValue = vm.LibraryScrollOffset;
@@ -89,7 +98,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void LeftPanelWidth_ClampsToMinimum()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth = new Avalonia.Controls.GridLength(50); // Below minimum of 200
 
@@ -99,7 +108,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void LeftPanelWidth_ClampsToMaximum()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth = new Avalonia.Controls.GridLength(1000); // Above maximum of 800
 
@@ -109,7 +118,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void Initialize_LoadsComponentLibrary()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.Initialize();
 
@@ -120,7 +129,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void SearchText_FiltersComponents()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
         vm.Initialize();
 
         var initialCount = vm.FilteredTemplates.Count;
@@ -136,7 +145,7 @@ public class LeftPanelViewModelTests : IDisposable
     [Fact]
     public void SearchText_ClearedRestoresAllComponents()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
         vm.Initialize();
 
         var initialCount = vm.FilteredTemplates.Count;

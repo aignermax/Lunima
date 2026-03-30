@@ -1,10 +1,7 @@
-using CAP.Avalonia.Commands;
-using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP_Core.Components.Core;
-using CAP_DataAccess.Components.ComponentDraftMapper;
-using CAP_Core.Export;
 using Shouldly;
+using UnitTests.Helpers;
 using Xunit;
 
 namespace UnitTests.ViewModels;
@@ -16,7 +13,7 @@ namespace UnitTests.ViewModels;
 public class ZoomToFitGroupsTests
 {
     private static MainViewModel CreateViewModel() =>
-        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager(), new UserPreferencesService(), new CAP_Core.Components.Creation.GroupLibraryManager(), new GroupPreviewGenerator(), new InputDialogService(), new GdsExportService(), new CAP_Core.ErrorConsoleService());
+        MainViewModelTestHelper.CreateMainViewModel();
 
     /// <summary>
     /// Regression test: Verifies that zoom-to-fit correctly includes components

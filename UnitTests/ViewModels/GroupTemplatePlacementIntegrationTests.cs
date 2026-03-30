@@ -39,7 +39,10 @@ public class GroupTemplatePlacementIntegrationTests : IDisposable
             _canvas,
             _libraryManager,
             new CAP_DataAccess.Components.ComponentDraftMapper.PdkLoader(),
-            new CAP.Avalonia.Services.UserPreferencesService());
+            new CAP.Avalonia.Services.UserPreferencesService(),
+            new CAP.Avalonia.ViewModels.Hierarchy.HierarchyPanelViewModel(_canvas),
+            new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
+            new CAP.Avalonia.ViewModels.Library.ComponentLibraryViewModel(_libraryManager));
 
         // Wire up the callback (simulating MainViewModel wiring)
         _leftPanel.OnGroupTemplateSelected = template =>

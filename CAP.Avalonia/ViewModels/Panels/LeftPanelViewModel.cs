@@ -108,6 +108,9 @@ public partial class LeftPanelViewModel : ObservableObject
         GroupLibraryManager libraryManager,
         PdkLoader pdkLoader,
         UserPreferencesService preferencesService,
+        HierarchyPanelViewModel hierarchyPanel,
+        PdkManagerViewModel pdkManager,
+        ComponentLibraryViewModel componentLibrary,
         ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
@@ -115,9 +118,9 @@ public partial class LeftPanelViewModel : ObservableObject
         _preferencesService = preferencesService;
         _errorConsole = errorConsole;
 
-        HierarchyPanel = new HierarchyPanelViewModel(canvas);
-        PdkManager = new PdkManagerViewModel();
-        ComponentLibrary = new ComponentLibraryViewModel(libraryManager);
+        HierarchyPanel = hierarchyPanel;
+        PdkManager = pdkManager;
+        ComponentLibrary = componentLibrary;
 
         PdkManager.OnFilterChanged = FilterComponents;
     }
