@@ -635,9 +635,6 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Layout Compression Panel -->
-                    <panels:LayoutCompressionPanel/>
-
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
 
@@ -687,11 +684,6 @@
 
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
 
-                    <TextBlock Text="Current Mode:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <TextBlock Text="{Binding CanvasInteraction.CurrentMode}" Foreground="Cyan" FontWeight="Bold"/>
-
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-
                     <TextBlock Text="Grid Snap [G Key]:" Foreground="Gray" Margin="0,0,0,5"/>
                     <CheckBox Content="Enable Grid Snapping"
                               IsChecked="{Binding Canvas.GridSnap.IsEnabled}"
@@ -713,12 +705,6 @@
                               Foreground="White" Margin="0,0,0,5"/>
                     <TextBlock Text="Shows cyan guide lines when pins align on same X or Y axis during dragging."
                                Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                    <!-- Routing Diagnostics -->
-                    <panels:RoutingDiagnosticsPanel/>
-
-                    <!-- Component Dimension Diagnostics -->
-                    <panels:ComponentDimensionDiagnosticsPanel/>
 
                     <!-- GDS Export Configuration -->
                     <panels:GdsExportPanel/>
