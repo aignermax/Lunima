@@ -370,21 +370,21 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenPdkHelp()
     {
-        var helpFile = System.IO.Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "docs", "PDK_JSON_FORMAT.md");
-        var absolutePath = System.IO.Path.GetFullPath(helpFile);
+        var url = "https://github.com/aignermax/Lunima/blob/main/docs/PDK_JSON_FORMAT.md";
 
-        if (!System.IO.File.Exists(absolutePath))
+        try
         {
-            StatusText = "Help file not found. See docs/PDK_JSON_FORMAT.md in the repository.";
-            return;
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+            StatusText = "Opening PDK help documentation in browser...";
         }
-
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        catch (Exception ex)
         {
-            FileName = absolutePath,
-            UseShellExecute = true
-        });
+            StatusText = $"Could not open browser: {ex.Message}";
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
