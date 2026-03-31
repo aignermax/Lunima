@@ -36,6 +36,7 @@ public class PathfindingGrid
 
     // Track which components own which cells (for selective invalidation)
     private readonly Dictionary<Component, HashSet<(int x, int y)>> _componentCells = new();
+    private readonly object _componentCellsLock = new();
 
     // Track waveguide path cells (keyed by connection ID)
     private readonly Dictionary<Guid, HashSet<(int x, int y)>> _waveguideCells = new();
@@ -185,7 +186,10 @@ public class PathfindingGrid
         }
 
         // Track all cells occupied by this group (for removal)
-        _componentCells[group] = groupCells;
+        lock (_componentCellsLock)
+        {
+            _componentCells[group] = groupCells;
+        }
     }
 
     /// <summary>
@@ -290,7 +294,10 @@ public class PathfindingGrid
                 }
             }
         }
-        _componentCells[component] = cells;
+        lock (_componentCellsLock)
+        {
+            _componentCells[component] = cells;
+        }
 
         // Mark pin reservation zones — soft penalty area around each pin.
         // Routes can pass through but A* prefers to avoid them.
@@ -316,7 +323,14 @@ public class PathfindingGrid
         }
 
         // Regular component obstacle removal
-        if (_componentCells.TryGetValue(component, out var cells))
+        HashSet<(int x, int y)>? cells;
+        lock (_componentCellsLock)
+        {
+            _componentCells.TryGetValue(component, out cells);
+            if (cells != null)
+                _componentCells.Remove(component);
+        }
+        if (cells != null)
         {
             foreach (var (gx, gy) in cells)
             {
@@ -325,7 +339,6 @@ public class PathfindingGrid
                     _cells[gx, gy] = 0;
                 }
             }
-            _componentCells.Remove(component);
         }
     }
 
@@ -345,7 +358,14 @@ public class PathfindingGrid
             else
             {
                 // Remove obstacle for regular child component
-                if (_componentCells.TryGetValue(child, out var cells))
+                HashSet<(int x, int y)>? cells;
+                lock (_componentCellsLock)
+                {
+                    _componentCells.TryGetValue(child, out cells);
+                    if (cells != null)
+                        _componentCells.Remove(child);
+                }
+                if (cells != null)
                 {
                     foreach (var (gx, gy) in cells)
                     {
@@ -354,13 +374,18 @@ public class PathfindingGrid
                             _cells[gx, gy] = 0;
                         }
                     }
-                    _componentCells.Remove(child);
                 }
             }
         }
 
         // Remove the group's own cells (frozen paths marked with state=3)
-        if (_componentCells.TryGetValue(group, out var groupCells))
+        HashSet<(int x, int y)>? groupCells;
+        lock (_componentCellsLock)
+        {
+            _componentCells.TryGetValue(group, out groupCells);
+            _componentCells.Remove(group);
+        }
+        if (groupCells != null)
         {
             foreach (var (gx, gy) in groupCells)
             {
@@ -370,9 +395,6 @@ public class PathfindingGrid
                 }
             }
         }
-
-        // Remove the group tracking entry
-        _componentCells.Remove(group);
     }
 
     /// <summary>
@@ -511,7 +533,10 @@ public class PathfindingGrid
     public void RebuildFromComponents(IEnumerable<Component> components)
     {
         Array.Clear(_cells);
-        _componentCells.Clear();
+        lock (_componentCellsLock)
+        {
+            _componentCells.Clear();
+        }
         lock (_waveguideCellsLock)
         {
             _waveguideCells.Clear();
