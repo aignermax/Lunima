@@ -34,7 +34,9 @@ public class SimulationService
         if (canvas.Components.Count == 0)
             return SimulationResult.Empty("No components placed");
 
-        if (canvas.Connections.Count == 0)
+        // Check for connections: either external canvas connections OR internal paths in groups
+        var hasConnections = canvas.Connections.Count > 0 || HasInternalPathsInGroups(canvas);
+        if (!hasConnections)
             return SimulationResult.Empty("No connections");
 
         var tileManager = new ComponentListTileManager();
@@ -182,6 +184,42 @@ public class SimulationService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Checks if any ComponentGroups in the canvas have internal paths (connections).
+    /// When all components are grouped, canvas.Connections is empty but groups have InternalPaths.
+    /// </summary>
+    private static bool HasInternalPathsInGroups(DesignCanvasViewModel canvas)
+    {
+        foreach (var compVm in canvas.Components)
+        {
+            if (compVm.Component is ComponentGroup group)
+            {
+                if (group.InternalPaths.Count > 0)
+                    return true;
+
+                // Recursively check nested groups
+                if (HasInternalPathsInGroupRecursive(group))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool HasInternalPathsInGroupRecursive(ComponentGroup group)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nestedGroup)
+            {
+                if (nestedGroup.InternalPaths.Count > 0)
+                    return true;
+                if (HasInternalPathsInGroupRecursive(nestedGroup))
+                    return true;
+            }
+        }
+        return false;
     }
 
     private static bool IsLightSource(Component component)
