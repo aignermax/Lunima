@@ -147,19 +147,21 @@ public class CreateGroupCommand : IUndoableCommand
             _createdGroup.AddChild(comp);
         }
 
-        // 5. Create frozen paths for internal connections
+        // 5. Create frozen paths for internal connections.
+        // Always create a FrozenWaveguidePath even when RoutedPath is null — an empty
+        // RoutedPath produces TransmissionCoefficient = Complex.One (lossless), which is
+        // the correct conservative default and ensures the connection is preserved in the
+        // group S-Matrix. Skipping connections with null RoutedPath silently drops them.
         foreach (var conn in _internalConnections)
         {
-            if (conn.RoutedPath != null)
+            var frozenPath = new FrozenWaveguidePath
             {
-                var frozenPath = new FrozenWaveguidePath
-                {
-                    Path = ClonePath(conn.RoutedPath),
-                    StartPin = conn.StartPin,
-                    EndPin = conn.EndPin
-                };
-                _createdGroup.AddInternalPath(frozenPath);
-            }
+                Path = conn.RoutedPath != null ? ClonePath(conn.RoutedPath) : new RoutedPath(),
+                StartPin = conn.StartPin,
+                EndPin = conn.EndPin,
+                PropagationLossDbPerCm = conn.PropagationLossDbPerCm
+            };
+            _createdGroup.AddInternalPath(frozenPath);
         }
 
         // 6. Create GroupPins for ALL unoccupied pins

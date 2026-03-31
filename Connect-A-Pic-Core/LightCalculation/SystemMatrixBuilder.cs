@@ -30,6 +30,14 @@ namespace CAP_Core.LightCalculation
         private SMatrix CreatePhysicalConnectionsMatrix()
         {
             var connections = Grid.WaveguideConnections.GetConnectionTransfers();
+
+            // Also include frozen internal paths from ComponentGroups so that grouped
+            // components are treated identically to flat components during simulation.
+            foreach (var frozenTransfer in GetAllFrozenPathTransfers())
+            {
+                connections[frozenTransfer.Key] = frozenTransfer.Value;
+            }
+
             var pinIdSet = new HashSet<Guid>(
                 connections.SelectMany(c => new[] { c.Key.Item1, c.Key.Item2 }));
 
@@ -41,6 +49,50 @@ namespace CAP_Core.LightCalculation
             var connectionsSMatrix = new SMatrix(pinIdSet.ToList(), new());
             connectionsSMatrix.SetValues(connections);
             return connectionsSMatrix;
+        }
+
+        /// <summary>
+        /// Collects connection transfers from all FrozenWaveguidePaths inside every
+        /// ComponentGroup that is present in the tile manager (recursively).
+        /// These transfers replace the group's pre-computed transitive S-matrix so that
+        /// the outer iterative simulation sees individual component matrices and explicit
+        /// connections — exactly as it does for a flat (ungrouped) circuit.
+        /// </summary>
+        private Dictionary<(Guid, Guid), Complex> GetAllFrozenPathTransfers()
+        {
+            var transfers = new Dictionary<(Guid, Guid), Complex>();
+            foreach (var component in Grid.TileManager.GetAllComponents())
+            {
+                if (component is ComponentGroup group)
+                {
+                    CollectFrozenPathTransfers(group, transfers);
+                }
+            }
+            return transfers;
+        }
+
+        private static void CollectFrozenPathTransfers(
+            ComponentGroup group,
+            Dictionary<(Guid, Guid), Complex> transfers)
+        {
+            foreach (var path in group.InternalPaths)
+            {
+                if (path.StartPin?.LogicalPin == null || path.EndPin?.LogicalPin == null)
+                    continue;
+
+                var coeff = path.TransmissionCoefficient;
+                // Forward: StartPin.OutFlow → EndPin.InFlow
+                transfers[(path.StartPin.LogicalPin.IDOutFlow, path.EndPin.LogicalPin.IDInFlow)] = coeff;
+                // Reverse: EndPin.OutFlow → StartPin.InFlow (waveguides are bidirectional)
+                transfers[(path.EndPin.LogicalPin.IDOutFlow, path.StartPin.LogicalPin.IDInFlow)] = coeff;
+            }
+
+            // Recurse into nested groups
+            foreach (var child in group.ChildComponents)
+            {
+                if (child is ComponentGroup nestedGroup)
+                    CollectFrozenPathTransfers(nestedGroup, transfers);
+            }
         }
 
         private SMatrix CreateInterComponentsConnectionsMatrix()
@@ -61,32 +113,65 @@ namespace CAP_Core.LightCalculation
             var allSMatrices = new List<SMatrix>();
             foreach (var component in allComponents)
             {
-                // ComponentGroups may not have their S-Matrix pre-computed (e.g. when using
-                // LightCalculationService or ParameterSweeper which bypass SimulationService).
-                // Auto-compute on demand so all simulation paths work correctly.
-                if (component is CAP_Core.Components.Core.ComponentGroup group && group.WaveLengthToSMatrixMap.Count == 0)
+                // ComponentGroups: flatten transparently by using each child's individual
+                // S-matrix rather than the group's pre-computed transitive S-matrix.
+                // Internal connections are captured separately via GetAllFrozenPathTransfers().
+                // This prevents double-counting: the transitive group matrix already encodes
+                // multi-hop transfer, so embedding it inside the outer iterative simulation
+                // (which converges the same Neumann series) would apply the internal chain twice.
+                if (component is ComponentGroup group)
                 {
-                    group.EnsureSMatrixComputed();
+                    // Still compute the group S-matrix for external consumers (e.g. serialization,
+                    // ParameterSweeper) that read WaveLengthToSMatrixMap directly.
+                    if (group.WaveLengthToSMatrixMap.Count == 0)
+                        group.EnsureSMatrixComputed();
+
+                    CollectChildSMatrices(group, waveLength, allSMatrices);
+                    continue;
                 }
 
-                if (component.WaveLengthToSMatrixMap.TryGetValue(waveLength, out var matrixFound))
+                AddComponentSMatrix(component, waveLength, allSMatrices);
+            }
+            return allSMatrices;
+        }
+
+        private static void CollectChildSMatrices(
+            ComponentGroup group, int waveLength, List<SMatrix> result)
+        {
+            foreach (var child in group.ChildComponents)
+            {
+                if (child is ComponentGroup nestedGroup)
                 {
-                    allSMatrices.Add(matrixFound);
-                }
-                else if (component.WaveLengthToSMatrixMap.Count > 0)
-                {
-                    // Nearest-wavelength fallback for multi-wavelength PDK components
-                    var nearestKey = component.WaveLengthToSMatrixMap.Keys
-                        .OrderBy(k => Math.Abs(k - waveLength))
-                        .First();
-                    allSMatrices.Add(component.WaveLengthToSMatrixMap[nearestKey]);
+                    CollectChildSMatrices(nestedGroup, waveLength, result);
                 }
                 else
                 {
-                    throw new InvalidDataException($"The Matrix was not defined for the specific waveLength: {waveLength} at component {component.Identifier}");
+                    AddComponentSMatrix(child, waveLength, result);
                 }
-            };
-            return allSMatrices;
+            }
+        }
+
+        private static void AddComponentSMatrix(
+            Component component, int waveLength, List<SMatrix> result)
+        {
+            if (component.WaveLengthToSMatrixMap.TryGetValue(waveLength, out var matrixFound))
+            {
+                result.Add(matrixFound);
+            }
+            else if (component.WaveLengthToSMatrixMap.Count > 0)
+            {
+                // Nearest-wavelength fallback for multi-wavelength PDK components
+                var nearestKey = component.WaveLengthToSMatrixMap.Keys
+                    .OrderBy(k => Math.Abs(k - waveLength))
+                    .First();
+                result.Add(component.WaveLengthToSMatrixMap[nearestKey]);
+            }
+            else
+            {
+                throw new InvalidDataException(
+                    $"The Matrix was not defined for the specific waveLength: {waveLength} " +
+                    $"at component {component.Identifier}");
+            }
         }
         private Dictionary<(Guid LightIn, Guid LightOut), Complex> GetAllConnectionsBetweenComponents()
         {
