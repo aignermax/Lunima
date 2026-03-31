@@ -30,4 +30,4 @@ jobs:
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
-        run: dotnet test --no-restore --logger trx
+        run: dotnet test --no-restore
