@@ -67,10 +67,9 @@
       Block installation if .NET 8 is absent (except during uninstall
       or upgrade where the package is already registered).
     -->
-    <Condition
-        Message="Lunima requires the .NET 8 Desktop Runtime (x64) or later.&#13;&#10;&#13;&#10;Please download and install it from:&#13;&#10;https://dotnet.microsoft.com/download/dotnet/8.0">
-      <![CDATA[Installed OR DOTNET8_PRESENT]]>
-    </Condition>
+    <Launch
+        Condition="Installed OR DOTNET8_PRESENT"
+        Message="Lunima requires the .NET 8 Desktop Runtime (x64) or later.&#13;&#10;&#13;&#10;Please download and install it from:&#13;&#10;https://dotnet.microsoft.com/download/dotnet/8.0" />
 
     <!-- ─────────────────────────────────────────────────────── -->
     <!-- Installer UI                                             -->
