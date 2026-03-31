@@ -1,4 +1,7 @@
 using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Hierarchy;
+using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Components.Creation;
 using CAP_DataAccess.Components.ComponentDraftMapper;
@@ -91,7 +94,9 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var pdkLoader = new PdkLoader();
 
         // Act
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService);
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+            new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
+            new ComponentLibraryViewModel(groupLibrary));
         leftPanel.Initialize();
 
         // Assert
@@ -105,7 +110,9 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService);
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+            new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
+            new ComponentLibraryViewModel(groupLibrary));
 
         // Act - try to set below minimum
         leftPanel.LeftPanelWidth = new Avalonia.Controls.GridLength(100);
@@ -121,7 +128,9 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService);
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+            new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
+            new ComponentLibraryViewModel(groupLibrary));
 
         // Act - try to set above maximum
         leftPanel.LeftPanelWidth = new Avalonia.Controls.GridLength(1000);
@@ -137,7 +146,9 @@ public class LeftPanelWidthPersistenceTests : IDisposable
         var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
         var groupLibrary = new GroupLibraryManager();
         var pdkLoader = new PdkLoader();
-        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService);
+        var leftPanel = new LeftPanelViewModel(canvas, groupLibrary, pdkLoader, _preferencesService,
+            new HierarchyPanelViewModel(canvas), new PdkManagerViewModel(),
+            new ComponentLibraryViewModel(groupLibrary));
         leftPanel.Initialize();
 
         // Act

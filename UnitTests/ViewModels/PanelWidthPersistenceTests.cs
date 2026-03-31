@@ -1,5 +1,9 @@
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Diagnostics;
+using CAP.Avalonia.ViewModels.Hierarchy;
+using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_Core.Components.Creation;
@@ -40,10 +44,32 @@ public class PanelWidthPersistenceTests : IDisposable
         }
     }
 
+    /// <summary>Creates a LeftPanelViewModel with all required sub-VM dependencies.</summary>
+    private LeftPanelViewModel CreateLeftPanelViewModel() =>
+        new(_canvas, _libraryManager, _pdkLoader, _preferencesService,
+            new HierarchyPanelViewModel(_canvas),
+            new PdkManagerViewModel(),
+            new ComponentLibraryViewModel(_libraryManager));
+
+    /// <summary>Creates a RightPanelViewModel with all required sub-VM dependencies.</summary>
+    private RightPanelViewModel CreateRightPanelViewModel() =>
+        new(_canvas, _preferencesService,
+            new ParameterSweepViewModel(),
+            new RoutingDiagnosticsViewModel(),
+            new DesignValidationViewModel(),
+            new ComponentDimensionDiagnosticsViewModel(_canvas),
+            new ComponentDimensionViewModel(),
+            new ExportValidationViewModel(),
+            new SMatrixPerformanceViewModel(),
+            new CompressLayoutViewModel(),
+            new GroupSMatrixViewModel(),
+            new ArchitectureReportViewModel(),
+            new PdkConsistencyViewModel());
+
     [Fact]
     public void LeftPanelWidth_DefaultsTo220()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth.Value.ShouldBe(220);
     }
@@ -51,7 +77,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void RightPanelWidth_DefaultsTo250()
     {
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
 
         vm.RightPanelWidth.Value.ShouldBe(250);
     }
@@ -59,7 +85,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void LeftPanelWidth_ClampsToMinimum200()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth = new Avalonia.Controls.GridLength(50); // Below minimum
 
@@ -69,7 +95,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void LeftPanelWidth_ClampsToMaximum800()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth = new Avalonia.Controls.GridLength(1000); // Above maximum
 
@@ -79,7 +105,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void RightPanelWidth_ClampsToMinimum200()
     {
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
 
         vm.RightPanelWidth = new Avalonia.Controls.GridLength(100); // Below minimum
 
@@ -89,7 +115,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void RightPanelWidth_ClampsToMaximum800()
     {
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
 
         vm.RightPanelWidth = new Avalonia.Controls.GridLength(1000); // Above maximum
 
@@ -99,7 +125,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void LeftPanelWidth_PersistsToPreferences()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth = new Avalonia.Controls.GridLength(350);
 
@@ -109,7 +135,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void RightPanelWidth_PersistsToPreferences()
     {
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
 
         vm.RightPanelWidth = new Avalonia.Controls.GridLength(400);
 
@@ -123,7 +149,7 @@ public class PanelWidthPersistenceTests : IDisposable
         _preferencesService.SetLeftPanelWidth(300);
 
         // Create new ViewModel and initialize
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
         vm.Initialize();
 
         vm.LeftPanelWidth.Value.ShouldBe(300);
@@ -136,7 +162,7 @@ public class PanelWidthPersistenceTests : IDisposable
         _preferencesService.SetRightPanelWidth(450);
 
         // Create new ViewModel and initialize
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
         vm.Initialize();
 
         vm.RightPanelWidth.Value.ShouldBe(450);
@@ -145,7 +171,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void LeftPanelWidth_RaisesPropertyChanged()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
         bool propertyChanged = false;
 
         vm.PropertyChanged += (s, e) =>
@@ -162,7 +188,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void RightPanelWidth_RaisesPropertyChanged()
     {
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
         bool propertyChanged = false;
 
         vm.PropertyChanged += (s, e) =>
@@ -179,8 +205,8 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void BothPanels_CanHaveIndependentWidths()
     {
-        var leftVm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
-        var rightVm = new RightPanelViewModel(_canvas, _preferencesService);
+        var leftVm = CreateLeftPanelViewModel();
+        var rightVm = CreateRightPanelViewModel();
 
         leftVm.LeftPanelWidth = new Avalonia.Controls.GridLength(300);
         rightVm.RightPanelWidth = new Avalonia.Controls.GridLength(500);
@@ -194,7 +220,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void LeftPanelWidth_AcceptsValidWidthInRange()
     {
-        var vm = new LeftPanelViewModel(_canvas, _libraryManager, _pdkLoader, _preferencesService);
+        var vm = CreateLeftPanelViewModel();
 
         vm.LeftPanelWidth = new Avalonia.Controls.GridLength(350);
 
@@ -204,7 +230,7 @@ public class PanelWidthPersistenceTests : IDisposable
     [Fact]
     public void RightPanelWidth_AcceptsValidWidthInRange()
     {
-        var vm = new RightPanelViewModel(_canvas, _preferencesService);
+        var vm = CreateRightPanelViewModel();
 
         vm.RightPanelWidth = new Avalonia.Controls.GridLength(400);
 

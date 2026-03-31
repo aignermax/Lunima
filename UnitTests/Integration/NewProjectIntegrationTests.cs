@@ -1,8 +1,5 @@
 using CAP.Avalonia.ViewModels;
-using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
-using CAP.Avalonia.ViewModels.Export;
-using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP_Core.Components.Core;
@@ -10,6 +7,7 @@ using CAP_Core.Components.Creation;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Moq;
 using Shouldly;
+using UnitTests.Helpers;
 
 namespace UnitTests.Integration;
 
@@ -20,42 +18,29 @@ namespace UnitTests.Integration;
 public class NewProjectIntegrationTests
 {
     private readonly SimulationService _simulationService;
-    private readonly SimpleNazcaExporter _nazcaExporter;
-    private readonly PdkLoader _pdkLoader;
     private readonly CommandManager _commandManager;
     private readonly UserPreferencesService _preferencesService;
     private readonly GroupLibraryManager _groupLibraryManager;
-    private readonly CAP.Avalonia.Services.GroupPreviewGenerator _previewGenerator;
-    private readonly IInputDialogService _inputDialogService;
-    private readonly CAP_Core.Export.GdsExportService _gdsExportService;
 
     public NewProjectIntegrationTests()
     {
         _simulationService = new SimulationService();
-        _nazcaExporter = new SimpleNazcaExporter();
-        _pdkLoader = new PdkLoader();
         _commandManager = new CommandManager();
         _preferencesService = new UserPreferencesService();
         _groupLibraryManager = new GroupLibraryManager();
-        _previewGenerator = new CAP.Avalonia.Services.GroupPreviewGenerator();
-        _inputDialogService = new InputDialogService();
-        _gdsExportService = new CAP_Core.Export.GdsExportService();
     }
+
+    private MainViewModel CreateMainViewModel() =>
+        MainViewModelTestHelper.CreateMainViewModel(
+            simulationService: _simulationService,
+            commandManager: _commandManager,
+            preferencesService: _preferencesService,
+            libraryManager: _groupLibraryManager);
 
     [Fact]
     public async Task MainViewModel_NewProject_ClearsCanvas()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         // Add a component to the canvas
         var component = TestComponentFactory.CreateStraightWaveGuide();
@@ -76,17 +61,7 @@ public class NewProjectIntegrationTests
     [Fact]
     public async Task MainViewModel_NewProject_PromptsWhenUnsaved()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         var mockMessageBox = new Mock<IMessageBoxService>();
         mockMessageBox
@@ -117,17 +92,7 @@ public class NewProjectIntegrationTests
     [Fact]
     public async Task NewProject_PreservesCommandHistory_AfterClear()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         // Add component
         var component = TestComponentFactory.CreateStraightWaveGuide();
@@ -147,17 +112,7 @@ public class NewProjectIntegrationTests
     [Fact]
     public async Task NewProject_ClearsConnections()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         // Add two components with physical pins
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
@@ -190,17 +145,7 @@ public class NewProjectIntegrationTests
     [Fact]
     public async Task NewProject_ExitsGroupEditMode()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         // Create a group with some components
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
@@ -238,17 +183,7 @@ public class NewProjectIntegrationTests
     [Fact]
     public async Task NewProject_ClearsCurrentFilePath_SaveOpensDialogInsteadOfOverwriting()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_cap_{Guid.NewGuid()}.lun");
 
@@ -294,17 +229,7 @@ public class NewProjectIntegrationTests
     [Fact]
     public async Task NewProject_ExitsNestedGroupEditMode()
     {
-        var mainVm = new MainViewModel(
-            _simulationService,
-            _nazcaExporter,
-            _pdkLoader,
-            _commandManager,
-            _preferencesService,
-            _groupLibraryManager,
-            _previewGenerator,
-            _inputDialogService,
-            _gdsExportService,
-            new CAP_Core.ErrorConsoleService());
+        var mainVm = CreateMainViewModel();
 
         // Create nested groups
         var comp = TestComponentFactory.CreateStraightWaveGuide();

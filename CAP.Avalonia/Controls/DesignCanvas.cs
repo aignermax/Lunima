@@ -78,6 +78,7 @@ public partial class DesignCanvas : Control
     {
         ClipToBounds = true;
         Focusable = true;
+        InitGestures();
     }
 
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)

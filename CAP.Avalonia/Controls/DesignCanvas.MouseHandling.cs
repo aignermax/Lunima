@@ -1,18 +1,31 @@
 using Avalonia;
 using Avalonia.Input;
-using CAP.Avalonia.Commands;
+using CAP.Avalonia.Gestures;
 using CAP.Avalonia.ViewModels;
-using CAP.Avalonia.ViewModels.Canvas;
-using CAP.Avalonia.ViewModels.Panels;
-using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Controls;
 
 /// <summary>
-/// Mouse and keyboard event handling methods for DesignCanvas.
+/// Mouse and keyboard event handling for DesignCanvas.
+/// Delegates all pointer events to registered gesture recognizers in priority order.
 /// </summary>
 public partial class DesignCanvas
 {
+    private List<IGestureRecognizer> _gestureRecognizers = [];
+    private IGestureRecognizer? _activeGesture;
+
+    internal void InitGestures()
+    {
+        _gestureRecognizers =
+        [
+            new PanGestureRecognizer(_interactionState, InvalidateVisual),
+            new ConnectionGestureRecognizer(_interactionState, InvalidateVisual),
+            new PlacementGestureRecognizer(_interactionState, InvalidateVisual),
+            new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c),
+            new SelectionBoxGestureRecognizer(_interactionState, InvalidateVisual),
+        ];
+    }
+
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
@@ -21,303 +34,22 @@ public partial class DesignCanvas
         _interactionState.LastPointerPosition = point;
 
         var vm = ViewModel;
-        var mainVm = MainViewModel;
         if (vm == null) return;
 
         var canvasPoint = ScreenToCanvas(point);
 
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        _activeGesture = null;
+        foreach (var recognizer in _gestureRecognizers)
         {
-            HandleLeftButtonPressed(e, canvasPoint, vm, mainVm);
-        }
-        else if (e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed ||
-                 e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
-        {
-            _interactionState.IsPanning = true;
+            if (recognizer.TryRecognize(e, canvasPoint, vm, MainViewModel))
+            {
+                _activeGesture = recognizer;
+                break;
+            }
         }
 
         e.Handled = true;
         Focus();
-    }
-
-    private void HandleLeftButtonPressed(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
-    {
-        if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.Connect)
-        {
-            HandleConnectModeClick(e, canvasPoint, vm, mainVm);
-        }
-        else if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.PlaceComponent)
-        {
-            HandlePlaceComponentClick(canvasPoint, vm, mainVm);
-        }
-        else if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.PlaceGroupTemplate)
-        {
-            HandlePlaceGroupTemplateClick(canvasPoint, vm, mainVm);
-        }
-        else if (mainVm?.CanvasInteraction.CurrentMode == InteractionMode.Delete)
-        {
-            HandleDeleteModeClick(canvasPoint, mainVm);
-        }
-        else
-        {
-            HandleSelectModeClick(e, canvasPoint, vm, mainVm);
-        }
-    }
-
-    private void HandleConnectModeClick(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
-    {
-        var pin = vm.HighlightedPin?.Pin ?? DesignCanvasHitTesting.HitTestPin(canvasPoint, vm);
-        if (pin != null)
-        {
-            _interactionState.ConnectionDragStartPin = pin;
-            _interactionState.ConnectionDragCurrentPoint = canvasPoint;
-            mainVm.StatusText = $"Drag to another pin to connect from {pin.Name}...";
-            InvalidateVisual();
-            e.Handled = true;
-        }
-        else
-        {
-            // No pin at click position — switch back to Select mode so user can drag components
-            mainVm.CanvasInteraction.CurrentMode = InteractionMode.Select;
-            vm.ClearPinHighlight();
-            InvalidateVisual();
-        }
-    }
-
-    private void HandlePlaceComponentClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
-    {
-        var snapSettings = vm.GridSnap;
-        var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
-        mainVm.CanvasClicked(placementX, placementY);
-        InvalidateVisual();
-    }
-
-    private void HandlePlaceGroupTemplateClick(Point canvasPoint, DesignCanvasViewModel vm, MainViewModel mainVm)
-    {
-        var snapSettings = vm.GridSnap;
-        var (placementX, placementY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
-        mainVm.CanvasClicked(placementX, placementY);
-        InvalidateVisual();
-    }
-
-    private void HandleDeleteModeClick(Point canvasPoint, MainViewModel mainVm)
-    {
-        mainVm.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-        InvalidateVisual();
-    }
-
-    private void HandleSelectModeClick(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
-    {
-        // PRIORITY 0: Check if clicking on a group lock icon (highest priority)
-        var hitLockIcon = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, vm);
-        if (hitLockIcon != null)
-        {
-            // Clicked on lock icon - toggle lock state
-            HandleLockIconClick(hitLockIcon, vm, mainVm);
-            e.Handled = true;
-            return;
-        }
-
-        // PRIORITY 1: Check if clicking on a group label (second priority)
-        var hitGroupLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
-        ComponentViewModel? hitComponent = null;
-
-        if (hitGroupLabel != null)
-        {
-            // Clicked on a group label - select/drag the group
-            hitComponent = vm.Components.FirstOrDefault(c => c.Component == hitGroupLabel);
-        }
-        else
-        {
-            // PRIORITY 2: Check if clicking on a component or group bounds
-            hitComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
-        }
-
-        // Determine which component should be selected/dragged:
-        // 1. In group edit mode: allow direct interaction with child components
-        // 2. If hit component is a ComponentGroup directly, use it
-        // 3. If hit component is part of a group (ParentGroup != null), select the top-level group
-        // 4. Otherwise, use the hit component as-is
-        if (hitComponent != null)
-        {
-            if (vm.IsInGroupEditMode && vm.CurrentEditGroup != null)
-            {
-                // In group edit mode: allow direct interaction with child components
-                // HitTestComponent already filtered to only return children, so use as-is
-                _interactionState.DraggingComponent = hitComponent;
-            }
-            else if (hitComponent.Component is ComponentGroup)
-            {
-                // Clicked directly on a group - select/drag the group
-                _interactionState.DraggingComponent = hitComponent;
-            }
-            else if (hitComponent.Component.ParentGroup != null)
-            {
-                // Clicked on a child component - select/drag the parent group
-                var topLevelGroup = GetTopLevelGroup(hitComponent.Component);
-                _interactionState.DraggingComponent = vm.Components.FirstOrDefault(c => c.Component == topLevelGroup);
-            }
-            else
-            {
-                // Regular component not in a group
-                _interactionState.DraggingComponent = hitComponent;
-            }
-        }
-        else
-        {
-            _interactionState.DraggingComponent = null;
-        }
-
-        if (_interactionState.DraggingComponent != null)
-        {
-            // Check for double-click on ComponentGroup
-            if (DetectDoubleClick(_interactionState.DraggingComponent) &&
-                _interactionState.DraggingComponent.Component is ComponentGroup clickedGroup)
-            {
-                // Enter group edit mode via command for undo/redo support
-                if (mainVm?.CommandManager != null)
-                {
-                    var cmd = new EnterGroupEditModeCommand(vm, clickedGroup);
-                    mainVm.CommandManager.ExecuteCommand(cmd);
-                }
-                else
-                {
-                    vm.EnterGroupEditMode(clickedGroup);
-                }
-                mainVm?.LeftPanel.HierarchyPanel?.RebuildTree();
-                _interactionState.DraggingComponent = null;
-                InvalidateVisual();
-                return;
-            }
-
-            HandleComponentSelection(e, canvasPoint, vm, mainVm);
-        }
-        else
-        {
-            // Check for double-click on background in edit mode
-            if (vm.IsInGroupEditMode && DetectDoubleClick(null))
-            {
-                // Exit group edit mode via command for undo/redo support
-                if (mainVm?.CommandManager != null && vm.CurrentEditGroup != null)
-                {
-                    var cmd = new ExitGroupEditModeCommand(vm, vm.CurrentEditGroup);
-                    mainVm.CommandManager.ExecuteCommand(cmd);
-                }
-                else
-                {
-                    vm.ExitGroupEditMode();
-                }
-                mainVm?.LeftPanel.HierarchyPanel?.RebuildTree();
-                InvalidateVisual();
-                return;
-            }
-
-            StartBoxSelection(canvasPoint, vm);
-        }
-    }
-
-    /// <summary>
-    /// Detects if the current click is a double-click on the same component.
-    /// </summary>
-    private bool DetectDoubleClick(ComponentViewModel? component)
-    {
-        var now = DateTime.UtcNow;
-        var timeSinceLastClick = (now - _interactionState.LastClickTime).TotalMilliseconds;
-
-        bool isDoubleClick = timeSinceLastClick < CanvasInteractionState.DoubleClickMilliseconds &&
-                             _interactionState.LastClickedComponent == component;
-
-        _interactionState.LastClickTime = now;
-        _interactionState.LastClickedComponent = component;
-
-        return isDoubleClick;
-    }
-
-    private void HandleComponentSelection(PointerPressedEventArgs e, Point canvasPoint, DesignCanvasViewModel vm, MainViewModel? mainVm)
-    {
-        bool isCtrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        bool isAltPressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
-
-        if (isCtrlPressed)
-        {
-            vm.Selection.AddToSelection(_interactionState.DraggingComponent!);
-            _interactionState.DraggingComponent = null;
-        }
-        else if (isAltPressed)
-        {
-            vm.Selection.RemoveFromSelection(_interactionState.DraggingComponent!);
-            _interactionState.DraggingComponent = null;
-        }
-        else
-        {
-            if (!vm.Selection.SelectedComponents.Contains(_interactionState.DraggingComponent))
-            {
-                vm.Selection.SelectSingle(_interactionState.DraggingComponent!);
-                vm.SelectedComponent = _interactionState.DraggingComponent;
-            }
-        }
-
-        if (_interactionState.DraggingComponent != null)
-        {
-            mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-
-            // Start tracking for undo
-            if (vm.Selection.SelectedComponents.Count > 1)
-            {
-                // Group move
-                mainVm?.StartGroupMove(vm.Selection.SelectedComponents);
-            }
-            else
-            {
-                // Single component move
-                mainVm?.StartMoveComponent(_interactionState.DraggingComponent);
-            }
-
-            _interactionState.DragStartX = _interactionState.DraggingComponent.X;
-            _interactionState.DragStartY = _interactionState.DraggingComponent.Y;
-
-            _interactionState.GroupDragStartPositions.Clear();
-            foreach (var comp in vm.Selection.SelectedComponents)
-            {
-                _interactionState.GroupDragStartPositions[comp] = (comp.X, comp.Y);
-            }
-        }
-
-        InvalidateVisual();
-    }
-
-    private void StartBoxSelection(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        vm.Selection.IsBoxSelecting = true;
-        vm.Selection.BoxStartX = canvasPoint.X;
-        vm.Selection.BoxStartY = canvasPoint.Y;
-        vm.Selection.BoxEndX = canvasPoint.X;
-        vm.Selection.BoxEndY = canvasPoint.Y;
-        InvalidateVisual();
-    }
-
-    /// <summary>
-    /// Handles clicking on a group's lock icon to toggle lock/unlock state.
-    /// </summary>
-    private void HandleLockIconClick(ComponentGroup group, DesignCanvasViewModel vm, MainViewModel? mainVm)
-    {
-        if (mainVm?.CommandManager == null) return;
-
-        // Toggle lock state using command for undo/redo support
-        var command = new ToggleGroupLockCommand(group);
-        mainVm.CommandManager.ExecuteCommand(command);
-
-        // Update status
-        string statusMessage = group.IsLocked
-            ? $"Locked group '{group.GroupName}'"
-            : $"Unlocked group '{group.GroupName}'";
-
-        if (mainVm != null)
-        {
-            mainVm.StatusText = statusMessage;
-        }
-
-        InvalidateVisual();
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -326,519 +58,39 @@ public partial class DesignCanvas
 
         var point = e.GetPosition(this);
         var delta = point - _interactionState.LastPointerPosition;
-
         var vm = ViewModel;
         if (vm == null) return;
 
         var canvasPoint = ScreenToCanvas(point);
-
-        // Always track the last canvas position for paste-at-cursor
         _interactionState.LastCanvasPosition = canvasPoint;
 
-        UpdatePlacementPreview(canvasPoint, vm);
-        UpdatePinHighlighting(canvasPoint, vm);
-        UpdatePowerFlowHover(canvasPoint, vm);
-        UpdateConnectionDragPreview(canvasPoint, vm);
-        UpdateComponentDrag(delta, canvasPoint, vm);
-        UpdateBoxSelection(canvasPoint, vm);
-        UpdatePanning(delta, vm);
+        foreach (var recognizer in _gestureRecognizers)
+            recognizer.UpdatePassiveState(canvasPoint, vm, MainViewModel);
+
+        _activeGesture?.OnPointerMoved(e, delta, canvasPoint, vm, MainViewModel);
 
         _interactionState.LastPointerPosition = point;
     }
 
-    private void UpdatePlacementPreview(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        if (MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.PlaceComponent &&
-            MainViewModel?.CanvasInteraction.SelectedTemplate != null)
-        {
-            _interactionState.ShowPlacementPreview = true;
-            _interactionState.PlacementPreviewTemplate = MainViewModel.CanvasInteraction.SelectedTemplate;
-            var snapSettings = vm.GridSnap;
-
-            var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
-            _interactionState.PlacementPreviewPosition = new Point(snappedCenterX, snappedCenterY);
-            InvalidateVisual();
-        }
-        else
-        {
-            if (_interactionState.ShowPlacementPreview)
-            {
-                _interactionState.ShowPlacementPreview = false;
-                InvalidateVisual();
-            }
-        }
-
-        // Update group template placement preview
-        if (MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.PlaceGroupTemplate &&
-            MainViewModel?.CanvasInteraction.SelectedGroupTemplate != null)
-        {
-            _interactionState.ShowGroupTemplatePlacementPreview = true;
-            _interactionState.GroupTemplatePlacementPreview = MainViewModel.CanvasInteraction.SelectedGroupTemplate;
-            var snapSettings = vm.GridSnap;
-
-            var (snappedCenterX, snappedCenterY) = snapSettings.Snap(canvasPoint.X, canvasPoint.Y);
-            _interactionState.GroupTemplatePlacementPreviewPosition = new Point(snappedCenterX, snappedCenterY);
-            InvalidateVisual();
-        }
-        else
-        {
-            if (_interactionState.ShowGroupTemplatePlacementPreview)
-            {
-                _interactionState.ShowGroupTemplatePlacementPreview = false;
-                InvalidateVisual();
-            }
-        }
-
-        // Update group hover highlighting
-        UpdateGroupHover(canvasPoint, vm);
-    }
-
-    /// <summary>
-    /// Updates group hover state when hovering over a component or group.
-    /// If hovering over a child component, highlights the entire parent group.
-    /// Also tracks label hover state and lock icon hover state separately for visual feedback.
-    /// </summary>
-    private void UpdateGroupHover(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        var previousHoveredGroup = _interactionState.HoveredGroup;
-        var previousHoveredLabel = _interactionState.HoveredGroupLabel;
-        var previousHoveredLockIcon = _interactionState.HoveredGroupLockIcon;
-
-        // Check if hovering over a group lock icon (highest priority)
-        var hoveredLockIcon = DesignCanvasHitTesting.HitTestGroupLockIcon(canvasPoint, vm);
-        _interactionState.HoveredGroupLockIcon = hoveredLockIcon;
-
-        // If hovering over lock icon, don't process other hover states
-        if (hoveredLockIcon != null)
-        {
-            _interactionState.HoveredGroup = hoveredLockIcon;
-            _interactionState.HoveredGroupLabel = null;
-            Cursor = new Cursor(StandardCursorType.Hand);
-        }
-        else
-        {
-            // Check if hovering over a group label (second priority)
-            var hoveredLabel = DesignCanvasHitTesting.HitTestGroupLabel(canvasPoint, vm);
-            _interactionState.HoveredGroupLabel = hoveredLabel;
-
-            // If hovering over label, also set the group as hovered
-            if (hoveredLabel != null)
-            {
-                _interactionState.HoveredGroup = hoveredLabel;
-                Cursor = new Cursor(StandardCursorType.Hand);
-            }
-            else
-            {
-                // Otherwise check component hover
-                var hoveredComponent = DesignCanvasHitTesting.HitTestComponent(canvasPoint, vm);
-
-                if (hoveredComponent != null)
-                {
-                    // Check if this component is part of a group
-                    var component = hoveredComponent.Component;
-                    if (component.ParentGroup != null)
-                    {
-                        // Hover over a child - highlight the entire parent group
-                        _interactionState.HoveredGroup = GetTopLevelGroup(component);
-                    }
-                    else if (component is ComponentGroup group)
-                    {
-                        // Hover directly over a group
-                        _interactionState.HoveredGroup = group;
-                    }
-                    else
-                    {
-                        // Regular component, not part of a group
-                        _interactionState.HoveredGroup = null;
-                    }
-                    Cursor = Cursor.Default;
-                }
-                else
-                {
-                    _interactionState.HoveredGroup = null;
-                    Cursor = Cursor.Default;
-                }
-            }
-        }
-
-        // Repaint if hover state changed
-        if (_interactionState.HoveredGroup != previousHoveredGroup ||
-            _interactionState.HoveredGroupLabel != previousHoveredLabel ||
-            _interactionState.HoveredGroupLockIcon != previousHoveredLockIcon)
-        {
-            InvalidateVisual();
-        }
-    }
-
-    /// <summary>
-    /// Gets the top-level group containing a component.
-    /// Traverses up the hierarchy until finding a group with no parent.
-    /// </summary>
-    private ComponentGroup GetTopLevelGroup(Component component)
-    {
-        var group = component.ParentGroup as ComponentGroup;
-        while (group?.ParentGroup != null)
-        {
-            group = group.ParentGroup as ComponentGroup;
-        }
-        return group!;
-    }
-
-    private void UpdatePinHighlighting(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        if (MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.Connect)
-        {
-            if (_interactionState.ConnectionDragStartPin != null)
-            {
-                vm.UpdatePinHighlight(canvasPoint.X, canvasPoint.Y, _interactionState.ConnectionDragStartPin);
-            }
-            else
-            {
-                MainViewModel.CanvasMouseMove(canvasPoint.X, canvasPoint.Y);
-            }
-            InvalidateVisual();
-        }
-    }
-
-    private void UpdatePowerFlowHover(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        if (vm.ShowPowerFlow)
-        {
-            var previousHover = _interactionState.HoveredConnection;
-            _interactionState.HoveredConnection = DesignCanvasHitTesting.HitTestConnection(canvasPoint, vm);
-            if (_interactionState.HoveredConnection != previousHover)
-            {
-                InvalidateVisual();
-            }
-        }
-        else if (_interactionState.HoveredConnection != null)
-        {
-            _interactionState.HoveredConnection = null;
-        }
-    }
-
-    private void UpdateConnectionDragPreview(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        if (_interactionState.ConnectionDragStartPin != null)
-        {
-            _interactionState.ConnectionDragCurrentPoint = canvasPoint;
-
-            var targetPin = vm.HighlightedPin?.Pin;
-            if (targetPin != null && targetPin != _interactionState.ConnectionDragStartPin &&
-                targetPin.ParentComponent != _interactionState.ConnectionDragStartPin.ParentComponent)
-            {
-                MainViewModel!.StatusText = $"Release to connect {_interactionState.ConnectionDragStartPin.Name} to {targetPin.Name}";
-            }
-            else
-            {
-                MainViewModel!.StatusText = $"Drag to another pin to connect from {_interactionState.ConnectionDragStartPin.Name}...";
-            }
-
-            InvalidateVisual();
-        }
-    }
-
-    private void UpdateComponentDrag(Point delta, Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        if (_interactionState.DraggingComponent != null && MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.Select)
-        {
-            double deltaX = delta.X / Zoom;
-            double deltaY = delta.Y / Zoom;
-
-            bool isDraggingGroup = vm.Selection.SelectedComponents.Count > 1;
-
-            if (isDraggingGroup)
-            {
-                UpdateGroupDrag(deltaX, deltaY, vm);
-            }
-            else
-            {
-                UpdateSingleComponentDrag(deltaX, deltaY, vm);
-            }
-
-            InvalidateVisual();
-        }
-    }
-
-    private void UpdateGroupDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
-    {
-        // Move all components by mouse delta
-        foreach (var comp in vm.Selection.SelectedComponents)
-        {
-            vm.MoveComponent(comp, deltaX, deltaY);
-        }
-
-        // Update alignment guide lines (visual only, no snapping during drag)
-        if (vm.AlignmentGuide.IsEnabled)
-        {
-            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
-        }
-
-        var snapSettings = vm.GridSnap;
-        double centerX = _interactionState.DraggingComponent!.X + _interactionState.DraggingComponent.Width / 2.0;
-        double centerY = _interactionState.DraggingComponent.Y + _interactionState.DraggingComponent.Height / 2.0;
-        var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
-        double previewX = snappedCX - _interactionState.DraggingComponent.Width / 2.0;
-        double previewY = snappedCY - _interactionState.DraggingComponent.Height / 2.0;
-        _interactionState.DragPreviewPosition = new Point(previewX, previewY);
-
-        double snapDeltaX = previewX - _interactionState.DraggingComponent.X;
-        double snapDeltaY = previewY - _interactionState.DraggingComponent.Y;
-        _interactionState.DragPreviewValid = vm.Selection.CanMoveGroup(vm, snapDeltaX, snapDeltaY);
-        _interactionState.ShowDragPreview = snapSettings.IsEnabled || !_interactionState.DragPreviewValid;
-    }
-
-    private void UpdateSingleComponentDrag(double deltaX, double deltaY, DesignCanvasViewModel vm)
-    {
-        vm.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
-
-        // Update alignment guide lines (visual only, no snapping during drag)
-        if (vm.AlignmentGuide.IsEnabled)
-        {
-            vm.AlignmentGuide.UpdateAlignments(_interactionState.DraggingComponent!, vm.Components);
-        }
-
-        var snapSettings = vm.GridSnap;
-        double centerX = _interactionState.DraggingComponent!.X + _interactionState.DraggingComponent.Width / 2.0;
-        double centerY = _interactionState.DraggingComponent.Y + _interactionState.DraggingComponent.Height / 2.0;
-        var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
-        double previewX = snappedCX - _interactionState.DraggingComponent.Width / 2.0;
-        double previewY = snappedCY - _interactionState.DraggingComponent.Height / 2.0;
-        _interactionState.DragPreviewPosition = new Point(previewX, previewY);
-        _interactionState.DragPreviewValid = vm.CanMoveComponentTo(_interactionState.DraggingComponent, previewX, previewY);
-        _interactionState.ShowDragPreview = snapSettings.IsEnabled || !_interactionState.DragPreviewValid;
-    }
-
-    private void UpdateBoxSelection(Point canvasPoint, DesignCanvasViewModel vm)
-    {
-        if (vm.Selection.IsBoxSelecting)
-        {
-            vm.Selection.BoxEndX = canvasPoint.X;
-            vm.Selection.BoxEndY = canvasPoint.Y;
-            InvalidateVisual();
-        }
-    }
-
-    private void UpdatePanning(Point delta, DesignCanvasViewModel vm)
-    {
-        if (_interactionState.IsPanning)
-        {
-            vm.PanX += delta.X;
-            vm.PanY += delta.Y;
-            _interactionState.HasPanned = true; // Mark that we actually panned
-            InvalidateVisual();
-        }
-    }
-
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        // Suppress context menu if we panned (right-click drag)
+        // Suppress context menu after a right-click pan
         if (_interactionState.HasPanned && e.InitialPressMouseButton == MouseButton.Right)
         {
             e.Handled = true;
             _interactionState.HasPanned = false;
             _interactionState.IsPanning = false;
+            _activeGesture = null;
             return;
         }
 
         base.OnPointerReleased(e);
 
-        CompleteConnectionDrag(e);
-        CompleteComponentDrag(e);
-        CompleteBoxSelection(e);
+        var vm = ViewModel;
+        if (vm != null)
+            _activeGesture?.OnPointerReleased(e, vm, MainViewModel);
 
-        _interactionState.DraggingComponent = null;
-        _interactionState.IsPanning = false;
-        _interactionState.HasPanned = false;
-    }
-
-    private void CompleteConnectionDrag(PointerReleasedEventArgs e)
-    {
-        if (_interactionState.ConnectionDragStartPin != null)
-        {
-            var targetPin = ViewModel?.HighlightedPin?.Pin;
-
-            if (targetPin != null && targetPin != _interactionState.ConnectionDragStartPin &&
-                targetPin.ParentComponent != _interactionState.ConnectionDragStartPin.ParentComponent)
-            {
-                var cmd = new Commands.CreateConnectionCommand(ViewModel!, _interactionState.ConnectionDragStartPin, targetPin);
-                MainViewModel?.CommandManager.ExecuteCommand(cmd);
-                MainViewModel!.StatusText = $"Connected {_interactionState.ConnectionDragStartPin.Name} to {targetPin.Name}";
-            }
-            else
-            {
-                var existingConnection = ViewModel?.GetConnectionForPin(_interactionState.ConnectionDragStartPin);
-                if (existingConnection != null)
-                {
-                    var deleteCmd = new Commands.DeleteConnectionCommand(ViewModel!, existingConnection);
-                    MainViewModel?.CommandManager.ExecuteCommand(deleteCmd);
-                    MainViewModel!.StatusText = $"Deleted connection from {_interactionState.ConnectionDragStartPin.Name}";
-                }
-                else
-                {
-                    MainViewModel!.StatusText = "Connect mode: Drag from a pin to another pin to connect";
-                }
-            }
-
-            _interactionState.ConnectionDragStartPin = null;
-            InvalidateVisual();
-        }
-    }
-
-    private void CompleteComponentDrag(PointerReleasedEventArgs e)
-    {
-        if (_interactionState.DraggingComponent != null)
-        {
-            var vm = ViewModel;
-            bool isDraggingGroup = vm?.Selection.SelectedComponents.Count > 1;
-
-            double finalX = _interactionState.DraggingComponent.X;
-            double finalY = _interactionState.DraggingComponent.Y;
-
-            // Apply pin alignment snapping on release (Figma-style)
-            if (vm?.AlignmentGuide != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.SnapEnabled)
-            {
-                var (snapDX, snapDY) = vm.AlignmentGuide.CalculateSnapOnRelease(
-                    _interactionState.DraggingComponent,
-                    vm.Components);
-
-                if (snapDX != 0 || snapDY != 0)
-                {
-                    finalX += snapDX;
-                    finalY += snapDY;
-                }
-            }
-
-            // Apply grid snapping if pin alignment didn't snap
-            var snapSettings = vm?.GridSnap;
-            if (snapSettings != null && snapSettings.IsEnabled)
-            {
-                double centerX = finalX + _interactionState.DraggingComponent.Width / 2.0;
-                double centerY = finalY + _interactionState.DraggingComponent.Height / 2.0;
-                var (snappedCX, snappedCY) = snapSettings.Snap(centerX, centerY);
-                finalX = snappedCX - _interactionState.DraggingComponent.Width / 2.0;
-                finalY = snappedCY - _interactionState.DraggingComponent.Height / 2.0;
-            }
-
-            double deltaX = finalX - _interactionState.DraggingComponent.X;
-            double deltaY = finalY - _interactionState.DraggingComponent.Y;
-
-            bool canPlace;
-            if (isDraggingGroup)
-            {
-                canPlace = vm?.Selection.CanMoveGroup(vm, deltaX, deltaY) ?? true;
-            }
-            else
-            {
-                canPlace = vm?.CanMoveComponentTo(_interactionState.DraggingComponent, finalX, finalY) ?? true;
-            }
-
-            if (canPlace)
-            {
-                ApplyFinalMove(deltaX, deltaY, vm, isDraggingGroup);
-            }
-            else
-            {
-                RevertDrag(vm, isDraggingGroup);
-            }
-
-            _interactionState.ShowDragPreview = false;
-
-            // Clear alignment guides and reset snap state
-            if (vm != null)
-            {
-                vm.AlignmentGuide.ClearAlignments();
-                vm.AlignmentGuide.ResetSnapState();
-            }
-
-            // End tracking for undo
-            if (isDraggingGroup)
-            {
-                MainViewModel?.EndGroupMove(vm!.Selection.SelectedComponents);
-
-                // Restore selection highlighting
-                foreach (var comp in vm!.Selection.SelectedComponents)
-                {
-                    comp.IsSelected = true;
-                }
-            }
-            else
-            {
-                MainViewModel?.EndMoveComponent();
-            }
-
-            InvalidateVisual();
-        }
-    }
-
-    private void ApplyFinalMove(double deltaX, double deltaY, DesignCanvasViewModel? vm, bool isDraggingGroup)
-    {
-        if (Math.Abs(deltaX) > 0.001 || Math.Abs(deltaY) > 0.001)
-        {
-            if (isDraggingGroup)
-            {
-                // Move all components in the group by the same delta
-                foreach (var comp in vm!.Selection.SelectedComponents)
-                {
-                    vm.MoveComponent(comp, deltaX, deltaY);
-                }
-            }
-            else
-            {
-                // Move single component
-                vm?.MoveComponent(_interactionState.DraggingComponent!, deltaX, deltaY);
-            }
-        }
-    }
-
-    private void RevertDrag(DesignCanvasViewModel? vm, bool isDraggingGroup)
-    {
-        if (isDraggingGroup)
-        {
-            foreach (var comp in vm!.Selection.SelectedComponents)
-            {
-                if (_interactionState.GroupDragStartPositions.TryGetValue(comp, out var startPos))
-                {
-                    double revertDeltaX = startPos.x - comp.X;
-                    double revertDeltaY = startPos.y - comp.Y;
-                    if (Math.Abs(revertDeltaX) > 0.001 || Math.Abs(revertDeltaY) > 0.001)
-                    {
-                        vm.MoveComponent(comp, revertDeltaX, revertDeltaY);
-                    }
-                }
-            }
-        }
-        else
-        {
-            double revertDeltaX = _interactionState.DragStartX - _interactionState.DraggingComponent!.X;
-            double revertDeltaY = _interactionState.DragStartY - _interactionState.DraggingComponent.Y;
-            if (Math.Abs(revertDeltaX) > 0.001 || Math.Abs(revertDeltaY) > 0.001)
-            {
-                vm?.MoveComponent(_interactionState.DraggingComponent, revertDeltaX, revertDeltaY);
-            }
-        }
-        if (MainViewModel != null)
-            MainViewModel.StatusText = "Cannot place here - overlaps with another component";
-    }
-
-    private void CompleteBoxSelection(PointerReleasedEventArgs e)
-    {
-        if (ViewModel?.Selection.IsBoxSelecting == true)
-        {
-            var (minX, minY, maxX, maxY) = ViewModel.Selection.GetNormalizedBox();
-
-            bool isCtrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-            bool isAltPressed = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
-
-            ViewModel.Selection.SelectInRectangle(
-                ViewModel.Components,
-                minX, minY, maxX, maxY,
-                addToSelection: isCtrlPressed,
-                removeFromSelection: isAltPressed);
-
-            ViewModel.Selection.IsBoxSelecting = false;
-            InvalidateVisual();
-        }
+        _activeGesture = null;
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
@@ -847,15 +99,14 @@ public partial class DesignCanvas
 
         var delta = e.Delta.Y > 0 ? 1.1 : 0.9;
         var newZoom = Math.Clamp(Zoom * delta, 0.1, 10.0);
-
         var point = e.GetPosition(this);
         var vm = ViewModel;
+
         if (vm != null)
         {
             var beforeZoom = ScreenToCanvas(point);
             Zoom = newZoom;
             var afterZoom = ScreenToCanvas(point);
-
             vm.PanX += (afterZoom.X - beforeZoom.X) * Zoom;
             vm.PanY += (afterZoom.Y - beforeZoom.Y) * Zoom;
         }
@@ -872,7 +123,6 @@ public partial class DesignCanvas
     {
         var vm = ViewModel;
         if (vm == null) return screenPoint;
-
         return new Point(
             (screenPoint.X - vm.PanX) / Zoom,
             (screenPoint.Y - vm.PanY) / Zoom);

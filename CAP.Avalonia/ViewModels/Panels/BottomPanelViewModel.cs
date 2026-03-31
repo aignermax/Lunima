@@ -34,15 +34,20 @@ public partial class BottomPanelViewModel : ObservableObject
     private string _statusText = "Ready";
 
     /// <summary>
-    /// Initializes the bottom panel with canvas, command manager, and error console service.
+    /// Initializes the bottom panel with injected sub-ViewModels.
     /// </summary>
-    public BottomPanelViewModel(DesignCanvasViewModel canvas, CommandManager commandManager, ErrorConsoleService errorConsoleService)
+    public BottomPanelViewModel(
+        DesignCanvasViewModel canvas,
+        CommandManager commandManager,
+        WaveguideLengthViewModel waveguideLength,
+        ElementLockViewModel elementLock,
+        ErrorConsoleViewModel errorConsole)
     {
-        WaveguideLength = new WaveguideLengthViewModel();
-        ElementLock = new ElementLockViewModel();
-        ErrorConsole = new ErrorConsoleViewModel(errorConsoleService);
+        WaveguideLength = waveguideLength;
+        ElementLock = elementLock;
+        ErrorConsole = errorConsole;
 
-        // Configure ViewModels that need dependencies
+        // Configure ViewModels that need canvas and command manager
         ElementLock.Configure(canvas, commandManager);
     }
 

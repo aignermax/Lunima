@@ -1,10 +1,6 @@
-using CAP.Avalonia.Commands;
-using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
-using CAP.Avalonia.ViewModels.Panels;
-using CAP_DataAccess.Components.ComponentDraftMapper;
-using CAP_Core.Export;
 using Shouldly;
+using UnitTests.Helpers;
 using Xunit;
 
 namespace UnitTests.ViewModels;
@@ -15,7 +11,7 @@ namespace UnitTests.ViewModels;
 public class ZoomToFitTests
 {
     private static MainViewModel CreateViewModel() =>
-        new(new SimulationService(), new SimpleNazcaExporter(), new PdkLoader(), new CommandManager(), new UserPreferencesService(), new CAP_Core.Components.Creation.GroupLibraryManager(), new GroupPreviewGenerator(), new InputDialogService(), new GdsExportService(), new CAP_Core.ErrorConsoleService());
+        MainViewModelTestHelper.CreateMainViewModel();
 
     [Fact]
     public void ZoomToFit_EmptyCanvas_DoesNotChangeZoom()
