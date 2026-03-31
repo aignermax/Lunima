@@ -162,7 +162,7 @@
     {
       "name": "Ring Resonator",
       "category": "Filters",
-      "nazcaFunction": "demo.ring_resonator",
+      "nazcaFunction": "demo_pdk.ring_resonator",
       "widthMicrometers": 80,
       "heightMicrometers": 55,
       "nazcaOriginOffsetX": 0,
