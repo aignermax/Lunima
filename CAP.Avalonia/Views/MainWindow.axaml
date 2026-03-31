@@ -492,7 +492,7 @@
                     <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.DisplayName, FallbackValue='None'}"
                                Foreground="White" FontWeight="SemiBold"/>
                     <StackPanel Orientation="Horizontal"
-                                IsVisible="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}"
+                                IsVisible="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}"
                                 Margin="0,3,0,0">
                         <TextBlock Text="Type: " Foreground="Gray"/>
                         <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName}"

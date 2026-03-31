@@ -251,6 +251,37 @@ public class SelectionPropertiesPanelIntegrationTests
     }
 
     /// <summary>
+    /// Scenario 7b: ComponentTypeName falls back to an inferred Nazca name when
+    /// neither NazcaFunctionName nor TemplateName are populated.
+    /// </summary>
+    [Fact]
+    public void SelectComponent_ComponentTypeNameFallsBackToInferredNazcaName()
+    {
+        // Arrange
+        var (canvas, interaction) = CreateSetup();
+
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.NazcaFunctionName = "";
+        component.Identifier = "grating_coupler";
+        component.PhysicalX = 0;
+        component.PhysicalY = 0;
+        component.WidthMicrometers = 50;
+        component.HeightMicrometers = 50;
+
+        var componentVm = canvas.AddComponent(component, "");
+        componentVm.TemplateName = "";
+        componentVm.X = component.PhysicalX;
+        componentVm.Y = component.PhysicalY;
+
+        // Act
+        interaction.CanvasClicked(10, 10);
+
+        // Assert: fallback uses inferred Nazca function label instead of blank text
+        interaction.SelectedComponent.ShouldNotBeNull();
+        interaction.SelectedComponent.ComponentTypeName.ShouldBe("demo.io");
+    }
+
+    /// <summary>
     /// Scenario 8: ComponentTypeName is null for ComponentGroups.
     /// </summary>
     [Fact]

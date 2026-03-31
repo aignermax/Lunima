@@ -1400,7 +1400,26 @@ public partial class ComponentViewModel : ObservableObject
         {
             if (Component is ComponentGroup) return null;
             if (!string.IsNullOrWhiteSpace(Component.NazcaFunctionName)) return Component.NazcaFunctionName;
-            return TemplateName;
+            if (!string.IsNullOrWhiteSpace(TemplateName)) return TemplateName;
+
+            var hint = !string.IsNullOrWhiteSpace(Component.Identifier)
+                ? Component.Identifier
+                : Component.HumanReadableName;
+
+            if (string.IsNullOrWhiteSpace(hint)) return null;
+
+            var normalizedHint = hint.ToLowerInvariant();
+
+            if (normalizedHint.Contains("grating")) return "demo.io";
+            if (normalizedHint.Contains("splitter") || normalizedHint.Contains("1x2")) return "demo.mmi1x2_sh";
+            if (normalizedHint.Contains("coupler") || normalizedHint.Contains("2x2")) return "demo.mmi2x2_dp";
+            if (normalizedHint.Contains("phase") || normalizedHint.Contains("shifter")) return "demo.eopm_dc";
+            if (normalizedHint.Contains("detector") || normalizedHint.Contains("photo")) return "demo.pd";
+            if (normalizedHint.Contains("bend")) return "demo.shallow.bend";
+            if (normalizedHint.Contains("straight") || normalizedHint.Contains("waveguide")) return "demo.shallow.strt";
+            if (normalizedHint.Contains("y-junction") || normalizedHint.Contains("yjunction")) return "demo.mmi1x2_sh";
+
+            return "demo.shallow.strt";
         }
     }
 
