@@ -87,13 +87,8 @@ public partial class UpdateViewModel : ObservableObject
                 return;
             }
 
-            var skipped = _preferences.GetSkippedUpdateVersion();
-            if (skipped != null && releaseVersion != null && releaseVersion <= skipped)
-            {
-                StatusText = $"Update v{releaseVersion} available (skipped). Click to re-check.";
-                return;
-            }
-
+            // Manual check: always show updates, even if previously skipped
+            // (User explicitly wants to check, so honor that intent)
             _availableRelease = release;
             LatestVersionText = $"New version: v{releaseVersion}";
             ReleaseNotes = TruncateReleaseNotes(release.Body);
