@@ -60,7 +60,8 @@ public class PanelWidthPersistenceTests : IDisposable
         var updateVm = new UpdateViewModel(
             new UpdateChecker(httpClient, "aignermax", "Connect-A-PIC-Pro"),
             new UpdateDownloader(httpClient),
-            _preferencesService);
+            _preferencesService,
+            new NoOpUrlLauncher());
         return new(_canvas, _preferencesService,
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
@@ -74,6 +75,13 @@ public class PanelWidthPersistenceTests : IDisposable
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
             updateVm);
+    }
+
+    private sealed class NoOpUrlLauncher : IUrlLauncher
+    {
+        public void Open(string url)
+        {
+        }
     }
 
     [Fact]

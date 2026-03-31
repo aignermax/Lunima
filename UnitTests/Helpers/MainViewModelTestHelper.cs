@@ -96,7 +96,11 @@ public static class MainViewModelTestHelper
         var httpClient = new HttpClient();
         var updateChecker = new UpdateChecker(httpClient, "aignermax", "Connect-A-PIC-Pro");
         var updateDownloader = new UpdateDownloader(httpClient);
-        var updateVm = new UpdateViewModel(updateChecker, updateDownloader, preferencesService);
+        var updateVm = new UpdateViewModel(
+            updateChecker,
+            updateDownloader,
+            preferencesService,
+            Mock.Of<IUrlLauncher>());
 
         return new RightPanelViewModel(
             canvas,

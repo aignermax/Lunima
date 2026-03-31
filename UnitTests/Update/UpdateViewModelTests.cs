@@ -45,7 +45,8 @@ public class UpdateViewModelTests
     private static UpdateViewModel CreateViewModel(
         string responseJson,
         HttpStatusCode statusCode = HttpStatusCode.OK,
-        string? tempPrefsPath = null)
+        string? tempPrefsPath = null,
+        IUrlLauncher? urlLauncher = null)
     {
         var handler = new FakeHttpMessageHandler(
             new HttpResponseMessage(statusCode)
@@ -60,7 +61,7 @@ public class UpdateViewModelTests
         var prefs = tempPrefsPath != null
             ? new UserPreferencesService(tempPrefsPath)
             : new UserPreferencesService(Path.GetTempFileName());
-        return new UpdateViewModel(checker, downloader, prefs);
+        return new UpdateViewModel(checker, downloader, prefs, urlLauncher ?? new FakeUrlLauncher());
     }
 
     [Fact]
@@ -116,7 +117,7 @@ public class UpdateViewModelTests
             var httpClient = new HttpClient(handler);
             var checker = new UpdateChecker(httpClient, "owner", "repo");
             var downloader = new UpdateDownloader(httpClient);
-            var vm = new UpdateViewModel(checker, downloader, prefs);
+            var vm = new UpdateViewModel(checker, downloader, prefs, new FakeUrlLauncher());
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
 
@@ -142,7 +143,7 @@ public class UpdateViewModelTests
                 });
             var httpClient = new HttpClient(handler);
             var vm = new UpdateViewModel(
-                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs);
+                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs, new FakeUrlLauncher());
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
             vm.UpdateAvailable.ShouldBeTrue();
@@ -174,7 +175,7 @@ public class UpdateViewModelTests
                 });
             var httpClient = new HttpClient(handler);
             var vm = new UpdateViewModel(
-                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs);
+                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs, new FakeUrlLauncher());
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
             vm.UpdateAvailable.ShouldBeTrue();
@@ -211,13 +212,25 @@ public class UpdateViewModelTests
             }
             """;
 
-        var vm = CreateViewModel(noMsiJson);
+        var urlLauncher = new FakeUrlLauncher();
+        var vm = CreateViewModel(noMsiJson, urlLauncher: urlLauncher);
         await vm.CheckForUpdatesCommand.ExecuteAsync(null);
         vm.UpdateAvailable.ShouldBeTrue();
 
         await vm.InstallUpdateCommand.ExecuteAsync(null);
 
         vm.StatusText.ShouldContain("GitHub releases page");
+        urlLauncher.LastOpenedUrl.ShouldBe("https://github.com/aignermax/Lunima/releases/tag/v99.0.0");
+    }
+
+    private sealed class FakeUrlLauncher : IUrlLauncher
+    {
+        public string? LastOpenedUrl { get; private set; }
+
+        public void Open(string url)
+        {
+            LastOpenedUrl = url;
+        }
     }
 
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
