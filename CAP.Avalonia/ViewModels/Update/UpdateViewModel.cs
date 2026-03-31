@@ -189,6 +189,54 @@ public partial class UpdateViewModel : ObservableObject
         StatusText = "Update available — will remind again next check.";
     }
 
+    /// <summary>
+    /// Marks today as skipped so the startup notification is suppressed until tomorrow.
+    /// </summary>
+    [RelayCommand]
+    private void SkipForToday()
+    {
+        _preferences.SkipToday();
+        UpdateAvailable = false;
+        StatusText = "Update notification suppressed until tomorrow.";
+        _availableRelease = null;
+    }
+
+    /// <summary>
+    /// Runs on app startup: checks for updates non-blockingly and shows the notification
+    /// banner only when an update is available and the user has not skipped today or
+    /// permanently skipped this version.
+    /// </summary>
+    public async Task CheckForUpdatesOnStartupAsync()
+    {
+        if (!_preferences.ShouldCheckToday()) return;
+        if (IsChecking || IsDownloading) return;
+
+        IsChecking = true;
+        try
+        {
+            var release = await _updateChecker.GetLatestReleaseAsync();
+            if (release == null) return;
+            if (!UpdateChecker.IsNewerThan(release, _currentVersion)) return;
+
+            var skipped = _preferences.GetSkippedUpdateVersion();
+            if (skipped != null && release.ParsedVersion != null && skipped >= release.ParsedVersion) return;
+
+            _availableRelease = release;
+            LatestVersionText = $"New version: v{release.ParsedVersion}";
+            ReleaseNotes = TruncateReleaseNotes(release.Body);
+            UpdateAvailable = true;
+            StatusText = $"Update available: v{release.ParsedVersion}";
+        }
+        catch
+        {
+            // Startup check failures are silent — don't disturb the user
+        }
+        finally
+        {
+            IsChecking = false;
+        }
+    }
+
     private static SemanticVersion ResolveCurrentVersion()
     {
         var version = Assembly.GetEntryAssembly()?.GetName().Version

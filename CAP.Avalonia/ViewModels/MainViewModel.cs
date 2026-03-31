@@ -232,6 +232,18 @@ public partial class MainViewModel : ObservableObject
         // Initialize panels
         LeftPanel.Initialize();
         RightPanel.Initialize();
+
+        // Trigger startup update check after a brief delay to avoid blocking startup
+        _ = TriggerStartupUpdateCheckAsync();
+    }
+
+    /// <summary>
+    /// Waits briefly for the UI to finish loading, then checks for updates in the background.
+    /// </summary>
+    private async Task TriggerStartupUpdateCheckAsync()
+    {
+        await Task.Delay(2000);
+        await RightPanel.Update.CheckForUpdatesOnStartupAsync();
     }
 
     private void WireCommandManager()
