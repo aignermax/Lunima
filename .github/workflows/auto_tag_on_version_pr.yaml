@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,4 +50,23 @@ jobs:
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
           git push origin "v${{ steps.version.outputs.version }}"
           echo "✅ Created and pushed tag v${{ steps.version.outputs.version }}"
-          echo "This will trigger the Build & Publish workflow to create a release."
+          echo "Tag pushed successfully."
+
+      - name: Trigger Build & Publish
+        if: steps.check_tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/dispatches \
+            --method POST \
+            --input - <<'EOF'
+          {
+            "event_type": "release-from-auto-tag",
+            "client_payload": {
+              "tag": "v${{ steps.version.outputs.version }}",
+              "version": "${{ steps.version.outputs.version }}",
+              "sha": "${{ github.event.pull_request.merge_commit_sha }}"
+            }
+          }
+          EOF
+          echo "✅ Triggered Build & Publish for v${{ steps.version.outputs.version }}"

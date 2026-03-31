@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'v*'
+  repository_dispatch:
+    types:
+      - release-from-auto-tag
   workflow_dispatch:
 
 env:
@@ -16,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.sha || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -44,6 +49,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.sha || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -85,6 +92,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.sha || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -152,32 +161,31 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.sha || github.ref }}
 
       - name: Compute release info
         id: info
         run: |
-          # Extract version from csproj
           version=$(grep '<Version>' CAP.Desktop/CAP.Desktop.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | xargs)
-          echo "version=$version" >> $GITHUB_OUTPUT
 
-          # Determine tag based on trigger type
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            # Use the actual tag that triggered this workflow
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            tag="${{ github.event.client_payload.tag }}"
+            version="${{ github.event.client_payload.version }}"
+            echo "Using dispatched release info: $tag ($version)"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
             tag="${{ github.ref_name }}"
-            echo "tag=$tag" >> $GITHUB_OUTPUT
-            echo "Using existing tag: $tag"
+            echo "Using pushed tag: $tag"
           else
-            # Manual workflow_dispatch - create build tag
             tag="v${version}-build.${{ github.run_number }}"
-            echo "tag=$tag" >> $GITHUB_OUTPUT
-            echo "Creating build tag: $tag"
+            echo "Creating manual build tag: $tag"
           fi
 
-          # Verify tag matches version (warning only, don't fail)
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            if [ "$tag" != "v$version" ]; then
-              echo "::warning::Tag '$tag' does not match csproj version 'v$version'"
-            fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+
+          if [ "$tag" != "v$version" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "::warning::Tag '$tag' does not match csproj version 'v$version'"
           fi
 
       - name: Download Windows build
