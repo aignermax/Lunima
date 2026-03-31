@@ -20,6 +20,9 @@ public sealed class GitHubReleaseInfo
     /// <summary>Gets when the release was published.</summary>
     public DateTimeOffset PublishedAt { get; init; }
 
+    /// <summary>Gets the URL to the release page on GitHub.</summary>
+    public string HtmlUrl { get; init; } = "";
+
     /// <summary>Gets the downloadable assets attached to this release.</summary>
     public List<GitHubReleaseAsset> Assets { get; init; } = new();
 

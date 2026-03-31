@@ -101,6 +101,8 @@ public class UpdateChecker
                 }
             }
 
+            var htmlUrl = root.TryGetProperty("html_url", out var htmlUrlEl) ? htmlUrlEl.GetString() ?? "" : "";
+
             return new GitHubReleaseInfo
             {
                 TagName = tagName,
@@ -108,6 +110,7 @@ public class UpdateChecker
                 Body = body,
                 IsPrerelease = isPrerelease,
                 PublishedAt = publishedAt,
+                HtmlUrl = htmlUrl,
                 Assets = assets,
             };
         }
