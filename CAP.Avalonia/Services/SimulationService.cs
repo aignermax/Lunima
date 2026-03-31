@@ -225,7 +225,15 @@ public class SimulationService
     private static bool IsLightSource(Component component)
     {
         var id = component.Identifier?.ToLowerInvariant() ?? "";
-        return id.Contains("grating") || id.Contains("edge coupler");
+        if (id.Contains("grating") || id.Contains("edge coupler"))
+            return true;
+
+        // Check NazcaFunctionName (e.g., "ebeam_gc_te1550") — this is reliable because
+        // it comes from the PDK and is not user-editable (unlike HumanReadableName).
+        // After prefab serialize/deserialize, Identifier may be GUID-based while
+        // NazcaFunctionName preserves the PDK template.
+        var nazcaName = component.NazcaFunctionName?.ToLowerInvariant() ?? "";
+        return nazcaName.Contains("_gc_") || nazcaName.Contains("edge_coupler") || nazcaName.Contains("grating");
     }
 
     internal static LaserType GetLaserTypeForWavelength(int wavelengthNm)
