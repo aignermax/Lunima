@@ -220,6 +220,168 @@ public class UpdateViewModelTests
         vm.StatusText.ShouldContain("GitHub releases page");
     }
 
+    [Fact]
+    public async Task CheckForUpdatesOnStartup_NewerVersion_ShowsStartupNotification()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var vm = CreateViewModel(NewerReleaseJson, tempPrefsPath: tempPath);
+
+            await vm.CheckForUpdatesOnStartup();
+
+            vm.UpdateAvailable.ShouldBeTrue();
+            vm.IsStartupNotification.ShouldBeTrue();
+            vm.LatestVersionText.ShouldContain("99");
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesOnStartup_SkippedToday_DoesNotCheck()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SkipToday();
+
+            var handler = new FakeHttpMessageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(NewerReleaseJson)
+                });
+            var httpClient = new HttpClient(handler);
+            var checker = new UpdateChecker(httpClient, "owner", "repo");
+            var downloader = new UpdateDownloader(httpClient);
+            var vm = new UpdateViewModel(checker, downloader, prefs);
+
+            await vm.CheckForUpdatesOnStartup();
+
+            vm.UpdateAvailable.ShouldBeFalse();
+            vm.IsStartupNotification.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesOnStartup_SkippedVersion_DoesNotShow()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SetSkippedUpdateVersion(new SemanticVersion(99, 0, 0));
+
+            var handler = new FakeHttpMessageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(NewerReleaseJson)
+                });
+            var httpClient = new HttpClient(handler);
+            var vm = new UpdateViewModel(
+                new UpdateChecker(httpClient, "o", "r"),
+                new UpdateDownloader(httpClient), prefs);
+
+            await vm.CheckForUpdatesOnStartup();
+
+            vm.UpdateAvailable.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task ManualCheck_AlwaysWorks_RegardlessOfSkipToday()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SkipToday();
+
+            var handler = new FakeHttpMessageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(NewerReleaseJson)
+                });
+            var httpClient = new HttpClient(handler);
+            var vm = new UpdateViewModel(
+                new UpdateChecker(httpClient, "o", "r"),
+                new UpdateDownloader(httpClient), prefs);
+
+            // Manual check should ignore skip-today preference
+            await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+            vm.UpdateAvailable.ShouldBeTrue();
+            vm.IsStartupNotification.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task SkipTodayCommand_HidesNotificationAndPersists()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            var handler = new FakeHttpMessageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(NewerReleaseJson)
+                });
+            var httpClient = new HttpClient(handler);
+            var vm = new UpdateViewModel(
+                new UpdateChecker(httpClient, "o", "r"),
+                new UpdateDownloader(httpClient), prefs);
+
+            await vm.CheckForUpdatesOnStartup();
+            vm.UpdateAvailable.ShouldBeTrue();
+            vm.IsStartupNotification.ShouldBeTrue();
+
+            vm.SkipTodayCommand.Execute(null);
+
+            vm.UpdateAvailable.ShouldBeFalse();
+            vm.IsStartupNotification.ShouldBeFalse();
+            prefs.ShouldCheckToday().ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesOnStartup_HttpFailure_FailsSilently()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var vm = CreateViewModel("", HttpStatusCode.ServiceUnavailable, tempPath);
+
+            await vm.CheckForUpdatesOnStartup();
+
+            vm.UpdateAvailable.ShouldBeFalse();
+            vm.IsStartupNotification.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpResponseMessage _response;

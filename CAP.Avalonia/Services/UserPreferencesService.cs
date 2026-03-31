@@ -207,6 +207,30 @@ public class UserPreferencesService
         _preferences.SkippedUpdateVersion = null;
         Save();
     }
+
+    /// <summary>
+    /// Marks today as skipped so the startup update check won't show again until tomorrow.
+    /// </summary>
+    public void SkipToday()
+    {
+        _preferences.SkippedTodayDate = DateTime.UtcNow.Date.ToString("yyyy-MM-dd");
+        Save();
+    }
+
+    /// <summary>
+    /// Returns true if the startup update check should run today.
+    /// Returns false if the user already chose "Skip for Today" today.
+    /// </summary>
+    public bool ShouldCheckToday()
+    {
+        if (string.IsNullOrEmpty(_preferences.SkippedTodayDate))
+            return true;
+
+        if (DateTime.TryParse(_preferences.SkippedTodayDate, out var skippedDate))
+            return DateTime.UtcNow.Date > skippedDate;
+
+        return true;
+    }
 }
 
 /// <summary>
@@ -245,4 +269,10 @@ public class UserPreferences
     /// Null means no version is skipped.
     /// </summary>
     public string? SkippedUpdateVersion { get; set; }
+
+    /// <summary>
+    /// Date string (yyyy-MM-dd, UTC) when the user chose "Skip for Today".
+    /// Null means no daily skip is active.
+    /// </summary>
+    public string? SkippedTodayDate { get; set; }
 }

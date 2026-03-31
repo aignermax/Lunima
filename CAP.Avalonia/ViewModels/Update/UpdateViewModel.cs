@@ -42,6 +42,13 @@ public partial class UpdateViewModel : ObservableObject
     [ObservableProperty]
     private string _releaseNotes = "";
 
+    /// <summary>
+    /// True when the update notification was triggered by the startup auto-check.
+    /// Startup notifications show "Skip for Today" and "Skip This Version" buttons.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isStartupNotification;
+
     /// <summary>Gets the current application version as a display string.</summary>
     public string CurrentVersionText => $"Current: v{_currentVersion}";
 
@@ -68,6 +75,7 @@ public partial class UpdateViewModel : ObservableObject
 
         IsChecking = true;
         UpdateAvailable = false;
+        IsStartupNotification = false;
         StatusText = "Checking for updates...";
 
         try
@@ -186,7 +194,65 @@ public partial class UpdateViewModel : ObservableObject
     private void RemindLater()
     {
         UpdateAvailable = false;
+        IsStartupNotification = false;
         StatusText = "Update available — will remind again next check.";
+    }
+
+    /// <summary>
+    /// Marks today as skipped so the startup check won't show again until tomorrow.
+    /// </summary>
+    [RelayCommand]
+    private void SkipToday()
+    {
+        _preferences.SkipToday();
+        UpdateAvailable = false;
+        IsStartupNotification = false;
+        StatusText = "Update notification skipped for today.";
+        _availableRelease = null;
+    }
+
+    /// <summary>
+    /// Checks for updates automatically on startup. Respects "Skip for Today"
+    /// and "Skip This Version" preferences. Shows a non-blocking notification
+    /// if an update is available.
+    /// </summary>
+    public async Task CheckForUpdatesOnStartup()
+    {
+        if (!_preferences.ShouldCheckToday())
+            return;
+
+        if (IsChecking || IsDownloading) return;
+
+        IsChecking = true;
+
+        try
+        {
+            var release = await _updateChecker.GetLatestReleaseAsync();
+            if (release == null) return;
+
+            if (!UpdateChecker.IsNewerThan(release, _currentVersion))
+                return;
+
+            var skipped = _preferences.GetSkippedUpdateVersion();
+            if (skipped != null && release.ParsedVersion != null
+                && release.ParsedVersion.Equals(skipped))
+                return;
+
+            _availableRelease = release;
+            LatestVersionText = $"New version: v{release.ParsedVersion}";
+            ReleaseNotes = TruncateReleaseNotes(release.Body);
+            UpdateAvailable = true;
+            IsStartupNotification = true;
+            StatusText = $"Update available: v{release.ParsedVersion}";
+        }
+        catch
+        {
+            // Startup check fails silently — don't disrupt the user
+        }
+        finally
+        {
+            IsChecking = false;
+        }
     }
 
     private static SemanticVersion ResolveCurrentVersion()

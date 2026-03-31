@@ -109,6 +109,9 @@ public partial class App : Application
             {
                 DataContext = mainVm
             };
+
+            // Auto-check for updates after a short delay to avoid blocking startup
+            _ = CheckForUpdatesOnStartupAsync(mainVm);
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
@@ -120,5 +123,22 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Checks for updates on startup after a 2-second delay.
+    /// Runs on the UI thread so ViewModel properties update correctly.
+    /// </summary>
+    private static async Task CheckForUpdatesOnStartupAsync(MainViewModel mainVm)
+    {
+        try
+        {
+            await Task.Delay(2000);
+            await mainVm.RightPanel.Update.CheckForUpdatesOnStartup();
+        }
+        catch
+        {
+            // Startup update check should never crash the app
+        }
     }
 }
