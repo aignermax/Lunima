@@ -743,10 +743,6 @@
                                     Command="{Binding RightPanel.Update.InstallUpdateCommand}"
                                     Width="90" Background="#3d5d3d"
                                     IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                            <Button Content="Skip Version"
-                                    Command="{Binding RightPanel.Update.SkipThisVersionCommand}"
-                                    Width="90" Background="#5d3d3d"
-                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                             <Button Content="Later"
                                     Command="{Binding RightPanel.Update.RemindLaterCommand}"
                                     Width="55" Background="#3d3d3d"
