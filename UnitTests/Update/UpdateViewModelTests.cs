@@ -220,6 +220,157 @@ public class UpdateViewModelTests
         vm.StatusText.ShouldContain("GitHub releases page");
     }
 
+    // --- Skip for Today tests ---
+
+    [Fact]
+    public async Task StartupCheck_SkipForTodaySet_DoesNotShowNotification()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SkipToday();
+
+            var vm = CreateViewModelWithPrefs(NewerReleaseJson, prefs);
+
+            await vm.CheckForUpdatesOnStartupAsync();
+
+            vm.UpdateAvailable.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task StartupCheck_SkipForTodayNotSet_ShowsNotification()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            // No skip set — should check today
+            var vm = CreateViewModelWithPrefs(NewerReleaseJson, prefs);
+
+            await vm.CheckForUpdatesOnStartupAsync();
+
+            vm.UpdateAvailable.ShouldBeTrue();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task StartupCheck_SkippedVersionMatchesRelease_DoesNotShowNotification()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SetSkippedUpdateVersion(new SemanticVersion(99, 0, 0));
+
+            var vm = CreateViewModelWithPrefs(NewerReleaseJson, prefs);
+
+            await vm.CheckForUpdatesOnStartupAsync();
+
+            vm.UpdateAvailable.ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public async Task ManualCheck_AlwaysShowsUpdate_EvenWhenSkippedToday()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SkipToday();
+
+            var vm = CreateViewModelWithPrefs(NewerReleaseJson, prefs);
+
+            // Manual check ignores skip-today
+            await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+            vm.UpdateAvailable.ShouldBeTrue();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void SkipForToday_HidesPanelAndPersistsTodayDate()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            var vm = CreateViewModelWithPrefs(NewerReleaseJson, prefs);
+
+            vm.SkipForTodayCommand.Execute(null);
+
+            vm.UpdateAvailable.ShouldBeFalse();
+            prefs.ShouldCheckToday().ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void ShouldCheckToday_AfterSkipToday_ReturnsFalse()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.SkipToday();
+            prefs.ShouldCheckToday().ShouldBeFalse();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void ShouldCheckToday_WhenNeverSkipped_ReturnsTrue()
+    {
+        var tempPath = Path.GetTempFileName();
+        try
+        {
+            var prefs = new UserPreferencesService(tempPath);
+            prefs.ShouldCheckToday().ShouldBeTrue();
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    private static UpdateViewModel CreateViewModelWithPrefs(string responseJson, UserPreferencesService prefs)
+    {
+        var handler = new FakeHttpMessageHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(responseJson)
+            });
+        var httpClient = new HttpClient(handler);
+        return new UpdateViewModel(
+            new UpdateChecker(httpClient, "owner", "repo"),
+            new UpdateDownloader(httpClient),
+            prefs);
+    }
+
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpResponseMessage _response;
