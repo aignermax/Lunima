@@ -1,21 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  WiX v4 installer project for Lunima (Connect-A-PIC-Pro).
-
-  Prerequisites:
-    dotnet tool install --global wix
-    wix extension add WixToolset.UI.wixext/4.0.5
-    wix extension add WixToolset.NetFx.wixext/4.0.5
-
-  Build with the provided script:
-    scripts/build_installer.ps1
-
-  Or manually (from repo root, after publishing the app):
-    dotnet publish CAP.Desktop/CAP.Desktop.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64
-    dotnet build Installer/Installer.wixproj -p:PublishDir=..\publish\win-x64\
-
-  Output: Installer/bin/Release/Lunima-Setup.msi
--->
+<!-- WiX v4 installer project for Lunima (Connect-A-PIC-Pro). -->
 <Project Sdk="WixToolset.Sdk/4.0.5">
 
   <!-- ────────────────────────────────────────────────────────── -->
@@ -24,6 +8,9 @@
   <PropertyGroup>
     <OutputName>Lunima-Setup</OutputName>
     <SuppressWixPdbFile>true</SuppressWixPdbFile>
+    <!-- Default installer version for ad-hoc WiX builds; normal flows pass this from CAP.Desktop.csproj -->
+    <ProductVersion Condition=" '$(ProductVersion)' == '' ">0.0.0</ProductVersion>
+    <DefineConstants>$(DefineConstants);ProductVersion=$(ProductVersion)</DefineConstants>
     <!-- Default publish output; overridden by build_installer.ps1 -->
     <PublishDir Condition=" '$(PublishDir)' == '' ">$(MSBuildThisFileDirectory)..\publish\win-x64\</PublishDir>
   </PropertyGroup>

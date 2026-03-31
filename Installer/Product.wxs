@@ -20,7 +20,7 @@
   <Package
       Name="Lunima"
       Manufacturer="Lunima Team"
-      Version="0.5.1"
+      Version="$(var.ProductVersion)"
       UpgradeCode="F8E4A2B6-3C5D-7F91-A0E4-B8D6F2C4A8E0"
       Scope="perMachine"
       Compressed="yes">

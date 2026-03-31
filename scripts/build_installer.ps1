@@ -13,7 +13,8 @@
     Build configuration: Release (default) or Debug.
 
 .PARAMETER Version
-    Override the application version embedded in the MSI (default: 0.5.1).
+    Override the application version embedded in the MSI.
+    When omitted, the version is read from CAP.Desktop/CAP.Desktop.csproj.
 
 .PARAMETER SelfContained
     When specified, creates a self-contained installer (~150 MB) that bundles
@@ -38,7 +39,7 @@ param(
     [ValidateSet("Release", "Debug")]
     [string]$Configuration = "Release",
 
-    [string]$Version = "0.5.1",
+    [string]$Version = "",
 
     [switch]$SelfContained
 )
@@ -57,6 +58,15 @@ $IconPath      = Join-Path $InstallerDir "LunimaIcon.ico"
 $IconScript    = Join-Path $PSScriptRoot "generate_icon.py"
 $DesktopProj   = Join-Path $RepoRoot "CAP.Desktop\CAP.Desktop.csproj"
 $InstallerProj = Join-Path $InstallerDir "Installer.wixproj"
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    [xml]$desktopProject = Get-Content $DesktopProj
+    $Version = $desktopProject.Project.PropertyGroup.Version
+
+    if ([string]::IsNullOrWhiteSpace($Version)) {
+        throw "Could not determine version from $DesktopProj."
+    }
+}
 
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -147,7 +157,7 @@ $publishDirSlash = $PublishDir.TrimEnd('\') + '\'
 & dotnet build $InstallerProj `
     --configuration $Configuration `
     "-p:PublishDir=$publishDirSlash" `
-    "-p:Version=$Version"
+    "-p:ProductVersion=$Version"
 
 if ($LASTEXITCODE -ne 0) { throw "WiX build failed." }
 

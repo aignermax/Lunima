@@ -26,7 +26,8 @@ jobs:
         run: dotnet restore
 
       - name: Test
-        run: dotnet test ./UnitTests/UnitTests.csproj --no-restore --logger:trx
+        working-directory: UnitTests
+        run: dotnet test --no-restore --logger trx
 
   build:
     name: Build ${{ matrix.rid }}
@@ -99,15 +100,6 @@ jobs:
           echo "version=$version" >> $env:GITHUB_OUTPUT
           echo "Extracted version: $version"
 
-      - name: Update Product.wxs version
-        shell: pwsh
-        run: |
-          $version = "${{ steps.version.outputs.version }}"
-          $content = Get-Content Installer/Product.wxs -Raw
-          $content = $content -replace 'Version="[^"]*"', "Version=`"$version`""
-          Set-Content Installer/Product.wxs $content
-          echo "Updated Product.wxs to version $version"
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -133,10 +125,11 @@ jobs:
           -c Release
           -r win-x64
           --self-contained false
+          -p:Version=${{ steps.version.outputs.version }}
           -o publish/win-x64-msi
 
       - name: Build MSI
-        run: dotnet build Installer/Installer.wixproj -c Release -p:PublishDir=..\publish\win-x64-msi\
+        run: dotnet build Installer/Installer.wixproj -c Release -p:PublishDir=..\publish\win-x64-msi\ -p:ProductVersion=${{ steps.version.outputs.version }}
 
       - name: Rename MSI with version
         shell: pwsh
