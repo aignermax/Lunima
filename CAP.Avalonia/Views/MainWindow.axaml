@@ -706,6 +706,54 @@
                     <TextBlock Text="Shows cyan guide lines when pins align on same X or Y axis during dragging."
                                Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
+                    <!-- Check for Updates -->
+                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+                    <TextBlock Text="Software Updates:" Foreground="SkyBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding RightPanel.Update.CurrentVersionText}"
+                               Foreground="Gray" FontSize="10" Margin="0,0,0,8"/>
+
+                    <Button Content="Check for Updates"
+                            Command="{Binding RightPanel.Update.CheckForUpdatesCommand}"
+                            Width="150" Margin="0,0,0,5" Background="#3d4d5d"
+                            IsEnabled="{Binding RightPanel.Update.IsChecking, Converter={x:Static BoolConverters.Not}}"/>
+
+                    <TextBlock Text="{Binding RightPanel.Update.StatusText}"
+                               Foreground="Gray" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                               IsVisible="{Binding RightPanel.Update.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <!-- Update available panel -->
+                    <StackPanel IsVisible="{Binding RightPanel.Update.UpdateAvailable}">
+                        <TextBlock Text="{Binding RightPanel.Update.LatestVersionText}"
+                                   Foreground="LightGreen" FontWeight="SemiBold" Margin="0,5,0,5"/>
+
+                        <ScrollViewer MaxHeight="120" Margin="0,0,0,8"
+                                      IsVisible="{Binding RightPanel.Update.ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding RightPanel.Update.ReleaseNotes}"
+                                       Foreground="#aaaaaa" FontSize="10" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+
+                        <!-- Download progress -->
+                        <ProgressBar Value="{Binding RightPanel.Update.DownloadProgress}"
+                                     Minimum="0" Maximum="1"
+                                     Height="6" Margin="0,0,0,5"
+                                     IsVisible="{Binding RightPanel.Update.IsDownloading}"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <Button Content="Install Now"
+                                    Command="{Binding RightPanel.Update.InstallUpdateCommand}"
+                                    Width="90" Background="#3d5d3d"
+                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                            <Button Content="Skip Version"
+                                    Command="{Binding RightPanel.Update.SkipThisVersionCommand}"
+                                    Width="90" Background="#5d3d3d"
+                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                            <Button Content="Later"
+                                    Command="{Binding RightPanel.Update.RemindLaterCommand}"
+                                    Width="55" Background="#3d3d3d"
+                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                        </StackPanel>
+                    </StackPanel>
+
                     <!-- GDS Export Configuration -->
                     <panels:GdsExportPanel/>
 

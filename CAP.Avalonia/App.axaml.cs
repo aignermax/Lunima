@@ -1,3 +1,5 @@
+using System.Net.Http;
+using System.Net.Http.Headers;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -10,6 +12,7 @@ using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.Views;
 using CAP_Contracts;
 using CAP_Core.Helpers;
@@ -31,6 +34,21 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         var services = new ServiceCollection();
+
+        // Register shared HttpClient with GitHub-compatible User-Agent
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.UserAgent.Add(
+            new ProductInfoHeaderValue("ConnectAPICPro", "1.0"));
+        services.AddSingleton(httpClient);
+
+        // Register update services
+        services.AddSingleton(sp => new UpdateChecker(
+            sp.GetRequiredService<HttpClient>(),
+            owner: "aignermax",
+            repo: "Connect-A-PIC-Pro"));
+        services.AddSingleton(sp => new UpdateDownloader(
+            sp.GetRequiredService<HttpClient>()));
+        services.AddTransient<UpdateViewModel>();
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();

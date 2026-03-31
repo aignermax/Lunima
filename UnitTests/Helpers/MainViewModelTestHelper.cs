@@ -1,3 +1,4 @@
+using System.Net.Http;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
@@ -7,6 +8,7 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Update;
 using CAP_Core.Components.Creation;
 using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
@@ -91,6 +93,11 @@ public static class MainViewModelTestHelper
         canvas ??= new DesignCanvasViewModel();
         preferencesService ??= new UserPreferencesService();
 
+        var httpClient = new HttpClient();
+        var updateChecker = new UpdateChecker(httpClient, "aignermax", "Connect-A-PIC-Pro");
+        var updateDownloader = new UpdateDownloader(httpClient);
+        var updateVm = new UpdateViewModel(updateChecker, updateDownloader, preferencesService);
+
         return new RightPanelViewModel(
             canvas,
             preferencesService,
@@ -104,7 +111,8 @@ public static class MainViewModelTestHelper
             new CompressLayoutViewModel(),
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
-            new PdkConsistencyViewModel());
+            new PdkConsistencyViewModel(),
+            updateVm);
     }
 
     /// <summary>
