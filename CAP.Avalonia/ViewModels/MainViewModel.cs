@@ -367,6 +367,26 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);
 
+    [RelayCommand]
+    private void OpenPdkHelp()
+    {
+        var helpFile = System.IO.Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "docs", "PDK_JSON_FORMAT.md");
+        var absolutePath = System.IO.Path.GetFullPath(helpFile);
+
+        if (!System.IO.File.Exists(absolutePath))
+        {
+            StatusText = "Help file not found. See docs/PDK_JSON_FORMAT.md in the repository.";
+            return;
+        }
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = absolutePath,
+            UseShellExecute = true
+        });
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo()
     {
