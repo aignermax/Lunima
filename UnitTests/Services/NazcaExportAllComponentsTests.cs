@@ -17,7 +17,7 @@ public class NazcaExportAllComponentsTests
     public void Export_AllBuiltInTemplates_EachComponentAppearsInOutput()
     {
         var canvas = new DesignCanvasViewModel();
-        var templates = ComponentTemplates.GetAllTemplates();
+        var templates = TestPdkLoader.LoadAllTemplates();
 
         double xOffset = 0;
         foreach (var template in templates)
@@ -47,7 +47,7 @@ public class NazcaExportAllComponentsTests
     public void Export_AllBuiltInTemplates_UseDemofabFunctions()
     {
         var canvas = new DesignCanvasViewModel();
-        var templates = ComponentTemplates.GetAllTemplates();
+        var templates = TestPdkLoader.LoadAllTemplates();
 
         foreach (var template in templates)
         {
@@ -120,7 +120,7 @@ public class NazcaExportAllComponentsTests
         var canvas = new DesignCanvasViewModel();
 
         // Add one built-in component
-        var builtInTemplates = ComponentTemplates.GetAllTemplates();
+        var builtInTemplates = TestPdkLoader.LoadAllTemplates();
         var splitter = builtInTemplates.First(t => t.Name.Contains("Splitter"));
         var builtInComp = ComponentTemplates.CreateFromTemplate(splitter, 0, 0);
         canvas.AddComponent(builtInComp, splitter.Name);

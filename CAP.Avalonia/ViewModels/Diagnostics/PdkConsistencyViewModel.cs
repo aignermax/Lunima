@@ -1,5 +1,4 @@
 using CAP.Avalonia.Services;
-using CAP.Avalonia.ViewModels.Library;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -66,7 +65,6 @@ public partial class PdkConsistencyViewModel : ObservableObject
     private List<PdkConsistencyFinding> RunChecksOnBundledPdks()
     {
         var allFindings = new List<PdkConsistencyFinding>();
-        var builtInTemplates = ComponentTemplates.GetAllTemplates();
 
         var pdkDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PDKs");
         if (!Directory.Exists(pdkDir))
@@ -81,9 +79,7 @@ public partial class PdkConsistencyViewModel : ObservableObject
             {
                 var pdk = _loader.LoadFromFile(file);
                 var internalFindings = _checker.Check(pdk);
-                var templateFindings = _checker.CompareWithTemplates(pdk, builtInTemplates);
                 allFindings.AddRange(internalFindings);
-                allFindings.AddRange(templateFindings);
             }
             catch (Exception ex)
             {

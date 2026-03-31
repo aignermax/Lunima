@@ -114,6 +114,20 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public PdkSMatrixDraft? SMatrix { get; set; }
 
         /// <summary>
+        /// Optional explicit Nazca origin offset X in micrometers.
+        /// Overrides the default first-pin heuristic when set.
+        /// </summary>
+        [JsonPropertyName("nazcaOriginOffsetX")]
+        public double? NazcaOriginOffsetX { get; set; }
+
+        /// <summary>
+        /// Optional explicit Nazca origin offset Y in micrometers.
+        /// Overrides the default first-pin heuristic when set.
+        /// </summary>
+        [JsonPropertyName("nazcaOriginOffsetY")]
+        public double? NazcaOriginOffsetY { get; set; }
+
+        /// <summary>
         /// Optional slider parameters (e.g., for phase shifters).
         /// </summary>
         [JsonPropertyName("sliders")]

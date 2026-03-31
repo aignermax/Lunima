@@ -8,11 +8,9 @@ using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Services;
 using CAP_Core.Components.Creation;
-using CAP_Core.LightCalculation;
 using CAP_Core.Components;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
-using System.Numerics;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -147,20 +145,7 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void LoadComponentLibrary()
     {
-        var templates = ComponentTemplates.GetAllTemplates();
-
-        foreach (var template in templates)
-        {
-            AllTemplates.Add(template);
-        }
-
-        // Register built-in templates as a PDK
-        if (templates.Count > 0)
-        {
-            PdkManager.RegisterPdk("Built-in Components", null, true, templates.Count);
-        }
-
-        // Auto-load bundled PDK files from PDKs directory
+        // All components are loaded from JSON PDK files — no hardcoded built-in templates.
         LoadBundledPdks();
 
         // Build category list from all loaded templates
@@ -312,92 +297,6 @@ public partial class LeftPanelViewModel : ObservableObject
         }
     }
 
-    private ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp, string pdkName, string? nazcaModuleName)
-    {
-        var pinDefs = pdkComp.Pins.Select(p => new PinDefinition(
-            p.Name,
-            p.OffsetXMicrometers,
-            p.OffsetYMicrometers,
-            p.AngleDegrees
-        )).ToArray();
-
-        var firstPin = pdkComp.Pins.FirstOrDefault();
-        double nazcaOriginOffsetX = firstPin?.OffsetXMicrometers ?? 0;
-        double nazcaOriginOffsetY = firstPin?.OffsetYMicrometers ?? 0;
-
-        var template = new ComponentTemplate
-        {
-            Name = pdkComp.Name,
-            Category = pdkComp.Category,
-            WidthMicrometers = pdkComp.WidthMicrometers,
-            HeightMicrometers = pdkComp.HeightMicrometers,
-            PinDefinitions = pinDefs,
-            NazcaFunctionName = pdkComp.NazcaFunction,
-            NazcaParameters = pdkComp.NazcaParameters,
-            HasSlider = pdkComp.Sliders?.Any() ?? false,
-            SliderMin = pdkComp.Sliders?.FirstOrDefault()?.MinVal ?? 0,
-            SliderMax = pdkComp.Sliders?.FirstOrDefault()?.MaxVal ?? 100,
-            PdkSource = pdkName,
-            NazcaModuleName = nazcaModuleName,
-            NazcaOriginOffsetX = nazcaOriginOffsetX,
-            NazcaOriginOffsetY = nazcaOriginOffsetY,
-        };
-
-        if (pdkComp.SMatrix?.WavelengthData is { Count: > 0 } wlData)
-        {
-            template.CreateWavelengthSMatrixMap = pins =>
-            {
-                var map = new Dictionary<int, SMatrix>();
-                foreach (var entry in wlData)
-                {
-                    var draft = new PdkSMatrixDraft
-                    {
-                        WavelengthNm = entry.WavelengthNm,
-                        Connections = entry.Connections
-                    };
-                    map[entry.WavelengthNm] = CreateSMatrixFromPdk(pins, draft);
-                }
-                return map;
-            };
-        }
-        else
-        {
-            template.CreateSMatrix = pins => CreateSMatrixFromPdk(pins, pdkComp.SMatrix);
-        }
-
-        return template;
-    }
-
-    private static SMatrix CreateSMatrixFromPdk(List<CAP_Core.Components.Core.Pin> pins, PdkSMatrixDraft? sMatrixDraft)
-    {
-        var pinIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-        var sMatrix = new SMatrix(pinIds, new List<(Guid, double)>());
-
-        if (sMatrixDraft?.Connections == null || sMatrixDraft.Connections.Count == 0)
-            return sMatrix;
-
-        var pinByName = new Dictionary<string, CAP_Core.Components.Core.Pin>(StringComparer.OrdinalIgnoreCase);
-        foreach (var pin in pins)
-        {
-            pinByName[pin.Name] = pin;
-        }
-
-        var transfers = new Dictionary<(Guid, Guid), Complex>();
-
-        foreach (var conn in sMatrixDraft.Connections)
-        {
-            if (!pinByName.TryGetValue(conn.FromPin, out var fromPin) ||
-                !pinByName.TryGetValue(conn.ToPin, out var toPin))
-                continue;
-
-            var phaseRad = conn.PhaseDegrees * Math.PI / 180.0;
-            var value = Complex.FromPolarCoordinates(conn.Magnitude, phaseRad);
-
-            transfers[(fromPin.IDInFlow, toPin.IDOutFlow)] = value;
-            transfers[(toPin.IDInFlow, fromPin.IDOutFlow)] = value;
-        }
-
-        sMatrix.SetValues(transfers);
-        return sMatrix;
-    }
+    private static ComponentTemplate ConvertPdkComponentToTemplate(PdkComponentDraft pdkComp, string pdkName, string? nazcaModuleName)
+        => PdkTemplateConverter.ConvertToTemplate(pdkComp, pdkName, nazcaModuleName);
 }

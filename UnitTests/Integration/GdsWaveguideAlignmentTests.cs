@@ -42,7 +42,7 @@ public class GdsWaveguideAlignmentTests
     /// <summary>Initialises library with all PDK component templates.</summary>
     public GdsWaveguideAlignmentTests()
     {
-        _library = new ObservableCollection<ComponentTemplate>(ComponentTemplates.GetAllTemplates());
+        _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
     }
 
     // ── Category A: single straight regression ────────────────────────────────

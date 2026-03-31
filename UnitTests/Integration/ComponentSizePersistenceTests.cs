@@ -55,7 +55,7 @@ public class ComponentSizePersistenceTests
         var templates = new ObservableCollection<ComponentTemplate>();
 
         // 1. Add ALL built-in templates (Phase Shifter is among them)
-        foreach (var t in ComponentTemplates.GetAllTemplates())
+        foreach (var t in TestPdkLoader.LoadAllTemplates())
             templates.Add(t);
 
         // 2. Add a Demo PDK "Phase Shifter" with DIFFERENT dimensions.

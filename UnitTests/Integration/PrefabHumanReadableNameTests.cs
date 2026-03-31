@@ -27,7 +27,7 @@ public class PrefabHumanReadableNameTests : IDisposable
     public PrefabHumanReadableNameTests()
     {
         _library = new ObservableCollection<ComponentTemplate>(
-            ComponentTemplates.GetAllTemplates());
+            TestPdkLoader.LoadAllTemplates());
         _testLibraryPath = Path.Combine(
             Path.GetTempPath(),
             $"PrefabNameTests_{Guid.NewGuid():N}");

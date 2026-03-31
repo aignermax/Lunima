@@ -29,7 +29,7 @@ public class UserGroupTemplatePersistenceTests
     public UserGroupTemplatePersistenceTests()
     {
         _library = new ObservableCollection<ComponentTemplate>(
-            ComponentTemplates.GetAllTemplates());
+            TestPdkLoader.LoadAllTemplates());
     }
 
     /// <summary>
