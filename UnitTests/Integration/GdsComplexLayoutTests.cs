@@ -17,7 +17,7 @@ public class GdsComplexLayoutTests
 
     public GdsComplexLayoutTests()
     {
-        _library = new ObservableCollection<ComponentTemplate>(ComponentTemplates.GetAllTemplates());
+        _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
     }
 
     /// <summary>

@@ -122,8 +122,8 @@ public class SimpleNazcaExporter
     {
         var h = comp.HeightMicrometers.ToString("F2", ci);
 
-        // Sanitize function name for valid Python identifier (replace dots with underscores)
-        var pythonFuncName = funcName.Replace(".", "_");
+        // Sanitize function name for valid Python identifier (replace non-alphanumeric/underscore chars)
+        var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
 
         sb.AppendLine($"def {pythonFuncName}(length=100, **kwargs):");
         sb.AppendLine($"    \"\"\"Auto-generated parametric straight waveguide stub for {funcName}.\"\"\"");
@@ -164,8 +164,8 @@ public class SimpleNazcaExporter
         var w = comp.WidthMicrometers;
         var h = comp.HeightMicrometers;
 
-        // Sanitize function name for valid Python identifier (replace dots with underscores)
-        var pythonFuncName = funcName.Replace(".", "_");
+        // Sanitize function name for valid Python identifier (replace non-alphanumeric/underscore chars)
+        var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
 
         // Define cell once, return cached instance on each call
         sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
@@ -782,16 +782,18 @@ public class SimpleNazcaExporter
         var funcName = comp.NazcaFunctionName;
         if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
         {
+            // Keep dots (for module attribute access like demo.mmi2x2_dp), replace other invalid chars
+            var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_.]", "_");
             var funcParams = comp.NazcaFunctionParameters;
             return string.IsNullOrEmpty(funcParams)
-                ? $"{funcName}()"
-                : $"{funcName}({funcParams})";
+                ? $"{pythonFuncName}()"
+                : $"{pythonFuncName}({funcParams})";
         }
 
-        // For demo_pdk components, sanitize the function name (dots -> underscores) to call the stub
+        // For demo_pdk components, sanitize the function name to a valid Python identifier (replace dots too)
         if (!string.IsNullOrEmpty(funcName) && funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase))
         {
-            var pythonFuncName = funcName.Replace(".", "_");
+            var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
             var funcParams = comp.NazcaFunctionParameters;
             return string.IsNullOrEmpty(funcParams)
                 ? $"{pythonFuncName}()"

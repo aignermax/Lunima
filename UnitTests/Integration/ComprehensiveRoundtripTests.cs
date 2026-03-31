@@ -25,7 +25,7 @@ public class ComprehensiveRoundtripTests
     /// <summary>Initializes the test suite with the full component library.</summary>
     public ComprehensiveRoundtripTests()
     {
-        _library = new ObservableCollection<ComponentTemplate>(ComponentTemplates.GetAllTemplates());
+        _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
     }
 
     /// <summary>

@@ -34,7 +34,7 @@ public class GdsRoundtripTests
     /// <summary>Initializes the test suite with the full component library.</summary>
     public GdsRoundtripTests()
     {
-        _library = new ObservableCollection<ComponentTemplate>(ComponentTemplates.GetAllTemplates());
+        _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
     }
 
     /// <summary>

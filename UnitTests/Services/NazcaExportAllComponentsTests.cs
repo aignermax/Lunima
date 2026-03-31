@@ -17,7 +17,7 @@ public class NazcaExportAllComponentsTests
     public void Export_AllBuiltInTemplates_EachComponentAppearsInOutput()
     {
         var canvas = new DesignCanvasViewModel();
-        var templates = ComponentTemplates.GetAllTemplates();
+        var templates = TestPdkLoader.LoadAllTemplates();
 
         double xOffset = 0;
         foreach (var template in templates)
@@ -47,7 +47,7 @@ public class NazcaExportAllComponentsTests
     public void Export_AllBuiltInTemplates_UseDemofabFunctions()
     {
         var canvas = new DesignCanvasViewModel();
-        var templates = ComponentTemplates.GetAllTemplates();
+        var templates = TestPdkLoader.LoadAllTemplates();
 
         foreach (var template in templates)
         {
@@ -98,12 +98,14 @@ public class NazcaExportAllComponentsTests
         var result = exporter.Export(canvas);
 
         // Every PDK function should have a stub definition and be called in the design
+        // Function names are sanitized to valid Python identifiers (non-alphanumeric/underscore chars replaced with _)
         foreach (var funcName in expectedFunctions)
         {
-            result.ShouldContain($"def {funcName}(**kwargs):",
-                customMessage: $"Stub definition for '{funcName}' not found in export");
-            result.ShouldContain($"{funcName}(",
-                customMessage: $"PDK function call '{funcName}' not found in export");
+            var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_.]", "_");
+            result.ShouldContain($"def {pythonFuncName}(**kwargs):",
+                customMessage: $"Stub definition for '{funcName}' (sanitized: '{pythonFuncName}') not found in export");
+            result.ShouldContain($"{pythonFuncName}(",
+                customMessage: $"PDK function call '{funcName}' (sanitized: '{pythonFuncName}') not found in export");
         }
 
         // Every component should have a comp_N variable
@@ -120,7 +122,7 @@ public class NazcaExportAllComponentsTests
         var canvas = new DesignCanvasViewModel();
 
         // Add one built-in component
-        var builtInTemplates = ComponentTemplates.GetAllTemplates();
+        var builtInTemplates = TestPdkLoader.LoadAllTemplates();
         var splitter = builtInTemplates.First(t => t.Name.Contains("Splitter"));
         var builtInComp = ComponentTemplates.CreateFromTemplate(splitter, 0, 0);
         canvas.AddComponent(builtInComp, splitter.Name);

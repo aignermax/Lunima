@@ -27,7 +27,7 @@ public class DesignFileGroupPersistenceTests
     public DesignFileGroupPersistenceTests()
     {
         _library = new ObservableCollection<ComponentTemplate>(
-            ComponentTemplates.GetAllTemplates());
+            TestPdkLoader.LoadAllTemplates());
     }
 
     /// <summary>

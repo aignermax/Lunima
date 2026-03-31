@@ -57,7 +57,7 @@ public class GdsCoordinateVerificationTests
     public GdsCoordinateVerificationTests(ITestOutputHelper output)
     {
         _output = output;
-        _library = new ObservableCollection<ComponentTemplate>(ComponentTemplates.GetAllTemplates());
+        _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
     }
 
     /// <summary>
