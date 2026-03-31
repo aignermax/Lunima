@@ -1,0 +1,119 @@
+using System.Net.Http;
+using System.Text.Json;
+using CAP_Core.Update;
+
+namespace CAP.Avalonia.Services;
+
+/// <summary>
+/// Checks GitHub Releases API for newer application versions.
+/// Compares versions and returns structured release metadata.
+/// </summary>
+public class UpdateChecker
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _owner;
+    private readonly string _repo;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="UpdateChecker"/>.
+    /// </summary>
+    /// <param name="httpClient">Configured HTTP client with User-Agent header set.</param>
+    /// <param name="owner">GitHub repository owner (e.g. "aignermax").</param>
+    /// <param name="repo">GitHub repository name (e.g. "Connect-A-PIC-Pro").</param>
+    public UpdateChecker(HttpClient httpClient, string owner, string repo)
+    {
+        _httpClient = httpClient;
+        _owner = owner;
+        _repo = repo;
+    }
+
+    /// <summary>
+    /// Fetches the latest non-prerelease release from GitHub Releases API.
+    /// Returns null if the request fails or no release exists.
+    /// </summary>
+    public async Task<GitHubReleaseInfo?> GetLatestReleaseAsync(CancellationToken cancellationToken = default)
+    {
+        var url = $"https://api.github.com/repos/{_owner}/{_repo}/releases/latest";
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ParseReleaseJson(json);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="release"/> has a version newer than <paramref name="currentVersion"/>.
+    /// </summary>
+    public static bool IsNewerThan(GitHubReleaseInfo release, SemanticVersion currentVersion)
+    {
+        var releaseVersion = release.ParsedVersion;
+        return releaseVersion != null && releaseVersion > currentVersion;
+    }
+
+    /// <summary>
+    /// Finds the first MSI installer asset in the release's asset list.
+    /// Returns null if no MSI asset exists.
+    /// </summary>
+    public static GitHubReleaseAsset? FindMsiAsset(GitHubReleaseInfo release)
+    {
+        return release.Assets.FirstOrDefault(a =>
+            a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Parses a GitHub Releases API JSON response into a <see cref="GitHubReleaseInfo"/>.
+    /// Returns null if parsing fails.
+    /// </summary>
+    public static GitHubReleaseInfo? ParseReleaseJson(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var tagName = root.GetProperty("tag_name").GetString() ?? "";
+            var name = root.GetProperty("name").GetString() ?? "";
+            var body = root.GetProperty("body").GetString() ?? "";
+            var isPrerelease = root.GetProperty("prerelease").GetBoolean();
+            var publishedAt = root.GetProperty("published_at").GetDateTimeOffset();
+
+            var assets = new List<GitHubReleaseAsset>();
+            if (root.TryGetProperty("assets", out var assetsElement))
+            {
+                foreach (var asset in assetsElement.EnumerateArray())
+                {
+                    assets.Add(new GitHubReleaseAsset
+                    {
+                        Name = asset.GetProperty("name").GetString() ?? "",
+                        BrowserDownloadUrl = asset.GetProperty("browser_download_url").GetString() ?? "",
+                        Size = asset.GetProperty("size").GetInt64(),
+                        ContentType = asset.GetProperty("content_type").GetString() ?? "",
+                    });
+                }
+            }
+
+            return new GitHubReleaseInfo
+            {
+                TagName = tagName,
+                Name = name,
+                Body = body,
+                IsPrerelease = isPrerelease,
+                PublishedAt = publishedAt,
+                Assets = assets,
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}

@@ -1,9 +1,11 @@
+using System.Net.Http;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_Core.Components.Creation;
@@ -52,8 +54,14 @@ public class PanelWidthPersistenceTests : IDisposable
             new ComponentLibraryViewModel(_libraryManager));
 
     /// <summary>Creates a RightPanelViewModel with all required sub-VM dependencies.</summary>
-    private RightPanelViewModel CreateRightPanelViewModel() =>
-        new(_canvas, _preferencesService,
+    private RightPanelViewModel CreateRightPanelViewModel()
+    {
+        var httpClient = new HttpClient();
+        var updateVm = new UpdateViewModel(
+            new UpdateChecker(httpClient, "aignermax", "Connect-A-PIC-Pro"),
+            new UpdateDownloader(httpClient),
+            _preferencesService);
+        return new(_canvas, _preferencesService,
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
             new DesignValidationViewModel(),
@@ -64,7 +72,9 @@ public class PanelWidthPersistenceTests : IDisposable
             new CompressLayoutViewModel(),
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
-            new PdkConsistencyViewModel());
+            new PdkConsistencyViewModel(),
+            updateVm);
+    }
 
     [Fact]
     public void LeftPanelWidth_DefaultsTo220()

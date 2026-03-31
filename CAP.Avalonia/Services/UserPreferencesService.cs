@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CAP_Core.Update;
 
 namespace CAP.Avalonia.Services;
 
@@ -179,6 +180,33 @@ public class UserPreferencesService
         _preferences.CustomPythonPath = pythonPath;
         Save();
     }
+
+    /// <summary>
+    /// Gets the version the user chose to skip during update prompts.
+    /// Returns null if no version was skipped.
+    /// </summary>
+    public SemanticVersion? GetSkippedUpdateVersion()
+    {
+        return SemanticVersion.TryParse(_preferences.SkippedUpdateVersion, out var v) ? v : null;
+    }
+
+    /// <summary>
+    /// Stores the version the user chose to skip and saves preferences.
+    /// </summary>
+    public void SetSkippedUpdateVersion(SemanticVersion version)
+    {
+        _preferences.SkippedUpdateVersion = version.ToString();
+        Save();
+    }
+
+    /// <summary>
+    /// Clears any skipped update version and saves preferences.
+    /// </summary>
+    public void ClearSkippedUpdateVersion()
+    {
+        _preferences.SkippedUpdateVersion = null;
+        Save();
+    }
 }
 
 /// <summary>
@@ -211,4 +239,10 @@ public class UserPreferences
     /// If null, system default (python3/python) will be used.
     /// </summary>
     public string? CustomPythonPath { get; set; }
+
+    /// <summary>
+    /// Version string the user chose to skip during update prompts (e.g. "1.2.3").
+    /// Null means no version is skipped.
+    /// </summary>
+    public string? SkippedUpdateVersion { get; set; }
 }
