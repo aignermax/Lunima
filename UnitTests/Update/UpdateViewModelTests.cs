@@ -381,7 +381,8 @@ public class UpdateViewModelTests
         return new UpdateViewModel(
             new UpdateChecker(httpClient, "owner", "repo"),
             new UpdateDownloader(httpClient),
-            prefs);
+            prefs,
+            new FakeUrlLauncher());
     }
 
     private sealed class FakeHttpMessageHandler : HttpMessageHandler

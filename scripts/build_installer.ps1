@@ -13,7 +13,7 @@
     Build configuration: Release (default) or Debug.
 
 .PARAMETER Version
-    Override the application version embedded in the MSI (default: 0.3.1).
+    Override the application version embedded in the MSI (default: 0.5.1).
 
 .PARAMETER SelfContained
     When specified, creates a self-contained installer (~150 MB) that bundles
@@ -38,7 +38,7 @@ param(
     [ValidateSet("Release", "Debug")]
     [string]$Configuration = "Release",
 
-    [string]$Version = "0.3.1",
+    [string]$Version = "0.5.1",
 
     [switch]$SelfContained
 )
