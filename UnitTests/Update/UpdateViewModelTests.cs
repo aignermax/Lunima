@@ -98,8 +98,10 @@ public class UpdateViewModelTests
     }
 
     [Fact]
-    public async Task CheckForUpdates_SkippedVersionMatches_DoesNotShowDialog()
+    public async Task CheckForUpdates_SkippedVersionMatches_StillShowsUpdateForManualCheck()
     {
+        // Manual check always shows updates, even for previously skipped versions.
+        // Only auto-startup checks should respect the skip preference.
         var tempPath = Path.GetTempFileName();
         try
         {
@@ -118,8 +120,7 @@ public class UpdateViewModelTests
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
 
-            vm.UpdateAvailable.ShouldBeFalse();
-            vm.StatusText.ShouldContain("skipped");
+            vm.UpdateAvailable.ShouldBeTrue();
         }
         finally
         {
@@ -216,7 +217,7 @@ public class UpdateViewModelTests
 
         await vm.InstallUpdateCommand.ExecuteAsync(null);
 
-        vm.StatusText.ShouldContain("No MSI");
+        vm.StatusText.ShouldContain("GitHub releases page");
     }
 
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
