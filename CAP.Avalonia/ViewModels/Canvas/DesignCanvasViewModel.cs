@@ -8,18 +8,79 @@ using CAP_Core.Routing;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.Visualization;
 using CAP.Avalonia.ViewModels.Simulation;
+using CAP.Avalonia.ViewModels.Canvas.Services;
 
 namespace CAP.Avalonia.ViewModels.Canvas;
 
+/// <summary>
+/// Thin orchestrator for the design canvas. Delegates to specialized services
+/// for routing, placement, group editing, simulation, and pin highlighting.
+/// </summary>
 public partial class DesignCanvasViewModel : ObservableObject
 {
-    private readonly WaveguideRouter _router;
-
+    // ── Collections (bound by AXAML) ──────────────────────────────────────
     public ObservableCollection<ComponentViewModel> Components { get; } = new();
     public ObservableCollection<WaveguideConnectionViewModel> Connections { get; } = new();
     public ObservableCollection<PinViewModel> AllPins { get; } = new();
 
+    // ── Core dependencies ─────────────────────────────────────────────────
     public WaveguideConnectionManager ConnectionManager { get; }
+    public WaveguideRouter Router { get; }
+
+    // ── Extracted services ────────────────────────────────────────────────
+    public GroupEditService Groups { get; }
+    public RoutingOrchestrator Routing { get; }
+    public ComponentPlacementService Placement { get; }
+    public SimulationCoordinator Simulation { get; }
+    public PinHighlightService PinHighlight { get; }
+
+    // ── UI services (pre-existing) ────────────────────────────────────────
+    public SelectionManager Selection { get; } = new();
+    public ComponentClipboard Clipboard { get; } = new();
+    public PowerFlowVisualizer PowerFlowVisualizer { get; } = new();
+    public AlignmentGuideViewModel AlignmentGuide { get; } = new();
+    public GridSnapSettings GridSnap { get; } = new();
+
+    // ── Observable properties (for AXAML bindings) ────────────────────────
+    [ObservableProperty] private bool _showPowerFlow;
+    [ObservableProperty] private bool _useAStarRouting = true;
+    [ObservableProperty] private bool _showGridOverlay;
+    [ObservableProperty] private double _minBendRadiusMicrometers = 10.0;
+    [ObservableProperty] private ComponentViewModel? _selectedComponent;
+    [ObservableProperty] private double _panX;
+    [ObservableProperty] private double _panY;
+    [ObservableProperty] private bool _isRouting;
+    [ObservableProperty] private string _routingStatusText = "";
+    [ObservableProperty] private ComponentGroup? _currentEditGroup;
+
+    // ── Callbacks ─────────────────────────────────────────────────────────
+    public Action? SimulationRequested
+    {
+        get => Simulation.SimulationRequested;
+        set => Simulation.SimulationRequested = value;
+    }
+
+    public Action? RepaintRequested
+    {
+        get => Routing.RepaintRequested;
+        set => Routing.RepaintRequested = value;
+    }
+
+    // ── Delegated read-only properties ────────────────────────────────────
+    public bool IsInGroupEditMode => Groups.IsInGroupEditMode;
+    public ObservableCollection<ComponentGroup> BreadcrumbPath => Groups.BreadcrumbPath;
+    public double PinHighlightDistance
+    {
+        get => PinHighlight.PinHighlightDistance;
+        set => PinHighlight.PinHighlightDistance = value;
+    }
+    public PinViewModel? HighlightedPin => PinHighlight.HighlightedPin;
+    public double ChipMinX { get => Placement.ChipMinX; set => Placement.ChipMinX = value; }
+    public double ChipMinY { get => Placement.ChipMinY; set => Placement.ChipMinY = value; }
+    public double ChipMaxX { get => Placement.ChipMaxX; set => Placement.ChipMaxX = value; }
+    public double ChipMaxY { get => Placement.ChipMaxY; set => Placement.ChipMaxY = value; }
+
+    // ── Constructors ──────────────────────────────────────────────────────
 
     /// <summary>
     /// Initializes a new instance with a fresh <see cref="WaveguideRouter"/>.
@@ -27,819 +88,140 @@ public partial class DesignCanvasViewModel : ObservableObject
     public DesignCanvasViewModel() : this(new WaveguideRouter()) { }
 
     /// <summary>
-    /// Initializes a new instance with an injected <see cref="WaveguideRouter"/>.
+    /// Initializes a new instance with an injected router.
     /// </summary>
-    /// <param name="router">The waveguide router for A* pathfinding and obstacle management.</param>
     public DesignCanvasViewModel(WaveguideRouter router)
     {
-        _router = router;
+        Router = router;
         ConnectionManager = new WaveguideConnectionManager(router);
-        InitializeAStarRouting();
-    }
 
-    /// <summary>
-    /// Manages multi-component selection state.
-    /// </summary>
-    public SelectionManager Selection { get; } = new();
+        Routing = new RoutingOrchestrator(router, ConnectionManager, Components, Connections);
+        Placement = new ComponentPlacementService(Components, Connections);
+        Simulation = new SimulationCoordinator(PowerFlowVisualizer);
+        PinHighlight = new PinHighlightService(AllPins, GetConnectionForPin);
+        Groups = new GroupEditService(
+            Components, Connections, AllPins, ConnectionManager, router,
+            (comp, tpl, pdk) => AddComponent(comp, tpl, pdk),
+            BeginCommandExecution, EndCommandExecution,
+            () => Routing.InitializeAStarRouting(),
+            () => Routing.RecalculateRoutesAsync());
 
-    /// <summary>
-    /// Clipboard for copy-paste operations.
-    /// </summary>
-    public ComponentClipboard Clipboard { get; } = new();
-
-    /// <summary>
-    /// Manages power flow visualization state and data.
-    /// </summary>
-    public PowerFlowVisualizer PowerFlowVisualizer { get; } = new();
-
-    /// <summary>
-    /// Manages pin alignment guide visualization during component dragging.
-    /// </summary>
-    public AlignmentGuideViewModel AlignmentGuide { get; } = new();
-
-    /// <summary>
-    /// Whether power flow overlay is currently visible.
-    /// </summary>
-    [ObservableProperty]
-    private bool _showPowerFlow;
-
-    /// <summary>
-    /// Callback invoked when simulation needs to be re-run (e.g., circuit changed while overlay is active).
-    /// Set by MainViewModel to trigger auto-recalculation.
-    /// </summary>
-    public Action? SimulationRequested { get; set; }
-
-    /// <summary>
-    /// Callback invoked when the canvas needs to be repainted (e.g., during incremental routing updates).
-    /// Set by the DesignCanvas control to trigger InvalidateVisual().
-    /// </summary>
-    public Action? RepaintRequested { get; set; }
-
-    /// <summary>
-    /// Called when the circuit topology changes (component moved, connection added/removed).
-    /// If the power overlay is active, requests auto-recalculation instead of hiding it.
-    /// </summary>
-    public void InvalidateSimulation()
-    {
-        bool wasShowingOverlay = ShowPowerFlow;
-        PowerFlowVisualizer.Clear();
-        ShowPowerFlow = false;
-
-        if (wasShowingOverlay)
+        // Wire service events to observable property updates
+        Routing.StateChanged += () =>
         {
-            // Overlay was active - auto-recalculate (SimulationService will re-enable ShowPowerFlow)
-            SimulationRequested?.Invoke();
-        }
-    }
-
-    /// <summary>
-    /// Called when a component parameter (slider) changes.
-    /// Re-runs simulation without clearing the overlay, avoiding visual flicker.
-    /// </summary>
-    public void RequestResimulation()
-    {
-        if (ShowPowerFlow)
-            SimulationRequested?.Invoke();
-    }
-
-    /// <summary>
-    /// Updates the power flow display after simulation.
-    /// If overlay is already visible, forces a re-render without toggling off/on.
-    /// </summary>
-    public void RefreshPowerFlowDisplay()
-    {
-        PowerFlowVisualizer.IsEnabled = true;
-        if (ShowPowerFlow)
+            IsRouting = Routing.IsRouting;
+            RoutingStatusText = Routing.RoutingStatusText;
+        };
+        // Pre-change: update VM property BEFORE collections are modified
+        // (HierarchyPanelViewModel.RebuildTree reads _canvas.CurrentEditGroup on CollectionChanged)
+        Groups.CurrentEditGroupChanging += group =>
         {
-            // Already visible — just force re-render with updated data
-            OnPropertyChanged(nameof(ShowPowerFlow));
-        }
-        else
+            CurrentEditGroup = group;
+            OnPropertyChanged(nameof(IsInGroupEditMode));
+        };
+        Groups.EditStateChanged += () =>
         {
-            ShowPowerFlow = true;
-        }
+            CurrentEditGroup = Groups.CurrentEditGroup;
+            OnPropertyChanged(nameof(IsInGroupEditMode));
+        };
+        PinHighlight.HighlightChanged += () => OnPropertyChanged(nameof(HighlightedPin));
+        Simulation.ShowPowerFlowChanged += (value, forceNotify) =>
+        {
+            if (forceNotify && ShowPowerFlow == value)
+                OnPropertyChanged(nameof(ShowPowerFlow));
+            else
+                ShowPowerFlow = value;
+        };
+
+        Routing.InitializeAStarRouting();
     }
 
-    /// <summary>
-    /// The currently highlighted pin (when mouse is near in Connect mode).
-    /// </summary>
-    [ObservableProperty]
-    private PinViewModel? _highlightedPin;
-
-    /// <summary>
-    /// Distance threshold for pin highlighting (in micrometers).
-    /// </summary>
-    public double PinHighlightDistance { get; set; } = 15.0;
-
-    /// <summary>
-    /// Gets the waveguide router for A* pathfinding configuration.
-    /// </summary>
-    public WaveguideRouter Router => _router;
-
-    /// <summary>
-    /// Whether A* pathfinding with obstacle avoidance is enabled.
-    /// </summary>
-    [ObservableProperty]
-    private bool _useAStarRouting = true;
-
-    /// <summary>
-    /// Whether to show the pathfinding grid overlay for debugging.
-    /// Shows blocked cells (components in red, waveguides in blue).
-    /// </summary>
-    [ObservableProperty]
-    private bool _showGridOverlay = false;
-
-    /// <summary>
-    /// Settings for optional grid snapping during component placement and drag.
-    /// </summary>
-    public GridSnapSettings GridSnap { get; } = new();
-
-    /// <summary>
-    /// The currently edited group (null if at root level).
-    /// When set, only components inside this group can be edited.
-    /// </summary>
-    [ObservableProperty]
-    private ComponentGroup? _currentEditGroup;
-
-    /// <summary>
-    /// Stack of groups for nested editing navigation (breadcrumb trail).
-    /// </summary>
-    private readonly Stack<ComponentGroup> _editModeStack = new();
-
-    /// <summary>
-    /// Backup of root canvas state when entering edit mode (Unity-style sub-canvas).
-    /// </summary>
-    private CanvasState? _rootCanvasBackup = null;
-
-    /// <summary>
-    /// Whether currently in group edit mode (editing inside a group).
-    /// </summary>
-    public bool IsInGroupEditMode => CurrentEditGroup != null;
-
-    /// <summary>
-    /// Breadcrumb path from root to current edit group.
-    /// </summary>
-    public ObservableCollection<ComponentGroup> BreadcrumbPath { get; } = new();
-
-    /// <summary>
-    /// Minimum bend radius for waveguides in micrometers.
-    /// Depends on the fabrication process - typical values: 5-20µm for silicon photonics.
-    /// Default: 10µm (conservative value for most foundries).
-    /// </summary>
-    [ObservableProperty]
-    private double _minBendRadiusMicrometers = 10.0;
+    // ── Property change handlers ──────────────────────────────────────────
 
     partial void OnMinBendRadiusMicrometersChanged(double value)
     {
         Router.MinBendRadiusMicrometers = value;
-        // Recalculate all waveguide routes with new bend radius (async)
         _ = RecalculateRoutesAsync();
     }
 
-    /// <summary>
-    /// Chip boundary in micrometers. Components can only be placed within this area.
-    /// Default: 5mm × 5mm (typical MPW chip size)
-    /// </summary>
-    public double ChipMinX { get; set; } = 0;
-    public double ChipMinY { get; set; } = 0;
-    public double ChipMaxX { get; set; } = 5000;
-    public double ChipMaxY { get; set; } = 5000;
+    partial void OnUseAStarRoutingChanged(bool value) => _ = RecalculateRoutesAsync();
 
-    /// <summary>
-    /// Default canvas bounds for A* pathfinding grid (in micrometers).
-    /// Slightly larger than chip to allow routing near edges.
-    /// </summary>
-    private const double DefaultGridMinX = -100;
-    private const double DefaultGridMinY = -100;
-    private const double DefaultGridMaxX = 5100;
-    private const double DefaultGridMaxY = 5100;
+    // ── Simulation delegation ─────────────────────────────────────────────
 
-    /// <summary>
-    /// Minimum clearance between waveguides and components (in micrometers).
-    /// </summary>
-    private const double ComponentClearanceMicrometers = 5.0;
+    public void InvalidateSimulation() => Simulation.InvalidateSimulation(ShowPowerFlow);
+    public void RequestResimulation() => Simulation.RequestResimulation(ShowPowerFlow);
+    public void RefreshPowerFlowDisplay() => Simulation.RefreshPowerFlowDisplay(ShowPowerFlow);
 
-    private bool _isDragging;
-    private bool _isExecutingCommand; // True during command Execute/Undo to skip collision checks
-    private CancellationTokenSource? _routingCts;
-    private readonly SemaphoreSlim _routingSemaphore = new(1, 1);
+    // ── Routing delegation ────────────────────────────────────────────────
 
-    [ObservableProperty]
-    private bool _isRouting;
-
-    [ObservableProperty]
-    private string _routingStatusText = "";
-
-    [ObservableProperty]
-    private ComponentViewModel? _selectedComponent;
-
-    [ObservableProperty]
-    private double _panX;
-
-    [ObservableProperty]
-    private double _panY;
-
-    /// <summary>
-    /// Enters edit mode for a ComponentGroup (Unity-style sub-canvas approach).
-    /// Backs up root canvas, clears it, and populates only the group's children.
-    /// </summary>
-    public void EnterGroupEditMode(ComponentGroup group)
-    {
-        if (group == null)
-            throw new ArgumentNullException(nameof(group));
-
-        // If this is the first level of edit mode, backup root canvas
-        if (CurrentEditGroup == null)
-        {
-            _rootCanvasBackup = BackupCanvasState();
-        }
-        else
-        {
-            // We're already in edit mode, push current group to stack
-            _editModeStack.Push(CurrentEditGroup);
-        }
-
-        CurrentEditGroup = group;
-
-        // Clear canvas and populate with group's children (sub-canvas)
-        LoadGroupAsSubCanvas(group);
-
-        UpdateBreadcrumbPath();
-        OnPropertyChanged(nameof(IsInGroupEditMode));
-    }
-
-    /// <summary>
-    /// Exits the current group edit mode (Unity-style).
-    /// Saves sub-canvas connections as frozen paths, then restores parent canvas.
-    /// </summary>
-    public void ExitGroupEditMode()
-    {
-        if (CurrentEditGroup == null)
-            return;
-
-        // Save current sub-canvas connections as frozen paths
-        var editedGroup = CurrentEditGroup;
-        SaveSubCanvasToGroup(editedGroup);
-
-        // Check if we're exiting to parent group or to root
-        if (_editModeStack.Count > 0)
-        {
-            // Exit to parent group
-            var parentGroup = _editModeStack.Pop();
-            CurrentEditGroup = parentGroup;
-            LoadGroupAsSubCanvas(parentGroup);
-        }
-        else
-        {
-            // Exit to root - restore backed up canvas
-            CurrentEditGroup = null;
-            if (_rootCanvasBackup != null)
-            {
-                RestoreCanvasState(_rootCanvasBackup);
-                _rootCanvasBackup = null;
-            }
-        }
-
-        // Notify the ComponentViewModel that the group's dimensions and position have changed
-        // This ensures click detection uses the updated bounding box
-        var groupViewModel = Components.FirstOrDefault(c => c.Component == editedGroup);
-        if (groupViewModel != null)
-        {
-            groupViewModel.NotifyDimensionsChanged();
-
-            // Update position to match the calculated bounding box (from children)
-            if (editedGroup.ChildComponents.Count > 0)
-            {
-                double minX = editedGroup.ChildComponents.Min(c => c.PhysicalX);
-                double minY = editedGroup.ChildComponents.Min(c => c.PhysicalY);
-                groupViewModel.X = minX;
-                groupViewModel.Y = minY;
-            }
-        }
-
-        UpdateBreadcrumbPath();
-        OnPropertyChanged(nameof(IsInGroupEditMode));
-    }
-
-    /// <summary>
-    /// Exits all the way to root level (Unity-style).
-    /// Saves all pending edits and restores root canvas.
-    /// </summary>
-    [RelayCommand]
-    public void ExitToRoot()
-    {
-        if (CurrentEditGroup == null)
-            return;
-
-        // Save current sub-canvas
-        var editedGroup = CurrentEditGroup;
-        SaveSubCanvasToGroup(editedGroup);
-
-        // Save all parent groups in stack
-        while (_editModeStack.Count > 0)
-        {
-            var parentGroup = _editModeStack.Pop();
-            // Parent groups don't have unsaved changes in our model
-        }
-
-        // Restore root canvas
-        CurrentEditGroup = null;
-        if (_rootCanvasBackup != null)
-        {
-            RestoreCanvasState(_rootCanvasBackup);
-            _rootCanvasBackup = null;
-        }
-
-        // Notify the ComponentViewModel that the group's dimensions and position have changed
-        // This ensures click detection uses the updated bounding box
-        var groupViewModel = Components.FirstOrDefault(c => c.Component == editedGroup);
-        if (groupViewModel != null)
-        {
-            groupViewModel.NotifyDimensionsChanged();
-
-            // Update position to match the calculated bounding box (from children)
-            if (editedGroup.ChildComponents.Count > 0)
-            {
-                double minX = editedGroup.ChildComponents.Min(c => c.PhysicalX);
-                double minY = editedGroup.ChildComponents.Min(c => c.PhysicalY);
-                groupViewModel.X = minX;
-                groupViewModel.Y = minY;
-            }
-        }
-
-        _editModeStack.Clear();
-        UpdateBreadcrumbPath();
-        OnPropertyChanged(nameof(IsInGroupEditMode));
-    }
-
-    /// <summary>
-    /// Jumps to a specific level in the breadcrumb path.
-    /// </summary>
-    [RelayCommand]
-    public void NavigateToBreadcrumbLevel(ComponentGroup? group)
-    {
-        if (group == null)
-        {
-            ExitToRoot();
-            return;
-        }
-
-        // Find the group in the breadcrumb path
-        var index = BreadcrumbPath.IndexOf(group);
-        if (index < 0)
-            return;
-
-        // Pop back to that level
-        while (_editModeStack.Count > BreadcrumbPath.Count - index - 2)
-        {
-            _editModeStack.Pop();
-        }
-
-        CurrentEditGroup = group;
-        UpdateBreadcrumbPath();
-        OnPropertyChanged(nameof(IsInGroupEditMode));
-    }
-
-    /// <summary>
-    /// Updates the breadcrumb path based on the current edit stack.
-    /// </summary>
-    private void UpdateBreadcrumbPath()
-    {
-        BreadcrumbPath.Clear();
-
-        // Build path from stack + current group
-        var tempStack = new Stack<ComponentGroup>(_editModeStack.Reverse());
-        while (tempStack.Count > 0)
-        {
-            BreadcrumbPath.Add(tempStack.Pop());
-        }
-
-        if (CurrentEditGroup != null)
-        {
-            BreadcrumbPath.Add(CurrentEditGroup);
-        }
-    }
-
-    /// <summary>
-    /// Initializes the A* pathfinding grid with default bounds.
-    /// Call this before adding components if using A* routing.
-    /// </summary>
-    public void InitializeAStarRouting()
-    {
-        // Set obstacle padding for clearance between waveguides and components
-        if (Router.PathfindingGrid != null)
-        {
-            Router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
-        }
-
-        Router.InitializePathfindingGrid(
-            DefaultGridMinX, DefaultGridMinY,
-            DefaultGridMaxX, DefaultGridMaxY,
-            Components.Select(c => c.Component));
-
-        // Apply padding after initialization
-        if (Router.PathfindingGrid != null)
-        {
-            Router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
-        }
-
-        // NOTE: HPA* hierarchical pathfinding is available but not activated yet.
-        // Router.BuildHierarchicalGraph() creates sector portals that force suboptimal
-        // detours, and the DistanceTransform goes stale during sequential routing
-        // (disabling proximity cost). Needs incremental DT updates before activation.
-    }
-
-    /// <summary>
-    /// Reinitializes the A* pathfinding grid with custom bounds.
-    /// </summary>
+    public void InitializeAStarRouting() => Routing.InitializeAStarRouting();
     public void InitializeAStarRouting(double minX, double minY, double maxX, double maxY)
-    {
-        Router.InitializePathfindingGrid(
-            minX, minY, maxX, maxY,
-            Components.Select(c => c.Component));
+        => Routing.InitializeAStarRouting(minX, minY, maxX, maxY);
+    public Task RecalculateRoutesAsync() => Routing.RecalculateRoutesAsync();
 
-        // Apply padding after initialization
-        if (Router.PathfindingGrid != null)
-        {
-            Router.PathfindingGrid.ObstaclePaddingMicrometers = ComponentClearanceMicrometers;
-        }
-    }
+    // ── Drag / command execution ──────────────────────────────────────────
 
-    partial void OnUseAStarRoutingChanged(bool value)
-    {
-        // A* is always used; this toggle is kept for backward compatibility.
-        // Recalculate connections (async)
-        _ = RecalculateRoutesAsync();
-    }
+    public void BeginDragComponent(ComponentViewModel component) => Placement.IsDragging = true;
+    public void BeginCommandExecution() => Placement.IsExecutingCommand = true;
+    public void EndCommandExecution() => Placement.IsExecutingCommand = false;
 
-    /// <summary>
-    /// Call when starting to drag a component. Disables expensive recalculations.
-    /// </summary>
-    public void BeginDragComponent(ComponentViewModel component)
-    {
-        _isDragging = true;
-    }
-
-    /// <summary>
-    /// Called before executing a command (Execute or Undo) to disable collision checking.
-    /// This allows components to move freely during undo/redo operations.
-    /// </summary>
-    public void BeginCommandExecution()
-    {
-        _isExecutingCommand = true;
-    }
-
-    /// <summary>
-    /// Called after executing a command (Execute or Undo) to re-enable collision checking.
-    /// </summary>
-    public void EndCommandExecution()
-    {
-        _isExecutingCommand = false;
-    }
-
-    /// <summary>
-    /// Call when done dragging a component. Triggers async route recalculation.
-    /// </summary>
     public async void EndDragComponent(ComponentViewModel component)
     {
-        _isDragging = false;
-
-        // Recalculate routes asynchronously so UI stays responsive.
-        // RecalculateRoutesAsync rebuilds the obstacle grid internally
-        // (inside the semaphore, on the background thread) to prevent races.
+        Placement.IsDragging = false;
         await RecalculateRoutesAsync();
         InvalidateSimulation();
     }
 
-    /// <summary>
-    /// Asynchronously recalculates all waveguide routes on a background thread.
-    /// Cancels any previous in-progress routing. Updates UI on completion.
-    /// Always rebuilds the obstacle grid before routing to ensure consistency.
-    /// Provides progressive visual updates throttled to max 10 Hz (every 100ms).
-    /// </summary>
-    public async Task RecalculateRoutesAsync()
-    {
-        // Cancel any previous routing operation
-        _routingCts?.Cancel();
-        _routingCts?.Dispose();
-        _routingCts = new CancellationTokenSource();
-        var token = _routingCts.Token;
+    // ── Movement / placement delegation ───────────────────────────────────
 
-        // Serialize routing: wait for any in-progress routing to finish.
-        // Pass the token so if this operation is cancelled while waiting, it bails immediately.
-        try
-        {
-            await _routingSemaphore.WaitAsync(token);
-        }
-        catch (OperationCanceledException)
-        {
-            // This routing request was superseded by a newer one
-            return;
-        }
-
-        try
-        {
-            // Double-check: if our token was cancelled while waiting, skip routing
-            if (token.IsCancellationRequested) return;
-
-            IsRouting = true;
-            RoutingStatusText = $"Routing {ConnectionManager.Connections.Count} connections...";
-
-            // Snapshot component list on UI thread for thread safety
-            var components = Components.Select(c => c.Component).ToList();
-
-            // Throttle UI updates to max 10 Hz (every 100ms)
-            var lastUpdateTime = DateTime.MinValue;
-            var updateLock = new object();
-            bool updatePending = false;
-
-            Action progressCallback = () =>
-            {
-                lock (updateLock)
-                {
-                    var now = DateTime.UtcNow;
-                    var elapsed = (now - lastUpdateTime).TotalMilliseconds;
-
-                    // Throttle: only update if at least 100ms have passed
-                    if (elapsed >= 100)
-                    {
-                        lastUpdateTime = now;
-                        updatePending = false;
-
-                        // Dispatch to UI thread with Normal priority (not Background) to ensure updates are visible
-                        global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                        {
-                            if (!token.IsCancellationRequested)
-                            {
-                                // Notify all connections to update their paths
-                                foreach (var conn in Connections)
-                                {
-                                    conn.NotifyPathChanged();
-                                }
-                                // Request canvas repaint to make changes visible
-                                RepaintRequested?.Invoke();
-                            }
-                        }, global::Avalonia.Threading.DispatcherPriority.Normal);
-                    }
-                    else
-                    {
-                        updatePending = true;
-                    }
-                }
-            };
-
-            var completed = await Task.Run(() =>
-            {
-                if (token.IsCancellationRequested) return false;
-
-                // Rebuild obstacle grid inside semaphore + background thread.
-                // This prevents races: RebuildFromComponents and routing
-                // always execute on the same thread, never concurrently.
-                Router.PathfindingGrid?.RebuildFromComponents(components);
-
-                if (token.IsCancellationRequested) return false;
-
-                ConnectionManager.RecalculateAllTransmissions(progressCallback, token);
-                return !token.IsCancellationRequested;
-            });
-
-            if (completed && !token.IsCancellationRequested)
-            {
-                // Final update to ensure all paths are shown
-                foreach (var conn in Connections)
-                {
-                    conn.NotifyPathChanged();
-                }
-                RoutingStatusText = "";
-            }
-        }
-        finally
-        {
-            _routingSemaphore.Release();
-            IsRouting = false;
-        }
-    }
-
-    /// <summary>
-    /// Connects two pins asynchronously, routing on a background thread.
-    /// Used for interactive connection creation (UI stays responsive).
-    /// </summary>
-    public async Task<WaveguideConnectionViewModel?> ConnectPinsAsync(
-        PhysicalPin startPin, PhysicalPin endPin)
-    {
-        RemoveConnectionsForPin(startPin);
-        RemoveConnectionsForPin(endPin);
-
-        var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
-        var vm = new WaveguideConnectionViewModel(connection);
-        Connections.Add(vm);
-
-        await RecalculateRoutesAsync();
-        InvalidateSimulation();
-        return vm;
-    }
-
-    /// <summary>
-    /// Checks if a component can be placed at the given position without overlapping others.
-    /// </summary>
     public bool CanMoveComponentTo(ComponentViewModel component, double x, double y)
-    {
-        // For ComponentGroups, use specialized collision detection
-        if (component.Component is ComponentGroup group)
-        {
-            return CanMoveGroupTo(group, x, y, excludeComponent: component);
-        }
-
-        return CanPlaceComponent(x, y, component.Width, component.Height, excludeComponent: component);
-    }
-
-    /// <summary>
-    /// Checks if a ComponentGroup can be placed at the given position.
-    /// Uses child component and frozen path collision detection instead of bounding box.
-    /// </summary>
-    private bool CanMoveGroupTo(ComponentGroup group, double x, double y, ComponentViewModel? excludeComponent = null)
-    {
-        // Check chip boundaries using group bounding box
-        if (x < ChipMinX || y < ChipMinY ||
-            x + group.WidthMicrometers > ChipMaxX ||
-            y + group.HeightMicrometers > ChipMaxY)
-        {
-            return false;
-        }
-
-        // Get all components as Component instances (not ViewModels)
-        var allComponents = Components.Select(c => c.Component).ToList();
-
-        // Build exclusion set (the component being moved)
-        var excludeSet = new HashSet<Component>();
-        if (excludeComponent != null)
-        {
-            excludeSet.Add(excludeComponent.Component);
-        }
-
-        // Use GroupCollisionDetector for precise collision detection
-        var detector = new CAP_Core.Grid.GroupCollisionDetector();
-        return detector.CanPlaceGroup(group, x, y, allComponents, excludeSet);
-    }
+        => Placement.CanMoveComponentTo(component, x, y);
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
-    {
-        // Don't move locked components
-        if (component.Component.IsLocked)
-            return;
+        => Placement.MoveComponent(component, deltaX, deltaY,
+            Groups.IsInGroupEditMode, Groups.CurrentEditGroup,
+            Groups.UpdateExternalPinPositions, Routing.RecalculateRoutesAsync);
 
-        // If this is a ComponentGroup, use specialized group movement
-        if (component.Component is ComponentGroup group)
-        {
-            MoveComponentGroup(component, group, deltaX, deltaY);
-            return;
-        }
+    public bool CanPlaceComponent(double x, double y, double width, double height,
+        ComponentViewModel? excludeComponent = null)
+        => Placement.CanPlaceComponent(x, y, width, height, excludeComponent);
 
-        double newX = component.X + deltaX;
-        double newY = component.Y + deltaY;
+    public (double x, double y)? FindValidPlacement(double x, double y, double width, double height)
+        => Placement.FindValidPlacement(x, y, width, height);
 
-        // During drag or command execution: allow free movement (collision checked on drop or not applicable for undo/redo)
-        // Otherwise: check for overlap
-        if (!_isDragging && !_isExecutingCommand && !CanPlaceComponent(newX, newY, component.Width, component.Height, excludeComponent: component))
-        {
-            return;
-        }
+    // ── Group editing delegation ──────────────────────────────────────────
 
-        component.X = newX;
-        component.Y = newY;
+    public void EnterGroupEditMode(ComponentGroup group) => Groups.EnterGroupEditMode(group);
+    public void ExitGroupEditMode() => Groups.ExitGroupEditMode();
+    [RelayCommand] public void ExitToRoot() => Groups.ExitToRoot();
+    [RelayCommand] public void NavigateToBreadcrumbLevel(ComponentGroup? group)
+        => Groups.NavigateToBreadcrumbLevel(group);
 
-        // Update the underlying component
-        component.Component.PhysicalX = component.X;
-        component.Component.PhysicalY = component.Y;
+    // ── Pin highlight delegation ──────────────────────────────────────────
 
-        // If in edit mode, update external pin positions
-        if (IsInGroupEditMode && CurrentEditGroup != null)
-        {
-            UpdateExternalPinPositions(CurrentEditGroup);
-        }
+    public PinViewModel? UpdatePinHighlight(double x, double y, PhysicalPin? excludePin = null)
+        => PinHighlight.UpdatePinHighlight(x, y, excludePin);
+    public void ClearPinHighlight() => PinHighlight.ClearPinHighlight();
+    public PhysicalPin? GetPinAt(double x, double y, double tolerance = 15.0)
+        => PinHighlight.GetPinAt(x, y, tolerance);
 
-        if (_isDragging)
-        {
-            // During drag: only update UI positions, no expensive routing
-            // Just notify that pin positions changed so the UI can redraw connection endpoints
-            foreach (var conn in Connections)
-            {
-                if (conn.Connection.StartPin.ParentComponent == component.Component ||
-                    conn.Connection.EndPin.ParentComponent == component.Component)
-                {
-                    conn.NotifyPathChanged();
-                }
-            }
-        }
-        else
-        {
-            // Not dragging (e.g., programmatic move, undo/redo): route async
-            // RecalculateRoutesAsync will rebuild the obstacle grid inside the semaphore,
-            // preventing threading issues from concurrent undo/redo operations
-            _ = RecalculateRoutesAsync();
-        }
-    }
+    // ── Component lifecycle ───────────────────────────────────────────────
 
-    /// <summary>
-    /// Moves a ComponentGroup and all its children together.
-    /// Uses ComponentGroup.MoveGroup() to maintain internal consistency.
-    /// </summary>
-    private void MoveComponentGroup(ComponentViewModel component, ComponentGroup group, double deltaX, double deltaY)
-    {
-        // Calculate new position
-        double newX = component.X + deltaX;
-        double newY = component.Y + deltaY;
-
-        // During drag or command execution: allow free movement (collision checked on drop or not applicable for undo/redo)
-        // Otherwise: check for overlap (check group bounds)
-        if (!_isDragging && !_isExecutingCommand)
-        {
-            var groupBounds = CalculateGroupBounds(group);
-            double testX = groupBounds.X + deltaX;
-            double testY = groupBounds.Y + deltaY;
-
-            if (!CanPlaceComponent(testX, testY, groupBounds.Width, groupBounds.Height, excludeComponent: component))
-            {
-                return;
-            }
-        }
-
-        // Update the ComponentViewModel position
-        component.X = newX;
-        component.Y = newY;
-
-        // Use the ComponentGroup's MoveGroup method to move all children and internal paths
-        group.MoveGroup(deltaX, deltaY);
-
-        // If in edit mode and moving a child group, update parent's external pins
-        if (IsInGroupEditMode && CurrentEditGroup != null)
-        {
-            UpdateExternalPinPositions(CurrentEditGroup);
-        }
-
-        // Update connections for the group's external pins
-        if (_isDragging)
-        {
-            // During drag: only update UI positions for external connections
-            foreach (var externalPin in group.ExternalPins)
-            {
-                foreach (var conn in Connections)
-                {
-                    if (conn.Connection.StartPin == externalPin.InternalPin ||
-                        conn.Connection.EndPin == externalPin.InternalPin)
-                    {
-                        conn.NotifyPathChanged();
-                    }
-                }
-            }
-        }
-        else
-        {
-            // Not dragging: route async
-            _ = RecalculateRoutesAsync();
-        }
-    }
-
-    /// <summary>
-    /// Calculates the bounding rectangle for a ComponentGroup based on its children.
-    /// </summary>
-    private (double X, double Y, double Width, double Height) CalculateGroupBounds(ComponentGroup group)
-    {
-        if (group.ChildComponents.Count == 0)
-        {
-            return (group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
-        }
-
-        double minX = group.ChildComponents.Min(c => c.PhysicalX);
-        double minY = group.ChildComponents.Min(c => c.PhysicalY);
-        double maxX = group.ChildComponents.Max(c => c.PhysicalX + c.WidthMicrometers);
-        double maxY = group.ChildComponents.Max(c => c.PhysicalY + c.HeightMicrometers);
-
-        return (minX, minY, maxX - minX, maxY - minY);
-    }
-
-    public ComponentViewModel AddComponent(Component component, string? templateName = null, string? templatePdkSource = null)
+    public ComponentViewModel AddComponent(Component component,
+        string? templateName = null, string? templatePdkSource = null)
     {
         var vm = new ComponentViewModel(component, templateName, templatePdkSource);
         vm.OnSliderChanged = () => RequestResimulation();
         Components.Add(vm);
-
-        // Add obstacle to A* pathfinding grid
         Router.AddComponentObstacle(component);
 
-        // Add pin ViewModels for this component
         foreach (var pin in component.PhysicalPins)
-        {
             AllPins.Add(new PinViewModel(pin, vm));
-        }
 
-        // For ComponentGroups, also add external pins
         if (component is ComponentGroup group)
         {
             foreach (var groupPin in group.ExternalPins)
-            {
                 AllPins.Add(new PinViewModel(groupPin.InternalPin, vm));
-            }
         }
 
         return vm;
@@ -847,470 +229,74 @@ public partial class DesignCanvasViewModel : ObservableObject
 
     public void RemoveComponent(ComponentViewModel component)
     {
-        // Remove obstacle from A* pathfinding grid
         Router.RemoveComponentObstacle(component.Component);
-
         ConnectionManager.RemoveConnectionsForComponent(component.Component);
 
-        // Remove pin ViewModels for this component
         var pinsToRemove = AllPins.Where(p => p.ParentComponentViewModel == component).ToList();
-        foreach (var pin in pinsToRemove)
-        {
-            AllPins.Remove(pin);
-        }
+        foreach (var pin in pinsToRemove) AllPins.Remove(pin);
 
-        // Remove connection view models
         var connectionsToRemove = Connections
             .Where(c => c.Connection.StartPin.ParentComponent == component.Component ||
-                        c.Connection.EndPin.ParentComponent == component.Component)
-            .ToList();
-
-        foreach (var conn in connectionsToRemove)
-        {
-            Connections.Remove(conn);
-        }
+                        c.Connection.EndPin.ParentComponent == component.Component).ToList();
+        foreach (var conn in connectionsToRemove) Connections.Remove(conn);
 
         Components.Remove(component);
-
-        // Recalculate remaining routes asynchronously (freed space may allow better routes)
-        if (ConnectionManager.Connections.Count > 0)
-        {
-            _ = RecalculateRoutesAsync();
-        }
-
+        if (ConnectionManager.Connections.Count > 0) _ = RecalculateRoutesAsync();
         InvalidateSimulation();
     }
 
-    /// <summary>
-    /// Creates a connection between two pins without routing.
-    /// Routing should be triggered separately via RecalculateRoutesAsync().
-    /// Used by commands (Execute/Undo pattern) where routing is fire-and-forget.
-    /// </summary>
-    public WaveguideConnectionViewModel? ConnectPins(PhysicalPin startPin, PhysicalPin endPin)
+    // ── Connection management ─────────────────────────────────────────────
+
+    public async Task<WaveguideConnectionViewModel?> ConnectPinsAsync(
+        PhysicalPin startPin, PhysicalPin endPin)
     {
-        // Remove any existing connections on either pin (only one waveguide per pin allowed)
         RemoveConnectionsForPin(startPin);
         RemoveConnectionsForPin(endPin);
-
         var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
         var vm = new WaveguideConnectionViewModel(connection);
         Connections.Add(vm);
-
+        await RecalculateRoutesAsync();
         InvalidateSimulation();
         return vm;
     }
 
-    /// <summary>
-    /// Connects two pins using a previously cached route, bypassing A* routing.
-    /// Used when loading designs with cached route data.
-    /// Does not call InvalidateSimulation or NotifyPathChanged — caller should do that after bulk loading.
-    /// </summary>
-    public WaveguideConnectionViewModel? ConnectPinsWithCachedRoute(
-        PhysicalPin startPin,
-        PhysicalPin endPin,
-        RoutedPath cachedRoute)
+    public WaveguideConnectionViewModel? ConnectPins(PhysicalPin startPin, PhysicalPin endPin)
     {
         RemoveConnectionsForPin(startPin);
         RemoveConnectionsForPin(endPin);
-
-        var connection = ConnectionManager.AddConnectionWithCachedRoute(startPin, endPin, cachedRoute);
+        var connection = ConnectionManager.AddConnectionDeferred(startPin, endPin);
         var vm = new WaveguideConnectionViewModel(connection);
         Connections.Add(vm);
-
+        InvalidateSimulation();
         return vm;
     }
 
-    /// <summary>
-    /// Removes all connections that involve a specific pin.
-    /// Uses deferred removal (no re-routing). Caller is responsible for triggering routing.
-    /// </summary>
+    public WaveguideConnectionViewModel? ConnectPinsWithCachedRoute(
+        PhysicalPin startPin, PhysicalPin endPin, RoutedPath cachedRoute)
+    {
+        RemoveConnectionsForPin(startPin);
+        RemoveConnectionsForPin(endPin);
+        var connection = ConnectionManager.AddConnectionWithCachedRoute(startPin, endPin, cachedRoute);
+        var vm = new WaveguideConnectionViewModel(connection);
+        Connections.Add(vm);
+        return vm;
+    }
+
     public void RemoveConnectionsForPin(PhysicalPin pin)
     {
         var connectionsToRemove = Connections
-            .Where(c => c.Connection.StartPin == pin || c.Connection.EndPin == pin)
-            .ToList();
-
+            .Where(c => c.Connection.StartPin == pin || c.Connection.EndPin == pin).ToList();
         foreach (var conn in connectionsToRemove)
         {
             ConnectionManager.RemoveConnectionDeferred(conn.Connection);
             Connections.Remove(conn);
         }
-
-        if (connectionsToRemove.Count > 0)
-            InvalidateSimulation();
+        if (connectionsToRemove.Count > 0) InvalidateSimulation();
     }
 
-    /// <summary>
-    /// Gets the connection for a specific pin, if any.
-    /// </summary>
     public WaveguideConnectionViewModel? GetConnectionForPin(PhysicalPin pin)
-    {
-        return Connections.FirstOrDefault(c =>
+        => Connections.FirstOrDefault(c =>
             c.Connection.StartPin == pin || c.Connection.EndPin == pin);
-    }
-
-    /// <summary>
-    /// Finds and highlights the nearest pin to the given position.
-    /// Called when mouse moves in Connect mode.
-    /// </summary>
-    /// <param name="x">Mouse X position in micrometers</param>
-    /// <param name="y">Mouse Y position in micrometers</param>
-    /// <param name="excludePin">Optional pin to exclude (e.g., the connection start pin)</param>
-    /// <returns>The nearest pin if within highlight distance, otherwise null</returns>
-    public PinViewModel? UpdatePinHighlight(double x, double y, PhysicalPin? excludePin = null)
-    {
-        // Clear previous highlight
-        if (HighlightedPin != null)
-        {
-            HighlightedPin.SetHighlighted(false);
-            HighlightedPin = null;
-        }
-
-        // Find nearest pin
-        PinViewModel? nearest = null;
-        double nearestDistance = double.MaxValue;
-
-        foreach (var pinVm in AllPins)
-        {
-            // Skip excluded pin (and pins on the same component as excludePin)
-            if (excludePin != null)
-            {
-                if (pinVm.Pin == excludePin) continue;
-                if (pinVm.Pin.ParentComponent == excludePin.ParentComponent) continue;
-            }
-
-            var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
-            double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
-
-            if (dist < nearestDistance && dist <= PinHighlightDistance)
-            {
-                nearest = pinVm;
-                nearestDistance = dist;
-            }
-        }
-
-        // Highlight the nearest pin
-        if (nearest != null)
-        {
-            nearest.SetHighlighted(true);
-            // Update whether this pin has a connection
-            nearest.HasConnection = GetConnectionForPin(nearest.Pin) != null;
-            HighlightedPin = nearest;
-        }
-
-        return nearest;
-    }
-
-    /// <summary>
-    /// Clears all pin highlighting.
-    /// </summary>
-    public void ClearPinHighlight()
-    {
-        if (HighlightedPin != null)
-        {
-            HighlightedPin.SetHighlighted(false);
-            HighlightedPin = null;
-        }
-    }
-
-    /// <summary>
-    /// Gets the nearest pin at or near the given position.
-    /// Uses the same nearest-pin logic as UpdatePinHighlight for consistency.
-    /// </summary>
-    public PhysicalPin? GetPinAt(double x, double y, double tolerance = 15.0)
-    {
-        PhysicalPin? nearest = null;
-        double nearestDistance = double.MaxValue;
-
-        foreach (var pinVm in AllPins)
-        {
-            var (pinX, pinY) = pinVm.Pin.GetAbsolutePosition();
-            double dist = Math.Sqrt(Math.Pow(x - pinX, 2) + Math.Pow(y - pinY, 2));
-
-            if (dist < nearestDistance && dist <= tolerance)
-            {
-                nearest = pinVm.Pin;
-                nearestDistance = dist;
-            }
-        }
-        return nearest;
-    }
-
-    /// <summary>
-    /// Minimum gap between components in micrometers.
-    /// </summary>
-    private const double MinComponentGapMicrometers = 5.0;
-
-    /// <summary>
-    /// Checks if a component can be placed at the given position without overlapping others
-    /// and within chip boundaries.
-    /// </summary>
-    public bool CanPlaceComponent(double x, double y, double width, double height, ComponentViewModel? excludeComponent = null)
-    {
-        // Check chip boundaries
-        if (x < ChipMinX || y < ChipMinY ||
-            x + width > ChipMaxX || y + height > ChipMaxY)
-        {
-            return false;
-        }
-
-        // Add padding for minimum gap
-        var testRect = new Rect(
-            x - MinComponentGapMicrometers,
-            y - MinComponentGapMicrometers,
-            width + MinComponentGapMicrometers * 2,
-            height + MinComponentGapMicrometers * 2);
-
-        foreach (var comp in Components)
-        {
-            if (comp == excludeComponent) continue;
-
-            var compRect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
-            if (RectsOverlap(testRect, compRect))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// Finds a valid position near the requested position if the exact position overlaps.
-    /// Returns null if no valid position can be found within chip boundaries.
-    /// </summary>
-    public (double x, double y)? FindValidPlacement(double x, double y, double width, double height)
-    {
-        // Clamp initial position to chip boundaries
-        x = Math.Max(ChipMinX, Math.Min(x, ChipMaxX - width));
-        y = Math.Max(ChipMinY, Math.Min(y, ChipMaxY - height));
-
-        if (CanPlaceComponent(x, y, width, height))
-        {
-            return (x, y);
-        }
-
-        // Try positions in expanding circles around the requested position
-        double searchStep = 50; // 50µm steps
-        double maxRadius = Math.Max(ChipMaxX - ChipMinX, ChipMaxY - ChipMinY);
-
-        for (double radius = searchStep; radius <= maxRadius; radius += searchStep)
-        {
-            for (double angle = 0; angle < 360; angle += 30)
-            {
-                double testX = x + radius * Math.Cos(angle * Math.PI / 180);
-                double testY = y + radius * Math.Sin(angle * Math.PI / 180);
-
-                if (CanPlaceComponent(testX, testY, width, height))
-                {
-                    return (testX, testY);
-                }
-            }
-        }
-
-        // No valid position found
-        return null;
-    }
-
-    private static bool RectsOverlap(Rect a, Rect b)
-    {
-        return a.X < b.X + b.Width &&
-               a.X + a.Width > b.X &&
-               a.Y < b.Y + b.Height &&
-               a.Y + a.Height > b.Y;
-    }
-
-    private readonly struct Rect
-    {
-        public double X { get; }
-        public double Y { get; }
-        public double Width { get; }
-        public double Height { get; }
-
-        public Rect(double x, double y, double width, double height)
-        {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
-        }
-    }
-
-    /// <summary>
-    /// Updates external pin positions for a group based on current child component positions.
-    /// Called when components are moved in edit mode to keep external pins in sync.
-    /// </summary>
-    private void UpdateExternalPinPositions(ComponentGroup group)
-    {
-        foreach (var externalPin in group.ExternalPins)
-        {
-            var (pinX, pinY) = externalPin.InternalPin.GetAbsolutePosition();
-            externalPin.RelativeX = pinX - group.PhysicalX;
-            externalPin.RelativeY = pinY - group.PhysicalY;
-        }
-    }
-
-    // ====================================================================================
-    // Unity-Style Sub-Canvas for Group Edit Mode
-    // ====================================================================================
-
-    /// <summary>
-    /// Backs up the current canvas state before entering edit mode.
-    /// </summary>
-    private CanvasState BackupCanvasState()
-    {
-        return new CanvasState
-        {
-            Components = Components.ToList(),
-            Connections = Connections.ToList(),
-            AllPins = AllPins.ToList(),
-            ManagerConnections = ConnectionManager.Connections.ToList()
-        };
-    }
-
-    /// <summary>
-    /// Restores a previously backed up canvas state.
-    /// </summary>
-    private void RestoreCanvasState(CanvasState state)
-    {
-        try
-        {
-            BeginCommandExecution();
-
-            // Clear current canvas
-            Components.Clear();
-            Connections.Clear();
-            AllPins.Clear();
-
-            // Clear stale sub-canvas connections from ConnectionManager
-            ConnectionManager.Clear();
-
-            // Restore backed up state
-            foreach (var comp in state.Components)
-                Components.Add(comp);
-
-            foreach (var conn in state.Connections)
-                Connections.Add(conn);
-
-            foreach (var pin in state.AllPins)
-                AllPins.Add(pin);
-
-            // Restore ConnectionManager connections from backup
-            foreach (var managerConn in state.ManagerConnections)
-                ConnectionManager.AddExistingConnection(managerConn);
-        }
-        finally
-        {
-            EndCommandExecution();
-        }
-
-        // Recalculate routes for restored connections
-        _ = RecalculateRoutesAsync();
-    }
-
-    /// <summary>
-    /// Loads a ComponentGroup as a sub-canvas (Unity-style).
-    /// Clears current canvas and populates only the group's children and frozen paths.
-    /// </summary>
-    private void LoadGroupAsSubCanvas(ComponentGroup group)
-    {
-        try
-        {
-            BeginCommandExecution();
-
-            // Clear canvas and ConnectionManager to remove stale state
-            Components.Clear();
-            Connections.Clear();
-            AllPins.Clear();
-            ConnectionManager.Clear();
-
-            // Add group's children as components (AddComponent already adds to Components)
-            foreach (var child in group.ChildComponents)
-            {
-                AddComponent(child);
-            }
-
-            // Re-initialize A* grid for the sub-canvas component set
-            InitializeAStarRouting();
-
-            // Add frozen paths as editable connections (already routed)
-            foreach (var frozenPath in group.InternalPaths)
-            {
-                // Use AddConnectionWithCachedRoute to avoid re-routing
-                var connection = ConnectionManager.AddConnectionWithCachedRoute(
-                    frozenPath.StartPin,
-                    frozenPath.EndPin,
-                    frozenPath.Path
-                );
-
-                var connVm = new WaveguideConnectionViewModel(connection);
-                Connections.Add(connVm);
-            }
-        }
-        finally
-        {
-            EndCommandExecution();
-        }
-    }
-
-    /// <summary>
-    /// Saves the current sub-canvas state back to the group.
-    /// Updates ChildComponents and converts all connections to frozen paths.
-    /// </summary>
-    private void SaveSubCanvasToGroup(ComponentGroup group)
-    {
-        // Sync ChildComponents: update with current canvas components
-        // Remove components no longer on canvas
-        var canvasComponents = Components.Select(c => c.Component).ToHashSet();
-        var childrenToRemove = group.ChildComponents.Where(c => !canvasComponents.Contains(c)).ToList();
-        foreach (var child in childrenToRemove)
-        {
-            group.RemoveChild(child);
-        }
-
-        // Add new components from canvas that aren't in group yet
-        foreach (var compVm in Components)
-        {
-            if (!group.ChildComponents.Contains(compVm.Component))
-            {
-                group.AddChild(compVm.Component);
-            }
-        }
-
-        // Clear existing frozen paths
-        group.InternalPaths.Clear();
-
-        // Convert all connections to frozen paths
-        foreach (var connVm in Connections.ToList())
-        {
-            var conn = connVm.Connection;
-
-            if (conn.RoutedPath != null)
-            {
-                var frozenPath = new CAP_Core.Components.Core.FrozenWaveguidePath
-                {
-                    StartPin = conn.StartPin,
-                    EndPin = conn.EndPin,
-                    Path = conn.RoutedPath
-                };
-
-                group.AddInternalPath(frozenPath);
-            }
-        }
-
-        // Update group bounds
-        group.UpdateGroupBounds();
-    }
-
-    /// <summary>
-    /// Canvas state backup for Unity-style sub-canvas editing.
-    /// </summary>
-    private class CanvasState
-    {
-        public List<ComponentViewModel> Components { get; set; } = new();
-        public List<WaveguideConnectionViewModel> Connections { get; set; } = new();
-        public List<PinViewModel> AllPins { get; set; } = new();
-        public List<WaveguideConnection> ManagerConnections { get; set; } = new();
-    }
 }
 
 public partial class ComponentViewModel : ObservableObject
@@ -1327,40 +313,30 @@ public partial class ComponentViewModel : ObservableObject
     public Component Component { get; }
 
     /// <summary>
-    /// Display name for UI - uses HumanReadableName if available, otherwise falls back to Name.
-    /// For ComponentGroups, uses GroupName instead.
+    /// Display name for UI - uses HumanReadableName if available, falls back to Name.
     /// </summary>
     public string DisplayName
     {
         get
         {
-            if (Component is ComponentGroup group)
-                return group.GroupName;
+            if (Component is ComponentGroup group) return group.GroupName;
             return Component.HumanReadableName ?? Component.Name;
         }
     }
 
     /// <summary>
     /// The name of the template used to create this component.
-    /// Used for save/load to recreate the component from the correct template.
     /// </summary>
     public string? TemplateName { get; set; }
 
     /// <summary>
     /// The PDK source of the template (e.g. "Built-in", "Demo PDK").
-    /// Used together with TemplateName to uniquely identify the correct template during load,
-    /// preventing size corruption when multiple PDKs share the same component name.
     /// </summary>
     public string? TemplatePdkSource { get; set; }
 
-    [ObservableProperty]
-    private double _x;
-
-    [ObservableProperty]
-    private double _y;
-
-    [ObservableProperty]
-    private bool _isSelected;
+    [ObservableProperty] private double _x;
+    [ObservableProperty] private double _y;
+    [ObservableProperty] private bool _isSelected;
 
     /// <summary>
     /// Whether this component is locked (cannot be moved, rotated, or deleted).
@@ -1368,12 +344,9 @@ public partial class ComponentViewModel : ObservableObject
     public bool IsLocked => Component.IsLocked;
 
     /// <summary>
-    /// Notifies that the lock state has changed (called after undo/redo or direct lock/unlock).
+    /// Notifies that the lock state has changed.
     /// </summary>
-    public void NotifyLockStateChanged()
-    {
-        OnPropertyChanged(nameof(IsLocked));
-    }
+    public void NotifyLockStateChanged() => OnPropertyChanged(nameof(IsLocked));
 
     /// <summary>
     /// Laser configuration for light source components (null for non-sources).
@@ -1434,7 +407,7 @@ public partial class ComponentViewModel : ObservableObject
     public bool HasSliders => Component.GetAllSliders().Count > 0;
 
     /// <summary>
-    /// Display label for the slider (e.g., "Phase (°)").
+    /// Display label for the slider.
     /// </summary>
     public string SliderLabel
     {
@@ -1447,14 +420,13 @@ public partial class ComponentViewModel : ObservableObject
     }
 
     /// <summary>
-    /// First slider's current value (get/set).
-    /// </summary>
-    /// <summary>
-    /// Callback to notify the canvas that a slider changed (triggers auto-re-simulation).
-    /// Set by DesignCanvasViewModel when the component is added.
+    /// Callback to notify the canvas that a slider changed.
     /// </summary>
     public Action? OnSliderChanged { get; set; }
 
+    /// <summary>
+    /// First slider's current value.
+    /// </summary>
     public double SliderValue
     {
         get => Component.GetSlider(0)?.Value ?? 0;
@@ -1482,9 +454,7 @@ public partial class ComponentViewModel : ObservableObject
         _y = component.PhysicalY;
 
         if (templateName != null && LightSourceNames.Contains(templateName))
-        {
             LaserConfig = new LaserConfig();
-        }
     }
 
     public void NotifyDimensionsChanged()
@@ -1498,41 +468,18 @@ public partial class WaveguideConnectionViewModel : ObservableObject
 {
     public WaveguideConnection Connection { get; }
 
-    [ObservableProperty]
-    private bool _isSelected;
+    [ObservableProperty] private bool _isSelected;
 
     public double StartX => Connection.StartPin.GetAbsolutePosition().x;
     public double StartY => Connection.StartPin.GetAbsolutePosition().y;
     public double EndX => Connection.EndPin.GetAbsolutePosition().x;
     public double EndY => Connection.EndPin.GetAbsolutePosition().y;
-
     public double PathLength => Connection.PathLengthMicrometers;
     public double LossDb => Connection.TotalLossDb;
-
-    /// <summary>
-    /// Indicates if the connection uses a fallback path that goes through obstacles.
-    /// When true, the path should be displayed differently (e.g., red/dashed).
-    /// </summary>
     public bool IsBlockedFallback => Connection.IsBlockedFallback;
-
-    /// <summary>
-    /// Whether target length constraint is enabled for this connection.
-    /// </summary>
     public bool IsTargetLengthEnabled => Connection.IsTargetLengthEnabled;
-
-    /// <summary>
-    /// Target length in micrometers (null if not set).
-    /// </summary>
     public double? TargetLengthMicrometers => Connection.TargetLengthMicrometers;
-
-    /// <summary>
-    /// Whether the current path length matches the target within tolerance.
-    /// </summary>
     public bool? IsLengthMatched => Connection.IsLengthMatched;
-
-    /// <summary>
-    /// Difference between actual and target length in micrometers.
-    /// </summary>
     public double? LengthDifference => Connection.LengthDifference;
 
     public WaveguideConnectionViewModel(WaveguideConnection connection)
@@ -1564,14 +511,8 @@ public partial class PinViewModel : ObservableObject
     public PhysicalPin Pin { get; }
     public ComponentViewModel ParentComponentViewModel { get; }
 
-    [ObservableProperty]
-    private bool _isHighlighted;
-
-    /// <summary>
-    /// Scale factor for visual size (1.0 = normal, 1.5 = highlighted).
-    /// </summary>
-    [ObservableProperty]
-    private double _scale = 1.0;
+    [ObservableProperty] private bool _isHighlighted;
+    [ObservableProperty] private double _scale = 1.0;
 
     public double X => Pin.GetAbsolutePosition().x;
     public double Y => Pin.GetAbsolutePosition().y;
