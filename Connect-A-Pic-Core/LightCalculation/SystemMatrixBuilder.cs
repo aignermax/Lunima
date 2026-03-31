@@ -144,10 +144,12 @@ namespace CAP_Core.LightCalculation
                 {
                     CollectChildSMatrices(nestedGroup, waveLength, result);
                 }
-                else
+                else if (child.WaveLengthToSMatrixMap.Count > 0)
                 {
                     AddComponentSMatrix(child, waveLength, result);
                 }
+                // Children with no S-matrix (e.g., from deserialized templates) are skipped.
+                // Their connectivity is still captured via frozen path transfers.
             }
         }
 

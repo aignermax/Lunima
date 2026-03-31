@@ -1,7 +1,9 @@
+using System.Numerics;
 using System.Text.Json;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
+using CAP_Core.Tiles;
 
 namespace CAP_Core.Components.Creation;
 
@@ -146,6 +148,7 @@ public static class GroupTemplateSerializer
 
     /// <summary>
     /// Serializes a regular Component to a DTO with all data inline.
+    /// Includes S-matrix transfer data and LogicalPin info for simulation support.
     /// </summary>
     private static ChildComponentDto SerializeComponent(Component comp)
     {
@@ -154,8 +157,14 @@ public static class GroupTemplateSerializer
             Name = p.Name,
             OffsetX = p.OffsetXMicrometers,
             OffsetY = p.OffsetYMicrometers,
-            AngleDegrees = p.AngleDegrees
+            AngleDegrees = p.AngleDegrees,
+            HasLogicalPin = p.LogicalPin != null,
+            PinNumber = p.LogicalPin?.PinNumber ?? 0,
+            MatterType = (int)(p.LogicalPin?.MatterType ?? MatterType.Light),
+            Side = (int)(p.LogicalPin?.Side ?? RectSide.Right)
         }).ToList();
+
+        var transfers = SerializeSMatrixData(comp);
 
         return new ChildComponentDto
         {
@@ -171,25 +180,94 @@ public static class GroupTemplateSerializer
             WidthMicrometers = comp.WidthMicrometers,
             HeightMicrometers = comp.HeightMicrometers,
             Rotation = (int)comp.Rotation90CounterClock,
-            Pins = pins
+            Pins = pins,
+            SMatrixTransfers = transfers
         };
     }
 
     /// <summary>
+    /// Extracts S-matrix transfer data from a component for serialization.
+    /// Maps pin Guids to pin indices and flow directions for portable storage.
+    /// </summary>
+    private static List<SMatrixTransferDto> SerializeSMatrixData(Component comp)
+    {
+        var transfers = new List<SMatrixTransferDto>();
+
+        // Build reverse lookup: Guid → (pinIndex, isInFlow)
+        var guidToPin = new Dictionary<Guid, (int PinIndex, bool IsInFlow)>();
+        for (int i = 0; i < comp.PhysicalPins.Count; i++)
+        {
+            var logicalPin = comp.PhysicalPins[i].LogicalPin;
+            if (logicalPin != null)
+            {
+                guidToPin[logicalPin.IDInFlow] = (i, true);
+                guidToPin[logicalPin.IDOutFlow] = (i, false);
+            }
+        }
+
+        foreach (var (wavelength, sMatrix) in comp.WaveLengthToSMatrixMap)
+        {
+            var nonNullValues = sMatrix.GetNonNullValues();
+            foreach (var ((inflowGuid, outflowGuid), value) in nonNullValues)
+            {
+                if (guidToPin.TryGetValue(inflowGuid, out var inflowPin) &&
+                    guidToPin.TryGetValue(outflowGuid, out var outflowPin))
+                {
+                    transfers.Add(new SMatrixTransferDto
+                    {
+                        Wavelength = wavelength,
+                        InFlowPinIndex = inflowPin.PinIndex,
+                        InFlowIsInFlow = inflowPin.IsInFlow,
+                        OutFlowPinIndex = outflowPin.PinIndex,
+                        OutFlowIsInFlow = outflowPin.IsInFlow,
+                        Real = value.Real,
+                        Imaginary = value.Imaginary
+                    });
+                }
+            }
+        }
+
+        return transfers;
+    }
+
+    /// <summary>
     /// Deserializes a regular Component from a DTO.
+    /// Reconstructs LogicalPins and S-matrices from serialized transfer data.
     /// </summary>
     private static Component DeserializeComponent(ChildComponentDto dto)
     {
-        var physicalPins = dto.Pins.Select(p => new PhysicalPin
+        // Create LogicalPins for each physical pin that had one
+        var logicalPins = new List<Pin?>();
+        foreach (var p in dto.Pins)
+        {
+            if (p.HasLogicalPin)
+            {
+                logicalPins.Add(new Pin(
+                    p.Name,
+                    p.PinNumber,
+                    (MatterType)p.MatterType,
+                    (RectSide)p.Side));
+            }
+            else
+            {
+                logicalPins.Add(null);
+            }
+        }
+
+        var physicalPins = dto.Pins.Select((p, i) => new PhysicalPin
         {
             Name = p.Name,
             OffsetXMicrometers = p.OffsetX,
             OffsetYMicrometers = p.OffsetY,
-            AngleDegrees = p.AngleDegrees
+            AngleDegrees = p.AngleDegrees,
+            LogicalPin = logicalPins[i]
         }).ToList();
 
+        // Reconstruct S-matrices from serialized transfer data
+        var sMatrixMap = DeserializeSMatrixData(dto.SMatrixTransfers, logicalPins);
+
         return new Component(
-            new Dictionary<int, SMatrix>(),
+            sMatrixMap,
             new List<Slider>(),
             dto.NazcaFunctionName ?? "",
             dto.NazcaFunctionParameters ?? "",
@@ -206,6 +284,65 @@ public static class GroupTemplateSerializer
             NazcaModuleName = dto.NazcaModuleName,
             HumanReadableName = dto.HumanReadableName
         };
+    }
+
+    /// <summary>
+    /// Reconstructs S-matrix data from serialized transfer entries.
+    /// Creates new SMatrix objects with the deserialized LogicalPin Guids.
+    /// </summary>
+    private static Dictionary<int, SMatrix> DeserializeSMatrixData(
+        List<SMatrixTransferDto>? transfers,
+        List<Pin?> logicalPins)
+    {
+        var sMatrixMap = new Dictionary<int, SMatrix>();
+        if (transfers == null || transfers.Count == 0)
+            return sMatrixMap;
+
+        // Collect all pin Guids (InFlow + OutFlow for each LogicalPin)
+        var allPinGuids = logicalPins
+            .Where(p => p != null)
+            .SelectMany(p => new[] { p!.IDInFlow, p.IDOutFlow })
+            .ToList();
+
+        if (allPinGuids.Count == 0)
+            return sMatrixMap;
+
+        // Group transfers by wavelength
+        foreach (var group in transfers.GroupBy(t => t.Wavelength))
+        {
+            var wavelength = group.Key;
+            var sMatrix = new SMatrix(allPinGuids, new List<(Guid, double)>());
+
+            var transferDict = new Dictionary<(Guid, Guid), Complex>();
+            foreach (var t in group)
+            {
+                var inflowGuid = ResolveGuid(logicalPins, t.InFlowPinIndex, t.InFlowIsInFlow);
+                var outflowGuid = ResolveGuid(logicalPins, t.OutFlowPinIndex, t.OutFlowIsInFlow);
+                if (inflowGuid.HasValue && outflowGuid.HasValue)
+                {
+                    transferDict[(inflowGuid.Value, outflowGuid.Value)] =
+                        new Complex(t.Real, t.Imaginary);
+                }
+            }
+
+            sMatrix.SetValues(transferDict);
+            sMatrixMap[wavelength] = sMatrix;
+        }
+
+        return sMatrixMap;
+    }
+
+    /// <summary>
+    /// Resolves a pin index and flow direction to the corresponding Guid.
+    /// </summary>
+    private static Guid? ResolveGuid(List<Pin?> logicalPins, int pinIndex, bool isInFlow)
+    {
+        if (pinIndex < 0 || pinIndex >= logicalPins.Count)
+            return null;
+        var pin = logicalPins[pinIndex];
+        if (pin == null)
+            return null;
+        return isInFlow ? pin.IDInFlow : pin.IDOutFlow;
     }
 
     /// <summary>
@@ -408,11 +545,13 @@ public class ChildComponentDto
     public double HeightMicrometers { get; set; }
     public int Rotation { get; set; }
     public List<PinDto> Pins { get; set; } = new();
+    public List<SMatrixTransferDto>? SMatrixTransfers { get; set; }
     public GroupTemplateDto? NestedGroup { get; set; }
 }
 
 /// <summary>
 /// DTO for a physical pin on a child component.
+/// Includes LogicalPin metadata for S-matrix reconstruction.
 /// </summary>
 public class PinDto
 {
@@ -420,6 +559,25 @@ public class PinDto
     public double OffsetX { get; set; }
     public double OffsetY { get; set; }
     public double AngleDegrees { get; set; }
+    public bool HasLogicalPin { get; set; }
+    public int PinNumber { get; set; }
+    public int MatterType { get; set; }
+    public int Side { get; set; }
+}
+
+/// <summary>
+/// DTO for a single S-matrix transfer entry.
+/// References pins by index in the parent component's Pins list.
+/// </summary>
+public class SMatrixTransferDto
+{
+    public int Wavelength { get; set; }
+    public int InFlowPinIndex { get; set; }
+    public bool InFlowIsInFlow { get; set; }
+    public int OutFlowPinIndex { get; set; }
+    public bool OutFlowIsInFlow { get; set; }
+    public double Real { get; set; }
+    public double Imaginary { get; set; }
 }
 
 /// <summary>
