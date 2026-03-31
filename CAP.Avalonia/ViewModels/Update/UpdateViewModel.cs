@@ -126,9 +126,10 @@ public partial class UpdateViewModel : ObservableObject
             StatusText = "Opening GitHub releases page in browser...";
             try
             {
+                var releaseUrl = $"https://github.com/aignermax/Lunima/releases/tag/{_availableRelease.TagName}";
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = _availableRelease.HtmlUrl,
+                    FileName = releaseUrl,
                     UseShellExecute = true
                 });
             }
