@@ -48,6 +48,7 @@ public partial class App : Application
             repo: "Connect-A-PIC-Pro"));
         services.AddSingleton(sp => new UpdateDownloader(
             sp.GetRequiredService<HttpClient>()));
+        services.AddSingleton<IUrlLauncher, SystemUrlLauncher>();
         services.AddTransient<UpdateViewModel>();
 
         // Register core services

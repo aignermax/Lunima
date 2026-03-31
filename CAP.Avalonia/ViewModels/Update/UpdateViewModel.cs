@@ -17,6 +17,7 @@ public partial class UpdateViewModel : ObservableObject
     private readonly UpdateChecker _updateChecker;
     private readonly UpdateDownloader _downloader;
     private readonly UserPreferencesService _preferences;
+    private readonly IUrlLauncher _urlLauncher;
     private readonly SemanticVersion _currentVersion;
 
     private GitHubReleaseInfo? _availableRelease;
@@ -49,11 +50,13 @@ public partial class UpdateViewModel : ObservableObject
     public UpdateViewModel(
         UpdateChecker updateChecker,
         UpdateDownloader downloader,
-        UserPreferencesService preferences)
+        UserPreferencesService preferences,
+        IUrlLauncher urlLauncher)
     {
         _updateChecker = updateChecker;
         _downloader = downloader;
         _preferences = preferences;
+        _urlLauncher = urlLauncher;
         _currentVersion = ResolveCurrentVersion();
     }
 
@@ -122,11 +125,7 @@ public partial class UpdateViewModel : ObservableObject
             try
             {
                 var releaseUrl = $"https://github.com/aignermax/Lunima/releases/tag/{_availableRelease.TagName}";
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = releaseUrl,
-                    UseShellExecute = true
-                });
+                _urlLauncher.Open(releaseUrl);
             }
             catch (Exception ex)
             {
