@@ -20,17 +20,18 @@ namespace UnitTests.Services;
 public class ComponentDimensionExportTests
 {
     [Fact]
-    public void Export_Mmi2x2FromDemoPdk_GeneratesStub()
+    public void Export_Mmi2x2FromDemoPdk_UsesDirectDemoCall()
     {
-        // Demo PDK components now generate stubs (as of PR #76) with sanitized function names.
-        // The function name "demo_pdk.mmi2x2" becomes "demo_pdk_mmi2x2" in Python.
+        // Demo PDK components loaded from demo-pdk.json use nazcaFunction "demo.mmi2x2_dp".
+        // These are called directly via nazca.demofab (import nazca.demofab as demo), not via stubs.
         var pdkPath = FindPdkFile("demo-pdk.json");
         if (pdkPath == null) return; // skip if PDK not found
 
         var loader = new PdkLoader();
         var pdk = loader.LoadFromFile(pdkPath);
 
-        var mmi2x2Draft = pdk.Components.First(c => c.Name == "MMI 2x2");
+        // Component is named "2x2 MMI Coupler" with nazcaFunction "demo.mmi2x2_dp"
+        var mmi2x2Draft = pdk.Components.First(c => c.Name == "2x2 MMI Coupler");
         mmi2x2Draft.ShouldNotBeNull();
 
         // Create component from template
@@ -43,10 +44,9 @@ public class ComponentDimensionExportTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // Assert - Should generate stub with sanitized function name
-        result.ShouldContain("demo_pdk_mmi2x2()");
-        result.ShouldContain("Auto-generated stub for demo_pdk.mmi2x2");
-        result.ShouldContain("def demo_pdk_mmi2x2(**kwargs):");
+        // Assert - Should use direct demo call (demo.mmi2x2_dp is a real nazca.demofab function)
+        result.ShouldContain("demo.mmi2x2_dp()");
+        result.ShouldContain("import nazca.demofab as demo");
     }
 
     [Fact]

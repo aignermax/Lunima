@@ -18,23 +18,23 @@ namespace UnitTests.Integration;
 /// Integration tests for Phase Shifter and other parameterized component
 /// size persistence across save/load roundtrips.
 ///
-/// Root cause under test: when two templates share the same name (e.g. built-in
-/// "Phase Shifter" at 500×60 µm and Demo PDK "Phase Shifter" at 200×20 µm),
+/// Root cause under test: when two templates share the same name (e.g. Demo PDK
+/// "Phase Shifter" at 500×60 µm and Custom Test PDK "Phase Shifter" at 200×20 µm),
 /// the old code always matched the *first* template in the library, silently
 /// replacing the saved component with the wrong size.  The fix stores the
 /// PdkSource alongside TemplateName so the correct template is found.
 /// </summary>
 public class ComponentSizePersistenceTests
 {
-    // ── Built-in template dimensions ──────────────────────────────────────────
+    // ── Demo PDK template dimensions (from demo-pdk.json, Phase Shifter 500×60 µm) ──
     private const double BuiltInWidth  = 500;
     private const double BuiltInHeight = 60;
-    private const string BuiltInPdkSource = "Built-in";
+    private const string BuiltInPdkSource = "Demo PDK";
 
-    // ── Demo PDK template dimensions (name collision with built-in) ───────────
+    // ── Custom PDK template dimensions (name collision with Demo PDK) ─────────
     private const double PdkWidth  = 200;
     private const double PdkHeight = 20;
-    private const string DemoPdkSource = "Demo PDK";
+    private const string DemoPdkSource = "Custom Test PDK";
 
     // ── Template / component names ────────────────────────────────────────────
     private const string PhaseShifterName = "Phase Shifter";
@@ -54,11 +54,11 @@ public class ComponentSizePersistenceTests
         var canvas    = new DesignCanvasViewModel();
         var templates = new ObservableCollection<ComponentTemplate>();
 
-        // 1. Add ALL built-in templates (Phase Shifter is among them)
+        // 1. Add ALL JSON PDK templates (Demo PDK "Phase Shifter" 500×60 is among them)
         foreach (var t in TestPdkLoader.LoadAllTemplates())
             templates.Add(t);
 
-        // 2. Add a Demo PDK "Phase Shifter" with DIFFERENT dimensions.
+        // 2. Add a Custom PDK "Phase Shifter" with DIFFERENT dimensions.
         //    This causes the name-collision that the fix addresses.
         var pdkTemplate = CreatePdkPhaseShifterTemplate();
         templates.Add(pdkTemplate);
@@ -73,7 +73,7 @@ public class ComponentSizePersistenceTests
         return (fileOps, canvas, templates, tempFile);
     }
 
-    /// <summary>Creates the fake PDK Phase Shifter template (200×20 µm).</summary>
+    /// <summary>Creates the fake custom PDK Phase Shifter template (200×20 µm) used to test name-collision resolution.</summary>
     private static ComponentTemplate CreatePdkPhaseShifterTemplate()
     {
         return new ComponentTemplate
@@ -83,7 +83,7 @@ public class ComponentSizePersistenceTests
             WidthMicrometers  = PdkWidth,
             HeightMicrometers = PdkHeight,
             PdkSource         = DemoPdkSource,
-            NazcaFunctionName = "demo_pdk.phase_shifter",
+            NazcaFunctionName = "custom_test_pdk.phase_shifter",
             HasSlider         = true,
             SliderMin         = 0,
             SliderMax         = 360,
