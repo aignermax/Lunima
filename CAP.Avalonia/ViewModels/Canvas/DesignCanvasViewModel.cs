@@ -1390,6 +1390,21 @@ public partial class ComponentViewModel : ObservableObject
     public string Name => Component.HumanReadableName ?? Component.Identifier;
 
     /// <summary>
+    /// Read-only component type label for display in the Properties panel.
+    /// Returns the Nazca function name if available, otherwise the template name.
+    /// Returns null for ComponentGroups (groups have no single type).
+    /// </summary>
+    public string? ComponentTypeName
+    {
+        get
+        {
+            if (Component is ComponentGroup) return null;
+            if (!string.IsNullOrWhiteSpace(Component.NazcaFunctionName)) return Component.NazcaFunctionName;
+            return TemplateName;
+        }
+    }
+
+    /// <summary>
     /// Whether this ComponentViewModel represents a ComponentGroup.
     /// </summary>
     public bool IsComponentGroup => Component is ComponentGroup;

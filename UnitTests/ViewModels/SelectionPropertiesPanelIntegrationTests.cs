@@ -195,6 +195,89 @@ public class SelectionPropertiesPanelIntegrationTests
     }
 
     /// <summary>
+    /// Scenario 6: ComponentTypeName returns the Nazca function name when set.
+    /// </summary>
+    [Fact]
+    public void SelectComponent_ComponentTypeNameShowsNazcaFunctionName()
+    {
+        // Arrange
+        var (canvas, interaction) = CreateSetup();
+
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.NazcaFunctionName = "ebeam_gc_te1550";
+        component.PhysicalX = 0;
+        component.PhysicalY = 0;
+        component.WidthMicrometers = 50;
+        component.HeightMicrometers = 50;
+
+        var componentVm = canvas.AddComponent(component, "Grating Coupler");
+        componentVm.X = component.PhysicalX;
+        componentVm.Y = component.PhysicalY;
+
+        // Act
+        interaction.CanvasClicked(10, 10);
+
+        // Assert: Nazca function name takes priority
+        interaction.SelectedComponent.ShouldNotBeNull();
+        interaction.SelectedComponent.ComponentTypeName.ShouldBe("ebeam_gc_te1550");
+    }
+
+    /// <summary>
+    /// Scenario 7: ComponentTypeName falls back to TemplateName when NazcaFunctionName is empty.
+    /// </summary>
+    [Fact]
+    public void SelectComponent_ComponentTypeNameFallsBackToTemplateName()
+    {
+        // Arrange
+        var (canvas, interaction) = CreateSetup();
+
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.NazcaFunctionName = "";
+        component.PhysicalX = 0;
+        component.PhysicalY = 0;
+        component.WidthMicrometers = 50;
+        component.HeightMicrometers = 50;
+
+        var componentVm = canvas.AddComponent(component, "Phase Shifter");
+        componentVm.X = component.PhysicalX;
+        componentVm.Y = component.PhysicalY;
+
+        // Act
+        interaction.CanvasClicked(10, 10);
+
+        // Assert: falls back to template name
+        interaction.SelectedComponent.ShouldNotBeNull();
+        interaction.SelectedComponent.ComponentTypeName.ShouldBe("Phase Shifter");
+    }
+
+    /// <summary>
+    /// Scenario 8: ComponentTypeName is null for ComponentGroups.
+    /// </summary>
+    [Fact]
+    public void SelectComponentGroup_ComponentTypeNameIsNull()
+    {
+        // Arrange
+        var (canvas, interaction) = CreateSetup();
+
+        var group = TestComponentFactory.CreateComponentGroup("MZI");
+        group.PhysicalX = 0;
+        group.PhysicalY = 0;
+        group.WidthMicrometers = 200;
+        group.HeightMicrometers = 100;
+
+        var groupVm = canvas.AddComponent(group, "MZI");
+        groupVm.X = group.PhysicalX;
+        groupVm.Y = group.PhysicalY;
+
+        // Act
+        interaction.CanvasClicked(10, 10);
+
+        // Assert: groups have no type label
+        interaction.SelectedComponent.ShouldNotBeNull();
+        interaction.SelectedComponent.ComponentTypeName.ShouldBeNull();
+    }
+
+    /// <summary>
     /// Verifies OnSelectionChanged callback is invoked when a component is selected.
     /// </summary>
     [Fact]
