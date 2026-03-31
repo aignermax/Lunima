@@ -78,9 +78,82 @@ jobs:
           name: ${{ matrix.artifact }}
           path: publish/
 
+  build-msi:
+    name: Build MSI Installer
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Extract version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content CAP.Desktop/CAP.Desktop.csproj
+          $version = $csproj.Project.PropertyGroup.Version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Extracted version: $version"
+
+      - name: Update Product.wxs version
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $content = Get-Content Installer/Product.wxs -Raw
+          $content = $content -replace 'Version="[^"]*"', "Version=`"$version`""
+          Set-Content Installer/Product.wxs $content
+          echo "Updated Product.wxs to version $version"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: pip install Pillow
+
+      - name: Generate Lunima icon
+        run: python scripts/generate_icon.py --output Installer/LunimaIcon.ico
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix --version 4.0.5
+
+      - name: Install WiX extensions
+        run: |
+          wix extension add WixToolset.UI.wixext/4.0.5
+          wix extension add WixToolset.NetFx.wixext/4.0.5
+
+      - name: Publish app for MSI
+        run: >
+          dotnet publish CAP.Desktop/CAP.Desktop.csproj
+          -c Release
+          -r win-x64
+          --self-contained false
+          -o publish/win-x64-msi
+
+      - name: Build MSI
+        run: dotnet build Installer/Installer.wixproj -c Release -p:PublishDir=..\publish\win-x64-msi\
+
+      - name: Rename MSI with version
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Copy-Item Installer/bin/Release/net8.0/en-US/Lunima-Setup.msi "Lunima-Setup-$version.msi"
+          echo "Created Lunima-Setup-$version.msi"
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lunima-MSI-Installer
+          path: Lunima-Setup-*.msi
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, build-msi]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -125,6 +198,12 @@ jobs:
         with:
           name: Connect-A-PIC-Pro-linux-x64
           path: linux-x64
+
+      - name: Download MSI installer
+        uses: actions/download-artifact@v4
+        with:
+          name: Lunima-MSI-Installer
+          path: msi
 
       - name: Create archives
         run: |
@@ -204,7 +283,14 @@ jobs:
 
             ## 📦 Installation
 
-            ### Windows
+            ### Windows (Recommended - MSI Installer)
+            1. Download `Lunima-Setup-${{ steps.info.outputs.version }}.msi`
+            2. Run the installer
+            3. Desktop shortcut and Start Menu entry will be created automatically
+
+            **Requirements:** .NET 8 Desktop Runtime (x64) - installer will check and prompt if missing
+
+            ### Windows (Portable)
             1. Download `Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip`
             2. Extract and run `Connect-A-PIC-Pro.exe`
 
@@ -213,10 +299,11 @@ jobs:
             2. Extract: `tar xzf Connect-A-PIC-Pro-*.tar.gz`
             3. Run: `./Connect-A-PIC-Pro`
 
-            No .NET installation required — everything is included.
+            No .NET installation required for portable versions — everything is included.
 
             ---
             **Commit:** ${{ github.sha }}
           files: |
+            msi/Lunima-Setup-${{ steps.info.outputs.version }}.msi
             Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-win-x64.zip
             Connect-A-PIC-Pro-${{ steps.info.outputs.version }}-linux-x64.tar.gz
