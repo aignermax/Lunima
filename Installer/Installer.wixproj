@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WiX v4 installer project for Lunima (Connect-A-PIC-Pro).
+
+  Prerequisites:
+    dotnet tool install --global wix
+    wix extension add WixToolset.UI.wixext/4.0.5
+    wix extension add WixToolset.NetFx.wixext/4.0.5
+
+  Build with the provided script:
+    scripts/build_installer.ps1
+
+  Or manually (from repo root, after publishing the app):
+    dotnet publish CAP.Desktop/CAP.Desktop.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64
+    dotnet build Installer/Installer.wixproj -p:PublishDir=..\publish\win-x64\
+
+  Output: Installer/bin/Release/Lunima-Setup.msi
+-->
+<Project Sdk="WixToolset.Sdk/4.0.5">
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- Output configuration                                       -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <PropertyGroup>
+    <OutputName>Lunima-Setup</OutputName>
+    <SuppressWixPdbFile>true</SuppressWixPdbFile>
+    <!-- Default publish output; overridden by build_installer.ps1 -->
+    <PublishDir Condition=" '$(PublishDir)' == '' ">$(MSBuildThisFileDirectory)..\publish\win-x64\</PublishDir>
+  </PropertyGroup>
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- WiX extensions                                             -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <ItemGroup>
+    <!-- Standard installer UI dialogs -->
+    <PackageReference Include="WixToolset.UI.wixext"    Version="4.0.5" />
+    <!-- .NET runtime detection -->
+    <PackageReference Include="WixToolset.NetFx.wixext" Version="4.0.5" />
+  </ItemGroup>
+
+  <!-- ────────────────────────────────────────────────────────── -->
+  <!-- Auto-harvest published application files                   -->
+  <!-- WiX scans $(PublishDir) at build time and generates        -->
+  <!-- components for every file it finds.                        -->
+  <!-- ────────────────────────────────────────────────────────── -->
+  <ItemGroup>
+    <HarvestDirectory Include="$(PublishDir)">
+      <DirectoryRef>INSTALLDIR</DirectoryRef>
+      <ComponentGroupRef>HarvestedAppFiles</ComponentGroupRef>
+      <SuppressRootDirectory>true</SuppressRootDirectory>
+    </HarvestDirectory>
+  </ItemGroup>
+
+</Project>

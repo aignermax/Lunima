@@ -1,4 +1,4 @@
-.PHONY: run build test clean restore
+.PHONY: run build test clean restore icon installer installer-selfcontained
 
 # Default target - run the desktop app
 run:
@@ -22,3 +22,19 @@ restore:
 
 # Build and run
 start: build run
+
+# ─────────────────────────────────────────────────────────────────
+# Installer targets (Windows only – requires WiX v4 and Python)
+# ─────────────────────────────────────────────────────────────────
+
+# Generate the Lunima application icon (Installer/LunimaIcon.ico)
+icon:
+	python3 scripts/generate_icon.py --output Installer/LunimaIcon.ico
+
+# Build the MSI installer (framework-dependent; .NET 8 required on target)
+installer:
+	powershell -ExecutionPolicy Bypass -File scripts/build_installer.ps1
+
+# Build a self-contained MSI (bundles .NET 8 runtime; ~150 MB)
+installer-selfcontained:
+	powershell -ExecutionPolicy Bypass -File scripts/build_installer.ps1 -SelfContained
