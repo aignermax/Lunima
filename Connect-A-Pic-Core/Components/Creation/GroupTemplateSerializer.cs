@@ -2,6 +2,7 @@ using System.Text.Json;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
+using CAP_Core.Tiles;
 
 namespace CAP_Core.Components.Creation;
 
@@ -145,7 +146,8 @@ public static class GroupTemplateSerializer
     }
 
     /// <summary>
-    /// Serializes a regular Component to a DTO with all data inline.
+    /// Serializes a regular Component to a DTO with all data inline,
+    /// including logical pin IDs and S-Matrix data so simulation survives a round-trip.
     /// </summary>
     private static ChildComponentDto SerializeComponent(Component comp)
     {
@@ -154,7 +156,32 @@ public static class GroupTemplateSerializer
             Name = p.Name,
             OffsetX = p.OffsetXMicrometers,
             OffsetY = p.OffsetYMicrometers,
-            AngleDegrees = p.AngleDegrees
+            AngleDegrees = p.AngleDegrees,
+            LogicalPinIdInFlow = p.LogicalPin?.IDInFlow ?? Guid.Empty,
+            LogicalPinIdOutFlow = p.LogicalPin?.IDOutFlow ?? Guid.Empty
+        }).ToList();
+
+        // Serialize S-Matrices so child components keep their simulation data after reload.
+        // Without this, deserialized children have empty WaveLengthToSMatrixMap → crash.
+        var sMatrices = comp.WaveLengthToSMatrixMap.Select(kvp =>
+        {
+            var allPinIds = kvp.Value.PinReference.Keys.ToList();
+            var transfers = kvp.Value.GetNonNullValues()
+                .Select(t => new TransferEntryDto
+                {
+                    FromPinId = t.Key.PinIdStart,
+                    ToPinId = t.Key.PinIdEnd,
+                    Real = t.Value.Real,
+                    Imaginary = t.Value.Imaginary
+                })
+                .ToList();
+
+            return new SMatrixEntryDto
+            {
+                WavelengthNm = kvp.Key,
+                AllPinIds = allPinIds,
+                Transfers = transfers
+            };
         }).ToList();
 
         return new ChildComponentDto
@@ -171,25 +198,51 @@ public static class GroupTemplateSerializer
             WidthMicrometers = comp.WidthMicrometers,
             HeightMicrometers = comp.HeightMicrometers,
             Rotation = (int)comp.Rotation90CounterClock,
-            Pins = pins
+            Pins = pins,
+            SMatrices = sMatrices
         };
     }
 
     /// <summary>
-    /// Deserializes a regular Component from a DTO.
+    /// Deserializes a regular Component from a DTO, restoring logical pin references
+    /// and S-Matrices so the component can participate in simulation after reload.
     /// </summary>
     private static Component DeserializeComponent(ChildComponentDto dto)
     {
-        var physicalPins = dto.Pins.Select(p => new PhysicalPin
+        // Reconstruct logical pins with the original Guids so S-Matrix pin references remain valid.
+        var physicalPins = dto.Pins.Select(p =>
         {
-            Name = p.Name,
-            OffsetXMicrometers = p.OffsetX,
-            OffsetYMicrometers = p.OffsetY,
-            AngleDegrees = p.AngleDegrees
+            Pin? logicalPin = null;
+            if (p.LogicalPinIdInFlow != Guid.Empty)
+            {
+                logicalPin = new Pin(p.Name, 0, MatterType.Light, RectSide.Left,
+                    p.LogicalPinIdInFlow, p.LogicalPinIdOutFlow);
+            }
+
+            return new PhysicalPin
+            {
+                Name = p.Name,
+                OffsetXMicrometers = p.OffsetX,
+                OffsetYMicrometers = p.OffsetY,
+                AngleDegrees = p.AngleDegrees,
+                LogicalPin = logicalPin
+            };
         }).ToList();
 
+        // Rebuild S-Matrices from serialized data so children are simulation-ready.
+        var sMatrixMap = new Dictionary<int, SMatrix>();
+        foreach (var entry in dto.SMatrices)
+        {
+            var sMatrix = new SMatrix(entry.AllPinIds, new());
+            var transfers = entry.Transfers.ToDictionary(
+                t => (t.FromPinId, t.ToPinId),
+                t => new System.Numerics.Complex(t.Real, t.Imaginary));
+            sMatrix.SetValues(transfers);
+            sMatrixMap[entry.WavelengthNm] = sMatrix;
+        }
+
         return new Component(
-            new Dictionary<int, SMatrix>(),
+            sMatrixMap,
             new List<Slider>(),
             dto.NazcaFunctionName ?? "",
             dto.NazcaFunctionParameters ?? "",
@@ -409,10 +462,17 @@ public class ChildComponentDto
     public int Rotation { get; set; }
     public List<PinDto> Pins { get; set; } = new();
     public GroupTemplateDto? NestedGroup { get; set; }
+
+    /// <summary>
+    /// S-Matrix data per wavelength. Populated during serialization so that
+    /// deserialized components remain simulation-ready without PDK re-loading.
+    /// </summary>
+    public List<SMatrixEntryDto> SMatrices { get; set; } = new();
 }
 
 /// <summary>
 /// DTO for a physical pin on a child component.
+/// Logical pin IDs are preserved so S-Matrix pin references survive a round-trip.
 /// </summary>
 public class PinDto
 {
@@ -420,6 +480,34 @@ public class PinDto
     public double OffsetX { get; set; }
     public double OffsetY { get; set; }
     public double AngleDegrees { get; set; }
+    public Guid LogicalPinIdInFlow { get; set; }
+    public Guid LogicalPinIdOutFlow { get; set; }
+}
+
+/// <summary>
+/// DTO for one wavelength's S-Matrix inside a serialized child component.
+/// Stores all pin IDs and the non-zero transfer coefficients.
+/// </summary>
+public class SMatrixEntryDto
+{
+    public int WavelengthNm { get; set; }
+
+    /// <summary>All pin IDs present in the matrix (needed to reconstruct dimensions).</summary>
+    public List<Guid> AllPinIds { get; set; } = new();
+
+    /// <summary>Non-zero transfer entries (inflow→outflow with complex coefficient).</summary>
+    public List<TransferEntryDto> Transfers { get; set; } = new();
+}
+
+/// <summary>
+/// DTO for a single transfer coefficient inside an S-Matrix.
+/// </summary>
+public class TransferEntryDto
+{
+    public Guid FromPinId { get; set; }
+    public Guid ToPinId { get; set; }
+    public double Real { get; set; }
+    public double Imaginary { get; set; }
 }
 
 /// <summary>
