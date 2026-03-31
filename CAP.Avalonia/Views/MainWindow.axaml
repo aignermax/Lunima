@@ -741,13 +741,17 @@
                                      IsVisible="{Binding RightPanel.Update.IsDownloading}"/>
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <Button Content="Install Now"
+                            <Button Content="Download"
                                     Command="{Binding RightPanel.Update.InstallUpdateCommand}"
                                     Width="90" Background="#3d5d3d"
                                     IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                            <Button Content="Later"
+                            <Button Content="Skip"
                                     Command="{Binding RightPanel.Update.RemindLaterCommand}"
                                     Width="55" Background="#3d3d3d"
+                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                            <Button Content="Skip Version"
+                                    Command="{Binding RightPanel.Update.SkipThisVersionCommand}"
+                                    Width="95" Background="#5d4330"
                                     IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                         </StackPanel>
                     </StackPanel>
@@ -763,6 +767,71 @@
 
         <!-- Main Canvas with Edit Mode Banner -->
         <DockPanel>
+            <!-- Update Banner -->
+            <Border DockPanel.Dock="Top"
+                    Background="#21463A"
+                    IsVisible="{Binding RightPanel.Update.UpdateAvailable}"
+                    Padding="14,10"
+                    BorderBrush="#3F8F73"
+                    BorderThickness="0,0,0,2">
+                <Grid ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto,Auto">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{Binding RightPanel.Update.LatestVersionText}"
+                                   Foreground="White"
+                                   FontWeight="Bold"
+                                   FontSize="14"/>
+                        <TextBlock Text="{Binding RightPanel.Update.StatusText}"
+                                   Foreground="#D4F2E6"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding RightPanel.Update.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                HorizontalAlignment="Right">
+                        <Button Content="Skip Version"
+                                Command="{Binding RightPanel.Update.SkipThisVersionCommand}"
+                                Background="#6A4A32"
+                                Foreground="White"
+                                Padding="14,6"
+                                IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                        <Button Content="Skip"
+                                Command="{Binding RightPanel.Update.RemindLaterCommand}"
+                                Background="#355248"
+                                Foreground="White"
+                                Padding="14,6"
+                                IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                        <Button Content="Download"
+                                Command="{Binding RightPanel.Update.InstallUpdateCommand}"
+                                Background="#8FD3A7"
+                                Foreground="#163227"
+                                FontWeight="SemiBold"
+                                Padding="16,6"
+                                IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                               Margin="0,8,0,0"
+                               Text="{Binding RightPanel.Update.ReleaseNotes}"
+                               Foreground="#C5E8DB"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               MaxHeight="72"
+                               IsVisible="{Binding RightPanel.Update.ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <ProgressBar Grid.Row="2" Grid.ColumnSpan="2"
+                                 Margin="0,10,0,0"
+                                 Value="{Binding RightPanel.Update.DownloadProgress}"
+                                 Minimum="0"
+                                 Maximum="1"
+                                 Height="6"
+                                 IsVisible="{Binding RightPanel.Update.IsDownloading}"/>
+                </Grid>
+            </Border>
+
             <!-- Edit Mode Banner (only visible when in edit mode) -->
             <Border DockPanel.Dock="Top"
                     Background="#FF6B35"
