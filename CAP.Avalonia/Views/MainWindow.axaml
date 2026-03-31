@@ -11,7 +11,7 @@
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Lunima"
-        Width="1400" Height="900">
+        Width="1500" Height="900">
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+G" Command="{Binding CreateGroupCommand}" />
@@ -100,6 +100,8 @@
                 <!-- PDK -->
                 <Button Content="📦 Load PDK" Command="{Binding LoadPdkCommand}"
                         MinWidth="95" Margin="2" Padding="8,4" Background="#3d3d5d" ToolTip.Tip="Load PDK component library"/>
+                <Button Content="❓" Command="{Binding OpenPdkHelpCommand}"
+                        Width="28" Margin="0,2,2,2" Padding="2,4" Background="#3d3d5d" ToolTip.Tip="PDK JSON format help and AI assistance guide"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 

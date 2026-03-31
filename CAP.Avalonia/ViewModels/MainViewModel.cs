@@ -367,6 +367,26 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);
 
+    [RelayCommand]
+    private void OpenPdkHelp()
+    {
+        var url = "https://github.com/aignermax/Lunima/blob/main/docs/PDK_JSON_FORMAT.md";
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+            StatusText = "Opening PDK help documentation in browser...";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not open browser: {ex.Message}";
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo()
     {
