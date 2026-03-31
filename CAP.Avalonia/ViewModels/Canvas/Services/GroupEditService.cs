@@ -1,0 +1,351 @@
+using System.Collections.ObjectModel;
+using CAP_Core.Components;
+using CAP_Core.Components.Connections;
+using CAP_Core.Components.Core;
+using CAP_Core.Routing;
+
+namespace CAP.Avalonia.ViewModels.Canvas.Services;
+
+/// <summary>
+/// Manages group editing operations (Unity-style sub-canvas approach).
+/// Handles entering/exiting edit mode, breadcrumb navigation, and canvas state backup/restore.
+/// </summary>
+public class GroupEditService
+{
+    private readonly ObservableCollection<ComponentViewModel> _components;
+    private readonly ObservableCollection<WaveguideConnectionViewModel> _connections;
+    private readonly ObservableCollection<PinViewModel> _allPins;
+    private readonly WaveguideConnectionManager _connectionManager;
+    private readonly WaveguideRouter _router;
+    private readonly Func<Component, string?, string?, ComponentViewModel> _addComponent;
+    private readonly Action _beginCommandExecution;
+    private readonly Action _endCommandExecution;
+    private readonly Action _initializeRouting;
+    private readonly Func<Task> _recalculateRoutes;
+
+    private readonly Stack<ComponentGroup> _editModeStack = new();
+    private CanvasState? _rootCanvasBackup;
+
+    /// <summary>
+    /// The currently edited group (null if at root level).
+    /// </summary>
+    public ComponentGroup? CurrentEditGroup { get; private set; }
+
+    /// <summary>
+    /// Whether currently in group edit mode.
+    /// </summary>
+    public bool IsInGroupEditMode => CurrentEditGroup != null;
+
+    /// <summary>
+    /// Breadcrumb path from root to current edit group.
+    /// </summary>
+    public ObservableCollection<ComponentGroup> BreadcrumbPath { get; } = new();
+
+    /// <summary>
+    /// Raised when group edit state changes (for VM to update bindings).
+    /// </summary>
+    public event Action? EditStateChanged;
+
+    /// <summary>
+    /// Called immediately when CurrentEditGroup changes, BEFORE collections are modified.
+    /// This allows the VM to update its observable property before CollectionChanged fires.
+    /// </summary>
+    public event Action<ComponentGroup?>? CurrentEditGroupChanging;
+
+    /// <summary>
+    /// Initializes the group edit service with required dependencies.
+    /// </summary>
+    public GroupEditService(
+        ObservableCollection<ComponentViewModel> components,
+        ObservableCollection<WaveguideConnectionViewModel> connections,
+        ObservableCollection<PinViewModel> allPins,
+        WaveguideConnectionManager connectionManager,
+        WaveguideRouter router,
+        Func<Component, string?, string?, ComponentViewModel> addComponent,
+        Action beginCommandExecution,
+        Action endCommandExecution,
+        Action initializeRouting,
+        Func<Task> recalculateRoutes)
+    {
+        _components = components;
+        _connections = connections;
+        _allPins = allPins;
+        _connectionManager = connectionManager;
+        _router = router;
+        _addComponent = addComponent;
+        _beginCommandExecution = beginCommandExecution;
+        _endCommandExecution = endCommandExecution;
+        _initializeRouting = initializeRouting;
+        _recalculateRoutes = recalculateRoutes;
+    }
+
+    /// <summary>
+    /// Enters edit mode for a ComponentGroup (Unity-style sub-canvas approach).
+    /// </summary>
+    public void EnterGroupEditMode(ComponentGroup group)
+    {
+        if (group == null)
+            throw new ArgumentNullException(nameof(group));
+
+        if (CurrentEditGroup == null)
+        {
+            _rootCanvasBackup = BackupCanvasState();
+        }
+        else
+        {
+            _editModeStack.Push(CurrentEditGroup);
+        }
+
+        CurrentEditGroup = group;
+        CurrentEditGroupChanging?.Invoke(CurrentEditGroup);
+        LoadGroupAsSubCanvas(group);
+        UpdateBreadcrumbPath();
+        EditStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Exits the current group edit mode.
+    /// </summary>
+    public void ExitGroupEditMode()
+    {
+        if (CurrentEditGroup == null)
+            return;
+
+        var editedGroup = CurrentEditGroup;
+        SaveSubCanvasToGroup(editedGroup);
+
+        if (_editModeStack.Count > 0)
+        {
+            var parentGroup = _editModeStack.Pop();
+            CurrentEditGroup = parentGroup;
+            CurrentEditGroupChanging?.Invoke(CurrentEditGroup);
+            LoadGroupAsSubCanvas(parentGroup);
+        }
+        else
+        {
+            CurrentEditGroup = null;
+            CurrentEditGroupChanging?.Invoke(null);
+            if (_rootCanvasBackup != null)
+            {
+                RestoreCanvasState(_rootCanvasBackup);
+                _rootCanvasBackup = null;
+            }
+        }
+
+        NotifyGroupDimensionsChanged(editedGroup);
+        UpdateBreadcrumbPath();
+        EditStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Exits all the way to root level.
+    /// </summary>
+    public void ExitToRoot()
+    {
+        if (CurrentEditGroup == null)
+            return;
+
+        var editedGroup = CurrentEditGroup;
+        SaveSubCanvasToGroup(editedGroup);
+
+        while (_editModeStack.Count > 0)
+            _editModeStack.Pop();
+
+        CurrentEditGroup = null;
+        CurrentEditGroupChanging?.Invoke(null);
+        if (_rootCanvasBackup != null)
+        {
+            RestoreCanvasState(_rootCanvasBackup);
+            _rootCanvasBackup = null;
+        }
+
+        NotifyGroupDimensionsChanged(editedGroup);
+        _editModeStack.Clear();
+        UpdateBreadcrumbPath();
+        EditStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Jumps to a specific level in the breadcrumb path.
+    /// </summary>
+    public void NavigateToBreadcrumbLevel(ComponentGroup? group)
+    {
+        if (group == null)
+        {
+            ExitToRoot();
+            return;
+        }
+
+        var index = BreadcrumbPath.IndexOf(group);
+        if (index < 0)
+            return;
+
+        while (_editModeStack.Count > BreadcrumbPath.Count - index - 2)
+            _editModeStack.Pop();
+
+        CurrentEditGroup = group;
+        CurrentEditGroupChanging?.Invoke(CurrentEditGroup);
+        UpdateBreadcrumbPath();
+        EditStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Updates external pin positions for a group based on current child positions.
+    /// </summary>
+    public void UpdateExternalPinPositions(ComponentGroup group)
+    {
+        foreach (var externalPin in group.ExternalPins)
+        {
+            var (pinX, pinY) = externalPin.InternalPin.GetAbsolutePosition();
+            externalPin.RelativeX = pinX - group.PhysicalX;
+            externalPin.RelativeY = pinY - group.PhysicalY;
+        }
+    }
+
+    /// <summary>
+    /// Calculates the bounding rectangle for a ComponentGroup.
+    /// </summary>
+    public (double X, double Y, double Width, double Height) CalculateGroupBounds(ComponentGroup group)
+    {
+        if (group.ChildComponents.Count == 0)
+            return (group.PhysicalX, group.PhysicalY, group.WidthMicrometers, group.HeightMicrometers);
+
+        double minX = group.ChildComponents.Min(c => c.PhysicalX);
+        double minY = group.ChildComponents.Min(c => c.PhysicalY);
+        double maxX = group.ChildComponents.Max(c => c.PhysicalX + c.WidthMicrometers);
+        double maxY = group.ChildComponents.Max(c => c.PhysicalY + c.HeightMicrometers);
+
+        return (minX, minY, maxX - minX, maxY - minY);
+    }
+
+    private void UpdateBreadcrumbPath()
+    {
+        BreadcrumbPath.Clear();
+        var tempStack = new Stack<ComponentGroup>(_editModeStack.Reverse());
+        while (tempStack.Count > 0)
+            BreadcrumbPath.Add(tempStack.Pop());
+
+        if (CurrentEditGroup != null)
+            BreadcrumbPath.Add(CurrentEditGroup);
+    }
+
+    private CanvasState BackupCanvasState()
+    {
+        return new CanvasState
+        {
+            Components = _components.ToList(),
+            Connections = _connections.ToList(),
+            AllPins = _allPins.ToList(),
+            ManagerConnections = _connectionManager.Connections.ToList()
+        };
+    }
+
+    private void RestoreCanvasState(CanvasState state)
+    {
+        try
+        {
+            _beginCommandExecution();
+            _components.Clear();
+            _connections.Clear();
+            _allPins.Clear();
+            _connectionManager.Clear();
+
+            foreach (var comp in state.Components)
+                _components.Add(comp);
+            foreach (var conn in state.Connections)
+                _connections.Add(conn);
+            foreach (var pin in state.AllPins)
+                _allPins.Add(pin);
+            foreach (var managerConn in state.ManagerConnections)
+                _connectionManager.AddExistingConnection(managerConn);
+        }
+        finally
+        {
+            _endCommandExecution();
+        }
+
+        _ = _recalculateRoutes();
+    }
+
+    private void LoadGroupAsSubCanvas(ComponentGroup group)
+    {
+        try
+        {
+            _beginCommandExecution();
+            _components.Clear();
+            _connections.Clear();
+            _allPins.Clear();
+            _connectionManager.Clear();
+
+            foreach (var child in group.ChildComponents)
+                _addComponent(child, null, null);
+
+            _initializeRouting();
+
+            foreach (var frozenPath in group.InternalPaths)
+            {
+                var connection = _connectionManager.AddConnectionWithCachedRoute(
+                    frozenPath.StartPin, frozenPath.EndPin, frozenPath.Path);
+                var connVm = new WaveguideConnectionViewModel(connection);
+                _connections.Add(connVm);
+            }
+        }
+        finally
+        {
+            _endCommandExecution();
+        }
+    }
+
+    private void SaveSubCanvasToGroup(ComponentGroup group)
+    {
+        var canvasComponents = _components.Select(c => c.Component).ToHashSet();
+        var childrenToRemove = group.ChildComponents.Where(c => !canvasComponents.Contains(c)).ToList();
+        foreach (var child in childrenToRemove)
+            group.RemoveChild(child);
+
+        foreach (var compVm in _components)
+        {
+            if (!group.ChildComponents.Contains(compVm.Component))
+                group.AddChild(compVm.Component);
+        }
+
+        group.InternalPaths.Clear();
+        foreach (var connVm in _connections.ToList())
+        {
+            var conn = connVm.Connection;
+            if (conn.RoutedPath != null)
+            {
+                group.AddInternalPath(new FrozenWaveguidePath
+                {
+                    StartPin = conn.StartPin,
+                    EndPin = conn.EndPin,
+                    Path = conn.RoutedPath
+                });
+            }
+        }
+
+        group.UpdateGroupBounds();
+    }
+
+    private void NotifyGroupDimensionsChanged(ComponentGroup editedGroup)
+    {
+        var groupViewModel = _components.FirstOrDefault(c => c.Component == editedGroup);
+        if (groupViewModel == null)
+            return;
+
+        groupViewModel.NotifyDimensionsChanged();
+        if (editedGroup.ChildComponents.Count > 0)
+        {
+            groupViewModel.X = editedGroup.ChildComponents.Min(c => c.PhysicalX);
+            groupViewModel.Y = editedGroup.ChildComponents.Min(c => c.PhysicalY);
+        }
+    }
+
+    private class CanvasState
+    {
+        public List<ComponentViewModel> Components { get; set; } = new();
+        public List<WaveguideConnectionViewModel> Connections { get; set; } = new();
+        public List<PinViewModel> AllPins { get; set; } = new();
+        public List<WaveguideConnection> ManagerConnections { get; set; } = new();
+    }
+}
