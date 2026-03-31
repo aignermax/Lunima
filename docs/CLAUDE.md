@@ -157,13 +157,40 @@ python3 tools/smart_test.py --file MyTests.cs   # Specific file
 
 **⚠️ MANDATORY: Use Python tools - NOT MCP (doesn't work in headless mode)!**
 
-### Tool Location
+### Tool Installation & Location
 
-**Tools are located in:** `~/.cap-tools/`
+**Tools can be in two locations:**
+1. `~/.cap-tools/` (recommended for persistent installation)
+2. `tools/` (inside repository, for agent sessions)
 
+**If tools are missing, install them:**
 ```bash
+# Clone tools repository
+git clone https://github.com/aignermax/python-dev-tools.git /tmp/python-dev-tools
+
+# Option 1: Install to ~/.cap-tools/ (persistent)
+mkdir -p ~/.cap-tools
+cp /tmp/python-dev-tools/smart_test.py ~/.cap-tools/
+cp /tmp/python-dev-tools/semantic_search.py ~/.cap-tools/
+
+# Option 2: Install to tools/ (repository-local)
+mkdir -p tools
+cp /tmp/python-dev-tools/smart_test.py tools/
+cp /tmp/python-dev-tools/semantic_search.py tools/
+
+# Clean up
+rm -rf /tmp/python-dev-tools
+```
+
+**Usage (try both locations):**
+```bash
+# Preferred (persistent installation):
 python3 ~/.cap-tools/smart_test.py
 python3 ~/.cap-tools/semantic_search.py
+
+# Alternative (repository-local):
+python3 tools/smart_test.py
+python3 tools/semantic_search.py
 ```
 
 ### 🔍 Semantic Search (`semantic_search.py`)
@@ -171,9 +198,9 @@ python3 ~/.cap-tools/semantic_search.py
 Intent-based code discovery - use instead of grep/reading multiple files:
 
 ```bash
-python3 tools/semantic_search.py "ViewModel for analysis features"
-python3 tools/semantic_search.py "pathfinding grid obstacle"
-python3 tools/semantic_search.py --rebuild  # After major refactoring
+python3 ~/.cap-tools/semantic_search.py "ViewModel for analysis features"
+python3 ~/.cap-tools/semantic_search.py "pathfinding grid obstacle"
+python3 ~/.cap-tools/semantic_search.py --rebuild  # After major refactoring
 ```
 
 **Benefits:** Sub-second results, 90% token savings (top 5 matches vs 50+ file reads), smart semantic matching

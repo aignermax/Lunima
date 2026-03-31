@@ -162,15 +162,21 @@ public class LightSourceAfterPrefabUngroupTests
     /// <summary>
     /// Tests with GUID-based identifiers (as created by some code paths).
     /// This is the scenario where IsLightSource() fails because the Identifier
-    /// doesn't contain "grating" — only HumanReadableName does.
+    /// doesn't contain "grating" — only NazcaFunctionName does.
+    /// HumanReadableName is NOT checked because users can rename it.
     /// </summary>
     [Fact]
-    public void GuidBasedIdentifier_WithGratingHumanReadableName_ShouldBeDetected()
+    public void GuidBasedIdentifier_WithGratingNazcaFunctionName_ShouldBeDetected()
     {
-        // Simulate component created with GUID identifier but "Grating Coupler" HumanReadableName
+        // Simulate component created with GUID identifier
         var gc = IntegrationCircuitBuilder.CreateGratingCoupler(
             $"comp_{Guid.NewGuid():N}", 0, 0, Wavelengths);
-        gc.Component.HumanReadableName = "Grating Coupler TE 1550";
+
+        // Set NazcaFunctionName as PDK would (e.g., "ebeam_gc_te1550")
+        gc.Component.NazcaFunctionName = "ebeam_gc_te1550";
+
+        // User renames it (HumanReadableName) — should NOT affect light source detection
+        gc.Component.HumanReadableName = "My Custom Component Name";
 
         // Add to canvas
         var canvas = new DesignCanvasViewModel();
@@ -181,10 +187,11 @@ public class LightSourceAfterPrefabUngroupTests
         var portManager = new CAP_Core.Grid.PhysicalExternalPortManager();
         var sources = simService.ConfigureLightSources(canvas, portManager);
 
-        // This reveals whether IsLightSource checks Identifier vs HumanReadableName
+        // Should be detected via NazcaFunctionName, even though Identifier is GUID
+        // and HumanReadableName doesn't contain "grating"
         sources.Count.ShouldBeGreaterThan(0,
             "Light source not detected when Identifier is GUID-based. " +
-            "IsLightSource() should also check HumanReadableName.");
+            "IsLightSource() should check NazcaFunctionName (not HumanReadableName).");
     }
 
     /// <summary>

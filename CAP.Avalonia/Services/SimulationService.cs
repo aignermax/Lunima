@@ -228,15 +228,12 @@ public class SimulationService
         if (id.Contains("grating") || id.Contains("edge coupler"))
             return true;
 
-        // Also check HumanReadableName — after prefab serialize/deserialize/ungroup,
-        // Identifier may be GUID-based while HumanReadableName preserves the PDK name.
-        var humanName = component.HumanReadableName?.ToLowerInvariant() ?? "";
-        if (humanName.Contains("grating") || humanName.Contains("edge coupler"))
-            return true;
-
-        // Check NazcaFunctionName as a fallback (e.g., "ebeam_gc_te1550")
+        // Check NazcaFunctionName (e.g., "ebeam_gc_te1550") — this is reliable because
+        // it comes from the PDK and is not user-editable (unlike HumanReadableName).
+        // After prefab serialize/deserialize, Identifier may be GUID-based while
+        // NazcaFunctionName preserves the PDK template.
         var nazcaName = component.NazcaFunctionName?.ToLowerInvariant() ?? "";
-        return nazcaName.Contains("_gc_") || nazcaName.Contains("edge_coupler");
+        return nazcaName.Contains("_gc_") || nazcaName.Contains("edge_coupler") || nazcaName.Contains("grating");
     }
 
     internal static LaserType GetLaserTypeForWavelength(int wavelengthNm)
