@@ -2,6 +2,7 @@ using System.Text.Json;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
+using CAP_Core.Tiles;
 
 namespace CAP_Core.Components.Creation;
 
@@ -154,7 +155,11 @@ public static class GroupTemplateSerializer
             Name = p.Name,
             OffsetX = p.OffsetXMicrometers,
             OffsetY = p.OffsetYMicrometers,
-            AngleDegrees = p.AngleDegrees
+            AngleDegrees = p.AngleDegrees,
+            HasLogicalPin = p.LogicalPin != null,
+            LogicalPinNumber = p.LogicalPin?.PinNumber ?? 0,
+            LogicalPinMatterType = p.LogicalPin?.MatterType.ToString() ?? "",
+            LogicalPinSide = p.LogicalPin?.Side.ToString() ?? ""
         }).ToList();
 
         return new ChildComponentDto
@@ -180,12 +185,26 @@ public static class GroupTemplateSerializer
     /// </summary>
     private static Component DeserializeComponent(ChildComponentDto dto)
     {
-        var physicalPins = dto.Pins.Select(p => new PhysicalPin
+        var physicalPins = dto.Pins.Select(p =>
         {
-            Name = p.Name,
-            OffsetXMicrometers = p.OffsetX,
-            OffsetYMicrometers = p.OffsetY,
-            AngleDegrees = p.AngleDegrees
+            var pin = new PhysicalPin
+            {
+                Name = p.Name,
+                OffsetXMicrometers = p.OffsetX,
+                OffsetYMicrometers = p.OffsetY,
+                AngleDegrees = p.AngleDegrees
+            };
+
+            if (p.HasLogicalPin)
+            {
+                var matterType = Enum.TryParse<MatterType>(p.LogicalPinMatterType, out var mt)
+                    ? mt : MatterType.Light;
+                var side = Enum.TryParse<RectSide>(p.LogicalPinSide, out var s)
+                    ? s : RectSide.Right;
+                pin.LogicalPin = new Pin(p.Name, p.LogicalPinNumber, matterType, side);
+            }
+
+            return pin;
         }).ToList();
 
         return new Component(
@@ -420,6 +439,27 @@ public class PinDto
     public double OffsetX { get; set; }
     public double OffsetY { get; set; }
     public double AngleDegrees { get; set; }
+
+    /// <summary>
+    /// Whether this pin has a logical pin for S-Matrix simulation.
+    /// When true, a LogicalPin is recreated during deserialization.
+    /// </summary>
+    public bool HasLogicalPin { get; set; }
+
+    /// <summary>
+    /// Logical pin number (used for S-Matrix port ordering).
+    /// </summary>
+    public int LogicalPinNumber { get; set; }
+
+    /// <summary>
+    /// Logical pin matter type (Light, Electricity, None).
+    /// </summary>
+    public string LogicalPinMatterType { get; set; } = "";
+
+    /// <summary>
+    /// Logical pin side on the component rectangle.
+    /// </summary>
+    public string LogicalPinSide { get; set; } = "";
 }
 
 /// <summary>
