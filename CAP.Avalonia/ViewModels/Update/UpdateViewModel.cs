@@ -122,7 +122,20 @@ public partial class UpdateViewModel : ObservableObject
         var msiAsset = UpdateChecker.FindMsiAsset(_availableRelease);
         if (msiAsset == null)
         {
-            StatusText = "No MSI installer found in this release. Please download manually.";
+            // No MSI found - open GitHub releases page in browser
+            StatusText = "Opening GitHub releases page in browser...";
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = _availableRelease.HtmlUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Could not open browser: {ex.Message}";
+            }
             return;
         }
 
