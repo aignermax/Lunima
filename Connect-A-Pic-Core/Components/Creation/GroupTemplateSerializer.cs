@@ -2,6 +2,7 @@ using System.Text.Json;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
+using CAP_Core.Tiles;
 
 namespace CAP_Core.Components.Creation;
 
@@ -154,7 +155,9 @@ public static class GroupTemplateSerializer
             Name = p.Name,
             OffsetX = p.OffsetXMicrometers,
             OffsetY = p.OffsetYMicrometers,
-            AngleDegrees = p.AngleDegrees
+            AngleDegrees = p.AngleDegrees,
+            LogicalPinIDInFlow = p.LogicalPin?.IDInFlow.ToString(),
+            LogicalPinIDOutFlow = p.LogicalPin?.IDOutFlow.ToString()
         }).ToList();
 
         return new ChildComponentDto
@@ -180,12 +183,13 @@ public static class GroupTemplateSerializer
     /// </summary>
     private static Component DeserializeComponent(ChildComponentDto dto)
     {
-        var physicalPins = dto.Pins.Select(p => new PhysicalPin
+        var physicalPins = dto.Pins.Select((p, i) => new PhysicalPin
         {
             Name = p.Name,
             OffsetXMicrometers = p.OffsetX,
             OffsetYMicrometers = p.OffsetY,
-            AngleDegrees = p.AngleDegrees
+            AngleDegrees = p.AngleDegrees,
+            LogicalPin = RestoreLogicalPin(p, i)
         }).ToList();
 
         return new Component(
@@ -206,6 +210,31 @@ public static class GroupTemplateSerializer
             NazcaModuleName = dto.NazcaModuleName,
             HumanReadableName = dto.HumanReadableName
         };
+    }
+
+    /// <summary>
+    /// Restores or creates a LogicalPin from a PinDto.
+    /// Uses stored GUIDs if available (forward compatibility), otherwise creates fresh ones.
+    /// This ensures deserialized components show valid (green) pins rather than invalid (red) ones.
+    /// </summary>
+    private static Pin RestoreLogicalPin(PinDto dto, int pinIndex)
+    {
+        var side = dto.AngleDegrees switch
+        {
+            0 => RectSide.Right,
+            90 => RectSide.Up,
+            180 => RectSide.Left,
+            270 => RectSide.Down,
+            _ => RectSide.Right
+        };
+
+        if (Guid.TryParse(dto.LogicalPinIDInFlow, out var idInFlow) &&
+            Guid.TryParse(dto.LogicalPinIDOutFlow, out var idOutFlow))
+        {
+            return new Pin(dto.Name, pinIndex, MatterType.Light, side, idInFlow, idOutFlow);
+        }
+
+        return new Pin(dto.Name, pinIndex, MatterType.Light, side);
     }
 
     /// <summary>
@@ -420,6 +449,18 @@ public class PinDto
     public double OffsetX { get; set; }
     public double OffsetY { get; set; }
     public double AngleDegrees { get; set; }
+
+    /// <summary>
+    /// Preserved LogicalPin IDInFlow for S-Matrix simulation continuity.
+    /// Null in templates saved before this field was introduced (backward-compatible).
+    /// </summary>
+    public string? LogicalPinIDInFlow { get; set; }
+
+    /// <summary>
+    /// Preserved LogicalPin IDOutFlow for S-Matrix simulation continuity.
+    /// Null in templates saved before this field was introduced (backward-compatible).
+    /// </summary>
+    public string? LogicalPinIDOutFlow { get; set; }
 }
 
 /// <summary>
