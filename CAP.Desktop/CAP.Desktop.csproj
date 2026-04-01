@@ -7,7 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-    <Version>0.5.5</Version>
+    <Version>0.5.6</Version>
     <!-- Lunima application icon (embedded in the .exe) -->
     <ApplicationIcon>LunimaIcon.ico</ApplicationIcon>
   </PropertyGroup>
