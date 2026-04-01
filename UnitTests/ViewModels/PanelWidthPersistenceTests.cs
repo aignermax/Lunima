@@ -6,6 +6,8 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Update;
+using CAP.Avalonia.ViewModels.AI;
+using Moq;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_Core.Components.Creation;
@@ -74,7 +76,8 @@ public class PanelWidthPersistenceTests : IDisposable
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            updateVm);
+            updateVm,
+            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService));
     }
 
     private sealed class NoOpUrlLauncher : IUrlLauncher

@@ -644,6 +644,9 @@
                         </StackPanel>
                     </StackPanel>
 
+                    <!-- AI Design Assistant Panel -->
+                    <panels:AiAssistantPanel/>
+
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
 

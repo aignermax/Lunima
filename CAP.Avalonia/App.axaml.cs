@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
+using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.Views;
 using CAP_Contracts;
 using CAP_Core.Helpers;
@@ -50,6 +51,10 @@ public partial class App : Application
             sp.GetRequiredService<HttpClient>()));
         services.AddSingleton<IUrlLauncher, SystemUrlLauncher>();
         services.AddTransient<UpdateViewModel>();
+
+        // Register AI assistant services
+        services.AddSingleton<IAiService, AiService>(sp => new AiService(sp.GetRequiredService<HttpClient>()));
+        services.AddTransient<AiAssistantViewModel>();
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();

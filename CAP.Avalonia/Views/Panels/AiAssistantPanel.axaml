@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:ai="using:CAP.Avalonia.ViewModels.AI"
+             x:Class="CAP.Avalonia.Views.Panels.AiAssistantPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+
+        <!-- Header row -->
+        <DockPanel Margin="0,0,0,8">
+            <TextBlock DockPanel.Dock="Left"
+                       Text="AI Design Assistant"
+                       Foreground="#7EC8E3"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+            <Button DockPanel.Dock="Right"
+                    Content="Clear"
+                    Command="{Binding RightPanel.AiAssistant.ClearHistoryCommand}"
+                    FontSize="10" Padding="6,2"
+                    Background="#3d3d3d" Foreground="Gray"
+                    HorizontalAlignment="Right"/>
+        </DockPanel>
+
+        <TextBlock Text="Describe your photonic circuit in natural language."
+                   Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+        <!-- Chat history -->
+        <Border Background="#1a1a1a" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Margin="0,0,0,8">
+            <ScrollViewer Height="220"
+                          VerticalScrollBarVisibility="Auto"
+                          x:Name="ChatScrollViewer">
+                <ItemsControl ItemsSource="{Binding RightPanel.AiAssistant.Messages}"
+                              Margin="6">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="ai:AiChatMessage">
+                            <Border Margin="0,3" Padding="8,6" CornerRadius="4"
+                                    Background="{Binding MessageBackground}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding RoleLabel}"
+                                               FontSize="9" FontWeight="SemiBold"
+                                               Foreground="Gray" Margin="0,0,0,3"/>
+                                    <TextBlock Text="{Binding Content}"
+                                               Foreground="White"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Typing indicator -->
+        <TextBlock Text="AI is thinking..."
+                   Foreground="Gray" FontSize="10" FontStyle="Italic"
+                   Margin="0,0,0,5"
+                   IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
+
+        <!-- Status text -->
+        <TextBlock Text="{Binding RightPanel.AiAssistant.StatusText}"
+                   Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                   IsVisible="{Binding RightPanel.AiAssistant.StatusText,
+                               Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Input row -->
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,5">
+            <TextBox Grid.Column="0"
+                     Text="{Binding RightPanel.AiAssistant.UserInput}"
+                     Watermark="Describe your photonic circuit..."
+                     Background="#1e1e1e" Foreground="White" BorderBrush="#3e3e3e"
+                     TextWrapping="Wrap" AcceptsReturn="False"
+                     FontSize="11" Margin="0,0,5,0"
+                     IsEnabled="{Binding RightPanel.AiAssistant.IsTyping,
+                                 Converter={x:Static BoolConverters.Not}}"/>
+            <Button Grid.Column="1"
+                    Content="Send"
+                    Command="{Binding RightPanel.AiAssistant.SendMessageCommand}"
+                    Background="#2d5d7d" Foreground="White"
+                    Width="50" Margin="0,0,4,0"/>
+            <Button Grid.Column="2"
+                    Content="✕"
+                    Command="{Binding RightPanel.AiAssistant.CancelRequestCommand}"
+                    Background="#5d2d2d" Foreground="White"
+                    Width="28"
+                    ToolTip.Tip="Cancel AI request"
+                    IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
+        </Grid>
+
+        <!-- API Key settings (collapsed by default) -->
+        <Expander Header="API Key Settings"
+                  IsExpanded="{Binding RightPanel.AiAssistant.IsSettingsExpanded}"
+                  Foreground="Gray" FontSize="10"
+                  Margin="0,5,0,0"
+                  Background="#1a1a1a">
+            <StackPanel Margin="0,8,0,0" Spacing="5">
+                <TextBlock Text="Claude API Key (Anthropic):"
+                           Foreground="Gray" FontSize="10"/>
+                <TextBox Text="{Binding RightPanel.AiAssistant.ApiKey}"
+                         Watermark="sk-ant-..."
+                         PasswordChar="*"
+                         Background="#1e1e1e" Foreground="White"
+                         BorderBrush="#3e3e3e" FontSize="11"/>
+                <Button Content="Save API Key"
+                        Command="{Binding RightPanel.AiAssistant.SaveApiKeyCommand}"
+                        Background="#3d5d3d" Foreground="White"
+                        Width="120" HorizontalAlignment="Left"/>
+                <TextBlock Text="Get a free API key at console.anthropic.com"
+                           Foreground="#666666" FontSize="9" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Expander>
+    </StackPanel>
+
+</UserControl>

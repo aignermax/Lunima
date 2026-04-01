@@ -200,6 +200,24 @@ public class UserPreferencesService
     }
 
     /// <summary>
+    /// Gets the API key for the AI Design Assistant.
+    /// Returns an empty string if not configured.
+    /// </summary>
+    public string GetAiApiKey()
+    {
+        return _preferences.AiApiKey;
+    }
+
+    /// <summary>
+    /// Sets the API key for the AI Design Assistant and saves preferences.
+    /// </summary>
+    public void SetAiApiKey(string apiKey)
+    {
+        _preferences.AiApiKey = apiKey ?? "";
+        Save();
+    }
+
+    /// <summary>
     /// Clears any skipped update version and saves preferences.
     /// </summary>
     public void ClearSkippedUpdateVersion()
@@ -271,4 +289,10 @@ public class UserPreferences
     /// Null means never skipped. Reset daily.
     /// </summary>
     public DateTime? SkipTodayDate { get; set; }
+
+    /// <summary>
+    /// Encrypted API key for the AI Design Assistant (Claude/Anthropic).
+    /// Empty string means no key is configured.
+    /// </summary>
+    public string AiApiKey { get; set; } = "";
 }
