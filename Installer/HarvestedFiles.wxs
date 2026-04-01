@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Fragment>
+        <DirectoryRef Id="INSTALLDIR">
+            <Directory Id="DIR_PDKs" Name="PDKs" />
+        </DirectoryRef>
         <ComponentGroup Id="HarvestedAppFiles">
             <Component Id="cmp0000" Directory="INSTALLDIR" Guid="*">
                 <File Id="fil0000" Source="$(var.PublishDir)\av_libglesv2.dll" KeyPath="yes" />
@@ -194,10 +197,10 @@
             <Component Id="cmp0063" Directory="INSTALLDIR" Guid="*">
                 <File Id="fil0063" Source="$(var.PublishDir)\YamlDotNet.dll" KeyPath="yes" />
             </Component>
-            <Component Id="cmp0064" Directory="INSTALLDIR" Guid="*">
+            <Component Id="cmp0064" Directory="DIR_PDKs" Guid="*">
                 <File Id="fil0064" Source="$(var.PublishDir)\PDKs\demo-pdk.json" KeyPath="yes" />
             </Component>
-            <Component Id="cmp0065" Directory="INSTALLDIR" Guid="*">
+            <Component Id="cmp0065" Directory="DIR_PDKs" Guid="*">
                 <File Id="fil0065" Source="$(var.PublishDir)\PDKs\siepic-ebeam-pdk.json" KeyPath="yes" />
             </Component>
         </ComponentGroup>
