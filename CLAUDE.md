@@ -260,7 +260,27 @@ python scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
 
 ---
 
-## 12. Key File Reference
+## 12. Coordinate Systems
+
+Three coordinate systems are used in Lunima. All conversions go through `CoordinateTranslationService`.
+
+| System | Origin | Units | Y-axis | Used in |
+|--------|--------|-------|--------|---------|
+| Viewport (Grid) | Top-left | Grid cells (int) | Down | UI, DesignCanvas |
+| Physical | Top-left | Micrometers (double) | Down | Component placement, simulation |
+| Nazca (GDS) | Bottom-left of Nazca origin | Micrometers (double) | **Up (flipped!)** | GDS export, Python generation |
+
+**Transformation Pipeline:** Viewport → Physical → Nazca → GDS
+
+**Single source of truth:** `Connect-A-Pic-Core/Coordinates/CoordinateTranslationService.cs`
+- `CalculateNazcaOriginOffset(comp)` — origin offset logic (PDK/explicit/parametric/legacy)
+- `GetPinNazcaPosition(pin)` — absolute Nazca coordinates for a physical pin
+- `ComponentToNazca(comp)` — component placement (X, Y, rotation) for .put() call
+- `IsPdkFunction(name)` / `IsParametricStraight(name, params)` — PDK classification
+
+---
+
+## 13. Key File Reference
 
 | Purpose | Path |
 |---------|------|
@@ -271,6 +291,8 @@ python scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
 | Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
 | Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
 | GDS testing tools | `scripts/extract_gds_coords.py`, `scripts/compare_gds_coords.py` |
+| Coordinate service | `Connect-A-Pic-Core/Coordinates/CoordinateTranslationService.cs` |
+| Coordinate tests | `UnitTests/Coordinates/CoordinateTranslationServiceTests.cs` |
 
 ---
 

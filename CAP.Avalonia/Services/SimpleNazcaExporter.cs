@@ -4,6 +4,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Coordinates;
 using CAP_Core.Routing;
 
 namespace CAP.Avalonia.Services;
@@ -14,6 +15,8 @@ namespace CAP.Avalonia.Services;
 /// </summary>
 public class SimpleNazcaExporter
 {
+    private static readonly CoordinateTranslationService _coordService = new();
+
     /// <summary>
     /// Exports the full design to a Python/Nazca script.
     /// </summary>
@@ -101,18 +104,10 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Checks if a component is a parametric straight waveguide.
+    /// Delegates to <see cref="CoordinateTranslationService.IsParametricStraight"/>.
     /// </summary>
-    private static bool IsParametricStraight(string funcName, string parameters)
-    {
-        if (string.IsNullOrEmpty(parameters))
-            return false;
-
-        var lower = funcName.ToLowerInvariant();
-        var hasLength = parameters.Contains("length=", StringComparison.OrdinalIgnoreCase);
-        var isStraight = lower.Contains("straight") || lower.Contains("strt");
-
-        return hasLength && isStraight;
-    }
+    private static bool IsParametricStraight(string funcName, string parameters) =>
+        CoordinateTranslationService.IsParametricStraight(funcName, parameters);
 
     /// <summary>
     /// Generates a parametric straight waveguide stub that uses nd.strt() with length parameter.
@@ -303,42 +298,10 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Calculates the Nazca origin offset for a component based on its type.
+    /// Delegates to <see cref="CoordinateTranslationService.CalculateNazcaOriginOffset"/>.
     /// </summary>
-    private static (double OffsetX, double OffsetY) CalculateOriginOffset(Component comp)
-    {
-        var funcName = comp.NazcaFunctionName;
-
-        bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) &&
-            (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
-
-        // Also use explicit NazcaOriginOffset when set (non-zero), regardless of function name.
-        // Fixes components with auto-generated names (e.g. "nazca_grating_coupler") that still
-        // have a physical Nazca origin offset. Issue #355.
-        bool hasExplicitOriginOffset = comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0;
-
-        if (hasPdkFunctionName || hasExplicitOriginOffset)
-        {
-            double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-            double offsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
-            double offsetY = comp.NazcaOriginOffsetX * Math.Sin(rotRad) + comp.NazcaOriginOffsetY * Math.Cos(rotRad);
-            return (offsetX, offsetY);
-        }
-
-        if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
-        {
-            var firstPin = comp.PhysicalPins.FirstOrDefault();
-            if (firstPin != null)
-            {
-                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-                double offsetX = firstPin.OffsetXMicrometers * Math.Cos(rotRad) - firstPin.OffsetYMicrometers * Math.Sin(rotRad);
-                double offsetY = firstPin.OffsetXMicrometers * Math.Sin(rotRad) + firstPin.OffsetYMicrometers * Math.Cos(rotRad);
-                return (offsetX, offsetY);
-            }
-        }
-
-        // Fallback for legacy components with no explicit Nazca origin offset
-        return (0, comp.HeightMicrometers);
-    }
+    private static (double OffsetX, double OffsetY) CalculateOriginOffset(Component comp) =>
+        _coordService.CalculateNazcaOriginOffset(comp);
 
     private static void AppendConnections(
         StringBuilder sb,
@@ -760,16 +723,10 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550").
-    /// Recognizes SiEPIC EBeam PDK naming patterns.
+    /// Delegates to <see cref="CoordinateTranslationService.IsPdkFunction"/>.
     /// </summary>
     internal static bool IsPdkFunction(string name) =>
-        name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("GC_", StringComparison.Ordinal) ||
-        name.StartsWith("ANT_", StringComparison.Ordinal) ||
-        name.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("taper_", StringComparison.OrdinalIgnoreCase) ||
-        (name.Contains(".", StringComparison.Ordinal) &&
-         !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+        CoordinateTranslationService.IsPdkFunction(name);
 
     /// <summary>
     /// Maps a component to its Nazca function call string.
