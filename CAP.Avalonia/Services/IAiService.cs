@@ -1,3 +1,5 @@
+using CAP.Avalonia.ViewModels.AI;
+
 namespace CAP.Avalonia.Services;
 
 /// <summary>
@@ -24,5 +26,22 @@ public interface IAiService
     Task<string> SendMessageAsync(
         string userMessage,
         IReadOnlyList<(string Role, string Content)> history,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Sends a message to the AI with tool support. Handles the full tool-calling loop:
+    /// Claude may call tools multiple times before returning the final text response.
+    /// </summary>
+    /// <param name="userMessage">The user's message to send.</param>
+    /// <param name="history">Prior text-only conversation turns as (role, content) pairs.</param>
+    /// <param name="tools">Tool definitions available for Claude to call.</param>
+    /// <param name="executeToolAsync">Callback to execute a tool: (toolName, inputJson) → result string.</param>
+    /// <param name="ct">Cancellation token to abort the request.</param>
+    /// <returns>Final text response after all tool calls are resolved.</returns>
+    Task<string> SendMessageWithToolsAsync(
+        string userMessage,
+        IReadOnlyList<(string Role, string Content)> history,
+        IReadOnlyList<AiToolDefinition> tools,
+        Func<string, string, Task<string>> executeToolAsync,
         CancellationToken ct = default);
 }
