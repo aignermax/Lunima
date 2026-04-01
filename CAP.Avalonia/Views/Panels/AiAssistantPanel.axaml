@@ -42,10 +42,10 @@
                                     <TextBlock Text="{Binding RoleLabel}"
                                                FontSize="9" FontWeight="SemiBold"
                                                Foreground="Gray" Margin="0,0,0,3"/>
-                                    <TextBlock Text="{Binding Content}"
-                                               Foreground="White"
-                                               FontSize="11"
-                                               TextWrapping="Wrap"/>
+                                    <SelectableTextBlock Text="{Binding Content}"
+                                                         Foreground="White"
+                                                         FontSize="11"
+                                                         TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -69,6 +69,7 @@
         <!-- Input row -->
         <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,5">
             <TextBox Grid.Column="0"
+                     x:Name="UserInputTextBox"
                      Text="{Binding RightPanel.AiAssistant.UserInput}"
                      Watermark="Describe your photonic circuit..."
                      Background="#1e1e1e" Foreground="White" BorderBrush="#3e3e3e"

@@ -14,7 +14,7 @@ public class AiService : IAiService
     private string _apiKey = "";
 
     private const string ApiUrl = "https://api.anthropic.com/v1/messages";
-    private const string ModelId = "claude-3-5-sonnet-20241022";
+    private const string ModelId = "claude-sonnet-4-5";
     private const string AnthropicVersion = "2023-06-01";
     private const int MaxTokens = 1024;
 
