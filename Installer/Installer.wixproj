@@ -11,8 +11,12 @@
     <!-- Default installer version for ad-hoc WiX builds; normal flows pass this from CAP.Desktop.csproj -->
     <ProductVersion Condition=" '$(ProductVersion)' == '' ">0.0.0</ProductVersion>
     <DefineConstants>$(DefineConstants);ProductVersion=$(ProductVersion)</DefineConstants>
-    <!-- Default publish output; overridden by build_installer.ps1 -->
+    <!-- Default publish output; overridden by GitHub Actions -->
     <PublishDir Condition=" '$(PublishDir)' == '' ">$(MSBuildThisFileDirectory)..\publish\win-x64\</PublishDir>
+    <!-- Pass PublishDir to WiX as a preprocessor variable -->
+    <DefineConstants>$(DefineConstants);PublishDir=$(PublishDir)</DefineConstants>
+    <!-- Suppress ICE80 (false positive for 64-bit components under ProgramFiles64Folder) -->
+    <SuppressIces>ICE80</SuppressIces>
   </PropertyGroup>
 
   <!-- ────────────────────────────────────────────────────────── -->
@@ -27,15 +31,11 @@
 
   <!-- ────────────────────────────────────────────────────────── -->
   <!-- Auto-harvest published application files                   -->
-  <!-- WiX scans $(PublishDir) at build time and generates        -->
-  <!-- components for every file it finds.                        -->
+  <!-- HarvestedFiles.wxs is generated using:                     -->
+  <!--   pwsh Installer/Generate-HarvestedFiles.ps1 \             -->
+  <!--     -PublishDir publish/win-x64-msi \                      -->
+  <!--     -OutputFile HarvestedFiles.wxs                         -->
+  <!-- Re-run this command when adding/removing files.            -->
   <!-- ────────────────────────────────────────────────────────── -->
-  <ItemGroup>
-    <HarvestDirectory Include="$(PublishDir)">
-      <DirectoryRef>INSTALLDIR</DirectoryRef>
-      <ComponentGroupRef>HarvestedAppFiles</ComponentGroupRef>
-      <SuppressRootDirectory>true</SuppressRootDirectory>
-    </HarvestDirectory>
-  </ItemGroup>
 
 </Project>

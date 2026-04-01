@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+    <Fragment>
+        <ComponentGroup Id="HarvestedAppFiles">
+            <Component Id="cmp0000" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0000" Source="$(var.PublishDir)\av_libglesv2.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0001" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0001" Source="$(var.PublishDir)\Avalonia.Base.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0002" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0002" Source="$(var.PublishDir)\Avalonia.Controls.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0003" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0003" Source="$(var.PublishDir)\Avalonia.DesignerSupport.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0004" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0004" Source="$(var.PublishDir)\Avalonia.Desktop.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0005" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0005" Source="$(var.PublishDir)\Avalonia.Dialogs.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0006" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0006" Source="$(var.PublishDir)\Avalonia.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0007" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0007" Source="$(var.PublishDir)\Avalonia.FreeDesktop.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0008" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0008" Source="$(var.PublishDir)\Avalonia.Markup.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0009" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0009" Source="$(var.PublishDir)\Avalonia.Markup.Xaml.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0010" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0010" Source="$(var.PublishDir)\Avalonia.Metal.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0011" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0011" Source="$(var.PublishDir)\Avalonia.MicroCom.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0012" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0012" Source="$(var.PublishDir)\Avalonia.Native.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0013" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0013" Source="$(var.PublishDir)\Avalonia.OpenGL.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0014" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0014" Source="$(var.PublishDir)\Avalonia.Remote.Protocol.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0015" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0015" Source="$(var.PublishDir)\Avalonia.Skia.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0016" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0016" Source="$(var.PublishDir)\Avalonia.Themes.Fluent.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0017" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0017" Source="$(var.PublishDir)\Avalonia.Vulkan.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0018" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0018" Source="$(var.PublishDir)\Avalonia.Win32.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0019" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0019" Source="$(var.PublishDir)\Avalonia.X11.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0020" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0020" Source="$(var.PublishDir)\CAP_Contracts.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0021" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0021" Source="$(var.PublishDir)\CAP_Contracts.pdb" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0022" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0022" Source="$(var.PublishDir)\CAP-Core.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0023" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0023" Source="$(var.PublishDir)\CAP-Core.pdb" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0024" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0024" Source="$(var.PublishDir)\CAP-DataAccess.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0025" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0025" Source="$(var.PublishDir)\CAP-DataAccess.pdb" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0026" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0026" Source="$(var.PublishDir)\CAP.Avalonia.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0027" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0027" Source="$(var.PublishDir)\CAP.Avalonia.pdb" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0028" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0028" Source="$(var.PublishDir)\CAP.Desktop.deps.json" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0029" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0029" Source="$(var.PublishDir)\CAP.Desktop.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0030" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0030" Source="$(var.PublishDir)\CAP.Desktop.exe" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0031" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0031" Source="$(var.PublishDir)\CAP.Desktop.pdb" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0032" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0032" Source="$(var.PublishDir)\CAP.Desktop.runtimeconfig.json" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0033" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0033" Source="$(var.PublishDir)\CommunityToolkit.Mvvm.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0034" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0034" Source="$(var.PublishDir)\ExtendedNumerics.BigDecimal.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0035" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0035" Source="$(var.PublishDir)\HarfBuzzSharp.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0036" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0036" Source="$(var.PublishDir)\libHarfBuzzSharp.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0037" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0037" Source="$(var.PublishDir)\libSkiaSharp.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0038" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0038" Source="$(var.PublishDir)\MathNet.Numerics.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0039" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0039" Source="$(var.PublishDir)\MicroCom.Runtime.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0040" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0040" Source="$(var.PublishDir)\Microsoft.Extensions.Configuration.Abstractions.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0041" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0041" Source="$(var.PublishDir)\Microsoft.Extensions.Configuration.Binder.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0042" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0042" Source="$(var.PublishDir)\Microsoft.Extensions.Configuration.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0043" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0043" Source="$(var.PublishDir)\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0044" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0044" Source="$(var.PublishDir)\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0045" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0045" Source="$(var.PublishDir)\Microsoft.Extensions.Logging.Abstractions.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0046" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0046" Source="$(var.PublishDir)\Microsoft.Extensions.Logging.Configuration.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0047" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0047" Source="$(var.PublishDir)\Microsoft.Extensions.Logging.Console.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0048" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0048" Source="$(var.PublishDir)\Microsoft.Extensions.Logging.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0049" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0049" Source="$(var.PublishDir)\Microsoft.Extensions.Logging.TraceSource.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0050" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0050" Source="$(var.PublishDir)\Microsoft.Extensions.Options.ConfigurationExtensions.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0051" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0051" Source="$(var.PublishDir)\Microsoft.Extensions.Options.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0052" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0052" Source="$(var.PublishDir)\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0053" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0053" Source="$(var.PublishDir)\NCalc.Core.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0054" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0054" Source="$(var.PublishDir)\NCalc.Sync.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0055" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0055" Source="$(var.PublishDir)\Parlot.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0056" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0056" Source="$(var.PublishDir)\SkiaSharp.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0057" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0057" Source="$(var.PublishDir)\System.Diagnostics.DiagnosticSource.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0058" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0058" Source="$(var.PublishDir)\System.IO.Pipelines.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0059" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0059" Source="$(var.PublishDir)\System.Linq.Dynamic.Core.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0060" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0060" Source="$(var.PublishDir)\System.Text.Encodings.Web.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0061" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0061" Source="$(var.PublishDir)\System.Text.Json.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0062" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0062" Source="$(var.PublishDir)\Tmds.DBus.Protocol.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0063" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0063" Source="$(var.PublishDir)\YamlDotNet.dll" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0064" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0064" Source="$(var.PublishDir)\PDKs\demo-pdk.json" KeyPath="yes" />
+            </Component>
+            <Component Id="cmp0065" Directory="INSTALLDIR" Guid="*">
+                <File Id="fil0065" Source="$(var.PublishDir)\PDKs\siepic-ebeam-pdk.json" KeyPath="yes" />
+            </Component>
+        </ComponentGroup>
+    </Fragment>
+</Wix>

@@ -137,6 +137,11 @@ jobs:
           -p:Version=${{ steps.version.outputs.version }}
           -o publish/win-x64-msi
 
+      - name: Generate HarvestedFiles.wxs
+        shell: pwsh
+        run: |
+          pwsh -ExecutionPolicy Bypass -File Installer/Generate-HarvestedFiles.ps1 -PublishDir publish/win-x64-msi -OutputFile HarvestedFiles.wxs
+
       - name: Build MSI
         shell: pwsh
         run: |
