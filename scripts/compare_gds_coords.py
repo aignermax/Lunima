@@ -7,7 +7,7 @@ the fabrication-blocking position bug where waveguide geometry does not align
 with component pin positions.
 
 Usage:
-    python Scripts/compare_gds_coords.py <reference.json> <system.json> [report.json]
+    python scripts/compare_gds_coords.py <reference.json> <system.json> [report.json]
 
 Exit codes:
     0 — all deviations within tolerance (no bug detected)

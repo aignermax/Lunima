@@ -13,7 +13,7 @@ namespace UnitTests.Integration;
 /// These tests establish a deterministic baseline by comparing
 /// <c>SimpleNazcaExporter</c> output against the explicit coordinates
 /// defined in <c>NazcaReferenceGenerator</c> and mirrored in
-/// <c>Scripts/generate_reference_nazca.py</c>.
+/// <c>scripts/generate_reference_nazca.py</c>.
 ///
 /// Test strategy:
 ///   1. Create reference design via <c>GdsTestDesigns</c>.

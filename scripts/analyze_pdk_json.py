@@ -6,8 +6,8 @@ Reads a PDK JSON file and prints component dimensions, pin positions,
 and the NazcaOriginOffset that would be derived by ConvertPdkComponentToTemplate().
 
 Usage:
-    python Scripts/analyze_pdk_json.py [pdk_file.json]
-    python Scripts/analyze_pdk_json.py CAP-DataAccess/PDKs/demo-pdk.json
+    python scripts/analyze_pdk_json.py [pdk_file.json]
+    python scripts/analyze_pdk_json.py CAP-DataAccess/PDKs/demo-pdk.json
 
 Output:
     For each component:

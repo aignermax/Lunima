@@ -6,7 +6,7 @@ namespace CAP.Avalonia.ViewModels.Diagnostics;
 
 /// <summary>
 /// ViewModel for the GDS Coordinate Comparison panel (Issue #333).
-/// Runs Scripts/compare_gds_coords.py on two JSON coordinate files and
+/// Runs scripts/compare_gds_coords.py on two JSON coordinate files and
 /// displays exact per-element deviations in micrometres, enabling engineers
 /// to confirm or refute fabrication-blocking alignment bugs (Issue #329).
 /// </summary>

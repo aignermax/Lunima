@@ -9,7 +9,7 @@ namespace UnitTests.Integration;
 
 /// <summary>
 /// Integration tests for the GDS coordinate extraction tool (issue #331).
-/// Verifies that Scripts/extract_gds_coords.py can be invoked from C# and
+/// Verifies that scripts/extract_gds_coords.py can be invoked from C# and
 /// produces valid JSON output containing polygon/path coordinate data.
 ///
 /// Tests skip automatically when Python or gdspy is not available, so they
@@ -29,7 +29,7 @@ public class GdsCoordinateExtractionTests
     {
         var scriptPath = GdsCoordinateExtractor.FindScriptPath();
         scriptPath.ShouldNotBeNull(
-            "Scripts/extract_gds_coords.py should exist relative to the test runner or AppContext.BaseDirectory");
+            "scripts/extract_gds_coords.py should exist relative to the test runner or AppContext.BaseDirectory");
         File.Exists(scriptPath).ShouldBeTrue();
     }
 
@@ -49,7 +49,7 @@ public class GdsCoordinateExtractionTests
         var scriptDir = Path.GetDirectoryName(scriptPath)!;
         var requirementsPath = Path.Combine(scriptDir, "requirements.txt");
         File.Exists(requirementsPath).ShouldBeTrue(
-            "Scripts/requirements.txt should exist next to extract_gds_coords.py");
+            "scripts/requirements.txt should exist next to extract_gds_coords.py");
 
         var content = File.ReadAllText(requirementsPath);
         content.ShouldContain("gdspy");

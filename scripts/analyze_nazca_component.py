@@ -8,8 +8,8 @@ Uses Nazca's demofab to instantiate components and report:
   - What NazcaOriginOffset should be in Connect-A-PIC
 
 Usage:
-    python Scripts/analyze_nazca_component.py [component_name]
-    python Scripts/analyze_nazca_component.py GratingCoupler_TE_1550
+    python scripts/analyze_nazca_component.py [component_name]
+    python scripts/analyze_nazca_component.py GratingCoupler_TE_1550
 
 Available components (Nazca demofab):
     mmi1x2_sh    — 1x2 MMI Splitter
@@ -136,7 +136,7 @@ def _print_reference_values(comp_name: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python Scripts/analyze_nazca_component.py <component_name>")
+        print("Usage: python scripts/analyze_nazca_component.py <component_name>")
         print()
         print("Available components: mmi1x2_sh, mmi2x2_dp, eopm_dc, io, pd")
         print()

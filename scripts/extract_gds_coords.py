@@ -5,7 +5,7 @@ Reads a GDS file using gdspy and extracts all polygon vertices and path
 coordinates, writing them to a JSON file for later comparison.
 
 Usage:
-    python Scripts/extract_gds_coords.py <input.gds> [output.json]
+    python scripts/extract_gds_coords.py <input.gds> [output.json]
 
 Output JSON schema:
 {

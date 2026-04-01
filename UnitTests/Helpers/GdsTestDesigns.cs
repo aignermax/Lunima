@@ -10,7 +10,7 @@ namespace UnitTests.Helpers;
 
 /// <summary>
 /// Provides reference designs for GDS ground-truth testing.
-/// The designs mirror <c>Scripts/generate_reference_nazca.py</c> exactly so
+/// The designs mirror <c>scripts/generate_reference_nazca.py</c> exactly so
 /// exported Nazca coordinates can be compared against a known-correct baseline.
 ///
 /// Reference design layout:
