@@ -3,8 +3,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
-using CAP.Avalonia.ViewModels.Library;
-using System.ComponentModel;
 using System.Linq;
 
 namespace CAP.Avalonia.Views;
@@ -15,7 +13,6 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Set up the FileDialogService when the window is loaded
         Loaded += async (_, _) =>
         {
             if (DataContext is MainViewModel vm)
@@ -26,21 +23,12 @@ public partial class MainWindow : Window
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
-                // Wire up rename dialog for group templates
-                vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = async (currentName) =>
-                {
-                    var dialog = new RenameDialog(currentName);
-                    return await dialog.ShowDialog<string?>(this);
-                };
-
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
-                    {
                         await clipboard.SetTextAsync(text);
-                    }
                 };
 
                 // Wire up clipboard for DimensionValidator
@@ -48,45 +36,11 @@ public partial class MainWindow : Window
                 {
                     var clipboard = Clipboard;
                     if (clipboard != null)
-                    {
                         await clipboard.SetTextAsync(text);
-                    }
-                };
-
-                // Wire up clipboard for ErrorConsole
-                vm.BottomPanel.ErrorConsole.CopyToClipboard = async (text) =>
-                {
-                    var clipboard = Clipboard;
-                    if (clipboard != null)
-                    {
-                        await clipboard.SetTextAsync(text);
-                    }
-                };
-
-                // Wire up auto-scroll: scroll to the newest entry when entries are added
-                vm.BottomPanel.ErrorConsole.PropertyChanged += (s, e) =>
-                {
-                    if (e.PropertyName == nameof(vm.BottomPanel.ErrorConsole.EntryCount) && ErrorConsoleListBox != null)
-                    {
-                        var items = ErrorConsoleListBox.ItemsSource;
-                        if (items is System.Collections.IList list && list.Count > 0)
-                        {
-                            ErrorConsoleListBox.ScrollIntoView(list[list.Count - 1]);
-                        }
-                    }
                 };
 
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
-
-                // Wire up LeftPanel.SelectedGroupTemplate changes to update ListBox selections
-                vm.LeftPanel.PropertyChanged += (s, e) =>
-                {
-                    if (e.PropertyName == nameof(vm.LeftPanel.SelectedGroupTemplate))
-                    {
-                        UpdateGroupTemplateListBoxSelections(vm.LeftPanel.SelectedGroupTemplate);
-                    }
-                };
             }
         };
     }
@@ -96,19 +50,12 @@ public partial class MainWindow : Window
     /// </summary>
     private void SetupPanelResizing(MainViewModel vm)
     {
-        // Set initial widths from saved preferences
         if (LeftPanelGrid != null && LeftPanelGrid.ColumnDefinitions.Count > 0)
-        {
             LeftPanelGrid.ColumnDefinitions[0].Width = new GridLength(vm.LeftPanel.LeftPanelWidth.Value, GridUnitType.Pixel);
-        }
 
         if (RightPanelGrid != null && RightPanelGrid.ColumnDefinitions.Count > 1)
-        {
             RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(vm.RightPanel.RightPanelWidth.Value, GridUnitType.Pixel);
-        }
 
-        // Listen to GridSplitter drag events to save new widths
-        // Left panel resizing - we need to find the GridSplitter in LeftPanelGrid
         if (LeftPanelGrid != null)
         {
             var leftSplitter = LeftPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
@@ -120,15 +67,12 @@ public partial class MainWindow : Window
                     {
                         var newWidth = LeftPanelGrid.ColumnDefinitions[0].Width.Value;
                         if (newWidth > 0)
-                        {
                             vm.LeftPanel.LeftPanelWidth = new GridLength(newWidth);
-                        }
                     }
                 };
             }
         }
 
-        // Right panel resizing
         if (RightPanelGrid != null)
         {
             var rightSplitter = RightPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
@@ -140,9 +84,7 @@ public partial class MainWindow : Window
                     {
                         var newWidth = RightPanelGrid.ColumnDefinitions[1].Width.Value;
                         if (newWidth > 0)
-                        {
                             vm.RightPanel.RightPanelWidth = new GridLength(newWidth);
-                        }
                     }
                 };
             }
@@ -161,7 +103,6 @@ public partial class MainWindow : Window
 
         var ctrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
-        // Global keyboard shortcuts that work regardless of focus
         switch (e.Key)
         {
             case Key.N:
@@ -187,7 +128,6 @@ public partial class MainWindow : Window
                 if (ctrlPressed)
                 {
                     Console.WriteLine("DEBUG: Ctrl+V detected");
-                    // Get the last canvas position for paste-at-cursor
                     var canvasPos = DesignCanvasControl.LastCanvasPosition;
                     mainVm.PasteSelected(canvasPos.X, canvasPos.Y);
                 }
@@ -201,7 +141,6 @@ public partial class MainWindow : Window
                 mainVm.DeleteSelectedCommand.Execute(null);
                 break;
             case Key.Escape:
-                // First priority: Exit group edit mode if active (via command for undo/redo)
                 if (mainVm.Canvas.IsInGroupEditMode)
                 {
                     if (mainVm.Canvas.CurrentEditGroup != null)
@@ -238,9 +177,7 @@ public partial class MainWindow : Window
                 {
                     var canvas = mainVm.Canvas;
                     if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-                    {
                         canvas.ShowGridOverlay = !canvas.ShowGridOverlay;
-                    }
                     else
                     {
                         canvas.GridSnap.Toggle();
@@ -285,185 +222,27 @@ public partial class MainWindow : Window
                     mainVm.RunSimulationCommand.Execute(null);
                 break;
             default:
-                return; // Don't mark as handled for unrecognized keys
+                return;
         }
 
         e.Handled = true;
         DesignCanvasControl.InvalidateVisual();
     }
 
-    private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel vm)
-        {
-            var (width, height) = GetActualViewportSize();
-            vm.ZoomToFit(width, height);
-        }
-    }
-
     /// <summary>
-    /// Gets the actual viewport size (visible area) independent of zoom level.
-    /// Uses the DesignCanvas control's own layout bounds, which correctly excludes
-    /// the left panel, right panel, and toolbar from the viewport dimensions.
-    /// The rendering coordinate space is the canvas local space, so ZoomToFit
-    /// must use canvas dimensions — not window dimensions — for correct centering.
+    /// Gets the actual viewport size (canvas bounds) independent of zoom level.
     /// </summary>
     private (double width, double height) GetActualViewportSize()
     {
-        // Use the canvas control's actual layout bounds.
-        // This is correct because PanX/PanY are in canvas-local coordinates,
-        // and ZoomToFit computes pan as: vpWidth/2 - boxCenterX * zoom.
-        // Using window ClientSize (which includes sidebars) would shift the
-        // computed pan center by (windowWidth - canvasWidth) / 2, causing the
-        // "wrong position on first F-press" bug.
         var canvasBounds = DesignCanvasControl.Bounds;
         if (canvasBounds.Width > 0 && canvasBounds.Height > 0)
             return (canvasBounds.Width, canvasBounds.Height);
 
-        // Fallback: if the canvas has not been laid out yet, use window client size.
         var windowWidth = ClientSize.Width;
         var windowHeight = ClientSize.Height;
         if (windowWidth > 0 && windowHeight > 0)
             return (windowWidth, windowHeight);
 
-        return (1400, 900); // Last-resort default matching the initial window size
+        return (1400, 900);
     }
-
-    /// <summary>
-    /// Handles pointer entering a group template item (shows delete button).
-    /// </summary>
-    private void OnGroupItemPointerEntered(object? sender, PointerEventArgs e)
-    {
-        if (sender is Border border && border.DataContext is GroupTemplateItemViewModel itemVm)
-        {
-            itemVm.IsHovered = true;
-        }
-    }
-
-    /// <summary>
-    /// Handles pointer leaving a group template item (hides delete button).
-    /// </summary>
-    private void OnGroupItemPointerExited(object? sender, PointerEventArgs e)
-    {
-        if (sender is Border border && border.DataContext is GroupTemplateItemViewModel itemVm)
-        {
-            itemVm.IsHovered = false;
-        }
-    }
-
-    /// <summary>
-    /// Handles selection change in UserGroups ListBox.
-    /// Extracts the GroupTemplate from GroupTemplateItemViewModel and sets it in LeftPanel.
-    /// </summary>
-    private void OnUserGroupsSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is not MainViewModel vm) return;
-        if (sender is not ListBox listBox) return;
-
-        if (listBox.SelectedItem is GroupTemplateItemViewModel itemVm)
-        {
-            vm.LeftPanel.SelectedGroupTemplate = itemVm.Template;
-            // Clear PDK groups selection
-            ClearPdkGroupsSelection();
-        }
-        else if (listBox.SelectedItem == null)
-        {
-            // Only clear if this was triggered by user action, not by code
-            if (e.RemovedItems.Count > 0 && e.AddedItems.Count == 0)
-            {
-                vm.LeftPanel.SelectedGroupTemplate = null;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Handles selection change in PdkGroups ListBox.
-    /// Extracts the GroupTemplate from GroupTemplateItemViewModel and sets it in LeftPanel.
-    /// </summary>
-    private void OnPdkGroupsSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is not MainViewModel vm) return;
-        if (sender is not ListBox listBox) return;
-
-        if (listBox.SelectedItem is GroupTemplateItemViewModel itemVm)
-        {
-            vm.LeftPanel.SelectedGroupTemplate = itemVm.Template;
-            // Clear user groups selection
-            ClearUserGroupsSelection();
-        }
-        else if (listBox.SelectedItem == null)
-        {
-            // Only clear if this was triggered by user action, not by code
-            if (e.RemovedItems.Count > 0 && e.AddedItems.Count == 0)
-            {
-                vm.LeftPanel.SelectedGroupTemplate = null;
-            }
-        }
-    }
-
-    private void ClearUserGroupsSelection()
-    {
-        if (UserGroupsListBox != null)
-        {
-            UserGroupsListBox.SelectedItem = null;
-        }
-    }
-
-    private void ClearPdkGroupsSelection()
-    {
-        if (PdkGroupsListBox != null)
-        {
-            PdkGroupsListBox.SelectedItem = null;
-        }
-    }
-
-    /// <summary>
-    /// Clears both user and PDK group selections. Called from MainViewModel.
-    /// </summary>
-    public void ClearAllGroupSelections()
-    {
-        ClearUserGroupsSelection();
-        ClearPdkGroupsSelection();
-    }
-
-    /// <summary>
-    /// Updates ListBox selections to match the given GroupTemplate.
-    /// Finds the corresponding GroupTemplateItemViewModel and selects it.
-    /// </summary>
-    private void UpdateGroupTemplateListBoxSelections(CAP_Core.Components.Creation.GroupTemplate? template)
-    {
-        if (DataContext is not MainViewModel vm) return;
-
-        if (template == null)
-        {
-            // Clear all selections
-            ClearAllGroupSelections();
-        }
-        else
-        {
-            // Find and select the matching item in UserGroups
-            var userItem = vm.LeftPanel.ComponentLibrary.UserGroups.FirstOrDefault(vm => vm.Template == template);
-            if (userItem != null)
-            {
-                if (UserGroupsListBox != null)
-                {
-                    UserGroupsListBox.SelectedItem = userItem;
-                }
-                ClearPdkGroupsSelection();
-                return;
-            }
-
-            // Find and select the matching item in PdkGroups
-            var pdkItem = vm.LeftPanel.ComponentLibrary.PdkGroups.FirstOrDefault(vm => vm.Template == template);
-            if (pdkItem != null)
-            {
-                if (PdkGroupsListBox != null)
-                {
-                    PdkGroupsListBox.SelectedItem = pdkItem;
-                }
-                ClearUserGroupsSelection();
-            }
-        }
-    }
-
 }

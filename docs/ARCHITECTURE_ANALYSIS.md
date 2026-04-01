@@ -1,9 +1,9 @@
 # Connect-A-PIC-Pro: Comprehensive Architecture Analysis
 
 **Issue:** #320
-**Date:** 2026-03-28 (updated 2026-04-01 — Issue #426)
+**Date:** 2026-03-28 (updated 2026-04-01 — Issues #426, #433)
 **Analyst:** Autonomous Agent (Claude Sonnet 4.6)
-**Maturity Score:** 4.5/5
+**Maturity Score:** 4.8/5
 
 ---
 
@@ -22,8 +22,9 @@ deliver 80% of PRISM's benefits with 20% of the migration cost.
 1. ✅ **COMPLETED (Issue #365)** Extract `MainWindow.axaml` panels into `UserControl` files
 2. ✅ **COMPLETED (Issue #377)** Sub-ViewModel DI injection + gesture recognizer extraction — `MouseHandling.cs` reduced 880 → ~130 lines; 40+ DI registrations
 3. ✅ **COMPLETED (commit efaa4f6)** Split `DesignCanvasViewModel` — reduced from 1,562 lines (7 partial files) → **299 lines** (1 file) via `Canvas/Services/` extraction
-4. **ACTIVE** Continue extracting panels from `MainWindow.axaml` (currently 927 lines — grew with new features)
+4. ✅ **COMPLETED (Issue #433)** Extract Toolbar, StatusBar, and ComponentLibrary panels — `MainWindow.axaml` reduced **927 → 511 lines** (new panels: `ToolbarPanel`, `StatusBarPanel`, `ComponentLibraryPanel`)
 5. **ACTIVE** `DesignCanvas.ComponentRendering.cs` at 487 lines — candidate for extraction
+6. **ACTIVE** `CAP.Avalonia/Services/` (22 services, flat) — organize into domain subfolders
 
 ---
 
@@ -34,7 +35,7 @@ deliver 80% of PRISM's benefits with 20% of the migration cost.
 | Layer | Files | Notes |
 |-------|-------|-------|
 | `CAP.Avalonia/ViewModels/` | 48 files in 10 subfolders + 2 root files | Well-organized; new `Update/` subfolder and `Canvas/Services/` sub-subfolder added |
-| `CAP.Avalonia/Views/` | 6 root files + 10 in `Panels/` | `Views/Panels/` extracted (Issue #365); no further subfolder split yet |
+| `CAP.Avalonia/Views/` | 6 root files + 16 in `Panels/` | 3 new panels extracted in Issue #433: `ToolbarPanel`, `StatusBarPanel`, `ComponentLibraryPanel` |
 | `Connect-A-Pic-Core/` | 143 files across 10+ modules | Proper domain separation |
 | `UnitTests/` | 206 test files in 15+ folders | Excellent coverage — 43 new test files added since last analysis |
 
@@ -43,7 +44,7 @@ deliver 80% of PRISM's benefits with 20% of the migration cost.
 | File | Lines | Status |
 |------|-------|--------|
 | `MainViewModel.cs` | 642 | Acceptable coordinator; backward-compat delegates removed (Issue #377) |
-| `MainWindow.axaml` | 927 (was 951 → 819 → 927) | Partially extracted — 5 panels in `Views/Panels/`; grew with new features |
+| `MainWindow.axaml` | **511** (was 951 → 819 → 927 → 511) | ✅ Refactored — 8 panels now in `Views/Panels/`; target <600 ✅ |
 | `DesignCanvasViewModel.cs` | **299** (was 1,562 / 7 partial files) | ✅ Refactored — `Canvas/Services/` extracted (commit efaa4f6) |
 | `App.axaml.cs` | 125 | ~40 DI registrations — all sub-ViewModels DI-injected |
 | `DesignCanvas.MouseHandling.cs` | 130 (was 880) | ✅ Refactored — delegates to 5 gesture recognizers (Issue #377) |

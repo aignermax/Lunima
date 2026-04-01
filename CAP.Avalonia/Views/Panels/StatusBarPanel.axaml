@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
+             x:Class="CAP.Avalonia.Views.Panels.StatusBarPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <!-- Error Console Panel (collapsible, toggled via F12) -->
+        <Border Background="#161616" BorderThickness="0,1,0,0" BorderBrush="#3d3d3d">
+            <StackPanel>
+                <!-- Header bar: always visible, click to toggle -->
+                <DockPanel Height="26" Background="#252526">
+                    <!-- Action buttons on the right -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                        <Button Content="📋"
+                                Command="{Binding BottomPanel.ErrorConsole.CopyAllCommand}"
+                                Width="28" Height="20" Margin="2,0" Padding="0"
+                                Background="#3d3d3d" Foreground="LightGray"
+                                FontSize="11"
+                                ToolTip.Tip="Copy all entries to clipboard"/>
+                        <Button Content="✕"
+                                Command="{Binding BottomPanel.ErrorConsole.ClearCommand}"
+                                Width="24" Height="20" Margin="2,0" Padding="0"
+                                Background="#3d3d3d" Foreground="LightGray"
+                                FontSize="11"
+                                ToolTip.Tip="Clear console"/>
+                    </StackPanel>
+                    <!-- Toggle button fills remaining space -->
+                    <Button Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}"
+                            Background="Transparent"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Height="26" Padding="8,0"
+                            ToolTip.Tip="Toggle error console (F12)">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock Text="▶" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
+                                       IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible, Converter={x:Static BoolConverters.Not}}"/>
+                            <TextBlock Text="▼" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
+                                       IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}"/>
+                            <TextBlock Text="Error Console" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
+                            <!-- Error badge -->
+                            <Border Background="#5d2020" CornerRadius="8" Padding="5,1"
+                                    IsVisible="{Binding BottomPanel.ErrorConsole.HasErrors}">
+                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.ErrorCount}"
+                                           Foreground="#FF6B6B" FontSize="10" VerticalAlignment="Center"/>
+                            </Border>
+                            <!-- Warning badge -->
+                            <Border Background="#5d4510" CornerRadius="8" Padding="5,1"
+                                    IsVisible="{Binding BottomPanel.ErrorConsole.HasWarnings}">
+                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.WarningCount}"
+                                           Foreground="#FFD93D" FontSize="10" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Button>
+                </DockPanel>
+
+                <!-- Content area: only shown when IsVisible is true -->
+                <Border IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}" Height="180" Background="#161616">
+                    <ListBox x:Name="ErrorConsoleListBox"
+                             ItemsSource="{Binding BottomPanel.ErrorConsole.DisplayEntries}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="diagnostics:LogDisplayEntry">
+                                <TextBlock Text="{Binding Text}"
+                                           Foreground="{Binding Color}"
+                                           FontFamily="Consolas, Courier New, monospace"
+                                           FontSize="11"
+                                           Padding="4,1"
+                                           TextWrapping="NoWrap"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border Background="#1e1e1e" Height="25">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding StatusText}"
+                           VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+                <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
+                    <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+G=Group  Ctrl+Shift+G=Ungroup  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste  F12=Error Console"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+</UserControl>
