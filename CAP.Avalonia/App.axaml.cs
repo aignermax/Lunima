@@ -54,7 +54,15 @@ public partial class App : Application
 
         // Register AI assistant services
         services.AddSingleton<IAiService, AiService>(sp => new AiService(sp.GetRequiredService<HttpClient>()));
-        services.AddTransient<AiAssistantViewModel>();
+        services.AddSingleton<IAiGridService>(sp => new AiGridService(
+            sp.GetRequiredService<DesignCanvasViewModel>(),
+            () => sp.GetRequiredService<LeftPanelViewModel>().AllTemplates.ToList(),
+            sp.GetRequiredService<Commands.CommandManager>(),
+            sp.GetRequiredService<SimulationService>()));
+        services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
+            sp.GetRequiredService<IAiService>(),
+            sp.GetRequiredService<UserPreferencesService>(),
+            sp.GetRequiredService<IAiGridService>()));
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();

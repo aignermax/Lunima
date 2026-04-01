@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CAP.Avalonia.Services;
@@ -8,12 +9,14 @@ namespace CAP.Avalonia.ViewModels.AI;
 /// <summary>
 /// ViewModel for the in-app AI Design Assistant chat panel.
 /// Manages conversation history, API key configuration, and communication
-/// with the <see cref="IAiService"/>.
+/// with the <see cref="IAiService"/>. When an <see cref="IAiGridService"/> is
+/// provided, uses Claude function calling to directly manipulate the circuit grid.
 /// </summary>
 public partial class AiAssistantViewModel : ObservableObject
 {
     private readonly IAiService _aiService;
     private readonly UserPreferencesService _preferencesService;
+    private readonly IAiGridService? _gridService;
     private CancellationTokenSource? _cancellationSource;
 
     private const int MaxHistoryMessages = 20;
@@ -39,10 +42,17 @@ public partial class AiAssistantViewModel : ObservableObject
     /// <summary>
     /// Initializes the ViewModel, loads persisted API key, and shows a welcome message.
     /// </summary>
-    public AiAssistantViewModel(IAiService aiService, UserPreferencesService preferencesService)
+    /// <param name="aiService">The AI backend service (Claude API).</param>
+    /// <param name="preferencesService">User preferences for persisting the API key.</param>
+    /// <param name="gridService">Optional grid manipulation service for tool calling.</param>
+    public AiAssistantViewModel(
+        IAiService aiService,
+        UserPreferencesService preferencesService,
+        IAiGridService? gridService = null)
     {
         _aiService = aiService;
         _preferencesService = preferencesService;
+        _gridService = gridService;
 
         var savedKey = _preferencesService.GetAiApiKey();
         if (!string.IsNullOrEmpty(savedKey))
@@ -56,6 +66,7 @@ public partial class AiAssistantViewModel : ObservableObject
 
     /// <summary>
     /// Sends the current <see cref="UserInput"/> to the AI and appends the response.
+    /// Uses tool calling when a grid service is available.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanSend))]
     private async Task SendMessage()
@@ -75,7 +86,18 @@ public partial class AiAssistantViewModel : ObservableObject
         try
         {
             var history = BuildConversationHistory();
-            var response = await _aiService.SendMessageAsync(text, history, _cancellationSource.Token);
+            string response;
+
+            if (_gridService != null)
+            {
+                var componentTypes = _gridService.GetAvailableComponentTypes();
+                response = await _aiService.SendMessageWithToolsAsync(
+                    text, history, componentTypes, ExecuteToolAsync, _cancellationSource.Token);
+            }
+            else
+            {
+                response = await _aiService.SendMessageAsync(text, history, _cancellationSource.Token);
+            }
 
             Messages.Add(new AiChatMessage { Role = AiChatRole.Assistant, Content = response });
             StatusText = "";
@@ -127,6 +149,43 @@ public partial class AiAssistantViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Executes a named tool call from Claude and returns the result.
+    /// Dispatches to the appropriate <see cref="IAiGridService"/> method.
+    /// </summary>
+    private async Task<string> ExecuteToolAsync(string toolName, string toolInputJson)
+    {
+        if (_gridService == null) return "Grid service not available.";
+
+        try
+        {
+            using var doc = JsonDocument.Parse(toolInputJson);
+            var root = doc.RootElement;
+
+            return toolName switch
+            {
+                "get_grid_state" => _gridService.GetGridState(),
+                "place_component" => _gridService.PlaceComponent(
+                    root.GetProperty("component_type").GetString()!,
+                    root.GetProperty("x").GetDouble(),
+                    root.GetProperty("y").GetDouble(),
+                    root.TryGetProperty("rotation", out var rot) ? rot.GetInt32() : 0),
+                "create_connection" => _gridService.CreateConnection(
+                    root.GetProperty("from_component").GetString()!,
+                    root.GetProperty("to_component").GetString()!),
+                "clear_grid" => _gridService.ClearGrid(),
+                "start_simulation" => await _gridService.StartSimulationAsync(),
+                "stop_simulation" => _gridService.StopSimulation(),
+                "get_light_values" => _gridService.GetLightValues(),
+                _ => $"Unknown tool: {toolName}"
+            };
+        }
+        catch (Exception ex)
+        {
+            return $"Error executing {toolName}: {ex.Message}";
+        }
+    }
+
+    /// <summary>
     /// Builds conversation history for the API call.
     /// Returns the last <see cref="MaxHistoryMessages"/> user/assistant turns.
     /// </summary>
@@ -142,8 +201,12 @@ public partial class AiAssistantViewModel : ObservableObject
     private void ShowWelcomeMessage()
     {
         var hasKey = _aiService.IsConfigured;
+        var gridNote = _gridService != null
+            ? " I can now place components and build circuits directly on the canvas!"
+            : "";
+
         var welcome = hasKey
-            ? "Hello! I'm your AI Design Assistant. Describe a photonic circuit and I'll help you design it."
+            ? $"Hello! I'm your AI Design Assistant.{gridNote} Describe a photonic circuit and I'll help you design it."
             : "Hello! I'm your AI Design Assistant. Configure your Claude API key in the settings below to get started.";
 
         Messages.Add(new AiChatMessage { Role = AiChatRole.Assistant, Content = welcome });

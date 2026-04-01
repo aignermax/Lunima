@@ -25,4 +25,20 @@ public interface IAiService
         string userMessage,
         IReadOnlyList<(string Role, string Content)> history,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Sends a message to the AI with tool-calling (function calling) support.
+    /// Handles the full tool-use loop until a final text response is produced.
+    /// </summary>
+    /// <param name="userMessage">The user's message.</param>
+    /// <param name="history">Prior conversation turns as (role, content) pairs.</param>
+    /// <param name="availableComponentTypes">Component type names to include in the place_component tool description.</param>
+    /// <param name="toolExecutor">Delegate invoked for each tool call: (toolName, toolInputJson) → result string.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<string> SendMessageWithToolsAsync(
+        string userMessage,
+        IReadOnlyList<(string Role, string Content)> history,
+        IReadOnlyList<string> availableComponentTypes,
+        Func<string, string, Task<string>> toolExecutor,
+        CancellationToken ct = default);
 }
