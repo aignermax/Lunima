@@ -49,5 +49,30 @@
 ## Build & Test
 ```bash
 dotnet build
-dotnet test
+python3 tools/smart_test.py
 ```
+
+## Key Files Quick Reference
+
+### ViewModels
+- `CAP.Avalonia/ViewModels/MainViewModel.cs` — main window, holds all feature VMs
+- `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` — example feature VM
+- `CAP.Avalonia/ViewModels/DesignCanvasViewModel.cs` — canvas, component placement
+
+### Core Classes
+- `Connect-A-Pic-Core/Analysis/ParameterSweeper.cs` — parameter sweeping logic
+- `Connect-A-Pic-Core/Layout/BoundingBoxCalculator.cs` — spatial calculations
+- `Connect-A-Pic-Core/Components/ComponentGroup.cs` — component containers
+
+### UI
+- `CAP.Avalonia/Views/MainWindow.axaml` — main UI; right panel lines 193-229 = ParameterSweep example
+
+### Tests
+- `UnitTests/Analysis/ParameterSweeperTests.cs` — example test pattern
+- `UnitTests/Helpers/TestComponentFactory.cs` — test utilities
+
+## Search Patterns
+- Analysis features: `**/Analysis/**/*`
+- ViewModels: `**/*ViewModel.cs`
+- Tests: `**/*Tests.cs`
+- UI panels: `**/MainWindow.axaml`
