@@ -6,6 +6,7 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Update;
+using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;
@@ -100,6 +101,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public UpdateViewModel Update { get; }
 
+    /// <summary>
+    /// ViewModel for the in-app AI Design Assistant chat panel.
+    /// </summary>
+    public AiAssistantViewModel AiAssistant { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
@@ -115,7 +121,8 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrixViewModel groupSMatrix,
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
-        UpdateViewModel update)
+        UpdateViewModel update,
+        AiAssistantViewModel aiAssistant)
     {
         _preferencesService = preferencesService;
 
@@ -131,6 +138,7 @@ public partial class RightPanelViewModel : ObservableObject
         ArchitectureReport = architectureReport;
         PdkConsistency = pdkConsistency;
         Update = update;
+        AiAssistant = aiAssistant;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
