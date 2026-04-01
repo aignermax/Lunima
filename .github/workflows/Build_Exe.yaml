@@ -152,7 +152,7 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          Copy-Item Installer/bin/Release/net8.0/en-US/Lunima-Setup.msi "Lunima-Setup-$version.msi"
+          Copy-Item Installer/bin/Release/Lunima-Setup.msi "Lunima-Setup-$version.msi"
           echo "Created Lunima-Setup-$version.msi"
 
       - name: Upload MSI artifact
