@@ -138,7 +138,10 @@ jobs:
           -o publish/win-x64-msi
 
       - name: Build MSI
-        run: dotnet build Installer/Installer.wixproj -c Release -p:PublishDir=..\publish\win-x64-msi\ -p:ProductVersion=${{ steps.version.outputs.version }}
+        shell: pwsh
+        run: |
+          $publishPath = "${{ github.workspace }}\publish\win-x64-msi\"
+          dotnet build Installer/Installer.wixproj -c Release -p:PublishDir=$publishPath -p:ProductVersion=${{ steps.version.outputs.version }}
 
       - name: Rename MSI with version
         shell: pwsh
