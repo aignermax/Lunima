@@ -1,27 +1,29 @@
 # Connect-A-PIC-Pro: Comprehensive Architecture Analysis
 
 **Issue:** #320
-**Date:** 2026-03-28 (updated 2026-03-30)
+**Date:** 2026-03-28 (updated 2026-04-01 — Issue #426)
 **Analyst:** Autonomous Agent (Claude Sonnet 4.6)
-**Maturity Score:** 4/5
+**Maturity Score:** 4.5/5
 
 ---
 
 ## Executive Summary
 
 Connect-A-PIC-Pro has a **well-structured, modular architecture** that successfully follows its
-own CLAUDE.md guidelines. The project is at **maturity level 4/5** — functional, organized, and
-testable, with clear paths for further improvement.
+own CLAUDE.md guidelines. The project is at **maturity level 4.5/5** — functional, organized, and
+testable, with substantial improvements completed since the last analysis.
 
-**PRISM migration is NOT recommended.** The current 28-ViewModel, 14-service architecture is
-well-served by CommunityToolkit.Mvvm + manual DI. Hybrid modularization (Option C) delivers
-80% of PRISM's benefits with 20% of the migration cost.
+**PRISM migration is NOT recommended.** The current 40+ ViewModel, 40+ service architecture is
+well-served by CommunityToolkit.Mvvm + manual DI. Hybrid modularization (Option C) continues to
+deliver 80% of PRISM's benefits with 20% of the migration cost.
 
-**Top 3 improvements (ordered by impact):**
+**Top improvements (ordered by impact):**
 
-1. ✅ **COMPLETED (Issue #365)** Extract `MainWindow.axaml` panels into `UserControl` files — reduced 951 → 819 lines
-2. ✅ **COMPLETED (Issue #377)** Sub-ViewModel DI injection + gesture recognizer extraction — `MouseHandling.cs` reduced 880 → ~115 lines; 30+ DI registrations
-3. Split `DesignCanvasViewModel` (1,562 lines, 7 partial files) into focused sub-ViewModels
+1. ✅ **COMPLETED (Issue #365)** Extract `MainWindow.axaml` panels into `UserControl` files
+2. ✅ **COMPLETED (Issue #377)** Sub-ViewModel DI injection + gesture recognizer extraction — `MouseHandling.cs` reduced 880 → ~130 lines; 40+ DI registrations
+3. ✅ **COMPLETED (commit efaa4f6)** Split `DesignCanvasViewModel` — reduced from 1,562 lines (7 partial files) → **299 lines** (1 file) via `Canvas/Services/` extraction
+4. **ACTIVE** Continue extracting panels from `MainWindow.axaml` (currently 927 lines — grew with new features)
+5. **ACTIVE** `DesignCanvas.ComponentRendering.cs` at 487 lines — candidate for extraction
 
 ---
 
@@ -31,26 +33,28 @@ well-served by CommunityToolkit.Mvvm + manual DI. Hybrid modularization (Option 
 
 | Layer | Files | Notes |
 |-------|-------|-------|
-| `CAP.Avalonia/ViewModels/` | 34 VMs in 8 subfolders | Well-organized per CLAUDE.md |
-| `CAP.Avalonia/Views/` | 10 files (root only) | **No subfolders yet — extraction needed** |
-| `Connect-A-Pic-Core/` | ~128 files across 10 modules | Proper domain separation |
-| `UnitTests/` | 163 test files in 15+ folders | Excellent coverage |
+| `CAP.Avalonia/ViewModels/` | 48 files in 10 subfolders + 2 root files | Well-organized; new `Update/` subfolder and `Canvas/Services/` sub-subfolder added |
+| `CAP.Avalonia/Views/` | 6 root files + 10 in `Panels/` | `Views/Panels/` extracted (Issue #365); no further subfolder split yet |
+| `Connect-A-Pic-Core/` | 143 files across 10+ modules | Proper domain separation |
+| `UnitTests/` | 206 test files in 15+ folders | Excellent coverage — 43 new test files added since last analysis |
 
-### 1.2 Key File Metrics
+### 1.2 Key File Metrics (Current — 2026-04-01)
 
 | File | Lines | Status |
 |------|-------|--------|
-| `MainViewModel.cs` | 654 | Acceptable coordinator; backward-compat delegates removed (Issue #377) |
-| `MainWindow.axaml` | 819 (was 951) | Partially extracted — 5 panels moved to `Views/Panels/` (Issue #365) |
-| `DesignCanvasViewModel.cs` | 1,562 (7 partial files) | Manageable via partials; could split further |
-| `App.axaml.cs` | ~95 | 30+ DI registrations — all sub-ViewModels now DI-injected (Issue #377) |
-| `DesignCanvas.MouseHandling.cs` | ~115 (was 880) | ✅ Refactored — delegates to 5 gesture recognizers (Issue #377) |
+| `MainViewModel.cs` | 642 | Acceptable coordinator; backward-compat delegates removed (Issue #377) |
+| `MainWindow.axaml` | 927 (was 951 → 819 → 927) | Partially extracted — 5 panels in `Views/Panels/`; grew with new features |
+| `DesignCanvasViewModel.cs` | **299** (was 1,562 / 7 partial files) | ✅ Refactored — `Canvas/Services/` extracted (commit efaa4f6) |
+| `App.axaml.cs` | 125 | ~40 DI registrations — all sub-ViewModels DI-injected |
+| `DesignCanvas.MouseHandling.cs` | 130 (was 880) | ✅ Refactored — delegates to 5 gesture recognizers (Issue #377) |
+| `DesignCanvas.ComponentRendering.cs` | 487 | Candidate for extraction |
+| `DesignCanvas.Rendering.cs` | 375 | Large — monitor |
 
 ### 1.3 Dependency Map
 
 ```
-App.axaml.cs (30+ DI registrations — all sub-ViewModels injected, Issue #377)
-  └── MainViewModel (coordinator)
+App.axaml.cs (~40 DI registrations — all sub-ViewModels injected)
+  └── MainViewModel (coordinator, 642 lines)
         ├── CanvasInteractionViewModel  ──► DesignCanvasViewModel
         ├── FileOperationsViewModel     ──► DesignCanvasViewModel, CommandManager
         ├── ViewportControlViewModel    ──► DesignCanvasViewModel
@@ -68,11 +72,21 @@ App.axaml.cs (30+ DI registrations — all sub-ViewModels injected, Issue #377)
         │     ├── SMatrixPerformanceViewModel
         │     ├── CompressLayoutViewModel
         │     ├── GroupSMatrixViewModel
-        │     └── ArchitectureReportViewModel (NEW — Issue #320)
+        │     ├── ArchitectureReportViewModel
+        │     ├── PdkConsistencyViewModel  (NEW — Issue #334)
+        │     └── UpdateViewModel          (NEW — auto-update feature)
         └── BottomPanelViewModel        ──► DesignCanvasViewModel, CommandManager
               ├── ElementLockViewModel
               ├── WaveguideLengthViewModel
               └── ErrorConsoleViewModel
+
+DesignCanvasViewModel (299 lines — refactored)
+  └── Canvas/Services/ (5 extracted services)
+        ├── ComponentPlacementService.cs
+        ├── GroupEditService.cs
+        ├── PinHighlightService.cs
+        ├── RoutingOrchestrator.cs
+        └── SimulationCoordinator.cs
 ```
 
 **Coupling assessment:** `DesignCanvasViewModel` is the central dependency shared across all
@@ -88,14 +102,11 @@ dependencies detected.
 | Class | Responsibilities | Verdict |
 |-------|-----------------|---------|
 | `MainViewModel` | Orchestrator + simulation trigger | **OK** — backward-compat delegates removed (Issue #377) |
-| `DesignCanvasViewModel` | Canvas state, simulation data, grid, component management | **Violation** — too many responsibilities despite partial file split |
+| `DesignCanvasViewModel` | Canvas state facade — delegates to 5 services | **OK** — now 299 lines, delegates to `Canvas/Services/` (commit efaa4f6) |
 | `CanvasInteractionViewModel` | User input + selection + placement | **OK** — focused |
-| `RightPanelViewModel` | Right sidebar composition | **OK** — pure aggregator |
+| `RightPanelViewModel` | Right sidebar composition (13 features) | **OK** — pure aggregator; monitor growth |
 | `DesignCanvas.MouseHandling.cs` | Mouse event dispatcher | **OK** — 5 gesture recognizers in `CAP.Avalonia/Gestures/` (Issue #377) |
-
-**Recommendation:** Extract canvas state management from `DesignCanvasViewModel` into
-`CanvasStateService` (components, connections, grid) and keep `DesignCanvasViewModel` as the
-simulation + rendering coordinator.
+| `DesignCanvas.ComponentRendering.cs` | Component drawing logic | **WATCH** — 487 lines, approaching limit |
 
 ### Open/Closed Principle (OCP)
 
@@ -106,7 +117,9 @@ simulation + rendering coordinator.
 3. Adding one panel section to `MainWindow.axaml`
 
 **Weakness:** `MainWindow.axaml` must be modified for every new panel — this is inherent to
-static AXAML composition. Extracting panels into `UserControl` files mitigates merge conflicts.
+static AXAML composition. The file has grown back to 927 lines as new features were added
+(PDK Consistency, Auto-Update panels). Continuing panel extraction into `UserControl` files
+mitigates merge conflicts.
 
 ### Liskov Substitution Principle (LSP)
 
@@ -117,32 +130,33 @@ No inheritance hierarchies at risk. The project correctly uses:
 ### Interface Segregation Principle (ISP)
 
 Per CLAUDE.md: "only create interfaces when multiple implementations exist."
-Current interfaces: `IDataAccessor`, `IInputDialogService`, `IFileDialogService`
+Current interfaces: `IDataAccessor`, `IInputDialogService`, `IFileDialogService`, `IGestureRecognizer`
 All are appropriately scoped. No fat interfaces detected.
 
 ### Dependency Inversion Principle (DIP)
 
-**Strength:** All ViewModels — including sub-ViewModels (`ParameterSweepViewModel`,
-`RoutingDiagnosticsViewModel`, etc.) — are now registered in DI and injected via constructor
-(Issue #377). `DesignCanvasViewModel` is a singleton shared across all panel VMs.
+**Strength:** All ViewModels — including sub-ViewModels — are registered in DI and injected via
+constructor (Issue #377). `DesignCanvasViewModel` is a singleton shared across all panel VMs.
+Canvas services (`ComponentPlacementService`, etc.) follow the same DI pattern.
 
 ---
 
 ## 3. Scalability Analysis
 
-### Current State: ~28 Feature ViewModels, 30+ DI Services (Issue #377)
+### Current State: ~40+ Feature ViewModels, 40+ DI Services
 
 | Dimension | Current | At 50 Features | Risk |
 |-----------|---------|----------------|------|
-| `MainViewModel` lines | 654 | ~900 | LOW — backward-compat delegates removed |
-| `MainWindow.axaml` lines | 819 | ~1,600+ | MEDIUM — merge conflicts, readability |
-| DI registrations | 30+ | ~45-50 | LOW — simple to manage |
+| `MainViewModel` lines | 642 | ~850 | LOW — backward-compat delegates removed |
+| `MainWindow.axaml` lines | 927 | ~1,400+ | MEDIUM — merge conflicts, readability |
+| DI registrations | ~40 | ~50 | LOW — simple to manage |
 | Build time | Fast | Moderate | LOW — Avalonia compiles AXAML lazily |
-| Test isolation | Good | Good | LOW — 163 files already well-organized |
+| Test isolation | Excellent | Good | LOW — 206 files well-organized |
 | Team merge conflicts | Low | MEDIUM | If multiple devs touch `MainWindow.axaml` simultaneously |
 
 **Key insight:** The architectural bottleneck is `MainWindow.axaml`, not `MainViewModel`.
-Extracting panels into `UserControl` files is the highest-leverage improvement.
+The file has grown back from 819 → 927 lines. Continuing panel extraction into `UserControl`
+files remains the highest-leverage improvement.
 
 ---
 
@@ -164,7 +178,7 @@ CAP.Avalonia/Features/
 
 | | Detail |
 |--|--------|
-| **Effort** | HIGH — ~80+ files to move/rename, AXAML namespace changes |
+| **Effort** | HIGH — ~100+ files to move/rename, AXAML namespace changes |
 | **Risk** | MEDIUM — git history discontinuity, potential missed references |
 | **Benefit** | Better file co-location per feature; easier to delete a feature |
 | **Verdict** | **OPTIONAL** — current subfolder organization delivers similar benefits |
@@ -180,17 +194,17 @@ diminishing returns at the current scale.
 | **Effort** | VERY HIGH — 6-12 weeks, touches nearly every file |
 | **Risk** | HIGH — framework learning curve, Avalonia PRISM maturity concerns |
 | **Benefit** | Region-based UI injection, EventAggregator, module loading |
-| **Verdict** | **NOT RECOMMENDED** — overkill for 28 ViewModels |
+| **Verdict** | **NOT RECOMMENDED** — overkill for 40 ViewModels |
 
 **Concrete PRISM benefits for this project:**
-- `EventAggregator` would replace callback wiring in `MainViewModel` (e.g., `OnSelectionChanged`, `UpdateStatus`)
+- `EventAggregator` would replace callback wiring in `MainViewModel`
 - `RegionManager` would replace static AXAML panel composition in `MainWindow.axaml`
 - Module loading would enable plugin-style PDK extensions
 
 **Why NOT now:** These benefits are real but achievable without PRISM. A simple
 `IMessageBus` (e.g., via `WeakReferenceMessenger` from CommunityToolkit) replaces
 `EventAggregator`. Panel extraction into `UserControl` replaces region management.
-The migration cost outweighs the benefit until the project exceeds 40+ features.
+Revisit when the project exceeds 50+ features.
 
 ### Option C: Hybrid Incremental Modularization (RECOMMENDED)
 
@@ -200,7 +214,7 @@ Keep CommunityToolkit.Mvvm. Apply targeted improvements over 3 phases.
 
 ## 5. Recommended Action Plan
 
-### Phase 1 — Quick Wins (1-2 days, LOW risk)
+### Phase 1 — Quick Wins (COMPLETED)
 
 **1.1 Extract right panel sections into UserControls** ✅ COMPLETED — Issue #365 (2026-03-29)
 
@@ -215,31 +229,45 @@ Views/Panels/
 ```
 
 All panels use `x:DataType="vm:MainViewModel"` and inherit DataContext from MainWindow.
-`MainWindow.axaml` reduced from 951 → 819 lines (−132 lines). 1312 tests passing.
-
-Remaining candidates for further extraction: ParameterSweepPanel, WaveguideLengthPanel,
-LockElementsPanel (all have cross-VM binding dependencies that require additional refactoring).
 
 **1.2 Sub-ViewModel DI injection + gesture recognizer extraction** ✅ COMPLETED — Issue #377 (2026-03-30)
 
-All sub-ViewModels (`ParameterSweepViewModel`, `RoutingDiagnosticsViewModel`, etc.) are now
-registered in `App.axaml.cs` and constructor-injected into panel VMs. `DesignCanvasViewModel`
-is a DI singleton. `DesignCanvas.MouseHandling.cs` reduced from 880 → ~115 lines by extracting
-5 gesture recognizer classes to `CAP.Avalonia/Gestures/`:
-```
-Gestures/
-  IGestureRecognizer.cs
-  PanGestureRecognizer.cs
-  ConnectionGestureRecognizer.cs
-  PlacementGestureRecognizer.cs
-  ComponentDragGestureRecognizer.cs
-  SelectionBoxGestureRecognizer.cs
-```
-Backward-compatibility delegates verified absent from `MainViewModel`. 1479 tests passing.
+All sub-ViewModels are now registered in `App.axaml.cs` and constructor-injected. 5 gesture
+recognizer classes extracted to `CAP.Avalonia/Gestures/`. `DesignCanvas.MouseHandling.cs`
+reduced from 880 → 130 lines.
 
-### Phase 2 — Structural Improvements (3-5 days, MEDIUM risk)
+**1.3 Split DesignCanvasViewModel** ✅ COMPLETED — commit efaa4f6 (2026-03-31)
 
-**2.1 Add WeakReferenceMessenger for cross-feature communication**
+`DesignCanvasViewModel` reduced from 1,562 lines (7 partial files) to **299 lines** (1 file).
+5 service classes extracted to `CAP.Avalonia/ViewModels/Canvas/Services/`:
+```
+Canvas/Services/
+  ComponentPlacementService.cs
+  GroupEditService.cs
+  PinHighlightService.cs
+  RoutingOrchestrator.cs
+  SimulationCoordinator.cs
+```
+`DesignCanvasViewModel` now acts as a facade delegating to these services.
+
+### Phase 2 — Structural Improvements (ACTIVE)
+
+**2.1 Continue MainWindow.axaml panel extraction** ← NEXT HIGHEST PRIORITY
+
+`MainWindow.axaml` has grown back to 927 lines as new features (PDK Consistency, Auto-Update)
+were added. Remaining candidates for `UserControl` extraction:
+
+- `ParameterSweepPanel` — has cross-VM binding that requires wiring review
+- `WaveguideLengthPanel` — same
+- `LockElementsPanel` — same
+- New panels added since Issue #365: PDK Consistency, Auto-Update panels
+
+**2.2 Extract DesignCanvas.ComponentRendering.cs** ← MEDIUM PRIORITY
+
+Currently 487 lines — the largest remaining DesignCanvas partial file. Could extract
+component-type-specific rendering logic into a renderer registry pattern.
+
+**2.3 Add WeakReferenceMessenger for cross-feature communication**
 
 Replace callback wiring in `MainViewModel` with typed messages:
 ```csharp
@@ -249,23 +277,17 @@ Replace callback wiring in `MainViewModel` with typed messages:
 
 `CommunityToolkit.Mvvm` already includes `WeakReferenceMessenger` — no new dependency.
 
-**2.2 Split DesignCanvasViewModel responsibilities**
+**2.4 Create Analysis subfolder to manage folder size**
 
-Current: `DesignCanvasViewModel` manages components, connections, simulation state, grid,
-waveguide visualization, and power flow.
+`Connect-A-Pic-Core/Analysis/` has 12 files — at the CLAUDE.md folder limit (8-10).
+Consider splitting into `Analysis/Sweep/` for sweep-specific classes and `Analysis/Validation/`
+for design validation classes.
 
-Proposal (gradual, using partial classes as intermediate step):
-- `CanvasComponentsViewModel` — component collection, add/remove/move
-- `CanvasConnectionsViewModel` — connection collection, waveguide routing
-- `CanvasSimulationStateViewModel` — power flow, S-matrix results, visualization
+### Phase 3 — Optional (LOW urgency)
 
-`DesignCanvasViewModel` becomes a facade delegating to these sub-VMs.
+**3.1 Revisit PRISM if feature count exceeds 50**
 
-### Phase 3 — Optional (4-6 weeks, LOW urgency)
-
-**3.1 Revisit PRISM if feature count exceeds 40**
-
-If the project grows to 40+ features:
+If the project grows to 50+ features:
 - Evaluate `Prism.Avalonia` maturity (watch GitHub for stable release)
 - Replace `MainViewModel` wiring with `EventAggregator`
 - Replace static AXAML panels with `RegionManager` regions
@@ -279,59 +301,65 @@ If external PDK contributors are expected, a module loading system (PRISM module
 
 ## 6. Code Quality Findings
 
-### High-Priority (fix in next sprint)
+### High-Priority (fix soon)
 
 | File | Issue | Recommendation |
 |------|-------|----------------|
-| `MainWindow.axaml:1` | 819 lines — partially extracted (Issue #365) | Continue extracting ParameterSweep, WaveguideLength, LockElements panels |
-| `DesignCanvas.MouseHandling.cs` | ✅ Reduced to ~115 lines (Issue #377) — 5 gesture recognizers extracted | Done |
+| `MainWindow.axaml:1` | 927 lines — grew back as new features added | Continue extracting panels: ParameterSweep, WaveguideLength, LockElements, PDK Consistency, Auto-Update |
 
 ### Medium-Priority (monitor)
 
 | File | Issue | Recommendation |
 |------|-------|----------------|
-| `DesignCanvasViewModel.cs:1562` | Very large even split across 7 partials | Consider sub-ViewModel extraction |
-| `Connect-A-Pic-Core/Analysis/` | 11 files at folder limit | Create `Sweep/` subfolder for sweep-specific files |
-| `RightPanelViewModel.cs` | 10 feature VMs in one panel — will grow | Consider collapsible section registration pattern |
+| `DesignCanvas.ComponentRendering.cs:487` | Largest remaining DesignCanvas partial | Consider renderer registry pattern or partial split |
+| `DesignCanvas.Rendering.cs:375` | Large rendering file | Monitor — if it grows, extract sub-renderers |
+| `Connect-A-Pic-Core/Analysis/` | 12 files — at folder limit | Create `Analysis/Sweep/` and `Analysis/Validation/` subfolders |
+| `RightPanelViewModel.cs` | 13 feature VMs in one panel — will grow | Consider collapsible section registration pattern |
 
 ### Low-Priority (future consideration)
 
 | File | Issue | Recommendation |
 |------|-------|----------------|
-| `App.axaml.cs` | ✅ Sub-ViewModels now DI-registered (Issue #377) | Done |
-| `MainViewModel` constructor | File loading callback (`LeftPanel.OnGroupTemplateSelected`) is 25 lines inline | Extract to named method |
+| `MainViewModel` constructor | File loading callback (`LeftPanel.OnGroupTemplateSelected`) is ~25 lines inline | Extract to named method |
+| `App.axaml.cs` | ~40 DI registrations — all correct | Consider sectioned comments for readability |
 
 ---
 
 ## 7. Test Architecture Quality
 
-**Current:** 163 test files, excellent coverage across all layers.
+**Current:** 206 test files (up from 163 at last analysis — +43 new test files).
 
 **Strengths:**
 - Clean separation: unit tests vs integration tests in dedicated folders
 - Commands tested independently (17 files) — enables undo/redo confidence
-- Persistence tests present (3 files) — save/load roundtrips protected
+- Persistence tests present — save/load roundtrips protected
+- New regression tests added for prefab S-Matrix, grouping/ungrouping, and light sources
 
-Sub-ViewModels are now DI-registered (Issue #377). A shared `MainViewModelTestHelper` factory
-was added to `UnitTests/Helpers/` to simplify test construction. 1479 tests passing.
+A shared `MainViewModelTestHelper` factory in `UnitTests/Helpers/` simplifies test construction
+across integration tests.
 
 ---
 
 ## 8. Summary Table
 
-| Concern | Severity | Phase | Estimated Effort |
-|---------|----------|-------|-----------------|
-| `MainWindow.axaml` too large | MEDIUM (partial) | 1 | ✅ Partially done (Issue #365) |
-| Sub-ViewModel DI + gesture recognizer extraction | MEDIUM | 1 | ✅ DONE (Issue #377) |
-| DesignCanvasViewModel too large | MEDIUM | 2 | 2-3 days |
-| Cross-feature callback wiring | LOW | 2 | 1 day |
-| PRISM migration | N/A | 3 (if needed) | 6-12 weeks |
+| Concern | Severity | Phase | Status |
+|---------|----------|-------|--------|
+| `MainWindow.axaml` too large | MEDIUM | 2 | Partial — grew back to 927 lines; more extraction needed |
+| Sub-ViewModel DI + gesture recognizer extraction | — | 1 | ✅ DONE (Issue #377) |
+| DesignCanvasViewModel too large | — | 1 | ✅ DONE (commit efaa4f6) — 299 lines |
+| Canvas/Services subfolder | — | 1 | ✅ DONE (commit efaa4f6) — 5 services extracted |
+| `DesignCanvas.ComponentRendering.cs` | MEDIUM | 2 | 487 lines — candidate for extraction |
+| `Core/Analysis/` folder size | LOW | 2 | 12 files — create subfolders |
+| Cross-feature callback wiring | LOW | 2 | Not started — WeakReferenceMessenger recommended |
+| PRISM migration | N/A | 3 (if needed) | Not needed at current scale |
 
-**Overall Recommendation:** The architecture is healthy. Phase 1 improvements are complete.
-Next highest-ROI investment is Phase 2.1 (WeakReferenceMessenger) and continued panel
-extraction for `MainWindow.axaml`.
+**Overall Recommendation:** The architecture is in excellent shape. Phase 1 is fully complete
+(including the DesignCanvasViewModel split that was Phase 2 in the previous analysis).
+Next highest-ROI investment is continuing `MainWindow.axaml` panel extraction (Phase 2.1)
+and addressing `DesignCanvas.ComponentRendering.cs` size (Phase 2.2).
 
 ---
 
-*This analysis was produced as part of Issue #320. The architecture report panel (see right sidebar
-→ Architecture Report) provides live access to the key metrics summarized here.*
+*This analysis was produced as part of Issue #320 and updated in Issue #426. The architecture
+report panel (see right sidebar → Architecture Report) provides live access to the key metrics
+summarized here.*
