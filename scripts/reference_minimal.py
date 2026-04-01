@@ -15,7 +15,7 @@ Design spec based on CAP system coordinate mapping:
   - Waveguide: straight from (100, 0) to (300, 0), length = 200 µm, angle = 0°
 
 Run this script to produce the reference GDS:
-  python Scripts/reference_minimal.py
+  python scripts/reference_minimal.py
 
 Output: /tmp/reference_minimal.gds
 """

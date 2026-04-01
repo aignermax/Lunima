@@ -11,7 +11,7 @@ namespace CAP_Core.Export;
 /// </summary>
 public class GdsCoordinateExtractor
 {
-    private const string ScriptRelativePath = "Scripts/extract_gds_coords.py";
+    private const string ScriptRelativePath = "scripts/extract_gds_coords.py";
 
     private string? _customPythonPath;
 
@@ -43,7 +43,7 @@ public class GdsCoordinateExtractor
 
     /// <summary>
     /// Extracts all polygon and path coordinates from a GDS file using the
-    /// Scripts/extract_gds_coords.py Python script.
+    /// scripts/extract_gds_coords.py Python script.
     /// </summary>
     /// <param name="gdsPath">Path to the GDS file to analyze.</param>
     /// <param name="outputJsonPath">Output JSON path; defaults to .coords.json alongside the GDS file.</param>

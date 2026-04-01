@@ -6,7 +6,7 @@ namespace CAP_Core.Export;
 
 /// <summary>
 /// Core service for comparing two GDS coordinate JSON files using the
-/// Scripts/compare_gds_coords.py tool.  Reports exact deviations in micrometres
+/// scripts/compare_gds_coords.py tool.  Reports exact deviations in micrometres
 /// so fabrication-blocking alignment bugs can be confirmed or refuted.
 /// </summary>
 public class GdsCoordinateComparisonService
@@ -162,12 +162,12 @@ public class GdsCoordinateComparisonService
             : RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "python" : "python3";
 
     /// <summary>
-    /// Searches for <c>Scripts/compare_gds_coords.py</c> by walking up from the
+    /// Searches for <c>scripts/compare_gds_coords.py</c> by walking up from the
     /// current assembly directory.  Returns null if not found.
     /// </summary>
     public static string? FindDefaultScriptPath()
     {
-        const string RelativePath = "Scripts/compare_gds_coords.py";
+        const string RelativePath = "scripts/compare_gds_coords.py";
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (dir != null)

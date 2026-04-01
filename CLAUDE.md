@@ -12,7 +12,7 @@ C# / Avalonia / MVVM photonic simulation tool. Stability, clarity, and architect
 **Core Features / Bug Fixes (NO UI):** Keywords: "investigate", "add test", "fix bug", "verify", "optimize"
 - Core class → Tests → **STOP** (no ViewModel/View unless explicitly requested)
 
-**Debug Tools (NO UI):** Python scripts in `Scripts/`, backend service classes, tests, documentation only
+**Debug Tools (NO UI):** Python scripts in `scripts/`, backend service classes, tests, documentation only
 
 ---
 
@@ -239,7 +239,7 @@ The core of this repository is photonic S-Matrix-based simulation.
 
 ## 11. GDS Export Debugging (Issue #329)
 
-**Python tools in `Scripts/` for GDS coordinate bugs:**
+**Python tools in `scripts/` for GDS coordinate bugs:**
 
 | Script | Purpose |
 |--------|---------|
@@ -249,9 +249,9 @@ The core of this repository is photonic S-Matrix-based simulation.
 
 **Debugging workflow:**
 ```bash
-python Scripts/generate_reference_nazca.py /tmp/ref.gds /tmp/ref_coords.json
-python Scripts/extract_gds_coords.py /tmp/test.gds /tmp/test_coords.json
-python Scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
+python scripts/generate_reference_nazca.py /tmp/ref.gds /tmp/ref_coords.json
+python scripts/extract_gds_coords.py /tmp/test.gds /tmp/test_coords.json
+python scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
 ```
 
 **Files to check:** `PhysicalPin.cs::GetAbsoluteNazcaPosition()`, `SimpleNazcaExporter.cs`, `NazcaReferenceGenerator.cs`
@@ -270,7 +270,7 @@ python Scripts/compare_gds_coords.py /tmp/ref_coords.json /tmp/test_coords.json
 | Example ViewModel | `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs` |
 | Example unit tests | `UnitTests/Analysis/ParameterSweeperTests.cs` |
 | Test helpers | `UnitTests/Helpers/TestComponentFactory.cs` |
-| GDS testing tools | `Scripts/extract_gds_coords.py`, `Scripts/compare_gds_coords.py` |
+| GDS testing tools | `scripts/extract_gds_coords.py`, `scripts/compare_gds_coords.py` |
 
 ---
 

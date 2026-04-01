@@ -15,7 +15,7 @@ namespace CAP_Core.Export;
 public class NazcaReferenceGenerator
 {
     // ── Reference design constants (micrometers) ──────────────────────────
-    // These MUST stay in sync with Scripts/generate_reference_nazca.py
+    // These MUST stay in sync with scripts/generate_reference_nazca.py
 
     /// <summary>Component width in µm.</summary>
     public const double ComponentWidth = 100.0;
@@ -66,7 +66,7 @@ public class NazcaReferenceGenerator
 
     /// <summary>
     /// Returns the expected ground-truth coordinates in physical (editor) µm.
-    /// These must match the values in Scripts/generate_reference_nazca.py exactly.
+    /// These must match the values in scripts/generate_reference_nazca.py exactly.
     /// </summary>
     /// <returns>Dictionary mapping coordinate names to (X, Y) tuples in physical µm.</returns>
     public Dictionary<string, (double X, double Y)> GetExpectedCoordinates()

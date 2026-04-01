@@ -29,7 +29,7 @@ public class GdsCoordinateExtractorTests
     {
         // Arrange: use a real file so we pass the first guard, but
         // the extraction script won't exist in the test runner's working dir
-        // unless Scripts/extract_gds_coords.py is present.
+        // unless scripts/extract_gds_coords.py is present.
         var extractor = new GdsCoordinateExtractor();
         var tempGds = Path.GetTempFileName() + ".gds";
         File.WriteAllBytes(tempGds, Array.Empty<byte>());
