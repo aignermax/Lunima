@@ -1,12 +1,13 @@
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using CAP.Avalonia.ViewModels.AI;
 
 namespace CAP.Avalonia.Services;
 
 /// <summary>
 /// Claude (Anthropic) API integration for the in-app AI Design Assistant.
-/// Supports plain conversation and tool-calling (function calling) for grid manipulation.
+/// Supports standard chat and tool-calling (function calling) mode.
 /// </summary>
 public class AiService : IAiService
 {
@@ -22,10 +23,11 @@ public class AiService : IAiService
     private const string SystemPrompt =
         "You are an AI assistant integrated into Lunima (Connect-A-PIC-Pro), a photonic integrated circuit design tool. " +
         "You help users design photonic circuits using natural language. " +
-        "You can explain photonic concepts, suggest designs, and directly manipulate the circuit grid using tools. " +
-        "Chip coordinate space: 0–5000 µm in both X and Y. Leave 50–100 µm spacing between components for routing. " +
-        "When building circuits, place components first, then connect them. " +
-        "After using tools, summarize what was done concisely. Keep responses under 200 words.";
+        "When the user asks you to build or create a circuit, use the available tools to place components and make connections. " +
+        "Always call get_grid_state first to understand the current canvas state. " +
+        "Use the available_types list from get_grid_state to find valid component names. " +
+        "Typical grid coordinates are 0–5000 micrometers. Space components 300–500µm apart. " +
+        "Be concise and report what you did. Keep responses under 300 words.";
 
     /// <inheritdoc/>
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_apiKey);
@@ -53,8 +55,15 @@ public class AiService : IAiService
         if (!IsConfigured)
             return "Please configure your Claude API key in the AI Assistant settings below.";
 
-        var messages = BuildSimpleMessageList(userMessage, history);
-        var requestBody = new { model = ModelId, max_tokens = MaxTokens, system = SystemPrompt, messages };
+        var messages = BuildTextMessageList(userMessage, history);
+        var requestBody = new
+        {
+            model = ModelId,
+            max_tokens = MaxTokens,
+            system = SystemPrompt,
+            messages
+        };
+
         var json = JsonSerializer.Serialize(requestBody);
         using var request = BuildHttpRequest(json);
 
@@ -62,9 +71,11 @@ public class AiService : IAiService
         {
             var response = await _httpClient.SendAsync(request, ct);
             var responseJson = await response.Content.ReadAsStringAsync(ct);
+
             if (!response.IsSuccessStatusCode)
                 return $"API error ({(int)response.StatusCode}): Check your API key and try again.";
-            return ParseFirstTextBlock(responseJson);
+
+            return ParseResponseText(responseJson);
         }
         catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex) { return $"Network error: {ex.Message}"; }
@@ -75,15 +86,15 @@ public class AiService : IAiService
     public async Task<string> SendMessageWithToolsAsync(
         string userMessage,
         IReadOnlyList<(string Role, string Content)> history,
-        IReadOnlyList<string> availableComponentTypes,
-        Func<string, string, Task<string>> toolExecutor,
+        IReadOnlyList<AiToolDefinition> tools,
+        Func<string, string, Task<string>> executeToolAsync,
         CancellationToken ct = default)
     {
         if (!IsConfigured)
             return "Please configure your Claude API key in the AI Assistant settings below.";
 
-        var messages = BuildSimpleMessageList(userMessage, history);
-        var tools = BuildToolDefinitions(availableComponentTypes);
+        var toolDefs = BuildToolDefinitions(tools);
+        var messages = new List<object>(BuildTextMessageList(userMessage, history));
 
         for (int iteration = 0; iteration < MaxToolLoopIterations; iteration++)
         {
@@ -94,55 +105,69 @@ public class AiService : IAiService
                 model = ModelId,
                 max_tokens = MaxTokens,
                 system = SystemPrompt,
-                tools,
+                tools = toolDefs,
                 messages
             };
 
-            string responseJson;
-            try
-            {
-                var json = JsonSerializer.Serialize(requestBody);
-                using var request = BuildHttpRequest(json);
-                var response = await _httpClient.SendAsync(request, ct);
-                responseJson = await response.Content.ReadAsStringAsync(ct);
-                if (!response.IsSuccessStatusCode)
-                    return $"API error ({(int)response.StatusCode}): Check your API key and try again.";
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (HttpRequestException ex) { return $"Network error: {ex.Message}"; }
+            var responseJson = await PostJsonAsync(requestBody, ct);
+            if (responseJson == null) return "Network error during tool call.";
 
             using var doc = JsonDocument.Parse(responseJson);
             var root = doc.RootElement;
-            var stopReason = root.TryGetProperty("stop_reason", out var sr) ? sr.GetString() : "";
 
-            if (stopReason != "tool_use")
-                return ParseFirstTextBlock(responseJson);
+            if (root.TryGetProperty("error", out var errorEl))
+                return $"API error: {errorEl.GetRawText()}";
 
-            // Add full assistant message (with tool_use blocks) to history
-            var contentElement = root.GetProperty("content");
-            messages.Add(new { role = "assistant", content = (object)contentElement.Clone() });
+            var stopReason = root.TryGetProperty("stop_reason", out var sr) ? sr.GetString() : null;
+            var contentArray = root.TryGetProperty("content", out var ca) ? ca : default;
 
-            // Execute each tool call and collect results
+            var textParts = ExtractTextParts(contentArray);
+            var toolUseParts = ExtractToolUseParts(contentArray);
+
+            if (stopReason == "end_turn" || toolUseParts.Count == 0)
+                return textParts.Count > 0 ? string.Join("\n", textParts) : "Done.";
+
+            // Add assistant message preserving tool_use blocks for API continuity
+            var assistantContent = BuildAssistantContentBlocks(textParts, toolUseParts);
+            messages.Add(new { role = "assistant", content = assistantContent });
+
+            // Execute each tool and collect results
             var toolResults = new List<object>();
-            foreach (var block in contentElement.EnumerateArray())
+            foreach (var (toolId, toolName, toolInputJson) in toolUseParts)
             {
-                if (block.GetProperty("type").GetString() != "tool_use") continue;
+                ct.ThrowIfCancellationRequested();
+                string toolResult;
+                try { toolResult = await executeToolAsync(toolName, toolInputJson); }
+                catch (Exception ex) { toolResult = $"Tool error: {ex.Message}"; }
 
-                var toolId = block.GetProperty("id").GetString()!;
-                var toolName = block.GetProperty("name").GetString()!;
-                var toolInput = block.GetProperty("input").GetRawText();
-
-                var result = await toolExecutor(toolName, toolInput);
-                toolResults.Add(new { type = "tool_result", tool_use_id = toolId, content = result });
+                toolResults.Add(new
+                {
+                    type = "tool_result",
+                    tool_use_id = toolId,
+                    content = toolResult
+                });
             }
 
-            messages.Add(new { role = "user", content = (object)toolResults });
+            messages.Add(new { role = "user", content = toolResults });
         }
 
-        return "Error: Tool calling loop exceeded maximum iterations.";
+        return "Reached maximum tool iterations. Please try a simpler request.";
     }
 
-    private static List<object> BuildSimpleMessageList(
+    private async Task<string?> PostJsonAsync(object requestBody, CancellationToken ct)
+    {
+        var json = JsonSerializer.Serialize(requestBody);
+        using var request = BuildHttpRequest(json);
+        try
+        {
+            var response = await _httpClient.SendAsync(request, ct);
+            return await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return null; }
+    }
+
+    private static List<object> BuildTextMessageList(
         string userMessage,
         IReadOnlyList<(string Role, string Content)> history)
     {
@@ -151,6 +176,70 @@ public class AiService : IAiService
             .ToList();
         messages.Add(new { role = "user", content = userMessage });
         return messages;
+    }
+
+    private static object[] BuildToolDefinitions(IReadOnlyList<AiToolDefinition> tools) =>
+        tools.Select(t => (object)new
+        {
+            name = t.Name,
+            description = t.Description,
+            input_schema = t.InputSchema
+        }).ToArray();
+
+    private static List<string> ExtractTextParts(JsonElement contentArray)
+    {
+        var parts = new List<string>();
+        if (contentArray.ValueKind != JsonValueKind.Array) return parts;
+
+        foreach (var item in contentArray.EnumerateArray())
+        {
+            if (item.TryGetProperty("type", out var type) && type.GetString() == "text"
+                && item.TryGetProperty("text", out var text))
+            {
+                var t = text.GetString();
+                if (!string.IsNullOrWhiteSpace(t)) parts.Add(t);
+            }
+        }
+        return parts;
+    }
+
+    private static List<(string Id, string Name, string InputJson)> ExtractToolUseParts(
+        JsonElement contentArray)
+    {
+        var parts = new List<(string, string, string)>();
+        if (contentArray.ValueKind != JsonValueKind.Array) return parts;
+
+        foreach (var item in contentArray.EnumerateArray())
+        {
+            if (!item.TryGetProperty("type", out var type) || type.GetString() != "tool_use")
+                continue;
+
+            var id = item.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+            var name = item.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? "" : "";
+            var inputJson = item.TryGetProperty("input", out var inputEl)
+                ? inputEl.GetRawText() : "{}";
+
+            parts.Add((id, name, inputJson));
+        }
+        return parts;
+    }
+
+    private static object[] BuildAssistantContentBlocks(
+        List<string> textParts,
+        List<(string Id, string Name, string InputJson)> toolUseParts)
+    {
+        var blocks = new List<object>();
+
+        foreach (var text in textParts)
+            blocks.Add(new { type = "text", text });
+
+        foreach (var (id, name, inputJson) in toolUseParts)
+        {
+            using var doc = JsonDocument.Parse(inputJson);
+            blocks.Add(new { type = "tool_use", id, name, input = doc.RootElement.Clone() });
+        }
+
+        return blocks.ToArray();
     }
 
     private HttpRequestMessage BuildHttpRequest(string json)
@@ -164,124 +253,20 @@ public class AiService : IAiService
         return request;
     }
 
-    private static string ParseFirstTextBlock(string responseJson)
+    private static string ParseResponseText(string responseJson)
     {
         try
         {
             using var doc = JsonDocument.Parse(responseJson);
-            foreach (var block in doc.RootElement.GetProperty("content").EnumerateArray())
-            {
-                if (block.GetProperty("type").GetString() == "text")
-                    return block.GetProperty("text").GetString() ?? "No response received.";
-            }
-            return "No text response received.";
+            var text = doc.RootElement
+                .GetProperty("content")[0]
+                .GetProperty("text")
+                .GetString();
+            return text ?? "No response received.";
         }
         catch
         {
             return "Could not parse AI response.";
         }
-    }
-
-    private static object[] BuildToolDefinitions(IReadOnlyList<string> componentTypes)
-    {
-        var typesList = componentTypes.Count > 0
-            ? string.Join(", ", componentTypes)
-            : "Grating Coupler, Straight Waveguide, MMI 1x2";
-
-        return new object[]
-        {
-            new
-            {
-                name = "get_grid_state",
-                description = "Get current components and connections on the design grid",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new { },
-                    required = Array.Empty<string>()
-                }
-            },
-            new
-            {
-                name = "place_component",
-                description = $"Place a component on the photonic circuit grid. Available types: {typesList}",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        component_type = new { type = "string", description = "Component type name (case-insensitive)" },
-                        x = new { type = "number", description = "Center X position in micrometers (0–5000)" },
-                        y = new { type = "number", description = "Center Y position in micrometers (0–5000)" },
-                        rotation = new
-                        {
-                            type = "integer",
-                            description = "Rotation in degrees",
-                            @enum = new[] { 0, 90, 180, 270 }
-                        }
-                    },
-                    required = new[] { "component_type", "x", "y" }
-                }
-            },
-            new
-            {
-                name = "create_connection",
-                description = "Connect two components with a waveguide (auto-selects first available pins)",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        from_component = new { type = "string", description = "Source component ID" },
-                        to_component = new { type = "string", description = "Target component ID" }
-                    },
-                    required = new[] { "from_component", "to_component" }
-                }
-            },
-            new
-            {
-                name = "clear_grid",
-                description = "Remove all components and connections from the design grid",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new { },
-                    required = Array.Empty<string>()
-                }
-            },
-            new
-            {
-                name = "start_simulation",
-                description = "Run photonic S-Matrix simulation and activate the power flow overlay",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new { },
-                    required = Array.Empty<string>()
-                }
-            },
-            new
-            {
-                name = "stop_simulation",
-                description = "Stop simulation and hide the power flow overlay",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new { },
-                    required = Array.Empty<string>()
-                }
-            },
-            new
-            {
-                name = "get_light_values",
-                description = "Get current light power values for all waveguide connections (requires simulation)",
-                input_schema = new
-                {
-                    type = "object",
-                    properties = new { },
-                    required = Array.Empty<string>()
-                }
-            }
-        };
     }
 }

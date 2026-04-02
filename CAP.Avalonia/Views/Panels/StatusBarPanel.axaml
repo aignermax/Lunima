@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.StatusBarPanel"
+             x:DataType="vm:MainViewModel">
+
+    <Border Background="#1e1e1e" Height="25">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding StatusText}"
+                       VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+            <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray">
+                <Run Text="S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+G=Group  Ctrl+Shift+G=Ungroup  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste  F12=Error Console"/>
+            </TextBlock>
+        </StackPanel>
+    </Border>
+
+</UserControl>
