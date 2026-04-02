@@ -136,6 +136,26 @@ public partial class AiAssistantViewModel : ObservableObject
         StatusText = string.IsNullOrEmpty(key) ? "API key cleared." : "API key saved.";
     }
 
+    /// <summary>Opens the Anthropic API keys page in the default browser.</summary>
+    [RelayCommand]
+    private void OpenApiKeyPage()
+    {
+        try
+        {
+            var url = "https://console.anthropic.com/settings/keys";
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch
+        {
+            StatusText = "Could not open browser. Visit: console.anthropic.com/settings/keys";
+        }
+    }
+
     /// <summary>
     /// Executes a tool on the Avalonia UI thread to safely modify ObservableCollections.
     /// </summary>
@@ -167,6 +187,15 @@ public partial class AiAssistantViewModel : ObservableObject
                 "run_simulation" => await _gridService.RunSimulationAsync(),
                 "get_light_values" => _gridService.GetLightValues(),
                 "clear_grid" => _gridService.ClearGrid(),
+                "create_group" => _gridService.CreateGroup(
+                    GetStringArray(input, "component_ids"),
+                    GetString(input, "group_name")),
+                "ungroup" => _gridService.UngroupComponent(
+                    GetString(input, "group_id")),
+                "save_as_prefab" => _gridService.SaveGroupAsPrefab(
+                    GetString(input, "group_id"),
+                    GetString(input, "prefab_name"),
+                    GetString(input, "description")),
                 _ => $"Unknown tool: {toolName}"
             };
         }
@@ -185,6 +214,17 @@ public partial class AiAssistantViewModel : ObservableObject
 
     private static double GetDouble(JsonElement el, string key) =>
         el.TryGetProperty(key, out var v) ? v.GetDouble() : 0.0;
+
+    private static IReadOnlyList<string> GetStringArray(JsonElement el, string key)
+    {
+        if (!el.TryGetProperty(key, out var arrayEl) || arrayEl.ValueKind != JsonValueKind.Array)
+            return Array.Empty<string>();
+
+        return arrayEl.EnumerateArray()
+            .Select(item => item.GetString() ?? "")
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToList();
+    }
 
     private static int GetInt(JsonElement el, string key, int defaultVal = 0) =>
         el.TryGetProperty(key, out var v) ? v.GetInt32() : defaultVal;
@@ -259,6 +299,56 @@ public partial class AiAssistantViewModel : ObservableObject
             Name = "clear_grid",
             Description = "Remove all components and connections from the photonic circuit grid.",
             InputSchema = new { type = "object", properties = new { } }
+        },
+        new AiToolDefinition
+        {
+            Name = "create_group",
+            Description = "Group multiple components together into a ComponentGroup. Useful for organizing circuits and creating reusable subcircuits.",
+            InputSchema = new
+            {
+                type = "object",
+                properties = new
+                {
+                    component_ids = new
+                    {
+                        type = "array",
+                        items = new { type = "string" },
+                        description = "Array of component IDs to group together (minimum 2 components)"
+                    },
+                    group_name = new { type = "string", description = "Optional name for the group" }
+                },
+                required = new[] { "component_ids" }
+            }
+        },
+        new AiToolDefinition
+        {
+            Name = "ungroup",
+            Description = "Ungroup a ComponentGroup back into individual components.",
+            InputSchema = new
+            {
+                type = "object",
+                properties = new
+                {
+                    group_id = new { type = "string", description = "ID of the group to ungroup" }
+                },
+                required = new[] { "group_id" }
+            }
+        },
+        new AiToolDefinition
+        {
+            Name = "save_as_prefab",
+            Description = "Save a ComponentGroup as a reusable prefab/template in the component library. The prefab will appear in the library panel.",
+            InputSchema = new
+            {
+                type = "object",
+                properties = new
+                {
+                    group_id = new { type = "string", description = "ID of the group to save as prefab" },
+                    prefab_name = new { type = "string", description = "Name for the prefab template" },
+                    description = new { type = "string", description = "Optional description of the prefab" }
+                },
+                required = new[] { "group_id", "prefab_name" }
+            }
         }
     };
 

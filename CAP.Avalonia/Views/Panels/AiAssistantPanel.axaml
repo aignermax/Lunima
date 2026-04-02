@@ -105,11 +105,18 @@
                          PasswordChar="*"
                          Background="#1e1e1e" Foreground="White"
                          BorderBrush="#3e3e3e" FontSize="11"/>
-                <Button Content="Save API Key"
-                        Command="{Binding RightPanel.AiAssistant.SaveApiKeyCommand}"
-                        Background="#3d5d3d" Foreground="White"
-                        Width="120" HorizontalAlignment="Left"/>
-                <TextBlock Text="Get a free API key at console.anthropic.com"
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Button Content="Save API Key"
+                            Command="{Binding RightPanel.AiAssistant.SaveApiKeyCommand}"
+                            Background="#3d5d3d" Foreground="White"
+                            Width="120" HorizontalAlignment="Left"/>
+                    <Button Content="Get API Key"
+                            Command="{Binding RightPanel.AiAssistant.OpenApiKeyPageCommand}"
+                            Background="#3d3d5d" Foreground="#7EC8E3"
+                            Width="100" HorizontalAlignment="Left"
+                            ToolTip.Tip="Open Anthropic console to get an API key"/>
+                </StackPanel>
+                <TextBlock Text="Free API key available at console.anthropic.com/settings/keys"
                            Foreground="#666666" FontSize="9" TextWrapping="Wrap"/>
             </StackPanel>
         </Expander>

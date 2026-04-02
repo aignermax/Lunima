@@ -163,6 +163,68 @@ public class AiGridService : IAiGridService
     public IReadOnlyList<string> GetAvailableComponentTypes() =>
         _leftPanel.AllTemplates.Select(t => t.Name).Distinct().ToList();
 
+    /// <inheritdoc/>
+    public string CreateGroup(IReadOnlyList<string> componentIds, string? groupName = null)
+    {
+        var componentsToGroup = componentIds
+            .Select(id => _canvas.Components.FirstOrDefault(c => c.Component.Identifier == id))
+            .Where(c => c != null)
+            .Cast<ComponentViewModel>()
+            .ToList();
+
+        if (componentsToGroup.Count < 2)
+            return $"Cannot create group: need at least 2 components. Found {componentsToGroup.Count} matching IDs.";
+
+        if (componentsToGroup.Any(c => c.Component.IsLocked))
+            return "Cannot group locked components.";
+
+        var cmd = new CreateGroupCommand(_canvas, componentsToGroup);
+        cmd.Execute();
+
+        var createdGroup = _canvas.Components.LastOrDefault();
+        if (createdGroup?.Component is ComponentGroup group)
+        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+                group.GroupName = groupName;
+
+            return $"Created group '{group.Identifier}' (name: {group.GroupName}) with {componentsToGroup.Count} components.";
+        }
+
+        return "Failed to create group.";
+    }
+
+    /// <inheritdoc/>
+    public string UngroupComponent(string groupId)
+    {
+        var groupVm = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == groupId);
+        if (groupVm?.Component is not ComponentGroup group)
+            return $"Component '{groupId}' is not a group.";
+
+        var memberCount = group.ChildComponents.Count;
+        var cmd = new UngroupCommand(_canvas, group);
+        cmd.Execute();
+
+        return $"Ungrouped '{groupId}'. Restored {memberCount} component(s).";
+    }
+
+    /// <inheritdoc/>
+    public string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null)
+    {
+        var groupVm = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == groupId);
+        if (groupVm?.Component is not ComponentGroup group)
+            return $"Component '{groupId}' is not a group.";
+
+        var libraryVm = _leftPanel.ComponentLibrary;
+        if (libraryVm == null)
+            return "Component library not available.";
+
+        var previewGenerator = new GroupPreviewGenerator();
+        var cmd = new SaveGroupToLibraryCommand(libraryVm, previewGenerator, group, prefabName, description);
+        cmd.Execute();
+
+        return $"Saved group '{groupId}' as prefab '{prefabName}' in component library.";
+    }
+
     private HashSet<PhysicalPin> GetConnectedPins() =>
         _canvas.Connections
             .SelectMany(c => new[] { c.Connection.StartPin, c.Connection.EndPin })

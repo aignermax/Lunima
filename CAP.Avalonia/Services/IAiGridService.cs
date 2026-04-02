@@ -46,4 +46,24 @@ public interface IAiGridService
     /// Returns the list of available component type names from loaded PDKs.
     /// </summary>
     IReadOnlyList<string> GetAvailableComponentTypes();
+
+    /// <summary>
+    /// Groups the specified components into a ComponentGroup.
+    /// Components must be specified by their identifiers.
+    /// Returns a status message with the created group identifier.
+    /// </summary>
+    string CreateGroup(IReadOnlyList<string> componentIds, string? groupName = null);
+
+    /// <summary>
+    /// Ungroups a ComponentGroup, restoring individual components.
+    /// Returns a status message listing the restored component identifiers.
+    /// </summary>
+    string UngroupComponent(string groupId);
+
+    /// <summary>
+    /// Saves a group as a reusable prefab/template in the component library.
+    /// The group will appear in the library panel for future use.
+    /// Returns a status message with the template name.
+    /// </summary>
+    string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null);
 }
