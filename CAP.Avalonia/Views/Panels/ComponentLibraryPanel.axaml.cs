@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Creation;
@@ -9,53 +8,52 @@ using System.Linq;
 namespace CAP.Avalonia.Views.Panels;
 
 /// <summary>
-/// Component library panel showing saved groups, PDK macros, and available component templates.
+/// Component library panel showing saved groups, PDK macros, and the full component list.
+/// Handles group template selection, hover state, and rename dialog wiring.
 /// DataContext is inherited from MainWindow (MainViewModel).
 /// </summary>
 public partial class ComponentLibraryPanel : UserControl
 {
-    /// <summary>Initializes the ComponentLibraryPanel and wires up VM callbacks.</summary>
+    /// <summary>Initializes the ComponentLibraryPanel and wires up view-model callbacks.</summary>
     public ComponentLibraryPanel()
     {
         InitializeComponent();
-        Loaded += OnLoaded;
+        DataContextChanged += OnDataContextChanged;
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs e)
+    private void OnDataContextChanged(object? sender, System.EventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;
 
-        var window = TopLevel.GetTopLevel(this) as Window;
-
+        // Wire rename dialog — requires a Window reference obtained via TopLevel
         vm.LeftPanel.ComponentLibrary.ShowRenameDialogAsync = async (currentName) =>
         {
+            var window = TopLevel.GetTopLevel(this) as Window;
             if (window == null) return null;
-            var dialog = new Views.RenameDialog(currentName);
+            var dialog = new RenameDialog(currentName);
             return await dialog.ShowDialog<string?>(window);
         };
 
+        // Sync ListBox selections when SelectedGroupTemplate changes externally
         vm.LeftPanel.PropertyChanged += (s, args) =>
         {
             if (args.PropertyName == nameof(vm.LeftPanel.SelectedGroupTemplate))
-                UpdateGroupTemplateListBoxSelections(vm, vm.LeftPanel.SelectedGroupTemplate);
+                UpdateGroupTemplateListBoxSelections(vm.LeftPanel.SelectedGroupTemplate);
         };
     }
 
-    /// <summary>Handles pointer entering a group template item (shows delete button).</summary>
     private void OnGroupItemPointerEntered(object? sender, PointerEventArgs e)
     {
         if (sender is Border border && border.DataContext is GroupTemplateItemViewModel itemVm)
             itemVm.IsHovered = true;
     }
 
-    /// <summary>Handles pointer leaving a group template item (hides delete button).</summary>
     private void OnGroupItemPointerExited(object? sender, PointerEventArgs e)
     {
         if (sender is Border border && border.DataContext is GroupTemplateItemViewModel itemVm)
             itemVm.IsHovered = false;
     }
 
-    /// <summary>Handles selection change in the UserGroups ListBox.</summary>
     private void OnUserGroupsSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;
@@ -72,7 +70,6 @@ public partial class ComponentLibraryPanel : UserControl
         }
     }
 
-    /// <summary>Handles selection change in the PdkGroups ListBox.</summary>
     private void OnPdkGroupsSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;
@@ -101,12 +98,20 @@ public partial class ComponentLibraryPanel : UserControl
             PdkGroupsListBox.SelectedItem = null;
     }
 
-    private void UpdateGroupTemplateListBoxSelections(MainViewModel vm, GroupTemplate? template)
+    /// <summary>Clears both user and PDK group selections. Called from MainWindow when needed.</summary>
+    public void ClearAllGroupSelections()
     {
+        ClearUserGroupsSelection();
+        ClearPdkGroupsSelection();
+    }
+
+    private void UpdateGroupTemplateListBoxSelections(GroupTemplate? template)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
         if (template == null)
         {
-            ClearUserGroupsSelection();
-            ClearPdkGroupsSelection();
+            ClearAllGroupSelections();
             return;
         }
 

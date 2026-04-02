@@ -52,6 +52,7 @@
                                 </Border.ContextMenu>
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
+                                        <!-- Preview box with component count and size info -->
                                         <Border Width="56" Height="36"
                                                 Background="#1e1e1e"
                                                 BorderBrush="#3e3e3e"
@@ -79,6 +80,7 @@
                                             </TextBlock>
                                         </StackPanel>
                                     </StackPanel>
+
                                     <!-- Delete button (visible on hover) -->
                                     <Button IsVisible="{Binding IsHovered}"
                                             HorizontalAlignment="Right"
@@ -125,6 +127,7 @@
                                 </Border.ContextMenu>
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
+                                        <!-- Preview box with component count and size info -->
                                         <Border Width="56" Height="36"
                                                 Background="#1e1e1e"
                                                 BorderBrush="#3e3e3e"
@@ -152,6 +155,7 @@
                                             </TextBlock>
                                         </StackPanel>
                                     </StackPanel>
+
                                     <!-- Delete button (visible on hover) -->
                                     <Button IsVisible="{Binding IsHovered}"
                                             HorizontalAlignment="Right"
@@ -181,6 +185,8 @@
             <StackPanel Margin="5">
                 <TextBlock Text="{Binding LeftPanel.PdkManager.StatusText}"
                            FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+
+                <!-- PDK Filter List -->
                 <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
@@ -204,6 +210,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+
+                <!-- PDK Action Buttons -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
                     <Button Content="Enable All" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
                             Width="75" Height="24" Margin="2" FontSize="10"
@@ -215,7 +223,6 @@
             </StackPanel>
         </Expander>
 
-        <!-- Component list -->
         <ScrollViewer x:Name="ComponentLibraryScroll"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"

@@ -1,14 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
-       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-       xmlns:vm="using:CAP.Avalonia.ViewModels"
-       xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
-       xmlns:controls="using:CAP.Avalonia.Controls"
-       xmlns:views="using:CAP.Avalonia.Views"
-       xmlns:panels="using:CAP.Avalonia.Views.Panels"
-       x:Class="CAP.Avalonia.Views.MainWindow"
-       x:DataType="vm:MainViewModel"
-       Title="Lunima"
-       Width="1500" Height="900">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:views="using:CAP.Avalonia.Views"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
+        x:Class="CAP.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Lunima"
+        Width="1500" Height="900">
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+G" Command="{Binding CreateGroupCommand}" />
@@ -18,10 +17,13 @@
 
     <DockPanel>
         <!-- Toolbar -->
-        <panels:ToolbarPanel DockPanel.Dock="Top"/>
+        <panels:ToolbarPanel DockPanel.Dock="Top" DataContext="{Binding}"/>
 
-        <!-- Status Bar + Error Console (docked to bottom before left/right panels) -->
-        <panels:StatusBarPanel DockPanel.Dock="Bottom"/>
+        <!-- Status Bar -->
+        <panels:StatusBarPanel DockPanel.Dock="Bottom" DataContext="{Binding}"/>
+
+        <!-- Error Console Panel (collapsible, above status bar, toggled via F12) -->
+        <panels:ErrorConsolePanel DockPanel.Dock="Bottom" DataContext="{Binding}"/>
 
         <!-- Left Panel - Hierarchy + Component Library -->
         <Grid DockPanel.Dock="Left" ColumnDefinitions="*,Auto" Name="LeftPanelGrid">
@@ -30,19 +32,19 @@
                     MinWidth="200" MaxWidth="800"
                     Background="#252526">
                 <Grid RowDefinitions="Auto,5,*">
-                    <!-- Hierarchy Panel -->
-                    <views:HierarchyPanel Grid.Row="0"
-                                          DataContext="{Binding LeftPanel.HierarchyPanel}"
-                                          Height="250"/>
+                <!-- Hierarchy Panel -->
+                <views:HierarchyPanel Grid.Row="0"
+                                      DataContext="{Binding LeftPanel.HierarchyPanel}"
+                                      Height="250"/>
 
-                    <!-- Splitter -->
-                    <GridSplitter Grid.Row="1"
-                                  Background="#3d3d3d"
-                                  ResizeDirection="Rows"
-                                  HorizontalAlignment="Stretch"/>
+                <!-- Splitter -->
+                <GridSplitter Grid.Row="1"
+                              Background="#3d3d3d"
+                              ResizeDirection="Rows"
+                              HorizontalAlignment="Stretch"/>
 
-                    <!-- Component Library -->
-                    <panels:ComponentLibraryPanel Grid.Row="2"/>
+                <!-- Component Library -->
+                <panels:ComponentLibraryPanel Grid.Row="2" DataContext="{Binding}"/>
                 </Grid>
             </Border>
 
@@ -244,6 +246,7 @@
                         Lock components to prevent moving, rotating, or deleting.
                     </TextBlock>
 
+                    <!-- Selection-based lock controls -->
                     <StackPanel IsVisible="{Binding BottomPanel.ElementLock.HasSelection}">
                         <TextBlock Text="Selected Components:" Foreground="Gray" Margin="0,0,0,5"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -256,6 +259,7 @@
                         </StackPanel>
                     </StackPanel>
 
+                    <!-- Global unlock controls -->
                     <Button Content="Unlock All Components"
                             Command="{Binding BottomPanel.ElementLock.UnlockAllComponentsCommand}"
                             Width="160" Margin="0,5,0,5"
@@ -266,6 +270,7 @@
                             Width="160" Margin="0,0,0,5"
                             Background="#3d4d5d"/>
 
+                    <!-- Status display -->
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
                         <TextBlock Text="Locked: " Foreground="Gray"/>
                         <TextBlock Text="{Binding BottomPanel.ElementLock.LockedComponentCount}" Foreground="Orange"/>
@@ -328,6 +333,7 @@
                                        Foreground="#aaaaaa" FontSize="10" TextWrapping="Wrap"/>
                         </ScrollViewer>
 
+                        <!-- Download progress -->
                         <ProgressBar Value="{Binding RightPanel.Update.DownloadProgress}"
                                      Minimum="0" Maximum="1"
                                      Height="6" Margin="0,0,0,5"
@@ -358,7 +364,7 @@
             </Border>
         </Grid>
 
-        <!-- Main Canvas with banners -->
+        <!-- Main Canvas with Edit Mode Banner -->
         <DockPanel>
             <!-- Update Banner -->
             <Border DockPanel.Dock="Top"
@@ -433,6 +439,7 @@
                     BorderBrush="#FF4520"
                     BorderThickness="0,0,0,2">
                 <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Icon and Label -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
                         <TextBlock Text="✏️" FontSize="16" VerticalAlignment="Center"/>
                         <TextBlock Text="GROUP EDIT MODE" FontWeight="Bold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
@@ -443,6 +450,7 @@
                         </TextBlock>
                     </StackPanel>
 
+                    <!-- Exit Button -->
                     <Button Grid.Column="2"
                             Content="Exit Edit Mode (ESC)"
                             Command="{Binding Canvas.ExitToRootCommand}"

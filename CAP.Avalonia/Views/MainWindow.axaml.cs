@@ -1,9 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
-using System.Linq;
 
 namespace CAP.Avalonia.Views;
 
@@ -13,6 +11,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // Set up the FileDialogService when the window is loaded
         Loaded += async (_, _) =>
         {
             if (DataContext is MainViewModel vm)
@@ -50,12 +49,19 @@ public partial class MainWindow : Window
     /// </summary>
     private void SetupPanelResizing(MainViewModel vm)
     {
+        // Set initial widths from saved preferences
         if (LeftPanelGrid != null && LeftPanelGrid.ColumnDefinitions.Count > 0)
+        {
             LeftPanelGrid.ColumnDefinitions[0].Width = new GridLength(vm.LeftPanel.LeftPanelWidth.Value, GridUnitType.Pixel);
+        }
 
         if (RightPanelGrid != null && RightPanelGrid.ColumnDefinitions.Count > 1)
+        {
             RightPanelGrid.ColumnDefinitions[1].Width = new GridLength(vm.RightPanel.RightPanelWidth.Value, GridUnitType.Pixel);
+        }
 
+        // Listen to GridSplitter drag events to save new widths
+        // Left panel resizing - we need to find the GridSplitter in LeftPanelGrid
         if (LeftPanelGrid != null)
         {
             var leftSplitter = LeftPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
@@ -67,12 +73,15 @@ public partial class MainWindow : Window
                     {
                         var newWidth = LeftPanelGrid.ColumnDefinitions[0].Width.Value;
                         if (newWidth > 0)
+                        {
                             vm.LeftPanel.LeftPanelWidth = new GridLength(newWidth);
+                        }
                     }
                 };
             }
         }
 
+        // Right panel resizing
         if (RightPanelGrid != null)
         {
             var rightSplitter = RightPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
@@ -84,7 +93,9 @@ public partial class MainWindow : Window
                     {
                         var newWidth = RightPanelGrid.ColumnDefinitions[1].Width.Value;
                         if (newWidth > 0)
+                        {
                             vm.RightPanel.RightPanelWidth = new GridLength(newWidth);
+                        }
                     }
                 };
             }
@@ -103,6 +114,7 @@ public partial class MainWindow : Window
 
         var ctrlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
+        // Global keyboard shortcuts that work regardless of focus
         switch (e.Key)
         {
             case Key.N:
@@ -128,6 +140,7 @@ public partial class MainWindow : Window
                 if (ctrlPressed)
                 {
                     Console.WriteLine("DEBUG: Ctrl+V detected");
+                    // Get the last canvas position for paste-at-cursor
                     var canvasPos = DesignCanvasControl.LastCanvasPosition;
                     mainVm.PasteSelected(canvasPos.X, canvasPos.Y);
                 }
@@ -141,6 +154,7 @@ public partial class MainWindow : Window
                 mainVm.DeleteSelectedCommand.Execute(null);
                 break;
             case Key.Escape:
+                // First priority: Exit group edit mode if active (via command for undo/redo)
                 if (mainVm.Canvas.IsInGroupEditMode)
                 {
                     if (mainVm.Canvas.CurrentEditGroup != null)
@@ -177,7 +191,9 @@ public partial class MainWindow : Window
                 {
                     var canvas = mainVm.Canvas;
                     if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                    {
                         canvas.ShowGridOverlay = !canvas.ShowGridOverlay;
+                    }
                     else
                     {
                         canvas.GridSnap.Toggle();
@@ -222,7 +238,7 @@ public partial class MainWindow : Window
                     mainVm.RunSimulationCommand.Execute(null);
                 break;
             default:
-                return;
+                return; // Don't mark as handled for unrecognized keys
         }
 
         e.Handled = true;
@@ -230,19 +246,31 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Gets the actual viewport size (canvas bounds) independent of zoom level.
+    /// Gets the actual viewport size (visible area) independent of zoom level.
+    /// Uses the DesignCanvas control's own layout bounds, which correctly excludes
+    /// the left panel, right panel, and toolbar from the viewport dimensions.
+    /// The rendering coordinate space is the canvas local space, so ZoomToFit
+    /// must use canvas dimensions — not window dimensions — for correct centering.
     /// </summary>
     private (double width, double height) GetActualViewportSize()
     {
+        // Use the canvas control's actual layout bounds.
+        // This is correct because PanX/PanY are in canvas-local coordinates,
+        // and ZoomToFit computes pan as: vpWidth/2 - boxCenterX * zoom.
+        // Using window ClientSize (which includes sidebars) would shift the
+        // computed pan center by (windowWidth - canvasWidth) / 2, causing the
+        // "wrong position on first F-press" bug.
         var canvasBounds = DesignCanvasControl.Bounds;
         if (canvasBounds.Width > 0 && canvasBounds.Height > 0)
             return (canvasBounds.Width, canvasBounds.Height);
 
+        // Fallback: if the canvas has not been laid out yet, use window client size.
         var windowWidth = ClientSize.Width;
         var windowHeight = ClientSize.Height;
         if (windowWidth > 0 && windowHeight > 0)
             return (windowWidth, windowHeight);
 
-        return (1400, 900);
+        return (1400, 900); // Last-resort default matching the initial window size
     }
+
 }

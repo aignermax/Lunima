@@ -23,7 +23,7 @@
             <!-- Zoom Controls -->
             <Button Content="+" Command="{Binding ZoomInCommand}" Width="30" Margin="2"/>
             <Button Content="-" Command="{Binding ZoomOutCommand}" Width="30" Margin="2"/>
-            <Button Content="[F] Fit" x:Name="ZoomToFitButton"
+            <Button Content="[F] Fit" x:Name="ZoomToFitButton" Click="ZoomToFitButton_Click"
                     Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Zoom to fit all components (F)"/>
             <Button Content="1:1" Command="{Binding ResetZoomCommand}"
                     Width="35" Margin="2" ToolTip.Tip="Reset zoom to 100%"/>

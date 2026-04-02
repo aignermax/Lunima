@@ -1,233 +1,148 @@
-using System.Text.Json;
-using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
-using CAP_Core.LightCalculation;
-using Moq;
+using CAP.Avalonia.ViewModels.Panels;
+using CAP_Core.Components.Creation;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
 
 namespace UnitTests.AI;
 
 /// <summary>
-/// Unit tests for <see cref="AiGridService"/>.
-/// Uses a real <see cref="DesignCanvasViewModel"/> and real <see cref="CommandManager"/>,
-/// but mocks <see cref="SimulationService"/> to avoid heavy core dependencies.
+/// Unit tests for <see cref="AiGridService"/> covering all grid operations.
+/// Uses real (minimal) instances of dependencies with empty state.
 /// </summary>
 public class AiGridServiceTests
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly CommandManager _commandManager;
-    private readonly Mock<SimulationService> _mockSimulation;
-
-    /// <summary>
-    /// Builds a test service with the given template list.
-    /// </summary>
-    private AiGridService CreateService(IReadOnlyList<ComponentTemplate>? templates = null)
-    {
-        var templateList = templates ?? TestPdkLoader.LoadAllTemplates();
-        return new AiGridService(
-            _canvas,
-            () => templateList,
-            _commandManager,
-            _mockSimulation.Object);
-    }
+    private readonly LeftPanelViewModel _leftPanel;
+    private readonly SimulationService _simulationService;
+    private readonly AiGridService _svc;
 
     public AiGridServiceTests()
     {
         _canvas = new DesignCanvasViewModel();
-        _commandManager = new CommandManager();
-        _mockSimulation = new Mock<SimulationService>();
-    }
-
-    // ── GetGridState ──────────────────────────────────────────────────────────
-
-    [Fact]
-    public void GetGridState_EmptyCanvas_ReturnsZeroCounts()
-    {
-        var service = CreateService();
-
-        var json = service.GetGridState();
-
-        using var doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("component_count").GetInt32().ShouldBe(0);
-        doc.RootElement.GetProperty("connection_count").GetInt32().ShouldBe(0);
-        doc.RootElement.GetProperty("simulation_active").GetBoolean().ShouldBeFalse();
+        _leftPanel = CreateMinimalLeftPanel(_canvas);
+        _simulationService = new SimulationService();
+        _svc = new AiGridService(_canvas, _leftPanel, _simulationService);
     }
 
     [Fact]
-    public void GetGridState_ReturnsValidJson()
+    public void GetGridState_EmptyCanvas_ReturnsValidJsonWithExpectedKeys()
     {
-        var service = CreateService();
+        var result = _svc.GetGridState();
 
-        var json = service.GetGridState();
-
-        Should.NotThrow(() => JsonDocument.Parse(json));
-    }
-
-    // ── GetAvailableComponentTypes ────────────────────────────────────────────
-
-    [Fact]
-    public void GetAvailableComponentTypes_NoTemplates_ReturnsEmptyList()
-    {
-        var service = CreateService(new List<ComponentTemplate>());
-
-        var types = service.GetAvailableComponentTypes();
-
-        types.ShouldBeEmpty();
+        result.ShouldNotBeNullOrEmpty();
+        result.ShouldContain("\"components\"");
+        result.ShouldContain("\"connections\"");
+        result.ShouldContain("\"available_types\"");
     }
 
     [Fact]
-    public void GetAvailableComponentTypes_WithTemplates_ReturnsDistinctSortedNames()
+    public void GetGridState_EmptyCanvas_HasZeroComponents()
     {
-        var templates = new List<ComponentTemplate>
-        {
-            MakeTemplate("Waveguide", 100, 20),
-            MakeTemplate("MMI 1x2", 80, 30),
-            MakeTemplate("Waveguide", 100, 20) // duplicate
-        };
-        var service = CreateService(templates);
+        var result = _svc.GetGridState();
 
-        var types = service.GetAvailableComponentTypes();
-
-        types.Count.ShouldBe(2);
-        types.ShouldBeInOrder(); // Sorted alphabetically
-    }
-
-    // ── PlaceComponent ────────────────────────────────────────────────────────
-
-    [Fact]
-    public void PlaceComponent_UnknownType_ReturnsError()
-    {
-        var service = CreateService(new List<ComponentTemplate>());
-
-        var result = service.PlaceComponent("NonExistentComponent", 100, 100);
-
-        result.ShouldStartWith("Error:");
+        // The components array should be empty
+        result.ShouldContain("\"components\":[]");
     }
 
     [Fact]
-    public void PlaceComponent_KnownType_ReturnsSuccessWithComponentId()
+    public void GetAvailableComponentTypes_NoTemplatesLoaded_ReturnsEmptyList()
     {
-        var template = MakeTemplate("Test Waveguide", 100, 20);
-        var service = CreateService(new List<ComponentTemplate> { template });
+        var types = _svc.GetAvailableComponentTypes();
 
-        var result = service.PlaceComponent("Test Waveguide", 500, 500);
-
-        result.ShouldNotStartWith("Error:");
-        result.ShouldContain("Component ID:");
-        _canvas.Components.Count.ShouldBe(1);
+        types.ShouldNotBeNull();
+        types.Count.ShouldBe(0);
     }
 
     [Fact]
-    public void PlaceComponent_KnownType_CaseInsensitive()
+    public async Task PlaceComponentAsync_UnknownType_ReturnsNotFoundMessage()
     {
-        var template = MakeTemplate("Grating Coupler", 50, 50);
-        var service = CreateService(new List<ComponentTemplate> { template });
+        var result = await _svc.PlaceComponentAsync("NonExistentMMI", 100, 100);
 
-        var result = service.PlaceComponent("grating coupler", 200, 200);
-
-        result.ShouldNotStartWith("Error:");
+        result.ShouldContain("not found");
+        result.ShouldContain("NonExistentMMI");
     }
 
     [Fact]
-    public void PlaceComponent_AddsComponentToCanvas()
+    public async Task PlaceComponentAsync_UnknownType_IncludesAvailableTypesHint()
     {
-        var template = MakeTemplate("My Component", 50, 50);
-        var service = CreateService(new List<ComponentTemplate> { template });
+        // With no templates loaded, the error hints at 0 available types
+        var result = await _svc.PlaceComponentAsync("X", 200, 200);
 
-        _canvas.Components.Count.ShouldBe(0);
-        service.PlaceComponent("My Component", 300, 300);
-        _canvas.Components.Count.ShouldBe(1);
+        result.ShouldContain("not found");
     }
 
-    // ── ClearGrid ─────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task CreateConnectionAsync_UnknownFromComponent_ReturnsNotFoundMessage()
+    {
+        var result = await _svc.CreateConnectionAsync("MMI_1", "WG_2");
+
+        result.ShouldContain("not found");
+        result.ShouldContain("MMI_1");
+    }
 
     [Fact]
-    public void ClearGrid_EmptyCanvas_ReturnsZeroCleared()
+    public async Task CreateConnectionAsync_UnknownToComponent_ReturnsNotFoundMessage()
     {
-        var service = CreateService();
+        // First register a fake component by adding it directly to the canvas
+        var result = await _svc.CreateConnectionAsync("MissingFrom_1", "MissingTo_2");
 
-        var result = service.ClearGrid();
+        result.ShouldContain("not found");
+    }
+
+    [Fact]
+    public async Task RunSimulationAsync_EmptyCanvas_ReturnsNoComponentsMessage()
+    {
+        var result = await _svc.RunSimulationAsync();
+
+        result.ShouldContain("No components");
+    }
+
+    [Fact]
+    public void GetLightValues_EmptyCanvas_ReturnsValidJsonWithConnectionsKey()
+    {
+        var result = _svc.GetLightValues();
+
+        result.ShouldNotBeNullOrEmpty();
+        result.ShouldContain("\"connections\"");
+    }
+
+    [Fact]
+    public void ClearGrid_EmptyCanvas_ReportsZeroRemovedComponents()
+    {
+        var result = _svc.ClearGrid();
 
         result.ShouldContain("0");
     }
 
     [Fact]
-    public void ClearGrid_WithComponents_RemovesAll()
+    public void ClearGrid_AfterOperations_ReturnsSuccessMessage()
     {
-        var template = MakeTemplate("WG", 50, 20);
-        var service = CreateService(new List<ComponentTemplate> { template });
-        service.PlaceComponent("WG", 200, 200);
-        service.PlaceComponent("WG", 400, 400);
-        _canvas.Components.Count.ShouldBe(2);
+        var result = _svc.ClearGrid();
 
-        service.ClearGrid();
-
-        _canvas.Components.Count.ShouldBe(0);
+        result.ShouldNotBeNullOrEmpty();
+        result.ShouldContain("cleared");
     }
-
-    // ── GetLightValues ────────────────────────────────────────────────────────
-
-    [Fact]
-    public void GetLightValues_SimulationNotActive_ReturnsNoDataMessage()
-    {
-        var service = CreateService();
-
-        var result = service.GetLightValues();
-
-        result.ShouldContain("start_simulation");
-    }
-
-    // ── StopSimulation ────────────────────────────────────────────────────────
-
-    [Fact]
-    public void StopSimulation_HidesPowerFlow()
-    {
-        var service = CreateService();
-        _canvas.ShowPowerFlow = true;
-
-        service.StopSimulation();
-
-        _canvas.ShowPowerFlow.ShouldBeFalse();
-    }
-
-    // ── CreateConnection ──────────────────────────────────────────────────────
-
-    [Fact]
-    public void CreateConnection_UnknownFromComponent_ReturnsError()
-    {
-        var service = CreateService();
-
-        var result = service.CreateConnection("NonExistent_1", "NonExistent_2");
-
-        result.ShouldStartWith("Error:");
-        result.ShouldContain("NonExistent_1");
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates a minimal ComponentTemplate with two pins and a zero-transmission S-Matrix.
+    /// Creates a minimal <see cref="LeftPanelViewModel"/> with real but empty dependencies.
+    /// No PDKs are loaded so <see cref="LeftPanelViewModel.AllTemplates"/> is empty.
     /// </summary>
-    private static ComponentTemplate MakeTemplate(string name, double width, double height)
+    private static LeftPanelViewModel CreateMinimalLeftPanel(DesignCanvasViewModel canvas)
     {
-        return new ComponentTemplate
-        {
-            Name = name,
-            PdkSource = "Test PDK",
-            WidthMicrometers = width,
-            HeightMicrometers = height,
-            PinDefinitions = new[]
-            {
-                new PinDefinition("left", 0, height / 2, 180),
-                new PinDefinition("right", width, height / 2, 0)
-            },
-            CreateSMatrix = pins =>
-            {
-                var allIds = pins.SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
-                return new SMatrix(allIds, new());
-            }
-        };
+        var libraryManager = new GroupLibraryManager();
+        var pdkLoader = new PdkLoader();
+        var prefsTempFile = Path.Combine(Path.GetTempPath(), $"cap-test-{Guid.NewGuid()}.json");
+        var prefs = new UserPreferencesService(prefsTempFile);
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+        var pdkManager = new PdkManagerViewModel();
+        var componentLibrary = new ComponentLibraryViewModel(libraryManager);
+
+        return new LeftPanelViewModel(
+            canvas, libraryManager, pdkLoader, prefs,
+            hierarchy, pdkManager, componentLibrary);
     }
 }

@@ -5,7 +5,7 @@ using CAP.Avalonia.ViewModels;
 namespace CAP.Avalonia.Views.Panels;
 
 /// <summary>
-/// Toolbar panel with mode buttons, zoom controls, undo/redo, file operations, PDK loading, and simulation.
+/// Toolbar panel containing mode buttons, zoom controls, undo/redo, file operations, PDK, and simulation.
 /// DataContext is inherited from MainWindow (MainViewModel).
 /// </summary>
 public partial class ToolbarPanel : UserControl
@@ -14,13 +14,18 @@ public partial class ToolbarPanel : UserControl
     public ToolbarPanel()
     {
         InitializeComponent();
-        ZoomToFitButton.Click += OnZoomToFitButtonClick;
     }
 
-    private void OnZoomToFitButtonClick(object? sender, RoutedEventArgs e)
+    /// <summary>
+    /// Handles the Zoom-to-Fit button click. Delegates to MainViewModel using the
+    /// already-wired ViewportControl.GetViewportSize callback.
+    /// </summary>
+    private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainViewModel vm) return;
-        var (width, height) = vm.ViewportControl.GetViewportSize?.Invoke() ?? (1400.0, 900.0);
-        vm.ZoomToFit(width, height);
+        if (DataContext is MainViewModel vm)
+        {
+            var (width, height) = vm.ViewportControl.GetViewportSize?.Invoke() ?? (1400, 900);
+            vm.ZoomToFit(width, height);
+        }
     }
 }
