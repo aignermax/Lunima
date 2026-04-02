@@ -1,6 +1,10 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
+using CAP.Avalonia.Controls.Handlers;
+using CAP.Avalonia.Controls.Rendering;
+using CAP.Avalonia.Gestures;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
@@ -10,88 +14,247 @@ using CAP_Core.Components.Core;
 namespace CAP.Avalonia.Controls;
 
 /// <summary>
-/// Core DesignCanvas control - main entry point for the canvas control.
-/// Rendering, mouse handling, and keyboard handling are in separate partial class files.
+/// Design canvas control — a lean coordinator that delegates rendering to renderer objects
+/// and input handling to <see cref="KeyboardHandler"/> and gesture recognizers.
+/// No partial classes; all behavior is composed via the Strategy pattern.
 /// </summary>
-public partial class DesignCanvas : Control
+public class DesignCanvas : Control
 {
+    // ── Styled Properties ──────────────────────────────────────────────────
+
+    /// <summary>Avalonia styled property for the canvas ViewModel.</summary>
     public static readonly StyledProperty<DesignCanvasViewModel?> ViewModelProperty =
         AvaloniaProperty.Register<DesignCanvas, DesignCanvasViewModel?>(nameof(ViewModel));
 
+    /// <summary>Avalonia styled property for the zoom level.</summary>
     public static readonly StyledProperty<double> ZoomProperty =
         AvaloniaProperty.Register<DesignCanvas, double>(nameof(Zoom), 1.0);
 
+    /// <summary>Avalonia styled property for the main application ViewModel.</summary>
     public static readonly StyledProperty<MainViewModel?> MainViewModelProperty =
         AvaloniaProperty.Register<DesignCanvas, MainViewModel?>(nameof(MainViewModel));
 
+    /// <summary>Gets or sets the canvas ViewModel.</summary>
     public DesignCanvasViewModel? ViewModel
     {
         get => GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
     }
 
+    /// <summary>Gets or sets the current zoom level.</summary>
     public double Zoom
     {
         get => GetValue(ZoomProperty);
         set => SetValue(ZoomProperty, value);
     }
 
+    /// <summary>Gets or sets the main application ViewModel.</summary>
     public MainViewModel? MainViewModel
     {
         get => GetValue(MainViewModelProperty);
         set => SetValue(MainViewModelProperty, value);
     }
 
+    // ── Internal State ─────────────────────────────────────────────────────
+
     private readonly CanvasInteractionState _interactionState = new();
 
-    /// <summary>
-    /// Provides read-only access to interaction state for rendering partial classes.
-    /// </summary>
-    internal CanvasInteractionState InteractionState => _interactionState;
-
-    // Public properties for rendering partial classes to access state
-    internal WaveguideConnectionViewModel? HoveredConnection => _interactionState.HoveredConnection;
-    internal bool ShowPlacementPreview => _interactionState.ShowPlacementPreview;
-    internal ComponentTemplate? PlacementPreviewTemplate => _interactionState.PlacementPreviewTemplate;
-    internal Point PlacementPreviewPosition => _interactionState.PlacementPreviewPosition;
-    internal bool ShowDragPreview => _interactionState.ShowDragPreview;
-    internal ComponentViewModel? DraggingComponent => _interactionState.DraggingComponent;
-    internal Point DragPreviewPosition => _interactionState.DragPreviewPosition;
-    internal bool DragPreviewValid => _interactionState.DragPreviewValid;
-    internal PhysicalPin? ConnectionDragStartPin => _interactionState.ConnectionDragStartPin;
-    internal Point ConnectionDragCurrentPoint => _interactionState.ConnectionDragCurrentPoint;
-
-    /// <summary>
-    /// Gets the last canvas position tracked by pointer movement (in canvas coordinates).
-    /// Used for paste-at-cursor functionality.
-    /// </summary>
+    /// <summary>Gets the last canvas position tracked by pointer movement. Used for paste-at-cursor.</summary>
     public Point LastCanvasPosition => _interactionState.LastCanvasPosition;
+
+    // ── Renderers ──────────────────────────────────────────────────────────
+
+    private readonly GridRenderer _gridRenderer;
+    private readonly PathfindingOverlayRenderer _pathfindingOverlayRenderer;
+    private readonly WaveguideConnectionRenderer _waveguideConnectionRenderer;
+    private readonly ComponentRenderer _componentRenderer;
+    private readonly PreviewRenderer _previewRenderer;
+    private readonly CanvasOverlayRenderer _overlayRenderer;
+
+    // ── Input Handlers ─────────────────────────────────────────────────────
+
+    private readonly KeyboardHandler _keyboardHandler;
+    private List<IGestureRecognizer> _gestureRecognizers = [];
+    private IGestureRecognizer? _activeGesture;
+
+    // ── Constructor ────────────────────────────────────────────────────────
 
     static DesignCanvas()
     {
         AffectsRender<DesignCanvas>(ViewModelProperty, ZoomProperty);
-        MainViewModelProperty.Changed.AddClassHandler<DesignCanvas>((canvas, e) => canvas.OnMainViewModelChanged(e));
-        ViewModelProperty.Changed.AddClassHandler<DesignCanvas>((canvas, e) => canvas.OnViewModelChanged(e));
+        MainViewModelProperty.Changed.AddClassHandler<DesignCanvas>((c, e) => c.OnMainViewModelChanged(e));
+        ViewModelProperty.Changed.AddClassHandler<DesignCanvas>((c, e) => c.OnViewModelChanged(e));
     }
 
+    /// <summary>Initializes a new instance of <see cref="DesignCanvas"/>.</summary>
     public DesignCanvas()
     {
         ClipToBounds = true;
         Focusable = true;
+
+        _gridRenderer = new GridRenderer();
+        _pathfindingOverlayRenderer = new PathfindingOverlayRenderer();
+        _waveguideConnectionRenderer = new WaveguideConnectionRenderer();
+        _componentRenderer = new ComponentRenderer();
+        _previewRenderer = new PreviewRenderer();
+        _overlayRenderer = new CanvasOverlayRenderer();
+        _keyboardHandler = new KeyboardHandler(() => ViewModel, () => MainViewModel, () => Bounds);
+
         InitGestures();
     }
+
+    // ── Rendering ──────────────────────────────────────────────────────────
+
+    /// <summary>Renders the canvas by orchestrating all registered renderers in layer order.</summary>
+    public override void Render(DrawingContext context)
+    {
+        base.Render(context);
+        var vm = ViewModel;
+        if (vm == null) return;
+
+        var rc = new CanvasRenderContext
+        {
+            ViewModel = vm,
+            MainViewModel = MainViewModel,
+            InteractionState = _interactionState,
+            Zoom = Zoom,
+            Bounds = Bounds
+        };
+
+        context.FillRectangle(Brushes.Black, Bounds);
+        _gridRenderer.RenderBackground(context, rc);
+
+        using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
+        using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
+        {
+            _gridRenderer.RenderWorld(context, rc);
+            _pathfindingOverlayRenderer.Render(context, rc);
+            _waveguideConnectionRenderer.Render(context, rc);
+            _componentRenderer.Render(context, rc);
+            _previewRenderer.Render(context, rc);
+        }
+
+        _overlayRenderer.Render(context, rc);
+    }
+
+    // ── Mouse Input (delegates to gesture recognizers) ─────────────────────
+
+    /// <inheritdoc/>
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        var point = e.GetPosition(this);
+        _interactionState.LastPointerPosition = point;
+        var vm = ViewModel;
+        if (vm == null) return;
+        var canvasPoint = ScreenToCanvas(point);
+        _activeGesture = null;
+        foreach (var recognizer in _gestureRecognizers)
+        {
+            if (recognizer.TryRecognize(e, canvasPoint, vm, MainViewModel))
+            {
+                _activeGesture = recognizer;
+                break;
+            }
+        }
+        e.Handled = true;
+        Focus();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        var point = e.GetPosition(this);
+        var delta = point - _interactionState.LastPointerPosition;
+        var vm = ViewModel;
+        if (vm == null) return;
+        var canvasPoint = ScreenToCanvas(point);
+        _interactionState.LastCanvasPosition = canvasPoint;
+        foreach (var recognizer in _gestureRecognizers)
+            recognizer.UpdatePassiveState(canvasPoint, vm, MainViewModel);
+        _activeGesture?.OnPointerMoved(e, delta, canvasPoint, vm, MainViewModel);
+        _interactionState.LastPointerPosition = point;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        if (_interactionState.HasPanned && e.InitialPressMouseButton == MouseButton.Right)
+        {
+            e.Handled = true;
+            _interactionState.HasPanned = false;
+            _interactionState.IsPanning = false;
+            _activeGesture = null;
+            return;
+        }
+        base.OnPointerReleased(e);
+        if (ViewModel != null)
+            _activeGesture?.OnPointerReleased(e, ViewModel, MainViewModel);
+        _activeGesture = null;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        var delta = e.Delta.Y > 0 ? 1.1 : 0.9;
+        var newZoom = Math.Clamp(Zoom * delta, 0.1, 10.0);
+        var point = e.GetPosition(this);
+        var vm = ViewModel;
+        if (vm != null)
+        {
+            var beforeZoom = ScreenToCanvas(point);
+            Zoom = newZoom;
+            var afterZoom = ScreenToCanvas(point);
+            vm.PanX += (afterZoom.X - beforeZoom.X) * Zoom;
+            vm.PanY += (afterZoom.Y - beforeZoom.Y) * Zoom;
+        }
+        else
+        {
+            Zoom = newZoom;
+        }
+        InvalidateVisual();
+        e.Handled = true;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        _keyboardHandler.OnKeyDown(e);
+        InvalidateVisual();
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    private void InitGestures()
+    {
+        _gestureRecognizers =
+        [
+            new PanGestureRecognizer(_interactionState, InvalidateVisual),
+            new ConnectionGestureRecognizer(_interactionState, InvalidateVisual),
+            new PlacementGestureRecognizer(_interactionState, InvalidateVisual),
+            new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c),
+            new SelectionBoxGestureRecognizer(_interactionState, InvalidateVisual),
+        ];
+    }
+
+    private Point ScreenToCanvas(Point screenPoint)
+    {
+        var vm = ViewModel;
+        if (vm == null) return screenPoint;
+        return new Point((screenPoint.X - vm.PanX) / Zoom, (screenPoint.Y - vm.PanY) / Zoom);
+    }
+
+    // ── ViewModel Change Handlers ──────────────────────────────────────────
 
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
     {
         if (e.OldValue is MainViewModel oldVm)
-        {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
-        }
-
         if (e.NewValue is MainViewModel newVm)
-        {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
-        }
     }
 
     private void OnViewModelChanged(AvaloniaPropertyChangedEventArgs e)
@@ -103,7 +266,6 @@ public partial class DesignCanvas : Control
             oldCanvas.Components.CollectionChanged -= OnComponentsCollectionChanged;
             oldCanvas.Connections.CollectionChanged -= OnConnectionsCollectionChanged;
         }
-
         if (e.NewValue is DesignCanvasViewModel newCanvas)
         {
             newCanvas.PropertyChanged += OnCanvasViewModelPropertyChanged;
@@ -114,28 +276,21 @@ public partial class DesignCanvas : Control
     }
 
     private void OnComponentsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-    {
-        InvalidateVisual();
-    }
+        => InvalidateVisual();
 
     private void OnConnectionsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-    {
-        InvalidateVisual();
-    }
+        => InvalidateVisual();
 
     private void OnCanvasViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(DesignCanvasViewModel.ShowPowerFlow) ||
-            e.PropertyName == nameof(DesignCanvasViewModel.IsRouting) ||
-            e.PropertyName == nameof(DesignCanvasViewModel.PanX) ||
-            e.PropertyName == nameof(DesignCanvasViewModel.PanY))
+        if (e.PropertyName is nameof(DesignCanvasViewModel.ShowPowerFlow)
+            or nameof(DesignCanvasViewModel.IsRouting)
+            or nameof(DesignCanvasViewModel.PanX)
+            or nameof(DesignCanvasViewModel.PanY))
         {
             InvalidateVisual();
         }
     }
 
-    private void OnCommandStateChanged(object? sender, EventArgs e)
-    {
-        InvalidateVisual();
-    }
+    private void OnCommandStateChanged(object? sender, EventArgs e) => InvalidateVisual();
 }
