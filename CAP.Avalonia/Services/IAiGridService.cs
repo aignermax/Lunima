@@ -1,62 +1,69 @@
 namespace CAP.Avalonia.Services;
 
 /// <summary>
-/// Contract for AI-driven grid manipulation operations.
-/// Provides high-level commands for the AI to read and modify the photonic circuit design.
-/// The AI acts as a circuit architect (decides WHAT to place and WHERE),
-/// while the application handles snapping, collision avoidance, and routing.
+/// Provides AI-accessible operations for reading and manipulating the photonic circuit grid.
+/// The AI acts as a high-level planner while this service handles execution and validation.
 /// </summary>
 public interface IAiGridService
 {
     /// <summary>
-    /// Returns a JSON summary of the current grid state: components, connections, and simulation status.
+    /// Returns a JSON summary of the current grid state: placed components, connections,
+    /// and available component types.
     /// </summary>
     string GetGridState();
 
     /// <summary>
-    /// Places a named component type on the grid at approximately the given position (micrometers).
-    /// Returns the component ID on success, or an error message prefixed with "Error:".
+    /// Places a component of the given type at approximately (x, y) in micrometers.
+    /// The service finds the nearest valid position automatically.
+    /// Returns a status message with the assigned component ID and actual position.
     /// </summary>
-    /// <param name="componentType">PDK component type name (e.g. "Grating Coupler").</param>
-    /// <param name="x">Approximate X position in micrometers.</param>
-    /// <param name="y">Approximate Y position in micrometers.</param>
-    /// <param name="rotation">Rotation in degrees (0, 90, 180, or 270).</param>
-    string PlaceComponent(string componentType, double x, double y, int rotation = 0);
+    Task<string> PlaceComponentAsync(string componentType, double x, double y, int rotation = 0);
 
     /// <summary>
-    /// Creates a waveguide connection between two components.
-    /// Automatically selects the first available unconnected pin on each component.
-    /// Returns a success message or an error message prefixed with "Error:".
+    /// Connects two components by automatically selecting compatible unconnected pins.
+    /// Returns a status message describing the connection or an error.
     /// </summary>
-    /// <param name="fromComponentId">ID of the source component.</param>
-    /// <param name="toComponentId">ID of the target component.</param>
-    string CreateConnection(string fromComponentId, string toComponentId);
+    Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId);
 
     /// <summary>
-    /// Removes all components and connections from the design grid.
-    /// Returns a summary of how many components were removed.
+    /// Runs the S-Matrix simulation for the current canvas state.
+    /// Returns a status message with the result.
     /// </summary>
-    string ClearGrid();
+    Task<string> RunSimulationAsync();
 
     /// <summary>
-    /// Runs the photonic S-Matrix simulation and activates the power flow overlay.
-    /// Returns simulation results summary or an error message.
-    /// </summary>
-    Task<string> StartSimulationAsync();
-
-    /// <summary>
-    /// Stops the running simulation and hides the power flow overlay.
-    /// </summary>
-    string StopSimulation();
-
-    /// <summary>
-    /// Returns current light power values for all waveguide connections as JSON.
-    /// Requires a simulation to have been run first.
+    /// Returns the current light propagation values (loss, path length) for all connections.
     /// </summary>
     string GetLightValues();
 
     /// <summary>
-    /// Returns all available component type names loaded from the active PDK.
+    /// Removes all components and connections from the grid.
+    /// Returns a status message.
+    /// </summary>
+    string ClearGrid();
+
+    /// <summary>
+    /// Returns the list of available component type names from loaded PDKs.
     /// </summary>
     IReadOnlyList<string> GetAvailableComponentTypes();
+
+    /// <summary>
+    /// Groups the specified components into a ComponentGroup.
+    /// Components must be specified by their identifiers.
+    /// Returns a status message with the created group identifier.
+    /// </summary>
+    string CreateGroup(IReadOnlyList<string> componentIds, string? groupName = null);
+
+    /// <summary>
+    /// Ungroups a ComponentGroup, restoring individual components.
+    /// Returns a status message listing the restored component identifiers.
+    /// </summary>
+    string UngroupComponent(string groupId);
+
+    /// <summary>
+    /// Saves a group as a reusable prefab/template in the component library.
+    /// The group will appear in the library panel for future use.
+    /// Returns a status message with the template name.
+    /// </summary>
+    string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null);
 }

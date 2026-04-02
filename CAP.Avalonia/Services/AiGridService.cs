@@ -1,206 +1,251 @@
 using System.Text.Json;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
-using CAP.Avalonia.ViewModels.Library;
-using CAP_Core.Components;
+using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Services;
 
 /// <summary>
-/// Implements AI grid manipulation by wrapping canvas operations.
-/// Translates high-level AI commands into application actions.
-/// Uses a template provider delegate to decouple from <see cref="CAP.Avalonia.ViewModels.Panels.LeftPanelViewModel"/>
-/// and simplify testing.
+/// Implements AI-accessible grid operations by wrapping existing canvas and simulation services.
+/// Translates high-level AI commands into concrete application actions.
 /// </summary>
 public class AiGridService : IAiGridService
 {
     private readonly DesignCanvasViewModel _canvas;
-    private readonly Func<IReadOnlyList<ComponentTemplate>> _templateProvider;
-    private readonly CommandManager _commandManager;
+    private readonly LeftPanelViewModel _leftPanel;
     private readonly SimulationService _simulationService;
 
-    private static readonly JsonSerializerOptions CompactJson =
-        new JsonSerializerOptions { WriteIndented = false };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = false
+    };
 
     /// <summary>
-    /// Initializes the AI grid service with canvas and command dependencies.
+    /// Initializes the grid service with required canvas and simulation dependencies.
     /// </summary>
-    /// <param name="canvas">The design canvas ViewModel.</param>
-    /// <param name="templateProvider">Delegate returning available component templates from the PDK.</param>
-    /// <param name="commandManager">Undo-aware command executor.</param>
-    /// <param name="simulationService">S-Matrix simulation service.</param>
     public AiGridService(
         DesignCanvasViewModel canvas,
-        Func<IReadOnlyList<ComponentTemplate>> templateProvider,
-        CommandManager commandManager,
+        LeftPanelViewModel leftPanel,
         SimulationService simulationService)
     {
         _canvas = canvas;
-        _templateProvider = templateProvider;
-        _commandManager = commandManager;
+        _leftPanel = leftPanel;
         _simulationService = simulationService;
     }
 
     /// <inheritdoc/>
     public string GetGridState()
     {
-        var components = _canvas.Components.Select(c => new
-        {
-            id = c.Name,
-            type = c.TemplateName ?? c.Name,
-            position = new { x = Math.Round(c.X, 1), y = Math.Round(c.Y, 1) },
-            width = c.Width,
-            height = c.Height
-        }).ToList();
-
-        var connections = _canvas.Connections.Select(c => new
-        {
-            from = c.Connection.StartPin.ParentComponent.Name,
-            to = c.Connection.EndPin.ParentComponent.Name,
-            from_pin = c.Connection.StartPin.Name,
-            to_pin = c.Connection.EndPin.Name,
-            path_length_um = Math.Round(c.PathLength, 1)
-        }).ToList();
-
         var state = new
         {
-            component_count = components.Count,
-            connection_count = connections.Count,
-            simulation_active = _canvas.ShowPowerFlow,
-            components,
-            connections
+            components = _canvas.Components.Select(c => new
+            {
+                id = c.Component.Identifier,
+                type = c.TemplateName ?? c.Component.HumanReadableName ?? c.Component.Identifier,
+                position = new
+                {
+                    x = Math.Round(c.Component.PhysicalX, 1),
+                    y = Math.Round(c.Component.PhysicalY, 1)
+                },
+                rotation = c.Component.RotationDegrees,
+                pins = c.Component.PhysicalPins.Count
+            }).ToList(),
+            connections = _canvas.Connections.Select(conn => new
+            {
+                from_component = conn.Connection.StartPin.ParentComponent?.Identifier,
+                from_pin = conn.Connection.StartPin.Name,
+                to_component = conn.Connection.EndPin.ParentComponent?.Identifier,
+                to_pin = conn.Connection.EndPin.Name
+            }).ToList(),
+            available_types = GetAvailableComponentTypes().Take(20).ToList(),
+            grid_size_um = new { width = 5000, height = 5000 }
         };
 
-        return JsonSerializer.Serialize(state, CompactJson);
+        return JsonSerializer.Serialize(state, JsonOptions);
     }
 
     /// <inheritdoc/>
-    public string PlaceComponent(string componentType, double x, double y, int rotation = 0)
+    public async Task<string> PlaceComponentAsync(string componentType, double x, double y, int rotation = 0)
     {
-        var templates = _templateProvider();
-        var template = templates
+        var template = _leftPanel.AllTemplates
             .FirstOrDefault(t => t.Name.Equals(componentType, StringComparison.OrdinalIgnoreCase));
 
         if (template == null)
         {
-            var available = string.Join(", ", GetAvailableComponentTypes().Take(10));
-            return $"Error: Unknown component type '{componentType}'. Available types: {available}";
+            var available = GetAvailableComponentTypes().Take(15).ToList();
+            return $"Component type '{componentType}' not found. Available types include: {string.Join(", ", available)}";
         }
 
-        double centeredX = x - template.WidthMicrometers / 2;
-        double centeredY = y - template.HeightMicrometers / 2;
+        // Center the component on the requested position
+        var centeredX = x - template.WidthMicrometers / 2;
+        var centeredY = y - template.HeightMicrometers / 2;
 
         var cmd = PlaceComponentCommand.TryCreate(_canvas, template, centeredX, centeredY);
         if (cmd == null)
-        {
-            return $"Error: Cannot place '{componentType}' near ({x:F0}, {y:F0})µm — position occupied or out of bounds.";
-        }
+            return $"Cannot place '{componentType}' — no valid position found near ({x:F0}, {y:F0})µm. Try a different position.";
 
-        _commandManager.ExecuteCommand(cmd);
+        cmd.Execute();
 
         var placed = _canvas.Components.LastOrDefault();
-        return placed != null
-            ? $"Placed {componentType} at ({placed.X:F0}, {placed.Y:F0})µm. Component ID: {placed.Name}"
-            : $"Error: Component placement failed for '{componentType}'";
+        if (placed == null)
+            return $"Failed to place '{componentType}'.";
+
+        var px = Math.Round(placed.Component.PhysicalX, 0);
+        var py = Math.Round(placed.Component.PhysicalY, 0);
+        return $"Placed '{placed.Component.Identifier}' at ({px}, {py})µm";
     }
 
     /// <inheritdoc/>
-    public string CreateConnection(string fromComponentId, string toComponentId)
+    public async Task<string> CreateConnectionAsync(string fromComponentId, string toComponentId)
     {
-        var fromVm = FindComponentById(fromComponentId);
-        if (fromVm == null)
-            return $"Error: Component '{fromComponentId}' not found. Use get_grid_state to see available IDs.";
+        var fromVm = _canvas.Components.FirstOrDefault(c =>
+            c.Component.Identifier.Equals(fromComponentId, StringComparison.OrdinalIgnoreCase));
+        var toVm = _canvas.Components.FirstOrDefault(c =>
+            c.Component.Identifier.Equals(toComponentId, StringComparison.OrdinalIgnoreCase));
 
-        var toVm = FindComponentById(toComponentId);
-        if (toVm == null)
-            return $"Error: Component '{toComponentId}' not found. Use get_grid_state to see available IDs.";
+        if (fromVm == null) return $"Component '{fromComponentId}' not found";
+        if (toVm == null) return $"Component '{toComponentId}' not found";
 
-        var fromPin = FindAvailablePin(fromVm.Component);
-        if (fromPin == null)
-            return $"Error: No available (unconnected) pins on '{fromComponentId}'";
+        var alreadyConnected = GetConnectedPins();
 
-        var toPin = FindAvailablePin(toVm.Component, exclude: fromPin);
-        if (toPin == null)
-            return $"Error: No available (unconnected) pins on '{toComponentId}'";
+        var fromPin = FindBestPin(fromVm.Component.PhysicalPins, alreadyConnected, preferOutput: true);
+        var toPin = FindBestPin(toVm.Component.PhysicalPins, alreadyConnected, preferOutput: false);
 
-        var cmd = new CreateConnectionCommand(_canvas, fromPin, toPin);
-        _commandManager.ExecuteCommand(cmd);
+        if (fromPin == null) return $"No available output pins on '{fromComponentId}'";
+        if (toPin == null) return $"No available input pins on '{toComponentId}'";
 
-        return $"Connected {fromComponentId} (pin: {fromPin.Name}) → {toComponentId} (pin: {toPin.Name})";
+        await _canvas.ConnectPinsAsync(fromPin, toPin);
+        return $"Connected '{fromComponentId}'.{fromPin.Name} → '{toComponentId}'.{toPin.Name}";
     }
 
     /// <inheritdoc/>
-    public string ClearGrid()
+    public async Task<string> RunSimulationAsync()
     {
-        int count = _canvas.Components.Count;
-        foreach (var comp in _canvas.Components.ToList())
-            _canvas.RemoveComponent(comp);
-        return $"Cleared {count} component(s) from the grid";
-    }
+        if (_canvas.Components.Count == 0)
+            return "No components on canvas to simulate.";
 
-    /// <inheritdoc/>
-    public async Task<string> StartSimulationAsync()
-    {
+        if (_canvas.Connections.Count == 0)
+            return "No connections found. Connect components before running simulation.";
+
         var result = await _simulationService.RunAsync(_canvas);
-        if (result.Success)
-        {
-            _canvas.ShowPowerFlow = true;
-            return $"Simulation complete: {result.LightSourceCount} light source(s), " +
-                   $"{result.ConnectionCount} connections @ {result.WavelengthSummary}";
-        }
-        return $"Simulation failed: {result.ErrorMessage ?? "Unknown error"}";
-    }
+        if (!result.Success)
+            return $"Simulation failed: {result.ErrorMessage ?? "unknown error"}";
 
-    /// <inheritdoc/>
-    public string StopSimulation()
-    {
-        _canvas.ShowPowerFlow = false;
-        _canvas.PowerFlowVisualizer.IsEnabled = false;
-        return "Simulation stopped";
+        return "Simulation completed. Use get_light_values to read results.";
     }
 
     /// <inheritdoc/>
     public string GetLightValues()
     {
-        if (!_canvas.ShowPowerFlow)
-            return "No simulation data available. Call start_simulation first.";
-
-        var values = _canvas.Connections.Select(c => new
+        var connections = _canvas.Connections.Select(c => new
         {
-            from_component = c.Connection.StartPin.ParentComponent.Name,
-            to_component = c.Connection.EndPin.ParentComponent.Name,
-            loss_db = Math.Round(c.LossDb, 3),
-            path_length_um = Math.Round(c.PathLength, 1)
+            from = c.Connection.StartPin.ParentComponent?.Identifier,
+            to = c.Connection.EndPin.ParentComponent?.Identifier,
+            loss_db = Math.Round(c.LossDb, 2),
+            length_um = Math.Round(c.PathLength, 1)
         }).ToList();
 
-        return JsonSerializer.Serialize(values, CompactJson);
+        return JsonSerializer.Serialize(new { connections }, JsonOptions);
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<string> GetAvailableComponentTypes()
+    public string ClearGrid()
     {
-        return _templateProvider()
-            .Select(t => t.Name)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(n => n)
+        var components = _canvas.Components.ToList();
+        foreach (var comp in components)
+            _canvas.RemoveComponent(comp);
+
+        return $"Grid cleared. Removed {components.Count} component(s).";
+    }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<string> GetAvailableComponentTypes() =>
+        _leftPanel.AllTemplates.Select(t => t.Name).Distinct().ToList();
+
+    /// <inheritdoc/>
+    public string CreateGroup(IReadOnlyList<string> componentIds, string? groupName = null)
+    {
+        var componentsToGroup = componentIds
+            .Select(id => _canvas.Components.FirstOrDefault(c => c.Component.Identifier == id))
+            .Where(c => c != null)
+            .Cast<ComponentViewModel>()
             .ToList();
-    }
 
-    private CAP.Avalonia.ViewModels.Canvas.ComponentViewModel? FindComponentById(string id)
-    {
-        return _canvas.Components.FirstOrDefault(c =>
-            c.Name.Equals(id, StringComparison.OrdinalIgnoreCase) ||
-            c.Component.Name.Equals(id, StringComparison.OrdinalIgnoreCase));
-    }
+        if (componentsToGroup.Count < 2)
+            return $"Cannot create group: need at least 2 components. Found {componentsToGroup.Count} matching IDs.";
 
-    private PhysicalPin? FindAvailablePin(Component component, PhysicalPin? exclude = null)
-    {
-        return component.PhysicalPins.FirstOrDefault(pin =>
+        if (componentsToGroup.Any(c => c.Component.IsLocked))
+            return "Cannot group locked components.";
+
+        var cmd = new CreateGroupCommand(_canvas, componentsToGroup);
+        cmd.Execute();
+
+        var createdGroup = _canvas.Components.LastOrDefault();
+        if (createdGroup?.Component is ComponentGroup group)
         {
-            if (pin == exclude) return false;
-            return !_canvas.Connections.Any(c =>
-                c.Connection.StartPin == pin || c.Connection.EndPin == pin);
-        });
+            if (!string.IsNullOrWhiteSpace(groupName))
+                group.GroupName = groupName;
+
+            return $"Created group '{group.Identifier}' (name: {group.GroupName}) with {componentsToGroup.Count} components.";
+        }
+
+        return "Failed to create group.";
+    }
+
+    /// <inheritdoc/>
+    public string UngroupComponent(string groupId)
+    {
+        var groupVm = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == groupId);
+        if (groupVm?.Component is not ComponentGroup group)
+            return $"Component '{groupId}' is not a group.";
+
+        var memberCount = group.ChildComponents.Count;
+        var cmd = new UngroupCommand(_canvas, group);
+        cmd.Execute();
+
+        return $"Ungrouped '{groupId}'. Restored {memberCount} component(s).";
+    }
+
+    /// <inheritdoc/>
+    public string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null)
+    {
+        var groupVm = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == groupId);
+        if (groupVm?.Component is not ComponentGroup group)
+            return $"Component '{groupId}' is not a group.";
+
+        var libraryVm = _leftPanel.ComponentLibrary;
+        if (libraryVm == null)
+            return "Component library not available.";
+
+        var previewGenerator = new GroupPreviewGenerator();
+        var cmd = new SaveGroupToLibraryCommand(libraryVm, previewGenerator, group, prefabName, description);
+        cmd.Execute();
+
+        return $"Saved group '{groupId}' as prefab '{prefabName}' in component library.";
+    }
+
+    private HashSet<PhysicalPin> GetConnectedPins() =>
+        _canvas.Connections
+            .SelectMany(c => new[] { c.Connection.StartPin, c.Connection.EndPin })
+            .ToHashSet();
+
+    /// <summary>
+    /// Finds the best available pin — prefers output (0°/270°) or input (180°/90°) based on flag.
+    /// Falls back to any unconnected pin if no directional match is found.
+    /// </summary>
+    private static PhysicalPin? FindBestPin(
+        IEnumerable<PhysicalPin> pins,
+        HashSet<PhysicalPin> alreadyConnected,
+        bool preferOutput)
+    {
+        var available = pins.Where(p => !alreadyConnected.Contains(p)).ToList();
+        if (available.Count == 0) return null;
+
+        var preferred = preferOutput
+            ? available.FirstOrDefault(p => p.AngleDegrees is 0 or 270)
+            : available.FirstOrDefault(p => p.AngleDegrees is 180 or 90);
+
+        return preferred ?? available.FirstOrDefault();
     }
 }

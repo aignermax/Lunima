@@ -56,8 +56,7 @@ public partial class App : Application
         services.AddSingleton<IAiService, AiService>(sp => new AiService(sp.GetRequiredService<HttpClient>()));
         services.AddSingleton<IAiGridService>(sp => new AiGridService(
             sp.GetRequiredService<DesignCanvasViewModel>(),
-            () => sp.GetRequiredService<LeftPanelViewModel>().AllTemplates.ToList(),
-            sp.GetRequiredService<Commands.CommandManager>(),
+            sp.GetRequiredService<LeftPanelViewModel>(),
             sp.GetRequiredService<SimulationService>()));
         services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
             sp.GetRequiredService<IAiService>(),
