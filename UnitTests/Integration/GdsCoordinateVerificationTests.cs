@@ -11,8 +11,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using Xunit;
-
-// ITestOutputHelper is in Xunit namespace in xUnit v2+
+using Xunit.Abstractions;
 
 namespace UnitTests.Integration;
 

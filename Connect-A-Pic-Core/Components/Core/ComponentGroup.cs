@@ -150,6 +150,9 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             childGroup.ParentGroup = this;
         }
 
+        // Subscribe to slider changes so we can invalidate our cached S-Matrix
+        component.SliderValueChanged += OnChildSliderValueChanged;
+
         ChildComponents.Add(component);
         UpdateGroupBounds();
         InvalidateSMatrix();
@@ -167,6 +170,7 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         bool removed = ChildComponents.Remove(component);
         if (removed)
         {
+            component.SliderValueChanged -= OnChildSliderValueChanged;
             component.ParentGroup = null;
             UpdateGroupBounds();
         }
@@ -723,13 +727,24 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Handles slider value changes in any child component.
+    /// Invalidates the cached S-Matrix so the next simulation uses updated parameter values.
+    /// </summary>
+    private void OnChildSliderValueChanged(object? sender, EventArgs e)
+    {
+        InvalidateSMatrix();
+    }
+
+    /// <summary>
     /// Invalidates the cached S-Matrix, forcing recomputation on next access.
-    /// Called when group structure changes (children, paths, or external pins modified).
+    /// Called when group structure changes (children, paths, external pins modified, or child slider changes).
+    /// Also propagates to the parent group so nested group caches are correctly invalidated.
     /// </summary>
     private void InvalidateSMatrix()
     {
-        // Clear the cached S-Matrix dictionary
         WaveLengthToSMatrixMap.Clear();
+        // Cascade invalidation to the parent group — its cache depends on this group's S-Matrix
+        ParentGroup?.InvalidateSMatrix();
     }
 
     /// <summary>
