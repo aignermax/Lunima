@@ -396,11 +396,11 @@ public class SimpleNazcaExporter
     /// that occur with Nazca's chaining syntax (.put() without coordinates).
     ///
     /// Fix #355 (single straight): direct pin-to-pin geometry avoids NazcaOriginOffset mismatch.
-    /// Fix #366 (multi-segment): absolute positioning for each segment, with the last straight
-    /// segment pinned to endPin.GetAbsoluteNazcaPosition() for exact endpoint alignment.
+    /// Fix #366 (multi-segment): absolute positioning for each segment. Only the first segment
+    /// uses startPin.GetAbsoluteNazcaPosition(); all others use a simple Y-flip.
     /// </summary>
-    /// <param name="startPin">Start pin for correct Nazca coordinate calculation.</param>
-    /// <param name="endPin">End pin for exact endpoint alignment on the last straight segment.</param>
+    /// <param name="startPin">Start pin for correct Nazca coordinate calculation of the first segment.</param>
+    /// <param name="endPin">End pin used only for single-straight-segment paths (direct pin-to-pin geometry).</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
         PhysicalPin? startPin = null, PhysicalPin? endPin = null)
@@ -416,7 +416,7 @@ public class SimpleNazcaExporter
         // For mixed-PDK designs, we can't use a single global offset because each component
         // has its own NazcaOriginOffset.
 
-        // Strategy: Use pin positions for first and last segments, derive others from segment geometry
+        // Strategy: Use pin position for the first segment only; all other segments use simple Y-flip.
 
         for (int i = 0; i < segments.Count; i++)
         {
@@ -441,55 +441,6 @@ public class SimpleNazcaExporter
             // Export the segment with its correct Nazca coordinates
             sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
         }
-    }
-
-    /// <summary>
-    /// Computes the (deltaX, deltaY) offset that maps editor-space segment coordinates
-    /// to Nazca-space coordinates. This handles the Y-flip and any coordinate adjustments
-    /// needed to align segments with pin positions.
-    /// </summary>
-    private static (double DeltaX, double DeltaY) ComputePathNazcaOffset(
-        PhysicalPin? startPin, IReadOnlyList<PathSegment> segments)
-    {
-        if (startPin == null || segments.Count == 0)
-            return (0, 0);
-
-        // Get where the pin actually is in Nazca coordinates
-        var (nazcaX, nazcaY) = startPin.GetAbsoluteNazcaPosition();
-
-        // Get where the first segment starts in editor coordinates
-        var editorStart = segments[0].StartPoint;
-
-        // The delta maps from editor-space segment position to Nazca-space pin position
-        // Note: Y-flip is just negation, so nazca_y = -(editor_y + offset)
-        return (nazcaX - editorStart.X, nazcaY - (-editorStart.Y));
-    }
-
-    /// <summary>
-    /// Converts an editor-space point to Nazca coordinates by applying Y-flip and the
-    /// precomputed path offset.
-    /// </summary>
-    private static (double X, double Y) ApplyNazcaOffset(
-        (double X, double Y) editorPoint, double deltaX, double deltaY) =>
-        (editorPoint.X + deltaX, -editorPoint.Y + deltaY);
-
-    /// <summary>
-    /// Formats a straight waveguide segment from an absolute Nazca start position to the
-    /// exact Nazca position of endPin. Used for the last segment of a multi-segment path.
-    /// </summary>
-    private static string FormatStraightToPin(double startX, double startY, PhysicalPin endPin)
-    {
-        var ci = CultureInfo.InvariantCulture;
-        var (ex, ey) = endPin.GetAbsoluteNazcaPosition();
-        double dx = ex - startX;
-        double dy = ey - startY;
-        double length = Math.Sqrt(dx * dx + dy * dy);
-        double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
-        var x = NormalizeZero(startX).ToString("F2", ci);
-        var y = NormalizeZero(startY).ToString("F2", ci);
-        var a = NormalizeZero(angleDeg).ToString("F2", ci);
-        var l = length.ToString("F2", ci);
-        return $"        nd.strt(length={l}).put({x}, {y}, {a})";
     }
 
     /// <summary>
