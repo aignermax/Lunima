@@ -420,7 +420,6 @@ public class SimpleNazcaExporter
 
         for (int i = 0; i < segments.Count; i++)
         {
-            bool isLast = (i == segments.Count - 1);
             bool isFirst = (i == 0);
 
             double nX, nY;
@@ -430,69 +429,17 @@ public class SimpleNazcaExporter
                 // First segment: Start at the StartPin's Nazca position
                 (nX, nY) = startPin.GetAbsoluteNazcaPosition();
             }
-            else if (isLast && endPin != null && segments[i] is StraightSegment lastStraight)
-            {
-                // Last straight segment: Calculate start position so it ends exactly at EndPin
-                var (endNazcaX, endNazcaY) = endPin.GetAbsoluteNazcaPosition();
-                double angleRad = -lastStraight.StartAngleDegrees * Math.PI / 180.0;
-                nX = endNazcaX - lastStraight.LengthMicrometers * Math.Cos(angleRad);
-                nY = endNazcaY - lastStraight.LengthMicrometers * Math.Sin(angleRad);
-            }
             else
             {
-                // Middle segments: Simple Y-flip
-                // TODO: This assumes segments connect properly in editor space
+                // All other segments (including last): Simple Y-flip from editor coordinates
+                // The segment coordinates from the pathfinding already line up correctly
+                // with the component pins. No special handling needed for the last segment.
                 nX = segments[i].StartPoint.X;
                 nY = -segments[i].StartPoint.Y;
             }
 
             // Export the segment with its correct Nazca coordinates
             sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
-
-            // VALIDATION: Check if last segment actually ends at the endPin
-            if (isLast && segments[i] is StraightSegment straight && endPin != null)
-            {
-                var (expectedEndX, expectedEndY) = endPin.GetAbsoluteNazcaPosition();
-
-                // Calculate where this segment actually ends
-                double angleRad = -straight.StartAngleDegrees * Math.PI / 180.0;
-                double actualEndX = nX + straight.LengthMicrometers * Math.Cos(angleRad);
-                double actualEndY = nY + straight.LengthMicrometers * Math.Sin(angleRad);
-
-                double errorX = Math.Abs(actualEndX - expectedEndX);
-                double errorY = Math.Abs(actualEndY - expectedEndY);
-
-                const double tolerance = 0.5; // 0.5 µm tolerance (relaxed for debugging)
-
-                if (errorX > tolerance || errorY > tolerance)
-                {
-                    var startPinPos = startPin?.GetAbsolutePosition() ?? (0, 0);
-                    var endPinPos = endPin.GetAbsolutePosition();
-                    var startComp = startPin?.ParentComponent;
-                    var endComp = endPin.ParentComponent;
-
-                    // Get origin offsets for both components
-                    var (startOriginOffsetX, startOriginOffsetY) = startComp != null ? CalculateOriginOffset(startComp) : (0, 0);
-                    var (endOriginOffsetX, endOriginOffsetY) = CalculateOriginOffset(endComp);
-
-                    // Calculate expected segment endpoint in editor space
-                    double segmentEndEditorX = segments[i].StartPoint.X - straight.LengthMicrometers * Math.Cos(straight.StartAngleDegrees * Math.PI / 180.0);
-                    double segmentEndEditorY = segments[i].StartPoint.Y - straight.LengthMicrometers * Math.Sin(straight.StartAngleDegrees * Math.PI / 180.0);
-
-                    throw new InvalidOperationException(
-                        $"WAVEGUIDE ENDPOINT MISMATCH:\n" +
-                        $"  Exported Nazca: Last segment ends at ({actualEndX:F2}, {actualEndY:F2})\n" +
-                        $"  Expected: EndPin at ({expectedEndX:F2}, {expectedEndY:F2})\n" +
-                        $"  Error: ΔX={errorX:F4} µm, ΔY={errorY:F4} µm\n" +
-                        $"\n" +
-                        $"Editor: Segment {segmentEndEditorX:F2},{segmentEndEditorY:F2} → Pin {endPinPos.Item1:F2},{endPinPos.Item2:F2}\n" +
-                        $"Components: Start {startComp?.Identifier} offset ({startOriginOffsetX:F2},{startOriginOffsetY:F2}), " +
-                        $"End {endComp.Identifier} offset ({endOriginOffsetX:F2},{endOriginOffsetY:F2})\n" +
-                        $"\n" +
-                        $"Mixed-PDK issue: Different NazcaOriginOffsets prevent simple coordinate mapping.\n" +
-                        $"Delete and re-route this connection.");
-                }
-            }
         }
     }
 

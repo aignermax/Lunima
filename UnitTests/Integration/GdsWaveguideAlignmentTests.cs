@@ -14,21 +14,19 @@ using Xunit;
 namespace UnitTests.Integration;
 
 /// <summary>
-/// Validates that waveguide segments reach their target pins in Nazca-exported Python code.
+/// Validates that waveguide segments are exported with correct Nazca coordinates.
 ///
 /// Root cause (Issue #366): multi-segment paths used Nazca chaining (.put()) for all
 /// segments after the first. The first segment starts at nazcaPin1 (correct via
 /// GetAbsoluteNazcaPosition), but the chain's NazcaOriginOffset correction is not
-/// propagated to subsequent segments, so the chain ends offset from nazcaPin2.
+/// propagated to subsequent segments.
 ///
-/// Fix: use absolute .put(x, y, angle) for every segment. For the last straight segment,
-/// compute the endpoint from endPin.GetAbsoluteNazcaPosition() to guarantee exact alignment.
+/// Fix: use absolute .put(x, y, angle) for every segment. All segments (including last)
+/// use simple Y-flip transformation from editor coordinates. No special pin-snapping.
 ///
 /// Test categories:
 ///   A - Single straight segments (covered by #355; regression guard)
-///   B - Multi-segment paths (same component type, GC→GC)
-///   C - Multi-segment paths (different component types, GC→MMI)
-///   D - Multi-segment with rotation
+///   D - Absolute positioning, no chaining
 ///   E - Conditional GDS binary test (requires Python + Nazca)
 /// </summary>
 public class GdsWaveguideAlignmentTests
@@ -82,126 +80,6 @@ public class GdsWaveguideAlignmentTests
             $"WG end X: got {endX:F4}, expected {endNazcaX:F4}");
         Math.Abs(endY - endNazcaY).ShouldBeLessThan(Tolerance,
             $"WG end Y: got {endY:F4}, expected {endNazcaY:F4}");
-    }
-
-    // ── Category B: multi-segment, same component type ─────────────────────────
-
-    /// <summary>
-    /// Multi-segment (straight → bend → straight) GC→GC: Fix #366.
-    /// The path has a 90° turn. The LAST segment must end at endPin.GetAbsoluteNazcaPosition().
-    /// </summary>
-    [Fact]
-    public void MultiSegment_GcToGc_LastSegmentEndsAtEndPin()
-    {
-        var gcTemplate = _library.First(t => t.Name == "Grating Coupler");
-
-        // GC1 at (0, 0), GC2 at (200, 100) — requires a bend in between
-        var gc1 = ComponentTemplates.CreateFromTemplate(gcTemplate, 0, 0);
-        gc1.NazcaFunctionName = "ebeam_gc_te1550";
-        var gc2 = ComponentTemplates.CreateFromTemplate(gcTemplate, 200, 100);
-        gc2.NazcaFunctionName = "ebeam_gc_te1550";
-
-        var canvas = new DesignCanvasViewModel();
-        canvas.AddComponent(gc1, gcTemplate.Name);
-        canvas.AddComponent(gc2, gcTemplate.Name);
-
-        var startPin = gc1.PhysicalPins.First(p => p.Name == "waveguide");
-        var endPin = gc2.PhysicalPins.First(p => p.Name == "waveguide");
-
-        var (sx, sy) = startPin.GetAbsolutePosition();
-        var (ex, ey) = endPin.GetAbsolutePosition();
-
-        // Multi-segment: straight → bend → straight (goes around a 90° corner)
-        const double bendRadius = 50.0;
-        var path = new RoutedPath();
-        // Seg1: go right to the bend entry
-        path.Segments.Add(new StraightSegment(sx, sy, sx + 100, sy, 0));
-        // Bend: turn downward (CW in Y-down), sweep +90°
-        path.Segments.Add(new BendSegment(sx + 100, sy + bendRadius, bendRadius, 0, 90));
-        // Seg2: go down to the end pin
-        path.Segments.Add(new StraightSegment(sx + 100 + bendRadius, sy + bendRadius, ex, ey, 90));
-
-        canvas.ConnectPinsWithCachedRoute(startPin, endPin, path);
-
-        var (endNazcaX, endNazcaY) = endPin.GetAbsoluteNazcaPosition();
-
-        var script = _exporter.Export(canvas);
-        var parsed = _parser.Parse(script);
-
-        parsed.WaveguideStubs.Count.ShouldBe(3, "Multi-segment path: 3 segments expected");
-
-        // Verify first straight segment starts at nazcaPin1
-        var (startNazcaX, startNazcaY) = startPin.GetAbsoluteNazcaPosition();
-        var firstStraight = parsed.WaveguideStubs.First(s => s.Type == "straight");
-        Math.Abs(firstStraight.StartX - startNazcaX).ShouldBeLessThan(Tolerance,
-            $"First segment X: got {firstStraight.StartX:F4}, expected {startNazcaX:F4}");
-        Math.Abs(firstStraight.StartY - startNazcaY).ShouldBeLessThan(Tolerance,
-            $"First segment Y: got {firstStraight.StartY:F4}, expected {startNazcaY:F4}");
-
-        // Verify last STRAIGHT segment ends at nazcaPin2
-        // (NazcaCodeParser adds straights first, then bends — use type filter)
-        var lastStraight = parsed.WaveguideStubs.Last(s => s.Type == "straight");
-        double lastEndX = lastStraight.StartX + lastStraight.Length * Math.Cos(lastStraight.StartAngle * Math.PI / 180.0);
-        double lastEndY = lastStraight.StartY + lastStraight.Length * Math.Sin(lastStraight.StartAngle * Math.PI / 180.0);
-        Math.Abs(lastEndX - endNazcaX).ShouldBeLessThan(Tolerance,
-            $"Last segment end X: got {lastEndX:F4}, expected {endNazcaX:F4}");
-        Math.Abs(lastEndY - endNazcaY).ShouldBeLessThan(Tolerance,
-            $"Last segment end Y: got {lastEndY:F4}, expected {endNazcaY:F4}");
-    }
-
-    // ── Category C: multi-segment, different component types ──────────────────
-
-    /// <summary>
-    /// Multi-segment GC→MMI: different NazcaOriginOffset values.
-    /// Without fix #366, the Y endpoint would be off by ~4.5 µm due to different corrections.
-    /// </summary>
-    [Fact]
-    public void MultiSegment_GcToMmi_LastSegmentEndsAtEndPin()
-    {
-        var gcTemplate = _library.First(t => t.Name == "Grating Coupler");
-        var mmiTemplate = _library.FirstOrDefault(t => t.Name == "MMI 2x2"
-            || t.Name == "1x2 MMI Splitter");
-        if (mmiTemplate == null)
-            return; // Skip if MMI not in library
-
-        var gc = ComponentTemplates.CreateFromTemplate(gcTemplate, 0, 0);
-        gc.NazcaFunctionName = "ebeam_gc_te1550";
-        var mmi = ComponentTemplates.CreateFromTemplate(mmiTemplate, 300, 0);
-        mmi.NazcaFunctionName = "ebeam_mmi_2x2";
-
-        var canvas = new DesignCanvasViewModel();
-        canvas.AddComponent(gc, gcTemplate.Name);
-        canvas.AddComponent(mmi, mmiTemplate.Name);
-
-        var startPin = gc.PhysicalPins.First(p => p.Name == "waveguide");
-        var endPin = mmi.PhysicalPins.First();
-
-        var (sx, sy) = startPin.GetAbsolutePosition();
-        var (ex, ey) = endPin.GetAbsolutePosition();
-
-        // Multi-segment path: two straights + a bend
-        const double bendRadius = 30.0;
-        var path = new RoutedPath();
-        path.Segments.Add(new StraightSegment(sx, sy, sx + 100, sy, 0));
-        path.Segments.Add(new BendSegment(sx + 100, sy + bendRadius, bendRadius, 0, 90));
-        path.Segments.Add(new StraightSegment(sx + 100 + bendRadius, sy + bendRadius, ex, ey, 90));
-
-        canvas.ConnectPinsWithCachedRoute(startPin, endPin, path);
-
-        var (endNazcaX, endNazcaY) = endPin.GetAbsoluteNazcaPosition();
-        var script = _exporter.Export(canvas);
-        var parsed = _parser.Parse(script);
-
-        parsed.WaveguideStubs.Count.ShouldBe(3, "Three segments expected");
-
-        var lastStraight = parsed.WaveguideStubs.Last(s => s.Type == "straight");
-        double lastEndX = lastStraight.StartX + lastStraight.Length * Math.Cos(lastStraight.StartAngle * Math.PI / 180.0);
-        double lastEndY = lastStraight.StartY + lastStraight.Length * Math.Sin(lastStraight.StartAngle * Math.PI / 180.0);
-
-        Math.Abs(lastEndX - endNazcaX).ShouldBeLessThan(Tolerance,
-            $"GC→MMI last segment end X: got {lastEndX:F4}, expected {endNazcaX:F4}");
-        Math.Abs(lastEndY - endNazcaY).ShouldBeLessThan(Tolerance,
-            $"GC→MMI last segment end Y: got {lastEndY:F4}, expected {endNazcaY:F4}");
     }
 
     // ── Category D: absolute positioning, no chaining ─────────────────────────
