@@ -188,6 +188,57 @@ public class WaveguideEndpointAlignmentTests
         AssertAligned(endPt, (expectedEndX, expectedEndY), $"end PDK (rot={rotation}°)");
     }
 
+    // ── Multi-segment: verify uniform coordinate transformation (Issue #456) ──
+
+    /// <summary>
+    /// Multi-segment path with PDK component: adjacent segments must be continuous in Nazca space.
+    /// Root cause (Issue #456): segment[0] used GetAbsoluteNazcaPosition() (includes NazcaOriginOffset)
+    /// while segment[1+] used a plain Y-flip — different coordinate systems caused a visible Y-gap.
+    /// Fix: all segments use the same delta offset derived from the start pin.
+    /// </summary>
+    [Fact]
+    public void MultiSegmentWaveguide_PdkComponent_SegmentsAreContinuousInNazca_Issue456()
+    {
+        // PDK component with NazcaOriginOffset — like an MMI 2x2 (H=38µm, NazcaOriginOffsetY=9.5µm).
+        // NazcaOriginOffsetY=9.5 means deltaY = nazcaPinY + editorPinY = 0 + 19 = 19.
+        // Without the fix, segment[1] would be shifted by 19 µm in Y relative to segment[0].
+        var (_, pinOut) = CreatePdkComponent("MmiOut", x: 0, y: 0, width: 100, height: 38,
+            nazcaOriginOffsetY: 9.5, pinOffsetX: 100, pinOffsetY: 19, pinAngle: 0);
+        var (_, pinIn) = CreatePdkComponent("MmiIn", x: 300, y: 0, width: 100, height: 38,
+            nazcaOriginOffsetY: 9.5, pinOffsetX: 0, pinOffsetY: 19, pinAngle: 180);
+
+        var (sx, sy) = pinOut.GetAbsolutePosition(); // (100, 19)
+        var (ex, ey) = pinIn.GetAbsolutePosition();  // (300, 19) — same Y, both horizontal
+
+        // Two horizontal segments sharing the midpoint — deliberately split to expose the Y-gap bug.
+        double midX = (sx + ex) / 2.0; // 200
+        var segments = new List<PathSegment>
+        {
+            new StraightSegment(sx, sy, midX, sy, 0),   // seg[0]: 100→200, editor Y=19
+            new StraightSegment(midX, sy, ex, ey, 0)    // seg[1]: 200→300, editor Y=19 (the "last" segment)
+        };
+
+        var sb = new StringBuilder();
+        SimpleNazcaExporter.AppendSegmentExport(sb, segments, pinOut, pinIn);
+        var nazcaCode = sb.ToString();
+
+        var lines = nazcaCode.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Where(l => l.Contains("nd.strt(") || l.Contains("nd.bend("))
+            .ToList();
+        lines.Count.ShouldBe(2, "Expected 2 exported segments");
+
+        // Compute where segment[0] ends in Nazca space: start + length along angle.
+        var seg0End = ComputeEndPoint(lines[0]);
+
+        // Segment[1] must start exactly where segment[0] ends — no Y-gap.
+        var (seg1StartX, seg1StartY) = ExtractStartPoint(lines[1]);
+        Math.Abs(seg1StartX - seg0End.X).ShouldBeLessThan(AlignmentTolerance,
+            $"Issue #456: Seg[0] ends at X={seg0End.X:F3} but seg[1] starts at X={seg1StartX:F3}");
+        Math.Abs(seg1StartY - seg0End.Y).ShouldBeLessThan(AlignmentTolerance,
+            $"Issue #456: Y-gap between segments (NazcaOriginOffset not applied uniformly). " +
+            $"Seg[0] ends at Y={seg0End.Y:F3} but seg[1] starts at Y={seg1StartY:F3}");
+    }
+
     // ── Multi-segment: verify start pin alignment is preserved ────────────────
 
     [Fact]
