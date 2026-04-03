@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using CAP.Avalonia;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -79,8 +80,8 @@ public class MainWindowInitializationTests
         // Assert - Verify canvas ViewModel is accessible
         var canvasVm = mainVm.CanvasInteraction;
         canvasVm.ShouldNotBeNull();
-        canvasVm.Components.ShouldNotBeNull();
-        canvasVm.Mode.ShouldBe(CAP.Avalonia.ViewModels.Canvas.CanvasMode.Select);
+        mainVm.Canvas.Components.ShouldNotBeNull();
+        canvasVm.CurrentMode.ShouldBe(InteractionMode.Select);
     }
 
     /// <summary>
