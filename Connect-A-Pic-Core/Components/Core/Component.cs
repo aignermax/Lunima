@@ -161,7 +161,8 @@ public class Component : ICloneable
                 }
             }
             SliderValueChanged?.Invoke(sender, e);
-            NazcaFunctionParameters = "deltaLength = " + slider.Value;
+            // Note: Slider values are for simulation only. GDS export stubs don't support parameters.
+            // NazcaFunctionParameters should only be set from PDK metadata, not from sliders.
         }
     }
 
