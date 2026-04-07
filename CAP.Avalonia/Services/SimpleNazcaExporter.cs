@@ -396,11 +396,12 @@ public class SimpleNazcaExporter
     /// that occur with Nazca's chaining syntax (.put() without coordinates).
     ///
     /// Fix #355 (single straight): direct pin-to-pin geometry avoids NazcaOriginOffset mismatch.
-    /// Fix #366 (multi-segment): absolute positioning for each segment, with the last straight
-    /// segment pinned to endPin.GetAbsoluteNazcaPosition() for exact endpoint alignment.
+    /// Fix #366 (multi-segment): absolute positioning for each segment.
+    /// Fix #456 (last segment Y-offset): all segments now use the SAME delta offset derived from
+    /// startPin, ensuring a continuous waveguide path with no coordinate-system jump between segments.
     /// </summary>
-    /// <param name="startPin">Start pin for correct Nazca coordinate calculation.</param>
-    /// <param name="endPin">End pin for exact endpoint alignment on the last straight segment.</param>
+    /// <param name="startPin">Start pin used to calculate the editor-to-Nazca offset for all segments.</param>
+    /// <param name="endPin">End pin used only for single-straight-segment paths (direct pin-to-pin geometry).</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
         PhysicalPin? startPin = null, PhysicalPin? endPin = null)
@@ -412,137 +413,28 @@ public class SimpleNazcaExporter
             return;
         }
 
-        // Multi-segment: use absolute Nazca coordinates for every segment.
-        // For mixed-PDK designs, we can't use a single global offset because each component
-        // has its own NazcaOriginOffset.
-
-        // Strategy: Use pin positions for first and last segments, derive others from segment geometry
+        // Multi-segment: calculate a SINGLE offset from editor space to Nazca space.
+        // Derived from the start pin's Nazca position vs. the first segment's editor start point.
+        // Applying the SAME delta to every segment ensures path continuity with no Y-jump.
+        // Fix #456: previously segment[0] used GetAbsoluteNazcaPosition() while segment[1+] used
+        // a plain Y-flip — mixing coordinate systems and causing a visible Y-offset on later segments.
+        double deltaX = 0;
+        double deltaY = 0;
+        if (startPin != null && segments.Count > 0)
+        {
+            var (nazcaPinX, nazcaPinY) = startPin.GetAbsoluteNazcaPosition();
+            double editorStartX = segments[0].StartPoint.X;
+            double editorStartY = segments[0].StartPoint.Y;
+            deltaX = nazcaPinX - editorStartX;
+            deltaY = nazcaPinY - (-editorStartY); // nazcaY = -editorY + deltaY → deltaY = nazcaY + editorY
+        }
 
         for (int i = 0; i < segments.Count; i++)
         {
-            bool isLast = (i == segments.Count - 1);
-            bool isFirst = (i == 0);
-
-            double nX, nY;
-
-            if (isFirst && startPin != null)
-            {
-                // First segment: Start at the StartPin's Nazca position
-                (nX, nY) = startPin.GetAbsoluteNazcaPosition();
-            }
-            else if (isLast && endPin != null && segments[i] is StraightSegment lastStraight)
-            {
-                // Last straight segment: Calculate start position so it ends exactly at EndPin
-                var (endNazcaX, endNazcaY) = endPin.GetAbsoluteNazcaPosition();
-                double angleRad = -lastStraight.StartAngleDegrees * Math.PI / 180.0;
-                nX = endNazcaX - lastStraight.LengthMicrometers * Math.Cos(angleRad);
-                nY = endNazcaY - lastStraight.LengthMicrometers * Math.Sin(angleRad);
-            }
-            else
-            {
-                // Middle segments: Simple Y-flip
-                // TODO: This assumes segments connect properly in editor space
-                nX = segments[i].StartPoint.X;
-                nY = -segments[i].StartPoint.Y;
-            }
-
-            // Export the segment with its correct Nazca coordinates
+            double nX = segments[i].StartPoint.X + deltaX;
+            double nY = -segments[i].StartPoint.Y + deltaY;
             sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
-
-            // VALIDATION: Check if last segment actually ends at the endPin
-            if (isLast && segments[i] is StraightSegment straight && endPin != null)
-            {
-                var (expectedEndX, expectedEndY) = endPin.GetAbsoluteNazcaPosition();
-
-                // Calculate where this segment actually ends
-                double angleRad = -straight.StartAngleDegrees * Math.PI / 180.0;
-                double actualEndX = nX + straight.LengthMicrometers * Math.Cos(angleRad);
-                double actualEndY = nY + straight.LengthMicrometers * Math.Sin(angleRad);
-
-                double errorX = Math.Abs(actualEndX - expectedEndX);
-                double errorY = Math.Abs(actualEndY - expectedEndY);
-
-                const double tolerance = 0.5; // 0.5 µm tolerance (relaxed for debugging)
-
-                if (errorX > tolerance || errorY > tolerance)
-                {
-                    var startPinPos = startPin?.GetAbsolutePosition() ?? (0, 0);
-                    var endPinPos = endPin.GetAbsolutePosition();
-                    var startComp = startPin?.ParentComponent;
-                    var endComp = endPin.ParentComponent;
-
-                    // Get origin offsets for both components
-                    var (startOriginOffsetX, startOriginOffsetY) = startComp != null ? CalculateOriginOffset(startComp) : (0, 0);
-                    var (endOriginOffsetX, endOriginOffsetY) = CalculateOriginOffset(endComp);
-
-                    // Calculate expected segment endpoint in editor space
-                    double segmentEndEditorX = segments[i].StartPoint.X - straight.LengthMicrometers * Math.Cos(straight.StartAngleDegrees * Math.PI / 180.0);
-                    double segmentEndEditorY = segments[i].StartPoint.Y - straight.LengthMicrometers * Math.Sin(straight.StartAngleDegrees * Math.PI / 180.0);
-
-                    throw new InvalidOperationException(
-                        $"WAVEGUIDE ENDPOINT MISMATCH:\n" +
-                        $"  Exported Nazca: Last segment ends at ({actualEndX:F2}, {actualEndY:F2})\n" +
-                        $"  Expected: EndPin at ({expectedEndX:F2}, {expectedEndY:F2})\n" +
-                        $"  Error: ΔX={errorX:F4} µm, ΔY={errorY:F4} µm\n" +
-                        $"\n" +
-                        $"Editor: Segment {segmentEndEditorX:F2},{segmentEndEditorY:F2} → Pin {endPinPos.Item1:F2},{endPinPos.Item2:F2}\n" +
-                        $"Components: Start {startComp?.Identifier} offset ({startOriginOffsetX:F2},{startOriginOffsetY:F2}), " +
-                        $"End {endComp.Identifier} offset ({endOriginOffsetX:F2},{endOriginOffsetY:F2})\n" +
-                        $"\n" +
-                        $"Mixed-PDK issue: Different NazcaOriginOffsets prevent simple coordinate mapping.\n" +
-                        $"Delete and re-route this connection.");
-                }
-            }
         }
-    }
-
-    /// <summary>
-    /// Computes the (deltaX, deltaY) offset that maps editor-space segment coordinates
-    /// to Nazca-space coordinates. This handles the Y-flip and any coordinate adjustments
-    /// needed to align segments with pin positions.
-    /// </summary>
-    private static (double DeltaX, double DeltaY) ComputePathNazcaOffset(
-        PhysicalPin? startPin, IReadOnlyList<PathSegment> segments)
-    {
-        if (startPin == null || segments.Count == 0)
-            return (0, 0);
-
-        // Get where the pin actually is in Nazca coordinates
-        var (nazcaX, nazcaY) = startPin.GetAbsoluteNazcaPosition();
-
-        // Get where the first segment starts in editor coordinates
-        var editorStart = segments[0].StartPoint;
-
-        // The delta maps from editor-space segment position to Nazca-space pin position
-        // Note: Y-flip is just negation, so nazca_y = -(editor_y + offset)
-        return (nazcaX - editorStart.X, nazcaY - (-editorStart.Y));
-    }
-
-    /// <summary>
-    /// Converts an editor-space point to Nazca coordinates by applying Y-flip and the
-    /// precomputed path offset.
-    /// </summary>
-    private static (double X, double Y) ApplyNazcaOffset(
-        (double X, double Y) editorPoint, double deltaX, double deltaY) =>
-        (editorPoint.X + deltaX, -editorPoint.Y + deltaY);
-
-    /// <summary>
-    /// Formats a straight waveguide segment from an absolute Nazca start position to the
-    /// exact Nazca position of endPin. Used for the last segment of a multi-segment path.
-    /// </summary>
-    private static string FormatStraightToPin(double startX, double startY, PhysicalPin endPin)
-    {
-        var ci = CultureInfo.InvariantCulture;
-        var (ex, ey) = endPin.GetAbsoluteNazcaPosition();
-        double dx = ex - startX;
-        double dy = ey - startY;
-        double length = Math.Sqrt(dx * dx + dy * dy);
-        double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
-        var x = NormalizeZero(startX).ToString("F2", ci);
-        var y = NormalizeZero(startY).ToString("F2", ci);
-        var a = NormalizeZero(angleDeg).ToString("F2", ci);
-        var l = length.ToString("F2", ci);
-        return $"        nd.strt(length={l}).put({x}, {y}, {a})";
     }
 
     /// <summary>
