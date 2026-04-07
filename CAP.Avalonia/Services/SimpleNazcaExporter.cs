@@ -676,20 +676,31 @@ public class SimpleNazcaExporter
         {
             // Keep dots (for module attribute access like demo.mmi2x2_dp), replace other invalid chars
             var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_.]", "_");
+
+            // Skip parameters for stub components - stubs don't support them
+            // Only include parameters for parametric straights (which do support length=)
             var funcParams = comp.NazcaFunctionParameters;
-            return string.IsNullOrEmpty(funcParams)
-                ? $"{pythonFuncName}()"
-                : $"{pythonFuncName}({funcParams})";
+            bool isParametricStraight = IsParametricStraight(funcName, funcParams);
+
+            if (isParametricStraight && !string.IsNullOrEmpty(funcParams))
+                return $"{pythonFuncName}({funcParams})";
+            else
+                return $"{pythonFuncName}()";
         }
 
         // For demo_pdk components, sanitize the function name to a valid Python identifier (replace dots too)
         if (!string.IsNullOrEmpty(funcName) && funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase))
         {
             var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
+
+            // Skip parameters for stub components - stubs don't support them
             var funcParams = comp.NazcaFunctionParameters;
-            return string.IsNullOrEmpty(funcParams)
-                ? $"{pythonFuncName}()"
-                : $"{pythonFuncName}({funcParams})";
+            bool isParametricStraight = IsParametricStraight(funcName, funcParams);
+
+            if (isParametricStraight && !string.IsNullOrEmpty(funcParams))
+                return $"{pythonFuncName}({funcParams})";
+            else
+                return $"{pythonFuncName}()";
         }
 
         // Fallback: heuristic mapping to demofab
