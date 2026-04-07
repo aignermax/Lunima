@@ -396,10 +396,11 @@ public class SimpleNazcaExporter
     /// that occur with Nazca's chaining syntax (.put() without coordinates).
     ///
     /// Fix #355 (single straight): direct pin-to-pin geometry avoids NazcaOriginOffset mismatch.
-    /// Fix #366 (multi-segment): absolute positioning for each segment. Only the first segment
-    /// uses startPin.GetAbsoluteNazcaPosition(); all others use a simple Y-flip.
+    /// Fix #366 (multi-segment): absolute positioning for each segment.
+    /// Fix #456 (last segment Y-offset): all segments now use the SAME delta offset derived from
+    /// startPin, ensuring a continuous waveguide path with no coordinate-system jump between segments.
     /// </summary>
-    /// <param name="startPin">Start pin for correct Nazca coordinate calculation of the first segment.</param>
+    /// <param name="startPin">Start pin used to calculate the editor-to-Nazca offset for all segments.</param>
     /// <param name="endPin">End pin used only for single-straight-segment paths (direct pin-to-pin geometry).</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
@@ -412,33 +413,26 @@ public class SimpleNazcaExporter
             return;
         }
 
-        // Multi-segment: use absolute Nazca coordinates for every segment.
-        // For mixed-PDK designs, we can't use a single global offset because each component
-        // has its own NazcaOriginOffset.
-
-        // Strategy: Use pin position for the first segment only; all other segments use simple Y-flip.
+        // Multi-segment: calculate a SINGLE offset from editor space to Nazca space.
+        // Derived from the start pin's Nazca position vs. the first segment's editor start point.
+        // Applying the SAME delta to every segment ensures path continuity with no Y-jump.
+        // Fix #456: previously segment[0] used GetAbsoluteNazcaPosition() while segment[1+] used
+        // a plain Y-flip — mixing coordinate systems and causing a visible Y-offset on later segments.
+        double deltaX = 0;
+        double deltaY = 0;
+        if (startPin != null && segments.Count > 0)
+        {
+            var (nazcaPinX, nazcaPinY) = startPin.GetAbsoluteNazcaPosition();
+            double editorStartX = segments[0].StartPoint.X;
+            double editorStartY = segments[0].StartPoint.Y;
+            deltaX = nazcaPinX - editorStartX;
+            deltaY = nazcaPinY - (-editorStartY); // nazcaY = -editorY + deltaY → deltaY = nazcaY + editorY
+        }
 
         for (int i = 0; i < segments.Count; i++)
         {
-            bool isFirst = (i == 0);
-
-            double nX, nY;
-
-            if (isFirst && startPin != null)
-            {
-                // First segment: Start at the StartPin's Nazca position
-                (nX, nY) = startPin.GetAbsoluteNazcaPosition();
-            }
-            else
-            {
-                // All other segments (including last): Simple Y-flip from editor coordinates
-                // The segment coordinates from the pathfinding already line up correctly
-                // with the component pins. No special handling needed for the last segment.
-                nX = segments[i].StartPoint.X;
-                nY = -segments[i].StartPoint.Y;
-            }
-
-            // Export the segment with its correct Nazca coordinates
+            double nX = segments[i].StartPoint.X + deltaX;
+            double nY = -segments[i].StartPoint.Y + deltaY;
             sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
         }
     }
