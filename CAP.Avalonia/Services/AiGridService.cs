@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CAP.Avalonia.Commands;
+using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Components.Core;
@@ -223,6 +224,37 @@ public class AiGridService : IAiGridService
         cmd.Execute();
 
         return $"Saved group '{groupId}' as prefab '{prefabName}' in component library.";
+    }
+
+    /// <inheritdoc/>
+    public Task<string> CopyComponentAsync(string sourceId, double x, double y, int rotation = -1)
+    {
+        var sourceVm = _canvas.Components.FirstOrDefault(c =>
+            c.Component.Identifier.Equals(sourceId, StringComparison.OrdinalIgnoreCase));
+
+        if (sourceVm == null)
+            return Task.FromResult($"Component '{sourceId}' not found.");
+
+        var tempClipboard = new ComponentClipboard();
+        tempClipboard.Copy(new[] { sourceVm }, _canvas.Connections);
+
+        var result = tempClipboard.Paste(_canvas, x, y);
+        if (result == null || result.Components.Count == 0)
+            return Task.FromResult($"Failed to copy '{sourceId}'.");
+
+        var copiedVm = result.Components[0];
+        var copiedId = copiedVm.Component.Identifier;
+
+        if (rotation >= 0 && rotation != copiedVm.Component.RotationDegrees
+            && copiedVm.Component is not ComponentGroup)
+        {
+            copiedVm.Component.RotationDegrees = rotation;
+        }
+
+        var px = Math.Round(copiedVm.Component.PhysicalX, 0);
+        var py = Math.Round(copiedVm.Component.PhysicalY, 0);
+        return Task.FromResult(
+            $"Copied '{sourceId}' to ({px}, {py})µm. New ID: '{copiedId}'.");
     }
 
     private HashSet<PhysicalPin> GetConnectedPins() =>
