@@ -13,6 +13,7 @@ using CAP_Core.LightCalculation;
 using CAP_Core.Tiles;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
+using System.Text.Json;
 
 namespace UnitTests.AI;
 
@@ -349,6 +350,86 @@ public class AiGridServiceTests
         copy.ShouldNotBeNull();
     }
 
+    [Fact]
+    public void GetGridState_WithGroupHavingExternalPins_ReportsPinCountFromExternalPins()
+    {
+        var group = CreateGroupWithTwoExternalPins();
+        _canvas.AddComponent(group);
+
+        var result = _svc.GetGridState();
+
+        result.ShouldContain("\"pins\":2");
+    }
+
+    [Fact]
+    public void GetGridState_WithGroupHavingExternalPins_IncludesExternalPinsArray()
+    {
+        var group = CreateGroupWithTwoExternalPins();
+        _canvas.AddComponent(group);
+
+        var result = _svc.GetGridState();
+
+        result.ShouldContain("\"external_pins\"");
+        result.ShouldContain("\"input_1\"");
+        result.ShouldContain("\"output_1\"");
+    }
+
+    [Fact]
+    public void GetGridState_WithGroupHavingExternalPins_PinIncludesDirectionAndConnectedStatus()
+    {
+        var group = CreateGroupWithTwoExternalPins();
+        _canvas.AddComponent(group);
+
+        var result = _svc.GetGridState();
+
+        result.ShouldContain("\"direction\"");
+        result.ShouldContain("\"connected\"");
+    }
+
+    [Fact]
+    public void GetGridState_WithGroupHavingNoExternalPins_ReportsZeroPins()
+    {
+        var emptyGroup = TestComponentFactory.CreateComponentGroup("EmptyGroup");
+        _canvas.AddComponent(emptyGroup);
+
+        var result = _svc.GetGridState();
+
+        result.ShouldContain("\"pins\":0");
+    }
+
+    [Fact]
+    public void GetGridState_WithGroupHavingNoExternalPins_OmitsExternalPinsField()
+    {
+        var emptyGroup = TestComponentFactory.CreateComponentGroup("EmptyGroup");
+        _canvas.AddComponent(emptyGroup);
+
+        var result = _svc.GetGridState();
+
+        // external_pins field should be omitted (null ignored) when group has no external pins
+        result.ShouldNotContain("\"external_pins\"");
+    }
+
+    [Fact]
+    public async Task CreateConnectionAsync_GroupWithExternalPins_FindsPinsForConnection()
+    {
+        // Arrange: two components, one grouped with external pins
+        var regularComp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        regularComp.PhysicalX = 0;
+        regularComp.PhysicalY = 0;
+        _canvas.AddComponent(regularComp);
+
+        var group = CreateGroupWithTwoExternalPins();
+        group.PhysicalX = 500;
+        group.PhysicalY = 0;
+        _canvas.AddComponent(group);
+
+        // Act: attempt connection from regular comp to group
+        var result = await _svc.CreateConnectionAsync(regularComp.Identifier, group.Identifier);
+
+        // Assert: should not fail with "no available pins" - it found the group's external pins
+        result.ShouldNotContain("No available");
+    }
+
     /// <summary>
     /// Creates a minimal <see cref="LeftPanelViewModel"/> with real but empty dependencies.
     /// No PDKs are loaded so <see cref="LeftPanelViewModel.AllTemplates"/> is empty.
@@ -366,5 +447,40 @@ public class AiGridServiceTests
         return new LeftPanelViewModel(
             canvas, libraryManager, pdkLoader, prefs,
             hierarchy, pdkManager, componentLibrary);
+    }
+
+    /// <summary>
+    /// Creates a ComponentGroup with 2 named external pins (input and output) for testing.
+    /// </summary>
+    private static ComponentGroup CreateGroupWithTwoExternalPins()
+    {
+        var child = TestComponentFactory.CreateSimpleTwoPortComponent();
+        child.PhysicalX = 100;
+        child.PhysicalY = 100;
+
+        var group = new ComponentGroup("TestGroup");
+        group.AddChild(child);
+
+        var inputExternalPin = new GroupPin
+        {
+            Name = "input_1",
+            InternalPin = child.PhysicalPins.First(p => p.AngleDegrees == 180),
+            RelativeX = 0,
+            RelativeY = 50,
+            AngleDegrees = 180
+        };
+        var outputExternalPin = new GroupPin
+        {
+            Name = "output_1",
+            InternalPin = child.PhysicalPins.First(p => p.AngleDegrees == 0),
+            RelativeX = 100,
+            RelativeY = 50,
+            AngleDegrees = 0
+        };
+
+        group.AddExternalPin(inputExternalPin);
+        group.AddExternalPin(outputExternalPin);
+
+        return group;
     }
 }
