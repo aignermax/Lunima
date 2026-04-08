@@ -489,19 +489,20 @@ public class WaveguideEndpointAlignmentTests
             pinOffsetX: 0, pinOffsetY: 30, pinAngle: 180); // in pin
 
         // Connection 1: mmi1.out1 -> phase_shifter.in
-        // Simplified test: just two straight segments to expose the coordinate bug
-        var (startX, startY) = mmi1_out1.GetAbsolutePosition();
-        var (endX, endY) = ps_in.GetAbsolutePosition();
+        // Create segments using EDITOR coordinates (what the router produces)
+        var (startX, startY) = mmi1_out1.GetAbsolutePosition();  // Editor coords
+        var (endX, endY) = ps_in.GetAbsolutePosition();            // Editor coords
         double midX = (startX + endX) / 2.0;
 
         var segments1 = new List<PathSegment>
         {
             new StraightSegment(startX, startY, midX, startY, 0),   // First half
-            new StraightSegment(midX, startY, endX, endY, 0)         // Second half (the "last" segment)
+            new StraightSegment(midX, startY, endX, endY, 0)         // Second half
         };
 
         // Export and verify
         var nazcaCode = ExportWithCustomSegments(mmi1_out1, ps_in, segments1);
+
         var lines = nazcaCode.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Where(l => l.Contains("nd.strt(") || l.Contains("nd.bend("))
             .ToList();
@@ -509,6 +510,7 @@ public class WaveguideEndpointAlignmentTests
         // Verify first segment starts at mmi1.out1 pin
         var (firstStartX, firstStartY) = ExtractStartPoint(lines[0]);
         var (expectedStartX, expectedStartY) = mmi1_out1.GetAbsoluteNazcaPosition();
+
         AssertAligned((firstStartX, firstStartY), (expectedStartX, expectedStartY),
             "MMI1.out1 -> PhaseShifter.in: first segment start");
 

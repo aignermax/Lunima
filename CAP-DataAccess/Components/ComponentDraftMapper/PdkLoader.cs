@@ -81,51 +81,71 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 throw new InvalidOperationException("PDK must have a name");
             }
 
+            var errors = new List<string>();
             foreach (var comp in pdk.Components)
             {
-                ValidateComponent(comp, pdk.Name);
+                ValidateComponent(comp, pdk.Name, errors);
+            }
+
+            if (errors.Count > 0)
+            {
+                throw new PdkValidationException(pdk.Name, errors);
             }
         }
 
-        private void ValidateComponent(PdkComponentDraft comp, string pdkName)
+        private static void ValidateComponent(PdkComponentDraft comp, string pdkName, List<string> errors)
         {
+            var compLabel = !string.IsNullOrWhiteSpace(comp.Name) ? comp.Name : "(unnamed)";
+
             if (string.IsNullOrWhiteSpace(comp.Name))
             {
-                throw new InvalidOperationException($"Component in PDK '{pdkName}' must have a name");
+                errors.Add($"[{pdkName}] Component must have a name");
             }
 
             if (comp.WidthMicrometers <= 0)
             {
-                throw new InvalidOperationException($"Component '{comp.Name}' must have positive width");
+                errors.Add($"[{pdkName}/{compLabel}] Width must be positive");
             }
 
             if (comp.HeightMicrometers <= 0)
             {
-                throw new InvalidOperationException($"Component '{comp.Name}' must have positive height");
+                errors.Add($"[{pdkName}/{compLabel}] Height must be positive");
             }
 
             if (comp.Pins == null || comp.Pins.Count == 0)
             {
-                throw new InvalidOperationException($"Component '{comp.Name}' must have at least one pin");
+                errors.Add($"[{pdkName}/{compLabel}] Must have at least one pin");
             }
 
-            // Validate pin positions are within component bounds (with some tolerance)
-            foreach (var pin in comp.Pins)
+            // NazcaOriginOffset is required — no silent fallback allowed.
+            // Without it, GDS export produces misaligned waveguides.
+            if (comp.NazcaOriginOffsetX == null)
             {
-                if (string.IsNullOrWhiteSpace(pin.Name))
-                {
-                    throw new InvalidOperationException($"Pin in component '{comp.Name}' must have a name");
-                }
+                errors.Add($"[{pdkName}/{compLabel}] Missing nazcaOriginOffsetX (required for GDS export)");
+            }
+            if (comp.NazcaOriginOffsetY == null)
+            {
+                errors.Add($"[{pdkName}/{compLabel}] Missing nazcaOriginOffsetY (required for GDS export)");
+            }
 
-                // Allow small tolerance for pins at edges
-                const double tolerance = 1.0;
-                if (pin.OffsetXMicrometers < -tolerance || pin.OffsetXMicrometers > comp.WidthMicrometers + tolerance)
+            if (comp.Pins != null)
+            {
+                foreach (var pin in comp.Pins)
                 {
-                    Console.WriteLine($"Warning: Pin '{pin.Name}' X position ({pin.OffsetXMicrometers}) may be outside component bounds");
-                }
-                if (pin.OffsetYMicrometers < -tolerance || pin.OffsetYMicrometers > comp.HeightMicrometers + tolerance)
-                {
-                    Console.WriteLine($"Warning: Pin '{pin.Name}' Y position ({pin.OffsetYMicrometers}) may be outside component bounds");
+                    if (string.IsNullOrWhiteSpace(pin.Name))
+                    {
+                        errors.Add($"[{pdkName}/{compLabel}] Pin must have a name");
+                    }
+
+                    const double tolerance = 1.0;
+                    if (pin.OffsetXMicrometers < -tolerance || pin.OffsetXMicrometers > comp.WidthMicrometers + tolerance)
+                    {
+                        errors.Add($"[{pdkName}/{compLabel}] Pin '{pin.Name}' X={pin.OffsetXMicrometers} outside bounds [0, {comp.WidthMicrometers}]");
+                    }
+                    if (pin.OffsetYMicrometers < -tolerance || pin.OffsetYMicrometers > comp.HeightMicrometers + tolerance)
+                    {
+                        errors.Add($"[{pdkName}/{compLabel}] Pin '{pin.Name}' Y={pin.OffsetYMicrometers} outside bounds [0, {comp.HeightMicrometers}]");
+                    }
                 }
             }
 

@@ -31,14 +31,9 @@ public static class PdkTemplateConverter
             p.AngleDegrees
         )).ToArray();
 
-        // Use explicit origin offset when provided; fall back to first-pin heuristic.
-        var firstPin = pdkComp.Pins.FirstOrDefault();
-        double nazcaOriginOffsetX = pdkComp.NazcaOriginOffsetX
-            ?? firstPin?.OffsetXMicrometers
-            ?? 0;
-        double nazcaOriginOffsetY = pdkComp.NazcaOriginOffsetY
-            ?? firstPin?.OffsetYMicrometers
-            ?? 0;
+        // NazcaOriginOffset is required — validated by PdkLoader.
+        double nazcaOriginOffsetX = pdkComp.NazcaOriginOffsetX ?? 0;
+        double nazcaOriginOffsetY = pdkComp.NazcaOriginOffsetY ?? 0;
 
         var template = new ComponentTemplate
         {
