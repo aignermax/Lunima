@@ -63,6 +63,25 @@ public class WaveguideRouter
     public bool UseHierarchicalPathfinding { get; set; } = false;
 
     /// <summary>
+    /// Maximum nodes for Phase 1 (quick) pathfinding.
+    /// Phase 1 provides fast results for simple and medium-complexity routes.
+    /// </summary>
+    public int Phase1MaxNodes { get; set; } = 200_000;
+
+    /// <summary>
+    /// Maximum nodes for Phase 2 (extended) pathfinding.
+    /// Phase 2 is triggered when Phase 1 fails, allowing longer search for complex routes.
+    /// </summary>
+    public int Phase2MaxNodes { get; set; } = 2_000_000;
+
+    /// <summary>
+    /// Invoked when routing escalates to Phase 2 (complex path search).
+    /// Use this to show a "Computing complex path..." indicator in the UI.
+    /// Called on the routing thread (not the UI thread).
+    /// </summary>
+    public Action? OnComplexRouteStarted { get; set; }
+
+    /// <summary>
     /// Initializes the pathfinding grid for A* routing.
     /// </summary>
     public void InitializePathfindingGrid(double minX, double minY, double maxX, double maxY,
@@ -137,11 +156,16 @@ public class WaveguideRouter
         PathfindingGrid?.AddComponentObstacle(component);
 
     /// <summary>
-    /// Routes a waveguide between two pins.
-    /// Always uses A* pathfinding. Falls back to Manhattan (marked as blocked) if A* fails.
-    /// Manhattan paths are checked for collisions with existing obstacles.
+    /// Routes a waveguide between two pins using two-phase A* pathfinding.
+    /// Phase 1 uses a limited node budget for fast results.
+    /// Phase 2 uses an extended node budget for complex routes (triggers <see cref="OnComplexRouteStarted"/>).
+    /// Falls back to Manhattan (marked as blocked) if both A* phases fail.
     /// </summary>
-    public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin)
+    /// <param name="startPin">Source pin.</param>
+    /// <param name="endPin">Target pin.</param>
+    /// <param name="cancellationToken">Token to cancel Phase 2 (e.g. when grid changes).</param>
+    public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin,
+                             CancellationToken cancellationToken = default)
     {
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
@@ -154,7 +178,7 @@ public class WaveguideRouter
         {
             var astarPath = new RoutedPath();
             if (TryRouteAStar(startX, startY, startAngle, endX, endY, endInputAngle,
-                              astarPath, startPin, endPin))
+                              astarPath, startPin, endPin, cancellationToken))
             {
                 if (astarPath.IsValid) return astarPath;
             }
@@ -202,11 +226,14 @@ public class WaveguideRouter
     }
 
     /// <summary>
-    /// Attempts to route using A* pathfinding with obstacle avoidance.
+    /// Attempts to route using two-phase A* pathfinding with obstacle avoidance.
+    /// Phase 1 uses <see cref="Phase1MaxNodes"/> for fast results.
+    /// Phase 2 uses <see cref="Phase2MaxNodes"/> and fires <see cref="OnComplexRouteStarted"/> if Phase 1 fails.
     /// </summary>
     private bool TryRouteAStar(double startX, double startY, double startAngle,
                                 double endX, double endY, double endInputAngle,
-                                RoutedPath path, PhysicalPin startPin, PhysicalPin endPin)
+                                RoutedPath path, PhysicalPin startPin, PhysicalPin endPin,
+                                CancellationToken cancellationToken = default)
     {
         if (PathfindingGrid == null) return false;
 
@@ -257,13 +284,25 @@ public class WaveguideRouter
             }
             else
             {
-                // HPA* disabled - use flat A* with generous node limit for all routes
-                var pathfinder = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
+                // Phase 1: Quick search with limited node budget for fast results
+                var phase1 = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
                 {
-                    MaxNodesExpanded = 1_000_000  // 1M nodes - handles even very long routes
+                    MaxNodesExpanded = Phase1MaxNodes
                 };
-                gridPath = pathfinder.FindPath(gridStartX, gridStartY, startDir,
-                                                gridEndX, gridEndY, endDir);
+                gridPath = phase1.FindPath(gridStartX, gridStartY, startDir,
+                                           gridEndX, gridEndY, endDir, cancellationToken);
+
+                // Phase 2: Extended search when Phase 1 exhausted its node budget
+                if (gridPath == null && !cancellationToken.IsCancellationRequested)
+                {
+                    OnComplexRouteStarted?.Invoke();
+                    var phase2 = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
+                    {
+                        MaxNodesExpanded = Phase2MaxNodes
+                    };
+                    gridPath = phase2.FindPath(gridStartX, gridStartY, startDir,
+                                               gridEndX, gridEndY, endDir, cancellationToken);
+                }
             }
 
             // Loop detection: if path is >2× Manhattan distance, retry with minimal constraints
@@ -273,7 +312,7 @@ public class WaveguideRouter
                 CostCalculator.MinStraightRunCells = 2;
                 var retry = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
                 var retryPath = retry.FindPath(gridStartX, gridStartY, startDir,
-                                                gridEndX, gridEndY, endDir);
+                                               gridEndX, gridEndY, endDir, cancellationToken);
                 if (retryPath != null && retryPath.Count < gridPath.Count)
                     gridPath = retryPath;
             }
@@ -284,7 +323,7 @@ public class WaveguideRouter
                 CostCalculator.MinStraightRunCells = 2;
                 var fallback = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator);
                 gridPath = fallback.FindPath(gridStartX, gridStartY, startDir,
-                                              gridEndX, gridEndY, endDir);
+                                             gridEndX, gridEndY, endDir, cancellationToken);
             }
 
             CostCalculator.MinStraightRunCells = originalStraightRun;

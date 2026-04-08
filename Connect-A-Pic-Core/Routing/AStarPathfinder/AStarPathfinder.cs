@@ -29,6 +29,12 @@ public class AStarPathfinder
     }
 
     /// <summary>
+    /// How often (in node expansions) to check the cancellation token.
+    /// Lower values = more responsive cancellation, slight overhead per check.
+    /// </summary>
+    private const int CancellationCheckInterval = 500;
+
+    /// <summary>
     /// Finds a path from start to end, respecting pin directions.
     /// </summary>
     /// <param name="startX">Start position X in grid cells</param>
@@ -37,9 +43,11 @@ public class AStarPathfinder
     /// <param name="endX">End position X in grid cells</param>
     /// <param name="endY">End position Y in grid cells</param>
     /// <param name="endDirection">Required final direction (direction to enter end pin)</param>
-    /// <returns>List of nodes forming the path, or null if no path found</returns>
+    /// <param name="cancellationToken">Token to cancel the search (checked every 500 nodes).</param>
+    /// <returns>List of nodes forming the path, or null if no path found or cancelled</returns>
     public List<AStarNode>? FindPath(int startX, int startY, GridDirection startDirection,
-                                      int endX, int endY, GridDirection endDirection)
+                                      int endX, int endY, GridDirection endDirection,
+                                      CancellationToken cancellationToken = default)
     {
         var openSet = new PriorityQueue<AStarNode, double>();
         var visited = new Dictionary<(int, int, GridDirection), AStarNode>();
@@ -64,6 +72,10 @@ public class AStarPathfinder
 
         while (openSet.Count > 0 && nodesExpanded < MaxNodesExpanded)
         {
+            // Check cancellation periodically to remain responsive
+            if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)
+                return null;
+
             var current = openSet.Dequeue();
             nodesExpanded++;
 
