@@ -297,7 +297,7 @@ public partial class AiAssistantViewModel : ObservableObject
         new AiToolDefinition
         {
             Name = "clear_grid",
-            Description = "Remove all components and connections from the photonic circuit grid.",
+            Description = "Remove ALL components and connections from the photonic circuit grid. ONLY use this when the user EXPLICITLY requests it with phrases like 'clear the grid', 'start fresh', 'delete everything', or 'reset'. Never use this automatically — it destroys the user's existing work.",
             InputSchema = new { type = "object", properties = new { } }
         },
         new AiToolDefinition
