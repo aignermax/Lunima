@@ -66,4 +66,11 @@ public interface IAiGridService
     /// Returns a status message with the template name.
     /// </summary>
     string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null);
+
+    /// <summary>
+    /// Returns detailed information about a ComponentGroup's internal structure.
+    /// Shows child components, internal connections (frozen waveguide paths), external pins, and nested group hierarchy.
+    /// Returns an error message if the component is not found or is not a group.
+    /// </summary>
+    string InspectGroup(string groupId);
 }
