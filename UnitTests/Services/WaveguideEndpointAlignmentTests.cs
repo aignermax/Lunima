@@ -188,6 +188,57 @@ public class WaveguideEndpointAlignmentTests
         AssertAligned(endPt, (expectedEndX, expectedEndY), $"end PDK (rot={rotation}°)");
     }
 
+    // ── Multi-segment: verify uniform coordinate transformation (Issue #456) ──
+
+    /// <summary>
+    /// Multi-segment path with PDK component: adjacent segments must be continuous in Nazca space.
+    /// Root cause (Issue #456): segment[0] used GetAbsoluteNazcaPosition() (includes NazcaOriginOffset)
+    /// while segment[1+] used a plain Y-flip — different coordinate systems caused a visible Y-gap.
+    /// Fix: all segments use the same delta offset derived from the start pin.
+    /// </summary>
+    [Fact]
+    public void MultiSegmentWaveguide_PdkComponent_SegmentsAreContinuousInNazca_Issue456()
+    {
+        // PDK component with NazcaOriginOffset — like an MMI 2x2 (H=38µm, NazcaOriginOffsetY=9.5µm).
+        // NazcaOriginOffsetY=9.5 means deltaY = nazcaPinY + editorPinY = 0 + 19 = 19.
+        // Without the fix, segment[1] would be shifted by 19 µm in Y relative to segment[0].
+        var (_, pinOut) = CreatePdkComponent("MmiOut", x: 0, y: 0, width: 100, height: 38,
+            nazcaOriginOffsetY: 9.5, pinOffsetX: 100, pinOffsetY: 19, pinAngle: 0);
+        var (_, pinIn) = CreatePdkComponent("MmiIn", x: 300, y: 0, width: 100, height: 38,
+            nazcaOriginOffsetY: 9.5, pinOffsetX: 0, pinOffsetY: 19, pinAngle: 180);
+
+        var (sx, sy) = pinOut.GetAbsolutePosition(); // (100, 19)
+        var (ex, ey) = pinIn.GetAbsolutePosition();  // (300, 19) — same Y, both horizontal
+
+        // Two horizontal segments sharing the midpoint — deliberately split to expose the Y-gap bug.
+        double midX = (sx + ex) / 2.0; // 200
+        var segments = new List<PathSegment>
+        {
+            new StraightSegment(sx, sy, midX, sy, 0),   // seg[0]: 100→200, editor Y=19
+            new StraightSegment(midX, sy, ex, ey, 0)    // seg[1]: 200→300, editor Y=19 (the "last" segment)
+        };
+
+        var sb = new StringBuilder();
+        SimpleNazcaExporter.AppendSegmentExport(sb, segments, pinOut, pinIn);
+        var nazcaCode = sb.ToString();
+
+        var lines = nazcaCode.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Where(l => l.Contains("nd.strt(") || l.Contains("nd.bend("))
+            .ToList();
+        lines.Count.ShouldBe(2, "Expected 2 exported segments");
+
+        // Compute where segment[0] ends in Nazca space: start + length along angle.
+        var seg0End = ComputeEndPoint(lines[0]);
+
+        // Segment[1] must start exactly where segment[0] ends — no Y-gap.
+        var (seg1StartX, seg1StartY) = ExtractStartPoint(lines[1]);
+        Math.Abs(seg1StartX - seg0End.X).ShouldBeLessThan(AlignmentTolerance,
+            $"Issue #456: Seg[0] ends at X={seg0End.X:F3} but seg[1] starts at X={seg1StartX:F3}");
+        Math.Abs(seg1StartY - seg0End.Y).ShouldBeLessThan(AlignmentTolerance,
+            $"Issue #456: Y-gap between segments (NazcaOriginOffset not applied uniformly). " +
+            $"Seg[0] ends at Y={seg0End.Y:F3} but seg[1] starts at Y={seg1StartY:F3}");
+    }
+
     // ── Multi-segment: verify start pin alignment is preserved ────────────────
 
     [Fact]
@@ -399,5 +450,89 @@ public class WaveguideEndpointAlignmentTests
             $"{label} X mismatch: actual={actual.X:F3} expected={expected.X:F3}");
         Math.Abs(actual.Y - expected.Y).ShouldBeLessThan(AlignmentTolerance,
             $"{label} Y mismatch: actual={actual.Y:F3} expected={expected.Y:F3}");
+    }
+
+    // ── Real-world MMI design test (from user's MMI.lun file) ────────────────
+
+    /// <summary>
+    /// Tests the actual MMI design from the user's MMI.lun file.
+    /// This is a real-world integration test with:
+    /// - 2x2 MMI Couplers (demo.mmi2x2_dp) with NazcaOriginOffsetY
+    /// - Phase Shifter (demo.eopm_dc)
+    /// - Grating Coupler (ebeam_gc_te1550)
+    /// - Photodetector (demo.pd)
+    /// - Multi-segment waveguides with bends
+    /// </summary>
+    [Fact]
+    public void RealWorld_MmiDesign_AllWaveguidesAlignToPins()
+    {
+        // Component 0: 2x2 MMI Coupler at (493.86, 458.09)
+        // MMI 2x2: Width=250µm, Height=60µm, NazcaOriginOffsetY = Height/2 = 30µm
+        var (mmi1, mmi1_out1) = CreatePdkComponent("mmi1",
+            x: 493.86170555623454, y: 458.0869784295108,
+            width: 250, height: 60, nazcaOriginOffsetY: 30.0,
+            pinOffsetX: 250, pinOffsetY: 26, pinAngle: 0); // out1 pin
+        var mmi1_out2 = new PhysicalPin {
+            Name = "out2",
+            OffsetXMicrometers = 250,
+            OffsetYMicrometers = 34,
+            AngleDegrees = 0,
+            ParentComponent = mmi1
+        };
+        mmi1.PhysicalPins.Add(mmi1_out2);
+
+        // Component 2: Phase Shifter at (853.72, 287.74)
+        // Phase Shifter: Width=500µm, Height=60µm, NazcaOriginOffsetY = 30µm
+        var (ps, ps_in) = CreatePdkComponent("phase_shifter",
+            x: 853.7179006311945, y: 287.73579424558557,
+            width: 500, height: 60, nazcaOriginOffsetY: 30.0,
+            pinOffsetX: 0, pinOffsetY: 30, pinAngle: 180); // in pin
+
+        // Connection 1: mmi1.out1 -> phase_shifter.in
+        // Create segments using EDITOR coordinates (what the router produces)
+        var (startX, startY) = mmi1_out1.GetAbsolutePosition();  // Editor coords
+        var (endX, endY) = ps_in.GetAbsolutePosition();            // Editor coords
+        double midX = (startX + endX) / 2.0;
+
+        var segments1 = new List<PathSegment>
+        {
+            new StraightSegment(startX, startY, midX, startY, 0),   // First half
+            new StraightSegment(midX, startY, endX, endY, 0)         // Second half
+        };
+
+        // Export and verify
+        var nazcaCode = ExportWithCustomSegments(mmi1_out1, ps_in, segments1);
+
+        var lines = nazcaCode.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Where(l => l.Contains("nd.strt(") || l.Contains("nd.bend("))
+            .ToList();
+
+        // Verify first segment starts at mmi1.out1 pin
+        var (firstStartX, firstStartY) = ExtractStartPoint(lines[0]);
+        var (expectedStartX, expectedStartY) = mmi1_out1.GetAbsoluteNazcaPosition();
+
+        AssertAligned((firstStartX, firstStartY), (expectedStartX, expectedStartY),
+            "MMI1.out1 -> PhaseShifter.in: first segment start");
+
+        // Verify segments are continuous (no gaps)
+        for (int i = 0; i < lines.Count - 1; i++)
+        {
+            var segEnd = lines[i].Contains("nd.strt(")
+                ? ComputeEndPoint(lines[i])
+                : ExtractStartPoint(lines[i + 1]); // For bends, just check next segment start
+            var (nextStartX, nextStartY) = ExtractStartPoint(lines[i + 1]);
+
+            Math.Abs(nextStartX - segEnd.X).ShouldBeLessThan(AlignmentTolerance,
+                $"Gap between segment {i} and {i+1}: X mismatch");
+            Math.Abs(nextStartY - segEnd.Y).ShouldBeLessThan(AlignmentTolerance,
+                $"Gap between segment {i} and {i+1}: Y mismatch");
+        }
+
+        // Verify last segment ends at phase_shifter.in pin
+        var lastSegment = lines[lines.Count - 1];
+        var (lastEndX, lastEndY) = ComputeEndPoint(lastSegment);
+        var (expectedEndX, expectedEndY) = ps_in.GetAbsoluteNazcaPosition();
+        AssertAligned((lastEndX, lastEndY), (expectedEndX, expectedEndY),
+            "MMI1.out1 -> PhaseShifter.in: last segment end");
     }
 }

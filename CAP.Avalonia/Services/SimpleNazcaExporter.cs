@@ -396,10 +396,14 @@ public class SimpleNazcaExporter
     /// that occur with Nazca's chaining syntax (.put() without coordinates).
     ///
     /// Fix #355 (single straight): direct pin-to-pin geometry avoids NazcaOriginOffset mismatch.
-    /// Fix #366 (multi-segment): absolute positioning for each segment. Only the first segment
-    /// uses startPin.GetAbsoluteNazcaPosition(); all others use a simple Y-flip.
+    /// Fix #366 (multi-segment): absolute positioning for each segment.
+    /// Fix #456 (last segment Y-offset): all segments now use the SAME delta offset derived from
+    /// startPin, ensuring a continuous waveguide path with no coordinate-system jump between segments.
+    /// Fix #458: straight segment length and angle are recomputed from transformed Nazca endpoints
+    /// instead of relying on editor-space stored values, eliminating misalignment for diagonal segments.
+    /// All segments use the same uniform offset — no per-segment distortion.
     /// </summary>
-    /// <param name="startPin">Start pin for correct Nazca coordinate calculation of the first segment.</param>
+    /// <param name="startPin">Start pin used to calculate the editor-to-Nazca offset for all segments.</param>
     /// <param name="endPin">End pin used only for single-straight-segment paths (direct pin-to-pin geometry).</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
@@ -412,62 +416,70 @@ public class SimpleNazcaExporter
             return;
         }
 
-        // Multi-segment: use absolute Nazca coordinates for every segment.
-        // For mixed-PDK designs, we can't use a single global offset because each component
-        // has its own NazcaOriginOffset.
-
-        // Strategy: Use pin position for the first segment only; all other segments use simple Y-flip.
+        // Multi-segment: Transform all segment endpoints from editor space to Nazca space.
+        // The SAME offset is applied to every segment — no per-segment or end-pin correction.
+        // The routing path geometry must be preserved exactly; if the endpoint doesn't hit the
+        // pin, the issue is in the offset calculation or component placement, not the segments.
+        double offsetX = 0;
+        double offsetY = 0;
+        if (startPin != null && segments.Count > 0)
+        {
+            var (editorPinX, editorPinY) = startPin.GetAbsolutePosition();
+            var (nazcaPinX, nazcaPinY) = startPin.GetAbsoluteNazcaPosition();
+            offsetX = nazcaPinX - editorPinX;
+            offsetY = nazcaPinY - (-editorPinY);
+        }
 
         for (int i = 0; i < segments.Count; i++)
         {
-            bool isFirst = (i == 0);
+            double nStartX = segments[i].StartPoint.X + offsetX;
+            double nStartY = -segments[i].StartPoint.Y + offsetY;
+            double nEndX = segments[i].EndPoint.X + offsetX;
+            double nEndY = -segments[i].EndPoint.Y + offsetY;
 
-            double nX, nY;
-
-            if (isFirst && startPin != null)
-            {
-                // First segment: Start at the StartPin's Nazca position
-                (nX, nY) = startPin.GetAbsoluteNazcaPosition();
-            }
-            else
-            {
-                // All other segments (including last): Simple Y-flip from editor coordinates
-                // The segment coordinates from the pathfinding already line up correctly
-                // with the component pins. No special handling needed for the last segment.
-                nX = segments[i].StartPoint.X;
-                nY = -segments[i].StartPoint.Y;
-            }
-
-            // Export the segment with its correct Nazca coordinates
-            sb.AppendLine(FormatSegmentAbsolute(segments[i], nX, nY));
+            sb.AppendLine(FormatSegmentAbsolute(segments[i], nStartX, nStartY, nEndX, nEndY));
         }
     }
 
     /// <summary>
-    /// Formats a path segment (straight or bend) with an absolute Nazca start position.
+    /// Formats a path segment (straight or bend) with absolute Nazca positions.
+    /// Straight segments compute length and angle from the transformed Nazca endpoints,
+    /// ensuring the exported geometry matches the actual endpoint positions.
+    /// Bend segments use stored radius/sweep with negated angles for Y-flip.
     /// </summary>
-    private static string FormatSegmentAbsolute(PathSegment segment, double nazcaX, double nazcaY)
+    private static string FormatSegmentAbsolute(
+        PathSegment segment, double nazcaStartX, double nazcaStartY,
+        double nazcaEndX, double nazcaEndY)
     {
         var ci = CultureInfo.InvariantCulture;
         return segment switch
         {
-            StraightSegment straight => FormatStraightAbsolute(straight, nazcaX, nazcaY, ci),
-            BendSegment bend => FormatBendAbsolute(bend, nazcaX, nazcaY, ci),
+            StraightSegment => FormatStraightAbsolute(
+                nazcaStartX, nazcaStartY, nazcaEndX, nazcaEndY, ci),
+            BendSegment bend => FormatBendAbsolute(bend, nazcaStartX, nazcaStartY, ci),
             _ => $"        # Unknown segment type: {segment.GetType().Name}"
         };
     }
 
     /// <summary>
-    /// Formats a straight segment with absolute Nazca start position.
+    /// Formats a straight segment by computing length and angle from Nazca start/end positions.
+    /// This is more robust than using stored editor-space angles, because the Nazca Y-flip
+    /// is applied to the actual endpoints rather than relying on angle negation.
     /// </summary>
     private static string FormatStraightAbsolute(
-        StraightSegment straight, double nazcaX, double nazcaY, CultureInfo ci)
+        double nazcaStartX, double nazcaStartY,
+        double nazcaEndX, double nazcaEndY, CultureInfo ci)
     {
-        var length = straight.LengthMicrometers.ToString("F2", ci);
-        var x = NormalizeZero(nazcaX).ToString("F2", ci);
-        var y = NormalizeZero(nazcaY).ToString("F2", ci);
-        var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
-        return $"        nd.strt(length={length}).put({x}, {y}, {angle})";
+        double dx = nazcaEndX - nazcaStartX;
+        double dy = nazcaEndY - nazcaStartY;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+
+        var l = length.ToString("F2", ci);
+        var x = NormalizeZero(nazcaStartX).ToString("F2", ci);
+        var y = NormalizeZero(nazcaStartY).ToString("F2", ci);
+        var a = NormalizeZero(angleDeg).ToString("F2", ci);
+        return $"        nd.strt(length={l}).put({x}, {y}, {a})";
     }
 
     /// <summary>
@@ -682,20 +694,31 @@ public class SimpleNazcaExporter
         {
             // Keep dots (for module attribute access like demo.mmi2x2_dp), replace other invalid chars
             var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_.]", "_");
+
+            // Skip parameters for stub components - stubs don't support them
+            // Only include parameters for parametric straights (which do support length=)
             var funcParams = comp.NazcaFunctionParameters;
-            return string.IsNullOrEmpty(funcParams)
-                ? $"{pythonFuncName}()"
-                : $"{pythonFuncName}({funcParams})";
+            bool isParametricStraight = IsParametricStraight(funcName, funcParams);
+
+            if (isParametricStraight && !string.IsNullOrEmpty(funcParams))
+                return $"{pythonFuncName}({funcParams})";
+            else
+                return $"{pythonFuncName}()";
         }
 
         // For demo_pdk components, sanitize the function name to a valid Python identifier (replace dots too)
         if (!string.IsNullOrEmpty(funcName) && funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase))
         {
             var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
+
+            // Skip parameters for stub components - stubs don't support them
             var funcParams = comp.NazcaFunctionParameters;
-            return string.IsNullOrEmpty(funcParams)
-                ? $"{pythonFuncName}()"
-                : $"{pythonFuncName}({funcParams})";
+            bool isParametricStraight = IsParametricStraight(funcName, funcParams);
+
+            if (isParametricStraight && !string.IsNullOrEmpty(funcParams))
+                return $"{pythonFuncName}({funcParams})";
+            else
+                return $"{pythonFuncName}()";
         }
 
         // Fallback: heuristic mapping to demofab

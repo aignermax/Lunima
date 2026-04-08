@@ -16,15 +16,40 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 27.5,
       "pins": [
-        { "name": "in",   "offsetXMicrometers": 0,  "offsetYMicrometers": 27.5, "angleDegrees": 180 },
-        { "name": "out1", "offsetXMicrometers": 80, "offsetYMicrometers": 25.5, "angleDegrees": 0   },
-        { "name": "out2", "offsetXMicrometers": 80, "offsetYMicrometers": 29.5, "angleDegrees": 0   }
+        {
+          "name": "in",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 27.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "out1",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 25.5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "out2",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 29.5,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 0 },
-          { "fromPin": "in", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 0 }
+          {
+            "fromPin": "in",
+            "toPin": "out1",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "in",
+            "toPin": "out2",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -35,20 +60,60 @@
       "widthMicrometers": 250,
       "heightMicrometers": 60,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 26,
+      "nazcaOriginOffsetY": 30.0,
       "pins": [
-        { "name": "in1",  "offsetXMicrometers": 0,   "offsetYMicrometers": 26, "angleDegrees": 180 },
-        { "name": "in2",  "offsetXMicrometers": 0,   "offsetYMicrometers": 34, "angleDegrees": 180 },
-        { "name": "out1", "offsetXMicrometers": 250, "offsetYMicrometers": 26, "angleDegrees": 0   },
-        { "name": "out2", "offsetXMicrometers": 250, "offsetYMicrometers": 34, "angleDegrees": 0   }
+        {
+          "name": "in1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 26,
+          "angleDegrees": 180
+        },
+        {
+          "name": "in2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 34,
+          "angleDegrees": 180
+        },
+        {
+          "name": "out1",
+          "offsetXMicrometers": 250,
+          "offsetYMicrometers": 26,
+          "angleDegrees": 0
+        },
+        {
+          "name": "out2",
+          "offsetXMicrometers": 250,
+          "offsetYMicrometers": 34,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in1", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 0  },
-          { "fromPin": "in1", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 90 },
-          { "fromPin": "in2", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 90 },
-          { "fromPin": "in2", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 0  }
+          {
+            "fromPin": "in1",
+            "toPin": "out1",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "in1",
+            "toPin": "out2",
+            "magnitude": 0.707,
+            "phaseDegrees": 90
+          },
+          {
+            "fromPin": "in2",
+            "toPin": "out1",
+            "magnitude": 0.707,
+            "phaseDegrees": 90
+          },
+          {
+            "fromPin": "in2",
+            "toPin": "out2",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -59,23 +124,69 @@
       "widthMicrometers": 250,
       "heightMicrometers": 60,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 26,
+      "nazcaOriginOffsetY": 30.0,
       "pins": [
-        { "name": "in1",  "offsetXMicrometers": 0,   "offsetYMicrometers": 26, "angleDegrees": 180 },
-        { "name": "in2",  "offsetXMicrometers": 0,   "offsetYMicrometers": 34, "angleDegrees": 180 },
-        { "name": "out1", "offsetXMicrometers": 250, "offsetYMicrometers": 26, "angleDegrees": 0   },
-        { "name": "out2", "offsetXMicrometers": 250, "offsetYMicrometers": 34, "angleDegrees": 0   }
+        {
+          "name": "in1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 26,
+          "angleDegrees": 180
+        },
+        {
+          "name": "in2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 34,
+          "angleDegrees": 180
+        },
+        {
+          "name": "out1",
+          "offsetXMicrometers": 250,
+          "offsetYMicrometers": 26,
+          "angleDegrees": 0
+        },
+        {
+          "name": "out2",
+          "offsetXMicrometers": 250,
+          "offsetYMicrometers": 34,
+          "angleDegrees": 0
+        }
       ],
       "sliders": [
-        { "sliderNumber": 0, "godotSliderName": "slider0", "godotSliderLabelName": "label0", "minVal": 0, "maxVal": 100 }
+        {
+          "sliderNumber": 0,
+          "godotSliderName": "slider0",
+          "godotSliderLabelName": "label0",
+          "minVal": 0,
+          "maxVal": 100
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in1", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 0  },
-          { "fromPin": "in1", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 90 },
-          { "fromPin": "in2", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 90 },
-          { "fromPin": "in2", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 0  }
+          {
+            "fromPin": "in1",
+            "toPin": "out1",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "in1",
+            "toPin": "out2",
+            "magnitude": 0.707,
+            "phaseDegrees": 90
+          },
+          {
+            "fromPin": "in2",
+            "toPin": "out1",
+            "magnitude": 0.707,
+            "phaseDegrees": 90
+          },
+          {
+            "fromPin": "in2",
+            "toPin": "out2",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -89,16 +200,37 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 30,
       "pins": [
-        { "name": "in",  "offsetXMicrometers": 0,   "offsetYMicrometers": 30, "angleDegrees": 180 },
-        { "name": "out", "offsetXMicrometers": 500, "offsetYMicrometers": 30, "angleDegrees": 0   }
+        {
+          "name": "in",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 180
+        },
+        {
+          "name": "out",
+          "offsetXMicrometers": 500,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 0
+        }
       ],
       "sliders": [
-        { "sliderNumber": 0, "godotSliderName": "slider0", "godotSliderLabelName": "label0", "minVal": 0, "maxVal": 360 }
+        {
+          "sliderNumber": 0,
+          "godotSliderName": "slider0",
+          "godotSliderLabelName": "label0",
+          "minVal": 0,
+          "maxVal": 360
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in", "toPin": "out", "magnitude": 1.0, "phaseDegrees": 0 }
+          {
+            "fromPin": "in",
+            "toPin": "out",
+            "magnitude": 1.0,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -111,12 +243,22 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 9.5,
       "pins": [
-        { "name": "waveguide", "offsetXMicrometers": 100, "offsetYMicrometers": 9.5, "angleDegrees": 0 }
+        {
+          "name": "waveguide",
+          "offsetXMicrometers": 100,
+          "offsetYMicrometers": 9.5,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "waveguide", "toPin": "waveguide", "magnitude": 0.3, "phaseDegrees": 0 }
+          {
+            "fromPin": "waveguide",
+            "toPin": "waveguide",
+            "magnitude": 0.3,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -129,12 +271,22 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 27.5,
       "pins": [
-        { "name": "in", "offsetXMicrometers": 0, "offsetYMicrometers": 27.5, "angleDegrees": 180 }
+        {
+          "name": "in",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 27.5,
+          "angleDegrees": 180
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in", "toPin": "in", "magnitude": 0.9, "phaseDegrees": 0 }
+          {
+            "fromPin": "in",
+            "toPin": "in",
+            "magnitude": 0.9,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -147,15 +299,40 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 27.5,
       "pins": [
-        { "name": "in",   "offsetXMicrometers": 0,  "offsetYMicrometers": 27.5, "angleDegrees": 180 },
-        { "name": "out1", "offsetXMicrometers": 80, "offsetYMicrometers": 25.5, "angleDegrees": 0   },
-        { "name": "out2", "offsetXMicrometers": 80, "offsetYMicrometers": 29.5, "angleDegrees": 0   }
+        {
+          "name": "in",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 27.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "out1",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 25.5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "out2",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 29.5,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in", "toPin": "out1", "magnitude": 0.707, "phaseDegrees": 0 },
-          { "fromPin": "in", "toPin": "out2", "magnitude": 0.707, "phaseDegrees": 0 }
+          {
+            "fromPin": "in",
+            "toPin": "out1",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "in",
+            "toPin": "out2",
+            "magnitude": 0.707,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -168,15 +345,40 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 27.5,
       "pins": [
-        { "name": "in",      "offsetXMicrometers": 0,  "offsetYMicrometers": 22.5, "angleDegrees": 180 },
-        { "name": "through", "offsetXMicrometers": 80, "offsetYMicrometers": 22.5, "angleDegrees": 0   },
-        { "name": "drop",    "offsetXMicrometers": 80, "offsetYMicrometers": 47.5, "angleDegrees": 0   }
+        {
+          "name": "in",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 22.5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "through",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 22.5,
+          "angleDegrees": 0
+        },
+        {
+          "name": "drop",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 47.5,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "in", "toPin": "through", "magnitude": 0.837, "phaseDegrees": 0 },
-          { "fromPin": "in", "toPin": "drop",    "magnitude": 0.5,   "phaseDegrees": 0 }
+          {
+            "fromPin": "in",
+            "toPin": "through",
+            "magnitude": 0.837,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "in",
+            "toPin": "drop",
+            "magnitude": 0.5,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
@@ -189,17 +391,27 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 9.5,
       "pins": [
-        { "name": "waveguide", "offsetXMicrometers": 100, "offsetYMicrometers": 9.5, "angleDegrees": 0 }
+        {
+          "name": "waveguide",
+          "offsetXMicrometers": 100,
+          "offsetYMicrometers": 9.5,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "waveguide", "toPin": "waveguide", "magnitude": 0.5, "phaseDegrees": 0 }
+          {
+            "fromPin": "waveguide",
+            "toPin": "waveguide",
+            "magnitude": 0.5,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
     {
-      "name": "Straight Waveguide 100µm",
+      "name": "Straight Waveguide 100\u00c2\u00b5m",
       "category": "Waveguides",
       "nazcaFunction": "demo.shallow.strt",
       "nazcaParameters": "length=100",
@@ -208,33 +420,63 @@
       "nazcaOriginOffsetX": 0,
       "nazcaOriginOffsetY": 5,
       "pins": [
-        { "name": "a0", "offsetXMicrometers": 0,   "offsetYMicrometers": 5, "angleDegrees": 180 },
-        { "name": "b0", "offsetXMicrometers": 100, "offsetYMicrometers": 5, "angleDegrees": 0   }
+        {
+          "name": "a0",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "b0",
+          "offsetXMicrometers": 100,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 0
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "a0", "toPin": "b0", "magnitude": 0.99, "phaseDegrees": 0 }
+          {
+            "fromPin": "a0",
+            "toPin": "b0",
+            "magnitude": 0.99,
+            "phaseDegrees": 0
+          }
         ]
       }
     },
     {
-      "name": "90° Bend",
+      "name": "90\u00c2\u00b0 Bend",
       "category": "Waveguides",
       "nazcaFunction": "demo.shallow.bend",
       "nazcaParameters": "angle=90",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5,
+      "nazcaOriginOffsetY": 15.0,
       "pins": [
-        { "name": "a0", "offsetXMicrometers": 0,  "offsetYMicrometers": 5,  "angleDegrees": 180 },
-        { "name": "b0", "offsetXMicrometers": 25, "offsetYMicrometers": 30, "angleDegrees": 90  }
+        {
+          "name": "a0",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "b0",
+          "offsetXMicrometers": 25,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        }
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
-          { "fromPin": "a0", "toPin": "b0", "magnitude": 0.98, "phaseDegrees": 0 }
+          {
+            "fromPin": "a0",
+            "toPin": "b0",
+            "magnitude": 0.98,
+            "phaseDegrees": 0
+          }
         ]
       }
     }

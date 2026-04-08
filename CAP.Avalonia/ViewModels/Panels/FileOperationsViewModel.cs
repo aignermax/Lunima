@@ -914,6 +914,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 }
                 else
                 {
+                    // Log full Python error to Error Console for visibility
+                    _errorConsole?.LogError($"GDS generation failed: {result.ErrorMessage}");
                     UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} (GDS generation failed: {result.ErrorMessage})");
                 }
             }

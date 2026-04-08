@@ -28,6 +28,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""test_pdk.mmi2x2"",
                         ""widthMicrometers"": 100,
                         ""heightMicrometers"": 50,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                         ""pins"": [
                             { ""name"": ""a0"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 12.5, ""angleDegrees"": 180 },
                             { ""name"": ""b0"", ""offsetXMicrometers"": 100, ""offsetYMicrometers"": 12.5, ""angleDegrees"": 0 }
@@ -63,6 +64,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""test.comp"",
                         ""widthMicrometers"": 200,
                         ""heightMicrometers"": 100,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 50,
                         ""pins"": [
                             { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 50, ""angleDegrees"": 180 },
                             { ""name"": ""out1"", ""offsetXMicrometers"": 200, ""offsetYMicrometers"": 25, ""angleDegrees"": 0 },
@@ -107,6 +109,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""test.splitter"",
                         ""widthMicrometers"": 100,
                         ""heightMicrometers"": 50,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                         ""pins"": [
                             { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 180 },
                             { ""name"": ""out"", ""offsetXMicrometers"": 100, ""offsetYMicrometers"": 25, ""angleDegrees"": 0 }
@@ -161,13 +164,14 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""test.invalid"",
                         ""widthMicrometers"": 100,
                         ""heightMicrometers"": 50,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                         ""pins"": []
                     }
                 ]
             }";
 
             // Act & Assert
-            Should.Throw<InvalidOperationException>(() => loader.LoadFromJson(json));
+            Should.Throw<PdkValidationException>(() => loader.LoadFromJson(json));
         }
 
         [Fact]
@@ -183,6 +187,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""test.invalid"",
                         ""widthMicrometers"": 0,
                         ""heightMicrometers"": 50,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                         ""pins"": [
                             { ""name"": ""a"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 0 }
                         ]
@@ -191,7 +196,7 @@ namespace UnitTests.Components
             }";
 
             // Act & Assert
-            Should.Throw<InvalidOperationException>(() => loader.LoadFromJson(json));
+            Should.Throw<PdkValidationException>(() => loader.LoadFromJson(json));
         }
 
         [Fact]
@@ -240,6 +245,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""pdk.a"",
                         ""widthMicrometers"": 100,
                         ""heightMicrometers"": 50,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                         ""pins"": [{ ""name"": ""p1"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 180 }]
                     },
                     {
@@ -248,6 +254,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""pdk.b"",
                         ""widthMicrometers"": 200,
                         ""heightMicrometers"": 100,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 50,
                         ""pins"": [{ ""name"": ""p1"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 50, ""angleDegrees"": 180 }]
                     },
                     {
@@ -256,6 +263,7 @@ namespace UnitTests.Components
                         ""nazcaFunction"": ""pdk.c"",
                         ""widthMicrometers"": 150,
                         ""heightMicrometers"": 75,
+                        ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 37.5,
                         ""pins"": [{ ""name"": ""p1"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 37.5, ""angleDegrees"": 180 }]
                     }
                 ]

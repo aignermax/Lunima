@@ -17,6 +17,7 @@ namespace UnitTests.Components.Parametric
                     ""nazcaFunction"": ""pdk.coupler"",
                     ""widthMicrometers"": 120,
                     ""heightMicrometers"": 50,
+                    ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                     ""pins"": [
                         { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 180 },
                         { ""name"": ""out1"", ""offsetXMicrometers"": 120, ""offsetYMicrometers"": 12.5, ""angleDegrees"": 0 },
@@ -59,6 +60,7 @@ namespace UnitTests.Components.Parametric
                     ""nazcaFunction"": ""pdk.phase"",
                     ""widthMicrometers"": 200,
                     ""heightMicrometers"": 20,
+                    ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 10,
                     ""pins"": [
                         { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 10, ""angleDegrees"": 180 },
                         { ""name"": ""out"", ""offsetXMicrometers"": 200, ""offsetYMicrometers"": 10, ""angleDegrees"": 0 }
@@ -94,6 +96,7 @@ namespace UnitTests.Components.Parametric
                     ""nazcaFunction"": ""pdk.mixed"",
                     ""widthMicrometers"": 100,
                     ""heightMicrometers"": 50,
+                    ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                     ""pins"": [
                         { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 180 },
                         { ""name"": ""out"", ""offsetXMicrometers"": 100, ""offsetYMicrometers"": 25, ""angleDegrees"": 0 }
@@ -126,6 +129,7 @@ namespace UnitTests.Components.Parametric
                     ""nazcaFunction"": ""pdk.bad"",
                     ""widthMicrometers"": 100,
                     ""heightMicrometers"": 50,
+                    ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                     ""pins"": [
                         { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 180 },
                         { ""name"": ""out"", ""offsetXMicrometers"": 100, ""offsetYMicrometers"": 25, ""angleDegrees"": 0 }
@@ -156,6 +160,7 @@ namespace UnitTests.Components.Parametric
                     ""nazcaFunction"": ""pdk.splitter"",
                     ""widthMicrometers"": 100,
                     ""heightMicrometers"": 50,
+                    ""nazcaOriginOffsetX"": 0, ""nazcaOriginOffsetY"": 25,
                     ""pins"": [
                         { ""name"": ""in"", ""offsetXMicrometers"": 0, ""offsetYMicrometers"": 25, ""angleDegrees"": 180 },
                         { ""name"": ""out"", ""offsetXMicrometers"": 100, ""offsetYMicrometers"": 25, ""angleDegrees"": 0 }

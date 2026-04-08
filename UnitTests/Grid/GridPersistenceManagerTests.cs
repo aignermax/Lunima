@@ -52,9 +52,9 @@ namespace UnitTests.Grid
             firstComponent.AddSlider(1, firstSlider);
             var sliderCountBeforeSaving = firstComponent.GetAllSliders().Count;
             grid.ComponentMover.PlaceComponent(0, inputHeight, firstComponent);
-            var secondComponent = ExportNazcaTests.PlaceAndConcatenateComponent(grid, firstComponent);
-            var thirdComponent = ExportNazcaTests.PlaceAndConcatenateComponent(grid, secondComponent);
-            var fourthComponent = ExportNazcaTests.PlaceAndConcatenateComponent(grid, thirdComponent);
+            var secondComponent = PlaceAndConcatenateComponent(grid, firstComponent);
+            var thirdComponent = PlaceAndConcatenateComponent(grid, secondComponent);
+            var fourthComponent = PlaceAndConcatenateComponent(grid, thirdComponent);
             var orphan = TestComponentFactory.CreateStraightWaveGuide();
             var orphanPos = new IntVector(10, 5);
             grid.ComponentMover.PlaceComponent(orphanPos.X, orphanPos.Y, orphan);
@@ -77,6 +77,15 @@ namespace UnitTests.Grid
             firstComponentConnections.First().Value.Magnitude.ShouldBe(1.0, 1e-4);
             grid.ComponentMover.GetComponentAt(orphanPos.X, orphanPos.Y).Rotation90CounterClock.ShouldBe(orphan.Rotation90CounterClock);
             grid.ComponentMover.GetComponentAt(orphanPos.X, orphanPos.Y).Identifier.ShouldBe(orphan.Identifier);
+        }
+
+        private static Component PlaceAndConcatenateComponent(GridManager grid, Component parentComponent)
+        {
+            Component newComponent = TestComponentFactory.CreateStraightWaveGuide();
+            var gridX = parentComponent.GridXMainTile + parentComponent.WidthInTiles;
+            var gridY = parentComponent.GridYMainTile + parentComponent.HeightInTiles - 1;
+            grid.ComponentMover.PlaceComponent(gridX, gridY, newComponent);
+            return newComponent;
         }
 
         private static ComponentFactory InitializeComponentFactory()

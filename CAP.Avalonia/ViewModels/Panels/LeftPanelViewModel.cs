@@ -182,9 +182,17 @@ public partial class LeftPanelViewModel : ObservableObject
 
                 PdkManager.RegisterPdk(pdk.Name, pdkFile, true, componentCount);
             }
+            catch (CAP_DataAccess.Components.ComponentDraftMapper.PdkValidationException vex)
+            {
+                foreach (var error in vex.Errors)
+                {
+                    _errorConsole?.LogError($"PDK validation: {error}");
+                }
+                _errorConsole?.LogError($"Skipped PDK '{Path.GetFileName(pdkFile)}' — {vex.Errors.Count} validation error(s)");
+            }
             catch (Exception ex)
             {
-                _errorConsole?.LogWarning($"Skipped malformed PDK file '{Path.GetFileName(pdkFile)}': {ex.Message}");
+                _errorConsole?.LogError($"Failed to load PDK '{Path.GetFileName(pdkFile)}': {ex.Message}");
             }
         }
     }

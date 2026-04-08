@@ -68,9 +68,17 @@ namespace CAP_Core.Components.Core
         {
             var funcName = comp.NazcaFunctionName;
 
+            // Must match SimpleNazcaExporter.CalculateOriginOffset exactly!
+            // PDK components use their stored NazcaOriginOffset (often 0,0).
+            // Recognized by: known prefixes, module.function dot-notation, or explicit offset.
             bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) &&
                 (funcName.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-                 funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+                 funcName.StartsWith("GC_", StringComparison.Ordinal) ||
+                 funcName.StartsWith("ANT_", StringComparison.Ordinal) ||
+                 funcName.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
+                 funcName.StartsWith("taper_", StringComparison.OrdinalIgnoreCase) ||
+                 funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase) ||
+                 funcName.Contains('.'));
 
             // Also use PDK formula when explicit NazcaOriginOffset is set (non-zero).
             // This handles components with auto-generated function names that still have
