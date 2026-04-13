@@ -37,6 +37,10 @@ public class PdkNazcaParserService
     /// Optional list of specific cell function names to parse.
     /// When null or empty, all public callables in the module are parsed.
     /// </param>
+    /// <param name="additionalPythonPath">
+    /// Optional directory to prepend to PYTHONPATH, allowing the module to be located
+    /// by its file path (e.g. when the user selects a .py file directly).
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Parsed PDK data including component geometry and origin offsets.</returns>
     /// <exception cref="FileNotFoundException">When the parse script is not found.</exception>
@@ -44,13 +48,14 @@ public class PdkNazcaParserService
     public async Task<PdkParseResult> ParseAsync(
         string moduleName,
         IEnumerable<string>? functionNames = null,
+        string? additionalPythonPath = null,
         CancellationToken cancellationToken = default)
     {
         if (!File.Exists(_scriptPath))
             throw new FileNotFoundException($"PDK parser script not found: {_scriptPath}", _scriptPath);
 
         var arguments = BuildArguments(moduleName, functionNames);
-        var (exitCode, stdout, stderr) = await RunScriptAsync(arguments, cancellationToken);
+        var (exitCode, stdout, stderr) = await RunScriptAsync(arguments, additionalPythonPath, cancellationToken);
 
         if (exitCode != 0)
             throw new PdkParserException(
@@ -74,10 +79,10 @@ public class PdkNazcaParserService
     }
 
     private async Task<(int exitCode, string stdout, string stderr)> RunScriptAsync(
-        string arguments, CancellationToken cancellationToken)
+        string arguments, string? additionalPythonPath, CancellationToken cancellationToken)
     {
         using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = _pythonExecutable,
             Arguments = arguments,
@@ -87,6 +92,16 @@ public class PdkNazcaParserService
             CreateNoWindow = true,
         };
 
+        if (!string.IsNullOrEmpty(additionalPythonPath))
+        {
+            var existing = Environment.GetEnvironmentVariable("PYTHONPATH") ?? "";
+            var separator = Path.PathSeparator.ToString();
+            startInfo.EnvironmentVariables["PYTHONPATH"] = string.IsNullOrEmpty(existing)
+                ? additionalPythonPath
+                : $"{additionalPythonPath}{separator}{existing}";
+        }
+
+        process.StartInfo = startInfo;
         process.Start();
         var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);

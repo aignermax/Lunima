@@ -100,6 +100,13 @@ public partial class LeftPanelViewModel : ObservableObject
     /// </summary>
     public Action<GroupTemplate>? OnGroupTemplateSelected { get; set; }
 
+    /// <summary>
+    /// Async callback to show the PDK Import Wizard for a Python .py file.
+    /// Set by the view layer (MainWindow.axaml.cs).
+    /// Returns the saved JSON file path on success, or null if cancelled.
+    /// </summary>
+    public Func<string, Task<string?>>? ShowImportWizardAsync { get; set; }
+
     /// <summary>Initializes a new instance of <see cref="LeftPanelViewModel"/>.</summary>
     public LeftPanelViewModel(
         DesignCanvasViewModel canvas,
@@ -262,10 +269,38 @@ public partial class LeftPanelViewModel : ObservableObject
 
         var filePath = await FileDialogService.ShowOpenFileDialogAsync(
             "Open PDK",
-            "PDK Files (*.json)|*.json|All Files (*.*)|*.*");
+            "PDK Files (*.json;*.py)|*.json;*.py|PDK JSON (*.json)|*.json|Nazca Python (*.py)|*.py|All Files (*.*)|*.*");
 
         if (string.IsNullOrEmpty(filePath)) return;
 
+        // Python file: open the Import Wizard to parse and convert it first
+        if (filePath.EndsWith(".py", StringComparison.OrdinalIgnoreCase))
+        {
+            await LoadPdkFromPythonFileAsync(filePath);
+            return;
+        }
+
+        await LoadPdkFromJsonFileAsync(filePath);
+    }
+
+    private async Task LoadPdkFromPythonFileAsync(string pyFilePath)
+    {
+        if (ShowImportWizardAsync == null)
+        {
+            UpdateStatus?.Invoke("PDK Import Wizard is not available in this context.");
+            return;
+        }
+
+        UpdateStatus?.Invoke($"Opening PDK Import Wizard for '{Path.GetFileName(pyFilePath)}'...");
+        var savedJsonPath = await ShowImportWizardAsync(pyFilePath);
+
+        if (string.IsNullOrEmpty(savedJsonPath)) return; // User cancelled
+
+        await LoadPdkFromJsonFileAsync(savedJsonPath);
+    }
+
+    private async Task LoadPdkFromJsonFileAsync(string filePath)
+    {
         if (PdkManager.IsPdkLoaded(filePath))
         {
             UpdateStatus?.Invoke("PDK already loaded from this file");
