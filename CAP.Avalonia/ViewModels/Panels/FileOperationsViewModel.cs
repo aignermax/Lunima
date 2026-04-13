@@ -39,6 +39,11 @@ public partial class FileOperationsViewModel : ObservableObject
     public GdsExportViewModel GdsExport { get; }
 
     /// <summary>
+    /// ViewModel for PhotonTorch export functionality.
+    /// </summary>
+    public PhotonTorchExportViewModel PhotonTorchExport { get; }
+
+    /// <summary>
     /// Callback to update status text in the UI.
     /// </summary>
     public Action<string>? UpdateStatus { get; set; }
@@ -70,6 +75,7 @@ public partial class FileOperationsViewModel : ObservableObject
         SimpleNazcaExporter nazcaExporter,
         ObservableCollection<ComponentTemplate> componentLibrary,
         GdsExportViewModel gdsExport,
+        PhotonTorchExportViewModel? photonTorchExport = null,
         ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
@@ -77,6 +83,8 @@ public partial class FileOperationsViewModel : ObservableObject
         _nazcaExporter = nazcaExporter;
         _componentLibrary = componentLibrary;
         GdsExport = gdsExport;
+        PhotonTorchExport = photonTorchExport
+            ?? new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas);
         _errorConsole = errorConsole;
 
         // Track changes to mark project as unsaved
