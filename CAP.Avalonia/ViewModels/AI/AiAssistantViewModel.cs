@@ -198,6 +198,11 @@ public partial class AiAssistantViewModel : ObservableObject
                     GetString(input, "description")),
                 "inspect_group" => _gridService.InspectGroup(
                     GetString(input, "group_id")),
+                "copy_component" => await _gridService.CopyComponentAsync(
+                    GetString(input, "source_id"),
+                    GetDouble(input, "x"),
+                    GetDouble(input, "y"),
+                    GetInt(input, "rotation", -1)),
                 _ => $"Unknown tool: {toolName}"
             };
         }
@@ -364,6 +369,23 @@ public partial class AiAssistantViewModel : ObservableObject
                     group_id = new { type = "string", description = "ID of the group to inspect (use id from get_grid_state)" }
                 },
                 required = new[] { "group_id" }
+            }
+        },
+        new AiToolDefinition
+        {
+            Name = "copy_component",
+            Description = "Duplicate a component or group to a new position. Preserves all internal structure, frozen paths, and settings. Much faster than manually recreating circuits — use this for arrays, meshes, and symmetric designs.",
+            InputSchema = new
+            {
+                type = "object",
+                properties = new
+                {
+                    source_id = new { type = "string", description = "ID of the component or group to copy (use id from get_grid_state)" },
+                    x = new { type = "number", description = "Target X position for the copy in micrometers" },
+                    y = new { type = "number", description = "Target Y position for the copy in micrometers" },
+                    rotation = new { type = "integer", description = "Rotation in degrees (0, 90, 180, 270). Optional, omit to keep source rotation. Not applied to groups." }
+                },
+                required = new[] { "source_id", "x", "y" }
             }
         }
     };

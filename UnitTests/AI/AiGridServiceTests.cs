@@ -134,6 +134,7 @@ public class AiGridServiceTests
         result.ShouldContain("cleared");
     }
 
+<<<<<<< HEAD
     // ── InspectGroup tests ──────────────────────────────────────────────────
 
     [Fact]
@@ -274,6 +275,79 @@ public class AiGridServiceTests
             HeightMicrometers = 50,
             HumanReadableName = identifier
         };
+    }
+
+    // ── CopyComponentAsync ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CopyComponentAsync_UnknownSourceId_ReturnsNotFoundMessage()
+    {
+        var result = await _svc.CopyComponentAsync("nonexistent_1", 200, 200);
+
+        result.ShouldContain("not found");
+        result.ShouldContain("nonexistent_1");
+    }
+
+    [Fact]
+    public async Task CopyComponentAsync_ValidComponent_CreatesNewComponentOnCanvas()
+    {
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.Identifier = "source_1";
+        component.PhysicalX = 100;
+        component.PhysicalY = 100;
+        _canvas.AddComponent(component, "TestWG");
+
+        var initialCount = _canvas.Components.Count;
+
+        var result = await _svc.CopyComponentAsync("source_1", 500, 500);
+
+        result.ShouldContain("source_1");
+        _canvas.Components.Count.ShouldBe(initialCount + 1);
+    }
+
+    [Fact]
+    public async Task CopyComponentAsync_ValidComponent_ReturnsNewComponentId()
+    {
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.Identifier = "wg_1";
+        component.PhysicalX = 0;
+        component.PhysicalY = 0;
+        _canvas.AddComponent(component, "Straight");
+
+        var result = await _svc.CopyComponentAsync("wg_1", 300, 300);
+
+        result.ShouldContain("New ID:");
+        result.ShouldNotContain("Failed");
+    }
+
+    [Fact]
+    public async Task CopyComponentAsync_ValidComponent_CopyHasDifferentIdentifier()
+    {
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.Identifier = "wg_source";
+        _canvas.AddComponent(component, "Straight");
+
+        await _svc.CopyComponentAsync("wg_source", 400, 400);
+
+        var allIds = _canvas.Components.Select(c => c.Component.Identifier).ToList();
+        allIds.Distinct().Count().ShouldBe(allIds.Count); // All IDs must be unique
+    }
+
+    [Fact]
+    public async Task CopyComponentAsync_ValidComponent_ResultMentionsTargetPosition()
+    {
+        var component = TestComponentFactory.CreateBasicComponent();
+        component.Identifier = "comp_1";
+        component.PhysicalX = 0;
+        component.PhysicalY = 0;
+        _canvas.AddComponent(component, "Straight");
+
+        var result = await _svc.CopyComponentAsync("comp_1", 600, 700);
+
+        result.ShouldNotContain("Failed");
+        result.ShouldNotContain("not found");
+        var copy = _canvas.Components.Skip(1).FirstOrDefault();
+        copy.ShouldNotBeNull();
     }
 
     /// <summary>

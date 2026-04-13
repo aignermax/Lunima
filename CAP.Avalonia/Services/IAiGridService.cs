@@ -73,4 +73,12 @@ public interface IAiGridService
     /// Returns an error message if the component is not found or is not a group.
     /// </summary>
     string InspectGroup(string groupId);
+
+    /// <summary>
+    /// Duplicates a component or group and places the copy at the specified position.
+    /// Preserves all internal structure, connections, and frozen paths for groups.
+    /// Optionally applies a new rotation to the copy.
+    /// Returns a status message with the new component's identifier.
+    /// </summary>
+    Task<string> CopyComponentAsync(string sourceId, double x, double y, int rotation = -1);
 }
