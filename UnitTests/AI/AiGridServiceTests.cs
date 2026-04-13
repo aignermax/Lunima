@@ -134,7 +134,6 @@ public class AiGridServiceTests
         result.ShouldContain("cleared");
     }
 
-<<<<<<< HEAD
     // ── InspectGroup tests ──────────────────────────────────────────────────
 
     [Fact]

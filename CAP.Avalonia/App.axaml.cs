@@ -15,6 +15,8 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.Views;
+using CAP.Avalonia.Services.AiTools;
+using CAP.Avalonia.Services.AiTools.GridTools;
 using CAP_Contracts;
 using CAP_Core.Helpers;
 using CAP_Core.Export;
@@ -58,10 +60,26 @@ public partial class App : Application
             sp.GetRequiredService<DesignCanvasViewModel>(),
             sp.GetRequiredService<LeftPanelViewModel>(),
             sp.GetRequiredService<SimulationService>()));
+
+        // Register AI tools — add new tools here without modifying any other file
+        services.AddTransient<IAiTool, GetGridStateTool>();
+        services.AddTransient<IAiTool, GetAvailableTypesTool>();
+        services.AddTransient<IAiTool, PlaceComponentTool>();
+        services.AddTransient<IAiTool, CreateConnectionTool>();
+        services.AddTransient<IAiTool, RunSimulationTool>();
+        services.AddTransient<IAiTool, GetLightValuesTool>();
+        services.AddTransient<IAiTool, ClearGridTool>();
+        services.AddTransient<IAiTool, CreateGroupTool>();
+        services.AddTransient<IAiTool, UngroupTool>();
+        services.AddTransient<IAiTool, SaveAsPrefabTool>();
+        services.AddTransient<IAiTool, InspectGroupTool>();
+        services.AddTransient<IAiTool, CopyComponentTool>();
+        services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
+
         services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
             sp.GetRequiredService<IAiService>(),
             sp.GetRequiredService<UserPreferencesService>(),
-            sp.GetRequiredService<IAiGridService>()));
+            sp.GetRequiredService<IAiToolRegistry>()));
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
