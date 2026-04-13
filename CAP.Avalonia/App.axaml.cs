@@ -91,6 +91,7 @@ public partial class App : Application
         services.AddSingleton<SimulationService>();
         services.AddSingleton<SimpleNazcaExporter>();
         services.AddSingleton<PdkLoader>();
+        services.AddSingleton<PdkImportService>();
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<ProjectPersistenceService>();
