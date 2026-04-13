@@ -85,6 +85,7 @@ public partial class App : Application
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
         services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
         services.AddSingleton<GdsExportService>();
+        services.AddSingleton<CAP_Core.Export.VerilogAExporter>();
         services.AddSingleton<CAP_Core.ErrorConsoleService>();
 
         // Register application services
@@ -117,6 +118,7 @@ public partial class App : Application
         services.AddTransient<GroupSMatrixViewModel>();
         services.AddTransient<ArchitectureReportViewModel>();
         services.AddTransient<PdkConsistencyViewModel>();
+        services.AddTransient<VerilogAExportViewModel>();
 
         // Register sub-ViewModels (Bottom panel)
         services.AddTransient<WaveguideLengthViewModel>();

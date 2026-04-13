@@ -10,6 +10,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.Export;
 using CAP_Core.Components.Creation;
 using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
@@ -118,7 +119,8 @@ public static class MainViewModelTestHelper
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
             updateVm,
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new VerilogAExportViewModel(new VerilogAExporter(), canvas));
     }
 
     /// <summary>
