@@ -74,7 +74,10 @@ public partial class App : Application
         services.AddTransient<IAiTool, SaveAsPrefabTool>();
         services.AddTransient<IAiTool, InspectGroupTool>();
         services.AddTransient<IAiTool, CopyComponentTool>();
+        services.AddTransient<IAiTool, FitToViewTool>();
         services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
+        // Expose ViewportControlViewModel from MainViewModel for DI injection (e.g. FitToViewTool)
+        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().ViewportControl);
 
         services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
             sp.GetRequiredService<IAiService>(),
