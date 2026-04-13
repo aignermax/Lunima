@@ -1,9 +1,16 @@
+using System.Text.Json;
+using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP_Core.Components;
+using CAP_Core.Components.Core;
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Creation;
+using CAP_Core.LightCalculation;
+using CAP_Core.Tiles;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
 
@@ -125,6 +132,149 @@ public class AiGridServiceTests
 
         result.ShouldNotBeNullOrEmpty();
         result.ShouldContain("cleared");
+    }
+
+<<<<<<< HEAD
+    // ── InspectGroup tests ──────────────────────────────────────────────────
+
+    [Fact]
+    public void InspectGroup_NonExistentId_ReturnsErrorMessage()
+    {
+        var result = _svc.InspectGroup("does_not_exist");
+
+        result.ShouldContain("does_not_exist");
+        result.ShouldNotStartWith("{");
+    }
+
+    [Fact]
+    public void InspectGroup_PlainComponent_ReturnsNotAGroupMessage()
+    {
+        var comp = CreateTestComponent("plain_comp", 100, 100);
+        _canvas.AddComponent(comp);
+
+        var result = _svc.InspectGroup(comp.Identifier);
+
+        result.ShouldContain("not a group");
+    }
+
+    [Fact]
+    public void InspectGroup_Group_ReturnsValidJson()
+    {
+        var group = CreateGroupWithTwoChildren();
+
+        var result = _svc.InspectGroup(group.Identifier);
+
+        result.ShouldNotBeNullOrEmpty();
+        var doc = JsonDocument.Parse(result); // must not throw
+        doc.RootElement.GetProperty("group_id").GetString().ShouldBe(group.Identifier);
+    }
+
+    [Fact]
+    public void InspectGroup_Group_ReturnsGroupNameAndChildCount()
+    {
+        var group = CreateGroupWithTwoChildren("MyMZI");
+
+        var result = _svc.InspectGroup(group.Identifier);
+
+        result.ShouldContain("\"group_name\"");
+        result.ShouldContain("MyMZI");
+        result.ShouldContain("\"total_child_count\":2");
+    }
+
+    [Fact]
+    public void InspectGroup_Group_ChildComponentsIncludeTypeAndPosition()
+    {
+        var group = CreateGroupWithTwoChildren();
+
+        var result = _svc.InspectGroup(group.Identifier);
+
+        result.ShouldContain("\"child_components\"");
+        result.ShouldContain("\"type\"");
+        result.ShouldContain("\"position\"");
+    }
+
+    [Fact]
+    public void InspectGroup_Group_ExternalPinsFieldPresent()
+    {
+        var group = CreateGroupWithTwoChildren();
+
+        var result = _svc.InspectGroup(group.Identifier);
+
+        result.ShouldContain("\"external_pins\"");
+    }
+
+    [Fact]
+    public void InspectGroup_Group_InternalConnectionsFieldPresent()
+    {
+        var group = CreateGroupWithTwoChildren();
+
+        var result = _svc.InspectGroup(group.Identifier);
+
+        result.ShouldContain("\"internal_connections\"");
+    }
+
+    [Fact]
+    public void InspectGroup_NestedGroup_ReportsNestedGroupCount()
+    {
+        // Arrange: outer group contains an inner group as one of its children
+        var inner = new ComponentGroup("InnerGroup");
+        var child = CreateTestComponent("child_in_inner", 50, 50);
+        inner.AddChild(child);
+        inner.Identifier = $"group_{Guid.NewGuid():N}";
+        inner.PhysicalX = 100;
+        inner.PhysicalY = 100;
+
+        var outer = new ComponentGroup("OuterGroup");
+        outer.AddChild(inner);
+        outer.Identifier = $"group_{Guid.NewGuid():N}";
+        outer.PhysicalX = 0;
+        outer.PhysicalY = 0;
+
+        _canvas.AddComponent(outer);
+
+        var result = _svc.InspectGroup(outer.Identifier);
+
+        result.ShouldContain("\"nested_group_count\":1");
+    }
+
+    /// <summary>
+    /// Creates a group with two plain child components and places it on the canvas.
+    /// </summary>
+    private ComponentGroup CreateGroupWithTwoChildren(string groupName = "TestGroup")
+    {
+        var comp1 = CreateTestComponent("child1", 100, 100);
+        var comp2 = CreateTestComponent("child2", 200, 100);
+
+        var vm1 = _canvas.AddComponent(comp1);
+        var vm2 = _canvas.AddComponent(comp2);
+
+        var cmd = new CreateGroupCommand(_canvas, new[] { vm1, vm2 }.ToList());
+        cmd.Execute();
+
+        var groupVm = _canvas.Components[0];
+        var group = (ComponentGroup)groupVm.Component;
+        group.GroupName = groupName;
+        return group;
+    }
+
+    private static Component CreateTestComponent(string identifier, double x, double y)
+    {
+        var parts = new Part[1, 1];
+        parts[0, 0] = new Part(new List<Pin> { new("west0", 0, MatterType.Light, RectSide.Left) });
+        var allPins = Component.GetAllPins(parts).SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+        var matrix = new SMatrix(allPins, new());
+        var connections = new Dictionary<int, SMatrix>
+        {
+            { StandardWaveLengths.RedNM, matrix }
+        };
+        return new Component(connections, new(), "stub", "", parts, 0, identifier, new DiscreteRotation())
+        {
+            PhysicalX = x,
+            PhysicalY = y,
+            WidthMicrometers = 50,
+            HeightMicrometers = 50,
+            HumanReadableName = identifier
+        };
     }
 
     // ── CopyComponentAsync ────────────────────────────────────────────────

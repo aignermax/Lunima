@@ -196,6 +196,8 @@ public partial class AiAssistantViewModel : ObservableObject
                     GetString(input, "group_id"),
                     GetString(input, "prefab_name"),
                     GetString(input, "description")),
+                "inspect_group" => _gridService.InspectGroup(
+                    GetString(input, "group_id")),
                 "copy_component" => await _gridService.CopyComponentAsync(
                     GetString(input, "source_id"),
                     GetDouble(input, "x"),
@@ -353,6 +355,20 @@ public partial class AiAssistantViewModel : ObservableObject
                     description = new { type = "string", description = "Optional description of the prefab" }
                 },
                 required = new[] { "group_id", "prefab_name" }
+            }
+        },
+        new AiToolDefinition
+        {
+            Name = "inspect_group",
+            Description = "Get detailed internal structure of a ComponentGroup: child components with types and positions, internal waveguide connections, external pins, and nested group hierarchy. Use this to understand what's inside a group.",
+            InputSchema = new
+            {
+                type = "object",
+                properties = new
+                {
+                    group_id = new { type = "string", description = "ID of the group to inspect (use id from get_grid_state)" }
+                },
+                required = new[] { "group_id" }
             }
         },
         new AiToolDefinition

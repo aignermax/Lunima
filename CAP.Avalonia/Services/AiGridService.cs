@@ -227,6 +227,46 @@ public class AiGridService : IAiGridService
     }
 
     /// <inheritdoc/>
+    public string InspectGroup(string groupId)
+    {
+        var groupVm = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == groupId);
+        if (groupVm?.Component is not ComponentGroup group)
+            return $"Component '{groupId}' is not a group or does not exist.";
+
+        var result = new
+        {
+            group_id = group.Identifier,
+            group_name = group.GroupName,
+            description = group.Description,
+            position = new { x = Math.Round(group.PhysicalX, 1), y = Math.Round(group.PhysicalY, 1) },
+            child_components = group.ChildComponents.Select(child => new
+            {
+                id = child.Identifier,
+                type = child.HumanReadableName ?? child.NazcaFunctionName ?? child.Identifier,
+                position = new { x = Math.Round(child.PhysicalX, 1), y = Math.Round(child.PhysicalY, 1) },
+                rotation = child.RotationDegrees,
+                is_group = child is ComponentGroup
+            }).ToList(),
+            internal_connections = group.InternalPaths.Select(path => new
+            {
+                from = $"{path.StartPin.ParentComponent?.Identifier}:{path.StartPin.Name}",
+                to = $"{path.EndPin.ParentComponent?.Identifier}:{path.EndPin.Name}"
+            }).ToList(),
+            external_pins = group.ExternalPins.Select(pin => new
+            {
+                name = pin.Name,
+                angle_degrees = pin.AngleDegrees,
+                relative_position = new { x = Math.Round(pin.RelativeX, 1), y = Math.Round(pin.RelativeY, 1) },
+                maps_to_internal = $"{pin.InternalPin?.ParentComponent?.Identifier}:{pin.InternalPin?.Name}"
+            }).ToList(),
+            nested_group_count = group.ChildComponents.Count(c => c is ComponentGroup),
+            total_child_count = group.ChildComponents.Count
+        };
+
+        return JsonSerializer.Serialize(result, JsonOptions);
+    }
+
+    /// <inheritdoc/>
     public Task<string> CopyComponentAsync(string sourceId, double x, double y, int rotation = -1)
     {
         var sourceVm = _canvas.Components.FirstOrDefault(c =>

@@ -68,6 +68,13 @@ public interface IAiGridService
     string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null);
 
     /// <summary>
+    /// Returns detailed information about a ComponentGroup's internal structure.
+    /// Shows child components, internal connections (frozen waveguide paths), external pins, and nested group hierarchy.
+    /// Returns an error message if the component is not found or is not a group.
+    /// </summary>
+    string InspectGroup(string groupId);
+
+    /// <summary>
     /// Duplicates a component or group and places the copy at the specified position.
     /// Preserves all internal structure, connections, and frozen paths for groups.
     /// Optionally applies a new rotation to the copy.
