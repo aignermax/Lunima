@@ -66,4 +66,12 @@ public interface IAiGridService
     /// Returns a status message with the template name.
     /// </summary>
     string SaveGroupAsPrefab(string groupId, string prefabName, string? description = null);
+
+    /// <summary>
+    /// Duplicates a component or group and places the copy at the specified position.
+    /// Preserves all internal structure, connections, and frozen paths for groups.
+    /// Optionally applies a new rotation to the copy.
+    /// Returns a status message with the new component's identifier.
+    /// </summary>
+    Task<string> CopyComponentAsync(string sourceId, double x, double y, int rotation = -1);
 }
