@@ -647,6 +647,9 @@
                     <!-- AI Design Assistant Panel -->
                     <panels:AiAssistantPanel/>
 
+                    <!-- Verilog-A / SPICE Export Panel -->
+                    <panels:VerilogAExportPanel/>
+
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
 
