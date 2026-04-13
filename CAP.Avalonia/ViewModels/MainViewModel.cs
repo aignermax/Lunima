@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
+using CAP_Core.Export;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -84,6 +85,7 @@ public partial class MainViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
+        PicWaveExporter picWaveExporter,
         Commands.CommandManager commandManager,
         UserPreferencesService preferencesService,
         Services.GroupPreviewGenerator previewGenerator,
@@ -108,7 +110,7 @@ public partial class MainViewModel : ObservableObject
         var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService, errorConsoleService);
         gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
         gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, errorConsoleService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportVm, errorConsoleService);
         ViewportControl = new ViewportControlViewModel(_canvas);
 
         // Wire up status callbacks
@@ -375,6 +377,9 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private async Task ExportNazca() => await FileOperations.ExportNazcaCommand.ExecuteAsync(null);
+
+    [RelayCommand]
+    private async Task ExportPicWave() => await FileOperations.ExportPicWaveCommand.ExecuteAsync(null);
 
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);

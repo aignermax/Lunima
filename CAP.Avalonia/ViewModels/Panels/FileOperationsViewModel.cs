@@ -12,6 +12,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Export;
+using CAP_Core.Export;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -25,6 +26,7 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private readonly CommandManager _commandManager;
     private readonly SimpleNazcaExporter _nazcaExporter;
+    private readonly PicWaveExporter _picWaveExporter;
     private readonly ObservableCollection<ComponentTemplate> _componentLibrary;
     private readonly ErrorConsoleService? _errorConsole;
 
@@ -68,6 +70,7 @@ public partial class FileOperationsViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
         SimpleNazcaExporter nazcaExporter,
+        PicWaveExporter picWaveExporter,
         ObservableCollection<ComponentTemplate> componentLibrary,
         GdsExportViewModel gdsExport,
         ErrorConsoleService? errorConsole = null)
@@ -75,6 +78,7 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas = canvas;
         _commandManager = commandManager;
         _nazcaExporter = nazcaExporter;
+        _picWaveExporter = picWaveExporter;
         _componentLibrary = componentLibrary;
         GdsExport = gdsExport;
         _errorConsole = errorConsole;
@@ -924,6 +928,47 @@ public partial class FileOperationsViewModel : ObservableObject
                 _errorConsole?.LogError($"Failed to export Nazca design: {ex.Message}", ex);
                 UpdateStatus?.Invoke($"Export failed: {ex.Message}");
             }
+        }
+    }
+
+    /// <summary>
+    /// Exports the current design to a PICWave Python simulation script.
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportPicWave()
+    {
+        if (FileDialogService == null)
+        {
+            UpdateStatus?.Invoke("Export not available");
+            return;
+        }
+
+        if (_canvas.Components.Count == 0)
+        {
+            UpdateStatus?.Invoke("Nothing to export - add some components first");
+            return;
+        }
+
+        var filePath = await FileDialogService.ShowSaveFileDialogAsync(
+            "Export to PICWave Python",
+            "py",
+            "Python Files|*.py|All Files|*.*");
+
+        if (filePath == null)
+            return;
+
+        try
+        {
+            var components = _canvas.Components.Select(vm => vm.Component);
+            var connections = _canvas.Connections.Select(vm => vm.Connection);
+            var script = _picWaveExporter.Export(components, connections);
+            await File.WriteAllTextAsync(filePath, script);
+            UpdateStatus?.Invoke($"Exported PICWave script: {Path.GetFileName(filePath)}");
+        }
+        catch (Exception ex)
+        {
+            _errorConsole?.LogError($"Failed to export PICWave script: {ex.Message}", ex);
+            UpdateStatus?.Invoke($"PICWave export failed: {ex.Message}");
         }
     }
 

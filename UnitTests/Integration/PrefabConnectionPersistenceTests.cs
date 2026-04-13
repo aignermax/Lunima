@@ -229,6 +229,7 @@ public class PrefabConnectionPersistenceTests
             canvas,
             new CommandManager(),
             new SimpleNazcaExporter(),
+            new CAP_Core.Export.PicWaveExporter(),
             _library,
             new GdsExportViewModel(new CAP_Core.Export.GdsExportService()));
         return (vm, canvas);
