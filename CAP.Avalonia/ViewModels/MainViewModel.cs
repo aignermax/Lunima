@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
+using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -504,8 +505,19 @@ public partial class MainViewModel : ObservableObject
 }
 
 // Data classes for serialization (used by FileOperationsViewModel)
+
+/// <summary>
+/// Root data structure for a .lun design file (Photonic Intermediate Representation).
+/// Version 2.0 adds S-matrix data, simulation results, metadata, and external references.
+/// Old v1 files (no Version field) load with all new sections defaulting to null/empty.
+/// </summary>
 public class DesignFileData
 {
+    /// <summary>
+    /// File format version. "2.0" for PIR-capable files. Null indicates a legacy v1 file.
+    /// </summary>
+    public string? FormatVersion { get; set; }
+
     public List<ComponentData> Components { get; set; } = new();
     public List<ConnectionData> Connections { get; set; } = new();
 
@@ -513,6 +525,30 @@ public class DesignFileData
     /// ComponentGroups with their hierarchical structure, frozen paths, and external pins.
     /// </summary>
     public List<DesignGroupData>? Groups { get; set; }
+
+    /// <summary>
+    /// Per-component S-matrix data, keyed by component Identifier string.
+    /// Null or empty for designs without stored S-matrix overrides.
+    /// </summary>
+    public Dictionary<string, ComponentSMatrixData>? SMatrices { get; set; }
+
+    /// <summary>
+    /// Most recent simulation results and any stored parameter sweep results.
+    /// Null if no simulation has been run and saved.
+    /// </summary>
+    public SimulationResultsData? SimulationResults { get; set; }
+
+    /// <summary>
+    /// Design metadata: PDK versions, design rules, authorship.
+    /// Automatically populated with dates on every save.
+    /// </summary>
+    public DesignMetadata? Metadata { get; set; }
+
+    /// <summary>
+    /// References to external simulation or measurement files linked to this design.
+    /// Null or empty for designs without external data.
+    /// </summary>
+    public List<ExternalReferenceData>? ExternalReferences { get; set; }
 }
 
 /// <summary>
