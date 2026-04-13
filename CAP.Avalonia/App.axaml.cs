@@ -93,6 +93,7 @@ public partial class App : Application
         // Register application services
         services.AddSingleton<SimulationService>();
         services.AddSingleton<SimpleNazcaExporter>();
+        services.AddSingleton<CAP_Core.Export.PicWaveExporter>();
         services.AddSingleton<PdkLoader>();
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
