@@ -1,252 +1,172 @@
 # Lunima
 
-AI-collaborative photonic design system
+**AI-collaborative photonic design system**
 
 <img width="1407" height="932" alt="Lunima photonic design canvas" src="https://github.com/user-attachments/assets/a784b7f3-7300-453f-a6a8-12638367ef9a" />
 
 <img width="1534" height="475" alt="Lunima component library and simulation panel" src="https://github.com/user-attachments/assets/80dcf0e1-1cbf-4709-ab79-5292cf3e415e" />
 
-> Lunima is an AI-collaborative photonic design system for fast, physically grounded circuit exploration and optimization.
+> Lunima is a photonic design environment for fast, physically grounded circuit exploration and system-level thinking.
 
-## Key Differences
+---
 
-Lunima provides a physically grounded and architecture-level approach to photonic circuit design:
+## Purpose
 
-- **Physical Coordinate System**: Components positioned in micrometers (µm) instead of fixed grid tiles
-- **Explicit Waveguide Routing**: Automatic routing with S-bends, straight segments, and manhattan routing
-- **Dynamic Loss Calculation**: Transmission coefficients calculated from actual path geometry (propagation loss + bend loss)
-- **Cross-Platform UI**: Avalonia-based frontend supporting Desktop and WebAssembly (browser)
-- **Decoupled from Godot**: No game engine dependency - pure .NET solution
+Lunima provides a unified environment for designing, exploring, and communicating photonic circuits across teams and abstraction levels.
 
-## Architecture
+Rather than replacing existing simulation tools, Lunima focuses on:
 
-```
-Lunima/
-├── CAP_Contracts/        # Shared interfaces
-├── Connect-A-Pic-Core/   # Core simulation engine
-│   ├── Components/       # Component models, pins, S-matrices, parametric
-│   ├── Routing/          # Waveguide routing (A*, Manhattan, CSC)
-│   ├── LightCalculation/ # S-Matrix propagation, power flow analysis
-│   ├── Analysis/         # Parameter sweep, sweep configuration
-│   └── Grid/             # Component placement, connection management
-├── CAP-DataAccess/       # JSON persistence, PDK loading
-│   └── PDKs/             # Bundled PDK JSON files (demo-pdk.json, siepic-ebeam-pdk.json)
-├── CAP.Avalonia/         # Shared cross-platform UI
-│   ├── ViewModels/       # MVVM ViewModels (30+ view models)
-│   ├── Views/            # AXAML views and controls
-│   ├── Commands/         # Undo/redo commands (IUndoableCommand, CommandManager)
-│   └── Services/         # SimulationService, NazcaExporter, FileDialogService
-├── CAP.Desktop/          # Desktop application entry point
-├── CAP.Browser/          # WebAssembly browser entry point (planned)
-└── UnitTests/            # 544 xUnit tests (539 passing)
-```
+- **Fast, intuitive circuit-level exploration**
+- **Shared visual representation** of photonic systems
+- **Bridging the gap** between design, simulation, and system-level understanding
 
-### Dependency Injection
+---
 
-Services are registered in `App.axaml.cs` using `Microsoft.Extensions.DependencyInjection`:
+## Vision: Photonic Intermediate Representation (PIR)
 
-| Service | Lifetime | Purpose |
-|---------|----------|---------|
-| `SimulationService` | Singleton | S-Matrix light simulation orchestrator |
-| `SimpleNazcaExporter` | Singleton | Nazca Python export |
-| `PdkLoader` | Singleton | PDK JSON file loading |
-| `CommandManager` | Singleton | Undo/redo command history |
-| `MainViewModel` | Singleton | Root ViewModel |
-| `FileDialogService` | Property | Cross-platform file dialogs |
+### The Central Idea
 
-The container is accessible via `App.Services` for view code-behind when needed.
+👉 **Lunima is becoming the central representation layer for photonic systems**
 
-## Physical Coordinate System
+- **Today:** GUI-based design tool
+- **Tomorrow:** Central PIR with multiple views and exports
+- **Future:** Integration hub for PhotonTorch, PICWave, Verilog-A, LTSpice
 
-Components have physical dimensions and positions:
+### PIR = `.lun` File Format
 
-```csharp
-component.WidthMicrometers = 250.0;   // Physical width in µm
-component.HeightMicrometers = 250.0;  // Physical height in µm
-component.PhysicalX = 1000.0;         // X position in µm
-component.PhysicalY = 500.0;          // Y position in µm
-component.RotationDegrees = 45.0;     // Rotation angle
-```
+The `.lun` file format is evolving to become the PIR — a tool-independent representation that:
 
-Physical pins define optical ports with µm offsets:
+- Defines components and connections as a **netlist / graph**
+- Accumulates physical, structural, and simulation data over time
+- Enables **export to and import from** different simulation tools
+- Evolves from schematic → device simulation → circuit simulation → system co-simulation
 
-```csharp
-var pin = new PhysicalPin
-{
-    Name = "output",
-    OffsetXMicrometers = 250.0,  // Position relative to component origin
-    OffsetYMicrometers = 125.0,
-    AngleDegrees = 0.0           // Pin direction (0 = pointing right)
-};
-```
+**This means:**
+- GUI is just one view of the PIR
+- Export is just a transformation of the PIR
+- AI becomes extremely powerful with structured access to PIR
 
-## Waveguide Routing
+### Role in the Photonics Toolchain
 
-Connections are automatically routed between physical pins:
+| Layer | Tools | Purpose |
+|-------|-------|---------|
+| **Device-level simulation** | Tidy3D, FimmProp, Lumerical MODE | EM simulation, S-matrix extraction |
+| **Circuit-level simulation** | PICWave, PhotonTorch | System behavior using S-matrices |
+| **System / Digital Twin** | Verilog-A, LTSpice, Xyce | Photonic + electronic co-simulation |
 
-```csharp
-var connection = new WaveguideConnection
-{
-    StartPin = componentA.PhysicalPins[0],
-    EndPin = componentB.PhysicalPins[1],
-    PropagationLossDbPerCm = 2.0,    // Loss parameter
-    BendLossDbPer90Deg = 0.05,       // Bend loss parameter
-    BendRadiusMicrometers = 10.0     // Minimum bend radius
-};
+**Lunima's position:** Between schematic design and system-level simulation.
 
-// Calculate actual routed path and transmission coefficient
-connection.RecalculateTransmission();
+Lunima acts as a **design and integration layer**, allowing information to flow between tools rather than duplicating their functionality.
 
-// Access results
-double pathLength = connection.PathLengthMicrometers;
-double bendCount = connection.BendCount;
-double totalLoss = connection.TotalLossDb;
-Complex transmission = connection.TransmissionCoefficient;
-```
+---
 
-The router supports three strategies:
-1. **Straight**: Direct line when pins are aligned
-2. **S-Bend**: Two opposing bends for parallel offset pins
-3. **Manhattan**: Rounded corners for perpendicular pin orientations
+## Key Features
 
-## Building
+- **Physical Coordinate System** — Components positioned in micrometers (µm), not grid tiles
+- **Explicit Waveguide Routing** — Automatic routing with S-bends and Manhattan geometry
+- **Dynamic Loss Calculation** — Transmission coefficients from actual path geometry
+- **Hierarchical Design** — Reusable subcircuits with external pins and frozen layouts
+- **PDK Integration** — JSON-based component libraries with physical pins and S-matrix data
+- **Nazca Export** — Export designs to Python/Nazca for fabrication pipelines
+- **AI Assistant** — Natural language circuit design with Claude integration
+- **Cross-Platform UI** — Avalonia-based (Desktop, WebAssembly planned)
 
-### Prerequisites
-- .NET 8.0 SDK
-- (Optional) Nazca Python for GDS export
+---
 
-### Build Commands
+## Getting Started
+
+### Installation
+
+Download the latest release from [GitHub Releases](https://github.com/aignermax/Lunima/releases).
+
+Supported platforms: Windows, macOS, Linux
+
+### Building from Source
+
+**Prerequisites:** .NET 8.0 SDK
 
 ```bash
-# Quick start (recommended)
-make run
-# or
-./run.sh
+# Quick start
+make run      # or ./run.sh
 
-# Build all projects
+# Build and test
 dotnet build
-# or
-make build
-
-# Run desktop app (explicit)
-dotnet run --project CAP.Desktop/CAP.Desktop.csproj
-
-# Run tests
-dotnet test UnitTests/UnitTests.csproj
-# or
-make test
+dotnet test
 ```
 
-## S-Matrix Simulation
+---
 
-The core S-Matrix light propagation simulation is physically grounded and compatible with standard photonic compact model formats:
+## Documentation
 
-- Components define wavelength-specific S-matrices
-- Light propagates through the system based on matrix multiplication
-- Waveguide connections contribute transmission coefficients to the system matrix
-- Supports non-linear formulas with slider parameters
+- **[Architecture Guide](ARCHITECTURE.md)** — Code structure, DI, routing, S-matrix simulation
+- **[Changelog](CHANGELOG.md)** — Completed features and milestones
+- **[Agent Development Guide](CLAUDE.md)** — For AI-assisted development
+- User Guide *(coming soon)*
+- API Documentation *(coming soon)*
 
-## Nazca Export
+---
 
-Export designs to Nazca Python for fabrication:
+## Roadmap
 
-```csharp
-string nazcaCode = connection.ExportToNazca();
-// Generates: ic.cobra_p2p(pin1=cell_0_0.pin['output'], pin2=cell_1_0.pin['input']).put()
+### 🎯 High Priority: PIR Evolution
+
+- [ ] **Expand `.lun` format** — Add S-matrix storage, simulation metadata, external tool links
+- [ ] **Import S-parameters from Lumerical/Tidy3D** — Direct device simulation integration
+- [ ] **Export to PhotonTorch** — Circuit-level time-domain simulation
+- [ ] **Export to Verilog-A** — System-level co-simulation
+
+### 🎯 High Priority: Professional Features
+
+- [ ] **Connection validation** — Warn about pin angle mismatches, unconnected pins
+- [ ] **Design Rule Checking** — Min bend radius, spacing violations
+- [ ] **Wavelength sweep / spectral response** — Plot transmission vs wavelength
+- [ ] **Parameterized models** — Components with interpolated S-matrices
+- [ ] **Direct GDS export** — Without Nazca intermediate step
+
+### 🎯 High Priority: PDK Expansion
+
+- [ ] **Expand SiEPIC PDK** — Add remaining 31 components (43 total)
+- [ ] **SiEPIC SiN PDK** — Silicon nitride platform support
+
+### 🔮 Future Vision: Tool Integration
+
+- [ ] **Browser version** — WebAssembly deployment
+- [ ] **Python PDK extractor** — Convert Nazca PDKs to JSON
+- [ ] **Component properties panel** — Edit S-matrix parameters per instance
+
+### 🔮 Future Vision: Optical Computing
+
+- [ ] **Nonlinear components** — S-matrix depends on input power
+- [ ] **Delay lines** — Waveguide loops with propagation time
+- [ ] **Pulsed laser source** — Time-domain clock for optical logic
+- [ ] **Time-domain simulation** — Step-based solver for signal propagation
+- [ ] **Multi-chip interconnect** — Inter-chip optical cables
+
+See [CHANGELOG.md](CHANGELOG.md) for completed features.
+
+---
+
+## Contributing
+
+We welcome contributions! Please see:
+
+- [CLAUDE.md](CLAUDE.md) for agent development guidelines
+- [ARCHITECTURE.md](ARCHITECTURE.md) for technical details
+
+For AI-assisted development, use the provided Python tools:
+
+```bash
+python3 tools/smart_test.py              # Compact test output
+python3 tools/semantic_search.py "query" # Semantic code search
 ```
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
-## Backlog / Roadmap
-
-### Done (50+ features implemented)
-- [x] Physical coordinate system (µm positioning)
-- [x] Avalonia UI with component placement, connections, rotation
-- [x] Undo/Redo system (Command pattern)
-- [x] Save/Load designs (.cappro JSON format)
-- [x] Save As support
-- [x] Nazca Python export
-- [x] Delete components and connections
-- [x] Keyboard shortcuts (S/C/D/R/G/F/L/P, Ctrl+Z/Y, Ctrl+S) — global, work regardless of focus
-- [x] **PDK JSON Format** - Define JSON schema for PDK component libraries with physical pins
-- [x] **PDK Loader** - Load PDK JSON files and add components to UI library
-- [x] **Grid Snapping** - Optional snap-to-grid with configurable grid size
-- [x] **Zoom to Fit** - Auto-fit design in viewport (F key)
-- [x] **Light Simulation Visualization** - Power overlay on connections with color-coded power levels
-- [x] **Auto-Recalculation** - Simulation auto-updates when circuit changes while overlay is active
-- [x] **Per-Source Laser Config** - Wavelength and power settings per light source (UI + multi-wavelength simulation)
-- [x] **Dependency Injection** - `Microsoft.Extensions.DependencyInjection` with constructor injection for all services
-- [x] **SiEPIC EBeam PDK** - 12 real components with measured S-parameters, auto-loaded at startup
-- [x] **Multi-Wavelength S-Matrices** - Per-wavelength S-matrix data with nearest-wavelength fallback
-- [x] **Component Library Search** - Fulltext search by name, category, PDK source, or Nazca function
-- [x] **Component Preview** - Miniature schematics in component panel showing pin layout
-- [x] **Nazca GDS Export Fixes** - Chained waveguide segments (no gaps), component rotation, Y-axis transform, demofab 1:1 matching
-- [x] **Nazca Integration Tests** - Python syntax validation, GDS generation, property-based tests
-- [x] **Multi-Select** - Box select + Shift+click for multiple components
-- [x] **Copy/Paste** - Duplicate components with Ctrl+C/V or context menu
-- [x] **Grating Coupler Component** - Vertical fiber coupling with Nazca GDS export
-- [x] **PDK Management Panel** - Toggle PDKs on/off with component count display
-- [x] **Pin Alignment Guides** - Figma-style visual guides during component placement
-- [x] **Routing Diagnostics Panel** - Real-time path validation with JSON export
-- [x] **Component Dimension Validation** - Verify component bounds match pin positions
-- [x] **Parameter Sweep** - Systematic analysis of component parameter variations
-- [x] **Element Locking** - Lock components/connections to prevent accidental modification
-- [x] **Incremental Routing** - Preserve valid routes when circuit changes
-- [x] **ComponentGroups & Prefabs** - Reusable component groups with external pins, frozen waveguide paths, and hierarchical editing
-
-### High Priority
-- [ ] **Connection Validation** - Warn about pin angle mismatches, unconnected pins
-
-### Path to Professional Use: Real PDK / CML Integration
-
-The goal is to make Lunima usable with real foundry component data so simulation results are physically meaningful.
-
-**Background:** Professional photonic design uses Compact Model Libraries (CMLs) — parameterized S-matrices calibrated to real fabrication data. Foundries ship CMLs with their PDKs. Major vendors (Ansys Lumerical, Synopsys) use proprietary encrypted formats. However, open PDKs exist and are widely used in research/education.
-
-**Step 1: Import SiEPIC Open PDK** ✅
-- [x] **Parse SiEPIC S-parameter files** - 12 SiEPIC EBeam PDK components with real Lumerical-simulated S-parameters, bundled as `siepic-ebeam-pdk.json`
-- [x] **Wavelength-dependent S-matrices in core** - Multi-wavelength support with nearest-wavelength fallback in `SystemMatrixBuilder`
-- [ ] **Expand SiEPIC PDK** - Add remaining 31 components (43 total in full PDK) 🚧 IN PROGRESS
-- [ ] **SiEPIC SiN PDK** - Silicon nitride platform, also open. Second priority after SOI.
-
-**Step 2: Define an open component model format** ✅
-- [x] **JSON compact model format** - PDK JSON schema with physical pins, multi-wavelength S-matrices, Nazca function names. Auto-loaded at startup from `PDKs/` directory.
-- [ ] **Parameterized models** - Components where S-matrix varies with user-adjustable parameters (e.g., coupler gap, ring radius, waveguide width). Could use interpolation between pre-computed S-matrices or analytical formulas.
-
-**Step 3: Professional features**
-- [x] **Nazca GDS Export** - Chained waveguide segments, component rotation, Y-axis coordinate transform, real PDK function names
-- [x] **Component Library Search** - Fulltext search across name, category, PDK source
-- [x] **Component Preview** - Miniature schematic with pin layout in the component panel
-- [x] **Demofab 1:1 Matching** - Built-in components match Nazca demofab dimensions exactly with correct origin offsets
-- [ ] **Wavelength sweep / spectral response** - Run simulation across a wavelength range, plot transmission vs wavelength at output ports
-- [ ] **Design Rule Checking** - Min bend radius, spacing violations, pin angle mismatches
-- [ ] **Direct GDS Export** - Export layout polygons without Nazca intermediate step
-
-### Nice to Have
-- [x] **Component Preview Graphics** - Miniature schematics with pin positions in the component library
-- [ ] **Browser Version** - WebAssembly deployment
-- [ ] **Component Properties Panel** - Edit S-matrix parameters per component instance
-
-### Future Vision: Optical Computing
-- [ ] **Nonlinear components** - S-matrix depends on input power (optical transistor / switch)
-- [ ] **Delay lines** - Waveguide loops with defined propagation time (optical memory/register)
-- [ ] **Pulsed laser source** - Time-domain clock signal for synchronous optical logic
-- [ ] **Time-domain simulation** - Step-based solver (vs current steady-state) for signal propagation
-- [ ] **Multi-chip interconnect** - Inter-chip optical cables between separate chip canvases
-- [ ] **Python PDK Extractor** - Tool to convert Nazca Python PDKs to JSON format
-
-## AI Code Assistant Integration
-
-For AI-assisted development, this project uses Python-based tools for token-efficient code search and testing:
-
-```bash
-python3 tools/smart_test.py           # Compact test output
-python3 tools/semantic_search.py "query"  # Semantic code search
-```
-
-See [CLAUDE.md](CLAUDE.md) for full agent instructions.
+---
 
 ## Origins
 
