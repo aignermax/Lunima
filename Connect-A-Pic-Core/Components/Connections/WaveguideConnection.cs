@@ -141,7 +141,9 @@ namespace CAP_Core.Components.Connections
         /// Should be called whenever connected components are moved.
         /// </summary>
         /// <param name="router">The waveguide router to use for path calculation.</param>
-        public void RecalculateTransmission(WaveguideRouter router)
+        /// <param name="cancellationToken">Token to cancel Phase 2 routing (e.g. when grid changes).</param>
+        public void RecalculateTransmission(WaveguideRouter router,
+                                             CancellationToken cancellationToken = default)
         {
             if (StartPin == null || EndPin == null)
             {
@@ -154,8 +156,8 @@ namespace CAP_Core.Components.Connections
             // Update router settings
             router.MinBendRadiusMicrometers = BendRadiusMicrometers;
 
-            // Route the connection
-            RoutedPath = router.Route(StartPin, EndPin);
+            // Route the connection using two-phase A* (Phase 1 quick, Phase 2 extended)
+            RoutedPath = router.Route(StartPin, EndPin, cancellationToken);
 
             // Calculate total loss from actual path
             double propagationLoss = (PathLengthMicrometers / 10000.0) * PropagationLossDbPerCm; // µm to cm
