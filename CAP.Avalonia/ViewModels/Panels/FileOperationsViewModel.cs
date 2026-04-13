@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_DataAccess.Persistence;
+using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -29,6 +30,12 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly ErrorConsoleService? _errorConsole;
 
     private string? _currentFilePath;
+
+    /// <summary>
+    /// Persists metadata loaded from the last opened file so that Created date
+    /// and other user-set fields survive a save-over-reload cycle.
+    /// </summary>
+    private DesignMetadata? _loadedMetadata;
 
     [ObservableProperty]
     private bool _hasUnsavedChanges;
@@ -180,6 +187,9 @@ public partial class FileOperationsViewModel : ObservableObject
                     SerializeGroupRecursively(gc, designData.Groups);
                 }
             }
+
+            designData.FormatVersion = "2.0";
+            designData.Metadata = BuildMetadataForSave();
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -350,6 +360,31 @@ public partial class FileOperationsViewModel : ObservableObject
     /// Finds the template name for a component by checking the canvas VMs
     /// and falling back to matching against the component library by NazcaFunctionName.
     /// </summary>
+    /// <summary>
+    /// Builds the DesignMetadata for the current save, preserving the Created date from the
+    /// last loaded file so that re-saving does not reset the original creation timestamp.
+    /// </summary>
+    private DesignMetadata BuildMetadataForSave()
+    {
+        var now = DateTime.UtcNow;
+        var createdDate = _loadedMetadata?.Authorship?.Created
+            ?? now.ToString("yyyy-MM-dd");
+
+        return new DesignMetadata
+        {
+            PdkVersions = _loadedMetadata?.PdkVersions ?? new Dictionary<string, string>(),
+            DesignRules = _loadedMetadata?.DesignRules,
+            Description = _loadedMetadata?.Description,
+            Authorship = new AuthorshipData
+            {
+                Created = createdDate,
+                Modified = now.ToString("o"),
+                Author = _loadedMetadata?.Authorship?.Author,
+                Version = _loadedMetadata?.Authorship?.Version
+            }
+        };
+    }
+
     private string FindTemplateName(Component component)
     {
         // Check if the component has a VM on the canvas with a template name
@@ -498,6 +533,9 @@ public partial class FileOperationsViewModel : ObservableObject
                     conn.NotifyPathChanged();
                 }
 
+                // Preserve PIR metadata so Created date survives subsequent saves
+                _loadedMetadata = designData.Metadata;
+
                 _currentFilePath = filePath;
                 HasUnsavedChanges = false;
                 UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
@@ -560,6 +598,7 @@ public partial class FileOperationsViewModel : ObservableObject
         ClearCanvas();
 
         _currentFilePath = null;
+        _loadedMetadata = null;
         HasUnsavedChanges = false;
         UpdateStatus?.Invoke("New project created");
 
