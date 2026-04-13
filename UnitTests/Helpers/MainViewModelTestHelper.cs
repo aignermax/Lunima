@@ -48,6 +48,7 @@ public static class MainViewModelTestHelper
             canvas,
             simulationService,
             new SimpleNazcaExporter(),
+            new CAP_Core.Export.PicWaveExporter(),
             commandManager,
             preferencesService,
             new GroupPreviewGenerator(),

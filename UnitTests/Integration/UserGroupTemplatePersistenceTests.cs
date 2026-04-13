@@ -240,7 +240,7 @@ public class UserGroupTemplatePersistenceTests
         var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, _library, gdsExport);
+            canvas, commandManager, nazcaExporter, new CAP_Core.Export.PicWaveExporter(), _library, gdsExport);
 
         return (vm, canvas);
     }

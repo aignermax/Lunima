@@ -67,7 +67,7 @@ public class ComponentSizePersistenceTests
         var nazcaExporter  = new SimpleNazcaExporter();
         var gdsExportVm    = new GdsExportViewModel(new GdsExportService());
         var fileOps = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, templates, gdsExportVm);
+            canvas, commandManager, nazcaExporter, new CAP_Core.Export.PicWaveExporter(), templates, gdsExportVm);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"cap_test_{Guid.NewGuid():N}.lun");
         return (fileOps, canvas, templates, tempFile);
