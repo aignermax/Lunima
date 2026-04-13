@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.PhotonTorchExportPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="PhotonTorch Export:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Export to PhotonTorch for time-domain circuit simulation (PyTorch-based)"
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+        <!-- Wavelength -->
+        <TextBlock Text="Wavelength (nm):" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <NumericUpDown Value="{Binding FileOperations.PhotonTorchExport.WavelengthNm}"
+                       Minimum="1260" Maximum="1625"
+                       Increment="10"
+                       Margin="0,0,0,8"
+                       FormatString="F0"/>
+
+        <!-- Simulation mode -->
+        <CheckBox Content="Time-domain simulation (vs. steady-state)"
+                  IsChecked="{Binding FileOperations.PhotonTorchExport.UseTimeDomain}"
+                  Foreground="White" Margin="0,0,0,8"/>
+
+        <!-- Time-domain settings (visible only when mode is time-domain) -->
+        <StackPanel IsVisible="{Binding FileOperations.PhotonTorchExport.UseTimeDomain}"
+                    Margin="10,0,0,8">
+            <TextBlock Text="Bit rate (Gbit/s):" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+            <NumericUpDown Value="{Binding FileOperations.PhotonTorchExport.BitRateGbps}"
+                           Minimum="0.1" Maximum="100"
+                           Increment="1"
+                           Margin="0,0,0,5"
+                           FormatString="F1"/>
+
+            <TextBlock Text="Time steps:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+            <NumericUpDown Value="{Binding FileOperations.PhotonTorchExport.TimeDomainSteps}"
+                           Minimum="100" Maximum="10000"
+                           Increment="100"
+                           Margin="0,0,0,5"
+                           FormatString="F0"/>
+        </StackPanel>
+
+        <!-- Export button -->
+        <Button Content="Export PhotonTorch Script…"
+                Command="{Binding FileOperations.PhotonTorchExport.ExportCommand}"
+                HorizontalAlignment="Stretch"
+                Margin="0,0,0,8" Padding="8,4"
+                Background="#3d4d6d"
+                IsEnabled="{Binding FileOperations.PhotonTorchExport.IsExporting, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Status -->
+        <TextBlock Text="{Binding FileOperations.PhotonTorchExport.LastExportStatus}"
+                   Foreground="LightBlue" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding FileOperations.PhotonTorchExport.LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </StackPanel>
+
+</UserControl>
