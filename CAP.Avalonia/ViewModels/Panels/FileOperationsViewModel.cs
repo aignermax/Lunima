@@ -29,6 +29,11 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly ObservableCollection<ComponentTemplate> _componentLibrary;
     private readonly ErrorConsoleService? _errorConsole;
 
+    /// <summary>
+    /// Current .lun format version this build reads and writes. Files with any other value are rejected at load time.
+    /// </summary>
+    private const string CurrentFormatVersion = "2.0";
+
     private string? _currentFilePath;
 
     /// <summary>
@@ -188,7 +193,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 }
             }
 
-            designData.FormatVersion = "2.0";
+            designData.FormatVersion = CurrentFormatVersion;
             designData.Metadata = BuildMetadataForSave();
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
@@ -498,6 +503,15 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (designData == null)
                 {
                     UpdateStatus?.Invoke("Invalid design file");
+                    return;
+                }
+
+                if (designData.FormatVersion != CurrentFormatVersion)
+                {
+                    var actual = string.IsNullOrEmpty(designData.FormatVersion) ? "<missing>" : designData.FormatVersion;
+                    var msg = $"Unsupported .lun format version '{actual}'. This build of Lunima requires '{CurrentFormatVersion}'. Legacy v1 files are not supported.";
+                    _errorConsole?.LogError(msg);
+                    UpdateStatus?.Invoke(msg);
                     return;
                 }
 

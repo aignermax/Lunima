@@ -227,19 +227,20 @@ public class DesignFileGroupPersistenceTests
     }
 
     /// <summary>
-    /// Verifies backward compatibility: files without Groups property load normally.
+    /// Verifies that v2.0 files without the optional Groups property load normally.
     /// </summary>
     [Fact]
-    public async Task LoadDesign_OldFormatWithoutGroups_LoadsNormally()
+    public async Task LoadDesign_V2FileWithoutGroups_LoadsNormally()
     {
         var (loadVm, loadCanvas) = CreateFileOperationsSetup();
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_compat_{Guid.NewGuid()}.cappro");
 
         try
         {
-            // Write old-format JSON (no Groups property)
-            var oldData = new
+            // Valid v2 file omitting the optional Groups property
+            var data = new
             {
+                FormatVersion = "2.0",
                 Components = new[]
                 {
                     new
@@ -247,20 +248,19 @@ public class DesignFileGroupPersistenceTests
                         TemplateName = "Photodetector",
                         X = 100.0,
                         Y = 200.0,
-                        Identifier = "old_det_1",
+                        Identifier = "det_1",
                         Rotation = 0
                     }
                 },
                 Connections = Array.Empty<object>()
             };
 
-            var json = JsonSerializer.Serialize(oldData, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
             await File.WriteAllTextAsync(tempFile, json);
 
-            // Load
             var loadDialog = new Mock<IFileDialogService>();
             loadDialog.Setup(f => f.ShowOpenFileDialogAsync(
                 It.IsAny<string>(), It.IsAny<string>()))
@@ -268,8 +268,47 @@ public class DesignFileGroupPersistenceTests
             loadVm.FileDialogService = loadDialog.Object;
             await loadVm.LoadDesignCommand.ExecuteAsync(null);
 
-            // Assert - Component loaded, no errors
             loadCanvas.Components.Count.ShouldBe(1);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that legacy files without FormatVersion are rejected with no silent fallback.
+    /// </summary>
+    [Fact]
+    public async Task LoadDesign_LegacyFileWithoutFormatVersion_IsRejected()
+    {
+        var (loadVm, loadCanvas) = CreateFileOperationsSetup();
+        var tempFile = Path.Combine(Path.GetTempPath(), $"test_legacy_{Guid.NewGuid()}.cappro");
+
+        try
+        {
+            var legacyData = new
+            {
+                Components = new[]
+                {
+                    new { TemplateName = "Photodetector", X = 0.0, Y = 0.0, Identifier = "legacy_1", Rotation = 0 }
+                },
+                Connections = Array.Empty<object>()
+            };
+
+            var json = JsonSerializer.Serialize(legacyData, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(tempFile, json);
+
+            var loadDialog = new Mock<IFileDialogService>();
+            loadDialog.Setup(f => f.ShowOpenFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile);
+            loadVm.FileDialogService = loadDialog.Object;
+            await loadVm.LoadDesignCommand.ExecuteAsync(null);
+
+            // Load must be rejected: canvas stays empty
+            loadCanvas.Components.Count.ShouldBe(0);
         }
         finally
         {

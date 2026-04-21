@@ -508,13 +508,13 @@ public partial class MainViewModel : ObservableObject
 
 /// <summary>
 /// Root data structure for a .lun design file (Photonic Intermediate Representation).
-/// Version 2.0 adds S-matrix data, simulation results, metadata, and external references.
-/// Old v1 files (no Version field) load with all new sections defaulting to null/empty.
+/// Version 2.0 stores S-matrix data, simulation results, metadata, and external references.
+/// Files without FormatVersion == "2.0" are rejected at load time (no legacy v1 support).
 /// </summary>
 public class DesignFileData
 {
     /// <summary>
-    /// File format version. "2.0" for PIR-capable files. Null indicates a legacy v1 file.
+    /// File format version. Must be "2.0". Files with any other value are rejected during load.
     /// </summary>
     public string? FormatVersion { get; set; }
 

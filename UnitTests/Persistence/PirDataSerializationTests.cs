@@ -8,8 +8,9 @@ namespace UnitTests.Persistence;
 
 /// <summary>
 /// Tests for PIR (Photonic Intermediate Representation) data model serialization.
-/// Verifies that the .lun v2.0 format can store and restore all new PIR sections,
-/// and that legacy v1 files (without the new sections) still load correctly.
+/// Verifies that the .lun v2.0 format can store and restore all new PIR sections.
+/// Legacy v1 files are rejected at load time (see FileOperationsViewModel); the
+/// DTOs themselves remain tolerant during raw JSON deserialization.
 /// </summary>
 public class PirDataSerializationTests
 {
@@ -36,60 +37,6 @@ public class PirDataSerializationTests
         var loaded = JsonSerializer.Deserialize<DesignFileData>(json)!;
 
         loaded.FormatVersion.ShouldBe("2.0");
-    }
-
-    // ─── Backward Compatibility (legacy v1 files) ─────────────────────────────
-
-    [Fact]
-    public void LoadLegacyV1Json_WithNoNewSections_LoadsWithoutError()
-    {
-        // A minimal legacy .lun file that has no PIR sections
-        const string legacyJson = """
-            {
-              "components": [],
-              "connections": []
-            }
-            """;
-
-        var loaded = JsonSerializer.Deserialize<DesignFileData>(legacyJson, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        loaded.ShouldNotBeNull();
-        loaded!.FormatVersion.ShouldBeNull();
-        loaded.SMatrices.ShouldBeNull();
-        loaded.SimulationResults.ShouldBeNull();
-        loaded.Metadata.ShouldBeNull();
-        loaded.ExternalReferences.ShouldBeNull();
-    }
-
-    [Fact]
-    public void LoadLegacyV1Json_WithComponents_StillLoadsComponents()
-    {
-        const string legacyJson = """
-            {
-              "components": [
-                {
-                  "templateName": "MMI_1x2",
-                  "x": 5.0,
-                  "y": 10.0,
-                  "identifier": "MMI_1x2_1",
-                  "rotation": 0
-                }
-              ],
-              "connections": []
-            }
-            """;
-
-        var loaded = JsonSerializer.Deserialize<DesignFileData>(legacyJson, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        loaded.ShouldNotBeNull();
-        loaded!.Components.Count.ShouldBe(1);
-        loaded.Components[0].Identifier.ShouldBe("MMI_1x2_1");
     }
 
     // ─── S-Matrix Serialization ───────────────────────────────────────────────
