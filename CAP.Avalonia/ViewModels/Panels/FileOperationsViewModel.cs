@@ -509,10 +509,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 if (designData.FormatVersion != CurrentFormatVersion)
                 {
                     var actual = string.IsNullOrEmpty(designData.FormatVersion) ? "<missing>" : designData.FormatVersion;
-                    var msg = $"Unsupported .lun format version '{actual}'. This build of Lunima requires '{CurrentFormatVersion}'. Legacy v1 files are not supported.";
-                    _errorConsole?.LogError(msg);
-                    UpdateStatus?.Invoke(msg);
-                    return;
+                    _errorConsole?.LogWarning(
+                        $"Legacy .lun file detected (FormatVersion: {actual}). Loading with missing PIR sections (S-matrices, metadata, simulation results) left empty. File will be upgraded to {CurrentFormatVersion} on next save.");
                 }
 
                 // Clear current design

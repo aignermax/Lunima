@@ -278,12 +278,13 @@ public class DesignFileGroupPersistenceTests
     }
 
     /// <summary>
-    /// Verifies that legacy files without FormatVersion are rejected with no silent fallback.
+    /// Verifies that legacy files without FormatVersion load successfully but log a loud warning.
     /// </summary>
     [Fact]
-    public async Task LoadDesign_LegacyFileWithoutFormatVersion_IsRejected()
+    public async Task LoadDesign_LegacyFileWithoutFormatVersion_LoadsAndWarns()
     {
-        var (loadVm, loadCanvas) = CreateFileOperationsSetup();
+        var errorConsole = new CAP_Core.ErrorConsoleService();
+        var (loadVm, loadCanvas) = CreateFileOperationsSetup(errorConsole);
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_legacy_{Guid.NewGuid()}.cappro");
 
         try
@@ -307,8 +308,16 @@ public class DesignFileGroupPersistenceTests
             loadVm.FileDialogService = loadDialog.Object;
             await loadVm.LoadDesignCommand.ExecuteAsync(null);
 
-            // Load must be rejected: canvas stays empty
-            loadCanvas.Components.Count.ShouldBe(0);
+            // Legacy file loads its components
+            loadCanvas.Components.Count.ShouldBe(1);
+
+            // Loud warning was logged for the missing/wrong FormatVersion
+            var warnings = errorConsole.Entries
+                .Where(e => e.Level == CAP_Contracts.Logger.LogLevel.Warn)
+                .ToList();
+            warnings.ShouldNotBeEmpty();
+            warnings[0].Message.ShouldContain("Legacy .lun file");
+            warnings[0].Message.ShouldContain("2.0");
         }
         finally
         {
@@ -594,7 +603,8 @@ public class DesignFileGroupPersistenceTests
     /// <summary>
     /// Creates a FileOperationsViewModel with real component library for testing.
     /// </summary>
-    private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateFileOperationsSetup()
+    private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateFileOperationsSetup(
+        CAP_Core.ErrorConsoleService? errorConsole = null)
     {
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
@@ -602,7 +612,7 @@ public class DesignFileGroupPersistenceTests
         var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, _library, gdsExport);
+            canvas, commandManager, nazcaExporter, _library, gdsExport, errorConsole);
 
         return (vm, canvas);
     }
