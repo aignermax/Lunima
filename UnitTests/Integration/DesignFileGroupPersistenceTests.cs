@@ -612,7 +612,7 @@ public class DesignFileGroupPersistenceTests
         var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, _library, gdsExport, errorConsole);
+            canvas, commandManager, nazcaExporter, _library, gdsExport, errorConsole: errorConsole);
 
         return (vm, canvas);
     }
