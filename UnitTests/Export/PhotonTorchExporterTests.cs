@@ -8,7 +8,10 @@ namespace UnitTests.Export;
 
 /// <summary>
 /// Unit tests for <see cref="PhotonTorchExporter"/>.
-/// Verifies script structure, component mapping, and connection formatting.
+/// Verifies that the generated script uses the actual photontorch context-manager
+/// Network API (`with pt.Network() as nw:`) and numeric port indices — NOT the
+/// invented kwargs-based API that an earlier version used.
+/// Runtime executability is covered by <see cref="PhotonTorchScriptExecutionTests"/>.
 /// </summary>
 public class PhotonTorchExporterTests
 {
@@ -17,19 +20,20 @@ public class PhotonTorchExporterTests
     // ── Header tests ────────────────────────────────────────────────────────
 
     [Fact]
-    public void Export_EmptyDesign_ProducesValidPythonHeader()
+    public void Export_AnyDesign_ImportsPhotonTorchAndTorch()
     {
-        var script = _exporter.Export([], []);
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var script = _exporter.Export([comp], []);
 
         script.ShouldContain("import torch");
         script.ShouldContain("import photontorch as pt");
-        script.ShouldContain("import numpy as np");
     }
 
     [Fact]
     public void Export_Default1550nm_EmbedsCorrectFrequency()
     {
-        var script = _exporter.Export([], []);
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var script = _exporter.Export([comp], []);
 
         script.ShouldContain("WAVELENGTH_NM = 1550.0");
         script.ShouldContain("1.93414E+14", Case.Insensitive);  // c / 1550nm ≈ 1.934e14 Hz
@@ -39,8 +43,9 @@ public class PhotonTorchExporterTests
     public void Export_Custom1310nm_EmbedsCorrectWavelength()
     {
         var options = new PhotonTorchExporter.ExportOptions { WavelengthNm = 1310.0 };
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
-        var script = _exporter.Export([], [], options);
+        var script = _exporter.Export([comp], [], options);
 
         script.ShouldContain("WAVELENGTH_NM = 1310.0");
     }
@@ -56,7 +61,7 @@ public class PhotonTorchExporterTests
         var script = _exporter.Export([comp], []);
 
         script.ShouldContain("pt.Waveguide(");
-        script.ShouldContain("length=");  // 250µm → some length value in metres
+        script.ShouldContain("length=");
     }
 
     [Fact]
@@ -70,40 +75,36 @@ public class PhotonTorchExporterTests
     }
 
     [Fact]
-    public void Export_GratingCoupler_MapsToDetector()
-    {
-        var comp = CreateComponentWithNazca("ebeam_gc_te1550");
-
-        var script = _exporter.Export([comp], []);
-
-        script.ShouldContain("pt.Detector()");
-    }
-
-    [Fact]
-    public void Export_PhaseShifter_MapsToPhaseShifter()
-    {
-        var comp = CreateComponentWithNazca("ebeam_phase_shifter");
-
-        var script = _exporter.Export([comp], []);
-
-        script.ShouldContain("pt.PhaseShifter(phase=0.0)");
-    }
-
-    [Fact]
-    public void Export_MmiComponent_MapsToDirectionalCoupler()
+    public void Export_MmiComponent_MarksAsApproximatedDC()
     {
         var comp = CreateComponentWithNazca("ebeam_mmi_1x2");
 
         var script = _exporter.Export([comp], []);
 
         script.ShouldContain("pt.DirectionalCoupler(");
-        script.ShouldContain("MMI approximated");
+        script.ShouldContain("MMI approximated", Case.Insensitive);
     }
 
     // ── Network / connection tests ──────────────────────────────────────────
 
     [Fact]
-    public void Export_TwoConnectedComponents_ContainsNetworkSection()
+    public void Export_UsesContextManagerNetworkApi_NotKwargs()
+    {
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+
+        var script = _exporter.Export([comp], []);
+
+        script.ShouldContain("with pt.Network() as nw:");
+        script.ShouldNotContain("nw = pt.Network(",
+            customMessage: "Must use 'with pt.Network() as nw:' — the kwargs-based constructor does not exist in photontorch.");
+        script.ShouldNotContain("connections=[",
+            customMessage: "Must use nw.link() per connection — there is no 'connections=' argument on pt.Network.");
+        // Components attached as attributes
+        script.ShouldContain("nw.wg_");
+    }
+
+    [Fact]
+    public void Export_TwoConnectedComponents_EmitsLinkCallWithNumericPorts()
     {
         var wg1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         wg1.Identifier = "wg1";
@@ -111,50 +112,55 @@ public class PhotonTorchExporterTests
         wg2.Identifier = "wg2";
         var conn = new WaveguideConnection
         {
-            StartPin = wg1.PhysicalPins[1],  // "out"
-            EndPin = wg2.PhysicalPins[0]     // "in"
+            StartPin = wg1.PhysicalPins[1],  // second pin → port index 1
+            EndPin = wg2.PhysicalPins[0]     // first pin → port index 0
         };
 
         var script = _exporter.Export([wg1, wg2], [conn]);
 
-        script.ShouldContain("nw = pt.Network(");
-        script.ShouldContain("connections=[");
-        script.ShouldContain("'out'");
-        script.ShouldContain("'in'");
+        script.ShouldContain("nw.link(");
+        // Port is numeric (0 / 1), NOT the pin-name 'in'/'out'
+        script.ShouldContain(":1'");
+        script.ShouldContain("'0:");
+        // No string-literal pin names leaking into link arguments
+        script.ShouldNotContain("'in'");
+        script.ShouldNotContain("'out'");
     }
 
     [Fact]
-    public void Export_SingleComponent_IncludedInNetworkArgs()
+    public void Export_UnconnectedPins_AreTerminatedWithSourceAndDetectors()
     {
-        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
-        comp.Identifier = "mycomp";
+        // A single waveguide with 2 unconnected pins → 1 source + 1 detector
+        var wg = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
-        var script = _exporter.Export([comp], []);
+        var script = _exporter.Export([wg], []);
 
-        script.ShouldContain("nw = pt.Network(");
-        script.ShouldContain("wg_mycomp=wg_mycomp");
+        script.ShouldContain("nw.src = pt.Source()");
+        script.ShouldContain("nw.det_0 = pt.Detector()");
     }
 
     // ── Simulation section tests ────────────────────────────────────────────
 
     [Fact]
-    public void Export_SteadyStateMode_ContainsSteadyStateCode()
+    public void Export_SteadyStateMode_InjectsTorchOnesAndCallsNetwork()
     {
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         var options = new PhotonTorchExporter.ExportOptions
         {
             Mode = PhotonTorchExporter.SimulationMode.SteadyState
         };
 
-        var script = _exporter.Export([], [], options);
+        var script = _exporter.Export([comp], [], options);
 
-        script.ShouldContain("Steady-state");
-        script.ShouldContain("source[0] = 1.0");
+        script.ShouldContain("Steady-state", Case.Insensitive);
+        script.ShouldContain("source = torch.ones(");
         script.ShouldContain("detected = nw(source=source)");
     }
 
     [Fact]
-    public void Export_TimeDomainMode_ContainsBitrateAndPulse()
+    public void Export_TimeDomainMode_ContainsBitrateAndPulseTensor()
     {
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         var options = new PhotonTorchExporter.ExportOptions
         {
             Mode = PhotonTorchExporter.SimulationMode.TimeDomain,
@@ -162,19 +168,21 @@ public class PhotonTorchExporterTests
             TimeDomainSteps = 500
         };
 
-        var script = _exporter.Export([], [], options);
+        var script = _exporter.Export([comp], [], options);
 
         script.ShouldContain("nw.bitrate");
         script.ShouldContain("10 Gbit/s", Case.Insensitive);
-        script.ShouldContain("torch.zeros(500)");
+        script.ShouldContain("torch.zeros(500,");
     }
 
     [Fact]
-    public void Export_DefaultOptions_ProduceSteadyState()
+    public void Export_DefaultOptions_ProducesSteadyState()
     {
-        var script = _exporter.Export([], []);
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
-        script.ShouldContain("Steady-state");
+        var script = _exporter.Export([comp], []);
+
+        script.ShouldContain("Steady-state", Case.Insensitive);
         script.ShouldNotContain("nw.bitrate");
     }
 
@@ -190,7 +198,6 @@ public class PhotonTorchExporterTests
 
         var script = _exporter.Export([wg1, wg2], []);
 
-        // Component definition lines contain "pt.Waveguide(" — extract their variable names
         var defLines = script.Split('\n')
             .Where(l => l.Contains("pt.Waveguide(") && l.Contains("="))
             .Select(l => l.Split('=')[0].Trim())
@@ -198,38 +205,6 @@ public class PhotonTorchExporterTests
 
         defLines.Count.ShouldBeGreaterThanOrEqualTo(2);
         defLines.Distinct().Count().ShouldBe(defLines.Count);
-    }
-
-    // ── Integration test ────────────────────────────────────────────────────
-
-    [Fact]
-    public void Export_TwoWaveguidesMziLayout_ProducesRunnablePythonShape()
-    {
-        // Arrange: simple two-waveguide layout
-        var wg1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
-        wg1.Identifier = "arm1";
-        wg1.WidthMicrometers = 100;
-
-        var wg2 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
-        wg2.Identifier = "arm2";
-        wg2.WidthMicrometers = 100;
-
-        var conn = new WaveguideConnection
-        {
-            StartPin = wg1.PhysicalPins[1],
-            EndPin = wg2.PhysicalPins[0]
-        };
-
-        // Act
-        var script = _exporter.Export([wg1, wg2], [conn]);
-
-        // Assert: all required sections present
-        script.ShouldContain("import photontorch as pt");
-        script.ShouldContain("pt.Waveguide(");
-        script.ShouldContain("nw = pt.Network(");
-        script.ShouldContain("connections=[");
-        script.ShouldContain("detected = nw(");
-        script.ShouldNotBeNullOrWhiteSpace();
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
@@ -247,25 +222,18 @@ public class PhotonTorchExporterTests
 /// </summary>
 internal static class TestComponentFactoryExtensions
 {
-    /// <summary>
-    /// Creates a directional coupler component with physical pins.
-    /// </summary>
-    public static CAP_Core.Components.Core.Component CreateDirectionalCouplerWithPhysicalPins()
+    /// <summary>Creates a directional coupler component with 4 physical pins.</summary>
+    public static Component CreateDirectionalCouplerWithPhysicalPins()
     {
         var comp = TestComponentFactory.CreateDirectionalCoupler();
         comp.NazcaFunctionName = "ebeam_dc_halfring_straight";
         comp.WidthMicrometers = 10;
         comp.HeightMicrometers = 10;
 
-        var in0 = new CAP_Core.Components.Core.PhysicalPin { Name = "in0", ParentComponent = comp };
-        var in1 = new CAP_Core.Components.Core.PhysicalPin { Name = "in1", ParentComponent = comp };
-        var out0 = new CAP_Core.Components.Core.PhysicalPin { Name = "out0", ParentComponent = comp };
-        var out1 = new CAP_Core.Components.Core.PhysicalPin { Name = "out1", ParentComponent = comp };
-
-        comp.PhysicalPins.Add(in0);
-        comp.PhysicalPins.Add(in1);
-        comp.PhysicalPins.Add(out0);
-        comp.PhysicalPins.Add(out1);
+        comp.PhysicalPins.Add(new PhysicalPin { Name = "in0", ParentComponent = comp });
+        comp.PhysicalPins.Add(new PhysicalPin { Name = "in1", ParentComponent = comp });
+        comp.PhysicalPins.Add(new PhysicalPin { Name = "out0", ParentComponent = comp });
+        comp.PhysicalPins.Add(new PhysicalPin { Name = "out1", ParentComponent = comp });
 
         return comp;
     }
