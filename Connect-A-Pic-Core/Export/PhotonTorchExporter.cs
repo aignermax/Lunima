@@ -72,7 +72,9 @@ public class PhotonTorchExporter
     private static void AppendHeader(StringBuilder sb, ExportOptions options, CultureInfo ci)
     {
         sb.AppendLine("# PhotonTorch export from Lunima");
-        sb.AppendLine("# Install: pip install photontorch torch matplotlib");
+        sb.AppendLine("# Install: pip install 'torch<1.9' photontorch matplotlib");
+        sb.AppendLine("# NOTE: photontorch 0.4.1 uses torch.solve, removed in torch >=1.9.");
+        sb.AppendLine("#       Install torch<1.9 or a patched photontorch to run the simulation.");
         sb.AppendLine("import torch");
         sb.AppendLine("import photontorch as pt");
         sb.AppendLine("import matplotlib.pyplot as plt");
