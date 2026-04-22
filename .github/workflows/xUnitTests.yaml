@@ -35,14 +35,14 @@ jobs:
 
       - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           python -m pip install --upgrade pip
-          pip install photontorch torch matplotlib
-          # Verify import works with the exact probe command the test uses.
-          which python3
-          which python || true
+          # scipy is a transitive dep of photontorch 0.4.1 but missing from its
+          # published requirements — install it explicitly so `import photontorch`
+          # doesn't fail with ModuleNotFoundError on a fresh runner.
+          pip install photontorch torch matplotlib scipy
+          # Verify the import works with the exact probe the test uses.
           python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
-          python -c "import photontorch; print('photontorch', photontorch.__version__)" || echo "python alias not on PATH"
 
       - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
         run: |
