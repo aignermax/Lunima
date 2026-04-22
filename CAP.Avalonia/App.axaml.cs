@@ -76,8 +76,6 @@ public partial class App : Application
         services.AddTransient<IAiTool, CopyComponentTool>();
         services.AddTransient<IAiTool, FitToViewTool>();
         services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
-        // Expose ViewportControlViewModel from MainViewModel for DI injection (e.g. FitToViewTool)
-        services.AddSingleton(sp => sp.GetRequiredService<MainViewModel>().ViewportControl);
 
         services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
             sp.GetRequiredService<IAiService>(),
@@ -102,6 +100,7 @@ public partial class App : Application
 
         // Register DesignCanvasViewModel as singleton (shared across all panel VMs)
         services.AddSingleton<DesignCanvasViewModel>();
+        services.AddSingleton<ViewportControlViewModel>();
 
         // Register sub-ViewModels (Left panel)
         services.AddTransient<HierarchyPanelViewModel>();
