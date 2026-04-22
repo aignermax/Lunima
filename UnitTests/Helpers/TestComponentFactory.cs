@@ -187,6 +187,58 @@ namespace UnitTests
         }
 
         /// <summary>
+        /// Creates a 2-port phase-shifter component with physical pins.
+        /// The S-matrix at 1550nm has S12 = S21 = <paramref name="s12"/>, allowing
+        /// tests to verify that complex (phase-carrying) S-parameters are preserved
+        /// in the generated Verilog-A output.
+        /// </summary>
+        public static Component CreatePhaseShifterWithPhysicalPins(Complex s12)
+        {
+            Part[,] parts = new Part[1, 1];
+            parts[0, 0] = new Part(new List<Pin>() {
+                new ("west0", 0, MatterType.Light, RectSide.Left),
+                new ("east0", 1, MatterType.Light, RectSide.Right)
+            });
+
+            var leftIn = parts[0, 0].GetPinAt(RectSide.Left).IDInFlow;
+            var rightOut = parts[0, 0].GetPinAt(RectSide.Right).IDOutFlow;
+            var rightIn = parts[0, 0].GetPinAt(RectSide.Right).IDInFlow;
+            var leftOut = parts[0, 0].GetPinAt(RectSide.Left).IDOutFlow;
+
+            var allPins = Component.GetAllPins(parts).SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+            var matrix = new SMatrix(allPins, new());
+            matrix.SetValues(new() {
+                { (leftIn, rightOut), s12 },
+                { (rightIn, leftOut), s12 },
+            });
+
+            var connections = new Dictionary<int, SMatrix>
+            {
+                { StandardWaveLengths.RedNM, matrix },
+            };
+
+            var comp = new Component(connections, new(), "phase_shifter", "", parts, 0, "PhaseShifter", DiscreteRotation.R0);
+
+            var logicalPin1 = comp.Parts[0, 0].GetPinAt(RectSide.Left);
+            var logicalPin2 = comp.Parts[0, 0].GetPinAt(RectSide.Right);
+
+            comp.PhysicalPins.Add(new PhysicalPin
+            {
+                Name = "in",
+                ParentComponent = comp,
+                LogicalPin = logicalPin1,
+            });
+            comp.PhysicalPins.Add(new PhysicalPin
+            {
+                Name = "out",
+                ParentComponent = comp,
+                LogicalPin = logicalPin2,
+            });
+
+            return comp;
+        }
+
+        /// <summary>
         /// Creates a WaveguideConnection between two components for testing.
         /// </summary>
         public static WaveguideConnection CreateConnection(Component startComponent, Component endComponent)

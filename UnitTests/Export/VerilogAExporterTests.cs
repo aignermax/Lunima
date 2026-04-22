@@ -1,3 +1,4 @@
+using System.Numerics;
 using CAP_Core;
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Connections;
@@ -140,8 +141,10 @@ public class VerilogAExporterTests
         var module = result.ComponentFiles.Values.First();
 
         module.ShouldContain("module ");
-        module.ShouldContain("electrical port0");
-        module.ShouldContain("electrical port1");
+        module.ShouldContain("port0_re");
+        module.ShouldContain("port0_im");
+        module.ShouldContain("port1_re");
+        module.ShouldContain("port1_im");
         module.ShouldContain("endmodule");
     }
 
@@ -154,10 +157,10 @@ public class VerilogAExporterTests
             new VerilogAExportOptions());
         var module = result.ComponentFiles.Values.First();
 
-        module.ShouldContain("s11_mag");
-        module.ShouldContain("s12_mag");
-        module.ShouldContain("s21_mag");
-        module.ShouldContain("s22_mag");
+        module.ShouldContain("s11_re");
+        module.ShouldContain("s12_re");
+        module.ShouldContain("s21_re");
+        module.ShouldContain("s22_re");
     }
 
     [Fact]
@@ -248,5 +251,28 @@ public class VerilogAExporterTests
         result.Success.ShouldBeTrue();
         // Only one component file since both have the same NazcaFunctionName
         result.ComponentFiles.Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Issue #484: verifies that a phase-shifter with S12 = e^(iπ/2) = i emits
+    /// both <c>s12_re</c> and <c>s12_im</c> parameters in the generated file,
+    /// preserving the full complex value rather than collapsing to the real part only.
+    /// </summary>
+    [Fact]
+    public void Export_PhaseShifter_S12EqualToImaginaryUnit_BothReImParametersInFile()
+    {
+        // e^(iπ/2) = i → Re part = 0, Im part = 1
+        var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(s12: new Complex(0, 1));
+
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions { WavelengthNm = 1550 });
+        var module = result.ComponentFiles.Values.First();
+
+        result.Success.ShouldBeTrue();
+        module.ShouldContain("s12_re");
+        module.ShouldContain("s12_im");
+        // cos(π/2) = 0, sin(π/2) = 1 — exact values via G6 format
+        module.ShouldContain("s12_re = 0;");
+        module.ShouldContain("s12_im = 1;");
     }
 }

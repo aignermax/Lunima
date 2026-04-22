@@ -32,16 +32,16 @@ public class VerilogASimulationTests
     public VerilogASimulationTests(ITestOutputHelper output) => _output = output;
 
     /// <summary>
-    /// Characterization test for the known modeling bug tracked in <see href="https://github.com/aignermax/Lunima/issues/484">#484</see>.
-    /// The current <c>V(port) &lt;+ expr</c> formulation is over-constrained: when
-    /// the external netlist drives a port with a voltage source, NGSpice's DC solver
-    /// cannot find a consistent solution and fails with "DC solution failed". This
-    /// test asserts the failure so we notice the moment the modelling is reworked
-    /// (twin Re/Im electrical ports or Y-parameter form, per #484) — at that point
-    /// the test should flip to assert the actual expected voltage.
+    /// End-to-end simulation test for a heuristic lossy waveguide using the
+    /// twin-node complex model introduced in issue #484.
+    /// <para>
+    /// The module has 4 electrical nodes (port0_re, port0_im, port1_re, port1_im).
+    /// With S21_re = 0.95 and S21_im = 0 (heuristic, S11 = S22 = 0), driving
+    /// port0_re = 1V should yield port1_re ≈ 0.95V and port1_im ≈ 0V.
+    /// </para>
     /// </summary>
     [SkippableFact]
-    public void LossyWaveguide_DCSweep_CurrentlyFailsToConverge_UntilIssue484IsFixed()
+    public void LossyWaveguide_TwinNodeComplexModel_TransmitsCorrectAmplitude()
     {
         SkipIfToolsMissing(out var openvaf, out var ngspice);
 
@@ -53,7 +53,7 @@ public class VerilogASimulationTests
         {
             CircuitName = "wg_sim",
             IncludeTestBench = false,
-            WavelengthNm = 9999,  // force heuristic: s21 = s12 = 0.95
+            WavelengthNm = 9999,  // force heuristic: S21_re = 0.95, S21_im = 0
         });
         result.Success.ShouldBeTrue(result.ErrorMessage);
 
@@ -63,15 +63,19 @@ public class VerilogASimulationTests
             var moduleName = result.ComponentFiles.Keys.First().Replace(".va", "");
             CompileToOsdi(openvaf, dir, result.ComponentFiles.Keys.First());
 
-            var netlist = $@"* Waveguide transmission test
-V1 in 0 DC 1
-Rload out 0 1e6
-N1 in out {moduleName}_mod
+            // Twin-node netlist: port0 = (in_re, in_im), port1 = (out_re, out_im)
+            // S11 = S22 = 0 so the module contributes nothing to port0 — no over-constraint.
+            var netlist = $@"* Waveguide transmission test (twin-node complex model, issue #484)
+V1_re in_re 0 DC 1
+V1_im in_im 0 DC 0
+Rload_re out_re 0 1e6
+Rload_im out_im 0 1e6
+N1 in_re in_im out_re out_im {moduleName}_mod
 .model {moduleName}_mod {moduleName}
 .control
   pre_osdi {moduleName}.osdi
   op
-  print v(in) v(out)
+  print v(out_re) v(out_im)
   quit
 .endc
 .end
@@ -82,12 +86,13 @@ N1 in out {moduleName}_mod
             _output.WriteLine($"ngspice stdout:\n{stdout}");
             if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
 
-            // The current model is over-constrained; NGSpice prints "DC solution failed"
-            // and leaves all node voltages at zero. This characterizes the pre-#484 state.
-            stdout.ShouldContain("DC solution failed", Case.Insensitive,
-                "If this assertion fails, the Verilog-A model has been reworked and " +
-                "actually simulates. Update the test to assert the real expected voltage " +
-                "(|S21| ≈ 0.95 for the heuristic waveguide) and close issue #484.");
+            stdout.ShouldNotContain("DC solution failed", Case.Insensitive,
+                "Issue #484 twin-node fix should resolve the DC convergence failure. " +
+                "If NGSpice still fails here, check the N-element 4-port syntax for your NGSpice version.");
+
+            var outRe = ParseNgspicePrintedVoltage(stdout, "v(out_re)");
+            outRe.ShouldBe(0.95, tolerance: 0.01,
+                "With heuristic waveguide S21 = 0.95+0j, driving port0_re=1V should yield port1_re ≈ 0.95V.");
         }
         finally
         {
