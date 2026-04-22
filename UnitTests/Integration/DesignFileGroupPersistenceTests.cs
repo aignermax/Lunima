@@ -227,19 +227,20 @@ public class DesignFileGroupPersistenceTests
     }
 
     /// <summary>
-    /// Verifies backward compatibility: files without Groups property load normally.
+    /// Verifies that v2.0 files without the optional Groups property load normally.
     /// </summary>
     [Fact]
-    public async Task LoadDesign_OldFormatWithoutGroups_LoadsNormally()
+    public async Task LoadDesign_V2FileWithoutGroups_LoadsNormally()
     {
         var (loadVm, loadCanvas) = CreateFileOperationsSetup();
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_compat_{Guid.NewGuid()}.cappro");
 
         try
         {
-            // Write old-format JSON (no Groups property)
-            var oldData = new
+            // Valid v2 file omitting the optional Groups property
+            var data = new
             {
+                FormatVersion = "2.0",
                 Components = new[]
                 {
                     new
@@ -247,20 +248,19 @@ public class DesignFileGroupPersistenceTests
                         TemplateName = "Photodetector",
                         X = 100.0,
                         Y = 200.0,
-                        Identifier = "old_det_1",
+                        Identifier = "det_1",
                         Rotation = 0
                     }
                 },
                 Connections = Array.Empty<object>()
             };
 
-            var json = JsonSerializer.Serialize(oldData, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
             await File.WriteAllTextAsync(tempFile, json);
 
-            // Load
             var loadDialog = new Mock<IFileDialogService>();
             loadDialog.Setup(f => f.ShowOpenFileDialogAsync(
                 It.IsAny<string>(), It.IsAny<string>()))
@@ -268,8 +268,56 @@ public class DesignFileGroupPersistenceTests
             loadVm.FileDialogService = loadDialog.Object;
             await loadVm.LoadDesignCommand.ExecuteAsync(null);
 
-            // Assert - Component loaded, no errors
             loadCanvas.Components.Count.ShouldBe(1);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that legacy files without FormatVersion load successfully but log a loud warning.
+    /// </summary>
+    [Fact]
+    public async Task LoadDesign_LegacyFileWithoutFormatVersion_LoadsAndWarns()
+    {
+        var errorConsole = new CAP_Core.ErrorConsoleService();
+        var (loadVm, loadCanvas) = CreateFileOperationsSetup(errorConsole);
+        var tempFile = Path.Combine(Path.GetTempPath(), $"test_legacy_{Guid.NewGuid()}.cappro");
+
+        try
+        {
+            var legacyData = new
+            {
+                Components = new[]
+                {
+                    new { TemplateName = "Photodetector", X = 0.0, Y = 0.0, Identifier = "legacy_1", Rotation = 0 }
+                },
+                Connections = Array.Empty<object>()
+            };
+
+            var json = JsonSerializer.Serialize(legacyData, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(tempFile, json);
+
+            var loadDialog = new Mock<IFileDialogService>();
+            loadDialog.Setup(f => f.ShowOpenFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(tempFile);
+            loadVm.FileDialogService = loadDialog.Object;
+            await loadVm.LoadDesignCommand.ExecuteAsync(null);
+
+            // Legacy file loads its components
+            loadCanvas.Components.Count.ShouldBe(1);
+
+            // Loud warning was logged for the missing/wrong FormatVersion
+            var warnings = errorConsole.Entries
+                .Where(e => e.Level == CAP_Contracts.Logger.LogLevel.Warn)
+                .ToList();
+            warnings.ShouldNotBeEmpty();
+            warnings[0].Message.ShouldContain("Legacy .lun file");
+            warnings[0].Message.ShouldContain("2.0");
         }
         finally
         {
@@ -555,7 +603,8 @@ public class DesignFileGroupPersistenceTests
     /// <summary>
     /// Creates a FileOperationsViewModel with real component library for testing.
     /// </summary>
-    private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateFileOperationsSetup()
+    private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateFileOperationsSetup(
+        CAP_Core.ErrorConsoleService? errorConsole = null)
     {
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
@@ -563,7 +612,7 @@ public class DesignFileGroupPersistenceTests
         var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, _library, gdsExport);
+            canvas, commandManager, nazcaExporter, _library, gdsExport, errorConsole);
 
         return (vm, canvas);
     }
