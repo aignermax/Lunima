@@ -94,6 +94,8 @@
                         Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design as..."/>
                 <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
                         MinWidth="75" Margin="2" Padding="8,4" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
+                <Button Content="🔦 PhotonTorch" Command="{Binding FileOperations.PhotonTorchExport.ExportCommand}"
+                        MinWidth="105" Margin="2" Padding="8,4" Background="#3d4d6d" ToolTip.Tip="Export to PhotonTorch for time-domain simulation"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
@@ -771,6 +773,9 @@
 
                     <!-- GDS Export Configuration -->
                     <panels:GdsExportPanel/>
+
+                    <!-- PhotonTorch Export Configuration -->
+                    <panels:PhotonTorchExportPanel/>
 
                 </StackPanel>
                 </ScrollViewer>

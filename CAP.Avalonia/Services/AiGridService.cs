@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Selection;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -19,7 +20,8 @@ public class AiGridService : IAiGridService
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        WriteIndented = false
+        WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
     /// <summary>
@@ -38,19 +40,32 @@ public class AiGridService : IAiGridService
     /// <inheritdoc/>
     public string GetGridState()
     {
+        var connectedPins = GetConnectedPins();
         var state = new
         {
-            components = _canvas.Components.Select(c => new
+            components = _canvas.Components.Select(c =>
             {
-                id = c.Component.Identifier,
-                type = c.TemplateName ?? c.Component.HumanReadableName ?? c.Component.Identifier,
-                position = new
+                var group = c.Component as ComponentGroup;
+                return new
                 {
-                    x = Math.Round(c.Component.PhysicalX, 1),
-                    y = Math.Round(c.Component.PhysicalY, 1)
-                },
-                rotation = c.Component.RotationDegrees,
-                pins = c.Component.PhysicalPins.Count
+                    id = c.Component.Identifier,
+                    type = c.TemplateName ?? c.Component.HumanReadableName ?? c.Component.Identifier,
+                    position = new
+                    {
+                        x = Math.Round(c.Component.PhysicalX, 1),
+                        y = Math.Round(c.Component.PhysicalY, 1)
+                    },
+                    rotation = c.Component.RotationDegrees,
+                    pins = group != null ? group.ExternalPins.Count : c.Component.PhysicalPins.Count,
+                    external_pins = group != null && group.ExternalPins.Count > 0
+                        ? (object)group.ExternalPins.Select(pin => new
+                        {
+                            name = pin.Name,
+                            direction = pin.AngleDegrees,
+                            connected = connectedPins.Contains(pin.InternalPin)
+                        }).ToList()
+                        : null
+                };
             }).ToList(),
             connections = _canvas.Connections.Select(conn => new
             {
@@ -110,8 +125,11 @@ public class AiGridService : IAiGridService
 
         var alreadyConnected = GetConnectedPins();
 
-        var fromPin = FindBestPin(fromVm.Component.PhysicalPins, alreadyConnected, preferOutput: true);
-        var toPin = FindBestPin(toVm.Component.PhysicalPins, alreadyConnected, preferOutput: false);
+        var fromPins = GetEffectivePins(fromVm.Component);
+        var toPins = GetEffectivePins(toVm.Component);
+
+        var fromPin = FindBestPin(fromPins, alreadyConnected, preferOutput: true);
+        var toPin = FindBestPin(toPins, alreadyConnected, preferOutput: false);
 
         if (fromPin == null) return $"No available output pins on '{fromComponentId}'";
         if (toPin == null) return $"No available input pins on '{toComponentId}'";
@@ -295,6 +313,18 @@ public class AiGridService : IAiGridService
         var py = Math.Round(copiedVm.Component.PhysicalY, 0);
         return Task.FromResult(
             $"Copied '{sourceId}' to ({px}, {py})µm. New ID: '{copiedId}'.");
+    }
+
+    /// <summary>
+    /// Returns the effective pins for connecting to a component.
+    /// For ComponentGroups, returns the InternalPins of ExternalPins so they can be wired up.
+    /// </summary>
+    private static IEnumerable<PhysicalPin> GetEffectivePins(Component component)
+    {
+        if (component is ComponentGroup group && group.ExternalPins.Count > 0)
+            return group.ExternalPins.Select(ep => ep.InternalPin);
+
+        return component.PhysicalPins;
     }
 
     private HashSet<PhysicalPin> GetConnectedPins() =>

@@ -171,6 +171,11 @@ public class AiAssistantViewModelTests
         vm.IsTyping.ShouldBeFalse();
     }
 
+    // NOTE: Tests for `BuildGridToolDefinitions` were removed. That static method
+    // was replaced by the DI-based IAiTool / AiToolRegistry pattern — each tool
+    // is now its own IAiTool class (PlaceComponentTool, ClearGridTool, ...) and
+    // has its own test (see UnitTests/AI/*ToolTests.cs + AiToolRegistryTests.cs).
+
     private AiAssistantViewModel CreateViewModel()
         => new AiAssistantViewModel(_mockAiService.Object, _preferencesService);
 }
