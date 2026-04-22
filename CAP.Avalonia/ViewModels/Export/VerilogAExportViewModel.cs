@@ -104,9 +104,19 @@ public partial class VerilogAExportViewModel : ObservableObject
             LastExportSucceeded = true;
             StatusText = $"✓ Exported {result.TotalFileCount} files to {OutputDirectory}";
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            StatusText = $"✗ Error: {ex.Message}";
+            // Design-level issue surfaced by the exporter (orphan pin, unmapped
+            // component type, missing ports, …).
+            StatusText = $"✗ Export rejected: {ex.Message}";
+        }
+        catch (IOException ex)
+        {
+            StatusText = $"✗ Could not write files: {ex.Message}";
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            StatusText = $"✗ Access denied: {ex.Message}";
         }
         finally
         {
@@ -130,9 +140,13 @@ public partial class VerilogAExportViewModel : ObservableObject
                 UseShellExecute = true
             });
         }
-        catch
+        catch (System.ComponentModel.Win32Exception ex)
         {
-            // Silently ignore if file explorer cannot be opened
+            StatusText = $"Could not open output directory: {ex.Message}";
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusText = $"Could not open output directory: {ex.Message}";
         }
     }
 

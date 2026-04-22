@@ -15,6 +15,12 @@ internal static class VerilogAModuleWriter
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
+    // Heuristic S-parameters used when a component has no measured/simulated S-matrix.
+    // Values represent amplitude transmission coefficients (|S| in [0,1]).
+    private const double WaveguideThroughputLossy = 0.95;     // Lossy straight waveguide (≈ 0.45 dB/segment)
+    private const double WaveguideThroughputIdeal = 0.99;     // Near-ideal 2-port element
+    private static readonly double SplitAmplitude5050 = Math.Sqrt(0.5);  // 50/50 power splitter
+
     internal static string Write(Component comp, string moduleName, int wavelengthNm)
     {
         var pins = comp.PhysicalPins;
@@ -82,12 +88,24 @@ internal static class VerilogAModuleWriter
     /// <summary>
     /// Extracts (out, in) → S-parameter. Returns the map plus a flag indicating
     /// whether the heuristic fallback was used (so the caller can emit a WARNING).
+    /// Throws when a pin has no <c>LogicalPin</c> (indicates an unfinished model).
     /// </summary>
     internal static (Dictionary<(int Out, int In), Complex> Map, bool UsedHeuristic) ExtractSParameters(
         Component comp, int wavelengthNm)
     {
         var result = new Dictionary<(int, int), Complex>();
         var pins = comp.PhysicalPins;
+
+        foreach (var pin in pins)
+        {
+            if (pin.LogicalPin == null)
+            {
+                throw new InvalidOperationException(
+                    $"Pin '{pin.Name}' on component '{comp.Name}' has no LogicalPin. " +
+                    "The component model is incomplete — finish wiring the LogicalPins " +
+                    "before exporting to Verilog-A.");
+            }
+        }
 
         if (!comp.WaveLengthToSMatrixMap.TryGetValue(wavelengthNm, out var sMatrix))
             return (ApplyHeuristicModel(comp), UsedHeuristic: true);
@@ -97,14 +115,10 @@ internal static class VerilogAModuleWriter
         for (int outIdx = 0; outIdx < pins.Count; outIdx++)
         {
             var outPin = pins[outIdx];
-            if (outPin.LogicalPin == null) continue;
-
             for (int inIdx = 0; inIdx < pins.Count; inIdx++)
             {
                 var inPin = pins[inIdx];
-                if (inPin.LogicalPin == null) continue;
-
-                var key = (inPin.LogicalPin.IDInFlow, outPin.LogicalPin.IDOutFlow);
+                var key = (inPin.LogicalPin!.IDInFlow, outPin.LogicalPin!.IDOutFlow);
                 if (transfers.TryGetValue(key, out var transfer))
                     result[(outIdx, inIdx)] = transfer;
             }
@@ -121,32 +135,37 @@ internal static class VerilogAModuleWriter
 
         if (n == 2)
         {
-            // Waveguide-like: reciprocal through-connection.
-            double loss = name.Contains("wg") || name.Contains("straight") ? 0.95 : 0.99;
+            var loss = name.Contains("wg") || name.Contains("straight")
+                ? WaveguideThroughputLossy
+                : WaveguideThroughputIdeal;
             result[(0, 1)] = new Complex(loss, 0);
             result[(1, 0)] = new Complex(loss, 0);
         }
         else if (n == 3)
         {
-            // Y-junction / 1x2 splitter: 50/50 split.
-            double split = Math.Sqrt(0.5);
-            result[(1, 0)] = new Complex(split, 0);
-            result[(2, 0)] = new Complex(split, 0);
-            result[(0, 1)] = new Complex(split, 0);
-            result[(0, 2)] = new Complex(split, 0);
+            // Y-junction / 1x2 splitter: 50/50 split between out ports.
+            result[(1, 0)] = new Complex(SplitAmplitude5050, 0);
+            result[(2, 0)] = new Complex(SplitAmplitude5050, 0);
+            result[(0, 1)] = new Complex(SplitAmplitude5050, 0);
+            result[(0, 2)] = new Complex(SplitAmplitude5050, 0);
         }
         else if (n == 4)
         {
-            // 2x2 directional coupler: 50/50.
-            double through = Math.Sqrt(0.5);
-            double cross = Math.Sqrt(0.5);
-            result[(2, 0)] = new Complex(through, 0);
-            result[(3, 1)] = new Complex(through, 0);
-            result[(3, 0)] = new Complex(cross, 0);
-            result[(2, 1)] = new Complex(cross, 0);
+            // 2x2 directional coupler: 50/50 through + 50/50 cross.
+            result[(2, 0)] = new Complex(SplitAmplitude5050, 0);
+            result[(3, 1)] = new Complex(SplitAmplitude5050, 0);
+            result[(3, 0)] = new Complex(SplitAmplitude5050, 0);
+            result[(2, 1)] = new Complex(SplitAmplitude5050, 0);
         }
-        // For n > 4 the heuristic has no sensible default — leave S empty so all
-        // transfer equations evaluate to 0 and the simulator flags the issue.
+        else
+        {
+            // No physically-defensible default exists for arbitrary N-port components.
+            // Emitting all-zero S-parameters would be a silent fallback — throw instead.
+            throw new InvalidOperationException(
+                $"Component '{comp.Name}' has {n} ports and no S-matrix at the requested " +
+                "wavelength. The heuristic fallback only covers 2/3/4-port components. " +
+                "Provide measured or simulated S-parameters via WaveLengthToSMatrixMap.");
+        }
 
         return result;
     }

@@ -184,6 +184,43 @@ public class VerilogAExporterTests
             new VerilogAExportOptions());
 
         result.ComponentFiles.Keys.ShouldContain("ebeam_y_1550.va");
+        // Module declaration inside the file must match the sanitized file name.
+        result.ComponentFiles["ebeam_y_1550.va"].ShouldContain("module ebeam_y_1550");
+    }
+
+    [Fact]
+    public void Export_TwoComponentsSanitizeToSameName_ReturnsCollisionFailure()
+    {
+        // 'ebeam.y-1550' and 'ebeam_y_1550' both sanitize to 'ebeam_y_1550'
+        // — must fail loud rather than silently share a module file.
+        var a = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        a.NazcaFunctionName = "ebeam.y-1550";
+        var b = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        b.NazcaFunctionName = "ebeam_y_1550";
+
+        var result = _exporter.Export(new[] { a, b }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions());
+
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldContain("collision", Case.Insensitive);
+    }
+
+    [Fact]
+    public void Export_TestBenchWithNoExternalPorts_ReturnsFailure()
+    {
+        // Fully-connected loop → no external ports → test bench cannot be meaningful.
+        var wg1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        wg1.Identifier = "wg1";
+        var wg2 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        wg2.Identifier = "wg2";
+        var c1 = new WaveguideConnection { StartPin = wg1.PhysicalPins[0], EndPin = wg2.PhysicalPins[1] };
+        var c2 = new WaveguideConnection { StartPin = wg1.PhysicalPins[1], EndPin = wg2.PhysicalPins[0] };
+
+        var result = _exporter.Export(new[] { wg1, wg2 }, new[] { c1, c2 },
+            new VerilogAExportOptions { IncludeTestBench = true });
+
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldContain("external port", Case.Insensitive);
     }
 
     [Fact]

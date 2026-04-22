@@ -71,14 +71,29 @@ public class VerilogAExporter
         IReadOnlyList<Component> components, int wavelengthNm)
     {
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
-        var generated = new HashSet<string>(StringComparer.Ordinal);
+        var moduleToSource = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var comp in components)
         {
             var moduleName = VerilogAIdentifier.For(comp);
-            if (!generated.Add(moduleName))
-                continue;
+            var sourceKey = comp.NazcaFunctionName ?? comp.Name ?? "";
 
+            if (moduleToSource.TryGetValue(moduleName, out var existingSource))
+            {
+                // Same underlying source (same NazcaFunctionName) → legitimate dedup.
+                // Different source → sanitization collision that would silently share a
+                // module file between two physically different components.
+                if (!string.Equals(existingSource, sourceKey, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Verilog-A module name collision: '{existingSource}' and '{sourceKey}' " +
+                        $"both sanitize to '{moduleName}'. Rename one component's NazcaFunctionName " +
+                        "to avoid two different component models sharing a single .va file.");
+                }
+                continue;
+            }
+
+            moduleToSource[moduleName] = sourceKey;
             files[$"{moduleName}.va"] = VerilogAModuleWriter.Write(comp, moduleName, wavelengthNm);
         }
 

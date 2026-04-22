@@ -22,6 +22,9 @@ namespace UnitTests.Export;
 /// </summary>
 public class VerilogAScriptExecutionTests
 {
+    private const int ProbeTimeoutMs = 10_000;
+    private const int CompileTimeoutMs = 60_000;
+
     private readonly ITestOutputHelper _output;
     private readonly VerilogAExporter _exporter = new();
 
@@ -51,6 +54,46 @@ public class VerilogAScriptExecutionTests
         {
             Directory.Delete(dir, recursive: true);
         }
+    }
+
+    [SkippableFact]
+    public void GeneratedVerilogA_ForFourPortDirectionalCoupler_CompilesWithOpenVAF()
+    {
+        SkipIfOpenVAFMissing(out var openvaf);
+
+        var dc = CreateComponentWithPins(portCount: 4, nazcaName: "ebeam_dc_halfring_te1550");
+
+        var result = _exporter.Export([dc], [], new VerilogAExportOptions
+        {
+            CircuitName = "dc_circuit",
+            IncludeTestBench = false,
+            WavelengthNm = 9999,  // force heuristic path
+        });
+        result.Success.ShouldBeTrue(result.ErrorMessage);
+
+        var dir = WriteExportToTempDir(result);
+        try { AssertEveryComponentFileCompiles(openvaf, dir, result); }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [SkippableFact]
+    public void GeneratedVerilogA_ForThreePortYJunction_CompilesWithOpenVAF()
+    {
+        SkipIfOpenVAFMissing(out var openvaf);
+
+        var yb = CreateComponentWithPins(portCount: 3, nazcaName: "ebeam_y_1550");
+
+        var result = _exporter.Export([yb], [], new VerilogAExportOptions
+        {
+            CircuitName = "yb_circuit",
+            IncludeTestBench = false,
+            WavelengthNm = 9999,  // force heuristic path
+        });
+        result.Success.ShouldBeTrue(result.ErrorMessage);
+
+        var dir = WriteExportToTempDir(result);
+        try { AssertEveryComponentFileCompiles(openvaf, dir, result); }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [SkippableFact]
@@ -84,6 +127,32 @@ public class VerilogAScriptExecutionTests
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    /// <summary>Creates a fake component with the given port count for heuristic-path tests.</summary>
+    private static CAP_Core.Components.Core.Component CreateComponentWithPins(int portCount, string nazcaName)
+    {
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        comp.NazcaFunctionName = nazcaName;
+        comp.PhysicalPins.Clear();
+        for (int i = 0; i < portCount; i++)
+        {
+            var logical = new CAP_Core.Components.Core.Pin(
+                Name: $"p{i}", pinNumber: i,
+                newMatterType: CAP_Core.Components.Core.MatterType.Light,
+                side: CAP_Core.Tiles.RectSide.Left,
+                idInFlow: Guid.NewGuid(),
+                idOutFlow: Guid.NewGuid());
+            var pin = new CAP_Core.Components.Core.PhysicalPin
+            {
+                Name = $"p{i}",
+                ParentComponent = comp,
+                LogicalPin = logical,
+            };
+            comp.PhysicalPins.Add(pin);
+        }
+        return comp;
+    }
+
+
     private static void SkipIfOpenVAFMissing(out string openvafExe)
     {
         foreach (var candidate in new[] { "openvaf", "openvaf.exe" })
@@ -113,11 +182,13 @@ public class VerilogAScriptExecutionTests
             };
             using var p = Process.Start(psi);
             if (p == null) return false;
-            p.WaitForExit(10_000);
+            p.WaitForExit(ProbeTimeoutMs);
             return p.HasExited;  // Any exit means the binary ran
         }
-        catch (Win32Exception) { return false; }
-        catch (FileNotFoundException) { return false; }
+        catch (Win32Exception) { return false; }        // Binary not on PATH.
+        catch (FileNotFoundException) { return false; } // python.exe not found.
+        catch (InvalidOperationException) { return false; } // Process-start race.
+        catch (PlatformNotSupportedException) { return false; }
     }
 
     private static string WriteExportToTempDir(VerilogAExportResult result)
@@ -165,7 +236,7 @@ public class VerilogAScriptExecutionTests
 
         var stdoutTask = p.StandardOutput.ReadToEndAsync();
         var stderrTask = p.StandardError.ReadToEndAsync();
-        p.WaitForExit(60_000);
+        p.WaitForExit(CompileTimeoutMs);
         Task.WaitAll(stdoutTask, stderrTask);
         return (p.ExitCode, stdoutTask.Result, stderrTask.Result);
     }

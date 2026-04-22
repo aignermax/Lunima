@@ -40,11 +40,14 @@ jobs:
 
       - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
         run: |
-          curl -L https://openva.fra1.digitaloceanspaces.com/openvaf_devel-x86_64-unknown-linux-gnu.tar.gz -o /tmp/openvaf.tar.gz
+          set -euo pipefail
+          # Dev build — no tagged release channel exists yet. Verify the binary
+          # runs before relying on it so a broken upload blocks CI loudly.
+          curl -fL https://openva.fra1.digitaloceanspaces.com/openvaf_devel-x86_64-unknown-linux-gnu.tar.gz -o /tmp/openvaf.tar.gz
           mkdir -p /tmp/openvaf
           tar xf /tmp/openvaf.tar.gz -C /tmp/openvaf
           sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
-          openvaf --help | head -3 || true
+          openvaf --help > /dev/null
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
