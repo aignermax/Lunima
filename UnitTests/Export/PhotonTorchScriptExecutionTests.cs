@@ -74,38 +74,61 @@ public class PhotonTorchScriptExecutionTests
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
-    private static void SkipIfPythonMissing(out string pythonExe)
+    private void SkipIfPythonMissing(out string pythonExe)
     {
-        foreach (var candidate in new[] { "python", "python3" })
+        var reasons = new List<string>();
+        foreach (var candidate in new[] { "python3", "python" })
         {
-            if (TryProbe(candidate))
+            if (TryProbe(candidate, out var probeReason))
             {
                 pythonExe = candidate;
                 return;
             }
+            reasons.Add($"{candidate}: {probeReason}");
+            _output.WriteLine($"probe '{candidate}' failed: {probeReason}");
         }
         pythonExe = "";  // unreachable after Skip
-        Skip.If(true, "Python with photontorch not found. Install via 'pip install \"torch<1.9\" photontorch'.");
+        Skip.If(true,
+            "Python with photontorch not found on PATH. Probed:\n  " + string.Join("\n  ", reasons));
     }
 
-    private static bool TryProbe(string pythonExe)
+    private static bool TryProbe(string pythonExe, out string reason)
     {
         try
         {
-            var psi = new ProcessStartInfo(pythonExe, "-c \"import photontorch\"")
+            // Use ArgumentList (not a single pre-quoted Arguments string) — on Linux
+            // the double-quotes in `-c "import photontorch"` were being passed through
+            // literally, so Python saw the quotes as part of the source and did nothing
+            // useful. ArgumentList builds argv element-by-element and is OS-agnostic.
+            var psi = new ProcessStartInfo(pythonExe)
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("import photontorch; print(photontorch.__version__)");
+
             using var p = Process.Start(psi);
-            if (p == null) return false;
+            if (p == null)
+            {
+                reason = $"Process.Start returned null for '{pythonExe}'";
+                return false;
+            }
             p.WaitForExit(30_000);
-            return p.ExitCode == 0;
+            if (p.ExitCode != 0)
+            {
+                var stderr = p.StandardError.ReadToEnd().Trim();
+                reason = $"exit {p.ExitCode}: {stderr}";
+                return false;
+            }
+            reason = "";
+            return true;
         }
-        catch (Win32Exception) { return false; }        // Binary not on PATH
-        catch (FileNotFoundException) { return false; } // python.exe not found
+        catch (Win32Exception ex) { reason = $"Win32Exception: {ex.Message}"; return false; }
+        catch (FileNotFoundException ex) { reason = $"FileNotFoundException: {ex.Message}"; return false; }
+        catch (InvalidOperationException ex) { reason = $"InvalidOperationException: {ex.Message}"; return false; }
     }
 
     /// <summary>
