@@ -1,0 +1,154 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.PdkOffset"
+        x:Class="CAP.Avalonia.Views.PdkOffsetEditorWindow"
+        x:DataType="vm:PdkOffsetEditorViewModel"
+        Title="PDK Component Offset Editor"
+        Width="1000" Height="700"
+        MinWidth="700" MinHeight="500"
+        Background="#1e1e1e"
+        Foreground="White">
+
+    <Grid ColumnDefinitions="250,4,*" RowDefinitions="*">
+
+        <!-- Left panel: component list -->
+        <DockPanel Grid.Column="0" Margin="8">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <TextBlock Text="PDK Components" FontWeight="Bold" Foreground="LightGray"
+                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                <Button Content="Load PDK..." Command="{Binding LoadPdkFileCommand}"
+                        DockPanel.Dock="Right" Padding="8,4" Background="#3d3d5d"/>
+            </DockPanel>
+
+            <ListBox ItemsSource="{Binding Components}"
+                     SelectedItem="{Binding SelectedComponent}"
+                     Background="#252525"
+                     SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PdkComponentOffsetItemViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,3"
+                                    ToolTip.Tip="{Binding StatusDescription}">
+                            <TextBlock Text="{Binding StatusBadge}" FontSize="14"/>
+                            <TextBlock Text="{Binding ComponentName}"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <!-- Splitter -->
+        <GridSplitter Grid.Column="1" Background="#3d3d3d" ResizeDirection="Columns"/>
+
+        <!-- Right panel: editor -->
+        <ScrollViewer Grid.Column="2" Margin="8" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="10">
+
+                <!-- Component header -->
+                <Border Background="#252525" CornerRadius="4" Padding="10,8">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="No component selected." Foreground="LightGray"
+                                   IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNull}}"/>
+                        <StackPanel Spacing="2"
+                                    IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding SelectedComponent.ComponentName}"
+                                       FontSize="16" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="{Binding SelectedComponent.PdkName}"
+                                       Foreground="Gray" FontSize="11"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding SelectedComponent.StatusBadge}" FontSize="14"/>
+                                <TextBlock Text="{Binding SelectedComponent.StatusDescription}"
+                                           Foreground="LightGray" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Offset editor -->
+                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                        IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="NazcaOriginOffset (µm)" FontWeight="Bold" Foreground="LightGray"/>
+                        <Grid ColumnDefinitions="Auto,120,20,Auto,120,*,Auto">
+                            <TextBlock Grid.Column="0" Text="X:" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
+                            <NumericUpDown Grid.Column="1"
+                                          Value="{Binding OffsetX}"
+                                          FormatString="F3"
+                                          Increment="0.5"
+                                          Background="#2d2d2d" Foreground="White"/>
+                            <TextBlock Grid.Column="3" Text="Y:" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
+                            <NumericUpDown Grid.Column="4"
+                                          Value="{Binding OffsetY}"
+                                          FormatString="F3"
+                                          Increment="0.5"
+                                          Background="#2d2d2d" Foreground="White"/>
+                            <Button Grid.Column="6" Content="Apply" Command="{Binding ApplyOffsetCommand}"
+                                    Padding="12,4" Background="#3d5d3d"/>
+                        </Grid>
+                        <TextBlock Text="Apply updates the preview and marks the file as changed. Click Save PDK to persist."
+                                   Foreground="Gray" FontSize="11"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Visual overlay canvas -->
+                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                        IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Visual Pin Overlay" FontWeight="Bold" Foreground="LightGray"/>
+                        <TextBlock Text="Blue = component bounding box  |  Cyan dots = pins  |  Orange crosshair = Nazca origin"
+                                   Foreground="Gray" FontSize="11"/>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      MaxHeight="280">
+                            <Canvas x:Name="OverlayCanvas"
+                                    Width="500" Height="260"
+                                    Background="#1a1a2e"
+                                    ClipToBounds="True"/>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- Pin positions table -->
+                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                        IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Pin Positions relative to Nazca Origin" FontWeight="Bold" Foreground="LightGray"/>
+                        <Grid ColumnDefinitions="80,90,90,90,90" Margin="0,4,0,2">
+                            <TextBlock Grid.Column="0" Text="Pin" Foreground="Gray" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="1" Text="Local X" Foreground="Gray" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="2" Text="Local Y" Foreground="Gray" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="3" Text="Nazca X" Foreground="Cyan" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="4" Text="Nazca Y" Foreground="Cyan" FontWeight="Bold"/>
+                        </Grid>
+                        <Rectangle Height="1" Fill="#3d3d3d"/>
+                        <ItemsControl ItemsSource="{Binding PinPositions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PinPositionViewModel">
+                                    <Grid ColumnDefinitions="80,90,90,90,90" Margin="0,2">
+                                        <TextBlock Grid.Column="0" Text="{Binding PinName}" Foreground="White"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LocalXText}" Foreground="LightGray"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding LocalYText}" Foreground="LightGray"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding NazcaXText}" Foreground="Cyan"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding NazcaYText}" Foreground="Cyan"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Save + status bar -->
+                <Border Background="#252526" CornerRadius="4" Padding="10,8">
+                    <DockPanel>
+                        <Button Content="💾 Save PDK" Command="{Binding SavePdkCommand}"
+                                DockPanel.Dock="Right" Padding="12,6" Background="#3d5d3d"
+                                ToolTip.Tip="Write all offset changes back to the PDK JSON file"/>
+                        <TextBlock Text="{Binding StatusText}"
+                                   Foreground="LightGray" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </DockPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </Grid>
+</Window>

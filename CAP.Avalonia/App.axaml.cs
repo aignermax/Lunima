@@ -14,6 +14,8 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.PdkOffset;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.Views;
 using CAP.Avalonia.Services.AiTools;
 using CAP.Avalonia.Services.AiTools.GridTools;
@@ -134,6 +136,10 @@ public partial class App : Application
         services.AddSingleton<LeftPanelViewModel>();
         services.AddSingleton<RightPanelViewModel>();
         services.AddSingleton<BottomPanelViewModel>();
+
+        // Register PDK offset editor services and ViewModel
+        services.AddTransient<PdkJsonSaver>();
+        services.AddTransient<PdkOffsetEditorViewModel>();
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();

@@ -47,6 +47,18 @@ public partial class MainWindow : Window
                     };
                 }
 
+                // Wire up PDK Offset Editor window
+                vm.ShowPdkOffsetEditorRequested = () =>
+                {
+                    var editorVm = vm.PdkOffsetEditor;
+                    editorVm.FileDialogService = new FileDialogService(this);
+                    var editorWindow = new PdkOffsetEditorWindow
+                    {
+                        DataContext = editorVm
+                    };
+                    editorWindow.Show(this);
+                };
+
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {

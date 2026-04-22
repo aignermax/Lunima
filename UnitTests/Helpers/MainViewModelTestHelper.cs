@@ -11,6 +11,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_Core.Components.Creation;
 using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
@@ -59,7 +60,8 @@ public static class MainViewModelTestHelper
             leftPanel,
             rightPanel,
             bottomPanel,
-            new ViewportControlViewModel(canvas));
+            new ViewportControlViewModel(canvas),
+            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver()));
     }
 
     /// <summary>
