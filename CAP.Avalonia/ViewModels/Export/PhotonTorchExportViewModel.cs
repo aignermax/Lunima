@@ -109,9 +109,22 @@ public partial class PhotonTorchExportViewModel : ObservableObject
             LastExportStatus = $"Exported to {Path.GetFileName(filePath)}";
             UpdateStatus?.Invoke($"PhotonTorch script saved: {Path.GetFileName(filePath)}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
+            // Thrown by PhotonTorchExporter for design-level issues: unmapped
+            // component types, missing pin data, fully-connected design, …
             LastExportStatus = $"Export failed: {ex.Message}";
+            UpdateStatus?.Invoke($"PhotonTorch export failed: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            // File write failed (permissions, disk full, locked target).
+            LastExportStatus = $"Could not write file: {ex.Message}";
+            UpdateStatus?.Invoke($"PhotonTorch export failed: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            LastExportStatus = $"Access denied: {ex.Message}";
             UpdateStatus?.Invoke($"PhotonTorch export failed: {ex.Message}");
         }
         finally

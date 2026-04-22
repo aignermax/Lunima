@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using CAP_Core.Components.Connections;
 using CAP_Core.Export;
@@ -11,10 +12,11 @@ namespace UnitTests.Export;
 /// Runtime tests for the PhotonTorch exporter: actually executes the generated
 /// script with a local Python interpreter and verifies it does not raise.
 ///
-/// The test skips gracefully (passes with a log line) when Python or the
-/// <c>photontorch</c> package is not available on the machine, so local dev
-/// checkouts without the Python stack don't turn red. In CI we install the
-/// stack explicitly — see <c>.github/workflows/</c>.
+/// <para>
+/// The test uses <see cref="SkippableFact"/> so a missing Python / photontorch
+/// install shows up as a Skipped test (not a silent Passed). CI installs the
+/// stack explicitly — see <c>.github/workflows/xUnitTests.yaml</c>.
+/// </para>
 /// </summary>
 public class PhotonTorchScriptExecutionTests
 {
@@ -23,14 +25,10 @@ public class PhotonTorchScriptExecutionTests
 
     public PhotonTorchScriptExecutionTests(ITestOutputHelper output) => _output = output;
 
-    [Fact]
+    [SkippableFact]
     public void GeneratedScript_ForTwoWaveguides_RunsWithoutError()
     {
-        if (!PythonWithPhotonTorchAvailable(out var python, out var reason))
-        {
-            _output.WriteLine($"SKIP: {reason}");
-            return;
-        }
+        SkipIfPythonMissing(out var python);
 
         var wg1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         wg1.Identifier = "wg1";
@@ -46,7 +44,7 @@ public class PhotonTorchScriptExecutionTests
 
         var script = _exporter.Export([wg1, wg2], [conn]);
 
-        var (exit, stdout, stderr) = RunPythonScript(python!, script);
+        var (exit, stdout, stderr) = RunPythonScript(python, script);
 
         _output.WriteLine($"stdout: {stdout}");
         if (!string.IsNullOrEmpty(stderr)) _output.WriteLine($"stderr: {stderr}");
@@ -55,22 +53,17 @@ public class PhotonTorchScriptExecutionTests
         stdout.ShouldContain("BUILD_OK:");
     }
 
-    [Fact]
+    [SkippableFact]
     public void GeneratedScript_WithDirectionalCoupler_RunsWithoutError()
     {
-        if (!PythonWithPhotonTorchAvailable(out var python, out var reason))
-        {
-            _output.WriteLine($"SKIP: {reason}");
-            return;
-        }
+        SkipIfPythonMissing(out var python);
 
         var dc = TestComponentFactoryExtensions.CreateDirectionalCouplerWithPhysicalPins();
         dc.Identifier = "dc1";
 
         var script = _exporter.Export([dc], []);
-        _output.WriteLine($"--- generated script ---\n{script}\n--- end ---");
 
-        var (exit, stdout, stderr) = RunPythonScript(python!, script);
+        var (exit, stdout, stderr) = RunPythonScript(python, script);
 
         _output.WriteLine($"stdout: {stdout}");
         if (!string.IsNullOrEmpty(stderr)) _output.WriteLine($"stderr: {stderr}");
@@ -81,35 +74,25 @@ public class PhotonTorchScriptExecutionTests
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Checks whether a Python interpreter with <c>photontorch</c> is reachable.
-    /// Tries <c>python</c> first, then <c>python3</c>. Returns the executable
-    /// that succeeded in <paramref name="pythonExe"/> — null if neither worked.
-    /// </summary>
-    private static bool PythonWithPhotonTorchAvailable(out string? pythonExe, out string reason)
+    private static void SkipIfPythonMissing(out string pythonExe)
     {
         foreach (var candidate in new[] { "python", "python3" })
         {
-            if (TryProbe(candidate, out var probeReason))
+            if (TryProbe(candidate))
             {
                 pythonExe = candidate;
-                reason = "";
-                return true;
+                return;
             }
-            // Keep the last probe reason in case both fail.
-            reason = probeReason;
         }
-
-        pythonExe = null;
-        reason = "No usable Python found (need 'python' or 'python3' with photontorch installed).";
-        return false;
+        pythonExe = "";  // unreachable after Skip
+        Skip.If(true, "Python with photontorch not found. Install via 'pip install \"torch<1.9\" photontorch'.");
     }
 
-    private static bool TryProbe(string pythonExe, out string reason)
+    private static bool TryProbe(string pythonExe)
     {
         try
         {
-            var psi = new ProcessStartInfo(pythonExe, "-c \"import photontorch; print(photontorch.__version__)\"")
+            var psi = new ProcessStartInfo(pythonExe, "-c \"import photontorch\"")
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -117,41 +100,26 @@ public class PhotonTorchScriptExecutionTests
                 CreateNoWindow = true,
             };
             using var p = Process.Start(psi);
-            if (p == null)
-            {
-                reason = $"Failed to start '{pythonExe}'.";
-                return false;
-            }
+            if (p == null) return false;
             p.WaitForExit(30_000);
-            if (p.ExitCode != 0)
-            {
-                reason = $"'{pythonExe}' found but photontorch import failed (exit {p.ExitCode}): {p.StandardError.ReadToEnd().Trim()}";
-                return false;
-            }
-            reason = "";
-            return true;
+            return p.ExitCode == 0;
         }
-        catch (Exception ex)
-        {
-            reason = $"Probe for '{pythonExe}' threw: {ex.Message}";
-            return false;
-        }
+        catch (Win32Exception) { return false; }        // Binary not on PATH
+        catch (FileNotFoundException) { return false; } // python.exe not found
     }
 
     /// <summary>
-    /// Marker inserted by the exporter before the simulation block. The integration
-    /// test truncates the script at this marker so we test only what *we* generate
-    /// (the Network construction), independent of photontorch's own torch-version
-    /// compatibility (photontorch 0.4.1 uses the removed torch.solve on torch≥1.9).
+    /// Prefix of the header line <see cref="PhotonTorchScriptWriter.AppendSimulation"/>
+    /// writes before the simulation block. The integration test truncates here so
+    /// we only verify the Network construction — photontorch 0.4.1's runtime
+    /// simulation path depends on a torch&lt;1.9 install.
     /// </summary>
-    private const string SimulationMarker = "# ── Simulation";
+    private const string SimulationMarker = "# ── Simulation ";
 
     private static (int exitCode, string stdout, string stderr) RunPythonScript(string pythonExe, string script)
     {
         var scriptPath = Path.Combine(Path.GetTempPath(), $"lunima_pt_{Guid.NewGuid():N}.py");
 
-        // Truncate before the simulation section: we only verify the exporter's
-        // output, not photontorch's simulation runtime.
         var markerIdx = script.IndexOf(SimulationMarker, StringComparison.Ordinal);
         var constructionOnly = markerIdx > 0 ? script[..markerIdx] : script;
 
@@ -159,8 +127,7 @@ public class PhotonTorchScriptExecutionTests
             "import matplotlib\nmatplotlib.use('Agg')\n"
             + constructionOnly
             + "\nprint('BUILD_OK:', type(nw).__name__)\n";
-        // Write as UTF-8 without BOM — Python 3 defaults to UTF-8 for source files
-        // but chokes on a BOM before the first statement in some versions.
+
         File.WriteAllText(scriptPath, headless, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         try
@@ -175,10 +142,13 @@ public class PhotonTorchScriptExecutionTests
             using var p = Process.Start(psi)
                 ?? throw new InvalidOperationException($"Failed to start '{pythonExe}'.");
 
-            var stdout = p.StandardOutput.ReadToEnd();
-            var stderr = p.StandardError.ReadToEnd();
+            // Read both pipes concurrently to avoid OS pipe-buffer deadlock when
+            // the child emits many stderr deprecation warnings (photontorch + torch do).
+            var stdoutTask = p.StandardOutput.ReadToEndAsync();
+            var stderrTask = p.StandardError.ReadToEndAsync();
             p.WaitForExit(120_000);
-            return (p.ExitCode, stdout, stderr);
+            Task.WaitAll(stdoutTask, stderrTask);
+            return (p.ExitCode, stdoutTask.Result, stderrTask.Result);
         }
         finally
         {

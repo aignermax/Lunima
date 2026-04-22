@@ -186,6 +186,40 @@ public class PhotonTorchExporterTests
         script.ShouldNotContain("nw.bitrate");
     }
 
+    // ── Loud-failure tests (no silent fallbacks) ───────────────────────────
+
+    [Fact]
+    public void Export_EmptyDesign_ThrowsBecauseNoSourceAvailable()
+    {
+        Should.Throw<InvalidOperationException>(() => _exporter.Export([], []))
+              .Message.ShouldContain("Source");
+    }
+
+    [Fact]
+    public void Export_FullyConnectedDesign_ThrowsBecauseNoUnconnectedPort()
+    {
+        var wg1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        wg1.Identifier = "a";
+        var wg2 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        wg2.Identifier = "b";
+        // Both pins of each wg connected → no unconnected port at all
+        var c1 = new WaveguideConnection { StartPin = wg1.PhysicalPins[0], EndPin = wg2.PhysicalPins[0] };
+        var c2 = new WaveguideConnection { StartPin = wg1.PhysicalPins[1], EndPin = wg2.PhysicalPins[1] };
+
+        Should.Throw<InvalidOperationException>(() => _exporter.Export([wg1, wg2], [c1, c2]))
+              .Message.ShouldContain("unconnected port");
+    }
+
+    [Fact]
+    public void Export_UnknownComponentType_ThrowsWithActionableMessage()
+    {
+        var comp = CreateComponentWithNazca("some_unmapped_future_component");
+
+        var ex = Should.Throw<InvalidOperationException>(() => _exporter.Export([comp], []));
+        ex.Message.ShouldContain("No PhotonTorch mapping");
+        ex.Message.ShouldContain("some_unmapped_future_component");
+    }
+
     // ── Name-map / sanitization tests ──────────────────────────────────────
 
     [Fact]
