@@ -26,6 +26,38 @@ public class VerilogAExporterTests
     }
 
     [Fact]
+    public void Export_ComponentWithNoPhysicalPins_ReturnsFailureWithActionableMessage()
+    {
+        var comp = TestComponentFactory.CreateStraightWaveGuide();  // bare — no pins added
+        comp.PhysicalPins.Clear();
+
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions());
+
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldContain("no physical ports");
+    }
+
+    [Fact]
+    public void Export_OrphanConnectionPin_ReturnsFailureWithActionableMessage()
+    {
+        // A connection whose start pin doesn't belong to any exported component.
+        var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var orphan = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var conn = new WaveguideConnection
+        {
+            StartPin = orphan.PhysicalPins[0], // <- orphan, not in [comp]
+            EndPin = comp.PhysicalPins[0]
+        };
+
+        var result = _exporter.Export(new[] { comp }, new[] { conn },
+            new VerilogAExportOptions());
+
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldContain("orphan", Case.Insensitive);
+    }
+
+    [Fact]
     public void Export_SingleTwoPortComponent_GeneratesComponentFile()
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
@@ -99,26 +131,28 @@ public class VerilogAExporterTests
     }
 
     [Fact]
-    public void GenerateComponentModule_TwoPortWaveguide_ContainsPortDeclarations()
+    public void Export_TwoPortWaveguide_ModuleContainsPortDeclarations()
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
-        var moduleName = "test_wg";
 
-        var module = VerilogAExporter.GenerateComponentModule(comp, moduleName, 1550);
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions { WavelengthNm = 1550 });
+        var module = result.ComponentFiles.Values.First();
 
-        module.ShouldContain("module test_wg");
+        module.ShouldContain("module ");
         module.ShouldContain("electrical port0");
         module.ShouldContain("electrical port1");
         module.ShouldContain("endmodule");
     }
 
     [Fact]
-    public void GenerateComponentModule_ContainsSParameters()
+    public void Export_TwoPortWaveguide_ModuleContainsSParameters()
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
-        var moduleName = "test_wg";
 
-        var module = VerilogAExporter.GenerateComponentModule(comp, moduleName, 1550);
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions());
+        var module = result.ComponentFiles.Values.First();
 
         module.ShouldContain("s11_mag");
         module.ShouldContain("s12_mag");
@@ -127,34 +161,29 @@ public class VerilogAExporterTests
     }
 
     [Fact]
-    public void ExtractSParameters_ComponentWithSMatrix_ReturnsNonZeroTransfers()
+    public void Export_HeuristicFallback_EmitsLoudWarningComment()
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
-        var sParams = VerilogAExporter.ExtractSParameters(comp, StandardWaveLengths.RedNM);
+        // Wavelength not in the SMatrix map → heuristic path
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions { WavelengthNm = 9999 });
+        var module = result.ComponentFiles.Values.First();
 
-        // Waveguide should have S21 and S12 transfer
-        sParams.ShouldNotBeEmpty();
+        module.ShouldContain("WARNING: No S-matrix", Case.Insensitive);
+        module.ShouldContain("heuristic", Case.Insensitive);
     }
 
     [Fact]
-    public void ExtractSParameters_NoSMatrixForWavelength_FallsBackToHeuristic()
+    public void Export_SpecialCharsInComponentName_SanitizedInModuleName()
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        comp.NazcaFunctionName = "ebeam.y-1550";
 
-        // Use wavelength not in the SMatrix map
-        var sParams = VerilogAExporter.ExtractSParameters(comp, 9999);
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions());
 
-        // Should return heuristic model (non-empty for 2-port)
-        sParams.ShouldNotBeEmpty();
-    }
-
-    [Fact]
-    public void SanitizeIdentifier_SpecialChars_ReplacedWithUnderscores()
-    {
-        VerilogAExporter.SanitizeIdentifier("ebeam.y-1550").ShouldBe("ebeam_y_1550");
-        VerilogAExporter.SanitizeIdentifier("my module!").ShouldBe("my_module_");
-        VerilogAExporter.SanitizeIdentifier("valid_name_123").ShouldBe("valid_name_123");
+        result.ComponentFiles.Keys.ShouldContain("ebeam_y_1550.va");
     }
 
     [Fact]
