@@ -171,38 +171,10 @@ public class AiAssistantViewModelTests
         vm.IsTyping.ShouldBeFalse();
     }
 
-    [Fact]
-    public void GridToolDefinitions_ClearGrid_ShouldWarnAgainstAutomaticUse()
-    {
-        var vm = CreateViewModel();
-
-        var method = typeof(AiAssistantViewModel).GetMethod(
-            "BuildGridToolDefinitions",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        method.ShouldNotBeNull();
-
-        var tools = (IReadOnlyList<AiToolDefinition>)method.Invoke(null, null)!;
-        var clearGridTool = tools.FirstOrDefault(t => t.Name == "clear_grid");
-
-        clearGridTool.ShouldNotBeNull();
-        clearGridTool!.Description.ShouldContain("ONLY");
-        clearGridTool.Description.ShouldContain("explicitly");
-    }
-
-    [Fact]
-    public void GridToolDefinitions_PlaceComponent_ShouldExist()
-    {
-        var method = typeof(AiAssistantViewModel).GetMethod(
-            "BuildGridToolDefinitions",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        var tools = (IReadOnlyList<AiToolDefinition>)method!.Invoke(null, null)!;
-
-        tools.ShouldContain(t => t.Name == "place_component");
-        tools.ShouldContain(t => t.Name == "get_grid_state");
-        tools.ShouldContain(t => t.Name == "clear_grid");
-    }
+    // NOTE: Tests for `BuildGridToolDefinitions` were removed. That static method
+    // was replaced by the DI-based IAiTool / AiToolRegistry pattern — each tool
+    // is now its own IAiTool class (PlaceComponentTool, ClearGridTool, ...) and
+    // has its own test (see UnitTests/AI/*ToolTests.cs + AiToolRegistryTests.cs).
 
     private AiAssistantViewModel CreateViewModel()
         => new AiAssistantViewModel(_mockAiService.Object, _preferencesService);
