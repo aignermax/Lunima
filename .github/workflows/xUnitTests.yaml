@@ -35,8 +35,32 @@ jobs:
 
       - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          pip install photontorch torch matplotlib
+          # scipy is a transitive dep of photontorch 0.4.1 but missing from its
+          # published requirements — install it explicitly so `import photontorch`
+          # doesn't fail with ModuleNotFoundError on a fresh runner.
+          pip install photontorch torch matplotlib scipy
+          # Verify the import works with the exact probe the test uses.
+          python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
+
+      - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
+        run: |
+          set -euo pipefail
+          # Dev build — no tagged release channel exists yet. Verify the binary
+          # runs before relying on it so a broken upload blocks CI loudly.
+          curl -fL https://openva.fra1.digitaloceanspaces.com/openvaf_devel-x86_64-unknown-linux-gnu.tar.gz -o /tmp/openvaf.tar.gz
+          mkdir -p /tmp/openvaf
+          tar xf /tmp/openvaf.tar.gz -C /tmp/openvaf
+          sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
+          openvaf --help > /dev/null
+
+      - name: 🔌 Install NGSpice (for Verilog-A runtime simulation tests)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ngspice
+          ngspice --version | head -1
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests

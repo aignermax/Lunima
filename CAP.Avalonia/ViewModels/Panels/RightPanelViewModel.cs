@@ -106,6 +106,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public AiAssistantViewModel AiAssistant { get; }
 
+    /// <summary>
+    /// ViewModel for Verilog-A / SPICE export for co-simulation.
+    /// </summary>
+    public VerilogAExportViewModel VerilogAExport { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
@@ -122,7 +127,8 @@ public partial class RightPanelViewModel : ObservableObject
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
         UpdateViewModel update,
-        AiAssistantViewModel aiAssistant)
+        AiAssistantViewModel aiAssistant,
+        VerilogAExportViewModel verilogAExport)
     {
         _preferencesService = preferencesService;
 
@@ -139,6 +145,7 @@ public partial class RightPanelViewModel : ObservableObject
         PdkConsistency = pdkConsistency;
         Update = update;
         AiAssistant = aiAssistant;
+        VerilogAExport = verilogAExport;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

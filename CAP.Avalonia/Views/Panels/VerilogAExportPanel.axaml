@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.VerilogAExportPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Verilog-A / SPICE Export:" Foreground="#7BC8A4" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Export photonic circuit for co-simulation with electronic circuits (ngspice, Xyce)."
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+        <!-- Circuit Name -->
+        <TextBlock Text="Circuit name:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <TextBox Text="{Binding RightPanel.VerilogAExport.CircuitName}"
+                 Watermark="PhotonicCircuit"
+                 Margin="0,0,0,8"
+                 Background="#1e1e1e" Foreground="White"
+                 BorderBrush="#3e3e3e"/>
+
+        <!-- Output Directory -->
+        <TextBlock Text="Output directory:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <TextBox Text="{Binding RightPanel.VerilogAExport.OutputDirectory}"
+                 Watermark="Output folder path..."
+                 Margin="0,0,0,8"
+                 Background="#1e1e1e" Foreground="White"
+                 BorderBrush="#3e3e3e"/>
+
+        <!-- Wavelength -->
+        <TextBlock Text="Wavelength for S-parameters:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <ComboBox ItemsSource="{Binding RightPanel.VerilogAExport.WavelengthOptions}"
+                  SelectedValue="{Binding RightPanel.VerilogAExport.WavelengthNm}"
+                  Margin="0,0,0,8"
+                  HorizontalAlignment="Stretch"
+                  Background="#1e1e1e"/>
+
+        <!-- Options -->
+        <CheckBox Content="Include SPICE test bench (.sp)"
+                  IsChecked="{Binding RightPanel.VerilogAExport.IncludeTestBench}"
+                  Foreground="White" Margin="0,0,0,10"/>
+
+        <!-- Export Button -->
+        <Button Content="Export Verilog-A / SPICE"
+                Command="{Binding RightPanel.VerilogAExport.ExportCommand}"
+                HorizontalAlignment="Stretch" Margin="0,0,0,5" Padding="8,6"
+                Background="#3d6d4d"
+                IsEnabled="{Binding RightPanel.VerilogAExport.IsExporting, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Status -->
+        <TextBlock Text="{Binding RightPanel.VerilogAExport.StatusText}"
+                   Foreground="LightGreen" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.VerilogAExport.LastExportSucceeded}"/>
+        <TextBlock Text="{Binding RightPanel.VerilogAExport.StatusText}"
+                   Foreground="#FF6B6B" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.VerilogAExport.IsExporting, Converter={x:Static BoolConverters.Not}}"
+                   IsHitTestVisible="False"/>
+
+        <!-- Open Folder Button (visible after success) -->
+        <Button Content="Open Output Folder"
+                Command="{Binding RightPanel.VerilogAExport.OpenOutputDirectoryCommand}"
+                HorizontalAlignment="Stretch" Margin="0,0,0,5" Padding="6,4"
+                Background="#2d4d3d" FontSize="11"
+                IsVisible="{Binding RightPanel.VerilogAExport.LastExportSucceeded}"/>
+
+    </StackPanel>
+
+</UserControl>
