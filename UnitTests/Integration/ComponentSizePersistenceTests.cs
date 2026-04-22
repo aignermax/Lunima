@@ -66,8 +66,10 @@ public class ComponentSizePersistenceTests
         var commandManager = new CommandManager();
         var nazcaExporter  = new SimpleNazcaExporter();
         var gdsExportVm    = new GdsExportViewModel(new GdsExportService());
+        var photonTorchVm = new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
+            new CAP_Core.Export.PhotonTorchExporter(), canvas);
         var fileOps = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, templates, gdsExportVm);
+            canvas, commandManager, nazcaExporter, templates, gdsExportVm, photonTorchVm);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"cap_test_{Guid.NewGuid():N}.lun");
         return (fileOps, canvas, templates, tempFile);

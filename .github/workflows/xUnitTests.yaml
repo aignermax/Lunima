@@ -28,6 +28,16 @@ jobs:
       - name: 📦 Restore Dependencies
         run: dotnet restore
 
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
+        run: |
+          python -m pip install --upgrade pip
+          pip install photontorch torch matplotlib
+
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
         run: dotnet test --no-restore

@@ -610,9 +610,11 @@ public class DesignFileGroupPersistenceTests
         var commandManager = new CommandManager();
         var nazcaExporter = new SimpleNazcaExporter();
         var gdsExport = new GdsExportViewModel(new CAP_Core.Export.GdsExportService());
+        var photonTorchExport = new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
+            new CAP_Core.Export.PhotonTorchExporter(), canvas);
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, _library, gdsExport, errorConsole);
+            canvas, commandManager, nazcaExporter, _library, gdsExport, photonTorchExport, errorConsole);
 
         return (vm, canvas);
     }

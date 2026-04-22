@@ -75,6 +75,7 @@ public partial class MainViewModel : ObservableObject
         set
         {
             FileOperations.FileDialogService = value;
+            FileOperations.PhotonTorchExport.FileDialogService = value;
             LeftPanel.FileDialogService = value;
         }
     }
@@ -110,7 +111,11 @@ public partial class MainViewModel : ObservableObject
         var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService, errorConsoleService);
         gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
         gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, errorConsoleService);
+
+        var photonTorchVm = new ViewModels.Export.PhotonTorchExportViewModel(
+            new CAP_Core.Export.PhotonTorchExporter(), _canvas);
+
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, photonTorchVm, errorConsoleService);
         ViewportControl = viewportControl;
 
         // Wire up status callbacks
@@ -290,6 +295,7 @@ public partial class MainViewModel : ObservableObject
 
     private void WireFileOperations()
     {
+        FileOperations.PhotonTorchExport.UpdateStatus = UpdateStatusText;
         FileOperations.RebuildHierarchy = LeftPanel.HierarchyPanel.RebuildTree;
         FileOperations.ZoomToFitAfterLoad = (w, h) =>
         {
