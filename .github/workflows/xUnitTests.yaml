@@ -35,8 +35,14 @@ jobs:
 
       - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
         run: |
+          set -euxo pipefail
           python -m pip install --upgrade pip
           pip install photontorch torch matplotlib
+          # Verify import works with the exact probe command the test uses.
+          which python3
+          which python || true
+          python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
+          python -c "import photontorch; print('photontorch', photontorch.__version__)" || echo "python alias not on PATH"
 
       - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
         run: |
