@@ -45,6 +45,11 @@ internal static class VerilogAModuleWriter
         sb.AppendLine();
         sb.AppendLine($"module {moduleName}({portList});");
 
+        // Photonic signals flow bidirectionally (the S-matrix has both S_ij and
+        // S_ji entries), so every port is declared `inout`. OpenVAF rejects
+        // modules whose ports have no explicit direction.
+        for (int i = 0; i < pins.Count; i++)
+            sb.AppendLine($"    inout port{i};");
         for (int i = 0; i < pins.Count; i++)
             sb.AppendLine($"    electrical port{i};  // {pins[i].Name}");
 
