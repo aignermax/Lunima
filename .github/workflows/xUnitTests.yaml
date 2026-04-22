@@ -38,6 +38,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install photontorch torch matplotlib
 
+      - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
+        run: |
+          curl -L https://openva.fra1.digitaloceanspaces.com/openvaf_devel-x86_64-unknown-linux-gnu.tar.gz -o /tmp/openvaf.tar.gz
+          mkdir -p /tmp/openvaf
+          tar xf /tmp/openvaf.tar.gz -C /tmp/openvaf
+          sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
+          openvaf --help | head -3 || true
+
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
         run: dotnet test --no-restore
