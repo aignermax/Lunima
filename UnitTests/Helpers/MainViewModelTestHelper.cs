@@ -56,7 +56,8 @@ public static class MainViewModelTestHelper
             new CAP_Core.ErrorConsoleService(),
             leftPanel,
             rightPanel,
-            bottomPanel);
+            bottomPanel,
+            new ViewportControlViewModel(canvas));
     }
 
     /// <summary>

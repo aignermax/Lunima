@@ -74,6 +74,7 @@ public partial class App : Application
         services.AddTransient<IAiTool, SaveAsPrefabTool>();
         services.AddTransient<IAiTool, InspectGroupTool>();
         services.AddTransient<IAiTool, CopyComponentTool>();
+        services.AddTransient<IAiTool, FitToViewTool>();
         services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
 
         services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
@@ -99,6 +100,7 @@ public partial class App : Application
 
         // Register DesignCanvasViewModel as singleton (shared across all panel VMs)
         services.AddSingleton<DesignCanvasViewModel>();
+        services.AddSingleton<ViewportControlViewModel>();
 
         // Register sub-ViewModels (Left panel)
         services.AddTransient<HierarchyPanelViewModel>();

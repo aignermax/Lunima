@@ -93,7 +93,8 @@ public partial class MainViewModel : ObservableObject
         ErrorConsoleService errorConsoleService,
         LeftPanelViewModel leftPanel,
         RightPanelViewModel rightPanel,
-        BottomPanelViewModel bottomPanel)
+        BottomPanelViewModel bottomPanel,
+        ViewportControlViewModel viewportControl)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -110,7 +111,7 @@ public partial class MainViewModel : ObservableObject
         gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
         gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, errorConsoleService);
-        ViewportControl = new ViewportControlViewModel(_canvas);
+        ViewportControl = viewportControl;
 
         // Wire up status callbacks
         CanvasInteraction.UpdateStatus = UpdateStatusText;
