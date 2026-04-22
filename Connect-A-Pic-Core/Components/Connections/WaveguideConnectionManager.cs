@@ -208,6 +208,12 @@ public class WaveguideConnectionManager
     public int MaxRoutingAttempts { get; set; } = 6;
 
     /// <summary>
+    /// Invoked on the routing thread when a connection escalates to Phase 2 (complex route).
+    /// Wire this to update a UI progress indicator.
+    /// </summary>
+    public Action? OnComplexRouteStarted { get; set; }
+
+    /// <summary>
     /// Recalculates transmission for all connections using incremental routing.
     /// Existing valid routes are preserved; only broken or new connections are re-routed.
     /// Falls back to full re-route if incremental routing leaves failed connections.
@@ -219,6 +225,9 @@ public class WaveguideConnectionManager
         CancellationToken cancellationToken = default)
     {
         var router = _router;
+
+        // Wire the complex-route callback so Phase 2 escalations surface to the UI
+        router.OnComplexRouteStarted = OnComplexRouteStarted;
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
@@ -269,7 +278,7 @@ public class WaveguideConnectionManager
             foreach (var connection in Connections)
             {
                 if (cancellationToken.IsCancellationRequested) return;
-                connection.RecalculateTransmission(_router);
+                connection.RecalculateTransmission(_router, cancellationToken);
                 progressCallback?.Invoke();
             }
         }
@@ -333,7 +342,7 @@ public class WaveguideConnectionManager
             if (cancellationToken.IsCancellationRequested)
                 return (false, failedCount);
 
-            connection.RecalculateTransmission(_router);
+            connection.RecalculateTransmission(_router, cancellationToken);
             progressCallback?.Invoke();
 
             // Register ALL paths with valid geometry as obstacles, including blocked fallbacks.
@@ -416,7 +425,7 @@ public class WaveguideConnectionManager
             if (cancellationToken.IsCancellationRequested)
                 return (false, failedCount);
 
-            connection.RecalculateTransmission(_router);
+            connection.RecalculateTransmission(_router, cancellationToken);
             progressCallback?.Invoke();
 
             // Register ANY path with valid geometry as an obstacle, including blocked fallbacks.

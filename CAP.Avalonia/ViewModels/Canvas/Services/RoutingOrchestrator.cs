@@ -124,6 +124,20 @@ public class RoutingOrchestrator
             RoutingStatusText = $"Routing {_connectionManager.Connections.Count} connections...";
             StateChanged?.Invoke();
 
+            // Wire Phase 2 callback: update status text when a complex route is being computed.
+            // Called on the background routing thread — must post to UI thread.
+            _connectionManager.OnComplexRouteStarted = () =>
+            {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        RoutingStatusText = "Computing complex path...";
+                        StateChanged?.Invoke();
+                    }
+                }, global::Avalonia.Threading.DispatcherPriority.Normal);
+            };
+
             var components = _components.Select(c => c.Component).ToList();
             var lastUpdateTime = DateTime.MinValue;
             var updateLock = new object();
@@ -168,6 +182,7 @@ public class RoutingOrchestrator
         }
         finally
         {
+            _connectionManager.OnComplexRouteStarted = null;
             _routingSemaphore.Release();
             IsRouting = false;
             StateChanged?.Invoke();

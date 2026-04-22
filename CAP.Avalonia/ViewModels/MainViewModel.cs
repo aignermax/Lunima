@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
+using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.ViewModels;
 
@@ -93,7 +94,8 @@ public partial class MainViewModel : ObservableObject
         ErrorConsoleService errorConsoleService,
         LeftPanelViewModel leftPanel,
         RightPanelViewModel rightPanel,
-        BottomPanelViewModel bottomPanel)
+        BottomPanelViewModel bottomPanel,
+        ViewportControlViewModel viewportControl)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -114,7 +116,7 @@ public partial class MainViewModel : ObservableObject
             new CAP_Core.Export.PhotonTorchExporter(), _canvas);
 
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, photonTorchVm, errorConsoleService);
-        ViewportControl = new ViewportControlViewModel(_canvas);
+        ViewportControl = viewportControl;
 
         // Wire up status callbacks
         CanvasInteraction.UpdateStatus = UpdateStatusText;
@@ -510,8 +512,21 @@ public partial class MainViewModel : ObservableObject
 }
 
 // Data classes for serialization (used by FileOperationsViewModel)
+
+/// <summary>
+/// Root data structure for a .lun design file (Photonic Intermediate Representation).
+/// Version 2.0 stores S-matrix data, simulation results, metadata, and external references.
+/// Legacy v1 files (FormatVersion missing or different) load with a loud warning in the
+/// error console and get upgraded to v2.0 on the next save.
+/// </summary>
 public class DesignFileData
 {
+    /// <summary>
+    /// File format version. "2.0" is the current format. Other values trigger a loud
+    /// warning during load; missing PIR sections remain empty until the next save.
+    /// </summary>
+    public string? FormatVersion { get; set; }
+
     public List<ComponentData> Components { get; set; } = new();
     public List<ConnectionData> Connections { get; set; } = new();
 
@@ -519,6 +534,30 @@ public class DesignFileData
     /// ComponentGroups with their hierarchical structure, frozen paths, and external pins.
     /// </summary>
     public List<DesignGroupData>? Groups { get; set; }
+
+    /// <summary>
+    /// Per-component S-matrix data, keyed by component Identifier string.
+    /// Null or empty for designs without stored S-matrix overrides.
+    /// </summary>
+    public Dictionary<string, ComponentSMatrixData>? SMatrices { get; set; }
+
+    /// <summary>
+    /// Most recent simulation results and any stored parameter sweep results.
+    /// Null if no simulation has been run and saved.
+    /// </summary>
+    public SimulationResultsData? SimulationResults { get; set; }
+
+    /// <summary>
+    /// Design metadata: PDK versions, design rules, authorship.
+    /// Automatically populated with dates on every save.
+    /// </summary>
+    public DesignMetadata? Metadata { get; set; }
+
+    /// <summary>
+    /// References to external simulation or measurement files linked to this design.
+    /// Null or empty for designs without external data.
+    /// </summary>
+    public List<ExternalReferenceData>? ExternalReferences { get; set; }
 }
 
 /// <summary>

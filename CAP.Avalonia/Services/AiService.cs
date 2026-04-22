@@ -26,7 +26,14 @@ public class AiService : IAiService
         "When the user asks you to build or create a circuit, use the available tools to place components and make connections. " +
         "Always call get_grid_state first to understand the current canvas state. " +
         "Use the available_types list from get_grid_state to find valid component names. " +
-        "Typical grid coordinates are 0–5000 micrometers. Space components 300–500µm apart. " +
+        "Typical grid coordinates are 0–5000 micrometers. Space components 150–300µm apart for compact designs. " +
+        "IMPORTANT: NEVER call clear_grid unless the user explicitly asks you to clear, reset, or start fresh. " +
+        "Always preserve existing components. Find empty space on the grid to place new circuits alongside existing ones. " +
+        "AFTER placing or connecting components, ALWAYS do the following in order: " +
+        "1. Call get_grid_state() to verify the components were actually placed and count them. " +
+        "2. Call fit_to_view() so the user can immediately see the result. " +
+        "3. Report the actual component count (e.g. 'Placed 5 components: 2 MMI, 2 phase shifters, 1 waveguide'). " +
+        "If get_grid_state() shows fewer components than expected, report the discrepancy honestly — do NOT claim success. " +
         "Be concise and report what you did. Keep responses under 300 words.";
 
     /// <inheritdoc/>
