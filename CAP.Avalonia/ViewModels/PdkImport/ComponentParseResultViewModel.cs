@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CAP_Core.Export;
 
@@ -43,9 +44,17 @@ public partial class ComponentParseResultViewModel : ObservableObject
 
     /// <summary>
     /// Formatted dimensions string for display (e.g., "10.5 × 25.3 µm").
+    /// Uses invariant culture so the decimal separator is stable across locales
+    /// — the wizard dialog is a debug-ish component-review view, not localized
+    /// user content, and mixing locale-dependent decimals with unit strings
+    /// confuses both users and tests on non-US/GB hosts.
     /// </summary>
     public string DimensionsText =>
-        $"{WidthMicrometers:F1} × {HeightMicrometers:F1} µm";
+        string.Format(
+            CultureInfo.InvariantCulture,
+            "{0:F1} × {1:F1} µm",
+            WidthMicrometers,
+            HeightMicrometers);
 
     /// <summary>Whether this component is selected for import.</summary>
     [ObservableProperty]

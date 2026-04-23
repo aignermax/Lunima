@@ -101,8 +101,12 @@ public class PdkImportService
 
     /// <summary>
     /// Searches for the parse_pdk.py script relative to the application base directory.
+    /// Throws immediately with the full list of probed paths when nothing is found —
+    /// previously this returned the first candidate and deferred the error to
+    /// <see cref="PdkNazcaParserService"/>, which produced a misleading
+    /// FileNotFoundException pointing at a path the user never chose.
     /// </summary>
-    private string FindParserScript()
+    private static string FindParserScript()
     {
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         var candidates = new[]
@@ -119,7 +123,10 @@ public class PdkImportService
                 return candidate;
         }
 
-        return candidates[0]; // Return best guess; error is raised by the parser service
+        throw new FileNotFoundException(
+            "PDK parser script not found. Looked in:" + Environment.NewLine +
+            string.Join(Environment.NewLine, candidates.Select(c => "  - " + c)),
+            candidates[0]);
     }
 
     private static PdkComponentDraft ConvertComponent(ParsedComponentGeometry comp)

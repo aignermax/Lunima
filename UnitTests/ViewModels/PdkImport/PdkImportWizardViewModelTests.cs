@@ -253,26 +253,89 @@ public class PdkImportWizardViewModelTests
         }
     }
 
-    // ── Integration: VM ↔ Service interaction ────────────────────────────────
+    // ── FilterToSelected (real internal method) ──────────────────────────────
 
     [Fact]
-    public void WizardViewModel_SelectingComponents_FilteredOnSave()
+    public void FilterToSelected_ExcludesDeselectedComponents()
     {
-        // Verify that deselected components don't affect selected set
-        var geometry1 = MakeGeometry("comp_a", pinCount: 2);
-        var geometry2 = MakeGeometry("comp_b", pinCount: 0);
+        var vm = MakeWizardVm("test.py");
+        var g1 = MakeGeometry("comp_a", pinCount: 2);
+        var g2 = MakeGeometry("comp_b", pinCount: 0);
+        vm.ParsedComponents.Add(new ComponentParseResultViewModel(g1));
+        vm.ParsedComponents.Add(new ComponentParseResultViewModel(g2) { IsSelected = false });
 
-        var compVm1 = new ComponentParseResultViewModel(geometry1);
-        var compVm2 = new ComponentParseResultViewModel(geometry2);
-        compVm2.IsSelected = false; // Deselect comp_b
+        var result = new PdkParseResult { Components = new() { g1, g2 } };
+        var filtered = vm.FilterToSelected(result);
 
-        var selectedNames = new[] { compVm1, compVm2 }
-            .Where(c => c.IsSelected)
-            .Select(c => c.Name)
-            .ToHashSet();
+        filtered.Components.Select(c => c.Name).ShouldBe(new[] { "comp_a" });
+    }
 
-        selectedNames.ShouldContain("comp_a");
-        selectedNames.ShouldNotContain("comp_b");
+    [Fact]
+    public void FilterToSelected_WithDuplicateNames_RespectsIndividualSelection()
+    {
+        // Regression: parametric Nazca cells can emit two components with the
+        // same Name. A name-based HashSet filter would either include both
+        // when one is unchecked, or exclude both when one is checked. The
+        // filter must key on positional identity instead.
+        var vm = MakeWizardVm("test.py");
+        var g1 = MakeGeometry("dup", pinCount: 2);
+        var g2 = MakeGeometry("dup", pinCount: 2);
+        vm.ParsedComponents.Add(new ComponentParseResultViewModel(g1) { IsSelected = true });
+        vm.ParsedComponents.Add(new ComponentParseResultViewModel(g2) { IsSelected = false });
+
+        var result = new PdkParseResult { Components = new() { g1, g2 } };
+        var filtered = vm.FilterToSelected(result);
+
+        filtered.Components.Count.ShouldBe(1);
+        filtered.Components[0].ShouldBeSameAs(g1);
+    }
+
+    // ── SaveAndLoad guards ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SaveAndLoad_BeforeParseCompletes_IsNoOpWithStatus()
+    {
+        var vm = MakeWizardVm("test.py");
+        vm.OutputPath = Path.GetTempFileName();
+        bool completed = false;
+        vm.OnCompleted = _ => completed = true;
+
+        await vm.SaveAndLoadCommand.ExecuteAsync(null);
+
+        completed.ShouldBeFalse();
+        vm.StatusText.ShouldContain("Parsing");
+    }
+
+    [Fact]
+    public async Task SaveAndLoad_WithBlankOutputPath_IsNoOpWithStatus()
+    {
+        var vm = MakeWizardVm("test.py");
+        vm.ParseResultForTesting = new PdkParseResult();
+        vm.OutputPath = "";
+        bool completed = false;
+        vm.OnCompleted = _ => completed = true;
+
+        await vm.SaveAndLoadCommand.ExecuteAsync(null);
+
+        completed.ShouldBeFalse();
+        vm.StatusText.ShouldContain("output path");
+    }
+
+    [Fact]
+    public async Task SaveAndLoad_WithNoComponentsSelected_IsNoOpWithStatus()
+    {
+        var vm = MakeWizardVm("test.py");
+        vm.ParseResultForTesting = new PdkParseResult();
+        vm.OutputPath = Path.GetTempFileName();
+        var g = MakeGeometry("only", pinCount: 1);
+        vm.ParsedComponents.Add(new ComponentParseResultViewModel(g) { IsSelected = false });
+        bool completed = false;
+        vm.OnCompleted = _ => completed = true;
+
+        await vm.SaveAndLoadCommand.ExecuteAsync(null);
+
+        completed.ShouldBeFalse();
+        vm.StatusText.ShouldContain("at least one component");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

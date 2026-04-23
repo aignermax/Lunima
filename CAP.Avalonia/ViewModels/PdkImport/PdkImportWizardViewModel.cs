@@ -31,6 +31,17 @@ public partial class PdkImportWizardViewModel : ObservableObject
     private readonly PdkImportService _importService;
     private PdkParseResult? _parseResult;
 
+    /// <summary>
+    /// Test-only seam to populate the parse result without running an actual
+    /// parse. Production code only writes to <c>_parseResult</c> from inside
+    /// <see cref="StartParsingAsync"/>.
+    /// </summary>
+    internal PdkParseResult? ParseResultForTesting
+    {
+        get => _parseResult;
+        set => _parseResult = value;
+    }
+
     /// <summary>Absolute path to the Python .py file being imported.</summary>
     public string PyFilePath { get; }
 
@@ -102,10 +113,14 @@ public partial class PdkImportWizardViewModel : ObservableObject
 
     /// <summary>
     /// Starts the parse operation. Called automatically when the dialog opens.
-    /// On success, advances to the Review step.
+    /// On success, advances to the Review step. Safe against double-click /
+    /// re-entry: a second call while the first is still running is a no-op,
+    /// preventing a race between two `ParsedComponents.Clear()` + `Add` loops.
     /// </summary>
     public async Task StartParsingAsync()
     {
+        if (IsLoading) return;
+
         IsLoading = true;
         HasError = false;
         ErrorText = "";
@@ -176,11 +191,29 @@ public partial class PdkImportWizardViewModel : ObservableObject
 
     /// <summary>
     /// Converts the selected components to a PDK JSON file and invokes <see cref="OnCompleted"/>.
+    /// No-ops with a visible status message when the parse hasn't completed yet,
+    /// output path is blank, or the user has unchecked every component — all
+    /// three cases would otherwise either silently do nothing or write a
+    /// components-less JSON that later fails to load.
     /// </summary>
     [RelayCommand]
     private async Task SaveAndLoad()
     {
-        if (_parseResult == null || string.IsNullOrWhiteSpace(OutputPath)) return;
+        if (_parseResult == null)
+        {
+            StatusText = "Parsing hasn't finished yet.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(OutputPath))
+        {
+            StatusText = "Choose an output path first.";
+            return;
+        }
+        if (!ParsedComponents.Any(c => c.IsSelected))
+        {
+            StatusText = "Select at least one component before saving.";
+            return;
+        }
 
         IsLoading = true;
         HasError = false;
@@ -216,12 +249,23 @@ public partial class PdkImportWizardViewModel : ObservableObject
         OnCancelled?.Invoke();
     }
 
-    private PdkParseResult FilterToSelected(PdkParseResult result)
+    /// <summary>
+    /// Returns a copy of <paramref name="result"/> filtered to only the components
+    /// whose corresponding VM entry is selected. Filtering is done by positional
+    /// index instead of by name: two parametric Nazca cells can produce
+    /// identical <c>Name</c> values, and a name-based <see cref="HashSet{T}"/>
+    /// would either include both entries when one is unchecked, or exclude
+    /// both when one is checked.
+    /// </summary>
+    internal PdkParseResult FilterToSelected(PdkParseResult result)
     {
-        var selectedNames = ParsedComponents
-            .Where(c => c.IsSelected)
-            .Select(c => c.Name)
-            .ToHashSet();
+        var selectedComponents = new List<ParsedComponentGeometry>();
+        int count = Math.Min(result.Components.Count, ParsedComponents.Count);
+        for (int i = 0; i < count; i++)
+        {
+            if (ParsedComponents[i].IsSelected)
+                selectedComponents.Add(result.Components[i]);
+        }
 
         return new PdkParseResult
         {
@@ -232,7 +276,7 @@ public partial class PdkImportWizardViewModel : ObservableObject
             Version = result.Version,
             DefaultWavelengthNm = result.DefaultWavelengthNm,
             NazcaModuleName = result.NazcaModuleName,
-            Components = result.Components.Where(c => selectedNames.Contains(c.Name)).ToList(),
+            Components = selectedComponents,
         };
     }
 }
