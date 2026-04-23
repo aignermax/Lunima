@@ -44,6 +44,15 @@ jobs:
           # Verify the import works with the exact probe the test uses.
           python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
 
+      - name: 🌊 Install sax (for PICWave export integration tests)
+        run: |
+          set -euo pipefail
+          # sax is the S-parameter library Simphony 0.7+ builds on. The PICWave
+          # exporter emits a sax-based script; the E2E tests execute it and
+          # inspect the returned transmission.
+          pip install sax
+          python3 -c "import sax, numpy, matplotlib; print('sax', sax.__version__)"
+
       - name: ⚡ Install OpenVAF (for Phase 4 Verilog-A export integration tests)
         run: |
           set -euo pipefail

@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
+using CAP_Core.Export;
 using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.ViewModels;
@@ -86,6 +87,7 @@ public partial class MainViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
+        PicWaveExporter picWaveExporter,
         Commands.CommandManager commandManager,
         UserPreferencesService preferencesService,
         Services.GroupPreviewGenerator previewGenerator,
@@ -115,7 +117,7 @@ public partial class MainViewModel : ObservableObject
         var photonTorchVm = new ViewModels.Export.PhotonTorchExportViewModel(
             new CAP_Core.Export.PhotonTorchExporter(), _canvas);
 
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, LeftPanel.AllTemplates, gdsExportVm, photonTorchVm, errorConsoleService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportVm, photonTorchVm, errorConsoleService);
         ViewportControl = viewportControl;
 
         // Wire up status callbacks
@@ -383,6 +385,9 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private async Task ExportNazca() => await FileOperations.ExportNazcaCommand.ExecuteAsync(null);
+
+    [RelayCommand]
+    private async Task ExportPicWave() => await FileOperations.ExportPicWaveCommand.ExecuteAsync(null);
 
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);

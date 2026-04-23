@@ -96,6 +96,8 @@
                         MinWidth="75" Margin="2" Padding="8,4" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
                 <Button Content="🔦 PhotonTorch" Command="{Binding FileOperations.PhotonTorchExport.ExportCommand}"
                         MinWidth="105" Margin="2" Padding="8,4" Background="#3d4d6d" ToolTip.Tip="Export to PhotonTorch for time-domain simulation"/>
+                <Button Content="🌊 PICWave" Command="{Binding ExportPicWaveCommand}"
+                        MinWidth="85" Margin="2" Padding="8,4" Background="#3d4d5d" ToolTip.Tip="Export to PICWave Python circuit simulator"/>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 

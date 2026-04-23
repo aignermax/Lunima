@@ -126,60 +126,25 @@ internal static class VerilogAModuleWriter
     }
 
     /// <summary>
-    /// Extracts (out, in) → S-parameter. Returns the map plus a flag indicating
-    /// whether the heuristic fallback was used (so the caller can emit a WARNING).
-    /// Throws when a pin has no <c>LogicalPin</c> (indicates an unfinished model).
+    /// Extracts (out, in) → S-parameter via the shared <see cref="PirSMatrixExtractor"/>
+    /// and falls back to a Verilog-A-specific heuristic when no S-matrix is
+    /// registered for the given wavelength. The flag tells the caller whether
+    /// the heuristic was used so a WARNING comment can be emitted.
     /// </summary>
     internal static (Dictionary<(int Out, int In), Complex> Map, bool UsedHeuristic) ExtractSParameters(
         Component comp, int wavelengthNm)
     {
-        var result = new Dictionary<(int, int), Complex>();
-        var pins = comp.PhysicalPins;
+        var extracted = PirSMatrixExtractor.TryExtract(comp, wavelengthNm);
+        if (extracted != null)
+            return (extracted, false);
 
-        foreach (var pin in pins)
-        {
-            if (pin.LogicalPin == null)
-            {
-                throw new InvalidOperationException(
-                    $"Pin '{pin.Name}' on component '{comp.Name}' has no LogicalPin. " +
-                    "The component model is incomplete — finish wiring the LogicalPins " +
-                    "before exporting to Verilog-A.");
-            }
-        }
-
-        if (!comp.WaveLengthToSMatrixMap.TryGetValue(wavelengthNm, out var sMatrix))
-            return (ApplyHeuristicModel(comp), UsedHeuristic: true);
-
-        var transfers = sMatrix.GetNonNullValues();
-
-        for (int outIdx = 0; outIdx < pins.Count; outIdx++)
-        {
-            var outPin = pins[outIdx];
-            for (int inIdx = 0; inIdx < pins.Count; inIdx++)
-            {
-                var inPin = pins[inIdx];
-                var key = (inPin.LogicalPin!.IDInFlow, outPin.LogicalPin!.IDOutFlow);
-                if (transfers.TryGetValue(key, out var transfer))
-                    result[(outIdx, inIdx)] = transfer;
-            }
-        }
-
-        // S-matrix was provided but did not map onto any (in-flow, out-flow) pair of the
-        // component's PhysicalPins. Falling back to the heuristic here would silently
-        // replace user-supplied physics with an invented default.
-        if (result.Count == 0)
-            throw new InvalidOperationException(
-                $"Component '{comp.Name}' has an S-matrix at {wavelengthNm}nm but none of its " +
-                "entries match the PhysicalPin LogicalPin GUIDs. The SMatrix pin IDs are out of " +
-                "sync with the component's LogicalPins — re-wire the pins or rebuild the model.");
-
-        return (result, false);
+        return (ApplyHeuristicModel(comp), UsedHeuristic: true);
     }
 
     private static Dictionary<(int, int), Complex> ApplyHeuristicModel(Component comp)
     {
         var result = new Dictionary<(int, int), Complex>();
-        var name = (comp.NazcaFunctionName ?? comp.Name).ToLowerInvariant();
+        var name = (comp.NazcaFunctionName ?? comp.Name ?? "").ToLowerInvariant();
         int n = comp.PhysicalPins.Count;
 
         if (n == 2)
