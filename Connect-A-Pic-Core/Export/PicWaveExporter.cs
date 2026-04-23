@@ -38,6 +38,7 @@ public class PicWaveExporter
     /// pin GUIDs don't match the component's LogicalPins, or a component has no
     /// physical pins. See message for the offending component.
     /// </exception>
+    /// <exception cref="ArgumentException">Invalid wavelength sweep parameters.</exception>
     public string Export(
         IEnumerable<Component> components,
         IEnumerable<WaveguideConnection> connections,
@@ -46,12 +47,31 @@ public class PicWaveExporter
         double wavelengthMaxNm = DefaultWavelengthMaxNm,
         int numPoints = DefaultNumPoints)
     {
+        ValidateSweep(wavelengthNm, wavelengthMinNm, wavelengthMaxNm, numPoints);
+
         var allComponents = FlattenComponents(components).ToList();
         var allConnections = connections.ToList();
 
         return PicWaveScriptWriter.Write(
             allComponents, allConnections,
             wavelengthNm, wavelengthMinNm, wavelengthMaxNm, numPoints);
+    }
+
+    private static void ValidateSweep(int wavelengthNm, double wlMinNm, double wlMaxNm, int numPoints)
+    {
+        if (wavelengthNm <= 0)
+            throw new ArgumentException(
+                $"wavelengthNm must be positive; got {wavelengthNm}.", nameof(wavelengthNm));
+        if (wlMinNm <= 0 || wlMaxNm <= 0)
+            throw new ArgumentException(
+                $"Sweep bounds must be positive; got [{wlMinNm}, {wlMaxNm}] nm.");
+        if (wlMinNm >= wlMaxNm)
+            throw new ArgumentException(
+                $"Sweep minimum must be strictly less than maximum; got [{wlMinNm}, {wlMaxNm}] nm.");
+        if (numPoints < 2)
+            throw new ArgumentException(
+                $"numPoints must be at least 2 for a meaningful sweep; got {numPoints}.",
+                nameof(numPoints));
     }
 
     /// <summary>

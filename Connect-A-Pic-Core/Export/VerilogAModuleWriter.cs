@@ -144,7 +144,7 @@ internal static class VerilogAModuleWriter
     private static Dictionary<(int, int), Complex> ApplyHeuristicModel(Component comp)
     {
         var result = new Dictionary<(int, int), Complex>();
-        var name = (comp.NazcaFunctionName ?? comp.Name).ToLowerInvariant();
+        var name = (comp.NazcaFunctionName ?? comp.Name ?? "").ToLowerInvariant();
         int n = comp.PhysicalPins.Count;
 
         if (n == 2)

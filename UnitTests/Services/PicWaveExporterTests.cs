@@ -287,4 +287,91 @@ public class PicWaveExporterTests
         script.ShouldContain("OUTPUT_PORTS");
         script.ShouldContain("raise ValueError");
     }
+
+    [Fact]
+    public void Export_WithComponents_ListsVarNamesAsPortCandidates()
+    {
+        // Users were getting empty INPUT_PORTS/OUTPUT_PORTS with no hint which
+        // identifiers are valid. The header now lists every emitted var name so
+        // the user can pick the right ones without hand-reading the script.
+        var a = MakeComponent("input_gc", "ebeam_grating_coupler_te1550", pinCount: 1);
+        var b = MakeComponent("output_gc", "ebeam_grating_coupler_te1550", pinCount: 1);
+        var script = _exporter.Export([a, b], []);
+
+        script.ShouldContain("- input_gc");
+        script.ShouldContain("- output_gc");
+    }
+
+    // --- Sweep validation ---
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Export_NonPositiveTargetWavelength_Throws(int wavelengthNm)
+    {
+        Should.Throw<ArgumentException>(() => _exporter.Export([], [], wavelengthNm: wavelengthNm));
+    }
+
+    [Fact]
+    public void Export_ReversedSweepBounds_Throws()
+    {
+        var ex = Should.Throw<ArgumentException>(
+            () => _exporter.Export([], [], wavelengthMinNm: 1600, wavelengthMaxNm: 1500));
+        ex.Message.ShouldContain("minimum");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(-10)]
+    public void Export_InvalidNumPoints_Throws(int numPoints)
+    {
+        Should.Throw<ArgumentException>(() => _exporter.Export([], [], numPoints: numPoints));
+    }
+
+    // --- Group-external-pin connection resolution ---
+
+    [Fact]
+    public void Export_ConnectionOnGroupExternalPin_ResolvesToLeafComponent()
+    {
+        // Regression: ComponentGroup gets flattened before emission, so a
+        // connection authored against the group's external pin (ParentComponent =
+        // the group) must be unwrapped to the leaf PhysicalPin or the resulting
+        // circuit.connect(...) line would reference a var name that was never
+        // emitted via circuit.add_component.
+        var leaf = MakeComponent("leaf_wg", "ebeam_wg_strip_straight", pinCount: 2);
+        var other = MakeComponent("other_wg", "ebeam_wg_strip_straight", pinCount: 2);
+
+        var group = new ComponentGroup("my group");
+        group.Identifier = "my_group";
+        group.AddChild(leaf);
+        group.ExternalPins.Add(new GroupPin
+        {
+            Name = "group_out",
+            InternalPin = leaf.PhysicalPins[1],
+            RelativeX = 0,
+            RelativeY = 5,
+            AngleDegrees = 0,
+        });
+        // Mirror ComponentGroup.SyncPhysicalPinsFromExternalPins so the
+        // connection can be authored against the group's outward-facing pin.
+        group.PhysicalPins.Add(new PhysicalPin
+        {
+            Name = "group_out",
+            ParentComponent = group,
+            LogicalPin = leaf.PhysicalPins[1].LogicalPin,
+        });
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = group.PhysicalPins[0],
+            EndPin = other.PhysicalPins[0],
+        };
+
+        var script = _exporter.Export([group, other], [conn]);
+
+        // Connection should reference the leaf component and its real pin name.
+        script.ShouldContain("circuit.connect('leaf_wg', 'out1', 'other_wg', 'in')");
+        script.ShouldNotContain("'my_group'");
+    }
 }
