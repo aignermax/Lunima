@@ -1,3 +1,4 @@
+using System.Numerics;
 using CAP_Core;
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Connections;
@@ -87,11 +88,18 @@ public class VerilogAExporterTests
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
         var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
-            new VerilogAExportOptions { IncludeTestBench = true });
+            new VerilogAExportOptions { IncludeTestBench = true, CircuitName = "MyCircuit" });
 
         result.Success.ShouldBeTrue();
         result.SpiceTestBench.ShouldNotBeNullOrEmpty();
-        result.SpiceTestBench.ShouldContain(".op");
+        // NGSpice-OSDI flow: one pre_osdi per component module inside a .control
+        // block, N-elements instantiate the compact models directly (OpenVAF can't
+        // compile the hierarchical top-level .va, so we don't reference it).
+        result.SpiceTestBench.ShouldContain("pre_osdi components/placeCell_StraightWG.osdi");
+        result.SpiceTestBench.ShouldContain(".control");
+        result.SpiceTestBench.ShouldContain(".endc");
+        result.SpiceTestBench.ShouldContain("N_inst0 ");
+        result.SpiceTestBench.ShouldContain(".model placeCell_StraightWG_mod placeCell_StraightWG");
     }
 
     [Fact]
@@ -140,8 +148,10 @@ public class VerilogAExporterTests
         var module = result.ComponentFiles.Values.First();
 
         module.ShouldContain("module ");
-        module.ShouldContain("electrical port0");
-        module.ShouldContain("electrical port1");
+        module.ShouldContain("port0_re");
+        module.ShouldContain("port0_im");
+        module.ShouldContain("port1_re");
+        module.ShouldContain("port1_im");
         module.ShouldContain("endmodule");
     }
 
@@ -154,10 +164,10 @@ public class VerilogAExporterTests
             new VerilogAExportOptions());
         var module = result.ComponentFiles.Values.First();
 
-        module.ShouldContain("s11_mag");
-        module.ShouldContain("s12_mag");
-        module.ShouldContain("s21_mag");
-        module.ShouldContain("s22_mag");
+        module.ShouldContain("s11_re");
+        module.ShouldContain("s12_re");
+        module.ShouldContain("s21_re");
+        module.ShouldContain("s22_re");
     }
 
     [Fact]
@@ -165,7 +175,6 @@ public class VerilogAExporterTests
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
-        // Wavelength not in the SMatrix map → heuristic path
         var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
             new VerilogAExportOptions { WavelengthNm = 9999 });
         var module = result.ComponentFiles.Values.First();
@@ -231,14 +240,14 @@ public class VerilogAExporterTests
         var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
             new VerilogAExportOptions { IncludeTestBench = true });
 
-        // 1 component file + 1 netlist + 1 test bench = 3
         result.TotalFileCount.ShouldBe(3);
     }
 
     [Fact]
     public void Export_DuplicateComponentTypes_GeneratesSingleModuleFile()
     {
-        // Two identical component types should produce one .va module, not two
+        // Two components with the same NazcaFunctionName must share one .va module,
+        // otherwise the top-level netlist would emit two `include` lines for the same symbol.
         var comp1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         var comp2 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
@@ -246,7 +255,53 @@ public class VerilogAExporterTests
             new VerilogAExportOptions());
 
         result.Success.ShouldBeTrue();
-        // Only one component file since both have the same NazcaFunctionName
         result.ComponentFiles.Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Verifies that forward (S21) and backward (S12) S-parameters are extracted
+    /// independently. A refactor that collapsed them to one key would still pass
+    /// the symmetric phase-shifter test but would fail here.
+    /// </summary>
+    [Fact]
+    public void Export_PhaseShifter_AsymmetricForwardBackward_BothDirectionsEmittedIndependently()
+    {
+        var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(
+            forward:  new Complex(0, 1),   // S21 = i
+            backward: new Complex(0.5, 0)  // S12 = 0.5 (real, different from S21)
+        );
+
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions { WavelengthNm = 1550 });
+        var module = result.ComponentFiles.Values.First();
+
+        result.Success.ShouldBeTrue();
+        module.ShouldContain("s21_re = 0;");
+        module.ShouldContain("s21_im = 1;");
+        module.ShouldContain("s12_re = 0.5;");
+        module.ShouldContain("s12_im = 0;");
+    }
+
+    /// <summary>
+    /// Verifies that a phase-shifter with S12 = e^(iπ/2) = i emits both
+    /// <c>s12_re</c> and <c>s12_im</c> parameters, preserving the full complex
+    /// value rather than collapsing to the real part only.
+    /// </summary>
+    [Fact]
+    public void Export_PhaseShifter_S12EqualToImaginaryUnit_BothReImParametersInFile()
+    {
+        // e^(iπ/2) = i → Re part = 0, Im part = 1
+        var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(forward: new Complex(0, 1));
+
+        var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
+            new VerilogAExportOptions { WavelengthNm = 1550 });
+        var module = result.ComponentFiles.Values.First();
+
+        result.Success.ShouldBeTrue();
+        module.ShouldContain("s12_re");
+        module.ShouldContain("s12_im");
+        // cos(π/2) = 0, sin(π/2) = 1 — exact values via G6 format
+        module.ShouldContain("s12_re = 0;");
+        module.ShouldContain("s12_im = 1;");
     }
 }

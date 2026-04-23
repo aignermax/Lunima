@@ -187,6 +187,63 @@ namespace UnitTests
         }
 
         /// <summary>
+        /// Creates a 2-port phase-shifter component with physical pins.
+        /// <paramref name="forward"/> defines the left→right transfer (emitted as
+        /// <c>s21</c> in the Verilog-A export). <paramref name="backward"/>, if
+        /// provided, defines the right→left transfer (<c>s12</c>); otherwise the
+        /// component is reciprocal and both directions share <paramref name="forward"/>.
+        /// The asymmetric form lets tests prove that ExtractSParameters registers
+        /// each direction independently rather than aliasing them.
+        /// </summary>
+        public static Component CreatePhaseShifterWithPhysicalPins(Complex forward, Complex? backward = null)
+        {
+            var backwardValue = backward ?? forward;
+
+            Part[,] parts = new Part[1, 1];
+            parts[0, 0] = new Part(new List<Pin>() {
+                new ("west0", 0, MatterType.Light, RectSide.Left),
+                new ("east0", 1, MatterType.Light, RectSide.Right)
+            });
+
+            var leftIn = parts[0, 0].GetPinAt(RectSide.Left).IDInFlow;
+            var rightOut = parts[0, 0].GetPinAt(RectSide.Right).IDOutFlow;
+            var rightIn = parts[0, 0].GetPinAt(RectSide.Right).IDInFlow;
+            var leftOut = parts[0, 0].GetPinAt(RectSide.Left).IDOutFlow;
+
+            var allPins = Component.GetAllPins(parts).SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+            var matrix = new SMatrix(allPins, new());
+            matrix.SetValues(new() {
+                { (leftIn, rightOut), forward },       // forward  = S21
+                { (rightIn, leftOut), backwardValue }, // backward = S12
+            });
+
+            var connections = new Dictionary<int, SMatrix>
+            {
+                { StandardWaveLengths.RedNM, matrix },
+            };
+
+            var comp = new Component(connections, new(), "phase_shifter", "", parts, 0, "PhaseShifter", DiscreteRotation.R0);
+
+            var logicalPin1 = comp.Parts[0, 0].GetPinAt(RectSide.Left);
+            var logicalPin2 = comp.Parts[0, 0].GetPinAt(RectSide.Right);
+
+            comp.PhysicalPins.Add(new PhysicalPin
+            {
+                Name = "in",
+                ParentComponent = comp,
+                LogicalPin = logicalPin1,
+            });
+            comp.PhysicalPins.Add(new PhysicalPin
+            {
+                Name = "out",
+                ParentComponent = comp,
+                LogicalPin = logicalPin2,
+            });
+
+            return comp;
+        }
+
+        /// <summary>
         /// Creates a WaveguideConnection between two components for testing.
         /// </summary>
         public static WaveguideConnection CreateConnection(Component startComponent, Component endComponent)

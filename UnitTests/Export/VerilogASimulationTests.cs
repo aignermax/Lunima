@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using CAP_Core.Components.Connections;
 using CAP_Core.Export;
@@ -14,12 +15,8 @@ namespace UnitTests.Export;
 /// End-to-end simulation tests for the Verilog-A exporter. Compiles the
 /// generated <c>.va</c> to <c>.osdi</c> with OpenVAF, runs a SPICE test bench
 /// through NGSpice's <c>pre_osdi</c> loader, and asserts on the solved node
-/// voltages.
-///
-/// <para>Skipped gracefully when <c>openvaf</c> or <c>ngspice</c> is not on
-/// PATH — CI installs both. These tests are the real logic check referenced
-/// in issue #485, sitting on top of the syntax-level OpenVAF compile tests in
-/// <see cref="VerilogAScriptExecutionTests"/>.</para>
+/// voltages. Skipped gracefully when <c>openvaf</c> or <c>ngspice</c> is not
+/// on PATH — CI installs both.
 /// </summary>
 public class VerilogASimulationTests
 {
@@ -32,16 +29,14 @@ public class VerilogASimulationTests
     public VerilogASimulationTests(ITestOutputHelper output) => _output = output;
 
     /// <summary>
-    /// Characterization test for the known modeling bug tracked in <see href="https://github.com/aignermax/Lunima/issues/484">#484</see>.
-    /// The current <c>V(port) &lt;+ expr</c> formulation is over-constrained: when
-    /// the external netlist drives a port with a voltage source, NGSpice's DC solver
-    /// cannot find a consistent solution and fails with "DC solution failed". This
-    /// test asserts the failure so we notice the moment the modelling is reworked
-    /// (twin Re/Im electrical ports or Y-parameter form, per #484) — at that point
-    /// the test should flip to assert the actual expected voltage.
+    /// End-to-end simulation test for a heuristic lossy waveguide using the
+    /// twin-node complex model. The module has 4 electrical nodes
+    /// (port0_re, port0_im, port1_re, port1_im). With S21_re = 0.95 and
+    /// S21_im = 0 (heuristic, S11 = S22 = 0), driving port0_re = 1V should
+    /// yield port1_re ≈ 0.95V and port1_im ≈ 0V.
     /// </summary>
     [SkippableFact]
-    public void LossyWaveguide_DCSweep_CurrentlyFailsToConverge_UntilIssue484IsFixed()
+    public void LossyWaveguide_TwinNodeComplexModel_TransmitsCorrectAmplitude()
     {
         SkipIfToolsMissing(out var openvaf, out var ngspice);
 
@@ -53,7 +48,7 @@ public class VerilogASimulationTests
         {
             CircuitName = "wg_sim",
             IncludeTestBench = false,
-            WavelengthNm = 9999,  // force heuristic: s21 = s12 = 0.95
+            WavelengthNm = 9999,  // force heuristic: S21_re = 0.95, S21_im = 0
         });
         result.Success.ShouldBeTrue(result.ErrorMessage);
 
@@ -63,15 +58,19 @@ public class VerilogASimulationTests
             var moduleName = result.ComponentFiles.Keys.First().Replace(".va", "");
             CompileToOsdi(openvaf, dir, result.ComponentFiles.Keys.First());
 
-            var netlist = $@"* Waveguide transmission test
-V1 in 0 DC 1
-Rload out 0 1e6
-N1 in out {moduleName}_mod
+            // S11 = S22 = 0 so the module contributes nothing to port0 — no over-constraint
+            // between the 1V source at in_re and the module equation at the same node.
+            var netlist = $@"* Waveguide transmission test (twin-node complex model)
+V1_re in_re 0 DC 1
+V1_im in_im 0 DC 0
+Rload_re out_re 0 1e6
+Rload_im out_im 0 1e6
+N1 in_re in_im out_re out_im {moduleName}_mod
 .model {moduleName}_mod {moduleName}
 .control
   pre_osdi {moduleName}.osdi
   op
-  print v(in) v(out)
+  print v(out_re) v(out_im)
   quit
 .endc
 .end
@@ -82,12 +81,144 @@ N1 in out {moduleName}_mod
             _output.WriteLine($"ngspice stdout:\n{stdout}");
             if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
 
-            // The current model is over-constrained; NGSpice prints "DC solution failed"
-            // and leaves all node voltages at zero. This characterizes the pre-#484 state.
-            stdout.ShouldContain("DC solution failed", Case.Insensitive,
-                "If this assertion fails, the Verilog-A model has been reworked and " +
-                "actually simulates. Update the test to assert the real expected voltage " +
-                "(|S21| ≈ 0.95 for the heuristic waveguide) and close issue #484.");
+            stdout.ShouldNotContain("DC solution failed", Case.Insensitive,
+                "Twin-node netlist must DC-converge. If NGSpice fails here, check the " +
+                "N-element 4-port syntax for your NGSpice version.");
+
+            var outRe = ParseNgspicePrintedVoltage(stdout, "v(out_re)");
+            outRe.ShouldBe(0.95, tolerance: 0.01,
+                "With heuristic waveguide S21 = 0.95+0j, driving port0_re=1V should yield port1_re ≈ 0.95V.");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// End-to-end phase-preservation proof. A purely-imaginary S12 = i = e^(iπ/2)
+    /// should transform a real-part stimulus into a pure imaginary-part output:
+    /// driving port0_re = 1V must yield port1_re ≈ 0V (zero real part) and
+    /// port1_im ≈ 1V (full transmission into the imaginary channel). This is
+    /// the hallmark that cannot be satisfied by the old real-only |S|·cos(φ)
+    /// model — it closes the end-to-end loop from #484.
+    /// </summary>
+    [SkippableFact]
+    public void PhaseShifter_S12EqualImaginaryUnit_TransmitsRealInputToImaginaryOutput()
+    {
+        SkipIfToolsMissing(out var openvaf, out var ngspice);
+
+        // S12 = S21 = i: a π/2 phase rotation. CreatePhaseShifter registers this
+        // at RedNM (1550nm), so the export must use the same wavelength.
+        var ps = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(new Complex(0, 1));
+        ps.Identifier = "ps1";
+
+        var result = _exporter.Export([ps], [], new VerilogAExportOptions
+        {
+            CircuitName = "ps_sim",
+            IncludeTestBench = false,
+            WavelengthNm = CAP_Core.Components.ComponentHelpers.StandardWaveLengths.RedNM,
+        });
+        result.Success.ShouldBeTrue(result.ErrorMessage);
+
+        var dir = WriteExportToTempDir(result);
+        try
+        {
+            var vaFile = result.ComponentFiles.Keys.First();
+            var moduleName = vaFile.Replace(".va", "");
+            CompileToOsdi(openvaf, dir, vaFile);
+
+            var netlist = $@"* Phase-shifter transmission test: S21 = i = e^(iπ/2)
+V1_re in_re 0 DC 1
+V1_im in_im 0 DC 0
+Rload_re out_re 0 1e6
+Rload_im out_im 0 1e6
+N1 in_re in_im out_re out_im {moduleName}_mod
+.model {moduleName}_mod {moduleName}
+.control
+  pre_osdi {moduleName}.osdi
+  op
+  print v(out_re) v(out_im)
+  quit
+.endc
+.end
+";
+            File.WriteAllText(Path.Combine(dir, "tb.sp"), netlist);
+
+            var (_, stdout, stderr) = RunNgspice(ngspice, dir, Path.Combine(dir, "tb.sp"));
+            _output.WriteLine($"ngspice stdout:\n{stdout}");
+            if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
+
+            stdout.ShouldNotContain("DC solution failed", Case.Insensitive);
+
+            var outRe = ParseNgspicePrintedVoltage(stdout, "v(out_re)");
+            var outIm = ParseNgspicePrintedVoltage(stdout, "v(out_im)");
+
+            outRe.ShouldBe(0.0, tolerance: 0.01,
+                "S = i rotates the real input to the imaginary channel. Any non-zero " +
+                "real-part output would mean phase information was lost.");
+            outIm.ShouldBe(1.0, tolerance: 0.01,
+                "Driving port0_re=1V through S21=i must deliver the amplitude to port1_im.");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// Exercises the generator's own <c>WriteSpiceTestBench</c> output through the
+    /// full OpenVAF → OSDI → NGSpice pipeline. Without this test, regressions in
+    /// the emitted <c>.sp</c> file (wrong port order in the N-element, missing
+    /// <c>.endc</c>, misnamed OSDI alias, …) would not be caught at runtime —
+    /// every other simulation test uses its own hand-rolled netlist.
+    /// </summary>
+    [SkippableFact]
+    public void GeneratedSpiceTestBench_RunsThroughNGSpice_LossyWaveguideTransmits0p95()
+    {
+        SkipIfToolsMissing(out var openvaf, out var ngspice);
+
+        var wg = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        wg.NazcaFunctionName = "ebeam_wg_te1550";
+
+        var result = _exporter.Export([wg], [], new VerilogAExportOptions
+        {
+            CircuitName = "gen_bench",
+            IncludeTestBench = true,
+            WavelengthNm = 9999,  // force heuristic S21 = 0.95
+        });
+        result.Success.ShouldBeTrue(result.ErrorMessage);
+        result.SpiceTestBench.ShouldNotBeNullOrEmpty();
+
+        // Replicate the ViewModel's output layout: bench at the root, component
+        // .va files in a components/ subdirectory. The generated bench preloads
+        // components/<name>.osdi from the root — paths must match exactly.
+        var dir = Path.Combine(Path.GetTempPath(), $"lunima_va_gen_{Guid.NewGuid():N}");
+        var componentsDir = Path.Combine(dir, "components");
+        Directory.CreateDirectory(componentsDir);
+        var enc = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        foreach (var (filename, content) in result.ComponentFiles)
+            File.WriteAllText(Path.Combine(componentsDir, filename), content, enc);
+        File.WriteAllText(Path.Combine(dir, $"{result.CircuitName}.sp"), result.SpiceTestBench, enc);
+
+        try
+        {
+            foreach (var componentVa in result.ComponentFiles.Keys)
+                CompileToOsdi(openvaf, componentsDir, componentVa);
+
+            var (_, stdout, stderr) = RunNgspice(ngspice, dir, Path.Combine(dir, $"{result.CircuitName}.sp"));
+            _output.WriteLine($"ngspice stdout:\n{stdout}");
+            if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
+
+            stdout.ShouldNotContain("DC solution failed", Case.Insensitive);
+            stdout.ShouldNotContain("can't open", Case.Insensitive,
+                "If NGSpice complains it can't open the .osdi, the bench's pre_osdi " +
+                "path no longer matches the ViewModel's output layout.");
+
+            var outRe = ParseNgspicePrintedVoltage(stdout, "v(ext_port1_re)");
+            outRe.ShouldBe(0.95, tolerance: 0.01,
+                "Generated test bench should replicate the transmission amplitude " +
+                "that the hand-rolled netlist produces.");
         }
         finally
         {
@@ -101,8 +232,21 @@ N1 in out {moduleName}_mod
     {
         var probedOpenVaf = TryProbe("openvaf", "--help", out var oReason)
             ? "openvaf" : (TryProbe("openvaf.exe", "--help", out _) ? "openvaf.exe" : null);
-        var probedNgspice = TryProbe("ngspice", "--version", out var nReason)
-            ? "ngspice" : (TryProbe("ngspice.exe", "--version", out _) ? "ngspice.exe" : null);
+
+        // On Windows, ngspice.exe is the GUI build — it pops up a message box on startup
+        // and writes nothing to stdout, which makes automated runs both noisy and unusable.
+        // The Spice64 distribution ships ngspice_con.exe as the batch/console variant;
+        // prefer it when available. Linux installs only 'ngspice', which is fine as-is.
+        string? probedNgspice = null;
+        string nReason = "";
+        foreach (var candidate in new[] { "ngspice_con", "ngspice_con.exe", "ngspice", "ngspice.exe" })
+        {
+            if (TryProbe(candidate, "--version", out nReason))
+            {
+                probedNgspice = candidate;
+                break;
+            }
+        }
 
         if (probedOpenVaf == null) _output.WriteLine($"openvaf probe: {oReason}");
         if (probedNgspice == null) _output.WriteLine($"ngspice probe: {nReason}");
@@ -148,6 +292,8 @@ N1 in out {moduleName}_mod
         foreach (var (filename, content) in result.ComponentFiles)
             File.WriteAllText(Path.Combine(dir, filename), content, enc);
         File.WriteAllText(Path.Combine(dir, $"{result.CircuitName}.va"), result.TopLevelNetlist, enc);
+        if (!string.IsNullOrEmpty(result.SpiceTestBench))
+            File.WriteAllText(Path.Combine(dir, $"{result.CircuitName}.sp"), result.SpiceTestBench, enc);
         return dir;
     }
 
@@ -210,8 +356,6 @@ N1 in out {moduleName}_mod
     /// </summary>
     private static double ParseNgspicePrintedVoltage(string stdout, string nodeName)
     {
-        // ngspice print output format: "v(out) = 9.500000e-01"
-        // Sometimes it's on its own line, sometimes preceded by whitespace.
         var pattern = Regex.Escape(nodeName) + @"\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)";
         var match = Regex.Match(stdout, pattern, RegexOptions.IgnoreCase);
         if (!match.Success)

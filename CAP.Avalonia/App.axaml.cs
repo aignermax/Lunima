@@ -87,6 +87,7 @@ public partial class App : Application
         services.AddSingleton<CAP_Core.Components.Creation.GroupLibraryManager>();
         services.AddSingleton<GdsExportService>();
         services.AddSingleton<CAP_Core.Export.VerilogAExporter>();
+        services.AddSingleton<VerilogAFileWriter>();
         services.AddSingleton<CAP_Core.ErrorConsoleService>();
 
         // Register application services
