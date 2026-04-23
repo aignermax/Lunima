@@ -191,3 +191,121 @@ public class DesignValidatorTests
         return path;
     }
 }
+
+/// <summary>
+/// Unit tests for <see cref="DesignValidator.ValidateComponentBounds"/> — out-of-bounds detection.
+/// </summary>
+public class DesignValidatorBoundsTests
+{
+    private readonly DesignValidator _validator = new();
+
+    /// <summary>
+    /// Creates a test component at the given position with explicit 250×250 μm dimensions
+    /// (1 tile at the standard grid pitch) so that bounds checks behave predictably.
+    /// </summary>
+    private static CAP_Core.Components.Core.Component CreateComponentAt(double x, double y)
+    {
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        comp.PhysicalX = x;
+        comp.PhysicalY = y;
+        comp.WidthMicrometers  = 250.0;
+        comp.HeightMicrometers = 250.0;
+        return comp;
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_NullComponents_ThrowsArgumentNullException()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            _validator.ValidateComponentBounds(null!, 5000, 5000));
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_EmptyComponents_ReturnsNoIssues()
+    {
+        var result = _validator.ValidateComponentBounds(
+            Array.Empty<CAP_Core.Components.Core.Component>(), 5000, 5000);
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_ComponentInsideBounds_ReturnsNoIssues()
+    {
+        // Component at (0,0), 250×250 μm — fits in 5000×5000 chip
+        var comp = CreateComponentAt(0, 0);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_ComponentBeyondRightEdge_ReturnsIssue()
+    {
+        // Component at x=4900, width=250 → right edge at 5150 > 5000 μm chip width
+        var comp = CreateComponentAt(4900, 0);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result.Count.ShouldBe(1);
+        result[0].Type.ShouldBe(DesignIssueType.OutOfBounds);
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_ComponentBeyondBottomEdge_ReturnsIssue()
+    {
+        // Component at y=4900, height=250 → bottom at 5150 > 5000 μm chip height
+        var comp = CreateComponentAt(0, 4900);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result.Count.ShouldBe(1);
+        result[0].Type.ShouldBe(DesignIssueType.OutOfBounds);
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_ComponentAtNegativeX_ReturnsIssue()
+    {
+        var comp = CreateComponentAt(-10, 0);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result.Count.ShouldBe(1);
+        result[0].Type.ShouldBe(DesignIssueType.OutOfBounds);
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_MultipleComponents_FlagsOnlyOutOfBounds()
+    {
+        var inside  = CreateComponentAt(0, 0);
+        var outside = CreateComponentAt(6000, 0); // beyond 5000 right edge
+
+        var result = _validator.ValidateComponentBounds(
+            new[] { inside, outside }, 5000, 5000);
+
+        result.Count.ShouldBe(1);
+        result[0].Connection.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_IssueDescription_ContainsChipSizeInMm()
+    {
+        var comp = CreateComponentAt(6000, 0);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        // 5000 μm = 5.0 mm
+        result[0].Description.ShouldContain("5.0");
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_IssueType_IsOutOfBounds()
+    {
+        var comp = CreateComponentAt(-1, 0);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result[0].Type.ShouldBe(DesignIssueType.OutOfBounds);
+    }
+}

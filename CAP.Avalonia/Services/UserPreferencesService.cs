@@ -218,6 +218,28 @@ public class UserPreferencesService
     }
 
     /// <summary>
+    /// Gets the default chip width in millimeters used for new projects.
+    /// Falls back to 5 mm if not configured.
+    /// </summary>
+    public double GetDefaultChipWidthMm() => _preferences.DefaultChipWidthMm;
+
+    /// <summary>
+    /// Gets the default chip height in millimeters used for new projects.
+    /// Falls back to 5 mm if not configured.
+    /// </summary>
+    public double GetDefaultChipHeightMm() => _preferences.DefaultChipHeightMm;
+
+    /// <summary>
+    /// Sets the default chip dimensions (in millimeters) used for new projects and saves.
+    /// </summary>
+    public void SetDefaultChipSize(double widthMm, double heightMm)
+    {
+        _preferences.DefaultChipWidthMm  = widthMm;
+        _preferences.DefaultChipHeightMm = heightMm;
+        Save();
+    }
+
+    /// <summary>
     /// Clears any skipped update version and saves preferences.
     /// </summary>
     public void ClearSkippedUpdateVersion()
@@ -295,4 +317,14 @@ public class UserPreferences
     /// Empty string means no key is configured.
     /// </summary>
     public string AiApiKey { get; set; } = "";
+
+    /// <summary>
+    /// Default chip width in millimeters for new projects (default 5 mm).
+    /// </summary>
+    public double DefaultChipWidthMm { get; set; } = 5.0;
+
+    /// <summary>
+    /// Default chip height in millimeters for new projects (default 5 mm).
+    /// </summary>
+    public double DefaultChipHeightMm { get; set; } = 5.0;
 }

@@ -7,6 +7,7 @@ using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;
@@ -111,10 +112,16 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public VerilogAExportViewModel VerilogAExport { get; }
 
+    /// <summary>
+    /// ViewModel for the Chip Size settings panel.
+    /// </summary>
+    public ChipSizeViewModel ChipSize { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
         UserPreferencesService preferencesService,
+        ChipSizeViewModel chipSize,
         ParameterSweepViewModel sweep,
         RoutingDiagnosticsViewModel routingDiagnostics,
         DesignValidationViewModel designValidation,
@@ -131,6 +138,9 @@ public partial class RightPanelViewModel : ObservableObject
         VerilogAExportViewModel verilogAExport)
     {
         _preferencesService = preferencesService;
+
+        ChipSize = chipSize;
+        ChipSize.Configure(canvas);
 
         Sweep = sweep;
         RoutingDiagnostics = routingDiagnostics;
