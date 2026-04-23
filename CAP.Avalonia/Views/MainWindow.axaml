@@ -92,14 +92,49 @@
                         Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design (Ctrl+S)"/>
                 <Button Content="💾+" Command="{Binding SaveDesignAsCommand}"
                         Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="Save design as..."/>
-                <Button Content="🐍 Export" Command="{Binding ExportNazcaCommand}"
-                        MinWidth="75" Margin="2" Padding="8,4" Background="#3d5d3d" ToolTip.Tip="Export to Nazca Python"/>
-                <Button Content="🔦 PhotonTorch" Command="{Binding FileOperations.PhotonTorchExport.ExportCommand}"
-                        MinWidth="105" Margin="2" Padding="8,4" Background="#3d4d6d" ToolTip.Tip="Export to PhotonTorch for time-domain simulation"/>
-                <Button Content="⚡ Verilog-A" Command="{Binding FileOperations.VerilogAExport.ExportCommand}"
-                        MinWidth="95" Margin="2" Padding="8,4" Background="#3d6d4d" ToolTip.Tip="Export to Verilog-A / SPICE for electronic-photonic co-simulation"/>
-                <Button Content="🌊 PICWave" Command="{Binding ExportPicWaveCommand}"
-                        MinWidth="85" Margin="2" Padding="8,4" Background="#3d4d5d" ToolTip.Tip="Export to PICWave Python circuit simulator"/>
+                <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
+                <Button MinWidth="95" Margin="2" Padding="8,4" Background="#3d4d3d"
+                        ToolTip.Tip="Export design to various formats">
+                    <Button.Content>
+                        <TextBlock Text="📤 Export ▾"/>
+                    </Button.Content>
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <StackPanel MinWidth="240" Margin="6">
+                                <TextBlock Text="Choose export format:" Foreground="Gray"
+                                           FontSize="11" Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding ExportMenu.Formats}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Margin="0,2" Padding="10,7"
+                                                    Command="{Binding ExportCommand}"
+                                                    Background="{Binding Background}"
+                                                    ToolTip.Tip="{Binding Description}">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="{Binding Icon}" FontSize="15"
+                                                               VerticalAlignment="Center"/>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Foreground="White"
+                                                                   FontWeight="SemiBold"
+                                                                   FontSize="12"/>
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   Foreground="#aaaaaa"
+                                                                   FontSize="9"
+                                                                   TextWrapping="Wrap"
+                                                                   MaxWidth="180"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
