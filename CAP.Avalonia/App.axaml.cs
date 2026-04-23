@@ -95,6 +95,7 @@ public partial class App : Application
         services.AddSingleton<SimpleNazcaExporter>();
         services.AddSingleton<CAP_Core.Export.PicWaveExporter>();
         services.AddSingleton<PdkLoader>();
+        services.AddSingleton<PdkImportService>();
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<ProjectPersistenceService>();

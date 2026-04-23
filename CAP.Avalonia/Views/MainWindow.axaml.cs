@@ -4,6 +4,8 @@ using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.PdkImport;
+using CAP.Avalonia.Views.PdkImport;
 using System.ComponentModel;
 using System.Linq;
 
@@ -32,6 +34,18 @@ public partial class MainWindow : Window
                     var dialog = new RenameDialog(currentName);
                     return await dialog.ShowDialog<string?>(this);
                 };
+
+                // Wire up PDK Import Wizard for Nazca .py files
+                var importService = App.Services.GetService(typeof(PdkImportService)) as PdkImportService;
+                if (importService != null)
+                {
+                    vm.LeftPanel.ShowImportWizardAsync = async (pyFilePath) =>
+                    {
+                        var wizardVm = new PdkImportWizardViewModel(pyFilePath, importService);
+                        var wizard = new PdkImportWizardWindow { DataContext = wizardVm };
+                        return await wizard.ShowDialog<string?>(this);
+                    };
+                }
 
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
