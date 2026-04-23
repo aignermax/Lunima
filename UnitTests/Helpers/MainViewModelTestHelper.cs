@@ -121,7 +121,7 @@ public static class MainViewModelTestHelper
             new PdkConsistencyViewModel(),
             updateVm,
             new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
-            new VerilogAExportViewModel(new VerilogAExporter(), canvas));
+            new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas));
     }
 
     /// <summary>
