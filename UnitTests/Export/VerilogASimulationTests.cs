@@ -166,6 +166,58 @@ N1 in_re in_im out_re out_im {moduleName}_mod
         }
     }
 
+    /// <summary>
+    /// Exercises the generator's own <c>WriteSpiceTestBench</c> output through the
+    /// full OpenVAF → OSDI → NGSpice pipeline. Without this test, regressions in
+    /// the emitted <c>.sp</c> file (wrong port order in the N-element, missing
+    /// <c>.endc</c>, misnamed OSDI alias, …) would not be caught at runtime —
+    /// every other simulation test uses its own hand-rolled netlist.
+    /// </summary>
+    [SkippableFact]
+    public void GeneratedSpiceTestBench_RunsThroughNGSpice_LossyWaveguideTransmits0p95()
+    {
+        SkipIfToolsMissing(out var openvaf, out var ngspice);
+
+        var wg = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        wg.NazcaFunctionName = "ebeam_wg_te1550";
+
+        var result = _exporter.Export([wg], [], new VerilogAExportOptions
+        {
+            CircuitName = "gen_bench",
+            IncludeTestBench = true,
+            WavelengthNm = 9999,  // force heuristic S21 = 0.95
+        });
+        result.Success.ShouldBeTrue(result.ErrorMessage);
+        result.SpiceTestBench.ShouldNotBeNullOrEmpty();
+
+        var dir = WriteExportToTempDir(result);
+        try
+        {
+            // The generated .sp preloads each component's OSDI — OpenVAF cannot
+            // compile the hierarchical top-level .va, only flat compact models.
+            foreach (var componentVa in result.ComponentFiles.Keys)
+                CompileToOsdi(openvaf, dir, componentVa);
+
+            var (_, stdout, stderr) = RunNgspice(ngspice, dir, Path.Combine(dir, $"{result.CircuitName}.sp"));
+            _output.WriteLine($"ngspice stdout:\n{stdout}");
+            if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
+
+            stdout.ShouldNotContain("DC solution failed", Case.Insensitive);
+
+            // External ports are named ext_portN_re/_im by VerilogANetlistWriter.
+            // Port 0 is driven (DC 1V on _re), port 1 is the transmission output.
+            var outRe = ParseNgspicePrintedVoltage(stdout, "v(ext_port1_re)");
+            outRe.ShouldBe(0.95, tolerance: 0.01,
+                "Generated test bench should replicate the transmission amplitude " +
+                "that the hand-rolled netlist produces — any divergence points to a " +
+                "bug in WriteSpiceTestBench itself.");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private void SkipIfToolsMissing(out string openvaf, out string ngspice)
@@ -232,6 +284,8 @@ N1 in_re in_im out_re out_im {moduleName}_mod
         foreach (var (filename, content) in result.ComponentFiles)
             File.WriteAllText(Path.Combine(dir, filename), content, enc);
         File.WriteAllText(Path.Combine(dir, $"{result.CircuitName}.va"), result.TopLevelNetlist, enc);
+        if (!string.IsNullOrEmpty(result.SpiceTestBench))
+            File.WriteAllText(Path.Combine(dir, $"{result.CircuitName}.sp"), result.SpiceTestBench, enc);
         return dir;
     }
 

@@ -131,8 +131,20 @@ internal static class VerilogANetlistWriter
         return (-1, -1);
     }
 
-    internal static string WriteSpiceTestBench(string circuitName, List<string> externalPorts)
+    /// <summary>
+    /// Writes an NGSpice+OSDI batch bench. OpenVAF compiles each component's
+    /// <c>.va</c> to a standalone <c>.osdi</c>; the bench preloads every unique
+    /// OSDI, instantiates one N-element per component with shared-node wiring,
+    /// and drives port 0 at 1V. Multi-component designs work because node names
+    /// come straight from <c>BuildNodeMap</c>, which already merges connected pins.
+    /// </summary>
+    internal static string WriteSpiceTestBench(
+        string circuitName,
+        IReadOnlyList<Component> components,
+        IReadOnlyList<WaveguideConnection> connections)
     {
+        var nodeMap = BuildNodeMap(components, connections, out var externalPorts);
+
         if (externalPorts.Count == 0)
         {
             throw new InvalidOperationException(
@@ -147,8 +159,9 @@ internal static class VerilogANetlistWriter
         sb.AppendLine("* Complex optical model: each optical port = two electrical nodes (_re / _im).");
         sb.AppendLine("* Stimulus: port 0 driven Re=1V, Im=0V. Other ports terminated via 1MΩ loads.");
         sb.AppendLine("*");
-        sb.AppendLine("* Prerequisite: compile the top-level Verilog-A to an OSDI module first,");
-        sb.AppendLine($"*   openvaf {circuitName}.va     ->  {circuitName}.osdi");
+        sb.AppendLine("* Prerequisite: compile each component .va file to an OSDI module:");
+        foreach (var moduleName in components.Select(VerilogAIdentifier.For).Distinct())
+            sb.AppendLine($"*   openvaf {moduleName}.va     ->  {moduleName}.osdi");
         sb.AppendLine("* Then run this bench with NGSpice in batch mode:");
         sb.AppendLine($"*   ngspice -b {circuitName}.sp   (use ngspice_con.exe on Windows)");
         sb.AppendLine();
@@ -171,15 +184,26 @@ internal static class VerilogANetlistWriter
         }
         sb.AppendLine();
 
-        // OSDI-loaded module is instantiated via N-element + .model, not a subcircuit.
-        // The N-element port list matches the module's inout port list exactly.
-        var nElementPorts = string.Join(" ", externalPorts);
-        sb.AppendLine($"N1 {nElementPorts} {circuitName}_mod");
-        sb.AppendLine($".model {circuitName}_mod {circuitName}");
+        // One N-element per component, wired via the shared node map.
+        // OpenVAF only compiles flat compact models, so we cannot instantiate the
+        // hierarchical top-level .va — we must reference each component's OSDI directly.
+        var uniqueModules = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < components.Count; i++)
+        {
+            var modName = VerilogAIdentifier.For(components[i]);
+            uniqueModules.Add(modName);
+            var ports = components[i].PhysicalPins
+                .Select((_, idx) => nodeMap[i][idx])
+                .SelectMany(n => new[] { n.Re, n.Im })
+                .ToList();
+            sb.AppendLine($"N_inst{i} {string.Join(" ", ports)} {modName}_mod");
+            sb.AppendLine($".model {modName}_mod {modName}");
+        }
         sb.AppendLine();
 
         sb.AppendLine(".control");
-        sb.AppendLine($"  pre_osdi {circuitName}.osdi");
+        foreach (var modName in uniqueModules)
+            sb.AppendLine($"  pre_osdi {modName}.osdi");
         sb.AppendLine("  op");
         sb.AppendLine($"  print {string.Join(" ", externalPorts.Select(p => $"v({p})"))}");
         sb.AppendLine("  quit");

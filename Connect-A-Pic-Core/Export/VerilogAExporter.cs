@@ -36,7 +36,7 @@ public class VerilogAExporter
             var (netlist, portNodes) = VerilogANetlistWriter.WriteTopLevel(
                 components, connections, options.CircuitName);
             var testBench = options.IncludeTestBench
-                ? VerilogANetlistWriter.WriteSpiceTestBench(options.CircuitName, portNodes)
+                ? VerilogANetlistWriter.WriteSpiceTestBench(options.CircuitName, components, connections)
                 : string.Empty;
 
             return new VerilogAExportResult

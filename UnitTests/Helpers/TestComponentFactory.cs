@@ -188,12 +188,17 @@ namespace UnitTests
 
         /// <summary>
         /// Creates a 2-port phase-shifter component with physical pins.
-        /// The S-matrix at 1550nm has S12 = S21 = <paramref name="s12"/>, allowing
-        /// tests to verify that complex (phase-carrying) S-parameters are preserved
-        /// in the generated Verilog-A output.
+        /// <paramref name="forward"/> defines the left→right transfer (emitted as
+        /// <c>s21</c> in the Verilog-A export). <paramref name="backward"/>, if
+        /// provided, defines the right→left transfer (<c>s12</c>); otherwise the
+        /// component is reciprocal and both directions share <paramref name="forward"/>.
+        /// The asymmetric form lets tests prove that ExtractSParameters registers
+        /// each direction independently rather than aliasing them.
         /// </summary>
-        public static Component CreatePhaseShifterWithPhysicalPins(Complex s12)
+        public static Component CreatePhaseShifterWithPhysicalPins(Complex forward, Complex? backward = null)
         {
+            var backwardValue = backward ?? forward;
+
             Part[,] parts = new Part[1, 1];
             parts[0, 0] = new Part(new List<Pin>() {
                 new ("west0", 0, MatterType.Light, RectSide.Left),
@@ -208,8 +213,8 @@ namespace UnitTests
             var allPins = Component.GetAllPins(parts).SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
             var matrix = new SMatrix(allPins, new());
             matrix.SetValues(new() {
-                { (leftIn, rightOut), s12 },
-                { (rightIn, leftOut), s12 },
+                { (leftIn, rightOut), forward },       // forward  = S21
+                { (rightIn, leftOut), backwardValue }, // backward = S12
             });
 
             var connections = new Dictionary<int, SMatrix>
