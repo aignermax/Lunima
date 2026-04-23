@@ -1,0 +1,82 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.Export"
+        x:Class="CAP.Avalonia.Views.Dialogs.GdsExportDialog"
+        x:DataType="vm:GdsExportViewModel"
+        Title="Export — GDS Layout"
+        Width="420" Height="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#1e1e1e"
+        Foreground="White">
+
+    <StackPanel Margin="16" Spacing="10">
+        <TextBlock Text="📐 GDS Layout Export" FontSize="15" FontWeight="SemiBold"
+                   Foreground="LightGreen"/>
+        <TextBlock Text="Automatically generate GDS from Nazca Python scripts. Requires Python + Nazca."
+                   Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
+
+        <Separator Background="#3d3d3d"/>
+
+        <!-- Generate GDS toggle -->
+        <CheckBox Content="Generate GDS file (run Nazca after export)"
+                  IsChecked="{Binding GenerateGdsEnabled}"
+                  Foreground="White"/>
+
+        <!-- Python path -->
+        <TextBlock Text="Python path:" Foreground="Gray" FontSize="11"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding CustomPythonPath}"
+                     Watermark="Auto-detect or enter path..." Margin="0,0,5,0"
+                     Background="#2d2d2d" Foreground="White"/>
+            <Button Grid.Column="1" Content="🔍" Width="32" Padding="4"
+                    Command="{Binding SearchForPythonCommand}"
+                    ToolTip.Tip="Search for Python with Nazca"
+                    IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"/>
+        </Grid>
+
+        <TextBlock Text="{Binding PythonPathSource}"
+                   Foreground="Gray" FontSize="10"
+                   IsVisible="{Binding PythonPathSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Discovered Pythons -->
+        <ItemsControl ItemsSource="{Binding AvailablePythons}"
+                      x:Name="AvailablePythonsList"
+                      IsVisible="{Binding AvailablePythons.Count}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Content="{Binding DisplayText}"
+                            Command="{Binding #AvailablePythonsList.DataContext.SelectPythonCommand}"
+                            CommandParameter="{Binding}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            Margin="0,2,0,0" Padding="6,4" Background="#2d2d2d" FontSize="10"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Environment status -->
+        <Button Content="Check Environment"
+                Command="{Binding CheckEnvironmentCommand}"
+                HorizontalAlignment="Stretch" Padding="8,4"
+                Background="#3d5d5d"
+                IsEnabled="{Binding IsChecking, Converter={x:Static BoolConverters.Not}}"/>
+
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Python: " Foreground="Gray" Width="65"/>
+            <TextBlock Text="{Binding PythonStatus}" Foreground="White"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Nazca: " Foreground="Gray" Width="65"/>
+            <TextBlock Text="{Binding NazcaStatus}" Foreground="White"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding LastExportStatus}"
+                   Foreground="LightBlue" FontSize="10" TextWrapping="Wrap"
+                   IsVisible="{Binding LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Buttons -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Close" x:Name="CloseButton" Width="70" Click="OnCloseClicked"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

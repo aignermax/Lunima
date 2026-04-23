@@ -59,7 +59,8 @@ public static class MainViewModelTestHelper
             leftPanel,
             rightPanel,
             bottomPanel,
-            new ViewportControlViewModel(canvas));
+            new ViewportControlViewModel(canvas),
+            new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas));
     }
 
     /// <summary>
@@ -121,8 +122,7 @@ public static class MainViewModelTestHelper
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
             updateVm,
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
-            new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
     }
 
     /// <summary>
