@@ -5,6 +5,7 @@ using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Export;
 using CAP_Core.LightCalculation;
+using CAP_Core.Routing;
 using CAP_Core.Tiles;
 using Shouldly;
 using Xunit;
@@ -12,11 +13,11 @@ using Xunit;
 namespace UnitTests.Services;
 
 /// <summary>
-/// Tests for PicWaveExporter. Cover the three behaviours that matter for safety:
-/// (1) components with an S-matrix always become CustomComponent + real data,
-/// (2) components without an S-matrix fall back to typed constructors only when
-/// their name matches a known pattern, (3) everything else throws — no silent
-/// stubs, no guessed physics.
+/// Structural tests for <see cref="PicWaveExporter"/>. These assert on the
+/// shape of the emitted sax-based Python script: presence of the expected
+/// netlist sections, correct pin-name routing through ComponentGroups, loud
+/// failures on unrecognised components. The "does the script actually run?"
+/// question lives in <see cref="UnitTests.Export.PicWaveScriptExecutionTests"/>.
 /// </summary>
 public class PicWaveExporterTests
 {
@@ -54,17 +55,47 @@ public class PicWaveExporterTests
                 AngleDegrees = 0,
             });
         }
+        comp.WidthMicrometers = 50;
+        comp.HeightMicrometers = 10;
         return comp;
+    }
+
+    // --- Script skeleton ---
+
+    [Fact]
+    public void Export_EmptyDesign_EmitsRunnableSkeleton()
+    {
+        var script = _exporter.Export([], []);
+
+        script.ShouldContain("import numpy as np");
+        script.ShouldContain("import sax");
+        script.ShouldContain("netlist = {");
+        script.ShouldContain("sax.circuit(");
+        script.ShouldContain("wavelengths_um = np.linspace(");
+        script.ShouldContain("plt.show()");
+    }
+
+    [Fact]
+    public void Export_HeaderPointsAtSaxAndPicWaveCom_NotHallucinatedSimphonyApi()
+    {
+        var script = _exporter.Export([], []);
+
+        script.ShouldContain("pip install sax");
+        script.ShouldContain("PICWave");
+        script.ShouldContain("COM");
+        // Must not repeat the old false promise that `from simphony import Circuit`
+        // is part of any shipping Simphony release.
+        script.ShouldNotContain("from simphony import Circuit");
     }
 
     // --- Identifier sanitisation (observed via emitted script) ---
 
     [Fact]
-    public void Export_AlphanumericIdentifier_AppearsVerbatim()
+    public void Export_AlphanumericIdentifier_AppearsInNetlist()
     {
         var script = _exporter.Export(
             [MakeComponent("comp_1", "ebeam_wg_strip_straight", pinCount: 2)], []);
-        script.ShouldContain("'comp_1'");
+        script.ShouldContain("'comp_1': 'comp_1_model'");
     }
 
     [Fact]
@@ -72,7 +103,7 @@ public class PicWaveExporterTests
     {
         var script = _exporter.Export(
             [MakeComponent("my-wg-1", "ebeam_wg_strip_straight", pinCount: 2)], []);
-        script.ShouldContain("'my_wg_1'");
+        script.ShouldContain("'my_wg_1': 'my_wg_1_model'");
         script.ShouldNotContain("'my-wg-1'");
     }
 
@@ -84,71 +115,20 @@ public class PicWaveExporterTests
         script.ShouldContain("'_1wg'");
     }
 
-    // --- Script skeleton ---
+    // --- Analytic waveguide fallback ---
 
     [Fact]
-    public void Export_EmptyDesign_EmitsRunnableSkeleton()
+    public void Export_StraightWaveguide_EmitsAnalyticWaveguideModel()
     {
-        var script = _exporter.Export([], []);
-
-        script.ShouldContain("import numpy as np");
-        script.ShouldContain("from simphony import Circuit");
-        script.ShouldContain("circuit = Circuit()");
-        script.ShouldContain("wavelengths = np.linspace(");
-        script.ShouldContain("plt.show()");
-    }
-
-    [Fact]
-    public void Export_HeaderIsHonestAboutPicWaveBeingCOMBased()
-    {
-        // The script must not claim `pip install picwave` works — PICWave is
-        // commercial COM-based. The header should point users to either the
-        // real COM workflow or Simphony as an open-source alternative.
-        var script = _exporter.Export([], []);
-
-        script.ShouldContain("COM");
-        script.ShouldContain("win32com");
-        script.ShouldContain("Simphony");
-        script.ShouldNotContain("pip install picwave");
-    }
-
-    // --- Typed component mapping (no S-matrix path) ---
-
-    [Fact]
-    public void Export_StraightWaveguide_EmitsWaveguideConstructor()
-    {
+        // 2-port component + "waveguide"/"straight" in name → analytic model
+        // with propagation formula. No measured S-matrix needed.
         var script = _exporter.Export(
             [MakeComponent("wg1", "ebeam_wg_strip_straight", pinCount: 2)], []);
-        script.ShouldContain("Waveguide(");
-    }
 
-    [Fact]
-    public void Export_DirectionalCoupler_EmitsDirectionalCouplerConstructor()
-    {
-        var script = _exporter.Export(
-            [MakeComponent("dc1", "ebeam_directional_coupler", pinCount: 4)], []);
-        script.ShouldContain("DirectionalCoupler(");
-    }
-
-    [Fact]
-    public void Export_GratingCoupler_EmitsGratingCouplerEvenWhenNameAlsoContainsCoupler()
-    {
-        // Guards against substring-order bugs: "coupler" is contained in
-        // "grating_coupler", so a naive Contains("coupler") check would
-        // mis-classify this as a DirectionalCoupler. The mapper must resolve
-        // the more specific pattern first.
-        var script = _exporter.Export(
-            [MakeComponent("gc1", "ebeam_grating_coupler_te1550", pinCount: 1)], []);
-        script.ShouldContain("GratingCoupler()");
-        script.ShouldNotContain("DirectionalCoupler(");
-    }
-
-    [Fact]
-    public void Export_Mmi_EmitsMmiWithPortCount()
-    {
-        var script = _exporter.Export(
-            [MakeComponent("mmi1", "demo_mmi2x2_dp", pinCount: 4)], []);
-        script.ShouldContain("MMI(ports=4)");
+        script.ShouldContain("def wg1_model(");
+        script.ShouldContain("length_um=");
+        script.ShouldContain("loss_db_per_cm=");
+        script.ShouldContain("sax.reciprocal(");
     }
 
     // --- Loud failure paths ---
@@ -156,20 +136,20 @@ public class PicWaveExporterTests
     [Fact]
     public void Export_UnknownTypeWithoutSMatrix_Throws()
     {
-        // No S-matrix, no name pattern → the exporter refuses to invent physics.
-        var comp = MakeComponent("mystery", "weird_unknown_thing", pinCount: 2);
+        // No S-matrix, no waveguide-like name, not 2 ports → refuse to invent physics.
+        var comp = MakeComponent("mystery", "weird_unknown_thing", pinCount: 3);
 
         var ex = Should.Throw<InvalidOperationException>(() => _exporter.Export([comp], []));
         ex.Message.ShouldContain("mystery");
-        ex.Message.ShouldContain("neither an S-matrix");
+        ex.Message.ShouldContain("no measured S-matrix");
     }
 
     [Fact]
-    public void Export_YJunctionWithoutSMatrix_Throws()
+    public void Export_ThreePortWithoutSMatrix_Throws()
     {
-        // A Y-junction is not an MMI (different S-behaviour) and has no generic
-        // pattern in the mapper. Previous versions silently emitted MMI(ports=3)
-        // — that was physics-unfaithful. Now it throws.
+        // A Y-junction / splitter without measured data has no analytic model we
+        // trust — previous PICWave exporter silently emitted MMI(ports=3) which
+        // was physics-unfaithful. Now it throws.
         var comp = MakeComponent("y1", "ebeam_y_1550", pinCount: 3);
 
         var ex = Should.Throw<InvalidOperationException>(() => _exporter.Export([comp], []));
@@ -185,121 +165,67 @@ public class PicWaveExporterTests
         ex.Message.ShouldContain("no physical pins");
     }
 
-    // --- S-matrix (pin-GUID) path ---
+    // --- Measured-S-matrix path ---
 
     [Fact]
-    public void Export_ComponentWithSMatrix_AlwaysEmitsCustomComponentWithData()
+    public void Export_ComponentWithSMatrix_EmitsDataAndMeasuredModel()
     {
-        // Even if the name would match Waveguide, a registered S-matrix must
-        // take precedence — the measured data is truthful, the heuristic is a
-        // guess.
         var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(forward: new Complex(0, 1));
         comp.Identifier = "ps1";
 
         var script = _exporter.Export([comp], []);
 
-        script.ShouldContain("CustomComponent(s_matrices=_s_ps1");
+        // Data dict is emitted with the wavelength key.
         script.ShouldContain("_s_ps1 = {");
         script.ShouldContain("np.array([");
+
+        // Model function looks up the dict at runtime (nearest wavelength).
+        script.ShouldContain("def ps1_model(");
+        script.ShouldContain("_s_ps1");
+        script.ShouldContain("complex(m[");
     }
 
     [Fact]
-    public void Export_SMatrixAtDifferentWavelengths_StillUsesCustomComponent()
+    public void Export_PhaseShifterAsymmetric_ForwardAndBackwardEmittedInDataDict()
     {
-        // Regression: SiEPIC grating couplers register S-matrix data at 1500nm,
-        // 1509nm, 1521nm, ..., 1600nm — never exactly at 1550nm. The exporter
-        // used to require an exact ContainsKey(wavelengthNm) match, causing the
-        // emitted _s_ dict to become dead code and the component to fall back
-        // to a generic GratingCoupler() that ignored the real measured data.
-        var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(forward: new Complex(0.8, 0));
-        comp.Identifier = "gc_like";
-        comp.NazcaFunctionName = "ebeam_gc_te1550";
-
-        // Move the S-matrix registration off the default 1550nm target.
-        // (PhaseShifter factory registers at RedNM = 1550; swap it to 1549.)
-        var sMatrixAt1550 = comp.WaveLengthToSMatrixMap[StandardWaveLengths.RedNM];
-        comp.WaveLengthToSMatrixMap.Remove(StandardWaveLengths.RedNM);
-        comp.WaveLengthToSMatrixMap[1549] = sMatrixAt1550;
-
-        var script = _exporter.Export([comp], [], wavelengthNm: StandardWaveLengths.RedNM);
-
-        // S-matrix data for the component is emitted
-        script.ShouldContain("_s_gc_like = {");
-        // AND the component uses it — not a dead dict above a typed constructor
-        script.ShouldContain("CustomComponent(s_matrices=_s_gc_like");
-        script.ShouldNotContain("GratingCoupler()");
-    }
-
-    [Fact]
-    public void Export_PhaseShifterAsymmetric_ForwardAndBackwardEmittedIndependently()
-    {
-        // Forward = i → row 1 col 0 (S21) = 0 + 1j
-        // Backward = 0.5 → row 0 col 1 (S12) = 0.5 + 0j
+        // Forward = i → row 1 col 0 = 0 + 1j
+        // Backward = 0.5 → row 0 col 1 = 0.5 + 0j
         var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(
             forward: new Complex(0, 1),
             backward: new Complex(0.5, 0));
         comp.Identifier = "ps_asym";
 
-        var script = _exporter.Export([comp], [],
-            wavelengthNm: StandardWaveLengths.RedNM);
+        var script = _exporter.Export([comp], []);
 
-        // S21 entry (row 1, col 0) should be the imaginary unit
         script.ShouldContain("0+1j");
-        // S12 entry (row 0, col 1) should be the 0.5 real
         script.ShouldContain("0.5+0j");
     }
 
-    // --- Connections ---
+    // --- Netlist connections ---
 
     [Fact]
-    public void Export_ConnectionBetweenTwoKnownComponents_EmitsCircuitConnect()
+    public void Export_ConnectionBetweenTwoComponents_AppearsInNetlistConnections()
     {
         var a = MakeComponent("a", "ebeam_wg_strip_straight", pinCount: 2);
-        var b = MakeComponent("b", "ebeam_grating_coupler_te1550", pinCount: 1);
+        var b = MakeComponent("b", "ebeam_wg_strip_straight", pinCount: 2);
         var conn = new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] };
 
         var script = _exporter.Export([a, b], [conn]);
 
-        script.ShouldContain("circuit.connect('a', 'out1', 'b', 'in')");
+        script.ShouldContain("'a,out1': 'b,in'");
     }
 
     // --- Sweep options ---
 
     [Fact]
-    public void Export_CustomWavelengthSweep_ValuesAppearInScript()
+    public void Export_CustomWavelengthSweep_UmValuesAppearInScript()
     {
+        // sax convention: wavelengths in micrometres. 1310 nm → 1.31 um.
         var script = _exporter.Export([], [], wavelengthMinNm: 1310, wavelengthMaxNm: 1400, numPoints: 50);
 
-        script.ShouldContain("1310");
-        script.ShouldContain("1400");
-        script.ShouldContain("50");
-    }
-
-    [Fact]
-    public void Export_SimulationSectionRefusesToRunWithoutExplicitPorts()
-    {
-        // The generated script must fail loudly (ValueError) if the user runs
-        // it without setting INPUT_PORTS / OUTPUT_PORTS — any silent success
-        // with empty ports would pretend to simulate nothing.
-        var script = _exporter.Export([], []);
-
-        script.ShouldContain("INPUT_PORTS");
-        script.ShouldContain("OUTPUT_PORTS");
-        script.ShouldContain("raise ValueError");
-    }
-
-    [Fact]
-    public void Export_WithComponents_ListsVarNamesAsPortCandidates()
-    {
-        // Users were getting empty INPUT_PORTS/OUTPUT_PORTS with no hint which
-        // identifiers are valid. The header now lists every emitted var name so
-        // the user can pick the right ones without hand-reading the script.
-        var a = MakeComponent("input_gc", "ebeam_grating_coupler_te1550", pinCount: 1);
-        var b = MakeComponent("output_gc", "ebeam_grating_coupler_te1550", pinCount: 1);
-        var script = _exporter.Export([a, b], []);
-
-        script.ShouldContain("- input_gc");
-        script.ShouldContain("- output_gc");
+        script.ShouldContain("1.31");
+        script.ShouldContain("1.4");
+        script.ShouldContain(", 50)");
     }
 
     // --- Sweep validation ---
@@ -329,16 +255,14 @@ public class PicWaveExporterTests
         Should.Throw<ArgumentException>(() => _exporter.Export([], [], numPoints: numPoints));
     }
 
-    // --- Group-external-pin connection resolution ---
+    // --- ComponentGroup integration ---
 
     [Fact]
     public void Export_ConnectionOnGroupExternalPin_ResolvesToLeafComponent()
     {
-        // Regression: ComponentGroup gets flattened before emission, so a
-        // connection authored against the group's external pin (ParentComponent =
-        // the group) must be unwrapped to the leaf PhysicalPin or the resulting
-        // circuit.connect(...) line would reference a var name that was never
-        // emitted via circuit.add_component.
+        // Groups flatten before emission; connections authored against a group's
+        // outward-facing pin must unwrap to the leaf so the netlist entry
+        // references a component var that's actually added.
         var leaf = MakeComponent("leaf_wg", "ebeam_wg_strip_straight", pinCount: 2);
         var other = MakeComponent("other_wg", "ebeam_wg_strip_straight", pinCount: 2);
 
@@ -349,12 +273,7 @@ public class PicWaveExporterTests
         {
             Name = "group_out",
             InternalPin = leaf.PhysicalPins[1],
-            RelativeX = 0,
-            RelativeY = 5,
-            AngleDegrees = 0,
         });
-        // Mirror ComponentGroup.SyncPhysicalPinsFromExternalPins so the
-        // connection can be authored against the group's outward-facing pin.
         group.PhysicalPins.Add(new PhysicalPin
         {
             Name = "group_out",
@@ -370,8 +289,129 @@ public class PicWaveExporterTests
 
         var script = _exporter.Export([group, other], [conn]);
 
-        // Connection should reference the leaf component and its real pin name.
-        script.ShouldContain("circuit.connect('leaf_wg', 'out1', 'other_wg', 'in')");
-        script.ShouldNotContain("'my_group'");
+        script.ShouldContain("'leaf_wg,out1': 'other_wg,in'");
+        script.ShouldNotContain("'my_group,");
+    }
+
+    [Fact]
+    public void Export_GroupInternalFrozenPaths_AreEmittedAsConnections()
+    {
+        // Regression for the user's scenario: child↔child wiring inside a group
+        // is stored in FrozenWaveguidePath, not on the canvas connection list.
+        // The exporter has to pick them up or the script silently drops them.
+        var a = MakeComponent("inner_a", "ebeam_wg_strip_straight", pinCount: 2);
+        var b = MakeComponent("inner_b", "ebeam_wg_strip_straight", pinCount: 2);
+        var c = MakeComponent("inner_c", "ebeam_wg_strip_straight", pinCount: 2);
+
+        var group = new ComponentGroup("three-wg chain");
+        group.Identifier = "my_chain";
+        group.AddChild(a);
+        group.AddChild(b);
+        group.AddChild(c);
+        group.InternalPaths.Add(new FrozenWaveguidePath
+        {
+            StartPin = a.PhysicalPins[1],
+            EndPin = b.PhysicalPins[0],
+            Path = new RoutedPath(),
+        });
+        group.InternalPaths.Add(new FrozenWaveguidePath
+        {
+            StartPin = b.PhysicalPins[1],
+            EndPin = c.PhysicalPins[0],
+            Path = new RoutedPath(),
+        });
+
+        var script = _exporter.Export([group], []);
+
+        script.ShouldContain("'inner_a,out1': 'inner_b,in'");
+        script.ShouldContain("'inner_b,out1': 'inner_c,in'");
+    }
+
+    // --- External ports (dangling pins) ---
+
+    [Fact]
+    public void Export_DanglingPins_BecomeCircuitLevelPorts()
+    {
+        // A pin that's not used in any connection is an external port of the
+        // generated circuit.
+        var a = MakeComponent("wg_a", "ebeam_wg_strip_straight", pinCount: 2);
+        var b = MakeComponent("wg_b", "ebeam_wg_strip_straight", pinCount: 2);
+        var conn = new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] };
+
+        var script = _exporter.Export([a, b], [conn]);
+
+        // a.in and b.out1 are dangling.
+        script.ShouldContain("'wg_a_in': 'wg_a,in'");
+        script.ShouldContain("'wg_b_out1': 'wg_b,out1'");
+    }
+
+    [Fact]
+    public void Export_DefaultSweepPorts_PickSourceInputAndSinkOutput()
+    {
+        // Chain: a → b → c.
+        // a appears only as a connection Start → dangling a.in is input-ish.
+        // c appears only as a connection End   → dangling c.out1 is output-ish.
+        // b is a pass-through, should never be picked.
+        var a = MakeComponent("a", "ebeam_wg_strip_straight", pinCount: 2);
+        var b = MakeComponent("b", "ebeam_wg_strip_straight", pinCount: 2);
+        var c = MakeComponent("c", "ebeam_wg_strip_straight", pinCount: 2);
+        var conn1 = new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] };
+        var conn2 = new WaveguideConnection { StartPin = b.PhysicalPins[1], EndPin = c.PhysicalPins[0] };
+
+        var script = _exporter.Export([a, b, c], [conn1, conn2]);
+
+        script.ShouldContain("INPUT_PORT  = 'a_in'");
+        script.ShouldContain("OUTPUT_PORT = 'c_out1'");
+    }
+
+    [Fact]
+    public void Export_DuplicateConnection_IsEmittedOnlyOnce()
+    {
+        // A connection that appears in both `_canvas.Connections` and a group's
+        // InternalPaths would otherwise produce two identical keys in the sax
+        // netlist dict. Python collapses them to the last, so no runtime impact,
+        // but the emitted file looks broken to a reviewer.
+        var a = MakeComponent("a", "ebeam_wg_strip_straight", pinCount: 2);
+        var b = MakeComponent("b", "ebeam_wg_strip_straight", pinCount: 2);
+        var conn1 = new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] };
+        var conn2 = new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] };
+
+        var script = _exporter.Export([a, b], [conn1, conn2]);
+
+        var first = script.IndexOf("'a,out1': 'b,in'", StringComparison.Ordinal);
+        var second = script.IndexOf("'a,out1': 'b,in'", first + 1, StringComparison.Ordinal);
+
+        first.ShouldBeGreaterThan(0, "the canonical edge must appear");
+        second.ShouldBeLessThan(0, "the duplicate must have been collapsed");
+    }
+
+    [Fact]
+    public void Export_ReverseConnection_IsEmittedOnlyOnce()
+    {
+        // A waveguide is bidirectional. (A→B) and (B→A) describe the same
+        // physical edge; the dedup must treat them as the same.
+        var a = MakeComponent("a", "ebeam_wg_strip_straight", pinCount: 2);
+        var b = MakeComponent("b", "ebeam_wg_strip_straight", pinCount: 2);
+        var forward = new WaveguideConnection { StartPin = a.PhysicalPins[1], EndPin = b.PhysicalPins[0] };
+        var reverse = new WaveguideConnection { StartPin = b.PhysicalPins[0], EndPin = a.PhysicalPins[1] };
+
+        var script = _exporter.Export([a, b], [forward, reverse]);
+
+        var first = script.IndexOf("'a,out1': 'b,in'", StringComparison.Ordinal);
+        var reverseStr = script.IndexOf("'b,in': 'a,out1'", StringComparison.Ordinal);
+        first.ShouldBeGreaterThan(0);
+        reverseStr.ShouldBeLessThan(0);
+    }
+
+    [Fact]
+    public void Export_Plot_AlsoSavesPngAlongsideScript()
+    {
+        // Even without an interactive matplotlib backend the user should get
+        // a visible result. The generated script saves a PNG next to its own
+        // file path and reports the path to stdout.
+        var script = _exporter.Export([], []);
+
+        script.ShouldContain("plt.savefig(");
+        script.ShouldContain("[Lunima] Spectrum saved to:");
     }
 }

@@ -49,12 +49,43 @@ public class PicWaveExporter
     {
         ValidateSweep(wavelengthNm, wavelengthMinNm, wavelengthMaxNm, numPoints);
 
-        var allComponents = FlattenComponents(components).ToList();
+        var topLevel = components.ToList();
+        var allComponents = FlattenComponents(topLevel).ToList();
+
         var allConnections = connections.ToList();
+        allConnections.AddRange(CollectInternalGroupConnections(topLevel));
+        allConnections = DeduplicateConnections(allConnections);
 
         return PicWaveScriptWriter.Write(
             allComponents, allConnections,
             wavelengthNm, wavelengthMinNm, wavelengthMaxNm, numPoints);
+    }
+
+    /// <summary>
+    /// Collapses duplicate edges. A connection can legitimately appear in both
+    /// <c>_canvas.Connections</c> and a <see cref="ComponentGroup.InternalPaths"/>
+    /// list when a group is built from already-connected components — without
+    /// dedup the emitted netlist would list the same edge twice.
+    /// Order of the first occurrence is preserved so the generated script stays
+    /// diff-friendly.
+    /// </summary>
+    private static List<WaveguideConnection> DeduplicateConnections(
+        List<WaveguideConnection> connections)
+    {
+        var seen = new HashSet<(PhysicalPin, PhysicalPin)>();
+        var result = new List<WaveguideConnection>(connections.Count);
+        foreach (var c in connections)
+        {
+            // An (A→B) and (B→A) edge describe the same waveguide, so record
+            // both orderings in the seen-set to catch the reverse form too.
+            var forward = (c.StartPin, c.EndPin);
+            var reverse = (c.EndPin, c.StartPin);
+            if (seen.Contains(forward) || seen.Contains(reverse))
+                continue;
+            seen.Add(forward);
+            result.Add(c);
+        }
+        return result;
     }
 
     private static void ValidateSweep(int wavelengthNm, double wlMinNm, double wlMaxNm, int numPoints)
@@ -91,6 +122,37 @@ public class PicWaveExporter
             {
                 yield return comp;
             }
+        }
+    }
+
+    /// <summary>
+    /// Yields group-internal <see cref="FrozenWaveguidePath"/>s as
+    /// <see cref="WaveguideConnection"/>s. A <see cref="ComponentGroup"/>
+    /// stores connections between its children in <c>InternalPaths</c>, not
+    /// on the top-level canvas connection list — so the exporter has to pick
+    /// them up explicitly, or internal wiring (child↔child inside the group)
+    /// silently vanishes from the generated script. Handles nested groups by
+    /// recursing into child groups.
+    /// </summary>
+    private static IEnumerable<WaveguideConnection> CollectInternalGroupConnections(
+        IEnumerable<Component> components)
+    {
+        foreach (var comp in components)
+        {
+            if (comp is not ComponentGroup group) continue;
+
+            foreach (var frozen in group.InternalPaths)
+            {
+                if (frozen.StartPin == null || frozen.EndPin == null) continue;
+                yield return new WaveguideConnection
+                {
+                    StartPin = frozen.StartPin,
+                    EndPin = frozen.EndPin,
+                };
+            }
+
+            foreach (var nestedConn in CollectInternalGroupConnections(group.ChildComponents))
+                yield return nestedConn;
         }
     }
 }
