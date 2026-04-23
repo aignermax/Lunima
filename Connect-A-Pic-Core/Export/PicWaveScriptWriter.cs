@@ -95,7 +95,15 @@ internal static class PicWaveScriptWriter
         foreach (var comp in components)
         {
             var varName = PicWaveIdentifier.ForVar(comp);
-            bool hasSMatrix = comp.WaveLengthToSMatrixMap.ContainsKey(wavelengthNm);
+
+            // Any registered wavelength counts — the downstream sweep interpolates
+            // between the points we emit. Requiring an exact match on wavelengthNm
+            // would silently discard real wavelength-dependent data when the target
+            // happens to fall between grid points (e.g. SiEPIC PDK grating couplers
+            // indexed at 1500/1509/1521/.../1600 nm would fall through to a generic
+            // typed constructor at wavelengthNm=1550).
+            bool hasSMatrix = comp.WaveLengthToSMatrixMap.Count > 0;
+
             var constructor = PicWaveComponentMapper.Build(comp, hasSMatrix, varName);
             sb.AppendLine($"circuit.add_component('{varName}', {constructor})");
         }

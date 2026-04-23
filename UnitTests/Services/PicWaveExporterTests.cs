@@ -204,6 +204,33 @@ public class PicWaveExporterTests
     }
 
     [Fact]
+    public void Export_SMatrixAtDifferentWavelengths_StillUsesCustomComponent()
+    {
+        // Regression: SiEPIC grating couplers register S-matrix data at 1500nm,
+        // 1509nm, 1521nm, ..., 1600nm — never exactly at 1550nm. The exporter
+        // used to require an exact ContainsKey(wavelengthNm) match, causing the
+        // emitted _s_ dict to become dead code and the component to fall back
+        // to a generic GratingCoupler() that ignored the real measured data.
+        var comp = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(forward: new Complex(0.8, 0));
+        comp.Identifier = "gc_like";
+        comp.NazcaFunctionName = "ebeam_gc_te1550";
+
+        // Move the S-matrix registration off the default 1550nm target.
+        // (PhaseShifter factory registers at RedNM = 1550; swap it to 1549.)
+        var sMatrixAt1550 = comp.WaveLengthToSMatrixMap[StandardWaveLengths.RedNM];
+        comp.WaveLengthToSMatrixMap.Remove(StandardWaveLengths.RedNM);
+        comp.WaveLengthToSMatrixMap[1549] = sMatrixAt1550;
+
+        var script = _exporter.Export([comp], [], wavelengthNm: StandardWaveLengths.RedNM);
+
+        // S-matrix data for the component is emitted
+        script.ShouldContain("_s_gc_like = {");
+        // AND the component uses it — not a dead dict above a typed constructor
+        script.ShouldContain("CustomComponent(s_matrices=_s_gc_like");
+        script.ShouldNotContain("GratingCoupler()");
+    }
+
+    [Fact]
     public void Export_PhaseShifterAsymmetric_ForwardAndBackwardEmittedIndependently()
     {
         // Forward = i → row 1 col 0 (S21) = 0 + 1j
