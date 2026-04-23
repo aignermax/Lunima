@@ -168,7 +168,6 @@ public class VerilogAExporterTests
     {
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
-        // Wavelength not in the SMatrix map → heuristic path
         var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
             new VerilogAExportOptions { WavelengthNm = 9999 });
         var module = result.ComponentFiles.Values.First();
@@ -234,14 +233,14 @@ public class VerilogAExporterTests
         var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
             new VerilogAExportOptions { IncludeTestBench = true });
 
-        // 1 component file + 1 netlist + 1 test bench = 3
         result.TotalFileCount.ShouldBe(3);
     }
 
     [Fact]
     public void Export_DuplicateComponentTypes_GeneratesSingleModuleFile()
     {
-        // Two identical component types should produce one .va module, not two
+        // Two components with the same NazcaFunctionName must share one .va module,
+        // otherwise the top-level netlist would emit two `include` lines for the same symbol.
         var comp1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         var comp2 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
@@ -249,14 +248,13 @@ public class VerilogAExporterTests
             new VerilogAExportOptions());
 
         result.Success.ShouldBeTrue();
-        // Only one component file since both have the same NazcaFunctionName
         result.ComponentFiles.Count.ShouldBe(1);
     }
 
     /// <summary>
-    /// Issue #484: verifies that a phase-shifter with S12 = e^(iπ/2) = i emits
-    /// both <c>s12_re</c> and <c>s12_im</c> parameters in the generated file,
-    /// preserving the full complex value rather than collapsing to the real part only.
+    /// Verifies that a phase-shifter with S12 = e^(iπ/2) = i emits both
+    /// <c>s12_re</c> and <c>s12_im</c> parameters, preserving the full complex
+    /// value rather than collapsing to the real part only.
     /// </summary>
     [Fact]
     public void Export_PhaseShifter_S12EqualToImaginaryUnit_BothReImParametersInFile()

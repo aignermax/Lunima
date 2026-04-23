@@ -99,10 +99,7 @@ internal static class VerilogAModuleWriter
 
     private static void AppendTransferEquations(StringBuilder sb, int n)
     {
-        // Complex S-matrix multiplication: Y_i = Σ_j S_ij · X_j
-        // Expanded into Re/Im components:
-        //   Y_re = S_re · X_re − S_im · X_im
-        //   Y_im = S_re · X_im + S_im · X_re
+        // Convention documented in AppendComplexModelHeader — do not duplicate here.
         for (int outPort = 0; outPort < n; outPort++)
         {
             var reTerms = new List<string>();
@@ -160,7 +157,16 @@ internal static class VerilogAModuleWriter
             }
         }
 
-        return result.Count > 0 ? (result, false) : (ApplyHeuristicModel(comp), true);
+        // S-matrix was provided but did not map onto any (in-flow, out-flow) pair of the
+        // component's PhysicalPins. Falling back to the heuristic here would silently
+        // replace user-supplied physics with an invented default.
+        if (result.Count == 0)
+            throw new InvalidOperationException(
+                $"Component '{comp.Name}' has an S-matrix at {wavelengthNm}nm but none of its " +
+                "entries match the PhysicalPin LogicalPin GUIDs. The SMatrix pin IDs are out of " +
+                "sync with the component's LogicalPins — re-wire the pins or rebuild the model.");
+
+        return (result, false);
     }
 
     private static Dictionary<(int, int), Complex> ApplyHeuristicModel(Component comp)

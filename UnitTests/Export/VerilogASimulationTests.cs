@@ -14,12 +14,8 @@ namespace UnitTests.Export;
 /// End-to-end simulation tests for the Verilog-A exporter. Compiles the
 /// generated <c>.va</c> to <c>.osdi</c> with OpenVAF, runs a SPICE test bench
 /// through NGSpice's <c>pre_osdi</c> loader, and asserts on the solved node
-/// voltages.
-///
-/// <para>Skipped gracefully when <c>openvaf</c> or <c>ngspice</c> is not on
-/// PATH — CI installs both. These tests are the real logic check referenced
-/// in issue #485, sitting on top of the syntax-level OpenVAF compile tests in
-/// <see cref="VerilogAScriptExecutionTests"/>.</para>
+/// voltages. Skipped gracefully when <c>openvaf</c> or <c>ngspice</c> is not
+/// on PATH — CI installs both.
 /// </summary>
 public class VerilogASimulationTests
 {
@@ -33,12 +29,10 @@ public class VerilogASimulationTests
 
     /// <summary>
     /// End-to-end simulation test for a heuristic lossy waveguide using the
-    /// twin-node complex model introduced in issue #484.
-    /// <para>
-    /// The module has 4 electrical nodes (port0_re, port0_im, port1_re, port1_im).
-    /// With S21_re = 0.95 and S21_im = 0 (heuristic, S11 = S22 = 0), driving
-    /// port0_re = 1V should yield port1_re ≈ 0.95V and port1_im ≈ 0V.
-    /// </para>
+    /// twin-node complex model. The module has 4 electrical nodes
+    /// (port0_re, port0_im, port1_re, port1_im). With S21_re = 0.95 and
+    /// S21_im = 0 (heuristic, S11 = S22 = 0), driving port0_re = 1V should
+    /// yield port1_re ≈ 0.95V and port1_im ≈ 0V.
     /// </summary>
     [SkippableFact]
     public void LossyWaveguide_TwinNodeComplexModel_TransmitsCorrectAmplitude()
@@ -63,9 +57,9 @@ public class VerilogASimulationTests
             var moduleName = result.ComponentFiles.Keys.First().Replace(".va", "");
             CompileToOsdi(openvaf, dir, result.ComponentFiles.Keys.First());
 
-            // Twin-node netlist: port0 = (in_re, in_im), port1 = (out_re, out_im)
-            // S11 = S22 = 0 so the module contributes nothing to port0 — no over-constraint.
-            var netlist = $@"* Waveguide transmission test (twin-node complex model, issue #484)
+            // S11 = S22 = 0 so the module contributes nothing to port0 — no over-constraint
+            // between the 1V source at in_re and the module equation at the same node.
+            var netlist = $@"* Waveguide transmission test (twin-node complex model)
 V1_re in_re 0 DC 1
 V1_im in_im 0 DC 0
 Rload_re out_re 0 1e6
@@ -87,8 +81,8 @@ N1 in_re in_im out_re out_im {moduleName}_mod
             if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
 
             stdout.ShouldNotContain("DC solution failed", Case.Insensitive,
-                "Issue #484 twin-node fix should resolve the DC convergence failure. " +
-                "If NGSpice still fails here, check the N-element 4-port syntax for your NGSpice version.");
+                "Twin-node netlist must DC-converge. If NGSpice fails here, check the " +
+                "N-element 4-port syntax for your NGSpice version.");
 
             var outRe = ParseNgspicePrintedVoltage(stdout, "v(out_re)");
             outRe.ShouldBe(0.95, tolerance: 0.01,
@@ -106,8 +100,21 @@ N1 in_re in_im out_re out_im {moduleName}_mod
     {
         var probedOpenVaf = TryProbe("openvaf", "--help", out var oReason)
             ? "openvaf" : (TryProbe("openvaf.exe", "--help", out _) ? "openvaf.exe" : null);
-        var probedNgspice = TryProbe("ngspice", "--version", out var nReason)
-            ? "ngspice" : (TryProbe("ngspice.exe", "--version", out _) ? "ngspice.exe" : null);
+
+        // On Windows, ngspice.exe is the GUI build — it pops up a message box on startup
+        // and writes nothing to stdout, which makes automated runs both noisy and unusable.
+        // The Spice64 distribution ships ngspice_con.exe as the batch/console variant;
+        // prefer it when available. Linux installs only 'ngspice', which is fine as-is.
+        string? probedNgspice = null;
+        string nReason = "";
+        foreach (var candidate in new[] { "ngspice_con", "ngspice_con.exe", "ngspice", "ngspice.exe" })
+        {
+            if (TryProbe(candidate, "--version", out nReason))
+            {
+                probedNgspice = candidate;
+                break;
+            }
+        }
 
         if (probedOpenVaf == null) _output.WriteLine($"openvaf probe: {oReason}");
         if (probedNgspice == null) _output.WriteLine($"ngspice probe: {nReason}");
@@ -215,8 +222,6 @@ N1 in_re in_im out_re out_im {moduleName}_mod
     /// </summary>
     private static double ParseNgspicePrintedVoltage(string stdout, string nodeName)
     {
-        // ngspice print output format: "v(out) = 9.500000e-01"
-        // Sometimes it's on its own line, sometimes preceded by whitespace.
         var pattern = Regex.Escape(nodeName) + @"\s*=\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)";
         var match = Regex.Match(stdout, pattern, RegexOptions.IgnoreCase);
         if (!match.Success)
