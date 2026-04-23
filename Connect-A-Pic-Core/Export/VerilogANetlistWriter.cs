@@ -159,11 +159,10 @@ internal static class VerilogANetlistWriter
         sb.AppendLine("* Complex optical model: each optical port = two electrical nodes (_re / _im).");
         sb.AppendLine("* Stimulus: port 0 driven Re=1V, Im=0V. Other ports terminated via 1MΩ loads.");
         sb.AppendLine("*");
-        sb.AppendLine("* Prerequisite: compile each component .va file to an OSDI module:");
-        foreach (var moduleName in components.Select(VerilogAIdentifier.For).Distinct())
-            sb.AppendLine($"*   openvaf {moduleName}.va     ->  {moduleName}.osdi");
-        sb.AppendLine("* Then run this bench with NGSpice in batch mode:");
-        sb.AppendLine($"*   ngspice -b {circuitName}.sp   (use ngspice_con.exe on Windows)");
+        sb.AppendLine("* Prerequisite: compile every component .va to an OSDI binary in-place:");
+        sb.AppendLine("*   for f in components/*.va; do openvaf \"$f\"; done");
+        sb.AppendLine("* Then run this bench from the export root (use ngspice_con.exe on Windows):");
+        sb.AppendLine($"*   ngspice -b {circuitName}.sp");
         sb.AppendLine();
 
         // externalPorts comes in (_re, _im) pairs — two entries per optical port.
@@ -201,9 +200,12 @@ internal static class VerilogANetlistWriter
         }
         sb.AppendLine();
 
+        // OSDI paths are relative to the bench's working directory. The UI writes
+        // each component as components/<name>.va (and openvaf emits the .osdi next
+        // to it), so the bench must mirror that layout.
         sb.AppendLine(".control");
         foreach (var modName in uniqueModules)
-            sb.AppendLine($"  pre_osdi {modName}.osdi");
+            sb.AppendLine($"  pre_osdi components/{modName}.osdi");
         sb.AppendLine("  op");
         sb.AppendLine($"  print {string.Join(" ", externalPorts.Select(p => $"v({p})"))}");
         sb.AppendLine("  quit");

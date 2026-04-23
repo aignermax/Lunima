@@ -190,27 +190,35 @@ N1 in_re in_im out_re out_im {moduleName}_mod
         result.Success.ShouldBeTrue(result.ErrorMessage);
         result.SpiceTestBench.ShouldNotBeNullOrEmpty();
 
-        var dir = WriteExportToTempDir(result);
+        // Replicate the ViewModel's output layout: bench at the root, component
+        // .va files in a components/ subdirectory. The generated bench preloads
+        // components/<name>.osdi from the root — paths must match exactly.
+        var dir = Path.Combine(Path.GetTempPath(), $"lunima_va_gen_{Guid.NewGuid():N}");
+        var componentsDir = Path.Combine(dir, "components");
+        Directory.CreateDirectory(componentsDir);
+        var enc = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        foreach (var (filename, content) in result.ComponentFiles)
+            File.WriteAllText(Path.Combine(componentsDir, filename), content, enc);
+        File.WriteAllText(Path.Combine(dir, $"{result.CircuitName}.sp"), result.SpiceTestBench, enc);
+
         try
         {
-            // The generated .sp preloads each component's OSDI — OpenVAF cannot
-            // compile the hierarchical top-level .va, only flat compact models.
             foreach (var componentVa in result.ComponentFiles.Keys)
-                CompileToOsdi(openvaf, dir, componentVa);
+                CompileToOsdi(openvaf, componentsDir, componentVa);
 
             var (_, stdout, stderr) = RunNgspice(ngspice, dir, Path.Combine(dir, $"{result.CircuitName}.sp"));
             _output.WriteLine($"ngspice stdout:\n{stdout}");
             if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
 
             stdout.ShouldNotContain("DC solution failed", Case.Insensitive);
+            stdout.ShouldNotContain("can't open", Case.Insensitive,
+                "If NGSpice complains it can't open the .osdi, the bench's pre_osdi " +
+                "path no longer matches the ViewModel's output layout.");
 
-            // External ports are named ext_portN_re/_im by VerilogANetlistWriter.
-            // Port 0 is driven (DC 1V on _re), port 1 is the transmission output.
             var outRe = ParseNgspicePrintedVoltage(stdout, "v(ext_port1_re)");
             outRe.ShouldBe(0.95, tolerance: 0.01,
                 "Generated test bench should replicate the transmission amplitude " +
-                "that the hand-rolled netlist produces — any divergence points to a " +
-                "bug in WriteSpiceTestBench itself.");
+                "that the hand-rolled netlist produces.");
         }
         finally
         {

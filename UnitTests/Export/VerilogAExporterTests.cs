@@ -95,7 +95,7 @@ public class VerilogAExporterTests
         // NGSpice-OSDI flow: one pre_osdi per component module inside a .control
         // block, N-elements instantiate the compact models directly (OpenVAF can't
         // compile the hierarchical top-level .va, so we don't reference it).
-        result.SpiceTestBench.ShouldContain("pre_osdi placeCell_StraightWG.osdi");
+        result.SpiceTestBench.ShouldContain("pre_osdi components/placeCell_StraightWG.osdi");
         result.SpiceTestBench.ShouldContain(".control");
         result.SpiceTestBench.ShouldContain(".endc");
         result.SpiceTestBench.ShouldContain("N_inst0 ");
