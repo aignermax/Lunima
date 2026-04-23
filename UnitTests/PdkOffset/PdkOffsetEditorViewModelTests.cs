@@ -110,6 +110,45 @@ public class PdkOffsetEditorViewModelTests
         vm.Status.ShouldBe(OffsetStatus.Set);
     }
 
+    [Fact]
+    public void OffsetItem_WhenOnlyOneFieldNull_HasMissingStatus()
+    {
+        // Guards against a `&&`-vs-`||` typo in RefreshStatus. One-null must be
+        // treated as Missing (can't GDS-export partial coordinates).
+        var draft = BuildTestPdk().Components[0];
+        draft.NazcaOriginOffsetX = 5.0;
+        draft.NazcaOriginOffsetY = null;
+        var vm = new PdkComponentOffsetItemViewModel(draft, "Test PDK");
+
+        vm.Status.ShouldBe(OffsetStatus.Missing);
+    }
+
+    [Fact]
+    public void OffsetItem_WhenFloatNoiseNearZero_StaysZeroOffset()
+    {
+        // Exact `== 0.0` comparison used to flip Status from ZeroOffset to Set
+        // on any floating-point noise (GUI round-trip, serializer fuzz).
+        var draft = BuildTestPdk().Components[2];
+        draft.NazcaOriginOffsetX = 1e-18;
+        draft.NazcaOriginOffsetY = -2e-18;
+        var vm = new PdkComponentOffsetItemViewModel(draft, "Test PDK");
+
+        vm.Status.ShouldBe(OffsetStatus.ZeroOffset);
+    }
+
+    [Fact]
+    public void OffsetItem_WhenOneFieldZeroOneNonzero_IsSet()
+    {
+        // Documents the boundary between ZeroOffset and Set: "both near-zero"
+        // is ZeroOffset, "any one non-zero" is Set.
+        var draft = BuildTestPdk().Components[0];
+        draft.NazcaOriginOffsetX = 0.0;
+        draft.NazcaOriginOffsetY = 10.0;
+        var vm = new PdkComponentOffsetItemViewModel(draft, "Test PDK");
+
+        vm.Status.ShouldBe(OffsetStatus.Set);
+    }
+
     // ─── PinPositionViewModel ──────────────────────────────────────────────────
 
     [Fact]
@@ -191,6 +230,60 @@ public class PdkOffsetEditorViewModelTests
         vm.SelectedComponent.Draft.NazcaOriginOffsetY.ShouldBe(4.0);
         vm.SelectedComponent.Status.ShouldBe(OffsetStatus.Set);
         vm.HasUnsavedChanges.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ViewModel_ApplyOffset_WithNoSelection_IsNoOpWithStatus()
+    {
+        var vm = CreateViewModel();
+        vm.OffsetX = 5.0;
+        vm.OffsetY = 2.0;
+
+        vm.ApplyOffsetCommand.Execute(null);
+
+        vm.HasUnsavedChanges.ShouldBeFalse();
+        vm.StatusText.ShouldContain("Select a component");
+    }
+
+    [Theory]
+    [InlineData(double.NaN, 0.0)]
+    [InlineData(0.0, double.NaN)]
+    [InlineData(double.PositiveInfinity, 0.0)]
+    [InlineData(0.0, double.NegativeInfinity)]
+    public void ViewModel_ApplyOffset_RejectsNonFiniteValues(double badX, double badY)
+    {
+        var vm = CreateViewModel();
+        var pdk = BuildTestPdk();
+        foreach (var comp in pdk.Components)
+            vm.Components.Add(new PdkComponentOffsetItemViewModel(comp, pdk.Name));
+
+        vm.SelectedComponent = vm.Components[1]; // Waveguide — Missing
+        vm.OffsetX = badX;
+        vm.OffsetY = badY;
+
+        vm.ApplyOffsetCommand.Execute(null);
+
+        // Draft stays untouched — no silent propagation of NaN into the JSON.
+        vm.SelectedComponent.Draft.NazcaOriginOffsetX.ShouldBeNull();
+        vm.SelectedComponent.Draft.NazcaOriginOffsetY.ShouldBeNull();
+        vm.HasUnsavedChanges.ShouldBeFalse();
+        vm.StatusText.ShouldContain("finite");
+    }
+
+    [Fact]
+    public void ViewModel_SelectingMissingComponent_ShowsWarningInStatus()
+    {
+        // The edit fields default to 0/0 for a null-offset component. A user
+        // who clicks Apply without reading the warning would silently convert
+        // "no offset in JSON" into "offset = 0". Make the state visible.
+        var vm = CreateViewModel();
+        var pdk = BuildTestPdk();
+        foreach (var comp in pdk.Components)
+            vm.Components.Add(new PdkComponentOffsetItemViewModel(comp, pdk.Name));
+
+        vm.SelectedComponent = vm.Components[1]; // Waveguide — Missing
+
+        vm.StatusText.ShouldContain("no offset in the JSON");
     }
 
     [Fact]
@@ -276,17 +369,63 @@ public class PdkOffsetEditorViewModelTests
     }
 
     [Fact]
-    public void PdkJsonSaver_UpdateComponentOffset_ReturnsFalseForUnknownComponent()
+    public void PdkJsonSaver_PreservesFloatPrecisionInJson()
     {
+        // The existing round-trip test above only greps for "3.25". Protects
+        // against JsonSerializerOptions regressions on culture / precision.
+        // Deliberately checks values that would truncate with a naive F-format:
+        // 0.1+0.2 → 0.30000000000000004, and a value that needs ≥ 7 sig digits.
         var tempFile = Path.GetTempFileName();
         try
         {
             var pdk = BuildTestPdk();
+            pdk.Components[0].NazcaOriginOffsetX = 0.1 + 0.2;
+            pdk.Components[0].NazcaOriginOffsetY = 1234.5678901;
+
             new PdkJsonSaver().SaveToFile(pdk, tempFile);
+            var json = File.ReadAllText(tempFile);
 
-            var result = new PdkJsonSaver().UpdateComponentOffset(pdk, "NonExistent", 1, 2, tempFile);
+            json.ShouldContain("0.30000000000000004");
+            json.ShouldContain("1234.5678901");
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
 
-            result.ShouldBeFalse();
+    [Fact]
+    public void PdkJsonSaver_WhenAllOffsetsNull_OmitsOffsetProperties()
+    {
+        // `DefaultIgnoreCondition.WhenWritingNull` on the saver's options is a
+        // contract: un-calibrated components must not flip to "0.0" in JSON.
+        // Otherwise the editor's missing-vs-zero-offset distinction collapses
+        // after one save and the user can never tell which components were
+        // actually calibrated.
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            var pdk = new PdkDraft
+            {
+                Name = "Null-offsets",
+                Components = new List<PdkComponentDraft>
+                {
+                    new()
+                    {
+                        Name = "untouched",
+                        WidthMicrometers = 10,
+                        HeightMicrometers = 10,
+                        NazcaOriginOffsetX = null,
+                        NazcaOriginOffsetY = null,
+                    }
+                }
+            };
+
+            new PdkJsonSaver().SaveToFile(pdk, tempFile);
+            var json = File.ReadAllText(tempFile);
+
+            json.ShouldNotContain("nazcaOriginOffsetX");
+            json.ShouldNotContain("nazcaOriginOffsetY");
         }
         finally
         {

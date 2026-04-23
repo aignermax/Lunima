@@ -72,6 +72,14 @@ public partial class PdkComponentOffsetItemViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Epsilon in µm below which an offset is treated as "exactly zero" for
+    /// the purposes of the ZeroOffset status. PDK offsets are calibrated in
+    /// whole or fractional µm, so 1e-9 µm (≈ sub-atomic scale) is
+    /// unambiguously floating-point noise from a GUI round-trip.
+    /// </summary>
+    private const double ZeroOffsetEpsilonMicrometers = 1e-9;
+
+    /// <summary>
     /// Re-evaluates the offset status from the current draft values.
     /// Call after editing the offset so the badge updates.
     /// </summary>
@@ -81,7 +89,8 @@ public partial class PdkComponentOffsetItemViewModel : ObservableObject
         {
             Status = OffsetStatus.Missing;
         }
-        else if (Draft.NazcaOriginOffsetX == 0.0 && Draft.NazcaOriginOffsetY == 0.0)
+        else if (Math.Abs(Draft.NazcaOriginOffsetX.Value) < ZeroOffsetEpsilonMicrometers
+                 && Math.Abs(Draft.NazcaOriginOffsetY.Value) < ZeroOffsetEpsilonMicrometers)
         {
             Status = OffsetStatus.ZeroOffset;
         }

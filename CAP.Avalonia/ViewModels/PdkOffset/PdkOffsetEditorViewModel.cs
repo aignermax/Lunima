@@ -109,12 +109,24 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
     /// <summary>
     /// Applies the current OffsetX/OffsetY to the selected component draft
-    /// and refreshes the pin position table.
+    /// and refreshes the pin position table. Rejects non-finite values
+    /// (NaN / ±Infinity) — they would silently propagate into the JSON and
+    /// later break GDS export with cryptic coordinate errors.
     /// </summary>
     [RelayCommand]
     private void ApplyOffset()
     {
-        if (SelectedComponent == null) return;
+        if (SelectedComponent == null)
+        {
+            StatusText = "Select a component before applying an offset.";
+            return;
+        }
+
+        if (!double.IsFinite(OffsetX) || !double.IsFinite(OffsetY))
+        {
+            StatusText = $"Offset values must be finite numbers (got X={OffsetX}, Y={OffsetY}).";
+            return;
+        }
 
         SelectedComponent.Draft.NazcaOriginOffsetX = OffsetX;
         SelectedComponent.Draft.NazcaOriginOffsetY = OffsetY;
@@ -161,6 +173,17 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         OffsetX = value.Draft.NazcaOriginOffsetX ?? 0;
         OffsetY = value.Draft.NazcaOriginOffsetY ?? 0;
+
+        // Warn when the selected component has no offset in the JSON. The edit
+        // fields show 0/0 as a display default, but hitting Apply without
+        // realizing would flip the JSON from "null" (missing) to "0.0" (set
+        // to zero) — the file would then claim the component has been
+        // calibrated when it hasn't. Make the state visible.
+        if (value.Status == OffsetStatus.Missing)
+        {
+            StatusText = $"'{value.ComponentName}' has no offset in the JSON. Entering 0 and " +
+                         "clicking Apply will record it as calibrated-to-zero.";
+        }
 
         RefreshPinPositions(value.Draft);
         RefreshCanvasMarkers(value.Draft);
