@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Update;
 using CAP_Core.Export;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_DataAccess.Persistence.PIR;
@@ -65,6 +66,16 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public BottomPanelViewModel BottomPanel { get; }
 
+    /// <summary>
+    /// ViewModel for software update checking. Shared with the Settings window.
+    /// The update banner in the main window binds to this property.
+    /// </summary>
+    public UpdateViewModel Update { get; }
+
+    /// <summary>
+    /// Delegate wired by <see cref="CAP.Avalonia.Views.MainWindow"/> to open the Settings window.
+    /// </summary>
+    public Func<Task>? ShowSettingsWindowAsync { get; set; }
 
     /// <summary>
     /// Available wavelength options for the laser configuration dropdown.
@@ -99,8 +110,9 @@ public partial class MainViewModel : ObservableObject
         UserPreferencesService preferencesService,
         Services.GroupPreviewGenerator previewGenerator,
         Services.IInputDialogService inputDialogService,
-        CAP_Core.Export.GdsExportService gdsExportService,
         ErrorConsoleService errorConsoleService,
+        GdsExportViewModel gdsExportViewModel,
+        UpdateViewModel updateViewModel,
         LeftPanelViewModel leftPanel,
         RightPanelViewModel rightPanel,
         BottomPanelViewModel bottomPanel,
@@ -112,6 +124,7 @@ public partial class MainViewModel : ObservableObject
         _canvas = canvas;
         PdkOffsetEditor = pdkOffsetEditor;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
+        Update = updateViewModel;
 
         // Wire panel ViewModels (injected via DI)
         LeftPanel = leftPanel;
@@ -119,14 +132,11 @@ public partial class MainViewModel : ObservableObject
         BottomPanel = bottomPanel;
 
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
-        var gdsExportVm = new ViewModels.Export.GdsExportViewModel(gdsExportService, errorConsoleService);
-        gdsExportVm.Initialize(preferencesService.GetCustomPythonPath());
-        gdsExportVm.OnPythonPathChanged = path => preferencesService.SetCustomPythonPath(path);
 
         var photonTorchVm = new ViewModels.Export.PhotonTorchExportViewModel(
             new CAP_Core.Export.PhotonTorchExporter(), _canvas);
 
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportVm, photonTorchVm, errorConsoleService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchVm, errorConsoleService);
         ViewportControl = viewportControl;
 
         // Wire up status callbacks
@@ -261,7 +271,7 @@ public partial class MainViewModel : ObservableObject
     private async Task TriggerStartupUpdateCheckAsync()
     {
         await Task.Delay(2000);
-        await RightPanel.Update.CheckForUpdatesOnStartupAsync();
+        await Update.CheckForUpdatesOnStartupAsync();
     }
 
     private void WireCommandManager()
@@ -431,6 +441,17 @@ public partial class MainViewModel : ObservableObject
         {
             StatusText = $"Could not open browser: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Opens the application Settings window.
+    /// The actual window creation is wired by <see cref="CAP.Avalonia.Views.MainWindow"/>.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenSettingsWindow()
+    {
+        if (ShowSettingsWindowAsync != null)
+            await ShowSettingsWindowAsync();
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]

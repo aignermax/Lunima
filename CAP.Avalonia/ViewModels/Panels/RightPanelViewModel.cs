@@ -5,7 +5,6 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Export;
-using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.Services;
 
@@ -97,11 +96,6 @@ public partial class RightPanelViewModel : ObservableObject
     public PdkConsistencyViewModel PdkConsistency { get; }
 
     /// <summary>
-    /// ViewModel for the software update panel (check for updates, download, install).
-    /// </summary>
-    public UpdateViewModel Update { get; }
-
-    /// <summary>
     /// ViewModel for the in-app AI Design Assistant chat panel.
     /// </summary>
     public AiAssistantViewModel AiAssistant { get; }
@@ -126,7 +120,6 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrixViewModel groupSMatrix,
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
-        UpdateViewModel update,
         AiAssistantViewModel aiAssistant,
         VerilogAExportViewModel verilogAExport)
     {
@@ -143,7 +136,6 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrix = groupSMatrix;
         ArchitectureReport = architectureReport;
         PdkConsistency = pdkConsistency;
-        Update = update;
         AiAssistant = aiAssistant;
         VerilogAExport = verilogAExport;
 

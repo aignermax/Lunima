@@ -46,6 +46,14 @@ public static class MainViewModelTestHelper
         var rightPanel = CreateRightPanelViewModel(canvas, preferencesService);
         var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
 
+        var errorConsoleService = new CAP_Core.ErrorConsoleService();
+        var gdsExportVm = new GdsExportViewModel(new GdsExportService(), errorConsoleService);
+        var updateVm = new UpdateViewModel(
+            new UpdateChecker(new HttpClient(), "aignermax", "Connect-A-PIC-Pro"),
+            new UpdateDownloader(new HttpClient()),
+            preferencesService,
+            Mock.Of<IUrlLauncher>());
+
         return new MainViewModel(
             canvas,
             simulationService,
@@ -55,8 +63,9 @@ public static class MainViewModelTestHelper
             preferencesService,
             new GroupPreviewGenerator(),
             Mock.Of<IInputDialogService>(),
-            new GdsExportService(),
-            new CAP_Core.ErrorConsoleService(),
+            errorConsoleService,
+            gdsExportVm,
+            updateVm,
             leftPanel,
             rightPanel,
             bottomPanel,
@@ -99,15 +108,6 @@ public static class MainViewModelTestHelper
         canvas ??= new DesignCanvasViewModel();
         preferencesService ??= new UserPreferencesService();
 
-        var httpClient = new HttpClient();
-        var updateChecker = new UpdateChecker(httpClient, "aignermax", "Connect-A-PIC-Pro");
-        var updateDownloader = new UpdateDownloader(httpClient);
-        var updateVm = new UpdateViewModel(
-            updateChecker,
-            updateDownloader,
-            preferencesService,
-            Mock.Of<IUrlLauncher>());
-
         return new RightPanelViewModel(
             canvas,
             preferencesService,
@@ -122,7 +122,6 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            updateVm,
             new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
             new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas));
     }

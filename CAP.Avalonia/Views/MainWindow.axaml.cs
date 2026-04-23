@@ -6,6 +6,8 @@ using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
 using CAP.Avalonia.Views.PdkImport;
+using CAP.Avalonia.ViewModels.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 using System.Linq;
 
@@ -13,6 +15,8 @@ namespace CAP.Avalonia.Views;
 
 public partial class MainWindow : Window
 {
+    private SettingsWindow? _settingsWindow;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -22,6 +26,20 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainViewModel vm)
             {
+                // Wire up Settings window opener
+                vm.ShowSettingsWindowAsync = async () =>
+                {
+                    if (_settingsWindow != null && _settingsWindow.IsVisible)
+                    {
+                        _settingsWindow.Activate();
+                        return;
+                    }
+                    var settingsVm = App.Services.GetRequiredService<SettingsWindowViewModel>();
+                    _settingsWindow = new SettingsWindow { DataContext = settingsVm };
+                    _settingsWindow.Show(this);
+                    await Task.CompletedTask;
+                };
+
                 vm.FileDialogService = new FileDialogService(this);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
