@@ -67,6 +67,7 @@ public class PanelWidthPersistenceTests : IDisposable
             _preferencesService,
             new NoOpUrlLauncher());
         return new(_canvas, _preferencesService,
+            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(_preferencesService),
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
             new DesignValidationViewModel(),

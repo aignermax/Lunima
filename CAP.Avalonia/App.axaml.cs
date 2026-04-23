@@ -112,6 +112,7 @@ public partial class App : Application
         services.AddTransient<ComponentLibraryViewModel>();
 
         // Register sub-ViewModels (Right panel)
+        services.AddTransient<ChipSizeViewModel>();
         services.AddTransient<ParameterSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();

@@ -654,6 +654,9 @@
                     <!-- Verilog-A / SPICE Export Panel -->
                     <panels:VerilogAExportPanel/>
 
+                    <!-- Chip Size Panel -->
+                    <panels:ChipSizePanel/>
+
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
 
