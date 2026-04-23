@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:canvas="using:CAP.Avalonia.ViewModels.Canvas"
+             x:Class="CAP.Avalonia.Views.Panels.ChipSizePanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Chip Size:" Foreground="LightCyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+
+        <!-- Preset dropdown -->
+        <TextBlock Text="Preset:" Foreground="Gray" Margin="0,4,0,2" FontSize="10"/>
+        <ComboBox ItemsSource="{Binding RightPanel.ChipSize.Presets}"
+                  SelectedItem="{Binding RightPanel.ChipSize.SelectedPreset}"
+                  DisplayMemberBinding="{Binding Name}"
+                  HorizontalAlignment="Stretch"
+                  Margin="0,0,0,6"/>
+
+        <!-- Width -->
+        <TextBlock Text="Width (mm):" Foreground="Gray" Margin="0,4,0,2" FontSize="10"/>
+        <NumericUpDown Value="{Binding RightPanel.ChipSize.WidthMillimeters}"
+                       Minimum="0.1" Maximum="100"
+                       Increment="1" FormatString="F2"
+                       HorizontalAlignment="Stretch"
+                       Margin="0,0,0,4"/>
+
+        <!-- Height -->
+        <TextBlock Text="Height (mm):" Foreground="Gray" Margin="0,4,0,2" FontSize="10"/>
+        <NumericUpDown Value="{Binding RightPanel.ChipSize.HeightMillimeters}"
+                       Minimum="0.1" Maximum="100"
+                       Increment="1" FormatString="F2"
+                       HorizontalAlignment="Stretch"
+                       Margin="0,0,0,6"/>
+
+        <!-- Derived tile grid (read-only) -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="Grid: " Foreground="Gray" FontSize="10"/>
+            <TextBlock Text="{Binding RightPanel.ChipSize.TileColumns}" Foreground="LightGray" FontSize="10"/>
+            <TextBlock Text=" × " Foreground="Gray" FontSize="10"/>
+            <TextBlock Text="{Binding RightPanel.ChipSize.TileRows}" Foreground="LightGray" FontSize="10"/>
+            <TextBlock Text=" tiles (250 μm pitch)" Foreground="Gray" FontSize="10"/>
+        </StackPanel>
+
+        <!-- Apply button -->
+        <Button Content="Apply"
+                Command="{Binding RightPanel.ChipSize.ApplyCommand}"
+                HorizontalAlignment="Stretch"
+                Background="#3d5d5d"
+                Margin="0,2,0,0"/>
+
+        <!-- Status text -->
+        <TextBlock Text="{Binding RightPanel.ChipSize.StatusText}"
+                   Foreground="LightGray" FontSize="10" Margin="0,4,0,0"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.ChipSize.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </StackPanel>
+
+</UserControl>

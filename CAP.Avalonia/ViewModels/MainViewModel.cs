@@ -364,6 +364,10 @@ public partial class MainViewModel : ObservableObject
             ViewportControl.ZoomToFit(vpWidth, vpHeight);
         };
 
+        // Restore chip size from saved file without overwriting the user preference default
+        FileOperations.ApplyChipSizeAfterLoad = (widthUm, heightUm) =>
+            RightPanel.ChipSize.ApplyFromMicrometers(widthUm, heightUm);
+
         // Auto-check Python/Nazca environment on startup
         // If no custom path is set, trigger auto-discovery
         var gdsExport = FileOperations.GdsExport;
@@ -604,7 +608,17 @@ public partial class MainViewModel : ObservableObject
             .OfType<CAP_Core.Components.Core.ComponentGroup>()
             .ToList();
 
-        RightPanel.DesignValidation.RunValidation(connections, groups);
+        var allComponents = Canvas.Components
+            .Select(c => c.Component)
+            .ToList();
+
+        RightPanel.DesignValidation.RunValidation(
+            connections,
+            groups,
+            allComponents,
+            RightPanel.ChipSize.CurrentWidthMicrometers,
+            RightPanel.ChipSize.CurrentHeightMicrometers);
+
         StatusText = RightPanel.DesignValidation.StatusText;
     }
 }
@@ -656,6 +670,18 @@ public class DesignFileData
     /// Null or empty for designs without external data.
     /// </summary>
     public List<ExternalReferenceData>? ExternalReferences { get; set; }
+
+    /// <summary>
+    /// Chip width in micrometers as configured in the Chip Size settings.
+    /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
+    /// </summary>
+    public double? ChipWidthMicrometers { get; set; }
+
+    /// <summary>
+    /// Chip height in micrometers as configured in the Chip Size settings.
+    /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
+    /// </summary>
+    public double? ChipHeightMicrometers { get; set; }
 }
 
 /// <summary>

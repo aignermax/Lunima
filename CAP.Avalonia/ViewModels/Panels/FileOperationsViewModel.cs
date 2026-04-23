@@ -87,6 +87,12 @@ public partial class FileOperationsViewModel : ObservableObject
     public Action<double, double>? ZoomToFitAfterLoad { get; set; }
 
     /// <summary>
+    /// Callback to apply a chip size (in micrometers) after loading a project.
+    /// Parameters: (widthMicrometers, heightMicrometers).
+    /// </summary>
+    public Action<double, double>? ApplyChipSizeAfterLoad { get; set; }
+
+    /// <summary>
     /// File dialog service for showing open/save dialogs.
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
@@ -224,6 +230,8 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.Metadata = BuildMetadataForSave();
             if (StoredSMatrices.Count > 0)
                 designData.SMatrices = new Dictionary<string, ComponentSMatrixData>(StoredSMatrices);
+            designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
+            designData.ChipHeightMicrometers = _canvas.ChipMaxY;
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -572,6 +580,14 @@ public partial class FileOperationsViewModel : ObservableObject
                 foreach (var conn in _canvas.Connections)
                 {
                     conn.NotifyPathChanged();
+                }
+
+                // Restore chip size if saved; fall back to canvas default (5000 × 5000 μm)
+                if (designData.ChipWidthMicrometers.HasValue && designData.ChipHeightMicrometers.HasValue)
+                {
+                    ApplyChipSizeAfterLoad?.Invoke(
+                        designData.ChipWidthMicrometers.Value,
+                        designData.ChipHeightMicrometers.Value);
                 }
 
                 // Preserve PIR metadata so Created date survives subsequent saves

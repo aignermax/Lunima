@@ -698,6 +698,9 @@
                     <!-- AI Design Assistant Panel -->
                     <panels:AiAssistantPanel/>
 
+                    <!-- Chip Size Panel -->
+                    <panels:ChipSizePanel/>
+
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
 
