@@ -79,8 +79,7 @@ public class PanelWidthPersistenceTests : IDisposable
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
             updateVm,
-            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
-            new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), _canvas));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService));
     }
 
     private sealed class NoOpUrlLauncher : IUrlLauncher

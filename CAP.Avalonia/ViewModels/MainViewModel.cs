@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Simulation;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Export.Formats;
 using CAP_Core.Export;
 using CAP_DataAccess.Persistence.PIR;
 
@@ -64,6 +65,21 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public BottomPanelViewModel BottomPanel { get; }
 
+    /// <summary>
+    /// ViewModel for the unified Export menu flyout.
+    /// Holds all registered <see cref="IExportFormat"/> implementations.
+    /// </summary>
+    public ExportMenuViewModel ExportMenu { get; }
+
+    /// <summary>PhotonTorch format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
+    public PhotonTorchExportFormat PhotonTorchExportFormat { get; private set; } = null!;
+
+    /// <summary>GDS format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
+    public GdsExportFormat GdsExportFormat { get; private set; } = null!;
+
+    /// <summary>Verilog-A format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
+    public VerilogAExportFormat VerilogAExportFormat { get; private set; } = null!;
+
 
     /// <summary>
     /// Available wavelength options for the laser configuration dropdown.
@@ -97,7 +113,8 @@ public partial class MainViewModel : ObservableObject
         LeftPanelViewModel leftPanel,
         RightPanelViewModel rightPanel,
         BottomPanelViewModel bottomPanel,
-        ViewportControlViewModel viewportControl)
+        ViewportControlViewModel viewportControl,
+        VerilogAExportViewModel verilogAExportVm)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -119,6 +136,19 @@ public partial class MainViewModel : ObservableObject
 
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportVm, photonTorchVm, errorConsoleService);
         ViewportControl = viewportControl;
+
+        // Build the unified Export menu (add new IExportFormat here for new formats)
+        PhotonTorchExportFormat = new PhotonTorchExportFormat(photonTorchVm);
+        GdsExportFormat = new GdsExportFormat(gdsExportVm);
+        VerilogAExportFormat = new VerilogAExportFormat(verilogAExportVm);
+        ExportMenu = new ExportMenuViewModel(new IExportFormat[]
+        {
+            new NazcaExportFormat(FileOperations.ExportNazcaCommand),
+            new PicWaveExportFormat(FileOperations.ExportPicWaveCommand),
+            PhotonTorchExportFormat,
+            GdsExportFormat,
+            VerilogAExportFormat,
+        });
 
         // Wire up status callbacks
         CanvasInteraction.UpdateStatus = UpdateStatusText;

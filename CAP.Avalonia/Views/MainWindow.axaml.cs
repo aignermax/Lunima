@@ -5,6 +5,7 @@ using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
+using CAP.Avalonia.Views.Dialogs;
 using CAP.Avalonia.Views.PdkImport;
 using System.ComponentModel;
 using System.Linq;
@@ -26,6 +27,7 @@ public partial class MainWindow : Window
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
+                WireExportDialogs(vm);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
                 // Wire up rename dialog for group templates
@@ -478,6 +480,21 @@ public partial class MainWindow : Window
                 ClearUserGroupsSelection();
             }
         }
+    }
+
+    /// <summary>
+    /// Wires the <c>ShowOptionsDialogAsync</c> callbacks for export formats that need a config dialog.
+    /// </summary>
+    private void WireExportDialogs(MainViewModel vm)
+    {
+        vm.PhotonTorchExportFormat.ShowOptionsDialogAsync = async () =>
+            await new PhotonTorchExportDialog { DataContext = vm.FileOperations.PhotonTorchExport }.ShowDialog(this);
+
+        vm.GdsExportFormat.ShowOptionsDialogAsync = async () =>
+            await new GdsExportDialog { DataContext = vm.FileOperations.GdsExport }.ShowDialog(this);
+
+        vm.VerilogAExportFormat.ShowOptionsDialogAsync = async () =>
+            await new VerilogAExportDialog { DataContext = vm.VerilogAExportFormat.OptionsViewModel }.ShowDialog(this);
     }
 
 }
