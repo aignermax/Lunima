@@ -11,6 +11,7 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.Import;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
@@ -145,6 +146,7 @@ public partial class App : Application
         services.AddTransient<GroupSMatrixViewModel>();
         services.AddTransient<ArchitectureReportViewModel>();
         services.AddTransient<PdkConsistencyViewModel>();
+        services.AddTransient<SParameterImportViewModel>();
 
         // VerilogAExportViewModel is a singleton because both FileOperations
         // (top-toolbar Verilog-A button) and VerilogAExportSettingsPage

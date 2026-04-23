@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.SParameterImportPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="S-Parameter Import:" Foreground="#7BC8A4" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="Import S-matrix data from Lumerical (.sparam/.dat) or Touchstone (.sNp) files."
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+        <!-- File selection row -->
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+            <TextBox Grid.Column="0"
+                     Text="{Binding RightPanel.SParameterImport.FilePath}"
+                     Watermark="No file selected…"
+                     IsReadOnly="True"
+                     Background="#1e1e1e" Foreground="White"
+                     BorderBrush="#3e3e3e"/>
+            <Button Grid.Column="1"
+                    Content="Browse"
+                    Command="{Binding RightPanel.SParameterImport.BrowseFileCommand}"
+                    Margin="4,0,0,0" Padding="8,4"
+                    Background="#3d4d5d"/>
+        </Grid>
+
+        <!-- Detected format -->
+        <TextBlock Text="{Binding RightPanel.SParameterImport.DetectedFormat}"
+                   Foreground="#8888aa" FontSize="9" Margin="0,0,0,8"
+                   IsVisible="{Binding RightPanel.SParameterImport.DetectedFormat, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Component identifier -->
+        <TextBlock Text="Component identifier:" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+        <TextBox Text="{Binding RightPanel.SParameterImport.ComponentIdentifier}"
+                 Watermark="e.g. mmi_2x2_custom"
+                 Margin="0,0,0,8"
+                 Background="#1e1e1e" Foreground="White"
+                 BorderBrush="#3e3e3e"/>
+
+        <!-- Import button -->
+        <Button Content="Import S-Parameters"
+                Command="{Binding RightPanel.SParameterImport.ImportCommand}"
+                HorizontalAlignment="Stretch" Margin="0,0,0,5" Padding="8,6"
+                Background="#3d6d4d"
+                IsEnabled="{Binding RightPanel.SParameterImport.IsImporting, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Preview info -->
+        <TextBlock Text="{Binding RightPanel.SParameterImport.PreviewInfo}"
+                   Foreground="#aaaacc" FontSize="9" Margin="0,0,0,4" TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.SParameterImport.PreviewInfo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Status: success -->
+        <TextBlock Text="{Binding RightPanel.SParameterImport.StatusText}"
+                   Foreground="LightGreen" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.SParameterImport.LastImportSucceeded}"/>
+
+        <!-- Status: error (not importing, not succeeded) -->
+        <TextBlock Text="{Binding RightPanel.SParameterImport.StatusText}"
+                   Foreground="#FF6B6B" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.SParameterImport.LastImportSucceeded, Converter={x:Static BoolConverters.Not}}"
+                   IsHitTestVisible="False"/>
+
+    </StackPanel>
+
+</UserControl>
