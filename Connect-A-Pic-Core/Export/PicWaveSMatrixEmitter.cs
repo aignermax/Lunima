@@ -6,74 +6,24 @@ using CAP_Core.Components.Core;
 namespace CAP_Core.Export;
 
 /// <summary>
-/// Extracts S-parameters from a component using its <see cref="PhysicalPin.LogicalPin"/>
-/// GUIDs (matching <see cref="VerilogAModuleWriter.ExtractSParameters"/>'s convention)
-/// and emits them as a Python wavelength-indexed dictionary of numpy arrays.
+/// Emits per-component S-matrix data as a Python wavelength-indexed dictionary
+/// of numpy arrays. Extraction itself is delegated to <see cref="PirSMatrixExtractor"/>
+/// so the Verilog-A and PICWave paths share the same pin-GUID lookup — this
+/// class only handles the Python-specific formatting.
 /// </summary>
 internal static class PicWaveSMatrixEmitter
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     /// <summary>
-    /// Returns an (out, in) → complex map for the component at the given wavelength,
-    /// or <c>null</c> when no S-matrix is registered for that wavelength.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// A pin has no <c>LogicalPin</c>, or the S-matrix exists but none of its
-    /// (in-flow, out-flow) GUID pairs match the PhysicalPins' LogicalPins.
-    /// </exception>
-    internal static Dictionary<(int Out, int In), Complex>? ExtractAt(Component comp, int wavelengthNm)
-    {
-        var pins = comp.PhysicalPins;
-        foreach (var pin in pins)
-        {
-            if (pin.LogicalPin == null)
-            {
-                throw new InvalidOperationException(
-                    $"Pin '{pin.Name}' on component '{comp.Name}' has no LogicalPin. " +
-                    "The component model is incomplete — finish wiring the LogicalPins " +
-                    "before exporting to PICWave.");
-            }
-        }
-
-        if (!comp.WaveLengthToSMatrixMap.TryGetValue(wavelengthNm, out var sMatrix))
-            return null;
-
-        var transfers = sMatrix.GetNonNullValues();
-        var result = new Dictionary<(int, int), Complex>();
-
-        for (int outIdx = 0; outIdx < pins.Count; outIdx++)
-        {
-            var outPin = pins[outIdx];
-            for (int inIdx = 0; inIdx < pins.Count; inIdx++)
-            {
-                var inPin = pins[inIdx];
-                var key = (inPin.LogicalPin!.IDInFlow, outPin.LogicalPin!.IDOutFlow);
-                if (transfers.TryGetValue(key, out var transfer))
-                    result[(outIdx, inIdx)] = transfer;
-            }
-        }
-
-        // S-matrix was registered but none of its keys line up with the
-        // component's physical pins — would silently emit a zero matrix.
-        if (result.Count == 0)
-            throw new InvalidOperationException(
-                $"Component '{comp.Name}' has an S-matrix at {wavelengthNm}nm but none of its " +
-                "entries match the PhysicalPin LogicalPin GUIDs. The SMatrix pin IDs are out of " +
-                "sync with the component's LogicalPins — re-wire the pins or rebuild the model.");
-
-        return result;
-    }
-
-    /// <summary>
     /// Emits a Python dictionary literal mapping wavelength (m) → numpy complex
-    /// 2D array for every wavelength registered on the component. Uses the
-    /// PhysicalPins-indexed matrix so downstream readers can map rows to ports
-    /// without needing LogicalPin knowledge.
+    /// 2D array for every wavelength registered on the component. Rows are
+    /// indexed by <see cref="Component.PhysicalPins"/> position so downstream
+    /// readers don't need LogicalPin knowledge.
     /// </summary>
     /// <exception cref="InvalidOperationException">
     /// Any registered wavelength has an S-matrix that does not line up with
-    /// the component's PhysicalPins (see <see cref="ExtractAt"/>).
+    /// the component's PhysicalPins (see <see cref="PirSMatrixExtractor.TryExtract"/>).
     /// </exception>
     internal static string EmitWavelengthDict(Component comp, string varName)
     {
@@ -83,10 +33,10 @@ internal static class PicWaveSMatrixEmitter
 
         foreach (var wlNm in comp.WaveLengthToSMatrixMap.Keys)
         {
-            var matrix = ExtractAt(comp, wlNm)
+            var matrix = PirSMatrixExtractor.TryExtract(comp, wlNm)
                 ?? throw new InvalidOperationException(
-                    $"Internal inconsistency: wavelength {wlNm}nm was registered on " +
-                    $"'{comp.Name}' but ExtractAt returned null.");
+                    $"Internal inconsistency: wavelength {wlNm}nm is registered on " +
+                    $"'{comp.Name}' but TryExtract returned null.");
 
             double wlM = wlNm * 1e-9;
             sb.AppendLine($"    {wlM.ToString("G6", Inv)}: np.array([");
