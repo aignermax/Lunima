@@ -38,5 +38,12 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         /// </summary>
         [JsonPropertyName("label")]
         public string? Label { get; set; }
+
+        /// <summary>
+        /// Slider number (0-based) that controls this parameter.
+        /// -1 means this parameter is not linked to a slider.
+        /// </summary>
+        [JsonPropertyName("sliderNumber")]
+        public int SliderNumber { get; set; } = -1;
     }
 }

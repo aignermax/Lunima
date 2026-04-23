@@ -63,7 +63,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 return new List<ParameterDefinition>();
 
             return drafts.Select(d => new ParameterDefinition(
-                d.Name, d.DefaultValue, d.MinValue, d.MaxValue, d.Label
+                d.Name, d.DefaultValue, d.MinValue, d.MaxValue, d.Label, d.SliderNumber
             )).ToList();
         }
 

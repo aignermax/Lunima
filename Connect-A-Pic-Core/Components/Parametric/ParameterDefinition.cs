@@ -34,6 +34,12 @@ namespace CAP_Core.Components.Parametric
         public string Label { get; }
 
         /// <summary>
+        /// Slider number (0-based) that controls this parameter.
+        /// -1 means this parameter is not linked to a slider.
+        /// </summary>
+        public int SliderNumber { get; }
+
+        /// <summary>
         /// Creates a new parameter definition.
         /// </summary>
         public ParameterDefinition(
@@ -41,7 +47,8 @@ namespace CAP_Core.Components.Parametric
             double defaultValue,
             double minValue,
             double maxValue,
-            string? label = null)
+            string? label = null,
+            int sliderNumber = -1)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Parameter name cannot be empty.", nameof(name));
@@ -56,6 +63,7 @@ namespace CAP_Core.Components.Parametric
             MinValue = minValue;
             MaxValue = maxValue;
             Label = label ?? name;
+            SliderNumber = sliderNumber;
         }
     }
 }
