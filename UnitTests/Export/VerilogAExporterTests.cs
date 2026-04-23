@@ -88,11 +88,15 @@ public class VerilogAExporterTests
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
 
         var result = _exporter.Export(new[] { comp }, new List<WaveguideConnection>(),
-            new VerilogAExportOptions { IncludeTestBench = true });
+            new VerilogAExportOptions { IncludeTestBench = true, CircuitName = "MyCircuit" });
 
         result.Success.ShouldBeTrue();
         result.SpiceTestBench.ShouldNotBeNullOrEmpty();
-        result.SpiceTestBench.ShouldContain(".op");
+        // NGSpice-OSDI flow: module is loaded via pre_osdi inside a .control block
+        // and instantiated as an N-element, not as a SPICE subcircuit.
+        result.SpiceTestBench.ShouldContain("pre_osdi MyCircuit.osdi");
+        result.SpiceTestBench.ShouldContain(".control");
+        result.SpiceTestBench.ShouldContain(".model MyCircuit_mod MyCircuit");
     }
 
     [Fact]

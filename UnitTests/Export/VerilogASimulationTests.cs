@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using CAP_Core.Components.Connections;
 using CAP_Core.Export;
@@ -87,6 +88,77 @@ N1 in_re in_im out_re out_im {moduleName}_mod
             var outRe = ParseNgspicePrintedVoltage(stdout, "v(out_re)");
             outRe.ShouldBe(0.95, tolerance: 0.01,
                 "With heuristic waveguide S21 = 0.95+0j, driving port0_re=1V should yield port1_re ≈ 0.95V.");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// End-to-end phase-preservation proof. A purely-imaginary S12 = i = e^(iπ/2)
+    /// should transform a real-part stimulus into a pure imaginary-part output:
+    /// driving port0_re = 1V must yield port1_re ≈ 0V (zero real part) and
+    /// port1_im ≈ 1V (full transmission into the imaginary channel). This is
+    /// the hallmark that cannot be satisfied by the old real-only |S|·cos(φ)
+    /// model — it closes the end-to-end loop from #484.
+    /// </summary>
+    [SkippableFact]
+    public void PhaseShifter_S12EqualImaginaryUnit_TransmitsRealInputToImaginaryOutput()
+    {
+        SkipIfToolsMissing(out var openvaf, out var ngspice);
+
+        // S12 = S21 = i: a π/2 phase rotation. CreatePhaseShifter registers this
+        // at RedNM (1550nm), so the export must use the same wavelength.
+        var ps = TestComponentFactory.CreatePhaseShifterWithPhysicalPins(new Complex(0, 1));
+        ps.Identifier = "ps1";
+
+        var result = _exporter.Export([ps], [], new VerilogAExportOptions
+        {
+            CircuitName = "ps_sim",
+            IncludeTestBench = false,
+            WavelengthNm = CAP_Core.Components.ComponentHelpers.StandardWaveLengths.RedNM,
+        });
+        result.Success.ShouldBeTrue(result.ErrorMessage);
+
+        var dir = WriteExportToTempDir(result);
+        try
+        {
+            var vaFile = result.ComponentFiles.Keys.First();
+            var moduleName = vaFile.Replace(".va", "");
+            CompileToOsdi(openvaf, dir, vaFile);
+
+            var netlist = $@"* Phase-shifter transmission test: S21 = i = e^(iπ/2)
+V1_re in_re 0 DC 1
+V1_im in_im 0 DC 0
+Rload_re out_re 0 1e6
+Rload_im out_im 0 1e6
+N1 in_re in_im out_re out_im {moduleName}_mod
+.model {moduleName}_mod {moduleName}
+.control
+  pre_osdi {moduleName}.osdi
+  op
+  print v(out_re) v(out_im)
+  quit
+.endc
+.end
+";
+            File.WriteAllText(Path.Combine(dir, "tb.sp"), netlist);
+
+            var (_, stdout, stderr) = RunNgspice(ngspice, dir, Path.Combine(dir, "tb.sp"));
+            _output.WriteLine($"ngspice stdout:\n{stdout}");
+            if (!string.IsNullOrWhiteSpace(stderr)) _output.WriteLine($"ngspice stderr:\n{stderr}");
+
+            stdout.ShouldNotContain("DC solution failed", Case.Insensitive);
+
+            var outRe = ParseNgspicePrintedVoltage(stdout, "v(out_re)");
+            var outIm = ParseNgspicePrintedVoltage(stdout, "v(out_im)");
+
+            outRe.ShouldBe(0.0, tolerance: 0.01,
+                "S = i rotates the real input to the imaginary channel. Any non-zero " +
+                "real-part output would mean phase information was lost.");
+            outIm.ShouldBe(1.0, tolerance: 0.01,
+                "Driving port0_re=1V through S21=i must deliver the amplitude to port1_im.");
         }
         finally
         {
