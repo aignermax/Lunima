@@ -66,9 +66,14 @@ internal static class VerilogAModuleWriter
         sb.AppendLine("//   Each optical port N is represented by two electrical nodes:");
         sb.AppendLine("//     portN_re — real part of the complex field amplitude");
         sb.AppendLine("//     portN_im — imaginary part of the complex field amplitude");
-        sb.AppendLine("//   Transfer equations implement S-matrix multiplication Y = S·X:");
-        sb.AppendLine("//     Y_re = Σ_j (S_ij_re · X_j_re − S_ij_im · X_j_im)");
-        sb.AppendLine("//     Y_im = Σ_j (S_ij_re · X_j_im + S_ij_im · X_j_re)");
+        sb.AppendLine("//");
+        sb.AppendLine("// Wave-based S-parameter formulation (current contributions):");
+        sb.AppendLine("//   Each port has a z0 characteristic admittance to ground plus VCCS");
+        sb.AppendLine("//   contributions for every S-matrix transfer. At node portN_re:");
+        sb.AppendLine("//     I(portN_re) = V(portN_re)/z0  −  Σ_k (S_Nk_re·V(portk_re) − S_Nk_im·V(portk_im)) / z0");
+        sb.AppendLine("//   (analogous for _im). Current-contributions avoid the DC-solve");
+        sb.AppendLine("//   singularity that voltage contributions create on inout ports.");
+        sb.AppendLine("//");
         sb.AppendLine("//   Optical power at port N: P ∝ V(portN_re)² + V(portN_im)²");
         sb.AppendLine("// ======================================================================");
         sb.AppendLine();
@@ -87,6 +92,7 @@ internal static class VerilogAModuleWriter
 
     private static void AppendSParameters(StringBuilder sb, Dictionary<(int, int), Complex> sParams, int n)
     {
+        sb.AppendLine("    parameter real z0 = 1.0;  // Port characteristic impedance (normalized units).");
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
@@ -100,21 +106,22 @@ internal static class VerilogAModuleWriter
     private static void AppendTransferEquations(StringBuilder sb, int n)
     {
         // Convention documented in AppendComplexModelHeader — do not duplicate here.
+        for (int p = 0; p < n; p++)
+        {
+            sb.AppendLine($"        I(port{p}_re) <+ V(port{p}_re) / z0;");
+            sb.AppendLine($"        I(port{p}_im) <+ V(port{p}_im) / z0;");
+        }
         for (int outPort = 0; outPort < n; outPort++)
         {
-            var reTerms = new List<string>();
-            var imTerms = new List<string>();
             for (int inPort = 0; inPort < n; inPort++)
             {
                 var sRe = $"s{outPort + 1}{inPort + 1}_re";
                 var sIm = $"s{outPort + 1}{inPort + 1}_im";
                 var xRe = $"V(port{inPort}_re)";
                 var xIm = $"V(port{inPort}_im)";
-                reTerms.Add($"{sRe}*{xRe} - {sIm}*{xIm}");
-                imTerms.Add($"{sRe}*{xIm} + {sIm}*{xRe}");
+                sb.AppendLine($"        I(port{outPort}_re) <+ -({sRe}*{xRe} - {sIm}*{xIm}) / z0;");
+                sb.AppendLine($"        I(port{outPort}_im) <+ -({sRe}*{xIm} + {sIm}*{xRe}) / z0;");
             }
-            sb.AppendLine($"        V(port{outPort}_re) <+ {string.Join(" + ", reTerms)};");
-            sb.AppendLine($"        V(port{outPort}_im) <+ {string.Join(" + ", imTerms)};");
         }
     }
 
