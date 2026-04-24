@@ -232,7 +232,8 @@ public class PrefabConnectionPersistenceTests
             new CAP_Core.Export.PicWaveExporter(),
             _library,
             new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
-            new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas));
+            new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
+            null!);
         return (vm, canvas);
     }
 

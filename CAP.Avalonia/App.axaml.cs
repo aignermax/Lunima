@@ -84,7 +84,8 @@ public partial class App : Application
             sp.GetRequiredService<UserPreferencesService>(),
             sp.GetRequiredService<IAiToolRegistry>()));
 
-        // Register GdsExportViewModel as singleton so both FileOperations and PythonEnvironmentSettingsPage share the same instance
+        // Register GdsExportViewModel as singleton so both FileOperations and
+        // GdsExportSettingsPage share the same instance.
         services.AddSingleton<GdsExportViewModel>(sp =>
         {
             var vm = new GdsExportViewModel(
@@ -95,6 +96,13 @@ public partial class App : Application
             vm.OnPythonPathChanged = path => prefs.SetCustomPythonPath(path);
             return vm;
         });
+
+        // PhotonTorchExportViewModel is a singleton so FileOperations (top-toolbar
+        // export button) and PhotonTorchExportSettingsPage (settings page config)
+        // bind to the same instance — otherwise editing wavelength / time-domain
+        // settings in the dialog would not apply to the toolbar-triggered export.
+        services.AddSingleton<CAP_Core.Export.PhotonTorchExporter>();
+        services.AddSingleton<PhotonTorchExportViewModel>();
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
@@ -137,7 +145,11 @@ public partial class App : Application
         services.AddTransient<GroupSMatrixViewModel>();
         services.AddTransient<ArchitectureReportViewModel>();
         services.AddTransient<PdkConsistencyViewModel>();
-        services.AddTransient<VerilogAExportViewModel>();
+
+        // VerilogAExportViewModel is a singleton because both FileOperations
+        // (top-toolbar Verilog-A button) and VerilogAExportSettingsPage
+        // (settings page config) must share state.
+        services.AddSingleton<VerilogAExportViewModel>();
 
         // Register sub-ViewModels (Bottom panel)
         services.AddTransient<WaveguideLengthViewModel>();
@@ -149,7 +161,9 @@ public partial class App : Application
         services.AddTransient<ISettingsPage, GeneralSettingsPage>();
         services.AddTransient<ISettingsPage, GridSnapSettingsPage>();
         services.AddTransient<ISettingsPage, UpdateSettingsPage>();
-        services.AddTransient<ISettingsPage, PythonEnvironmentSettingsPage>();
+        services.AddTransient<ISettingsPage, GdsExportSettingsPage>();
+        services.AddTransient<ISettingsPage, VerilogAExportSettingsPage>();
+        services.AddTransient<ISettingsPage, PhotonTorchExportSettingsPage>();
         services.AddTransient<ISettingsPage, AiAssistantSettingsPage>();
         services.AddTransient<SettingsWindowViewModel>();
 

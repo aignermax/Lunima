@@ -58,6 +58,12 @@ public partial class FileOperationsViewModel : ObservableObject
     public PhotonTorchExportViewModel PhotonTorchExport { get; }
 
     /// <summary>
+    /// ViewModel for Verilog-A / SPICE export functionality. Shared singleton
+    /// so the top-toolbar button and the settings page see the same state.
+    /// </summary>
+    public VerilogAExportViewModel VerilogAExport { get; }
+
+    /// <summary>
     /// Callback to update status text in the UI.
     /// </summary>
     public Action<string>? UpdateStatus { get; set; }
@@ -91,6 +97,7 @@ public partial class FileOperationsViewModel : ObservableObject
         ObservableCollection<ComponentTemplate> componentLibrary,
         GdsExportViewModel gdsExport,
         PhotonTorchExportViewModel photonTorchExport,
+        VerilogAExportViewModel verilogAExport,
         ErrorConsoleService? errorConsole = null)
     {
         _canvas = canvas;
@@ -100,6 +107,7 @@ public partial class FileOperationsViewModel : ObservableObject
         _componentLibrary = componentLibrary;
         GdsExport = gdsExport;
         PhotonTorchExport = photonTorchExport;
+        VerilogAExport = verilogAExport;
         _errorConsole = errorConsole;
 
         // Track changes to mark project as unsaved

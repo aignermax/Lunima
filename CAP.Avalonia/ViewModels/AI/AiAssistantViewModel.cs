@@ -28,9 +28,20 @@ public partial class AiAssistantViewModel : ObservableObject
 
     [ObservableProperty] private string _userInput = "";
     [ObservableProperty] private bool _isTyping;
-    [ObservableProperty] private string _apiKey = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsApiKeySet))]
+    private string _apiKey = "";
+
     [ObservableProperty] private bool _isSettingsExpanded;
     [ObservableProperty] private string _statusText = "";
+
+    /// <summary>
+    /// True when an API key has been configured. Bound by the chat panel to
+    /// decide whether to show the chat input or a "Set API key in Settings"
+    /// shortcut button.
+    /// </summary>
+    public bool IsApiKeySet => !string.IsNullOrWhiteSpace(ApiKey);
 
     /// <summary>
     /// Initializes the ViewModel, loads persisted API key, and shows a welcome message.
@@ -126,15 +137,29 @@ public partial class AiAssistantViewModel : ObservableObject
         StatusText = "";
     }
 
-    /// <summary>Persists the API key to preferences and applies it to the service.</summary>
+    /// <summary>
+    /// Legacy "Save" command retained for the explicit-save flow. The actual
+    /// persistence now happens on every edit through
+    /// <see cref="OnApiKeyChanged"/>; this command only collapses the (no
+    /// longer shown) expander and updates the status message.
+    /// </summary>
     [RelayCommand]
     private void SaveApiKey()
     {
         var key = ApiKey.Trim();
-        _aiService.SetApiKey(key);
-        _preferencesService.SetAiApiKey(key);
         IsSettingsExpanded = false;
         StatusText = string.IsNullOrEmpty(key) ? "API key cleared." : "API key saved.";
+    }
+
+    partial void OnApiKeyChanged(string value)
+    {
+        // Auto-persist: the Settings-window TextBox has no explicit Save button,
+        // so typing into it must immediately update the in-memory AI service
+        // and on-disk preferences. Writes are idempotent and API keys change
+        // rarely, so per-keystroke cost is negligible.
+        var trimmed = value?.Trim() ?? string.Empty;
+        _aiService.SetApiKey(trimmed);
+        _preferencesService.SetAiApiKey(trimmed);
     }
 
     /// <summary>Opens the Anthropic API keys page in the default browser.</summary>

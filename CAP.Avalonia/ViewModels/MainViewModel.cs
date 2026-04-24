@@ -73,9 +73,13 @@ public partial class MainViewModel : ObservableObject
     public UpdateViewModel Update { get; }
 
     /// <summary>
-    /// Delegate wired by <see cref="CAP.Avalonia.Views.MainWindow"/> to open the Settings window.
+    /// Delegate wired by <see cref="CAP.Avalonia.Views.MainWindow"/> to open
+    /// the Settings window. The optional page-type argument asks the window
+    /// to pre-select a specific <c>ISettingsPage</c> by runtime type (used by
+    /// shortcut buttons like "Set API key in Settings" in the AI panel);
+    /// pass <c>null</c> for default behavior.
     /// </summary>
-    public Func<Task>? ShowSettingsWindowAsync { get; set; }
+    public Func<Type?, Task>? ShowSettingsWindowAsync { get; set; }
 
     /// <summary>
     /// Available wavelength options for the laser configuration dropdown.
@@ -117,7 +121,9 @@ public partial class MainViewModel : ObservableObject
         RightPanelViewModel rightPanel,
         BottomPanelViewModel bottomPanel,
         ViewportControlViewModel viewportControl,
-        PdkOffsetEditorViewModel pdkOffsetEditor)
+        PdkOffsetEditorViewModel pdkOffsetEditor,
+        ViewModels.Export.PhotonTorchExportViewModel photonTorchExport,
+        ViewModels.Export.VerilogAExportViewModel verilogAExport)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -133,10 +139,7 @@ public partial class MainViewModel : ObservableObject
 
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
 
-        var photonTorchVm = new ViewModels.Export.PhotonTorchExportViewModel(
-            new CAP_Core.Export.PhotonTorchExporter(), _canvas);
-
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchVm, errorConsoleService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService);
         ViewportControl = viewportControl;
 
         // Wire up status callbacks
@@ -444,14 +447,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Opens the application Settings window.
-    /// The actual window creation is wired by <see cref="CAP.Avalonia.Views.MainWindow"/>.
+    /// Opens the application Settings window. The concrete window creation
+    /// is wired by <see cref="CAP.Avalonia.Views.MainWindow"/>.
     /// </summary>
     [RelayCommand]
     private async Task OpenSettingsWindow()
     {
         if (ShowSettingsWindowAsync != null)
-            await ShowSettingsWindowAsync();
+            await ShowSettingsWindowAsync(null);
+    }
+
+    /// <summary>
+    /// Opens the Settings window focused on the AI Assistant page — used by
+    /// the right-panel AI shortcut when no API key is configured yet.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenAiSettings()
+    {
+        if (ShowSettingsWindowAsync != null)
+            await ShowSettingsWindowAsync(typeof(ViewModels.Settings.AiAssistantSettingsPage));
     }
 
     [RelayCommand(CanExecute = nameof(CanUndo))]

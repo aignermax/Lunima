@@ -133,16 +133,27 @@
                         </StackPanel>
                     </DataTemplate>
 
-                    <!-- Python Environment -->
+                    <!-- GDS Export (GDS toggle + Python environment) -->
                     <DataTemplate DataType="{x:Type vmExport:GdsExportViewModel}">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Python Environment" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Text="GDS Export" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
                             <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4">
-                                Configures the Python interpreter used for GDS export via Nazca.
-                                Leave blank to use auto-detection.
+                                Configures how the "Export" top-toolbar action generates a GDS file
+                                from the exported Nazca Python script.
                             </TextBlock>
 
-                            <TextBlock Text="Python Path:" Foreground="Gray" FontSize="12" Margin="0,8,0,3"/>
+                            <CheckBox Content="Generate GDS file after Nazca export (requires Python + Nazca)"
+                                      IsChecked="{Binding GenerateGdsEnabled}"
+                                      Foreground="White" Margin="0,4,0,0"/>
+
+                            <Separator Margin="0,12,0,4" Background="#3d3d3d"/>
+                            <TextBlock Text="Python Environment" FontSize="14" FontWeight="SemiBold" Foreground="LightGray"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4">
+                                Python interpreter used to run the exported Nazca script.
+                                Leave the path blank to use auto-detection.
+                            </TextBlock>
+
+                            <TextBlock Text="Python Path:" Foreground="Gray" FontSize="12" Margin="0,4,0,3"/>
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBox Grid.Column="0"
                                          Text="{Binding CustomPythonPath}"
@@ -212,7 +223,80 @@
                         </StackPanel>
                     </DataTemplate>
 
-                    <!-- General (placeholder — Python path lives on Python Environment) -->
+                    <!-- Verilog-A / SPICE Export -->
+                    <DataTemplate DataType="{x:Type vmExport:VerilogAExportViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Verilog-A / SPICE Export" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
+                                Configures the Verilog-A / SPICE export used for co-simulation with
+                                electronic circuits (ngspice, Xyce). Trigger the export itself from
+                                the top toolbar.
+                            </TextBlock>
+
+                            <TextBlock Text="Circuit name:" Foreground="Gray" FontSize="12" Margin="0,4,0,3"/>
+                            <TextBox Text="{Binding CircuitName}" Watermark="PhotonicCircuit"/>
+
+                            <TextBlock Text="Output directory:" Foreground="Gray" FontSize="12" Margin="0,8,0,3"/>
+                            <TextBox Text="{Binding OutputDirectory}" Watermark="Output folder path..."/>
+
+                            <TextBlock Text="Wavelength for S-parameters:" Foreground="Gray" FontSize="12" Margin="0,8,0,3"/>
+                            <ComboBox ItemsSource="{Binding WavelengthOptions}"
+                                      SelectedValue="{Binding WavelengthNm}"
+                                      HorizontalAlignment="Stretch"/>
+
+                            <CheckBox Content="Include SPICE test bench (.sp)"
+                                      IsChecked="{Binding IncludeTestBench}"
+                                      Foreground="White" Margin="0,8,0,0"/>
+
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="LightGreen" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <Button Content="Open Output Folder"
+                                    Command="{Binding OpenOutputDirectoryCommand}"
+                                    HorizontalAlignment="Left" Margin="0,8,0,0" Padding="8,4"
+                                    Background="#2d4d3d"
+                                    IsVisible="{Binding LastExportSucceeded}"/>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- PhotonTorch Export -->
+                    <DataTemplate DataType="{x:Type vmExport:PhotonTorchExportViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="PhotonTorch Export" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
+                                Configures the PhotonTorch script export used for time-domain circuit
+                                simulation (PyTorch-based). Trigger the export itself from the top toolbar.
+                            </TextBlock>
+
+                            <TextBlock Text="Wavelength (nm):" Foreground="Gray" FontSize="12" Margin="0,4,0,3"/>
+                            <NumericUpDown Value="{Binding WavelengthNm}"
+                                           Minimum="1260" Maximum="1625" Increment="10"
+                                           FormatString="F0" HorizontalAlignment="Left" Width="160"/>
+
+                            <CheckBox Content="Time-domain simulation (otherwise steady-state)"
+                                      IsChecked="{Binding UseTimeDomain}"
+                                      Foreground="White" Margin="0,8,0,0"/>
+
+                            <StackPanel IsVisible="{Binding UseTimeDomain}" Spacing="6" Margin="10,4,0,0">
+                                <TextBlock Text="Bit rate (Gbit/s):" Foreground="Gray" FontSize="12"/>
+                                <NumericUpDown Value="{Binding BitRateGbps}"
+                                               Minimum="0.1" Maximum="100" Increment="1"
+                                               FormatString="F1" HorizontalAlignment="Left" Width="160"/>
+
+                                <TextBlock Text="Time steps:" Foreground="Gray" FontSize="12" Margin="0,6,0,0"/>
+                                <NumericUpDown Value="{Binding TimeDomainSteps}"
+                                               Minimum="100" Maximum="10000" Increment="100"
+                                               FormatString="F0" HorizontalAlignment="Left" Width="160"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding LastExportStatus}"
+                                       Foreground="LightBlue" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       IsVisible="{Binding LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- General (placeholder — GDS config lives on the GDS Export page) -->
                     <DataTemplate DataType="{x:Type settings:GeneralSettingsViewModel}">
                         <StackPanel Spacing="8">
                             <TextBlock Text="General" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>

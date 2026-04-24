@@ -255,7 +255,7 @@ public class PrefabHumanReadableNameTests : IDisposable
         var photonTorchExport = new CAP.Avalonia.ViewModels.Export.PhotonTorchExportViewModel(
             new CAP_Core.Export.PhotonTorchExporter(), canvas);
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, new CAP_Core.Export.PicWaveExporter(), _library, gdsExport, photonTorchExport);
+            canvas, commandManager, nazcaExporter, new CAP_Core.Export.PicWaveExporter(), _library, gdsExport, photonTorchExport, null!);
 
         return (vm, canvas);
     }
