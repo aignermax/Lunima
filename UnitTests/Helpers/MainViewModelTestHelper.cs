@@ -12,6 +12,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Import;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_Core.Components.Creation;
 using CAP_Core.Export;
@@ -131,7 +132,8 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new SParameterImportViewModel());
     }
 
     /// <summary>

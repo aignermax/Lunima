@@ -44,6 +44,13 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     private DesignMetadata? _loadedMetadata;
 
+    /// <summary>
+    /// Per-component S-matrix overrides loaded from the PIR section of the .lun file,
+    /// or added via the S-parameter import feature. Survives save-over-reload cycles.
+    /// Keyed by component identifier string; values are the stored S-matrices.
+    /// </summary>
+    public Dictionary<string, ComponentSMatrixData> StoredSMatrices { get; } = new();
+
     [ObservableProperty]
     private bool _hasUnsavedChanges;
 
@@ -214,6 +221,8 @@ public partial class FileOperationsViewModel : ObservableObject
 
             designData.FormatVersion = CurrentFormatVersion;
             designData.Metadata = BuildMetadataForSave();
+            if (StoredSMatrices.Count > 0)
+                designData.SMatrices = new Dictionary<string, ComponentSMatrixData>(StoredSMatrices);
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -566,6 +575,14 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Preserve PIR metadata so Created date survives subsequent saves
                 _loadedMetadata = designData.Metadata;
+
+                // Restore imported S-matrices from PIR section
+                StoredSMatrices.Clear();
+                if (designData.SMatrices != null)
+                {
+                    foreach (var kv in designData.SMatrices)
+                        StoredSMatrices[kv.Key] = kv.Value;
+                }
 
                 _currentFilePath = filePath;
                 HasUnsavedChanges = false;
