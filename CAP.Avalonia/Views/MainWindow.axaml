@@ -114,6 +114,14 @@
                 <!-- Simulation -->
                 <Button Content="[L] Simulate" Command="{Binding RunSimulationCommand}"
                         Width="90" Margin="2" Background="#3d5d3d" ToolTip.Tip="Run light simulation (L). Press P to toggle power overlay. Overlay auto-updates on circuit changes."/>
+
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
+
+                <!-- Settings -->
+                <Button Command="{Binding OpenSettingsWindowCommand}"
+                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Open Settings (grid snap, updates, Python environment, AI key)">
+                    <TextBlock Text="⚙" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Button>
             </StackPanel>
         </ScrollViewer>
 
@@ -703,78 +711,6 @@
                                Foreground="LightGreen" FontSize="10" Margin="0,0,0,5"
                                IsVisible="{Binding BottomPanel.ElementLock.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-
-                    <TextBlock Text="Grid Snap [G Key]:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <CheckBox Content="Enable Grid Snapping"
-                              IsChecked="{Binding Canvas.GridSnap.IsEnabled}"
-                              Foreground="White" Margin="0,0,0,10"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Grid Size: " Foreground="Gray" VerticalAlignment="Center" Width="70"/>
-                        <NumericUpDown Value="{Binding Canvas.GridSnap.GridSizeMicrometers}"
-                                       Minimum="1" Maximum="1000" Increment="10"
-                                       Width="120" Margin="5,0,5,0"
-                                       FormatString="F0"/>
-                        <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-
-                    <TextBlock Text="Alignment Guides:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <CheckBox Content="Show Pin Alignment"
-                              IsChecked="{Binding Canvas.AlignmentGuide.IsEnabled}"
-                              Foreground="White" Margin="0,0,0,5"/>
-                    <TextBlock Text="Shows cyan guide lines when pins align on same X or Y axis during dragging."
-                               Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                    <!-- Check for Updates -->
-                    <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                    <TextBlock Text="Software Updates:" Foreground="SkyBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding RightPanel.Update.CurrentVersionText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,8"/>
-
-                    <Button Content="Check for Updates"
-                            Command="{Binding RightPanel.Update.CheckForUpdatesCommand}"
-                            Width="150" Margin="0,0,0,5" Background="#3d4d5d"
-                            IsEnabled="{Binding RightPanel.Update.IsChecking, Converter={x:Static BoolConverters.Not}}"/>
-
-                    <TextBlock Text="{Binding RightPanel.Update.StatusText}"
-                               Foreground="Gray" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
-                               IsVisible="{Binding RightPanel.Update.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <!-- Update available panel -->
-                    <StackPanel IsVisible="{Binding RightPanel.Update.UpdateAvailable}">
-                        <TextBlock Text="{Binding RightPanel.Update.LatestVersionText}"
-                                   Foreground="LightGreen" FontWeight="SemiBold" Margin="0,5,0,5"/>
-
-                        <ScrollViewer MaxHeight="120" Margin="0,0,0,8"
-                                      IsVisible="{Binding RightPanel.Update.ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding RightPanel.Update.ReleaseNotes}"
-                                       Foreground="#aaaaaa" FontSize="10" TextWrapping="Wrap"/>
-                        </ScrollViewer>
-
-                        <!-- Download progress -->
-                        <ProgressBar Value="{Binding RightPanel.Update.DownloadProgress}"
-                                     Minimum="0" Maximum="1"
-                                     Height="6" Margin="0,0,0,5"
-                                     IsVisible="{Binding RightPanel.Update.IsDownloading}"/>
-
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <Button Content="Download"
-                                    Command="{Binding RightPanel.Update.InstallUpdateCommand}"
-                                    Width="90" Background="#3d5d3d"
-                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                            <Button Content="Skip"
-                                    Command="{Binding RightPanel.Update.RemindLaterCommand}"
-                                    Width="55" Background="#3d3d3d"
-                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                            <Button Content="Skip Version"
-                                    Command="{Binding RightPanel.Update.SkipThisVersionCommand}"
-                                    Width="95" Background="#5d4330"
-                                    IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                        </StackPanel>
-                    </StackPanel>
-
                     <!-- GDS Export Configuration -->
                     <panels:GdsExportPanel/>
 
@@ -792,22 +728,22 @@
             <!-- Update Banner -->
             <Border DockPanel.Dock="Top"
                     Background="#21463A"
-                    IsVisible="{Binding RightPanel.Update.UpdateAvailable}"
+                    IsVisible="{Binding Update.UpdateAvailable}"
                     Padding="14,10"
                     BorderBrush="#3F8F73"
                     BorderThickness="0,0,0,2">
                 <Grid ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto,Auto">
                     <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-                        <TextBlock Text="{Binding RightPanel.Update.LatestVersionText}"
+                        <TextBlock Text="{Binding Update.LatestVersionText}"
                                    Foreground="White"
                                    FontWeight="Bold"
                                    FontSize="14"/>
-                        <TextBlock Text="{Binding RightPanel.Update.StatusText}"
+                        <TextBlock Text="{Binding Update.StatusText}"
                                    Foreground="#D4F2E6"
                                    FontSize="11"
                                    TextWrapping="Wrap"
-                                   IsVisible="{Binding RightPanel.Update.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                   IsVisible="{Binding Update.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="0" Grid.Column="1"
@@ -815,42 +751,42 @@
                                 Spacing="8"
                                 HorizontalAlignment="Right">
                         <Button Content="Skip Version"
-                                Command="{Binding RightPanel.Update.SkipThisVersionCommand}"
+                                Command="{Binding Update.SkipThisVersionCommand}"
                                 Background="#6A4A32"
                                 Foreground="White"
                                 Padding="14,6"
-                                IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                IsEnabled="{Binding Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                         <Button Content="Skip"
-                                Command="{Binding RightPanel.Update.RemindLaterCommand}"
+                                Command="{Binding Update.RemindLaterCommand}"
                                 Background="#355248"
                                 Foreground="White"
                                 Padding="14,6"
-                                IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                IsEnabled="{Binding Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                         <Button Content="Download"
-                                Command="{Binding RightPanel.Update.InstallUpdateCommand}"
+                                Command="{Binding Update.InstallUpdateCommand}"
                                 Background="#8FD3A7"
                                 Foreground="#163227"
                                 FontWeight="SemiBold"
                                 Padding="16,6"
-                                IsEnabled="{Binding RightPanel.Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                IsEnabled="{Binding Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                     </StackPanel>
 
                     <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
                                Margin="0,8,0,0"
-                               Text="{Binding RightPanel.Update.ReleaseNotes}"
+                               Text="{Binding Update.ReleaseNotes}"
                                Foreground="#C5E8DB"
                                FontSize="11"
                                TextWrapping="Wrap"
                                MaxHeight="72"
-                               IsVisible="{Binding RightPanel.Update.ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                               IsVisible="{Binding Update.ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                     <ProgressBar Grid.Row="2" Grid.ColumnSpan="2"
                                  Margin="0,10,0,0"
-                                 Value="{Binding RightPanel.Update.DownloadProgress}"
+                                 Value="{Binding Update.DownloadProgress}"
                                  Minimum="0"
                                  Maximum="1"
                                  Height="6"
-                                 IsVisible="{Binding RightPanel.Update.IsDownloading}"/>
+                                 IsVisible="{Binding Update.IsDownloading}"/>
                 </Grid>
             </Border>
 

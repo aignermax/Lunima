@@ -1,0 +1,231 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:settings="using:CAP.Avalonia.ViewModels.Settings"
+        xmlns:vmUpdate="using:CAP.Avalonia.ViewModels.Update"
+        xmlns:vmExport="using:CAP.Avalonia.ViewModels.Export"
+        xmlns:vmAi="using:CAP.Avalonia.ViewModels.AI"
+        x:Class="CAP.Avalonia.Views.SettingsWindow"
+        x:DataType="settings:SettingsWindowViewModel"
+        Title="Settings"
+        Width="820" Height="560"
+        WindowStartupLocation="CenterOwner"
+        Background="#1e1e1e"
+        Foreground="White">
+
+    <Grid ColumnDefinitions="200,1,*">
+
+        <!-- Navigation sidebar -->
+        <DockPanel Grid.Column="0" Background="#252525">
+            <TextBlock DockPanel.Dock="Top"
+                       Text="Settings"
+                       FontSize="16" FontWeight="SemiBold"
+                       Foreground="White"
+                       Margin="15,15,15,12"/>
+            <ListBox ItemsSource="{Binding Pages}"
+                     SelectedItem="{Binding SelectedPage}"
+                     Background="Transparent"
+                     BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type settings:ISettingsPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="5,2">
+                            <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" FontSize="14"/>
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="10,6"/>
+                        <Setter Property="Foreground" Value="#cccccc"/>
+                    </Style>
+                    <Style Selector="ListBoxItem:selected">
+                        <Setter Property="Background" Value="#3a3a3a"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Style>
+                    <Style Selector="ListBoxItem:pointerover">
+                        <Setter Property="Background" Value="#333333"/>
+                    </Style>
+                </ListBox.Styles>
+            </ListBox>
+        </DockPanel>
+
+        <!-- Divider -->
+        <Rectangle Grid.Column="1" Fill="#3d3d3d"/>
+
+        <!-- Content area -->
+        <ScrollViewer Grid.Column="2" Padding="24,20">
+            <ContentControl Content="{Binding SelectedPage.ViewModel}">
+                <ContentControl.DataTemplates>
+
+                    <!-- Grid Snap & Alignment -->
+                    <DataTemplate DataType="{x:Type settings:GridSnapSettingsViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Grid Snap" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <CheckBox Content="Enable Grid Snapping  [G Key]"
+                                      IsChecked="{Binding GridSnap.IsEnabled}"
+                                      Foreground="White"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="Grid Size:" Foreground="Gray" VerticalAlignment="Center" Width="80"/>
+                                <NumericUpDown Value="{Binding GridSnap.GridSizeMicrometers}"
+                                               Minimum="1" Maximum="1000" Increment="10"
+                                               Width="130" FormatString="F0"/>
+                                <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                            </StackPanel>
+
+                            <Separator Margin="0,16,0,8" Background="#3d3d3d"/>
+                            <TextBlock Text="Alignment Guides" FontSize="16" FontWeight="SemiBold" Foreground="Cyan" Margin="0,0,0,4"/>
+                            <CheckBox Content="Show Pin Alignment Guides during dragging"
+                                      IsChecked="{Binding AlignmentGuide.IsEnabled}"
+                                      Foreground="White"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0">
+                                Displays cyan guide lines when component pins share an X or Y axis.
+                                The component snaps to alignment when released nearby.
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- Software Updates -->
+                    <DataTemplate DataType="{x:Type vmUpdate:UpdateViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Software Updates" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding CurrentVersionText}" Foreground="Gray" FontSize="11"/>
+
+                            <Button Content="Check for Updates"
+                                    Command="{Binding CheckForUpdatesCommand}"
+                                    Width="150" Margin="0,8,0,0" Background="#3d4d5d"
+                                    HorizontalAlignment="Left"
+                                    IsEnabled="{Binding IsChecking, Converter={x:Static BoolConverters.Not}}"/>
+
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"
+                                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <StackPanel IsVisible="{Binding UpdateAvailable}" Spacing="6" Margin="0,8,0,0">
+                                <TextBlock Text="{Binding LatestVersionText}"
+                                           Foreground="LightGreen" FontWeight="SemiBold"/>
+
+                                <ScrollViewer MaxHeight="120"
+                                              IsVisible="{Binding ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="{Binding ReleaseNotes}"
+                                               Foreground="#aaaaaa" FontSize="11" TextWrapping="Wrap"/>
+                                </ScrollViewer>
+
+                                <ProgressBar Value="{Binding DownloadProgress}"
+                                             Minimum="0" Maximum="1"
+                                             Height="6"
+                                             IsVisible="{Binding IsDownloading}"/>
+
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Download &amp; Install"
+                                            Command="{Binding InstallUpdateCommand}"
+                                            Background="#3d5d3d"
+                                            IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                    <Button Content="Remind Later"
+                                            Command="{Binding RemindLaterCommand}"
+                                            Background="#3d3d3d"
+                                            IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                    <Button Content="Skip Version"
+                                            Command="{Binding SkipThisVersionCommand}"
+                                            Background="#5d4330"
+                                            IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- Python Environment -->
+                    <DataTemplate DataType="{x:Type vmExport:GdsExportViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Python Environment" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4">
+                                Configures the Python interpreter used for GDS export via Nazca.
+                                Leave blank to use auto-detection.
+                            </TextBlock>
+
+                            <TextBlock Text="Python Path:" Foreground="Gray" FontSize="12" Margin="0,8,0,3"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding CustomPythonPath}"
+                                         Watermark="Auto-detect or enter path..."
+                                         Margin="0,0,6,0"/>
+                                <Button Grid.Column="1" Content="🔍" Width="32" Padding="4"
+                                        Command="{Binding SearchForPythonCommand}"
+                                        ToolTip.Tip="Search for Python with Nazca"
+                                        IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"/>
+                            </Grid>
+
+                            <TextBlock Text="{Binding PythonPathSource}"
+                                       Foreground="Gray" FontSize="10"
+                                       IsVisible="{Binding PythonPathSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <Button Content="Check Environment"
+                                    Command="{Binding CheckEnvironmentCommand}"
+                                    Width="150" Margin="0,8,0,0" Background="#3d5d5d"
+                                    HorizontalAlignment="Left"
+                                    IsEnabled="{Binding IsChecking, Converter={x:Static BoolConverters.Not}}"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="Python: " Foreground="Gray" Width="70"/>
+                                <TextBlock Text="{Binding PythonStatus}" Foreground="White"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Nazca: " Foreground="Gray" Width="70"/>
+                                <TextBlock Text="{Binding NazcaStatus}" Foreground="White"/>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding AvailablePythons}"
+                                          Margin="0,6,0,0"
+                                          x:Name="AvailablePythonsList"
+                                          IsVisible="{Binding AvailablePythons.Count}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding DisplayText}"
+                                                Command="{Binding #AvailablePythonsList.DataContext.SelectPythonCommand}"
+                                                CommandParameter="{Binding}"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Margin="0,2,0,0" Padding="6,4"
+                                                Background="#2d2d2d" FontSize="11"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- AI Assistant -->
+                    <DataTemplate DataType="{x:Type vmAi:AiAssistantViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="AI Assistant" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
+                                Configure the Anthropic Claude API key used by the AI Design Assistant
+                                in the right panel. The key is stored locally and never transmitted elsewhere.
+                            </TextBlock>
+
+                            <TextBlock Text="API Key:" Foreground="Gray" FontSize="12" Margin="0,0,0,3"/>
+                            <TextBox Text="{Binding ApiKey}"
+                                     Watermark="sk-ant-..."
+                                     PasswordChar="•"/>
+
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="Gray" FontSize="11"
+                                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- General (placeholder — Python path lives on Python Environment) -->
+                    <DataTemplate DataType="{x:Type settings:GeneralSettingsViewModel}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="General" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap">
+                                General application preferences. Additional settings will appear here
+                                as new features are added.
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </ScrollViewer>
+
+    </Grid>
+</Window>

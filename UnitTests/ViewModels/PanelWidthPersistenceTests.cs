@@ -1,11 +1,9 @@
-using System.Net.Http;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Analysis;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
-using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
 using CAP_Core.Export;
@@ -58,15 +56,8 @@ public class PanelWidthPersistenceTests : IDisposable
             new ComponentLibraryViewModel(_libraryManager));
 
     /// <summary>Creates a RightPanelViewModel with all required sub-VM dependencies.</summary>
-    private RightPanelViewModel CreateRightPanelViewModel()
-    {
-        var httpClient = new HttpClient();
-        var updateVm = new UpdateViewModel(
-            new UpdateChecker(httpClient, "aignermax", "Connect-A-PIC-Pro"),
-            new UpdateDownloader(httpClient),
-            _preferencesService,
-            new NoOpUrlLauncher());
-        return new(_canvas, _preferencesService,
+    private RightPanelViewModel CreateRightPanelViewModel() =>
+        new(_canvas, _preferencesService,
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
             new DesignValidationViewModel(),
@@ -78,17 +69,8 @@ public class PanelWidthPersistenceTests : IDisposable
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            updateVm,
             new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
             new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), _canvas));
-    }
-
-    private sealed class NoOpUrlLauncher : IUrlLauncher
-    {
-        public void Open(string url)
-        {
-        }
-    }
 
     [Fact]
     public void LeftPanelWidth_DefaultsTo220()

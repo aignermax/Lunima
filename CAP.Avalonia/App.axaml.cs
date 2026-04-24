@@ -15,6 +15,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.PdkOffset;
+using CAP.Avalonia.ViewModels.Settings;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.Views;
 using CAP.Avalonia.Services.AiTools;
@@ -53,7 +54,7 @@ public partial class App : Application
         services.AddSingleton(sp => new UpdateDownloader(
             sp.GetRequiredService<HttpClient>()));
         services.AddSingleton<IUrlLauncher, SystemUrlLauncher>();
-        services.AddTransient<UpdateViewModel>();
+        services.AddSingleton<UpdateViewModel>();
 
         // Register AI assistant services
         services.AddSingleton<IAiService, AiService>(sp => new AiService(sp.GetRequiredService<HttpClient>()));
@@ -78,10 +79,22 @@ public partial class App : Application
         services.AddTransient<IAiTool, FitToViewTool>();
         services.AddSingleton<IAiToolRegistry, AiToolRegistry>();
 
-        services.AddTransient<AiAssistantViewModel>(sp => new AiAssistantViewModel(
+        services.AddSingleton<AiAssistantViewModel>(sp => new AiAssistantViewModel(
             sp.GetRequiredService<IAiService>(),
             sp.GetRequiredService<UserPreferencesService>(),
             sp.GetRequiredService<IAiToolRegistry>()));
+
+        // Register GdsExportViewModel as singleton so both FileOperations and PythonEnvironmentSettingsPage share the same instance
+        services.AddSingleton<GdsExportViewModel>(sp =>
+        {
+            var vm = new GdsExportViewModel(
+                sp.GetRequiredService<GdsExportService>(),
+                sp.GetRequiredService<CAP_Core.ErrorConsoleService>());
+            var prefs = sp.GetRequiredService<UserPreferencesService>();
+            vm.Initialize(prefs.GetCustomPythonPath());
+            vm.OnPythonPathChanged = path => prefs.SetCustomPythonPath(path);
+            return vm;
+        });
 
         // Register core services
         services.AddSingleton<IDataAccessor, FileDataAccessor>();
@@ -130,6 +143,15 @@ public partial class App : Application
         services.AddTransient<WaveguideLengthViewModel>();
         services.AddTransient<ElementLockViewModel>();
         services.AddTransient<ErrorConsoleViewModel>();
+
+        // Register settings pages — each implements ISettingsPage; SettingsWindowViewModel enumerates them all.
+        // To add a new settings page: add one line here + create the page class. Nothing else changes.
+        services.AddTransient<ISettingsPage, GeneralSettingsPage>();
+        services.AddTransient<ISettingsPage, GridSnapSettingsPage>();
+        services.AddTransient<ISettingsPage, UpdateSettingsPage>();
+        services.AddTransient<ISettingsPage, PythonEnvironmentSettingsPage>();
+        services.AddTransient<ISettingsPage, AiAssistantSettingsPage>();
+        services.AddTransient<SettingsWindowViewModel>();
 
         // Register panel ViewModels as singletons
         services.AddSingleton<LeftPanelViewModel>();
