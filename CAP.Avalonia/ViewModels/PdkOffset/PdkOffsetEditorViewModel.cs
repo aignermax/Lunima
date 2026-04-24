@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Library;
+using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,29 +13,30 @@ namespace CAP.Avalonia.ViewModels.PdkOffset;
 /// ViewModel for the PDK Component Offset Editor window.
 /// Allows browsing all PDK components, inspecting NazcaOriginOffset status,
 /// editing offset values with a live pin-position preview, and saving back to JSON.
+/// Optionally displays a Nazca GDS overlay when a preview service is provided.
 /// </summary>
 public partial class PdkOffsetEditorViewModel : ObservableObject
 {
     private readonly PdkLoader _pdkLoader;
     private readonly PdkJsonSaver _pdkSaver;
     private readonly PdkManagerViewModel _pdkManager;
+    private readonly NazcaComponentPreviewService? _previewService;
     private PdkDraft? _loadedPdk;
     private string? _loadedFilePath;
+    private double _nazcaCanvasRefX;
+    private double _nazcaCanvasRefY;
+    private CancellationTokenSource? _renderCts;
 
-    [ObservableProperty]
-    private string _statusText = "Load a PDK file to begin.";
-
-    [ObservableProperty]
-    private PdkComponentOffsetItemViewModel? _selectedComponent;
-
-    [ObservableProperty]
-    private double _offsetX;
-
-    [ObservableProperty]
-    private double _offsetY;
-
-    [ObservableProperty]
-    private bool _hasUnsavedChanges;
+    [ObservableProperty] private string _statusText = "Load a PDK file to begin.";
+    [ObservableProperty] private PdkComponentOffsetItemViewModel? _selectedComponent;
+    [ObservableProperty] private double _offsetX;
+    [ObservableProperty] private double _offsetY;
+    [ObservableProperty] private bool _hasUnsavedChanges;
+    [ObservableProperty] private double _componentWidth;
+    [ObservableProperty] private double _componentHeight;
+    [ObservableProperty] private bool _isNazcaRendering;
+    [ObservableProperty] private string _nazcaOverlayStatus = "";
+    [ObservableProperty] private bool _hasNazcaOverlay;
 
     /// <summary>Currently selected PDK from the installed-PDK dropdown; triggers load on change.</summary>
     [ObservableProperty]
@@ -63,12 +65,16 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     private double _canvasComponentHeight;
 
     /// <summary>Nazca origin X position in canvas pixels (for the crosshair).</summary>
-    [ObservableProperty]
-    private double _canvasOriginX;
+    [ObservableProperty] private double _canvasOriginX;
 
     /// <summary>Nazca origin Y position in canvas pixels (for the crosshair).</summary>
-    [ObservableProperty]
-    private double _canvasOriginY;
+    [ObservableProperty] private double _canvasOriginY;
+
+    /// <summary>X offset of the component bounding box inside the canvas.</summary>
+    [ObservableProperty] private double _canvasComponentLeft = CanvasPadding;
+
+    /// <summary>Y offset of the component bounding box inside the canvas.</summary>
+    [ObservableProperty] private double _canvasComponentTop = CanvasPadding;
 
     /// <summary>Total canvas width in pixels (component plus both paddings).</summary>
     public double CanvasTotalWidth => CanvasComponentWidth + CanvasPadding * 2;
@@ -76,26 +82,31 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>Total canvas height in pixels (component plus both paddings).</summary>
     public double CanvasTotalHeight => CanvasComponentHeight + CanvasPadding * 2;
 
-    /// <summary>X offset of the component bounding box inside the canvas (= padding).</summary>
-    public double CanvasComponentLeft => CanvasPadding;
-
-    /// <summary>Y offset of the component bounding box inside the canvas (= padding).</summary>
-    public double CanvasComponentTop => CanvasPadding;
-
     /// <summary>Pin markers for visual canvas overlay (canvas-pixel coordinates).</summary>
     public ObservableCollection<PinMarker> PinMarkers { get; } = new();
 
-    private const double CanvasScale = 2.0;    // pixels per µm
+    /// <summary>Nazca GDS polygon markers for the overlay (canvas-pixel coordinates).</summary>
+    public ObservableCollection<NazcaPolygonMarker> NazcaPolygons { get; } = new();
+
+    /// <summary>Nazca GDS pin stub markers for the overlay (canvas-pixel coordinates).</summary>
+    public ObservableCollection<NazcaStubMarker> NazcaPinStubs { get; } = new();
+
+    private const double CanvasScale = 2.0;
     private const double CanvasPadding = 20.0;
 
     /// <summary>
-    /// Initializes the ViewModel with required services.
+    /// Initializes the ViewModel with required services and optional preview service.
     /// </summary>
-    public PdkOffsetEditorViewModel(PdkLoader pdkLoader, PdkJsonSaver pdkSaver, PdkManagerViewModel pdkManager)
+    public PdkOffsetEditorViewModel(
+        PdkLoader pdkLoader,
+        PdkJsonSaver pdkSaver,
+        PdkManagerViewModel pdkManager,
+        NazcaComponentPreviewService? previewService = null)
     {
         _pdkLoader = pdkLoader;
         _pdkSaver = pdkSaver;
         _pdkManager = pdkManager;
+        _previewService = previewService;
     }
 
     /// <summary>Opens a file dialog and loads the selected PDK JSON file.</summary>
@@ -125,10 +136,8 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Applies the current OffsetX/OffsetY to the selected component draft
-    /// and refreshes the pin position table. Rejects non-finite values
-    /// (NaN / ±Infinity) — they would silently propagate into the JSON and
-    /// later break GDS export with cryptic coordinate errors.
+    /// Applies the current OffsetX/OffsetY (and optional Width/Height) to the selected
+    /// component draft and refreshes the pin position table.
     /// </summary>
     [RelayCommand]
     private void ApplyOffset()
@@ -147,6 +156,8 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         SelectedComponent.Draft.NazcaOriginOffsetX = OffsetX;
         SelectedComponent.Draft.NazcaOriginOffsetY = OffsetY;
+        SelectedComponent.Draft.WidthMicrometers = ComponentWidth;
+        SelectedComponent.Draft.HeightMicrometers = ComponentHeight;
         SelectedComponent.RefreshStatus();
 
         RefreshPinPositions(SelectedComponent.Draft);
@@ -155,9 +166,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         StatusText = $"Offset updated for '{SelectedComponent.ComponentName}'. Click Save to persist.";
     }
 
-    /// <summary>
-    /// Saves the current PDK draft (with all edited offsets) back to its source JSON file.
-    /// </summary>
+    /// <summary>Saves the current PDK draft back to its source JSON file.</summary>
     [RelayCommand]
     private void SavePdk()
     {
@@ -205,25 +214,34 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         {
             PinPositions.Clear();
             PinMarkers.Clear();
+            NazcaPolygons.Clear();
+            NazcaPinStubs.Clear();
+            HasNazcaOverlay = false;
             return;
         }
 
         OffsetX = value.Draft.NazcaOriginOffsetX ?? 0;
         OffsetY = value.Draft.NazcaOriginOffsetY ?? 0;
+        ComponentWidth = value.Draft.WidthMicrometers;
+        ComponentHeight = value.Draft.HeightMicrometers;
 
-        // Warn when the selected component has no offset in the JSON. The edit
-        // fields show 0/0 as a display default, but hitting Apply without
-        // realizing would flip the JSON from "null" (missing) to "0.0" (set
-        // to zero) — the file would then claim the component has been
-        // calibrated when it hasn't. Make the state visible.
         if (value.Status == OffsetStatus.Missing)
         {
             StatusText = $"'{value.ComponentName}' has no offset in the JSON. Entering 0 and " +
                          "clicking Apply will record it as calibrated-to-zero.";
         }
 
+        // Reset overlay state for new component
+        HasNazcaOverlay = false;
+        NazcaPolygons.Clear();
+        NazcaPinStubs.Clear();
+        NazcaOverlayStatus = "";
+
         RefreshPinPositions(value.Draft);
         RefreshCanvasMarkers(value.Draft);
+
+        if (_previewService != null)
+            _ = TriggerNazcaRenderAsync(value.Draft);
     }
 
     /// <summary>
@@ -260,7 +278,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                 pin.Name,
                 pin.OffsetXMicrometers,
                 pin.OffsetYMicrometers,
-                draft.HeightMicrometers,
+                ComponentHeight,
                 OffsetX,
                 OffsetY));
         }
@@ -268,18 +286,115 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
     private void RefreshCanvasMarkers(PdkComponentDraft draft)
     {
-        CanvasComponentWidth  = draft.WidthMicrometers  * CanvasScale;
-        CanvasComponentHeight = draft.HeightMicrometers * CanvasScale;
-        CanvasOriginX = CanvasPadding + OffsetX  * CanvasScale;
-        CanvasOriginY = CanvasPadding + (draft.HeightMicrometers - OffsetY) * CanvasScale;
+        CanvasComponentWidth = ComponentWidth * CanvasScale;
+        CanvasComponentHeight = ComponentHeight * CanvasScale;
+
+        if (HasNazcaOverlay)
+        {
+            // Nazca geometry is fixed; move Lunima box as offset changes
+            CanvasComponentLeft = _nazcaCanvasRefX - OffsetX * CanvasScale;
+            CanvasComponentTop = _nazcaCanvasRefY - (ComponentHeight - OffsetY) * CanvasScale;
+            CanvasOriginX = _nazcaCanvasRefX;
+            CanvasOriginY = _nazcaCanvasRefY;
+        }
+        else
+        {
+            CanvasComponentLeft = CanvasPadding;
+            CanvasComponentTop = CanvasPadding;
+            CanvasOriginX = CanvasPadding + OffsetX * CanvasScale;
+            CanvasOriginY = CanvasPadding + (ComponentHeight - OffsetY) * CanvasScale;
+        }
 
         PinMarkers.Clear();
         foreach (var pin in draft.Pins)
         {
             PinMarkers.Add(new PinMarker(
                 pin.Name,
-                CanvasPadding + pin.OffsetXMicrometers * CanvasScale,
-                CanvasPadding + pin.OffsetYMicrometers * CanvasScale));
+                CanvasComponentLeft + pin.OffsetXMicrometers * CanvasScale,
+                CanvasComponentTop + pin.OffsetYMicrometers * CanvasScale));
+        }
+    }
+
+    /// <summary>
+    /// Applies a Nazca preview result, transforming coordinates to canvas space
+    /// and populating the overlay collections.
+    /// </summary>
+    private void SetNazcaOverlay(NazcaPreviewResult result)
+    {
+        // Nazca origin is at (0,0) in Nazca space; map to canvas
+        _nazcaCanvasRefX = CanvasPadding + (-result.XMin) * CanvasScale;
+        _nazcaCanvasRefY = CanvasPadding + result.YMax * CanvasScale;
+
+        NazcaPolygons.Clear();
+        foreach (var poly in result.Polygons)
+        {
+            var canvasPts = poly.Vertices
+                .Select(v => (
+                    X: _nazcaCanvasRefX + v.X * CanvasScale,
+                    Y: _nazcaCanvasRefY - v.Y * CanvasScale))
+                .ToList();
+            NazcaPolygons.Add(new NazcaPolygonMarker(poly.Layer, canvasPts));
+        }
+
+        NazcaPinStubs.Clear();
+        foreach (var pin in result.Pins)
+        {
+            var x0 = _nazcaCanvasRefX + pin.X * CanvasScale;
+            var y0 = _nazcaCanvasRefY - pin.Y * CanvasScale;
+            var x1 = _nazcaCanvasRefX + pin.StubX1 * CanvasScale;
+            var y1 = _nazcaCanvasRefY - pin.StubY1 * CanvasScale;
+            NazcaPinStubs.Add(new NazcaStubMarker(pin.Name, x0, y0, x1, y1));
+        }
+
+        HasNazcaOverlay = true;
+        if (SelectedComponent != null)
+            RefreshCanvasMarkers(SelectedComponent.Draft);
+    }
+
+    /// <summary>Triggers an async Nazca render for the given component draft.</summary>
+    private async Task TriggerNazcaRenderAsync(PdkComponentDraft draft)
+    {
+        _renderCts?.Cancel();
+        _renderCts = new CancellationTokenSource();
+        var token = _renderCts.Token;
+
+        IsNazcaRendering = true;
+        NazcaOverlayStatus = "Rendering Nazca GDS preview…";
+
+        try
+        {
+            var result = await _previewService!.RenderAsync(
+                null,
+                draft.NazcaFunction,
+                draft.NazcaParameters,
+                token);
+
+            if (token.IsCancellationRequested) return;
+
+            if (result.Success)
+            {
+                SetNazcaOverlay(result);
+                NazcaOverlayStatus = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
+            }
+            else
+            {
+                HasNazcaOverlay = false;
+                NazcaOverlayStatus = $"Preview unavailable: {result.Error}";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer selection — no status update needed
+        }
+        catch (Exception ex)
+        {
+            HasNazcaOverlay = false;
+            NazcaOverlayStatus = $"Preview error: {ex.Message}";
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+                IsNazcaRendering = false;
         }
     }
 }

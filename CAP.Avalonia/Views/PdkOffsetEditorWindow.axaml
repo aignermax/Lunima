@@ -101,8 +101,30 @@
                             <Button Grid.Column="6" Content="Apply" Command="{Binding ApplyOffsetCommand}"
                                     Padding="12,4" Background="#3d5d3d"/>
                         </Grid>
+                        <Grid ColumnDefinitions="Auto,120,20,Auto,120,*">
+                            <TextBlock Grid.Column="0" Text="Width:" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
+                            <NumericUpDown Grid.Column="1"
+                                          Value="{Binding ComponentWidth}"
+                                          FormatString="F3"
+                                          Increment="0.5"
+                                          Minimum="0.001"
+                                          Background="#2d2d2d" Foreground="White"/>
+                            <TextBlock Grid.Column="3" Text="Height:" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
+                            <NumericUpDown Grid.Column="4"
+                                          Value="{Binding ComponentHeight}"
+                                          FormatString="F3"
+                                          Increment="0.5"
+                                          Minimum="0.001"
+                                          Background="#2d2d2d" Foreground="White"/>
+                        </Grid>
                         <TextBlock Text="Apply updates the preview and marks the file as changed. Click Save PDK to persist."
                                    Foreground="Gray" FontSize="11"/>
+                        <ProgressBar IsIndeterminate="True"
+                                     IsVisible="{Binding IsNazcaRendering}"
+                                     Height="3" Foreground="#00c060"/>
+                        <TextBlock Text="{Binding NazcaOverlayStatus}"
+                                   Foreground="Gray" FontSize="11"
+                                   IsVisible="{Binding NazcaOverlayStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
                 </Border>
 
@@ -111,8 +133,8 @@
                         IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <StackPanel Spacing="6">
                         <TextBlock Text="Visual Pin Overlay" FontWeight="Bold" Foreground="LightGray"/>
-                        <TextBlock Text="Blue = component bounding box  |  Cyan dots = pins  |  Orange crosshair = Nazca origin"
-                                   Foreground="Gray" FontSize="11"/>
+                        <TextBlock Text="Blue = component bounding box  |  Cyan dots = pins  |  Orange crosshair = Nazca origin  |  Dark green = Nazca GDS polygons  |  Cyan stubs = Nazca pin exits"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                                       MaxHeight="280">
                             <Canvas x:Name="OverlayCanvas"

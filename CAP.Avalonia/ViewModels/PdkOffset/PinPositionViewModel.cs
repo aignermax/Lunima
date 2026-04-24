@@ -74,3 +74,20 @@ public class PinPositionViewModel
 /// <param name="CanvasX">X coordinate in canvas pixels.</param>
 /// <param name="CanvasY">Y coordinate in canvas pixels.</param>
 public record PinMarker(string Name, double CanvasX, double CanvasY);
+
+/// <summary>
+/// Canvas-space polygon from the Nazca GDS overlay (dark green).
+/// </summary>
+/// <param name="Layer">GDS layer number.</param>
+/// <param name="CanvasPoints">Polygon vertices in canvas pixel coordinates.</param>
+public record NazcaPolygonMarker(int Layer, IReadOnlyList<(double X, double Y)> CanvasPoints);
+
+/// <summary>
+/// Canvas-space pin stub line from the Nazca GDS overlay (cyan).
+/// </summary>
+/// <param name="Name">Pin name for tooltip.</param>
+/// <param name="X0">Stub start X in canvas pixels.</param>
+/// <param name="Y0">Stub start Y in canvas pixels.</param>
+/// <param name="X1">Stub end X in canvas pixels.</param>
+/// <param name="Y1">Stub end Y in canvas pixels.</param>
+public record NazcaStubMarker(string Name, double X0, double Y0, double X1, double Y1);

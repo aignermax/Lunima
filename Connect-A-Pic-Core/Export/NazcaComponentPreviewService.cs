@@ -1,0 +1,233 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text.Json;
+
+namespace CAP_Core.Export;
+
+/// <summary>Polygon data returned by the Nazca preview script.</summary>
+public class NazcaPreviewPolygon
+{
+    /// <summary>GDS layer number.</summary>
+    public int Layer { get; init; }
+    /// <summary>Polygon vertices in Nazca coordinate space (µm).</summary>
+    public IReadOnlyList<(double X, double Y)> Vertices { get; init; } = Array.Empty<(double, double)>();
+}
+
+/// <summary>Pin stub data returned by the Nazca preview script.</summary>
+public class NazcaPreviewPin
+{
+    /// <summary>Pin name (e.g. "a0").</summary>
+    public string Name { get; init; } = "";
+    /// <summary>Pin X in Nazca space (µm).</summary>
+    public double X { get; init; }
+    /// <summary>Pin Y in Nazca space (µm).</summary>
+    public double Y { get; init; }
+    /// <summary>Pin angle in degrees.</summary>
+    public double Angle { get; init; }
+    /// <summary>Stub far endpoint X (µm).</summary>
+    public double StubX1 { get; init; }
+    /// <summary>Stub far endpoint Y (µm).</summary>
+    public double StubY1 { get; init; }
+}
+
+/// <summary>Result from <see cref="NazcaComponentPreviewService.RenderAsync"/>.</summary>
+public class NazcaPreviewResult
+{
+    /// <summary>True when the script ran successfully.</summary>
+    public bool Success { get; init; }
+    /// <summary>Error description when <see cref="Success"/> is false.</summary>
+    public string? Error { get; init; }
+    /// <summary>Nazca bounding-box extents (µm).</summary>
+    public double XMin { get; init; }
+    /// <inheritdoc cref="XMin"/>
+    public double YMin { get; init; }
+    /// <inheritdoc cref="XMin"/>
+    public double XMax { get; init; }
+    /// <inheritdoc cref="XMin"/>
+    public double YMax { get; init; }
+    /// <summary>GDS polygons (empty when gdspy is not installed).</summary>
+    public IReadOnlyList<NazcaPreviewPolygon> Polygons { get; init; } = Array.Empty<NazcaPreviewPolygon>();
+    /// <summary>Pin stubs.</summary>
+    public IReadOnlyList<NazcaPreviewPin> Pins { get; init; } = Array.Empty<NazcaPreviewPin>();
+
+    /// <summary>Returns a failure result with the given error message.</summary>
+    public static NazcaPreviewResult Fail(string error) =>
+        new() { Success = false, Error = error };
+}
+
+/// <summary>
+/// Invokes <c>scripts/render_component_preview.py</c> to render a Nazca component
+/// cell and returns bounding-box, polygon and pin data for the PDK Offset Editor overlay.
+/// Results are cached by (module, function, parameters) key.
+/// </summary>
+public class NazcaComponentPreviewService
+{
+    /// <summary>Default subprocess timeout.</summary>
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(90);
+
+    private readonly string _pythonExecutable;
+    private readonly string _scriptPath;
+    private readonly TimeSpan _timeout;
+    private readonly ConcurrentDictionary<string, NazcaPreviewResult> _cache = new();
+
+    /// <summary>
+    /// Initializes the service.
+    /// </summary>
+    /// <param name="pythonExecutable">Path to Python 3 executable.</param>
+    /// <param name="scriptPath">Absolute path to render_component_preview.py.</param>
+    /// <param name="timeout">Optional subprocess timeout.</param>
+    public NazcaComponentPreviewService(string pythonExecutable, string scriptPath, TimeSpan? timeout = null)
+    {
+        _pythonExecutable = pythonExecutable ?? throw new ArgumentNullException(nameof(pythonExecutable));
+        _scriptPath = scriptPath ?? throw new ArgumentNullException(nameof(scriptPath));
+        _timeout = timeout ?? DefaultTimeout;
+    }
+
+    /// <summary>
+    /// Renders the component preview, using a cached result when available.
+    /// Never throws — returns a failure result instead.
+    /// </summary>
+    public async Task<NazcaPreviewResult> RenderAsync(
+        string? moduleName, string nazcaFunction, string? nazcaParameters,
+        CancellationToken ct = default)
+    {
+        var key = $"{moduleName ?? ""}|{nazcaFunction}|{nazcaParameters ?? ""}";
+        if (_cache.TryGetValue(key, out var cached))
+            return cached;
+
+        var result = await RunScriptAsync(moduleName, nazcaFunction, nazcaParameters, ct);
+        if (result.Success)
+            _cache[key] = result;
+        return result;
+    }
+
+    private async Task<NazcaPreviewResult> RunScriptAsync(
+        string? moduleName, string nazcaFunction, string? nazcaParameters, CancellationToken ct)
+    {
+        if (!File.Exists(_scriptPath))
+            return NazcaPreviewResult.Fail($"Preview script not found: {_scriptPath}");
+
+        var module = string.IsNullOrWhiteSpace(moduleName) ? "demo" : moduleName;
+        try
+        {
+            using var process = new Process();
+            var si = new ProcessStartInfo
+            {
+                FileName = _pythonExecutable,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            si.ArgumentList.Add(_scriptPath);
+            si.ArgumentList.Add(module);
+            si.ArgumentList.Add(nazcaFunction);
+            if (!string.IsNullOrWhiteSpace(nazcaParameters))
+                si.ArgumentList.Add(nazcaParameters);
+            process.StartInfo = si;
+            process.Start();
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            var timeoutTask = Task.Delay(_timeout, ct);
+            var completed = await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), timeoutTask);
+
+            if (completed == timeoutTask || ct.IsCancellationRequested)
+            {
+                TryKill(process);
+                return ct.IsCancellationRequested
+                    ? NazcaPreviewResult.Fail("Operation was cancelled.")
+                    : NazcaPreviewResult.Fail($"Preview script timed out after {_timeout.TotalSeconds:F0}s.");
+            }
+
+            process.WaitForExit();
+            return ParseOutput(await stdoutTask);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            return NazcaPreviewResult.Fail($"Could not start Python '{_pythonExecutable}': {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return NazcaPreviewResult.Fail($"Unexpected error: {ex.Message}");
+        }
+    }
+
+    private static NazcaPreviewResult ParseOutput(string stdout)
+    {
+        if (string.IsNullOrWhiteSpace(stdout))
+            return NazcaPreviewResult.Fail("Preview script produced no output.");
+        try
+        {
+            var doc = JsonDocument.Parse(stdout);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("success", out var sp) && !sp.GetBoolean())
+            {
+                var msg = root.TryGetProperty("error", out var ep) ? ep.GetString() : null;
+                return NazcaPreviewResult.Fail(msg ?? "Unknown error");
+            }
+
+            var bbox = root.GetProperty("bbox");
+            return new NazcaPreviewResult
+            {
+                Success = true,
+                XMin = bbox.GetProperty("xmin").GetDouble(),
+                YMin = bbox.GetProperty("ymin").GetDouble(),
+                XMax = bbox.GetProperty("xmax").GetDouble(),
+                YMax = bbox.GetProperty("ymax").GetDouble(),
+                Polygons = ParsePolygons(root),
+                Pins = ParsePins(root),
+            };
+        }
+        catch (Exception ex)
+        {
+            return NazcaPreviewResult.Fail($"Failed to parse preview output: {ex.Message}");
+        }
+    }
+
+    private static List<NazcaPreviewPolygon> ParsePolygons(JsonElement root)
+    {
+        var list = new List<NazcaPreviewPolygon>();
+        if (!root.TryGetProperty("polygons", out var arr)) return list;
+        foreach (var poly in arr.EnumerateArray())
+        {
+            var layer = poly.TryGetProperty("layer", out var lp) ? lp.GetInt32() : 0;
+            var verts = new List<(double, double)>();
+            if (poly.TryGetProperty("vertices", out var va))
+                foreach (var v in va.EnumerateArray())
+                {
+                    var c = v.EnumerateArray().ToArray();
+                    if (c.Length >= 2) verts.Add((c[0].GetDouble(), c[1].GetDouble()));
+                }
+            list.Add(new NazcaPreviewPolygon { Layer = layer, Vertices = verts });
+        }
+        return list;
+    }
+
+    private static List<NazcaPreviewPin> ParsePins(JsonElement root)
+    {
+        var list = new List<NazcaPreviewPin>();
+        if (!root.TryGetProperty("pins", out var arr)) return list;
+        foreach (var p in arr.EnumerateArray())
+        {
+            list.Add(new NazcaPreviewPin
+            {
+                Name   = p.TryGetProperty("name",   out var n)  ? n.GetString() ?? "" : "",
+                X      = p.TryGetProperty("x",      out var xp) ? xp.GetDouble() : 0,
+                Y      = p.TryGetProperty("y",      out var yp) ? yp.GetDouble() : 0,
+                Angle  = p.TryGetProperty("angle",  out var ap) ? ap.GetDouble() : 0,
+                StubX1 = p.TryGetProperty("stubX1", out var sx) ? sx.GetDouble() : 0,
+                StubY1 = p.TryGetProperty("stubY1", out var sy) ? sy.GetDouble() : 0,
+            });
+        }
+        return list;
+    }
+
+    private static void TryKill(Process process)
+    {
+        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+        catch { /* best-effort */ }
+    }
+}
