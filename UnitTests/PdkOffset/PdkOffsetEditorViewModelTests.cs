@@ -179,6 +179,20 @@ public class PdkOffsetEditorViewModelTests
         pin.NazcaRelX.ShouldBe(15.0);
     }
 
+    [Fact]
+    public void PinPosition_WithNegativeOffsetAndPinAtOrigin_ComputesCorrectly()
+    {
+        // Covers the negative-offset arithmetic path that the positive-only
+        // tests above skip. Pin at (0, 0), 10 µm-tall component, offset (-3, -4):
+        //   NazcaRelX = 0 - (-3) = 3
+        //   NazcaRelY = (10 - 0) - (-4) = 14
+        var pin = new PinPositionViewModel("a0", localX: 0, localY: 0, componentHeight: 10,
+                                           nazcaOffsetX: -3, nazcaOffsetY: -4);
+
+        pin.NazcaRelX.ShouldBe(3.0);
+        pin.NazcaRelY.ShouldBe(14.0);
+    }
+
     // ─── PdkOffsetEditorViewModel ──────────────────────────────────────────────
 
     private static PdkOffsetEditorViewModel CreateViewModel()

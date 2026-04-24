@@ -137,9 +137,13 @@ public partial class App : Application
         services.AddSingleton<RightPanelViewModel>();
         services.AddSingleton<BottomPanelViewModel>();
 
-        // Register PDK offset editor services and ViewModel
-        services.AddTransient<PdkJsonSaver>();
-        services.AddTransient<PdkOffsetEditorViewModel>();
+        // Register PDK offset editor services and ViewModel.
+        // The ViewModel is Singleton so that MainViewModel can hold it as a
+        // property — this preserves editor state (loaded PDK, unsaved edits)
+        // when the user re-opens the window. Transient here would give the
+        // MainViewModel a different instance than any other DI resolution.
+        services.AddSingleton<PdkJsonSaver>();
+        services.AddSingleton<PdkOffsetEditorViewModel>();
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();

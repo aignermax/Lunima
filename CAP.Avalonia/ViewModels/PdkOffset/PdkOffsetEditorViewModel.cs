@@ -52,6 +52,18 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     public double CanvasOriginX { get; private set; }
     public double CanvasOriginY { get; private set; }
 
+    /// <summary>Total canvas width in pixels (component plus both paddings).</summary>
+    public double CanvasTotalWidth => CanvasComponentWidth + CanvasPadding * 2;
+
+    /// <summary>Total canvas height in pixels (component plus both paddings).</summary>
+    public double CanvasTotalHeight => CanvasComponentHeight + CanvasPadding * 2;
+
+    /// <summary>X offset of the component bounding box inside the canvas (= padding).</summary>
+    public double CanvasComponentLeft => CanvasPadding;
+
+    /// <summary>Y offset of the component bounding box inside the canvas (= padding).</summary>
+    public double CanvasComponentTop => CanvasPadding;
+
     /// <summary>Pin markers for visual canvas overlay (canvas-pixel coordinates).</summary>
     public ObservableCollection<PinMarker> PinMarkers { get; } = new();
 
@@ -85,7 +97,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         try
         {
-            _loadedPdk = _pdkLoader.LoadFromFile(path);
+            // Use the editing-tolerant loader — this window's whole purpose
+            // is to calibrate components whose offsets are still null. The
+            // strict LoadFromFile path would reject exactly those PDKs.
+            _loadedPdk = _pdkLoader.LoadFromFileForEditing(path);
             _loadedFilePath = path;
             HasUnsavedChanges = false;
 
@@ -224,13 +239,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(CanvasComponentHeight));
         OnPropertyChanged(nameof(CanvasOriginX));
         OnPropertyChanged(nameof(CanvasOriginY));
+        OnPropertyChanged(nameof(CanvasTotalWidth));
+        OnPropertyChanged(nameof(CanvasTotalHeight));
     }
 }
-
-/// <summary>
-/// Position of a pin marker on the visual canvas overlay.
-/// </summary>
-/// <param name="Name">Pin name for the tooltip label.</param>
-/// <param name="CanvasX">X coordinate in canvas pixels.</param>
-/// <param name="CanvasY">Y coordinate in canvas pixels.</param>
-public record PinMarker(string Name, double CanvasX, double CanvasY);

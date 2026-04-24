@@ -66,3 +66,11 @@ public class PinPositionViewModel
         NazcaRelY = (componentHeight - localY) - nazcaOffsetY;
     }
 }
+
+/// <summary>
+/// Position of a pin marker on the visual canvas overlay.
+/// </summary>
+/// <param name="Name">Pin name for the tooltip label.</param>
+/// <param name="CanvasX">X coordinate in canvas pixels.</param>
+/// <param name="CanvasY">Y coordinate in canvas pixels.</param>
+public record PinMarker(string Name, double CanvasX, double CanvasY);

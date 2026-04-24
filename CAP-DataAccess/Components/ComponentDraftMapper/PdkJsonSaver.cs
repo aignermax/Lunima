@@ -17,13 +17,20 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
 
         /// <summary>
         /// Writes a <see cref="PdkDraft"/> to the specified file path as formatted JSON.
-        /// Overwrites the file if it already exists.
+        /// The write is atomic: content is first written to a sibling <c>.tmp</c>
+        /// file and then renamed, so a crash mid-write leaves the original PDK
+        /// JSON intact (this file is the source of truth for GDS export).
         /// </summary>
         /// <param name="pdk">The PDK draft to serialize.</param>
         /// <param name="filePath">Destination file path.</param>
-        /// <exception cref="InvalidOperationException">Thrown when the file path is invalid or the directory does not exist.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="pdk"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="filePath"/> is null or empty.</exception>
+        /// <exception cref="InvalidOperationException">The destination directory does not exist.</exception>
         public void SaveToFile(PdkDraft pdk, string filePath)
         {
+            ArgumentNullException.ThrowIfNull(pdk);
+            ArgumentException.ThrowIfNullOrEmpty(filePath);
+
             var directory = Path.GetDirectoryName(filePath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
@@ -31,7 +38,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
 
             var json = JsonSerializer.Serialize(pdk, WriteOptions);
-            File.WriteAllText(filePath, json);
+            var tempPath = filePath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, filePath, overwrite: true);
         }
     }
 }

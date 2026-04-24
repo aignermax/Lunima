@@ -11,8 +11,6 @@ namespace CAP.Avalonia.Views;
 /// </summary>
 public partial class PdkOffsetEditorWindow : Window
 {
-    private const double CanvasPadding = 20.0;
-    private const double CanvasScale = 2.0;
     private const double PinDotRadius = 5.0;
     private const double CrosshairLength = 12.0;
 
@@ -57,33 +55,36 @@ public partial class PdkOffsetEditorWindow : Window
 
     private void RedrawOverlay(PdkOffsetEditorViewModel vm)
     {
-        if (OverlayCanvas == null) return;
+        if (OverlayCanvas == null)
+        {
+            // Can happen when the DataContext is assigned before the XAML
+            // is fully loaded. The next redraw (triggered by a ViewModel
+            // change once the canvas exists) will render correctly.
+            System.Diagnostics.Debug.WriteLine(
+                "PdkOffsetEditorWindow.RedrawOverlay: OverlayCanvas not initialized — skipping redraw.");
+            return;
+        }
         OverlayCanvas.Children.Clear();
 
         if (vm.SelectedComponent == null) return;
 
-        var draft = vm.SelectedComponent.Draft;
-        double compW = draft.WidthMicrometers  * CanvasScale;
-        double compH = draft.HeightMicrometers * CanvasScale;
+        // All geometry comes from the ViewModel — the view only maps these
+        // pre-computed canvas pixel values onto Avalonia shapes.
+        OverlayCanvas.Width  = vm.CanvasTotalWidth;
+        OverlayCanvas.Height = vm.CanvasTotalHeight;
 
-        // Expand canvas if component is large
-        OverlayCanvas.Width  = compW + CanvasPadding * 2;
-        OverlayCanvas.Height = compH + CanvasPadding * 2;
-
-        // Component bounding box
         var box = new Rectangle
         {
-            Width  = compW,
-            Height = compH,
+            Width  = vm.CanvasComponentWidth,
+            Height = vm.CanvasComponentHeight,
             Fill   = ComponentBoxBrush,
             Stroke = ComponentBorderBrush,
             StrokeThickness = 1.5
         };
-        Canvas.SetLeft(box, CanvasPadding);
-        Canvas.SetTop(box, CanvasPadding);
+        Canvas.SetLeft(box, vm.CanvasComponentLeft);
+        Canvas.SetTop(box, vm.CanvasComponentTop);
         OverlayCanvas.Children.Add(box);
 
-        // Pin dots
         foreach (var pin in vm.PinMarkers)
         {
             var dot = new Ellipse
@@ -97,7 +98,6 @@ public partial class PdkOffsetEditorWindow : Window
             Canvas.SetTop(dot, pin.CanvasY - PinDotRadius);
             OverlayCanvas.Children.Add(dot);
 
-            // Pin label
             var label = new TextBlock
             {
                 Text       = pin.Name,
@@ -109,10 +109,7 @@ public partial class PdkOffsetEditorWindow : Window
             OverlayCanvas.Children.Add(label);
         }
 
-        // Nazca origin crosshair
-        double originX = CanvasPadding + vm.OffsetX * CanvasScale;
-        double originY = CanvasPadding + (draft.HeightMicrometers - vm.OffsetY) * CanvasScale;
-        DrawCrosshair(originX, originY);
+        DrawCrosshair(vm.CanvasOriginX, vm.CanvasOriginY);
 
         var originLabel = new TextBlock
         {
@@ -120,8 +117,8 @@ public partial class PdkOffsetEditorWindow : Window
             Foreground = OriginBrush,
             FontSize   = 9
         };
-        Canvas.SetLeft(originLabel, originX + CrosshairLength + 2);
-        Canvas.SetTop(originLabel, originY - 6);
+        Canvas.SetLeft(originLabel, vm.CanvasOriginX + CrosshairLength + 2);
+        Canvas.SetTop(originLabel, vm.CanvasOriginY - 6);
         OverlayCanvas.Children.Add(originLabel);
     }
 
