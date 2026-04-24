@@ -33,11 +33,45 @@ public class LumericalSParameterImporter : ISParameterImporter
         var lines = await File.ReadAllLinesAsync(filePath);
         var ext = Path.GetExtension(filePath).ToLowerInvariant();
 
-        var blocks = ext == ".txt"
-            ? ParseGcTxtFormat(lines)
-            : ParseSparamFormat(lines);
+        // Format routing by extension alone is not enough: both `.dat` and `.txt`
+        // are used in the wild for the GC-packed layout (9 numeric columns per
+        // row, no header), and `.dat` is ALSO used for the blocked SiEPIC
+        // format. Try blocked first (it's unambiguous — starts with `(`), and
+        // fall back to the packed parser if no blocks are found.
+        bool forcedPacked = ext == ".txt" && LooksLikePacked(lines);
+
+        List<SparamBlock> blocks;
+        if (forcedPacked)
+        {
+            blocks = ParseGcTxtFormat(lines);
+        }
+        else
+        {
+            blocks = ParseSparamFormat(lines);
+            if (blocks.Count == 0 && LooksLikePacked(lines))
+                blocks = ParseGcTxtFormat(lines);
+        }
 
         return BuildResult(blocks, filePath, ext);
+    }
+
+    /// <summary>
+    /// GC-packed layout heuristic: first non-blank, non-comment line has 9+
+    /// numeric tokens (freq + 4×(mag, phase) for 2-port) and no leading `(`.
+    /// </summary>
+    private static bool LooksLikePacked(string[] lines)
+    {
+        foreach (var line in lines)
+        {
+            var t = line.TrimStart();
+            if (t.Length == 0 || t.StartsWith('#') || t.StartsWith('!') || t.StartsWith('['))
+                continue;
+            if (t.StartsWith('(')) return false;
+            var tokens = t.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return tokens.Length >= 9 &&
+                   double.TryParse(tokens[0], NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+        }
+        return false;
     }
 
     // ── Blocked (.sparam / .dat) parser ──────────────────────────────────────
@@ -196,6 +230,11 @@ public class LumericalSParameterImporter : ISParameterImporter
             PortNames = portNames,
         };
 
+        // Dense sweeps in frequency don't stay distinct when rounded to nm:
+        // 101 equally-spaced Hz samples around 1550 nm collapse to ~99 nm
+        // keys. Count collisions so they're visible via Metadata instead of
+        // the dict silently dropping data points.
+        int wavelengthCollisions = 0;
         for (int wIdx = 0; wIdx < wavelengthsNm.Length; wIdx++)
         {
             var matrix = new Complex[n, n];
@@ -209,8 +248,13 @@ public class LumericalSParameterImporter : ISParameterImporter
                 matrix[outIdx, inIdx] = Complex.FromPolarCoordinates(mag, phase);
             }
 
+            if (result.SMatricesByWavelengthNm.ContainsKey(wavelengthsNm[wIdx]))
+                wavelengthCollisions++;
             result.SMatricesByWavelengthNm[wavelengthsNm[wIdx]] = matrix;
         }
+
+        if (wavelengthCollisions > 0)
+            result.Metadata["wavelengthCollisions"] = wavelengthCollisions.ToString(CultureInfo.InvariantCulture);
 
         result.Metadata["polarization"] = "TE";
         result.Metadata["tool"] = "Lumerical INTERCONNECT";

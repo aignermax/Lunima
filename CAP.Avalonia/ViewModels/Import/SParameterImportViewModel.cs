@@ -140,9 +140,12 @@ public partial class SParameterImportViewModel : ObservableObject
             _storedSMatrices![ComponentIdentifier] = smatrixData;
 
             PreviewInfo = BuildPreviewInfo(imported);
-            var warnSuffix = imported.Metadata.TryGetValue("malformedRows", out var malformed) && malformed != "0"
-                ? $" — {malformed} malformed row(s) skipped"
-                : string.Empty;
+            var warns = new List<string>();
+            if (imported.Metadata.TryGetValue("malformedRows", out var malformed) && malformed != "0")
+                warns.Add($"{malformed} malformed row(s) skipped");
+            if (imported.Metadata.TryGetValue("wavelengthCollisions", out var collisions) && collisions != "0")
+                warns.Add($"{collisions} wavelength(s) collapsed by nm-rounding — consider a sparser sweep");
+            var warnSuffix = warns.Count > 0 ? $" — {string.Join("; ", warns)}" : string.Empty;
             StatusText = $"Imported {imported.PortCount}-port S-matrix ({imported.SMatricesByWavelengthNm.Count} wavelengths) → '{ComponentIdentifier}'.{warnSuffix}";
             LastImportSucceeded = true;
         }
