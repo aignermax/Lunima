@@ -261,6 +261,86 @@ public class PhaseShifterSimulationTests
     }
 
     [Fact]
+    public void UnboundParameter_EvaluatesAgainstDefaultValue()
+    {
+        // Behavioural follow-up to the NotThrow test above: null SliderNumber
+        // plus DefaultValue=90 must actually produce phase=π/2 on evaluation.
+        // A regression that silently forces unbound parameters to 0 would
+        // fail here.
+        var parameters = new[] { new ParameterDefinition("phase_shift", defaultValue: 90, minValue: 0, maxValue: 360) };
+        var connections = new[] { new FormulaConnection("in", "out", "1.0", "phase_shift") };
+        var parametric = new ParametricSMatrix(parameters, connections);
+
+        var result = parametric.EvaluateConnections();
+
+        result[0].Value.Magnitude.ShouldBe(1.0, Tolerance);
+        result[0].Value.Imaginary.ShouldBe(1.0, Tolerance);
+        result[0].Value.Real.ShouldBe(0.0, 1e-9);
+    }
+
+    [Fact]
+    public void ParameterDefinitionDraft_SliderNumberNull_RoundTripsThroughJson()
+    {
+        // Guards the JSON contract: a null SliderNumber must survive
+        // serialize → deserialize. A JsonIgnoreCondition regression that
+        // drops the field would silently turn null into 0 on reload.
+        var draft = new ParameterDefinitionDraft
+        {
+            Name = "phase_shift",
+            DefaultValue = 45,
+            MinValue = 0,
+            MaxValue = 360,
+            SliderNumber = null,
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(draft);
+        var reloaded = System.Text.Json.JsonSerializer.Deserialize<ParameterDefinitionDraft>(json);
+
+        reloaded.ShouldNotBeNull();
+        reloaded!.SliderNumber.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ParameterDefinitionDraft_SliderNumberZero_RoundTripsThroughJson()
+    {
+        // Mirror test for the bound case: 0 must stay 0, not default to null.
+        var draft = new ParameterDefinitionDraft
+        {
+            Name = "phase_shift",
+            DefaultValue = 45,
+            MinValue = 0,
+            MaxValue = 360,
+            SliderNumber = 0,
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(draft);
+        var reloaded = System.Text.Json.JsonSerializer.Deserialize<ParameterDefinitionDraft>(json);
+
+        reloaded!.SliderNumber.ShouldBe(0);
+    }
+
+    [Fact]
+    public void DoubleCloned_PhaseShifter_StillEvaluatesCorrectly()
+    {
+        // Clone chain preservation: ParametricRebuild must carry forward
+        // through multiple clones so that the grandchild of the original
+        // component still has a working parametric evaluator, not the
+        // crashing MathExpressionReader fallback.
+        var draft = CreatePhaseShifterDraft();
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+        var original = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+        var firstClone = (CAP_Core.Components.Core.Component)original.Clone();
+        var secondClone = (CAP_Core.Components.Core.Component)firstClone.Clone();
+
+        var connFn = secondClone.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+        var at90 = connFn.CalcConnectionWeightAsync(new List<object> { 90.0 });
+
+        at90.Magnitude.ShouldBe(1.0, Tolerance);
+        at90.Imaginary.ShouldBe(1.0, Tolerance);
+        at90.Real.ShouldBe(0.0, 1e-9);
+    }
+
+    [Fact]
     public void PhaseSweep_0To360_RotatesCounterclockwise_Unnormalized()
     {
         // Sign-flip sensitivity: without raw (non-normalized) phase checks,

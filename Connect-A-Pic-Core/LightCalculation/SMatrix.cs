@@ -24,6 +24,11 @@ namespace CAP_Core.LightCalculation
         /// the parametric formula through <c>MathExpressionReader</c>, which
         /// would otherwise throw because the raw-formula string is not valid
         /// NCalc syntax. <c>null</c> for non-parametric matrices.
+        /// Convention: set only by the PDK template converter at construction
+        /// and carried forward by <c>Component.Clone</c>. Do not mutate from
+        /// elsewhere — the "set once, propagate on clone" invariant would
+        /// break. The setter is <c>public</c> because the template converter
+        /// lives in a separate assembly (<c>CAP.Avalonia</c>).
         /// </summary>
         public Func<List<Pin>, List<Slider>, SMatrix>? ParametricRebuild { get; set; }
 

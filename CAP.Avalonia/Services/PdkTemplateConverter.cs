@@ -151,9 +151,16 @@ public static class PdkTemplateConverter
 
         foreach (var conn in parametric.Connections)
         {
-            if (!pinByName.TryGetValue(conn.FromPin, out var fromPin) ||
-                !pinByName.TryGetValue(conn.ToPin, out var toPin))
-                continue;
+            // Pin-name mismatch must throw instead of silently dropping the
+            // connection. ParametricSMatrixMapper.Validate already enforces
+            // pin-name validity at PDK load, so reaching this point means
+            // something upstream mutated the draft or skipped validation.
+            if (!pinByName.TryGetValue(conn.FromPin, out var fromPin))
+                throw new InvalidOperationException(
+                    $"Parametric connection references unknown pin '{conn.FromPin}'.");
+            if (!pinByName.TryGetValue(conn.ToPin, out var toPin))
+                throw new InvalidOperationException(
+                    $"Parametric connection references unknown pin '{conn.ToPin}'.");
 
             var capturedConn = conn;
             var capturedParametric = parametric;
@@ -168,11 +175,18 @@ public static class PdkTemplateConverter
                     capturedParametric.SetParameterValue(capturedParamSliders[i].Name, val);
                 }
 
-                // Find evaluated value for this specific connection
+                // Find evaluated value for this specific connection. Using
+                // Single (not FirstOrDefault) because EvaluatedConnection is
+                // a record struct — a miss would silently return a
+                // Complex.Zero default with no indication, producing a
+                // correct-looking but wrong simulation result.
                 var results = capturedParametric.EvaluateConnections();
-                var ev = results.FirstOrDefault(e =>
-                    e.FromPin == capturedConn.FromPin && e.ToPin == capturedConn.ToPin);
-                return ev.Value;
+                var match = results.Where(e =>
+                    e.FromPin == capturedConn.FromPin && e.ToPin == capturedConn.ToPin).ToList();
+                if (match.Count == 0)
+                    throw new InvalidOperationException(
+                        $"No evaluated connection for {capturedConn.FromPin}→{capturedConn.ToPin}.");
+                return match[0].Value;
             };
 
             var rawFormula = $"mag={conn.MagnitudeFormula};phase={conn.PhaseDegFormula}";
