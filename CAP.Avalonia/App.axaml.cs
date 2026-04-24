@@ -22,7 +22,6 @@ using CAP.Avalonia.Services.AiTools.GridTools;
 using CAP_Contracts;
 using CAP_Core.Helpers;
 using CAP_Core.Export;
-using CAP_DataAccess.Components.ComponentDraftMapper;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CAP.Avalonia;

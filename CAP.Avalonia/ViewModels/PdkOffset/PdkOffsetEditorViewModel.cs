@@ -43,14 +43,23 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>File dialog service for picking a PDK JSON file to load.</summary>
     public IFileDialogService? FileDialogService { get; set; }
 
-    /// <summary>
-    /// Canvas geometry properties for the visual pin overlay.
-    /// These are updated when a component is selected or offset changes.
-    /// </summary>
-    public double CanvasComponentWidth { get; private set; }
-    public double CanvasComponentHeight { get; private set; }
-    public double CanvasOriginX { get; private set; }
-    public double CanvasOriginY { get; private set; }
+    /// <summary>Component bounding-box width in canvas pixels.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanvasTotalWidth))]
+    private double _canvasComponentWidth;
+
+    /// <summary>Component bounding-box height in canvas pixels.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanvasTotalHeight))]
+    private double _canvasComponentHeight;
+
+    /// <summary>Nazca origin X position in canvas pixels (for the crosshair).</summary>
+    [ObservableProperty]
+    private double _canvasOriginX;
+
+    /// <summary>Nazca origin Y position in canvas pixels (for the crosshair).</summary>
+    [ObservableProperty]
+    private double _canvasOriginY;
 
     /// <summary>Total canvas width in pixels (component plus both paddings).</summary>
     public double CanvasTotalWidth => CanvasComponentWidth + CanvasPadding * 2;
@@ -234,12 +243,5 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                 CanvasPadding + pin.OffsetXMicrometers * CanvasScale,
                 CanvasPadding + pin.OffsetYMicrometers * CanvasScale));
         }
-
-        OnPropertyChanged(nameof(CanvasComponentWidth));
-        OnPropertyChanged(nameof(CanvasComponentHeight));
-        OnPropertyChanged(nameof(CanvasOriginX));
-        OnPropertyChanged(nameof(CanvasOriginY));
-        OnPropertyChanged(nameof(CanvasTotalWidth));
-        OnPropertyChanged(nameof(CanvasTotalHeight));
     }
 }

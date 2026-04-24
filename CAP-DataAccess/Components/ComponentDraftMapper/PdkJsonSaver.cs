@@ -39,8 +39,26 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
 
             var json = JsonSerializer.Serialize(pdk, WriteOptions);
             var tempPath = filePath + ".tmp";
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, filePath, overwrite: true);
+            var moved = false;
+            try
+            {
+                File.WriteAllText(tempPath, json);
+                File.Move(tempPath, filePath, overwrite: true);
+                moved = true;
+            }
+            finally
+            {
+                if (!moved && File.Exists(tempPath))
+                {
+                    try { File.Delete(tempPath); }
+                    catch
+                    {
+                        // Best-effort cleanup only — the caller sees the real
+                        // save failure, and a leftover <path>.tmp is overwritten
+                        // on the next successful save anyway.
+                    }
+                }
+            }
         }
     }
 }

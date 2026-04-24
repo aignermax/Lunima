@@ -230,8 +230,32 @@ public class PdkOffsetEditorLoadSaveTests
         }
         finally
         {
-            File.Delete(tempFile);
-            if (File.Exists(tempFile + ".tmp")) File.Delete(tempFile + ".tmp");
+            if (File.Exists(tempFile))           File.Delete(tempFile);
+            if (File.Exists(tempFile + ".tmp"))  File.Delete(tempFile + ".tmp");
+        }
+    }
+
+    [Fact]
+    public void SaveToFile_WhenMoveFails_DoesNotLeaveOrphanTempFile()
+    {
+        // Atomic write should clean up its <path>.tmp sibling if the final
+        // rename step throws (target is a directory). Without the cleanup
+        // block we'd accumulate .tmp files on every failed save.
+        var tempDir = Path.Combine(Path.GetTempPath(), "pdk-saver-orphan-" + Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+        var targetPath = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetPath); // target is a directory → File.Move throws
+
+        try
+        {
+            Should.Throw<Exception>(() =>
+                new PdkJsonSaver().SaveToFile(BuildMinimalPdk(), targetPath));
+
+            File.Exists(targetPath + ".tmp").ShouldBeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true);
         }
     }
 
