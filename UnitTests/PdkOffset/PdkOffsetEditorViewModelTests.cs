@@ -1,3 +1,4 @@
+using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
@@ -197,7 +198,7 @@ public class PdkOffsetEditorViewModelTests
 
     private static PdkOffsetEditorViewModel CreateViewModel()
     {
-        return new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver());
+        return new PdkOffsetEditorViewModel(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel());
     }
 
     [Fact]
