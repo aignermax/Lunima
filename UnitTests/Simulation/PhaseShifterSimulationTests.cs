@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Numerics;
+using System.Threading;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Parametric;
@@ -165,5 +167,213 @@ public class PhaseShifterSimulationTests
         var at180 = connFn.CalcConnectionWeightAsync(new List<object> { 180.0 });
         at180.Magnitude.ShouldBe(1.0, Tolerance);
         at180.Real.ShouldBe(-1.0, Tolerance);
+    }
+
+    // ── Regression guards added in the post-review fix pass ──────────────────
+
+    [Fact]
+    public void ClonedPhaseShifter_DoesNotCrash_AndKeepsParametricBehavior()
+    {
+        // Clone() used to throw because MathExpressionReader tried to re-parse
+        // the raw-formula string "mag=1.0;phase=phase_shift", which is not
+        // valid NCalc syntax. The SMatrix now carries a ParametricRebuild
+        // factory that Clone() uses instead; this test verifies (a) no
+        // exception, and (b) the clone still evaluates the phase correctly.
+        var draft = CreatePhaseShifterDraft();
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+        var original = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+
+        var clone = (CAP_Core.Components.Core.Component)original.Clone();
+
+        var sMatrix = clone.WaveLengthToSMatrixMap[1550];
+        sMatrix.NonLinearConnections.Count.ShouldBeGreaterThan(0,
+            "Cloned component must retain parametric connections");
+
+        var connFn = sMatrix.NonLinearConnections.First().Value;
+        var at90 = connFn.CalcConnectionWeightAsync(new List<object> { 90.0 });
+        at90.Magnitude.ShouldBe(1.0, Tolerance);
+        at90.Imaginary.ShouldBe(1.0, Tolerance); // phase=90° → (0, 1)
+        at90.Real.ShouldBe(0.0, 1e-9);
+    }
+
+    [Fact]
+    public void ClonedPhaseShifter_HasIndependentParameterState()
+    {
+        // Multi-instance isolation: two clones must not share one
+        // ParametricSMatrix._currentValues dictionary, or setting slider on
+        // instance A would leak into instance B's evaluation.
+        var draft = CreatePhaseShifterDraft();
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+        var a = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+        var b = (CAP_Core.Components.Core.Component)a.Clone();
+
+        // Call A's connection function at 180° and B's at 0°. If state were
+        // shared, B's evaluation would pick up the 180° A just set.
+        var aFn = a.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+        var bFn = b.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+
+        var aAt180 = aFn.CalcConnectionWeightAsync(new List<object> { 180.0 });
+        var bAt0   = bFn.CalcConnectionWeightAsync(new List<object> { 0.0 });
+
+        aAt180.Real.ShouldBe(-1.0, Tolerance);
+        bAt0.Real.ShouldBe(1.0, Tolerance);
+    }
+
+    [Fact]
+    public void LoadingPdk_WithOutOfRangeSliderNumber_ThrowsAtLoadTime()
+    {
+        // Bad PDKs must fail at load time, not silently produce a broken
+        // simulation. Slider count on this component is 1, so sliderNumber=5
+        // is invalid.
+        var draft = CreatePhaseShifterDraft();
+        draft.SMatrix!.Parameters![0].SliderNumber = 5;
+
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            ParametricSMatrixMapper.Validate(draft.SMatrix, draft.Name, draft.Pins, draft.Sliders!.Count));
+        ex.Message.ShouldContain("sliderNumber 5");
+        ex.Message.ShouldContain("only 1 slider");
+    }
+
+    [Fact]
+    public void LoadingPdk_WithSliderNumberOnComponentWithoutSliders_ThrowsAtLoadTime()
+    {
+        var draft = CreatePhaseShifterDraft();
+        draft.Sliders = new List<SliderDraft>();
+        // SliderNumber is 0 in the default draft; still invalid because the
+        // component has zero sliders.
+
+        var ex = Should.Throw<InvalidOperationException>(() =>
+            ParametricSMatrixMapper.Validate(draft.SMatrix!, draft.Name, draft.Pins, sliderCount: 0));
+        ex.Message.ShouldContain("only 0 slider");
+    }
+
+    [Fact]
+    public void LoadingPdk_WithoutSliderBinding_IsAccepted()
+    {
+        // A parameter without SliderNumber = null is legal: the formula
+        // evaluates against the parameter's DefaultValue. This case is how
+        // constants-with-named-labels would work.
+        var draft = CreatePhaseShifterDraft();
+        draft.SMatrix!.Parameters![0].SliderNumber = null;
+
+        Should.NotThrow(() =>
+            ParametricSMatrixMapper.Validate(draft.SMatrix, draft.Name, draft.Pins, draft.Sliders!.Count));
+    }
+
+    [Fact]
+    public void PhaseSweep_0To360_RotatesCounterclockwise_Unnormalized()
+    {
+        // Sign-flip sensitivity: without raw (non-normalized) phase checks,
+        // a sign-flip bug on deg→rad still passes the 0/180 assertions.
+        // Here we walk the slider in 15° steps and verify atan2(Im, Re)
+        // actually follows the slider value (unwrapping by accumulating).
+        var draft = CreatePhaseShifterDraft();
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+        var component = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+        var connFn = component.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+
+        double lastPhase = 0;
+        double accumulated = 0;
+        for (int deg = 0; deg <= 360; deg += 15)
+        {
+            var c = connFn.CalcConnectionWeightAsync(new List<object> { (double)deg });
+            double phase = Math.Atan2(c.Imaginary, c.Real);
+
+            // Unwrap: assume forward rotation, add 2π on branch cut.
+            double delta = phase - lastPhase;
+            if (delta < -Math.PI) delta += 2 * Math.PI;
+            accumulated += delta;
+            lastPhase = phase;
+
+            double expectedRad = deg * Math.PI / 180.0;
+            accumulated.ShouldBe(expectedRad, 1e-6,
+                $"Phase at {deg}° should trace a counterclockwise rotation");
+        }
+    }
+
+    [Fact]
+    public void TwoPhaseShifters_Combined_PhasesAddModuloTwoPi()
+    {
+        // Physical composition check: the complex product of two parametric
+        // connection outputs (e.g. two phase shifters in series) should have
+        // phase equal to the sum of the two slider settings. Catches any
+        // accidental global-state sharing between parametric VMs.
+        var draft = CreatePhaseShifterDraft();
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+        var a = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+        var b = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+
+        var aFn = a.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+        var bFn = b.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+
+        var c1 = aFn.CalcConnectionWeightAsync(new List<object> { 60.0 });
+        var c2 = bFn.CalcConnectionWeightAsync(new List<object> { 120.0 });
+        var composed = c1 * c2;
+
+        composed.Real.ShouldBe(-1.0, 1e-9);
+        composed.Imaginary.ShouldBe(0.0, 1e-9);
+    }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    [InlineData("fr-FR")]
+    public void FormulaEvaluator_ParsesDecimalLiterals_CultureInvariant(string cultureName)
+    {
+        // NCalc defaults to thread culture. Without InvariantCulture the
+        // literal "0.707" on de-DE parses as 707. Pin the promised
+        // invariant-culture behaviour across the three most likely locales.
+        var original = Thread.CurrentThread.CurrentCulture;
+        Thread.CurrentThread.CurrentCulture = new CultureInfo(cultureName);
+        try
+        {
+            var evaluator = new FormulaEvaluator();
+            var result = evaluator.Evaluate("0.707", new Dictionary<string, double>());
+            result.ShouldBe(0.707, 1e-9);
+        }
+        finally
+        {
+            Thread.CurrentThread.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public void NonParametric_Component_StillUsesStaticFactory()
+    {
+        // Regression guard: the new parametric branch must not divert
+        // non-parametric components from their classic CreateSMatrix path.
+        var draft = CreatePhaseShifterDraft();
+        draft.SMatrix = new PdkSMatrixDraft
+        {
+            WavelengthNm = 1550,
+            Connections = new List<SMatrixConnection>
+            {
+                new() { FromPin = "in", ToPin = "out", Magnitude = 1.0, PhaseDegrees = 0 }
+            }
+        };
+        draft.Sliders = new List<SliderDraft>();
+
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+
+        template.CreateSMatrix.ShouldNotBeNull("Static S-matrix must still use the static factory");
+        template.CreateSMatrixWithSliders.ShouldBeNull("Static S-matrix must not be routed through the parametric factory");
+    }
+
+    [Fact]
+    public void PhaseShifter_At360_ApproximatelyEqualsAt0()
+    {
+        // Boundary: 360° and 0° are physically identical endpoints on the
+        // circular parameter. A clamping bug (Math.Clamp(360, 0, 360) works,
+        // but also a negative-one-sentinel-leak could break this).
+        var draft = CreatePhaseShifterDraft();
+        var template = PdkTemplateConverter.ConvertToTemplate(draft, "Test PDK", null);
+        var component = ComponentTemplates.CreateFromTemplate(template, 0, 0);
+        var connFn = component.WaveLengthToSMatrixMap[1550].NonLinearConnections.First().Value;
+
+        var at0 = connFn.CalcConnectionWeightAsync(new List<object> { 0.0 });
+        var at360 = connFn.CalcConnectionWeightAsync(new List<object> { 360.0 });
+
+        at0.Real.ShouldBe(at360.Real, 1e-9);
+        at0.Imaginary.ShouldBe(at360.Imaginary, 1e-9);
     }
 }

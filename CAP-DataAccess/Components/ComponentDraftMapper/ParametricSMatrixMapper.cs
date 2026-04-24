@@ -35,12 +35,25 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
         }
 
         /// <summary>
-        /// Validates a parametric S-Matrix draft for correctness.
+        /// Validates a parametric S-Matrix draft for correctness. Throws
+        /// <see cref="InvalidOperationException"/> on any defect so bad PDKs
+        /// fail at load time, not at simulation time where the failure is
+        /// swallowed deep inside the solver.
         /// </summary>
+        /// <param name="draft">Parametric S-matrix draft to validate.</param>
+        /// <param name="componentName">Used in error messages only.</param>
+        /// <param name="pins">All pins on the component (must be non-null).</param>
+        /// <param name="sliderCount">
+        /// Number of sliders configured on the component. Used to bounds-check
+        /// every <see cref="ParameterDefinitionDraft.SliderNumber"/>. Pass 0
+        /// if the component has no sliders — parameters referencing a slider
+        /// will then correctly be rejected.
+        /// </param>
         public static void Validate(
             PdkSMatrixDraft draft,
             string componentName,
-            IReadOnlyList<PhysicalPinDraft> pins)
+            IReadOnlyList<PhysicalPinDraft> pins,
+            int sliderCount = 0)
         {
             if (draft.Parameters == null || draft.Parameters.Count == 0)
                 return;
@@ -48,7 +61,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             var paramNames = new HashSet<string>();
             foreach (var param in draft.Parameters)
             {
-                ValidateParameter(param, componentName, paramNames);
+                ValidateParameter(param, componentName, paramNames, sliderCount);
             }
 
             var pinNames = pins.Select(p => p.Name).ToHashSet();
@@ -126,7 +139,8 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
         private static void ValidateParameter(
             ParameterDefinitionDraft param,
             string componentName,
-            HashSet<string> paramNames)
+            HashSet<string> paramNames,
+            int sliderCount)
         {
             if (string.IsNullOrWhiteSpace(param.Name))
             {
@@ -145,6 +159,25 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 throw new InvalidOperationException(
                     $"Parameter '{param.Name}' in component '{componentName}' " +
                     $"has minValue > maxValue.");
+            }
+
+            // Bounds-check slider index at load time. A bad sliderNumber
+            // (missing slider, out-of-range, negative) must not silently
+            // leave the parameter unbound — the simulation would then run
+            // with the parameter stuck at its default and produce a wrong
+            // S-matrix with no warning (CLAUDE.md §10).
+            if (param.SliderNumber is int sn)
+            {
+                if (sn < 0)
+                    throw new InvalidOperationException(
+                        $"Parameter '{param.Name}' in component '{componentName}' " +
+                        $"has negative sliderNumber ({sn}). Omit the field to mark " +
+                        $"the parameter as unbound.");
+                if (sn >= sliderCount)
+                    throw new InvalidOperationException(
+                        $"Parameter '{param.Name}' in component '{componentName}' " +
+                        $"references sliderNumber {sn}, but the component has only " +
+                        $"{sliderCount} slider(s).");
             }
         }
 

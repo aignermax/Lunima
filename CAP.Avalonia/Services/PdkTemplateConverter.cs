@@ -75,6 +75,15 @@ public static class PdkTemplateConverter
         }
         else if (pdkComp.SMatrix != null && ParametricSMatrixMapper.IsParametric(pdkComp.SMatrix))
         {
+            // Fail-at-load-time validation: unknown pin names, bad slider
+            // indices, invalid formulas are caught here instead of silently
+            // producing a broken simulation at run time.
+            ParametricSMatrixMapper.Validate(
+                pdkComp.SMatrix,
+                pdkComp.Name,
+                pdkComp.Pins,
+                pdkComp.Sliders?.Count ?? 0);
+
             var capturedSMatrixDraft = pdkComp.SMatrix;
             template.CreateSMatrixWithSliders = (pins, sliders) =>
                 BuildParametricSMatrix(pins, sliders, capturedSMatrixDraft);
@@ -102,16 +111,34 @@ public static class PdkTemplateConverter
         var sliderTuples = sliders.Select(s => (s.ID, s.Value)).ToList();
         var sMatrix = new SMatrix(pinIds, sliderTuples);
 
+        // Carry the draft so Component.Clone() can rebuild this S-matrix
+        // against the cloned pins + sliders instead of trying to re-parse
+        // the non-NCalc raw-formula string, and so each cloned instance gets
+        // its own ParametricSMatrix with isolated _currentValues state.
+        var capturedDraft = sMatrixDraft;
+        sMatrix.ParametricRebuild = (newPins, newSliders) =>
+            BuildParametricSMatrix(newPins, newSliders, capturedDraft);
+
         var pinByName = new Dictionary<string, Pin>(StringComparer.OrdinalIgnoreCase);
         foreach (var pin in pins)
             pinByName[pin.Name] = pin;
 
-        // Build param name → slider GUID mapping using SliderNumber from the draft
+        // Build param name → slider GUID mapping using SliderNumber from the
+        // draft. Bounds were already validated at PDK load time via
+        // ParametricSMatrixMapper.Validate; any out-of-range index that
+        // slips in here would throw deterministically instead of silently
+        // leaving the parameter unbound.
         var paramToSliderGuid = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         foreach (var paramDraft in sMatrixDraft.Parameters ?? [])
         {
-            if (paramDraft.SliderNumber >= 0 && paramDraft.SliderNumber < sliders.Count)
-                paramToSliderGuid[paramDraft.Name] = sliders[paramDraft.SliderNumber].ID;
+            if (paramDraft.SliderNumber is int sn)
+            {
+                if (sn < 0 || sn >= sliders.Count)
+                    throw new InvalidOperationException(
+                        $"Parameter '{paramDraft.Name}' references sliderNumber {sn}, " +
+                        $"but only {sliders.Count} slider(s) exist on this instance.");
+                paramToSliderGuid[paramDraft.Name] = sliders[sn].ID;
+            }
         }
 
         // Get ordered list of (paramName, sliderGuid) for params that have slider bindings

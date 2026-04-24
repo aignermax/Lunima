@@ -40,10 +40,14 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public string? Label { get; set; }
 
         /// <summary>
-        /// Slider number (0-based) that controls this parameter.
-        /// -1 means this parameter is not linked to a slider.
+        /// Slider index (0-based) that controls this parameter.
+        /// <c>null</c> (or a missing JSON field) means this parameter has no
+        /// slider binding — the formula evaluates with the parameter's
+        /// <see cref="DefaultValue"/>. A nullable int is the correct shape:
+        /// an <c>int</c> sentinel like <c>-1</c> conflates "unbound" with
+        /// "invalid index".
         /// </summary>
         [JsonPropertyName("sliderNumber")]
-        public int SliderNumber { get; set; } = -1;
+        public int? SliderNumber { get; set; }
     }
 }

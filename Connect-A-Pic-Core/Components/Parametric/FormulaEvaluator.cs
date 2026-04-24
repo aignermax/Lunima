@@ -1,3 +1,4 @@
+using System.Globalization;
 using NCalc;
 using NCalc.Handlers;
 
@@ -26,7 +27,11 @@ namespace CAP_Core.Components.Parametric
             if (string.IsNullOrWhiteSpace(formula))
                 throw new ArgumentException("Formula cannot be empty.", nameof(formula));
 
-            var expression = new Expression(formula);
+            // InvariantCulture pin: NCalc parses numeric literals via the
+            // thread culture by default, so "0.707" would become 707 on
+            // de-DE / fr-FR. Force invariant so formulas round-trip
+            // identically regardless of where the app runs.
+            var expression = new Expression(formula, ExpressionOptions.None, CultureInfo.InvariantCulture);
 
             expression.EvaluateParameter += (string name, ParameterArgs args) =>
             {
