@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
@@ -37,7 +38,10 @@ public static class MainViewModelTestHelper
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
-        preferencesService ??= new UserPreferencesService();
+        // Isolated temp-file prefs so AiAssistant auto-persist and every
+        // other *Changed handler cannot clobber the developer's real file.
+        preferencesService ??= new UserPreferencesService(
+            Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
         libraryManager ??= new GroupLibraryManager();
         simulationService ??= new SimulationService();
 
@@ -110,7 +114,8 @@ public static class MainViewModelTestHelper
         UserPreferencesService? preferencesService = null)
     {
         canvas ??= new DesignCanvasViewModel();
-        preferencesService ??= new UserPreferencesService();
+        preferencesService ??= new UserPreferencesService(
+            Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
 
         return new RightPanelViewModel(
             canvas,

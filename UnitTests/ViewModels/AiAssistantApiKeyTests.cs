@@ -1,3 +1,4 @@
+using System.IO;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.AI;
 using Moq;
@@ -14,8 +15,12 @@ public class AiAssistantApiKeyTests
 {
     private static AiAssistantViewModel BuildViewModel()
     {
-        var vm = new AiAssistantViewModel(Mock.Of<IAiService>(), new UserPreferencesService());
-        vm.ApiKey = string.Empty; // baseline, override whatever prefs loaded
+        // Isolated temp file — the auto-persist OnApiKeyChanged would
+        // otherwise overwrite the developer's real Claude API key on every
+        // test run (vm.ApiKey = "" as a baseline triggers persistence too).
+        var tempFile = Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json");
+        var vm = new AiAssistantViewModel(Mock.Of<IAiService>(), new UserPreferencesService(tempFile));
+        vm.ApiKey = string.Empty; // baseline
         return vm;
     }
 

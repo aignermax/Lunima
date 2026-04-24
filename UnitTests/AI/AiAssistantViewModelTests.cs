@@ -117,25 +117,58 @@ public class AiAssistantViewModelTests
     }
 
     [Fact]
-    public void SaveApiKey_ShouldCallSetApiKeyOnService()
+    public void ApiKeySetter_ShouldCallSetApiKeyOnService()
     {
+        // Auto-persist: OnApiKeyChanged propagates to the AI service on every
+        // edit, so no explicit Save call is required. The SaveApiKeyCommand
+        // test below still exists for the legacy flow but is now a status-only
+        // command.
         var vm = CreateViewModel();
-        vm.ApiKey = "sk-ant-new-key";
 
-        vm.SaveApiKeyCommand.Execute(null);
+        vm.ApiKey = "sk-ant-new-key";
 
         _mockAiService.Verify(s => s.SetApiKey("sk-ant-new-key"), Times.Once);
     }
 
     [Fact]
-    public void SaveApiKey_ShouldPersistKeyToPreferences()
+    public void ApiKeySetter_ShouldPersistKeyToPreferences()
     {
         var vm = CreateViewModel();
+
         vm.ApiKey = "sk-ant-persist-key";
+
+        _preferencesService.GetAiApiKey().ShouldBe("sk-ant-persist-key");
+    }
+
+    [Fact]
+    public void ApiKeySetter_ShouldTrimWhitespaceBeforePersisting()
+    {
+        // Guards the OnApiKeyChanged contract: the raw UI text may have
+        // trailing whitespace from a paste, but what lands in prefs and
+        // reaches the service must be trimmed — anything else would send
+        // "sk-ant-xxx\n" to Anthropic and get a cryptic 401.
+        var vm = CreateViewModel();
+
+        vm.ApiKey = "  sk-ant-padded  ";
+
+        _mockAiService.Verify(s => s.SetApiKey("sk-ant-padded"), Times.Once);
+        _preferencesService.GetAiApiKey().ShouldBe("sk-ant-padded");
+    }
+
+    [Fact]
+    public void SaveApiKey_LegacyCommand_StillRuns()
+    {
+        // Legacy command retained for the old chat-panel save-button flow.
+        // It no longer writes to the service/prefs (OnApiKeyChanged already
+        // did on the preceding ApiKey assignment); it only resets the
+        // expander and updates status text.
+        var vm = CreateViewModel();
+        vm.ApiKey = "sk-ant-legacy";
 
         vm.SaveApiKeyCommand.Execute(null);
 
-        _preferencesService.GetAiApiKey().ShouldBe("sk-ant-persist-key");
+        _preferencesService.GetAiApiKey().ShouldBe("sk-ant-legacy");
+        vm.StatusText.ShouldContain("saved");
     }
 
     [Fact]

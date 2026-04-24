@@ -156,10 +156,21 @@ public partial class AiAssistantViewModel : ObservableObject
         // Auto-persist: the Settings-window TextBox has no explicit Save button,
         // so typing into it must immediately update the in-memory AI service
         // and on-disk preferences. Writes are idempotent and API keys change
-        // rarely, so per-keystroke cost is negligible.
+        // rarely, so per-keystroke cost is negligible. Wrapped in try/catch
+        // because this runs from inside an [ObservableProperty] setter;
+        // an exception would propagate into Avalonia's binding pipeline and
+        // only appear as a silent binding-error log — surface it as a
+        // user-visible status message instead.
         var trimmed = value?.Trim() ?? string.Empty;
-        _aiService.SetApiKey(trimmed);
-        _preferencesService.SetAiApiKey(trimmed);
+        try
+        {
+            _aiService.SetApiKey(trimmed);
+            _preferencesService.SetAiApiKey(trimmed);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not save API key: {ex.Message}";
+        }
     }
 
     /// <summary>Opens the Anthropic API keys page in the default browser.</summary>

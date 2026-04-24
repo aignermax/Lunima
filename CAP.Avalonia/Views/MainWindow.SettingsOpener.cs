@@ -43,6 +43,8 @@ public partial class MainWindow
                     var target = settingsVm.Pages.FirstOrDefault(p => p.GetType() == pageType);
                     if (target != null)
                         settingsVm.SelectedPage = target;
+                    else
+                        vm.StatusText = $"Settings page '{pageType.Name}' not found — opening default.";
                 }
             }
             catch (System.Exception ex)
