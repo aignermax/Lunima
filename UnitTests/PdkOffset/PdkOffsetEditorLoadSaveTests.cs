@@ -1,5 +1,6 @@
 using System.IO;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
@@ -45,7 +46,7 @@ public class PdkOffsetEditorLoadSaveTests
     }";
 
     private static PdkOffsetEditorViewModel BuildViewModel() =>
-        new(new PdkLoader(), new PdkJsonSaver());
+        new(new PdkLoader(), new PdkJsonSaver(), new PdkManagerViewModel());
 
     [Fact]
     public async Task LoadPdkFile_WithMissingOffsets_LoadsAndReportsCounts()

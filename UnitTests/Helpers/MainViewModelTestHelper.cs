@@ -77,7 +77,7 @@ public static class MainViewModelTestHelper
             rightPanel,
             bottomPanel,
             new ViewportControlViewModel(canvas),
-            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver()),
+            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
             photonTorchVm,
             verilogAVm);
     }

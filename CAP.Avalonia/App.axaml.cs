@@ -131,7 +131,7 @@ public partial class App : Application
 
         // Register sub-ViewModels (Left panel)
         services.AddTransient<HierarchyPanelViewModel>();
-        services.AddTransient<PdkManagerViewModel>();
+        services.AddSingleton<PdkManagerViewModel>();
         services.AddTransient<ComponentLibraryViewModel>();
 
         // Register sub-ViewModels (Right panel)
