@@ -16,9 +16,23 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
         };
 
         /// <summary>
-        /// Loads a PDK from a JSON file.
+        /// Loads a PDK from a JSON file. Validates that every component has a
+        /// NazcaOriginOffset — use this for simulation and export paths.
         /// </summary>
         public PdkDraft LoadFromFile(string filePath)
+            => LoadFromFileInternal(filePath, requireNazcaOffset: true);
+
+        /// <summary>
+        /// Loads a PDK from a JSON file for editing, tolerating components
+        /// whose NazcaOriginOffset is still null. Used by the PDK Offset
+        /// Editor — the tool that fixes missing offsets cannot itself reject
+        /// PDKs with missing offsets. Structural validation (names, pins,
+        /// dimensions) still applies.
+        /// </summary>
+        public PdkDraft LoadFromFileForEditing(string filePath)
+            => LoadFromFileInternal(filePath, requireNazcaOffset: false);
+
+        private PdkDraft LoadFromFileInternal(string filePath, bool requireNazcaOffset)
         {
             if (!File.Exists(filePath))
             {
@@ -26,13 +40,17 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
 
             var json = File.ReadAllText(filePath);
-            return LoadFromJson(json);
+            return LoadFromJson(json, requireNazcaOffset);
         }
 
         /// <summary>
-        /// Loads a PDK from a JSON string.
+        /// Loads a PDK from a JSON string. Validates that every component has
+        /// a NazcaOriginOffset.
         /// </summary>
         public PdkDraft LoadFromJson(string json)
+            => LoadFromJson(json, requireNazcaOffset: true);
+
+        private PdkDraft LoadFromJson(string json, bool requireNazcaOffset)
         {
             var pdk = JsonSerializer.Deserialize<PdkDraft>(json, JsonOptions);
             if (pdk == null)
@@ -40,7 +58,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 throw new InvalidOperationException("Failed to deserialize PDK JSON");
             }
 
-            ValidatePdk(pdk);
+            ValidatePdk(pdk, requireNazcaOffset);
             return pdk;
         }
 
@@ -74,7 +92,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             return pdks;
         }
 
-        private void ValidatePdk(PdkDraft pdk)
+        private void ValidatePdk(PdkDraft pdk, bool requireNazcaOffset)
         {
             if (string.IsNullOrWhiteSpace(pdk.Name))
             {
@@ -84,7 +102,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             var errors = new List<string>();
             foreach (var comp in pdk.Components)
             {
-                ValidateComponent(comp, pdk.Name, errors);
+                ValidateComponent(comp, pdk.Name, errors, requireNazcaOffset);
             }
 
             if (errors.Count > 0)
@@ -93,7 +111,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
         }
 
-        private static void ValidateComponent(PdkComponentDraft comp, string pdkName, List<string> errors)
+        private static void ValidateComponent(PdkComponentDraft comp, string pdkName, List<string> errors, bool requireNazcaOffset)
         {
             var compLabel = !string.IsNullOrWhiteSpace(comp.Name) ? comp.Name : "(unnamed)";
 
@@ -117,15 +135,20 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 errors.Add($"[{pdkName}/{compLabel}] Must have at least one pin");
             }
 
-            // NazcaOriginOffset is required — no silent fallback allowed.
-            // Without it, GDS export produces misaligned waveguides.
-            if (comp.NazcaOriginOffsetX == null)
+            // NazcaOriginOffset is required on the main load path — no silent
+            // fallback allowed. Without it, GDS export produces misaligned
+            // waveguides. The Offset Editor bypasses this check (it exists
+            // precisely to fix PDKs in this state).
+            if (requireNazcaOffset)
             {
-                errors.Add($"[{pdkName}/{compLabel}] Missing nazcaOriginOffsetX (required for GDS export)");
-            }
-            if (comp.NazcaOriginOffsetY == null)
-            {
-                errors.Add($"[{pdkName}/{compLabel}] Missing nazcaOriginOffsetY (required for GDS export)");
+                if (comp.NazcaOriginOffsetX == null)
+                {
+                    errors.Add($"[{pdkName}/{compLabel}] Missing nazcaOriginOffsetX (required for GDS export)");
+                }
+                if (comp.NazcaOriginOffsetY == null)
+                {
+                    errors.Add($"[{pdkName}/{compLabel}] Missing nazcaOriginOffsetY (required for GDS export)");
+                }
             }
 
             if (comp.Pins != null)

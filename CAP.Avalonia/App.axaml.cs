@@ -14,13 +14,14 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.PdkOffset;
+using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.Views;
 using CAP.Avalonia.Services.AiTools;
 using CAP.Avalonia.Services.AiTools.GridTools;
 using CAP_Contracts;
 using CAP_Core.Helpers;
 using CAP_Core.Export;
-using CAP_DataAccess.Components.ComponentDraftMapper;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CAP.Avalonia;
@@ -134,6 +135,14 @@ public partial class App : Application
         services.AddSingleton<LeftPanelViewModel>();
         services.AddSingleton<RightPanelViewModel>();
         services.AddSingleton<BottomPanelViewModel>();
+
+        // Register PDK offset editor services and ViewModel.
+        // The ViewModel is Singleton so that MainViewModel can hold it as a
+        // property — this preserves editor state (loaded PDK, unsaved edits)
+        // when the user re-opens the window. Transient here would give the
+        // MainViewModel a different instance than any other DI resolution.
+        services.AddSingleton<PdkJsonSaver>();
+        services.AddSingleton<PdkOffsetEditorViewModel>();
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();

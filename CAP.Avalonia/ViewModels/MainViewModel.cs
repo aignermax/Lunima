@@ -14,6 +14,7 @@ using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Export;
 using CAP_Core.Export;
+using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.ViewModels;
@@ -83,6 +84,12 @@ public partial class MainViewModel : ObservableObject
 
     private bool _isSimulating;
 
+    /// <summary>
+    /// ViewModel for the PDK Component Offset Editor window.
+    /// Exposed so the code-behind can pass the FileDialogService.
+    /// </summary>
+    public PdkOffsetEditorViewModel PdkOffsetEditor { get; }
+
     public MainViewModel(
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
@@ -97,11 +104,13 @@ public partial class MainViewModel : ObservableObject
         LeftPanelViewModel leftPanel,
         RightPanelViewModel rightPanel,
         BottomPanelViewModel bottomPanel,
-        ViewportControlViewModel viewportControl)
+        ViewportControlViewModel viewportControl,
+        PdkOffsetEditorViewModel pdkOffsetEditor)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
         _canvas = canvas;
+        PdkOffsetEditor = pdkOffsetEditor;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
 
         // Wire panel ViewModels (injected via DI)
@@ -391,6 +400,18 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);
+
+    /// <summary>
+    /// Raised when the user requests to open the PDK Offset Editor window.
+    /// The View layer subscribes and shows the window.
+    /// </summary>
+    public Action? ShowPdkOffsetEditorRequested { get; set; }
+
+    [RelayCommand]
+    private void OpenPdkOffsetEditor()
+    {
+        ShowPdkOffsetEditorRequested?.Invoke();
+    }
 
     [RelayCommand]
     private void OpenPdkHelp()
