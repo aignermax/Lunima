@@ -224,12 +224,22 @@
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
+        "parameters": [
+          {
+            "name": "phase_shift",
+            "sliderNumber": 0,
+            "defaultValue": 0,
+            "minValue": 0,
+            "maxValue": 360,
+            "label": "Phase (degrees)"
+          }
+        ],
         "connections": [
           {
             "fromPin": "in",
             "toPin": "out",
-            "magnitude": 1.0,
-            "phaseDegrees": 0
+            "magnitudeFormula": "1.0",
+            "phaseDegreesFormula": "phase_shift"
           }
         ]
       }

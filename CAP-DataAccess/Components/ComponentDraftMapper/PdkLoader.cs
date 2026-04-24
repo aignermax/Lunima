@@ -172,10 +172,13 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 }
             }
 
-            // Validate parametric S-Matrix if present
+            // Validate parametric S-Matrix if present. Pass the component's
+            // slider count so slider-binding indices in parameter definitions
+            // are bounds-checked at load time instead of silently dropped
+            // downstream.
             if (comp.SMatrix != null && ParametricSMatrixMapper.IsParametric(comp.SMatrix))
             {
-                ParametricSMatrixMapper.Validate(comp.SMatrix, comp.Name, comp.Pins);
+                ParametricSMatrixMapper.Validate(comp.SMatrix, comp.Name, comp.Pins, comp.Sliders?.Count ?? 0);
             }
         }
     }

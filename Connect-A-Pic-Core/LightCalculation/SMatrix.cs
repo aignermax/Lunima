@@ -1,6 +1,7 @@
 using System.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using System.Linq.Dynamic.Core;
+using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
 
 namespace CAP_Core.LightCalculation
@@ -14,6 +15,22 @@ namespace CAP_Core.LightCalculation
         private readonly int size;
         public const int MaxToStringPinGuidSize = 6;
         public Dictionary<(Guid PinIdStart, Guid PinIdEnd), ConnectionFunction> NonLinearConnections { get; set; }
+
+        /// <summary>
+        /// Optional rebuild factory used by <c>Component.Clone()</c> when the
+        /// S-matrix was produced by a parametric PDK template. Rebuilding via
+        /// this factory gives the clone its own <c>ParametricSMatrix</c>
+        /// instance (isolated parameter state) and avoids trying to re-parse
+        /// the parametric formula through <c>MathExpressionReader</c>, which
+        /// would otherwise throw because the raw-formula string is not valid
+        /// NCalc syntax. <c>null</c> for non-parametric matrices.
+        /// Convention: set only by the PDK template converter at construction
+        /// and carried forward by <c>Component.Clone</c>. Do not mutate from
+        /// elsewhere — the "set once, propagate on clone" invariant would
+        /// break. The setter is <c>public</c> because the template converter
+        /// lives in a separate assembly (<c>CAP.Avalonia</c>).
+        /// </summary>
+        public Func<List<Pin>, List<Slider>, SMatrix>? ParametricRebuild { get; set; }
 
         public SMatrix(List<Guid> allPinsInGrid, List<(Guid sliderID, double value)> AllSliders)
         {
@@ -130,10 +147,17 @@ namespace CAP_Core.LightCalculation
 
                 return ConvertToDictWithGuids(inputAfterSteps);
             }
-            catch
+            catch (OperationCanceledException)
             {
+                // Cancellation is expected during user-triggered stop; return
+                // empty so the caller can handle it without noise.
                 return new Dictionary<Guid, Complex>();
             }
+            // Any other exception (formula evaluation error, matrix singular,
+            // division by zero in a parametric connection, ...) previously
+            // got swallowed here and produced a blank simulation with no
+            // indication of what went wrong. Let it propagate so the UI
+            // error-handling layer can log and surface it.
         }
 
         private List<object> GetWeightParameters(IEnumerable<Guid> parameterGuids, MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector)

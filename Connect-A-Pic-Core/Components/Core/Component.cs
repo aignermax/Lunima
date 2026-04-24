@@ -317,6 +317,21 @@ public class Component : ICloneable
         {
             var oldMatrix = laserAndMatrix.Value;
 
+            // Parametric S-matrices carry a rebuild factory (set by
+            // PdkTemplateConverter). Rebuild through the factory instead of
+            // trying to re-parse the raw-formula string through
+            // MathExpressionReader — the raw string is a marker like
+            // "mag=1.0;phase=phase_shift", which is NOT valid NCalc syntax
+            // and would throw here. The factory also gives each clone its
+            // own ParametricSMatrix so slider edits stay instance-scoped.
+            if (oldMatrix.ParametricRebuild != null)
+            {
+                var rebuilt = oldMatrix.ParametricRebuild(clonedPins, clonedSliderMap.Values.ToList());
+                rebuilt.ParametricRebuild = oldMatrix.ParametricRebuild;
+                clonedLaserSMatrixMap.Add(laserAndMatrix.Key, rebuilt);
+                continue;
+            }
+
             var newMat = new SMatrix(allClonedPinIDs , allClonedSliderIDs);
             // assign the linear connections
             var newConnections = CreateConnectionsWithUpdatedPins(oldToNewPinIds, oldMatrix);

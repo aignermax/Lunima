@@ -34,6 +34,13 @@ namespace CAP_Core.Components.Parametric
         public string Label { get; }
 
         /// <summary>
+        /// Slider index (0-based) that controls this parameter, or
+        /// <c>null</c> if the parameter has no slider binding. A nullable
+        /// int expresses "unbound" distinctly from "index 0".
+        /// </summary>
+        public int? SliderNumber { get; }
+
+        /// <summary>
         /// Creates a new parameter definition.
         /// </summary>
         public ParameterDefinition(
@@ -41,7 +48,8 @@ namespace CAP_Core.Components.Parametric
             double defaultValue,
             double minValue,
             double maxValue,
-            string? label = null)
+            string? label = null,
+            int? sliderNumber = null)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Parameter name cannot be empty.", nameof(name));
@@ -50,12 +58,16 @@ namespace CAP_Core.Components.Parametric
             if (defaultValue < minValue || defaultValue > maxValue)
                 throw new ArgumentOutOfRangeException(nameof(defaultValue),
                     $"Default value {defaultValue} is outside range [{minValue}, {maxValue}].");
+            if (sliderNumber is int sn && sn < 0)
+                throw new ArgumentOutOfRangeException(nameof(sliderNumber),
+                    $"Slider index {sn} is negative. Use null to mark the parameter as unbound.");
 
             Name = name;
             DefaultValue = defaultValue;
             MinValue = minValue;
             MaxValue = maxValue;
             Label = label ?? name;
+            SliderNumber = sliderNumber;
         }
     }
 }
