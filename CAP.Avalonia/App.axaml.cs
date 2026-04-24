@@ -180,7 +180,17 @@ public partial class App : Application
         // when the user re-opens the window. Transient here would give the
         // MainViewModel a different instance than any other DI resolution.
         services.AddSingleton<PdkJsonSaver>();
-        services.AddSingleton<PdkOffsetEditorViewModel>();
+        services.AddSingleton(sp =>
+        {
+            var prefs = sp.GetRequiredService<UserPreferencesService>();
+            var python = prefs.GetCustomPythonPath() ?? "python3";
+            var script = FindPreviewScript();
+            return new NazcaComponentPreviewService(python, script);
+        });
+        services.AddSingleton(sp => new PdkOffsetEditorViewModel(
+            sp.GetRequiredService<PdkLoader>(),
+            sp.GetRequiredService<PdkJsonSaver>(),
+            sp.GetRequiredService<NazcaComponentPreviewService>()));
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();
@@ -205,5 +215,32 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Searches for render_component_preview.py relative to the application base directory.
+    /// Returns the first candidate path found, or the primary candidate when none exist
+    /// (the service will return a graceful failure result at render time).
+    /// </summary>
+    private static string FindPreviewScript()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var candidates = new[]
+        {
+            Path.Combine(baseDir, "scripts", "render_component_preview.py"),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "scripts", "render_component_preview.py")),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "scripts", "render_component_preview.py")),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "scripts", "render_component_preview.py")),
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        // Return primary candidate — NazcaComponentPreviewService returns a
+        // graceful failure result when the script is not found.
+        return candidates[0];
     }
 }
