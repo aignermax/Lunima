@@ -120,6 +120,81 @@ public class SettingsRegistryTests
         canvas.GridSnap.GridSizeMicrometers.ShouldBe(100.0);
     }
 
+    [Fact]
+    public void GridSnapSettingsPage_AlignmentGuideChange_AffectsCanvas()
+    {
+        // Mirrors the GridSnap test for the second wrapped property — a
+        // regression in the AlignmentGuide wiring (e.g. a local copy instead
+        // of the canvas reference) would otherwise slip through.
+        var canvas = new DesignCanvasViewModel();
+        var page = new GridSnapSettingsPage(canvas);
+        var vm = (GridSnapSettingsViewModel)page.ViewModel;
+
+        vm.AlignmentGuide.IsEnabled = true;
+
+        canvas.AlignmentGuide.IsEnabled.ShouldBeTrue();
+    }
+
+    // -----------------------------------------------------------------------
+    // Page contract — title, icon, category stability
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void GeneralSettingsPage_StableContract()
+    {
+        ISettingsPage page = new GeneralSettingsPage();
+
+        page.Title.ShouldBe("General");
+        page.Icon.ShouldBe("⚙");
+        page.Category.ShouldBeNull();
+        page.ViewModel.ShouldBeOfType<GeneralSettingsViewModel>();
+    }
+
+    [Fact]
+    public void GridSnapSettingsPage_StableContract()
+    {
+        // Guards the display string — a refactor silently turning
+        // "Grid & Alignment" into "Grid" would otherwise ship.
+        ISettingsPage page = new GridSnapSettingsPage(new DesignCanvasViewModel());
+
+        page.Title.ShouldBe("Grid & Alignment");
+        page.Icon.ShouldBe("⊞");
+        page.Category.ShouldBe("Canvas");
+    }
+
+    [Fact]
+    public void UpdateSettingsPage_StableContract()
+    {
+        // The page reads only its own Title/Icon/Category — the VM is passed
+        // through untouched — so a null VM is fine for verifying the contract
+        // and avoids pulling HttpClient / UpdateChecker into the test rig.
+        ISettingsPage page = new UpdateSettingsPage(null!);
+
+        page.Title.ShouldBe("Software Updates");
+        page.Icon.ShouldBe("🔄");
+        page.Category.ShouldBeNull();
+    }
+
+    [Fact]
+    public void PythonEnvironmentSettingsPage_StableContract()
+    {
+        ISettingsPage page = new PythonEnvironmentSettingsPage(null!);
+
+        page.Title.ShouldBe("Python Environment");
+        page.Icon.ShouldBe("🐍");
+        page.Category.ShouldBe("Export");
+    }
+
+    [Fact]
+    public void AiAssistantSettingsPage_StableContract()
+    {
+        ISettingsPage page = new AiAssistantSettingsPage(null!);
+
+        page.Title.ShouldBe("AI Assistant");
+        page.Icon.ShouldBe("🤖");
+        page.Category.ShouldBeNull();
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------

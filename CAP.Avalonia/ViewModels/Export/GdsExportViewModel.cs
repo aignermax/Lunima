@@ -85,7 +85,10 @@ public partial class GdsExportViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Checks the Python/Nazca environment and updates status.
+    /// Checks the Python/Nazca environment and updates status. Exceptions
+    /// are surfaced on the status strings and logged to the ErrorConsole —
+    /// this method is also invoked fire-and-forget from MainViewModel wiring,
+    /// where an unobserved task exception would crash silently.
     /// </summary>
     [RelayCommand]
     public async Task CheckEnvironmentAsync()
@@ -123,6 +126,15 @@ public partial class GdsExportViewModel : ObservableObject
                 NazcaStatus = "N/A (Python not found)";
             }
 
+            OnPropertyChanged(nameof(IsEnvironmentReady));
+        }
+        catch (Exception ex)
+        {
+            PythonAvailable = false;
+            NazcaAvailable = false;
+            PythonStatus = $"✗ Check failed: {ex.Message}";
+            NazcaStatus = "✗ Check failed";
+            _errorConsole?.LogError($"Python environment check failed: {ex.Message}", ex);
             OnPropertyChanged(nameof(IsEnvironmentReady));
         }
         finally

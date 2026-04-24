@@ -10,7 +10,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class GridSnapSettingsPage : ISettingsPage
 {
     /// <inheritdoc/>
-    public string Title => "Grid &amp; Alignment";
+    public string Title => "Grid & Alignment";
 
     /// <inheritdoc/>
     public string Icon => "⊞";

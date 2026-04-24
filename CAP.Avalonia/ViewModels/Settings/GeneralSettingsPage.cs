@@ -1,10 +1,8 @@
-using CAP.Avalonia.Services;
-
 namespace CAP.Avalonia.ViewModels.Settings;
 
 /// <summary>
-/// Settings page for general application preferences backed by
-/// <see cref="UserPreferencesService"/> that do not belong to a dedicated category.
+/// Settings page for general application preferences that do not belong to a
+/// dedicated category. Acts as an anchor point for future general preferences.
 /// </summary>
 public class GeneralSettingsPage : ISettingsPage
 {
@@ -18,13 +16,5 @@ public class GeneralSettingsPage : ISettingsPage
     public string? Category => null;
 
     /// <inheritdoc/>
-    public object ViewModel { get; }
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="GeneralSettingsPage"/>.
-    /// </summary>
-    public GeneralSettingsPage(UserPreferencesService preferences)
-    {
-        ViewModel = new GeneralSettingsViewModel(preferences);
-    }
+    public object ViewModel { get; } = new GeneralSettingsViewModel();
 }

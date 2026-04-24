@@ -212,29 +212,14 @@
                         </StackPanel>
                     </DataTemplate>
 
-                    <!-- General -->
+                    <!-- General (placeholder — Python path lives on Python Environment) -->
                     <DataTemplate DataType="{x:Type settings:GeneralSettingsViewModel}">
                         <StackPanel Spacing="8">
                             <TextBlock Text="General" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap">
                                 General application preferences. Additional settings will appear here
                                 as new features are added.
                             </TextBlock>
-
-                            <TextBlock Text="Custom Python Path:" Foreground="Gray" FontSize="12" Margin="0,8,0,3"/>
-                            <TextBlock Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,4">
-                                Override the Python interpreter used for GDS and export scripts.
-                                Leave blank to rely on auto-detection (preferred).
-                            </TextBlock>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding CustomPythonPath}"
-                                         Watermark="Auto-detect (recommended)"
-                                         Margin="0,0,6,0"/>
-                                <Button Grid.Column="1" Content="Clear"
-                                        Command="{Binding ClearPythonPathCommand}"
-                                        Padding="8,4"/>
-                            </Grid>
                         </StackPanel>
                     </DataTemplate>
 

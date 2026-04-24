@@ -26,17 +26,27 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainViewModel vm)
             {
-                // Wire up Settings window opener
+                // Wire up Settings window opener. Any failure resolving a
+                // page would otherwise crash the UI thread silently (this
+                // lambda is reached from an async-void event handler); we
+                // surface the error on the status bar instead.
                 vm.ShowSettingsWindowAsync = async () =>
                 {
-                    if (_settingsWindow != null && _settingsWindow.IsVisible)
+                    try
                     {
-                        _settingsWindow.Activate();
-                        return;
+                        if (_settingsWindow != null && _settingsWindow.IsVisible)
+                        {
+                            _settingsWindow.Activate();
+                            return;
+                        }
+                        var settingsVm = App.Services.GetRequiredService<SettingsWindowViewModel>();
+                        _settingsWindow = new SettingsWindow { DataContext = settingsVm };
+                        _settingsWindow.Show(this);
                     }
-                    var settingsVm = App.Services.GetRequiredService<SettingsWindowViewModel>();
-                    _settingsWindow = new SettingsWindow { DataContext = settingsVm };
-                    _settingsWindow.Show(this);
+                    catch (System.Exception ex)
+                    {
+                        vm.StatusText = $"Failed to open Settings: {ex.Message}";
+                    }
                     await Task.CompletedTask;
                 };
 
