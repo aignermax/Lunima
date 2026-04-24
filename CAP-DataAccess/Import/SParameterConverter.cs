@@ -1,3 +1,4 @@
+using System.Globalization;
 using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP_DataAccess.Import;
@@ -44,7 +45,10 @@ public static class SParameterConverter
                 }
             }
 
-            data.Wavelengths[wavelengthNm.ToString()] = entry;
+            // InvariantCulture: wavelength keys round-trip through JSON save/load;
+            // a culture-dependent ToString() would write "1.550e+3" on fr-FR and
+            // silently break the reload.
+            data.Wavelengths[wavelengthNm.ToString(CultureInfo.InvariantCulture)] = entry;
         }
 
         return data;

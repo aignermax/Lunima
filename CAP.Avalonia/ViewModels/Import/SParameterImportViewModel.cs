@@ -1,3 +1,4 @@
+using CAP_Core;
 using CAP_DataAccess.Import;
 using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
@@ -15,6 +16,7 @@ namespace CAP.Avalonia.ViewModels.Import;
 public partial class SParameterImportViewModel : ObservableObject
 {
     private readonly IReadOnlyList<ISParameterImporter> _importers;
+    private readonly ErrorConsoleService? _errorConsole;
     private Dictionary<string, ComponentSMatrixData>? _storedSMatrices;
 
     /// <summary>Path of the selected source file.</summary>
@@ -63,8 +65,9 @@ public partial class SParameterImportViewModel : ObservableObject
     }
 
     /// <summary>Initializes a new instance of <see cref="SParameterImportViewModel"/>.</summary>
-    public SParameterImportViewModel()
+    public SParameterImportViewModel(ErrorConsoleService? errorConsole = null)
     {
+        _errorConsole = errorConsole;
         _importers = new ISParameterImporter[]
         {
             new LumericalSParameterImporter(),
@@ -137,16 +140,29 @@ public partial class SParameterImportViewModel : ObservableObject
             _storedSMatrices![ComponentIdentifier] = smatrixData;
 
             PreviewInfo = BuildPreviewInfo(imported);
-            StatusText = $"Imported {imported.PortCount}-port S-matrix ({imported.SMatricesByWavelengthNm.Count} wavelengths) → '{ComponentIdentifier}'.";
+            var warnSuffix = imported.Metadata.TryGetValue("malformedRows", out var malformed) && malformed != "0"
+                ? $" — {malformed} malformed row(s) skipped"
+                : string.Empty;
+            StatusText = $"Imported {imported.PortCount}-port S-matrix ({imported.SMatricesByWavelengthNm.Count} wavelengths) → '{ComponentIdentifier}'.{warnSuffix}";
             LastImportSucceeded = true;
         }
         catch (SParameterImportException ex)
         {
             StatusText = $"Parse error: {ex.Message}";
+            _errorConsole?.LogError($"S-parameter parse error ({Path.GetFileName(FilePath)}): {ex.Message}", ex);
+        }
+        catch (FormatException ex)
+        {
+            // Raw double.Parse / int.Parse failures bleed through with a
+            // generic "Input string was not in a correct format" — useless
+            // for a 10k-line file. Wrap with context.
+            StatusText = $"Malformed numeric data in {Path.GetFileName(FilePath)}: {ex.Message}";
+            _errorConsole?.LogError($"S-parameter format error: {ex.Message}", ex);
         }
         catch (Exception ex)
         {
             StatusText = $"Import failed: {ex.Message}";
+            _errorConsole?.LogError($"S-parameter import failed ({Path.GetFileName(FilePath)}): {ex.Message}", ex);
         }
         finally
         {
@@ -157,7 +173,43 @@ public partial class SParameterImportViewModel : ObservableObject
     private ISParameterImporter? FindImporter(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
+
+        // Touchstone extensions (.s1p through .s9p) are unambiguous.
+        // Lumerical's own extensions `.sparam` and `.dat` are unambiguous too.
+        // `.txt` is NOT — any text file could carry that extension, so we
+        // sniff the first non-empty/non-comment line before claiming it.
+        if (ext == ".txt")
+            return LooksLikeLumericalTxt(path) ? _importers[0] /* Lumerical */ : null;
+
         return _importers.FirstOrDefault(i => i.SupportedExtensions.Contains(ext));
+    }
+
+    private static bool LooksLikeLumericalTxt(string path)
+    {
+        try
+        {
+            foreach (var line in File.ReadLines(path))
+            {
+                var trimmed = line.TrimStart();
+                if (trimmed.Length == 0 || trimmed.StartsWith('#') || trimmed.StartsWith('!'))
+                    continue;
+                // Lumerical blocked header begins with `(`. GC packed TXT rows
+                // start with a scientific-notation frequency — 9+ columns of
+                // double-precision numbers separated by whitespace is the
+                // cheap-and-cheerful discriminator.
+                if (trimmed.StartsWith('(')) return true;
+                var tokens = trimmed.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                return tokens.Length >= 9 &&
+                       double.TryParse(tokens[0], System.Globalization.NumberStyles.Float,
+                                       System.Globalization.CultureInfo.InvariantCulture, out _);
+            }
+        }
+        catch
+        {
+            // File-read failure → let the subsequent import path produce the
+            // proper error; don't claim the file here.
+        }
+        return false;
     }
 
     private string DetectFormat(string path)

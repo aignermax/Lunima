@@ -66,8 +66,17 @@ public class TouchstoneImporter : ISParameterImporter
                 // Option line: # <FreqUnit> <ParamType> <DataFormat> R <Impedance>
                 var parts = line[1..].Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 1) freqMultiplier = FreqUnitMultiplier(parts[0]);
-                // parts[1] = S/Y/Z — we only handle S, but read all anyway
-                if (parts.Length >= 3) dataFormat = parts[2].ToUpperInvariant();
+                if (parts.Length >= 2)
+                {
+                    // Only S parameters are supported. Silently accepting Y/Z
+                    // would produce physically wrong simulation (admittance or
+                    // impedance treated as scattering) — reject explicitly.
+                    var paramType = parts[1].ToUpperInvariant();
+                    if (paramType != "S")
+                        throw new SParameterImportException(
+                            $"Unsupported parameter type '{parts[1]}'. Only S-parameters are supported; Y and Z must be converted before import.");
+                }
+                if (parts.Length >= 3) dataFormat = ValidateDataFormat(parts[2]);
                 continue;
             }
 
@@ -83,7 +92,18 @@ public class TouchstoneImporter : ISParameterImporter
             int expectedPerRow = 1 + 2 * portCount * portCount;
             if (currentRow.Count >= expectedPerRow)
             {
-                dataRows.Add(currentRow.Take(expectedPerRow).ToArray());
+                var completedRow = currentRow.Take(expectedPerRow).ToArray();
+
+                // Touchstone v1 allows noise-parameter blocks after the last
+                // S-parameter row. They re-use the frequency column but use a
+                // different (smaller) column layout. We detect the start of
+                // noise data as "frequency went backwards" — real sweeps are
+                // monotonically increasing — and stop parsing there rather
+                // than corrupting the S-matrix with noise numbers silently.
+                if (dataRows.Count > 0 && completedRow[0] <= dataRows[^1][0])
+                    break;
+
+                dataRows.Add(completedRow);
                 currentRow = new List<double>(currentRow.Skip(expectedPerRow));
             }
         }
@@ -113,6 +133,10 @@ public class TouchstoneImporter : ISParameterImporter
         foreach (var row in dataRows)
         {
             double freqHz = row[0] * freqMult;
+            if (!double.IsFinite(freqHz) || freqHz <= 0)
+                throw new SParameterImportException(
+                    $"Invalid frequency {row[0]} {format} — must be finite and positive.");
+
             int wavelengthNm = (int)Math.Round(299_792_458.0 / freqHz * 1e9);
 
             var matrix = new Complex[n, n];
@@ -137,13 +161,35 @@ public class TouchstoneImporter : ISParameterImporter
         return result;
     }
 
-    private static Complex ToComplex(double a, double b, string format) => format switch
+    private static Complex ToComplex(double a, double b, string format)
     {
-        "MA" => Complex.FromPolarCoordinates(a, b * Math.PI / 180.0),
-        "DB" => Complex.FromPolarCoordinates(Math.Pow(10, a / 20.0), b * Math.PI / 180.0),
-        "RI" => new Complex(a, b),
-        _ => new Complex(a, b)
-    };
+        if (!double.IsFinite(a) || !double.IsFinite(b))
+            throw new SParameterImportException(
+                $"Non-finite S-parameter component ({a}, {b}) in {format} format — file contains NaN or Infinity.");
+
+        return format switch
+        {
+            "MA" => Complex.FromPolarCoordinates(a, b * Math.PI / 180.0),
+            "DB" => Complex.FromPolarCoordinates(Math.Pow(10, a / 20.0), b * Math.PI / 180.0),
+            "RI" => new Complex(a, b),
+            _ => throw new SParameterImportException(
+                $"Unknown data format '{format}'. Expected MA, DB, or RI.")
+        };
+    }
+
+    /// <summary>
+    /// Validates the data-format token on the Touchstone option line.
+    /// Unknown tokens throw — silently defaulting to RI would turn a typo'd
+    /// "# HZ S MAG R 50" file into garbage values without the user noticing.
+    /// </summary>
+    private static string ValidateDataFormat(string raw)
+    {
+        var format = raw.ToUpperInvariant();
+        if (format is not ("MA" or "DB" or "RI"))
+            throw new SParameterImportException(
+                $"Unknown data format '{raw}' on Touchstone option line. Expected MA, DB, or RI.");
+        return format;
+    }
 
     private static double FreqUnitMultiplier(string unit) => unit.ToUpperInvariant() switch
     {
@@ -151,7 +197,8 @@ public class TouchstoneImporter : ISParameterImporter
         "KHZ" => 1e3,
         "MHZ" => 1e6,
         "GHZ" => 1e9,
-        _ => 1.0
+        _ => throw new SParameterImportException(
+            $"Unknown frequency unit '{unit}' on Touchstone option line. Expected Hz, kHz, MHz, or GHz.")
     };
 
     private static IReadOnlyList<string> BuildExtensions()

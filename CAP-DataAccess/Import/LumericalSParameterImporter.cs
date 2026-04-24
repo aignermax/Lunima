@@ -45,6 +45,7 @@ public class LumericalSParameterImporter : ISParameterImporter
     private static List<SparamBlock> ParseSparamFormat(string[] lines)
     {
         var blocks = new List<SparamBlock>();
+        int malformedRows = 0;
         int i = 0;
 
         while (i < lines.Length)
@@ -70,7 +71,16 @@ public class LumericalSParameterImporter : ISParameterImporter
                         double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var mag) &&
                         double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var phase))
                     {
+                        if (!double.IsFinite(freq) || freq <= 0 || !double.IsFinite(mag) || !double.IsFinite(phase))
+                        {
+                            malformedRows++;
+                            continue;
+                        }
                         data.Add((freq, mag, phase));
+                    }
+                    else
+                    {
+                        malformedRows++;
                     }
                 }
 
@@ -82,6 +92,9 @@ public class LumericalSParameterImporter : ISParameterImporter
                 i++;
             }
         }
+
+        if (malformedRows > 0 && blocks.Count > 0)
+            blocks[0] = blocks[0] with { MalformedRowsWarning = malformedRows };
 
         return blocks;
     }
@@ -152,14 +165,21 @@ public class LumericalSParameterImporter : ISParameterImporter
         var teBlocks = blocks.Where(b => b.Mode.Equals("TE", StringComparison.OrdinalIgnoreCase)).ToList();
         var useBlocks = teBlocks.Count > 0 ? teBlocks : blocks;
 
-        // Collect all unique port names
+        // Collect all unique port names, ordered numerically so "port 10"
+        // follows "port 9" instead of "port 1" (lexicographic breaks past 10).
         var portNames = useBlocks
             .SelectMany(b => new[] { b.InPort, b.OutPort })
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(p => p)
+            .OrderBy(NaturalSortKey, StringComparer.Ordinal)
             .ToList();
 
         int n = portNames.Count;
+
+        // Build a case-insensitive port-name → index map once, instead of
+        // the O(n²) IndexOf+FirstOrDefault inside the per-wavelength loop.
+        var portIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int idx = 0; idx < portNames.Count; idx++)
+            portIndex[portNames[idx]] = idx;
 
         // Get all wavelengths from first block
         var refBlock = useBlocks[0];
@@ -181,9 +201,9 @@ public class LumericalSParameterImporter : ISParameterImporter
             var matrix = new Complex[n, n];
             foreach (var block in useBlocks)
             {
-                int outIdx = portNames.IndexOf(portNames.FirstOrDefault(p => string.Equals(p, block.OutPort, StringComparison.OrdinalIgnoreCase)) ?? "");
-                int inIdx = portNames.IndexOf(portNames.FirstOrDefault(p => string.Equals(p, block.InPort, StringComparison.OrdinalIgnoreCase)) ?? "");
-                if (outIdx < 0 || inIdx < 0 || wIdx >= block.Data.Count) continue;
+                if (!portIndex.TryGetValue(block.OutPort, out var outIdx)) continue;
+                if (!portIndex.TryGetValue(block.InPort, out var inIdx)) continue;
+                if (wIdx >= block.Data.Count) continue;
 
                 var (_, mag, phase) = block.Data[wIdx];
                 matrix[outIdx, inIdx] = Complex.FromPolarCoordinates(mag, phase);
@@ -195,15 +215,40 @@ public class LumericalSParameterImporter : ISParameterImporter
         result.Metadata["polarization"] = "TE";
         result.Metadata["tool"] = "Lumerical INTERCONNECT";
 
+        var totalMalformed = blocks.Sum(b => b.MalformedRowsWarning);
+        if (totalMalformed > 0)
+            result.Metadata["malformedRows"] = totalMalformed.ToString(CultureInfo.InvariantCulture);
+
         return result;
     }
 
-    private static int FreqToWavelengthNm(double freqHz) =>
-        (int)Math.Round(SpeedOfLightMs / freqHz * 1e9);
+    private static int FreqToWavelengthNm(double freqHz)
+    {
+        if (!double.IsFinite(freqHz) || freqHz <= 0)
+            throw new SParameterImportException(
+                $"Invalid frequency {freqHz} Hz — must be finite and positive for wavelength conversion.");
+        return (int)Math.Round(SpeedOfLightMs / freqHz * 1e9);
+    }
+
+    /// <summary>
+    /// Returns a natural-sort key so port names like "port 2" precede "port 10".
+    /// Falls back to the original string if no numeric suffix is found.
+    /// </summary>
+    private static string NaturalSortKey(string s)
+    {
+        var m = Regex.Match(s, @"^(?<prefix>.*?)(?<num>\d+)(?<suffix>.*)$");
+        if (!m.Success) return s;
+        var padded = m.Groups["num"].Value.PadLeft(10, '0');
+        return m.Groups["prefix"].Value + padded + m.Groups["suffix"].Value;
+    }
 
     private record SparamBlock(
         string OutPort,
         string InPort,
         string Mode,
-        List<(double FreqHz, double Mag, double PhaseRad)> Data);
+        List<(double FreqHz, double Mag, double PhaseRad)> Data)
+    {
+        /// <summary>Count of rows that failed to parse in this block; exposed via Metadata on the result.</summary>
+        public int MalformedRowsWarning { get; init; }
+    }
 }
