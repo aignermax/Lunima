@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels.PdkOffset"
+        xmlns:libvm="using:CAP.Avalonia.ViewModels.Library"
         x:Class="CAP.Avalonia.Views.PdkOffsetEditorWindow"
         x:DataType="vm:PdkOffsetEditorViewModel"
         Title="PDK Component Offset Editor"
@@ -13,12 +14,27 @@
 
         <!-- Left panel: component list -->
         <DockPanel Grid.Column="0" Margin="8">
-            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                <TextBlock Text="PDK Components" FontWeight="Bold" Foreground="LightGray"
-                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                <Button Content="Load PDK..." Command="{Binding LoadPdkFileCommand}"
-                        DockPanel.Dock="Right" Padding="8,4" Background="#3d3d5d"/>
-            </DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8" Spacing="6">
+                <DockPanel>
+                    <TextBlock Text="PDK Components" FontWeight="Bold" Foreground="LightGray"
+                               VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                    <Button Content="Load PDK..." Command="{Binding LoadPdkFileCommand}"
+                            DockPanel.Dock="Right" Padding="8,4" Background="#3d3d5d"/>
+                </DockPanel>
+                <ComboBox ItemsSource="{Binding AvailablePdks}"
+                          SelectedItem="{Binding SelectedInstalledPdk}"
+                          PlaceholderText="Select installed PDK..."
+                          HorizontalAlignment="Stretch"
+                          Background="#2d2d2d" Foreground="White"
+                          ToolTip.Tip="Load an already-registered PDK directly into the editor">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="libvm:PdkInfoViewModel">
+                            <TextBlock Text="{Binding DisplayText}"
+                                       ToolTip.Tip="{Binding FilePath}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
 
             <ListBox ItemsSource="{Binding Components}"
                      SelectedItem="{Binding SelectedComponent}"

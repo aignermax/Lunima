@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.Library;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,6 +17,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 {
     private readonly PdkLoader _pdkLoader;
     private readonly PdkJsonSaver _pdkSaver;
+    private readonly PdkManagerViewModel _pdkManager;
     private PdkDraft? _loadedPdk;
     private string? _loadedFilePath;
 
@@ -34,11 +36,18 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasUnsavedChanges;
 
+    /// <summary>Currently selected PDK from the installed-PDK dropdown; triggers load on change.</summary>
+    [ObservableProperty]
+    private PdkInfoViewModel? _selectedInstalledPdk;
+
     /// <summary>All components from the loaded PDK, with offset status badges.</summary>
     public ObservableCollection<PdkComponentOffsetItemViewModel> Components { get; } = new();
 
     /// <summary>Pin positions for the currently selected component, recalculated on offset change.</summary>
     public ObservableCollection<PinPositionViewModel> PinPositions { get; } = new();
+
+    /// <summary>PDKs currently registered in Lunima, exposed for the installed-PDK dropdown.</summary>
+    public ObservableCollection<PdkInfoViewModel> AvailablePdks => _pdkManager.LoadedPdks;
 
     /// <summary>File dialog service for picking a PDK JSON file to load.</summary>
     public IFileDialogService? FileDialogService { get; set; }
@@ -82,10 +91,11 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>
     /// Initializes the ViewModel with required services.
     /// </summary>
-    public PdkOffsetEditorViewModel(PdkLoader pdkLoader, PdkJsonSaver pdkSaver)
+    public PdkOffsetEditorViewModel(PdkLoader pdkLoader, PdkJsonSaver pdkSaver, PdkManagerViewModel pdkManager)
     {
         _pdkLoader = pdkLoader;
         _pdkSaver = pdkSaver;
+        _pdkManager = pdkManager;
     }
 
     /// <summary>Opens a file dialog and loads the selected PDK JSON file.</summary>
@@ -106,24 +116,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         try
         {
-            // Use the editing-tolerant loader — this window's whole purpose
-            // is to calibrate components whose offsets are still null. The
-            // strict LoadFromFile path would reject exactly those PDKs.
-            _loadedPdk = _pdkLoader.LoadFromFileForEditing(path);
-            _loadedFilePath = path;
-            HasUnsavedChanges = false;
-
-            Components.Clear();
-            foreach (var comp in _loadedPdk.Components)
-            {
-                Components.Add(new PdkComponentOffsetItemViewModel(comp, _loadedPdk.Name));
-            }
-
-            var missing = Components.Count(c => c.Status == OffsetStatus.Missing);
-            var zero   = Components.Count(c => c.Status == OffsetStatus.ZeroOffset);
-            StatusText = $"Loaded {_loadedPdk.Name}: {Components.Count} components " +
-                         $"({missing} missing offset, {zero} at zero).";
-            SelectedComponent = null;
+            LoadPdkFromPath(path);
         }
         catch (Exception ex)
         {
@@ -186,6 +179,26 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         }
     }
 
+    partial void OnSelectedInstalledPdkChanged(PdkInfoViewModel? value)
+    {
+        if (value == null) return;
+
+        if (string.IsNullOrEmpty(value.FilePath))
+        {
+            StatusText = $"'{value.Name}' has no file path available for editing.";
+            return;
+        }
+
+        try
+        {
+            LoadPdkFromPath(value.FilePath);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to load PDK: {ex.Message}";
+        }
+    }
+
     partial void OnSelectedComponentChanged(PdkComponentOffsetItemViewModel? value)
     {
         if (value == null)
@@ -211,6 +224,31 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         RefreshPinPositions(value.Draft);
         RefreshCanvasMarkers(value.Draft);
+    }
+
+    /// <summary>
+    /// Loads a PDK from the given file path using the editing-tolerant loader
+    /// and populates the component list. Shared by the file-dialog and
+    /// installed-PDK-dropdown load paths.
+    /// </summary>
+    private void LoadPdkFromPath(string path)
+    {
+        // Use the editing-tolerant loader — this window's whole purpose
+        // is to calibrate components whose offsets are still null. The
+        // strict LoadFromFile path would reject exactly those PDKs.
+        _loadedPdk = _pdkLoader.LoadFromFileForEditing(path);
+        _loadedFilePath = path;
+        HasUnsavedChanges = false;
+
+        Components.Clear();
+        foreach (var comp in _loadedPdk.Components)
+            Components.Add(new PdkComponentOffsetItemViewModel(comp, _loadedPdk.Name));
+
+        var missing = Components.Count(c => c.Status == OffsetStatus.Missing);
+        var zero   = Components.Count(c => c.Status == OffsetStatus.ZeroOffset);
+        StatusText = $"Loaded {_loadedPdk.Name}: {Components.Count} components " +
+                     $"({missing} missing offset, {zero} at zero).";
+        SelectedComponent = null;
     }
 
     private void RefreshPinPositions(PdkComponentDraft draft)
