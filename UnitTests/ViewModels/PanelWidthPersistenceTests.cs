@@ -69,8 +69,7 @@ public class PanelWidthPersistenceTests : IDisposable
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
-            new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), _canvas));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService));
 
     [Fact]
     public void LeftPanelWidth_DefaultsTo220()

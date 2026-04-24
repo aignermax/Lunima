@@ -176,12 +176,34 @@ public class SettingsRegistryTests
     }
 
     [Fact]
-    public void PythonEnvironmentSettingsPage_StableContract()
+    public void GdsExportSettingsPage_StableContract()
     {
-        ISettingsPage page = new PythonEnvironmentSettingsPage(null!);
+        // Renamed from "Python Environment" — the page now also hosts the
+        // GenerateGdsEnabled toggle, so the broader "GDS Export" title fits.
+        ISettingsPage page = new GdsExportSettingsPage(null!);
 
-        page.Title.ShouldBe("Python Environment");
+        page.Title.ShouldBe("GDS Export");
         page.Icon.ShouldBe("🐍");
+        page.Category.ShouldBe("Export");
+    }
+
+    [Fact]
+    public void VerilogAExportSettingsPage_StableContract()
+    {
+        ISettingsPage page = new VerilogAExportSettingsPage(null!);
+
+        page.Title.ShouldBe("Verilog-A Export");
+        page.Icon.ShouldBe("⚡");
+        page.Category.ShouldBe("Export");
+    }
+
+    [Fact]
+    public void PhotonTorchExportSettingsPage_StableContract()
+    {
+        ISettingsPage page = new PhotonTorchExportSettingsPage(null!);
+
+        page.Title.ShouldBe("PhotonTorch Export");
+        page.Icon.ShouldBe("🔦");
         page.Category.ShouldBe("Export");
     }
 

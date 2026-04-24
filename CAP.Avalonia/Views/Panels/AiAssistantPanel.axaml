@@ -91,35 +91,17 @@
                     IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
         </Grid>
 
-        <!-- API Key settings (collapsed by default) -->
-        <Expander Header="API Key Settings"
-                  IsExpanded="{Binding RightPanel.AiAssistant.IsSettingsExpanded}"
-                  Foreground="Gray" FontSize="10"
-                  Margin="0,5,0,0"
-                  Background="#1a1a1a">
-            <StackPanel Margin="0,8,0,0" Spacing="5">
-                <TextBlock Text="Claude API Key (Anthropic):"
-                           Foreground="Gray" FontSize="10"/>
-                <TextBox Text="{Binding RightPanel.AiAssistant.ApiKey}"
-                         Watermark="sk-ant-..."
-                         PasswordChar="*"
-                         Background="#1e1e1e" Foreground="White"
-                         BorderBrush="#3e3e3e" FontSize="11"/>
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <Button Content="Save API Key"
-                            Command="{Binding RightPanel.AiAssistant.SaveApiKeyCommand}"
-                            Background="#3d5d3d" Foreground="White"
-                            Width="120" HorizontalAlignment="Left"/>
-                    <Button Content="Get API Key"
-                            Command="{Binding RightPanel.AiAssistant.OpenApiKeyPageCommand}"
-                            Background="#3d3d5d" Foreground="#7EC8E3"
-                            Width="100" HorizontalAlignment="Left"
-                            ToolTip.Tip="Open Anthropic console to get an API key"/>
-                </StackPanel>
-                <TextBlock Text="Free API key available at console.anthropic.com/settings/keys"
-                           Foreground="#666666" FontSize="9" TextWrapping="Wrap"/>
-            </StackPanel>
-        </Expander>
+        <!-- API-key shortcut: visible only when no key is configured yet.
+             Clicking opens Settings pre-selected on the AI Assistant page. -->
+        <Button Content="⚙ Set API key in Settings"
+                Command="{Binding OpenAiSettingsCommand}"
+                HorizontalAlignment="Stretch"
+                Margin="0,5,0,0" Padding="6,4"
+                Background="#3d3d5d" Foreground="#7EC8E3"
+                FontSize="11"
+                IsVisible="{Binding RightPanel.AiAssistant.IsApiKeySet,
+                            Converter={x:Static BoolConverters.Not}}"
+                ToolTip.Tip="Open Settings → AI Assistant to configure your Claude API key"/>
     </StackPanel>
 
 </UserControl>

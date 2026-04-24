@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
@@ -37,7 +38,10 @@ public static class MainViewModelTestHelper
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
-        preferencesService ??= new UserPreferencesService();
+        // Isolated temp-file prefs so AiAssistant auto-persist and every
+        // other *Changed handler cannot clobber the developer's real file.
+        preferencesService ??= new UserPreferencesService(
+            Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
         libraryManager ??= new GroupLibraryManager();
         simulationService ??= new SimulationService();
 
@@ -53,6 +57,8 @@ public static class MainViewModelTestHelper
             new UpdateDownloader(new HttpClient()),
             preferencesService,
             Mock.Of<IUrlLauncher>());
+        var photonTorchVm = new PhotonTorchExportViewModel(new PhotonTorchExporter(), canvas);
+        var verilogAVm = new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas);
 
         return new MainViewModel(
             canvas,
@@ -70,7 +76,9 @@ public static class MainViewModelTestHelper
             rightPanel,
             bottomPanel,
             new ViewportControlViewModel(canvas),
-            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver()));
+            new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver()),
+            photonTorchVm,
+            verilogAVm);
     }
 
     /// <summary>
@@ -106,7 +114,8 @@ public static class MainViewModelTestHelper
         UserPreferencesService? preferencesService = null)
     {
         canvas ??= new DesignCanvasViewModel();
-        preferencesService ??= new UserPreferencesService();
+        preferencesService ??= new UserPreferencesService(
+            Path.Combine(Path.GetTempPath(), $"cap-test-prefs-{Guid.NewGuid()}.json"));
 
         return new RightPanelViewModel(
             canvas,
@@ -122,8 +131,7 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
-            new VerilogAExportViewModel(new VerilogAExporter(), new VerilogAFileWriter(), canvas));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
     }
 
     /// <summary>

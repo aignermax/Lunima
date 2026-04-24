@@ -6,8 +6,6 @@ using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
 using CAP.Avalonia.Views.PdkImport;
-using CAP.Avalonia.ViewModels.Settings;
-using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 using System.Linq;
 
@@ -26,29 +24,7 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainViewModel vm)
             {
-                // Wire up Settings window opener. Any failure resolving a
-                // page would otherwise crash the UI thread silently (this
-                // lambda is reached from an async-void event handler); we
-                // surface the error on the status bar instead.
-                vm.ShowSettingsWindowAsync = async () =>
-                {
-                    try
-                    {
-                        if (_settingsWindow != null && _settingsWindow.IsVisible)
-                        {
-                            _settingsWindow.Activate();
-                            return;
-                        }
-                        var settingsVm = App.Services.GetRequiredService<SettingsWindowViewModel>();
-                        _settingsWindow = new SettingsWindow { DataContext = settingsVm };
-                        _settingsWindow.Show(this);
-                    }
-                    catch (System.Exception ex)
-                    {
-                        vm.StatusText = $"Failed to open Settings: {ex.Message}";
-                    }
-                    await Task.CompletedTask;
-                };
+                WireSettingsOpener(vm); // see MainWindow.SettingsOpener.cs
 
                 vm.FileDialogService = new FileDialogService(this);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
