@@ -5,7 +5,6 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Export;
-using CAP.Avalonia.ViewModels.Import;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.Services;
 
@@ -101,11 +100,6 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public AiAssistantViewModel AiAssistant { get; }
 
-    /// <summary>
-    /// ViewModel for S-parameter import from Lumerical and Touchstone files.
-    /// </summary>
-    public SParameterImportViewModel SParameterImport { get; }
-
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
@@ -121,8 +115,7 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrixViewModel groupSMatrix,
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
-        AiAssistantViewModel aiAssistant,
-        SParameterImportViewModel sParameterImport)
+        AiAssistantViewModel aiAssistant)
     {
         _preferencesService = preferencesService;
 
@@ -138,7 +131,6 @@ public partial class RightPanelViewModel : ObservableObject
         ArchitectureReport = architectureReport;
         PdkConsistency = pdkConsistency;
         AiAssistant = aiAssistant;
-        SParameterImport = sParameterImport;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

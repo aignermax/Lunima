@@ -3,6 +3,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.ComponentSettings;
+using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
 using CAP.Avalonia.Views.PdkImport;
@@ -105,6 +107,20 @@ public partial class MainWindow : Window
                         }
                     }
                 };
+
+                // Wire up Component Settings dialog for hierarchy nodes
+                vm.LeftPanel.HierarchyPanel.OpenComponentSettings = node =>
+                {
+                    ShowComponentSettingsDialog(
+                        node.Component.Identifier,
+                        node.Component.HumanReadableName ?? node.Component.Identifier,
+                        node.Component,
+                        vm);
+                };
+
+                // Wire up per-instance S-matrix override marker in hierarchy
+                vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
+                    id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
 
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
@@ -429,6 +445,41 @@ public partial class MainWindow : Window
                 vm.LeftPanel.SelectedGroupTemplate = null;
             }
         }
+    }
+
+    /// <summary>
+    /// Handles "Component Settings…" click in the PDK template list context menu.
+    /// </summary>
+    private void TemplateComponentSettings_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        if (sender is MenuItem { DataContext: ComponentTemplate template })
+        {
+            var key = $"{template.PdkSource}::{template.Name}";
+            ShowComponentSettingsDialog(key, template.Name, null, vm);
+        }
+    }
+
+    /// <summary>
+    /// Creates and shows the Component Settings dialog for the given entity.
+    /// Wires <see cref="ComponentSettingsDialogViewModel.OnSMatrixStoreChanged"/> so the
+    /// hierarchy panel refreshes its 📊 override badges after every import or delete.
+    /// </summary>
+    private void ShowComponentSettingsDialog(
+        string entityKey,
+        string displayName,
+        CAP_Core.Components.Core.Component? liveComponent,
+        MainViewModel vm)
+    {
+        var dialogVm = new ComponentSettingsDialogViewModel();
+        dialogVm.FileDialogService = new FileDialogService(this);
+        dialogVm.OnSMatrixStoreChanged = () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+        dialogVm.Configure(entityKey, displayName, vm.FileOperations.StoredSMatrices, liveComponent);
+
+        var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
+        dialog.Show(this);
     }
 
     private void ClearUserGroupsSelection()

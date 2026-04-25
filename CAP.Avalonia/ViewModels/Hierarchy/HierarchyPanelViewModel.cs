@@ -39,6 +39,19 @@ public partial class HierarchyPanelViewModel : ObservableObject
     /// </summary>
     public Action<Component, string>? RenameComponent { get; set; }
 
+    /// <summary>
+    /// Callback invoked when the user requests "Component Settings…" for a hierarchy node.
+    /// Set by <see cref="CAP.Avalonia.ViewModels.MainViewModel"/> after initialization.
+    /// </summary>
+    public Action<HierarchyNodeViewModel>? OpenComponentSettings { get; set; }
+
+    /// <summary>
+    /// Returns <c>true</c> when a per-instance S-matrix override exists for the given
+    /// component identifier. Wired to <c>FileOperationsViewModel.StoredSMatrices</c>
+    /// by <see cref="CAP.Avalonia.Views.MainWindow"/>.
+    /// </summary>
+    public Func<string, bool>? CheckHasSMatrixOverride { get; set; }
+
     public HierarchyPanelViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -69,6 +82,24 @@ public partial class HierarchyPanelViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Updates the <see cref="HierarchyNodeViewModel.HasSMatrixOverride"/> flag on every
+    /// node in the tree. Call this after an S-matrix import or deletion so the 📊 badge
+    /// in the hierarchy panel appears or disappears immediately.
+    /// </summary>
+    public void RefreshOverrideMarkers()
+    {
+        foreach (var root in RootNodes)
+            RefreshOverrideMarkersRecursive(root);
+    }
+
+    private void RefreshOverrideMarkersRecursive(HierarchyNodeViewModel node)
+    {
+        node.HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(node.Component.Identifier) ?? false;
+        foreach (var child in node.Children)
+            RefreshOverrideMarkersRecursive(child);
+    }
+
+    /// <summary>
     /// Recursively creates a hierarchy node and its children.
     /// </summary>
     private HierarchyNodeViewModel CreateNodeRecursive(Component component, ComponentViewModel? componentVm)
@@ -78,7 +109,9 @@ public partial class HierarchyPanelViewModel : ObservableObject
             ComponentViewModel = componentVm,
             FocusRequested = FocusOnComponent,
             SelectionRequested = SelectComponent,
-            RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName)
+            RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName),
+            OpenSettingsRequested = n => OpenComponentSettings?.Invoke(n),
+            HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(component.Identifier) ?? false
         };
 
         // If this is a group, recursively add its children
