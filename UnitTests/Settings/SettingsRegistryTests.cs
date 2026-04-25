@@ -188,26 +188,6 @@ public class SettingsRegistryTests
     }
 
     [Fact]
-    public void VerilogAExportSettingsPage_StableContract()
-    {
-        ISettingsPage page = new VerilogAExportSettingsPage(null!);
-
-        page.Title.ShouldBe("Verilog-A Export");
-        page.Icon.ShouldBe("⚡");
-        page.Category.ShouldBe("Export");
-    }
-
-    [Fact]
-    public void PhotonTorchExportSettingsPage_StableContract()
-    {
-        ISettingsPage page = new PhotonTorchExportSettingsPage(null!);
-
-        page.Title.ShouldBe("PhotonTorch Export");
-        page.Icon.ShouldBe("🔦");
-        page.Category.ShouldBe("Export");
-    }
-
-    [Fact]
     public void AiAssistantSettingsPage_StableContract()
     {
         ISettingsPage page = new AiAssistantSettingsPage(null!);

@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.Export"
+        x:Class="CAP.Avalonia.Views.Export.VerilogAExportDialog"
+        x:DataType="vm:VerilogAExportViewModel"
+        Title="Verilog-A / SPICE Export"
+        Width="420" Height="320"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#1e1e1e"
+        Foreground="White">
+    <StackPanel Margin="20" Spacing="10">
+        <TextBlock Text="Verilog-A / SPICE Export"
+                   FontSize="18" FontWeight="SemiBold"
+                   Foreground="White" Margin="0,0,0,4"/>
+
+        <TextBlock Text="Circuit name:" Foreground="Gray" FontSize="12"/>
+        <TextBox Text="{Binding CircuitName}"
+                 Watermark="PhotonicCircuit"
+                 Background="#2d2d2d" Foreground="White" CaretBrush="White"/>
+
+        <TextBlock Text="Output directory:" Foreground="Gray" FontSize="12" Margin="0,4,0,0"/>
+        <TextBox Text="{Binding OutputDirectory}"
+                 Watermark="Output folder path..."
+                 Background="#2d2d2d" Foreground="White" CaretBrush="White"/>
+
+        <TextBlock Text="Wavelength for S-parameters:" Foreground="Gray" FontSize="12" Margin="0,4,0,0"/>
+        <ComboBox ItemsSource="{Binding WavelengthOptions}"
+                  SelectedValue="{Binding WavelengthNm}"
+                  HorizontalAlignment="Left" MinWidth="120"
+                  Background="#2d2d2d"/>
+
+        <CheckBox Content="Include SPICE test bench (.sp)"
+                  IsChecked="{Binding IncludeTestBench}"
+                  Foreground="White" Margin="0,4,0,0"/>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8" Margin="0,12,0,0">
+            <Button Content="Export" Width="90"
+                    Click="OnExportClicked"
+                    Background="#3d5d3d" Foreground="White"/>
+            <Button Content="Cancel" Width="90"
+                    Click="OnCancelClicked"
+                    Background="#3d3d3d" Foreground="White"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
