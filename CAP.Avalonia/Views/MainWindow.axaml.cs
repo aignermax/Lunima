@@ -120,6 +120,10 @@ public partial class MainWindow : Window
                         vm);
                 };
 
+                // Wire up per-instance S-matrix override marker in hierarchy
+                vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
+                    id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
+
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
 
@@ -462,6 +466,8 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Creates and shows the Component Settings dialog for the given entity.
+    /// Wires <see cref="ComponentSettingsDialogViewModel.OnSMatrixStoreChanged"/> so the
+    /// hierarchy panel refreshes its 📊 override badges after every import or delete.
     /// </summary>
     private void ShowComponentSettingsDialog(
         string entityKey,
@@ -471,6 +477,7 @@ public partial class MainWindow : Window
     {
         var dialogVm = new ComponentSettingsDialogViewModel();
         dialogVm.FileDialogService = new FileDialogService(this);
+        dialogVm.OnSMatrixStoreChanged = () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
         dialogVm.Configure(entityKey, displayName, vm.FileOperations.StoredSMatrices, liveComponent);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
