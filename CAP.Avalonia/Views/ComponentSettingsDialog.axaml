@@ -1,0 +1,130 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.ComponentSettings"
+        x:Class="CAP.Avalonia.Views.ComponentSettingsDialog"
+        x:DataType="vm:ComponentSettingsDialogViewModel"
+        Title="{Binding Title}"
+        Width="560" Height="500"
+        MinWidth="400" MinHeight="300"
+        Background="#1e1e1e"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel Margin="16">
+
+        <!-- Title -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{Binding Title}"
+                   FontWeight="SemiBold"
+                   FontSize="15"
+                   Foreground="LightBlue"
+                   Margin="0,0,0,12"/>
+
+        <!-- Status bar -->
+        <Border DockPanel.Dock="Bottom"
+                Background="#161616"
+                CornerRadius="4"
+                Padding="8,6"
+                Margin="0,10,0,0"
+                IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding StatusText}"
+                       Foreground="#aaaacc"
+                       FontSize="11"
+                       TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Load button -->
+        <Button DockPanel.Dock="Bottom"
+                Content="Load S-matrix from file…"
+                Command="{Binding LoadFromFileCommand}"
+                HorizontalAlignment="Left"
+                Margin="0,10,0,0"
+                Padding="12,6"
+                Background="#3d5d3d"
+                IsEnabled="{Binding IsImporting, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Empty state -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="No S-matrices stored for this component.&#10;Use 'Load S-matrix from file…' to import Lumerical or Touchstone data."
+                   Foreground="Gray"
+                   FontSize="11"
+                   Margin="0,0,0,10"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasSMatrices, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- S-matrix list header -->
+        <Grid DockPanel.Dock="Top"
+              ColumnDefinitions="110,80,*,80"
+              Margin="0,0,0,4"
+              IsVisible="{Binding HasSMatrices}">
+            <TextBlock Grid.Column="0" Text="Wavelength" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="1" Text="Size" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="2" Text="Diagonal magnitudes" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="3" Text="" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
+        </Grid>
+
+        <!-- S-matrix entries list -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      IsVisible="{Binding HasSMatrices}">
+            <ItemsControl ItemsSource="{Binding SMatrixEntries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SMatrixEntryViewModel">
+                        <Border Background="#252526"
+                                CornerRadius="4"
+                                Padding="8,6"
+                                Margin="0,2">
+                            <Grid ColumnDefinitions="110,80,*,36">
+                                <!-- Wavelength -->
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding WavelengthLabel}"
+                                               Foreground="White"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"/>
+                                    <TextBlock Text="{Binding SourceNote}"
+                                               Foreground="#666666"
+                                               FontSize="9"
+                                               IsVisible="{Binding SourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                </StackPanel>
+
+                                <!-- Dimensions -->
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Dimensions}"
+                                           Foreground="#aaaaaa"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"/>
+
+                                <!-- Diagonal preview -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DiagonalPreview}"
+                                               Foreground="#88ccaa"
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="10"
+                                               TextWrapping="NoWrap"/>
+                                    <TextBlock Text="{Binding PortNamesDisplay}"
+                                               Foreground="#666666"
+                                               FontSize="9"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+
+                                <!-- Delete button -->
+                                <Button Grid.Column="3"
+                                        Content="×"
+                                        CommandParameter="{Binding}"
+                                        Command="{Binding $parent[ItemsControl].((vm:ComponentSettingsDialogViewModel)DataContext).DeleteEntryCommand}"
+                                        Width="28" Height="24"
+                                        Padding="0"
+                                        Background="#5d2020"
+                                        Foreground="#FF6B6B"
+                                        FontSize="14"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        ToolTip.Tip="Remove this wavelength entry"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+    </DockPanel>
+</Window>

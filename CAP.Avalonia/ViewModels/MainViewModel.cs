@@ -108,7 +108,6 @@ public partial class MainViewModel : ObservableObject
             FileOperations.PhotonTorchExport.FileDialogService = value;
             FileOperations.VerilogAExport.FileDialogService = value;
             LeftPanel.FileDialogService = value;
-            RightPanel.SParameterImport.FileDialogService = value;
         }
     }
 
@@ -172,9 +171,6 @@ public partial class MainViewModel : ObservableObject
 
         FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService);
         ViewportControl = viewportControl;
-
-        // Link S-parameter import store so imported data is included in saves
-        RightPanel.SParameterImport.StoredSMatrices = FileOperations.StoredSMatrices;
 
         // Build the unified Export menu (add new IExportFormat here for new formats)
         PhotonTorchExportFormat = new PhotonTorchExportFormat();
@@ -348,6 +344,7 @@ public partial class MainViewModel : ObservableObject
     {
         LeftPanel.HierarchyPanel.NavigateToPosition = ViewportControl.NavigateCanvasTo;
         LeftPanel.HierarchyPanel.GetViewportSize = ViewportControl.GetViewportSize;
+        // OpenComponentSettings is wired by MainWindow.axaml.cs (view layer) so it can open the dialog window.
     }
 
     private void WireDesignValidation()
