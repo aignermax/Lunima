@@ -28,6 +28,7 @@ public partial class MainWindow : Window
 
                 vm.FileDialogService = new FileDialogService(this);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
+                WireExportDialogs(vm); // see MainWindow.ExportDialogs.cs
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;

@@ -164,8 +164,6 @@ public partial class App : Application
         services.AddTransient<ISettingsPage, GridSnapSettingsPage>();
         services.AddTransient<ISettingsPage, UpdateSettingsPage>();
         services.AddTransient<ISettingsPage, GdsExportSettingsPage>();
-        services.AddTransient<ISettingsPage, VerilogAExportSettingsPage>();
-        services.AddTransient<ISettingsPage, PhotonTorchExportSettingsPage>();
         services.AddTransient<ISettingsPage, AiAssistantSettingsPage>();
         services.AddTransient<SettingsWindowViewModel>();
 

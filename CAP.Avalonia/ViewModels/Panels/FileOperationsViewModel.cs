@@ -71,6 +71,20 @@ public partial class FileOperationsViewModel : ObservableObject
     public VerilogAExportViewModel VerilogAExport { get; }
 
     /// <summary>
+    /// Delegate to show the Verilog-A export configuration dialog.
+    /// Returns <c>true</c> if the user confirmed; <c>false</c> if cancelled.
+    /// Must be set by the hosting view after the window loads.
+    /// </summary>
+    public Func<Task<bool>>? ShowVerilogAExportDialogAsync { get; set; }
+
+    /// <summary>
+    /// Delegate to show the PhotonTorch export configuration dialog.
+    /// Returns <c>true</c> if the user confirmed; <c>false</c> if cancelled.
+    /// Must be set by the hosting view after the window loads.
+    /// </summary>
+    public Func<Task<bool>>? ShowPhotonTorchExportDialogAsync { get; set; }
+
+    /// <summary>
     /// Callback to update status text in the UI.
     /// </summary>
     public Action<string>? UpdateStatus { get; set; }
@@ -1113,6 +1127,39 @@ public partial class FileOperationsViewModel : ObservableObject
         {
             _errorConsole?.LogWarning($"Could not open GDS file: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Opens the Verilog-A configuration dialog then triggers the export if confirmed.
+    /// Falls back to running the export directly when no dialog delegate is wired
+    /// (e.g. in headless test environments).
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportVerilogAWithDialog()
+    {
+        if (ShowVerilogAExportDialogAsync != null)
+        {
+            var confirmed = await ShowVerilogAExportDialogAsync();
+            if (!confirmed) return;
+        }
+
+        await VerilogAExport.ExportAsync();
+    }
+
+    /// <summary>
+    /// Opens the PhotonTorch configuration dialog then triggers the export if confirmed.
+    /// Falls back to running the export directly when no dialog delegate is wired.
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportPhotonTorchWithDialog()
+    {
+        if (ShowPhotonTorchExportDialogAsync != null)
+        {
+            var confirmed = await ShowPhotonTorchExportDialogAsync();
+            if (!confirmed) return;
+        }
+
+        await PhotonTorchExport.ExportAsync();
     }
 
     /// <summary>

@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.Export"
+        x:Class="CAP.Avalonia.Views.Export.PhotonTorchExportDialog"
+        x:DataType="vm:PhotonTorchExportViewModel"
+        Title="PhotonTorch Export"
+        Width="380" Height="300"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#1e1e1e"
+        Foreground="White">
+    <StackPanel Margin="20" Spacing="10">
+        <TextBlock Text="PhotonTorch Export"
+                   FontSize="18" FontWeight="SemiBold"
+                   Foreground="White" Margin="0,0,0,4"/>
+
+        <TextBlock Text="Wavelength (nm):" Foreground="Gray" FontSize="12"/>
+        <NumericUpDown Value="{Binding WavelengthNm}"
+                       Minimum="1260" Maximum="1625" Increment="10"
+                       FormatString="F0"
+                       HorizontalAlignment="Left" Width="160"/>
+
+        <CheckBox Content="Time-domain simulation (otherwise steady-state)"
+                  IsChecked="{Binding UseTimeDomain}"
+                  Foreground="White" Margin="0,4,0,0"/>
+
+        <StackPanel IsVisible="{Binding UseTimeDomain}"
+                    Spacing="6" Margin="10,2,0,0">
+            <TextBlock Text="Bit rate (Gbit/s):" Foreground="Gray" FontSize="12"/>
+            <NumericUpDown Value="{Binding BitRateGbps}"
+                           Minimum="0.1" Maximum="100" Increment="1"
+                           FormatString="F1"
+                           HorizontalAlignment="Left" Width="160"/>
+
+            <TextBlock Text="Time steps:" Foreground="Gray" FontSize="12" Margin="0,4,0,0"/>
+            <NumericUpDown Value="{Binding TimeDomainSteps}"
+                           Minimum="100" Maximum="10000" Increment="100"
+                           FormatString="F0"
+                           HorizontalAlignment="Left" Width="160"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8" Margin="0,12,0,0">
+            <Button Content="Export" Width="90"
+                    Click="OnExportClicked"
+                    Background="#3d4d6d" Foreground="White"/>
+            <Button Content="Cancel" Width="90"
+                    Click="OnCancelClicked"
+                    Background="#3d3d3d" Foreground="White"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
