@@ -44,6 +44,12 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     public IFileDialogService? FileDialogService { get; set; }
 
     /// <summary>
+    /// Callback fired after every import or delete operation so the hierarchy panel
+    /// can refresh its per-instance override markers.
+    /// </summary>
+    public Action? OnSMatrixStoreChanged { get; set; }
+
+    /// <summary>
     /// Initialises a new instance with the available S-parameter importers.
     /// </summary>
     public ComponentSettingsDialogViewModel()
@@ -161,6 +167,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
         {
             HasSMatrices = false;
+            OnSMatrixStoreChanged?.Invoke();
             return;
         }
 
@@ -168,6 +175,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             SMatrixEntries.Add(new SMatrixEntryViewModel(kvp.Key, kvp.Value, data.SourceNote));
 
         HasSMatrices = SMatrixEntries.Count > 0;
+        OnSMatrixStoreChanged?.Invoke();
     }
 
     private ISParameterImporter? FindImporter(string path)

@@ -90,6 +90,14 @@
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
 
+                                <!-- S-matrix override badge -->
+                                <TextBlock Text="📊"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           Margin="2,0,0,0"
+                                           IsVisible="{Binding HasSMatrixOverride}"
+                                           ToolTip.Tip="Per-instance S-matrix override active"/>
+
                                 <!-- Focus Button -->
                                 <Button Content="🎯"
                                         Command="{Binding FocusCommand}"

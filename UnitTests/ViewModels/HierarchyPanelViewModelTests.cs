@@ -381,4 +381,96 @@ public class HierarchyPanelViewModelTests
         // The child component should be selected through its ComponentViewModel if available
         // (In this case, it may not have a VM since it's inside a group, but the focus should still work)
     }
+
+    // ── S-matrix override marker tests ───────────────────────────────────────
+
+    [Fact]
+    public void RebuildTree_WithOverrideChecker_SetsHasSMatrixOverrideOnMatchingNode()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        comp.Identifier = "comp_override";
+        canvas.AddComponent(comp, "Waveguide");
+
+        var overrideIds = new HashSet<string> { "comp_override" };
+        hierarchy.CheckHasSMatrixOverride = id => overrideIds.Contains(id);
+
+        // Act
+        hierarchy.RebuildTree();
+
+        // Assert
+        hierarchy.RootNodes[0].HasSMatrixOverride.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RebuildTree_WithNoOverride_HasSMatrixOverrideIsFalse()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        canvas.AddComponent(comp, "Waveguide");
+
+        hierarchy.CheckHasSMatrixOverride = _ => false;
+
+        // Act
+        hierarchy.RebuildTree();
+
+        // Assert
+        hierarchy.RootNodes[0].HasSMatrixOverride.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RefreshOverrideMarkers_UpdatesExistingNodes()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        comp.Identifier = "comp_A";
+        canvas.AddComponent(comp, "Waveguide");
+
+        hierarchy.CheckHasSMatrixOverride = _ => false;
+        hierarchy.RebuildTree();
+        hierarchy.RootNodes[0].HasSMatrixOverride.ShouldBeFalse();
+
+        // Simulate an import: now the override exists
+        hierarchy.CheckHasSMatrixOverride = id => id == "comp_A";
+
+        // Act
+        hierarchy.RefreshOverrideMarkers();
+
+        // Assert
+        hierarchy.RootNodes[0].HasSMatrixOverride.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RefreshOverrideMarkers_AfterDelete_ClearsMarker()
+    {
+        // Arrange
+        var canvas = new DesignCanvasViewModel();
+        var hierarchy = new HierarchyPanelViewModel(canvas);
+
+        var comp = TestComponentFactory.CreateStraightWaveGuide();
+        comp.Identifier = "comp_B";
+        canvas.AddComponent(comp, "Waveguide");
+
+        hierarchy.CheckHasSMatrixOverride = id => id == "comp_B";
+        hierarchy.RebuildTree();
+        hierarchy.RootNodes[0].HasSMatrixOverride.ShouldBeTrue();
+
+        // Simulate a delete: override removed
+        hierarchy.CheckHasSMatrixOverride = _ => false;
+
+        // Act
+        hierarchy.RefreshOverrideMarkers();
+
+        // Assert
+        hierarchy.RootNodes[0].HasSMatrixOverride.ShouldBeFalse();
+    }
 }

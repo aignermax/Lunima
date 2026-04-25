@@ -112,6 +112,14 @@ public partial class HierarchyNodeViewModel : ObservableObject
     /// </summary>
     public Action<HierarchyNodeViewModel>? OpenSettingsRequested { get; set; }
 
+    /// <summary>
+    /// True when a per-instance S-matrix override is stored for this component.
+    /// Used to display the 📊 badge in the hierarchy panel.
+    /// Refreshed by <see cref="HierarchyPanelViewModel.RefreshOverrideMarkers"/>.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasSMatrixOverride;
+
     public HierarchyNodeViewModel(Component component)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
