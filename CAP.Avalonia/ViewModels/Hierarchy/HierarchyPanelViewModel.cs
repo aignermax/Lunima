@@ -39,6 +39,12 @@ public partial class HierarchyPanelViewModel : ObservableObject
     /// </summary>
     public Action<Component, string>? RenameComponent { get; set; }
 
+    /// <summary>
+    /// Callback invoked when the user requests "Component Settings…" for a hierarchy node.
+    /// Set by <see cref="CAP.Avalonia.ViewModels.MainViewModel"/> after initialization.
+    /// </summary>
+    public Action<HierarchyNodeViewModel>? OpenComponentSettings { get; set; }
+
     public HierarchyPanelViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -78,7 +84,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
             ComponentViewModel = componentVm,
             FocusRequested = FocusOnComponent,
             SelectionRequested = SelectComponent,
-            RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName)
+            RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName),
+            OpenSettingsRequested = n => OpenComponentSettings?.Invoke(n)
         };
 
         // If this is a group, recursively add its children

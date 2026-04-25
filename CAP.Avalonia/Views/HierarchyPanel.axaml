@@ -48,6 +48,12 @@
                         <Border Padding="4,2"
                                 Background="Transparent"
                                 PointerPressed="TreeNode_PointerPressed">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Component Settings…" Command="{Binding OpenSettingsCommand}"/>
+                                    <MenuItem Header="Rename" Command="{Binding StartRenameCommand}"/>
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <!-- Icon -->
                                 <TextBlock Text="{Binding IconGlyph}"

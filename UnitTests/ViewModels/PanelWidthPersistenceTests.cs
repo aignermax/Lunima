@@ -70,8 +70,7 @@ public class PanelWidthPersistenceTests : IDisposable
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
-            new SParameterImportViewModel());
+            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService));
 
     [Fact]
     public void LeftPanelWidth_DefaultsTo220()

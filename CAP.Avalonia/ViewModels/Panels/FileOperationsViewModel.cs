@@ -582,6 +582,11 @@ public partial class FileOperationsViewModel : ObservableObject
                 {
                     foreach (var kv in designData.SMatrices)
                         StoredSMatrices[kv.Key] = kv.Value;
+
+                    // Apply per-instance overrides to live components so the
+                    // next simulation run picks up the stored S-matrices.
+                    var allComponents = _canvas.Components.Select(vm => vm.Component);
+                    Services.SMatrixOverrideApplicator.ApplyAll(allComponents, StoredSMatrices);
                 }
 
                 _currentFilePath = filePath;

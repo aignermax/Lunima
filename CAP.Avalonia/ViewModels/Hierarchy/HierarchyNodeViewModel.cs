@@ -106,6 +106,12 @@ public partial class HierarchyNodeViewModel : ObservableObject
     /// </summary>
     public Action<HierarchyNodeViewModel>? SelectionRequested { get; set; }
 
+    /// <summary>
+    /// Callback invoked when the user chooses "Component Settings…" from the context menu.
+    /// Set by <see cref="HierarchyPanelViewModel"/> during node creation.
+    /// </summary>
+    public Action<HierarchyNodeViewModel>? OpenSettingsRequested { get; set; }
+
     public HierarchyNodeViewModel(Component component)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
@@ -184,6 +190,15 @@ public partial class HierarchyNodeViewModel : ObservableObject
     private void ToggleExpanded()
     {
         IsExpanded = !IsExpanded;
+    }
+
+    /// <summary>
+    /// Opens the Component Settings dialog for this component.
+    /// </summary>
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        OpenSettingsRequested?.Invoke(this);
     }
 
     /// <summary>
