@@ -142,8 +142,6 @@ public partial class VerilogAExportViewModel : ObservableObject
             LastOutputDirectory = circuitOutputDir;
             LastExportSucceeded = true;
             StatusText = $"✓ Exported {result.TotalFileCount} files to {circuitOutputDir}";
-
-            OpenDirectoryInFileManager(circuitOutputDir);
         }
         catch (InvalidOperationException ex)
         {

@@ -993,20 +993,20 @@ public partial class FileOperationsViewModel : ObservableObject
                 {
                     UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} and {Path.GetFileName(result.GdsPath)}");
 
-                    // Try to open GDS file with default application
+                    // Try to open the generated GDS file in the default viewer (KLayout etc.) —
+                    // this is a content launch, not a file-manager open, so it stays useful even
+                    // when the user runs many exports back-to-back.
                     TryOpenFileWithDefaultApp(result.GdsPath);
                 }
                 else if (result.Success)
                 {
                     UpdateStatus?.Invoke($"Exported to {Path.GetFileName(filePath)}");
-                    OpenFileExplorer(filePath);
                 }
                 else
                 {
                     // Log full Python error to Error Console for visibility
                     _errorConsole?.LogError($"GDS generation failed: {result.ErrorMessage}");
                     UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} (GDS generation failed: {result.ErrorMessage})");
-                    OpenFileExplorer(filePath);
                 }
             }
             catch (Exception ex)
@@ -1050,7 +1050,6 @@ public partial class FileOperationsViewModel : ObservableObject
             var script = _picWaveExporter.Export(components, connections);
             await File.WriteAllTextAsync(filePath, script);
             UpdateStatus?.Invoke($"Exported PICWave script: {Path.GetFileName(filePath)}");
-            OpenFileExplorer(filePath);
         }
         catch (Exception ex)
         {
