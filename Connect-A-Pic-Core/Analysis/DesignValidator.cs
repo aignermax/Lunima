@@ -1,5 +1,7 @@
+using System.Globalization;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Analysis;
 
@@ -95,6 +97,59 @@ public class DesignValidator
         var (startX, startY) = connection.StartPin.GetAbsolutePosition();
         var (endX, endY) = connection.EndPin.GetAbsolutePosition();
         return ((startX + endX) / 2, (startY + endY) / 2);
+    }
+
+    /// <summary>
+    /// Checks whether any components exceed the specified chip footprint and returns issues
+    /// for any that are fully or partially outside the boundary (0,0) to
+    /// (<paramref name="chipWidthMicrometers"/>, <paramref name="chipHeightMicrometers"/>).
+    /// Components outside bounds are flagged with <see cref="DesignIssueType.OutOfBounds"/>;
+    /// they are never moved or deleted.
+    /// </summary>
+    /// <param name="components">All placed components to check.</param>
+    /// <param name="chipWidthMicrometers">Chip boundary width in micrometers.</param>
+    /// <param name="chipHeightMicrometers">Chip boundary height in micrometers.</param>
+    /// <returns>List of out-of-bounds issues, empty when all components are within bounds.</returns>
+    public List<DesignIssue> ValidateComponentBounds(
+        IEnumerable<Component> components,
+        double chipWidthMicrometers,
+        double chipHeightMicrometers)
+    {
+        ArgumentNullException.ThrowIfNull(components);
+
+        var issues = new List<DesignIssue>();
+
+        foreach (var component in components)
+        {
+            double right  = component.PhysicalX + component.WidthMicrometers;
+            double bottom = component.PhysicalY + component.HeightMicrometers;
+
+            bool outOfBounds = component.PhysicalX < 0
+                || component.PhysicalY < 0
+                || right  > chipWidthMicrometers
+                || bottom > chipHeightMicrometers;
+
+            if (!outOfBounds) continue;
+
+            double centerX = component.PhysicalX + component.WidthMicrometers / 2;
+            double centerY = component.PhysicalY + component.HeightMicrometers / 2;
+            double wMm = chipWidthMicrometers  / 1000.0;
+            double hMm = chipHeightMicrometers / 1000.0;
+            string name = component.HumanReadableName ?? component.Identifier;
+
+            issues.Add(new DesignIssue(
+                DesignIssueType.OutOfBounds,
+                connection: null,
+                x: centerX,
+                y: centerY,
+                // Invariant culture: '5.0' is part of the test contract and the user-facing
+                // unit format. Without this, de-DE / fr-FR machines render '5,0'.
+                description: string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)")));
+        }
+
+        return issues;
     }
 
     /// <summary>

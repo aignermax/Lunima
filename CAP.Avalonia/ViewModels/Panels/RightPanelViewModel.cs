@@ -7,6 +7,7 @@ using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Import;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;

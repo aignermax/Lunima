@@ -6,6 +6,7 @@ using CAP_Core.Components.Connections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ComponentGroup = CAP_Core.Components.Core.ComponentGroup;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP.Avalonia.ViewModels.Diagnostics;
 
@@ -55,13 +56,20 @@ public partial class DesignValidationViewModel : ObservableObject
 
     /// <summary>
     /// Runs design validation on the provided connections.
-    /// Detects invalid geometry, blocked paths, and overlaps with frozen group paths.
+    /// Detects invalid geometry, blocked paths, overlaps with frozen group paths,
+    /// and (when chip bounds are provided) out-of-bounds component placement.
     /// </summary>
     /// <param name="connections">Waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen paths are checked for overlap. Optional.</param>
+    /// <param name="allComponents">All placed components checked against chip bounds. Optional.</param>
+    /// <param name="chipWidthMicrometers">Chip boundary width; ignored when ≤0. Optional.</param>
+    /// <param name="chipHeightMicrometers">Chip boundary height; ignored when ≤0. Optional.</param>
     public void RunValidation(
         IEnumerable<WaveguideConnection> connections,
-        IEnumerable<ComponentGroup>? groups = null)
+        IEnumerable<ComponentGroup>? groups = null,
+        IEnumerable<Component>? allComponents = null,
+        double chipWidthMicrometers = 0,
+        double chipHeightMicrometers = 0)
     {
         Issues.Clear();
         CurrentIndex = -1;
@@ -72,8 +80,15 @@ public partial class DesignValidationViewModel : ObservableObject
             : _validator.Validate(connections);
 
         foreach (var issue in results)
-        {
             Issues.Add(issue);
+
+        if (allComponents is not null && chipWidthMicrometers > 0 && chipHeightMicrometers > 0)
+        {
+            var boundsIssues = _validator.ValidateComponentBounds(
+                allComponents, chipWidthMicrometers, chipHeightMicrometers);
+
+            foreach (var issue in boundsIssues)
+                Issues.Add(issue);
         }
 
         HasIssues = Issues.Count > 0;

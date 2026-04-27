@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:settings="using:CAP.Avalonia.ViewModels.Settings"
+        xmlns:vmCanvas="using:CAP.Avalonia.ViewModels.Canvas"
         xmlns:vmUpdate="using:CAP.Avalonia.ViewModels.Update"
         xmlns:vmExport="using:CAP.Avalonia.ViewModels.Export"
         xmlns:vmAi="using:CAP.Avalonia.ViewModels.AI"
@@ -219,6 +220,54 @@
 
                             <TextBlock Text="{Binding StatusText}"
                                        Foreground="Gray" FontSize="11"
+                                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- Chip Size — design-wide footprint of the PIC -->
+                    <DataTemplate DataType="{x:Type vmCanvas:ChipSizeViewModel}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Chip Size" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4"/>
+                            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
+                                Sets the physical footprint of the PIC chip. Components placed
+                                outside the boundary are flagged in Design Checks but not moved.
+                                Range: 0.25–100 mm per dimension.
+                            </TextBlock>
+
+                            <TextBlock Text="Preset:" Foreground="Gray" FontSize="12" Margin="0,4,0,2"/>
+                            <ComboBox ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset}"
+                                      DisplayMemberBinding="{Binding Name}"
+                                      HorizontalAlignment="Stretch"/>
+
+                            <TextBlock Text="Width (mm):" Foreground="Gray" FontSize="12" Margin="0,8,0,2"/>
+                            <NumericUpDown Value="{Binding WidthMillimeters}"
+                                           Minimum="0.25" Maximum="100"
+                                           Increment="1" FormatString="F2"
+                                           HorizontalAlignment="Stretch"/>
+
+                            <TextBlock Text="Height (mm):" Foreground="Gray" FontSize="12" Margin="0,8,0,2"/>
+                            <NumericUpDown Value="{Binding HeightMillimeters}"
+                                           Minimum="0.25" Maximum="100"
+                                           Increment="1" FormatString="F2"
+                                           HorizontalAlignment="Stretch"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="Grid: " Foreground="Gray" FontSize="11"/>
+                                <TextBlock Text="{Binding TileColumns}" Foreground="LightGray" FontSize="11"/>
+                                <TextBlock Text=" × " Foreground="Gray" FontSize="11"/>
+                                <TextBlock Text="{Binding TileRows}" Foreground="LightGray" FontSize="11"/>
+                                <TextBlock Text=" tiles (250 µm pitch)" Foreground="Gray" FontSize="11"/>
+                            </StackPanel>
+
+                            <Button Content="Apply"
+                                    Command="{Binding ApplyCommand}"
+                                    HorizontalAlignment="Left" Padding="16,4"
+                                    Background="#3d5d5d"
+                                    Margin="0,12,0,0"/>
+
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="LightGreen" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </DataTemplate>

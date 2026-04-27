@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CAP_Core;
 using CAP_Core.Update;
 
 namespace CAP.Avalonia.Services;
@@ -10,13 +11,15 @@ namespace CAP.Avalonia.Services;
 public class UserPreferencesService
 {
     private readonly string _preferencesFilePath;
+    private readonly ErrorConsoleService? _errorConsole;
     private UserPreferences _preferences;
 
-    public UserPreferencesService()
+    public UserPreferencesService(ErrorConsoleService? errorConsole = null)
     {
         var appDataDir = GetAppDataDirectory();
         Directory.CreateDirectory(appDataDir);
         _preferencesFilePath = Path.Combine(appDataDir, "user-preferences.json");
+        _errorConsole = errorConsole;
         _preferences = LoadPreferences();
     }
 
@@ -24,9 +27,10 @@ public class UserPreferencesService
     /// Test constructor that uses a custom file path.
     /// Used by unit tests to avoid polluting user preferences.
     /// </summary>
-    internal UserPreferencesService(string testFilePath)
+    internal UserPreferencesService(string testFilePath, ErrorConsoleService? errorConsole = null)
     {
         _preferencesFilePath = testFilePath;
+        _errorConsole = errorConsole;
         _preferences = LoadPreferences();
     }
 
@@ -40,31 +44,62 @@ public class UserPreferencesService
     }
 
     /// <summary>
-    /// Loads preferences from disk or creates defaults.
+    /// Loads preferences from disk or creates defaults. On corruption the bad file is renamed
+    /// to {filename}.bak so the next Save() doesn't overwrite the user's data, and the failure
+    /// is logged to the error console (if available).
     /// </summary>
     private UserPreferences LoadPreferences()
     {
+        if (!File.Exists(_preferencesFilePath))
+            return new UserPreferences();
+
         try
         {
-            if (File.Exists(_preferencesFilePath))
-            {
-                var json = File.ReadAllText(_preferencesFilePath);
-                var prefs = JsonSerializer.Deserialize<UserPreferences>(json);
-                return prefs ?? new UserPreferences();
-            }
+            var json = File.ReadAllText(_preferencesFilePath);
+            var prefs = JsonSerializer.Deserialize<UserPreferences>(json);
+            return prefs ?? new UserPreferences();
         }
-        catch
+        catch (JsonException ex)
         {
-            // If load fails, use defaults
+            BackupAndLog(ex, "Preferences file is corrupted");
+        }
+        catch (IOException ex)
+        {
+            _errorConsole?.LogError($"Could not read preferences from '{_preferencesFilePath}': {ex.Message}", ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _errorConsole?.LogError($"Access denied reading preferences from '{_preferencesFilePath}': {ex.Message}", ex);
         }
 
         return new UserPreferences();
     }
 
+    private void BackupAndLog(Exception ex, string reason)
+    {
+        var backupPath = _preferencesFilePath + ".bak";
+        try
+        {
+            File.Move(_preferencesFilePath, backupPath, overwrite: true);
+            _errorConsole?.LogError(
+                $"{reason}. Original kept at '{backupPath}'; defaults will be used. ({ex.Message})", ex);
+        }
+        catch (IOException backupEx)
+        {
+            _errorConsole?.LogError(
+                $"{reason} and backup also failed ({backupEx.Message}). Preferences will reset to defaults.", ex);
+        }
+        catch (UnauthorizedAccessException backupEx)
+        {
+            _errorConsole?.LogError(
+                $"{reason} and backup also failed ({backupEx.Message}). Preferences will reset to defaults.", ex);
+        }
+    }
+
     /// <summary>
-    /// Saves current preferences to disk.
+    /// Saves current preferences to disk. Returns true on success; logs and returns false otherwise.
     /// </summary>
-    public void Save()
+    public bool Save()
     {
         try
         {
@@ -73,11 +108,17 @@ public class UserPreferencesService
                 WriteIndented = true
             });
             File.WriteAllText(_preferencesFilePath, json);
+            return true;
         }
-        catch
+        catch (IOException ex)
         {
-            // Fail silently - preferences are not critical
+            _errorConsole?.LogWarning($"Could not save preferences to '{_preferencesFilePath}': {ex.Message}");
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            _errorConsole?.LogWarning($"Access denied saving preferences to '{_preferencesFilePath}': {ex.Message}");
+        }
+        return false;
     }
 
     /// <summary>
@@ -218,6 +259,28 @@ public class UserPreferencesService
     }
 
     /// <summary>
+    /// Gets the default chip width in millimeters used for new projects.
+    /// Falls back to 5 mm if not configured.
+    /// </summary>
+    public double GetDefaultChipWidthMm() => _preferences.DefaultChipWidthMm;
+
+    /// <summary>
+    /// Gets the default chip height in millimeters used for new projects.
+    /// Falls back to 5 mm if not configured.
+    /// </summary>
+    public double GetDefaultChipHeightMm() => _preferences.DefaultChipHeightMm;
+
+    /// <summary>
+    /// Sets the default chip dimensions (in millimeters) used for new projects and saves.
+    /// </summary>
+    public void SetDefaultChipSize(double widthMm, double heightMm)
+    {
+        _preferences.DefaultChipWidthMm  = widthMm;
+        _preferences.DefaultChipHeightMm = heightMm;
+        Save();
+    }
+
+    /// <summary>
     /// Clears any skipped update version and saves preferences.
     /// </summary>
     public void ClearSkippedUpdateVersion()
@@ -295,4 +358,14 @@ public class UserPreferences
     /// Empty string means no key is configured.
     /// </summary>
     public string AiApiKey { get; set; } = "";
+
+    /// <summary>
+    /// Default chip width in millimeters for new projects (default 5 mm).
+    /// </summary>
+    public double DefaultChipWidthMm { get; set; } = 5.0;
+
+    /// <summary>
+    /// Default chip height in millimeters for new projects (default 5 mm).
+    /// </summary>
+    public double DefaultChipHeightMm { get; set; } = 5.0;
 }

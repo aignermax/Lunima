@@ -21,7 +21,13 @@ public enum DesignIssueType
     /// Two waveguide paths physically overlap, which causes fabrication errors.
     /// This includes regular connections crossing frozen group paths.
     /// </summary>
-    OverlappingPaths
+    OverlappingPaths,
+
+    /// <summary>
+    /// A component is placed outside the configured chip boundary.
+    /// The component must be moved back into bounds before fabrication.
+    /// </summary>
+    OutOfBounds
 }
 
 /// <summary>

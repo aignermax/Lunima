@@ -127,6 +127,12 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public ErrorConsoleService ErrorConsole { get; }
 
+    /// <summary>
+    /// Chip-size ViewModel. Singleton — same instance is bound by the Settings window
+    /// page and consulted here for save/load and design-checks bounds.
+    /// </summary>
+    public ViewModels.Canvas.ChipSizeViewModel ChipSize { get; }
+
     public MainViewModel(
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
@@ -145,13 +151,15 @@ public partial class MainViewModel : ObservableObject
         ViewportControlViewModel viewportControl,
         PdkOffsetEditorViewModel pdkOffsetEditor,
         ViewModels.Export.PhotonTorchExportViewModel photonTorchExport,
-        ViewModels.Export.VerilogAExportViewModel verilogAExport)
+        ViewModels.Export.VerilogAExportViewModel verilogAExport,
+        ViewModels.Canvas.ChipSizeViewModel chipSize)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
         _canvas = canvas;
         PdkOffsetEditor = pdkOffsetEditor;
         ErrorConsole = errorConsoleService;
+        ChipSize = chipSize;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         Update = updateViewModel;
 
@@ -363,6 +371,10 @@ public partial class MainViewModel : ObservableObject
             var (vpWidth, vpHeight) = ViewportControl.GetViewportSize?.Invoke() ?? (w, h);
             ViewportControl.ZoomToFit(vpWidth, vpHeight);
         };
+
+        // Restore chip size from saved file without overwriting the user preference default
+        FileOperations.ApplyChipSizeAfterLoad = (widthUm, heightUm) =>
+            ChipSize.ApplyFromMicrometers(widthUm, heightUm);
 
         // Auto-check Python/Nazca environment on startup
         // If no custom path is set, trigger auto-discovery
@@ -604,7 +616,17 @@ public partial class MainViewModel : ObservableObject
             .OfType<CAP_Core.Components.Core.ComponentGroup>()
             .ToList();
 
-        RightPanel.DesignValidation.RunValidation(connections, groups);
+        var allComponents = Canvas.Components
+            .Select(c => c.Component)
+            .ToList();
+
+        RightPanel.DesignValidation.RunValidation(
+            connections,
+            groups,
+            allComponents,
+            ChipSize.CurrentWidthMicrometers,
+            ChipSize.CurrentHeightMicrometers);
+
         StatusText = RightPanel.DesignValidation.StatusText;
     }
 }
@@ -656,6 +678,18 @@ public class DesignFileData
     /// Null or empty for designs without external data.
     /// </summary>
     public List<ExternalReferenceData>? ExternalReferences { get; set; }
+
+    /// <summary>
+    /// Chip width in micrometers as configured in the Chip Size settings.
+    /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
+    /// </summary>
+    public double? ChipWidthMicrometers { get; set; }
+
+    /// <summary>
+    /// Chip height in micrometers as configured in the Chip Size settings.
+    /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
+    /// </summary>
+    public double? ChipHeightMicrometers { get; set; }
 }
 
 /// <summary>

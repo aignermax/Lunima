@@ -133,6 +133,8 @@ public partial class App : Application
         services.AddTransient<ComponentLibraryViewModel>();
 
         // Register sub-ViewModels (Right panel)
+        // Singleton so the Settings-window page and the RightPanel reference share state.
+        services.AddSingleton<ChipSizeViewModel>();
         services.AddTransient<ParameterSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();
@@ -161,6 +163,7 @@ public partial class App : Application
         services.AddTransient<ISettingsPage, GridSnapSettingsPage>();
         services.AddTransient<ISettingsPage, UpdateSettingsPage>();
         services.AddTransient<ISettingsPage, GdsExportSettingsPage>();
+        services.AddTransient<ISettingsPage, ChipSizeSettingsPage>();
         services.AddTransient<ISettingsPage, AiAssistantSettingsPage>();
         services.AddTransient<SettingsWindowViewModel>();
 

@@ -87,6 +87,12 @@ public partial class FileOperationsViewModel : ObservableObject
     public Action<double, double>? ZoomToFitAfterLoad { get; set; }
 
     /// <summary>
+    /// Callback to apply a chip size (in micrometers) after loading a project.
+    /// Parameters: (widthMicrometers, heightMicrometers).
+    /// </summary>
+    public Action<double, double>? ApplyChipSizeAfterLoad { get; set; }
+
+    /// <summary>
     /// File dialog service for showing open/save dialogs.
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
@@ -224,6 +230,8 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.Metadata = BuildMetadataForSave();
             if (StoredSMatrices.Count > 0)
                 designData.SMatrices = new Dictionary<string, ComponentSMatrixData>(StoredSMatrices);
+            designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
+            designData.ChipHeightMicrometers = _canvas.ChipMaxY;
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -572,6 +580,24 @@ public partial class FileOperationsViewModel : ObservableObject
                 foreach (var conn in _canvas.Connections)
                 {
                     conn.NotifyPathChanged();
+                }
+
+                // Restore chip size if saved. The two fields are written together by Save(), so
+                // a half-present pair indicates a truncated/edited file — warn the user via the
+                // error console rather than silently applying half the chip size.
+                bool hasWidth  = designData.ChipWidthMicrometers.HasValue;
+                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
+                if (hasWidth && hasHeight)
+                {
+                    ApplyChipSizeAfterLoad?.Invoke(
+                        designData.ChipWidthMicrometers!.Value,
+                        designData.ChipHeightMicrometers!.Value);
+                }
+                else if (hasWidth || hasHeight)
+                {
+                    _errorConsole?.LogWarning(
+                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
+                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
                 }
 
                 // Preserve PIR metadata so Created date survives subsequent saves
