@@ -28,7 +28,7 @@ public class PhotonTorchExportFormat : IExportFormat
 
     /// <summary>
     /// Callback that opens the PhotonTorch export options dialog.
-    /// Must be set from the UI layer (e.g., MainWindow.axaml.cs::WireExportDialogs)
+    /// Must be set from the UI layer (see <c>Views.Dialogs.ExportDialogWiring.Wire</c>)
     /// before the command is invoked. Invoking the command before this is wired
     /// throws <see cref="InvalidOperationException"/>.
     /// </summary>
@@ -45,7 +45,7 @@ public class PhotonTorchExportFormat : IExportFormat
         if (ShowOptionsDialogAsync == null)
             throw new InvalidOperationException(
                 $"{nameof(PhotonTorchExportFormat)}.{nameof(ShowOptionsDialogAsync)} has not been wired. " +
-                "The UI layer (MainWindow.axaml.cs::WireExportDialogs) must set this callback before the export command can run.");
+                "The UI layer (Views.Dialogs.ExportDialogWiring.Wire) must set this callback before the export command can run.");
         await ShowOptionsDialogAsync();
     }
 }

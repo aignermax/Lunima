@@ -1,3 +1,4 @@
+using CAP_Core;
 using CAP_Core.Export;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -15,6 +16,7 @@ public partial class PhotonTorchExportViewModel : ObservableObject
 {
     private readonly PhotonTorchExporter _exporter;
     private readonly DesignCanvasViewModel _canvas;
+    private readonly ErrorConsoleService? _errorConsole;
 
     /// <summary>Wavelength in nanometers used for simulation.</summary>
     [ObservableProperty]
@@ -52,10 +54,16 @@ public partial class PhotonTorchExportViewModel : ObservableObject
     /// <summary>Initializes a new instance of <see cref="PhotonTorchExportViewModel"/>.</summary>
     /// <param name="exporter">Core PhotonTorch script generator.</param>
     /// <param name="canvas">Design canvas providing components and connections.</param>
-    public PhotonTorchExportViewModel(PhotonTorchExporter exporter, DesignCanvasViewModel canvas)
+    /// <param name="errorConsole">Optional service for surfacing best-effort failures (e.g. auto-open folder)
+    /// to the bottom-panel error console without overwriting the user-facing status message.</param>
+    public PhotonTorchExportViewModel(
+        PhotonTorchExporter exporter,
+        DesignCanvasViewModel canvas,
+        ErrorConsoleService? errorConsole = null)
     {
         _exporter = exporter;
         _canvas = canvas;
+        _errorConsole = errorConsole;
     }
 
     /// <summary>
@@ -135,6 +143,9 @@ public partial class PhotonTorchExportViewModel : ObservableObject
         }
     }
 
+    // Best effort: a failure to auto-open the folder must not look like an export failure
+    // (the export already succeeded and the user-facing StatusText reflects that). Log to the
+    // error console instead so the failure is still discoverable for troubleshooting.
     private void OpenContainingDirectoryInFileManager(string filePath)
     {
         var directory = Path.GetDirectoryName(filePath);
@@ -148,13 +159,13 @@ public partial class PhotonTorchExportViewModel : ObservableObject
                 UseShellExecute = true
             });
         }
-        catch (System.ComponentModel.Win32Exception)
+        catch (System.ComponentModel.Win32Exception ex)
         {
-            // Best effort — failing to open the folder is not an export failure.
+            _errorConsole?.LogWarning($"Could not auto-open output folder '{directory}': {ex.Message}");
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex)
         {
-            // Best effort — failing to open the folder is not an export failure.
+            _errorConsole?.LogWarning($"Could not auto-open output folder '{directory}': {ex.Message}");
         }
     }
 

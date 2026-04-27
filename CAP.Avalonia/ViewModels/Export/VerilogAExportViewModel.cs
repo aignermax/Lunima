@@ -1,6 +1,7 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CAP_Core;
 using CAP_Core.Export;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -8,7 +9,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 namespace CAP.Avalonia.ViewModels.Export;
 
 /// <summary>
-/// ViewModel for Verilog-A / SPICE export panel.
+/// ViewModel for the Verilog-A / SPICE export options dialog.
 /// Allows exporting photonic circuits for co-simulation with electronic circuits.
 /// </summary>
 public partial class VerilogAExportViewModel : ObservableObject
@@ -16,6 +17,7 @@ public partial class VerilogAExportViewModel : ObservableObject
     private readonly VerilogAExporter _exporter;
     private readonly VerilogAFileWriter _fileWriter;
     private readonly DesignCanvasViewModel _canvas;
+    private readonly ErrorConsoleService? _errorConsole;
 
     [ObservableProperty]
     private int _wavelengthNm = 1550;
@@ -51,14 +53,18 @@ public partial class VerilogAExportViewModel : ObservableObject
     public IFileDialogService? FileDialogService { get; set; }
 
     /// <summary>Initializes the ViewModel with required services.</summary>
+    /// <param name="errorConsole">Optional service for surfacing best-effort failures (e.g. auto-open folder)
+    /// to the bottom-panel error console without overwriting the user-facing status message.</param>
     public VerilogAExportViewModel(
         VerilogAExporter exporter,
         VerilogAFileWriter fileWriter,
-        DesignCanvasViewModel canvas)
+        DesignCanvasViewModel canvas,
+        ErrorConsoleService? errorConsole = null)
     {
         _exporter = exporter;
         _fileWriter = fileWriter;
         _canvas = canvas;
+        _errorConsole = errorConsole;
     }
 
     /// <summary>
@@ -101,6 +107,10 @@ public partial class VerilogAExportViewModel : ObservableObject
         IsExporting = true;
         StatusText = "Exporting...";
         LastExportSucceeded = false;
+        // Reset state from any previous run so a failure here doesn't leave the
+        // dialog pointing at stale data (e.g., last successful directory/file count).
+        LastFileCount = 0;
+        LastOutputDirectory = string.Empty;
 
         try
         {
@@ -166,6 +176,9 @@ public partial class VerilogAExportViewModel : ObservableObject
         OpenDirectoryInFileManager(LastOutputDirectory);
     }
 
+    // Best effort: a failure to auto-open the folder must not overwrite the success
+    // StatusText (the export already succeeded). Log to the error console instead so
+    // the failure is still discoverable for troubleshooting.
     private void OpenDirectoryInFileManager(string directory)
     {
         try
@@ -178,11 +191,11 @@ public partial class VerilogAExportViewModel : ObservableObject
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            StatusText = $"Could not open output directory: {ex.Message}";
+            _errorConsole?.LogWarning($"Could not auto-open output folder '{directory}': {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
-            StatusText = $"Could not open output directory: {ex.Message}";
+            _errorConsole?.LogWarning($"Could not auto-open output folder '{directory}': {ex.Message}");
         }
     }
 

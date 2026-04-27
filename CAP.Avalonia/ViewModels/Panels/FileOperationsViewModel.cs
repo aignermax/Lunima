@@ -66,7 +66,8 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// ViewModel for Verilog-A / SPICE export functionality. Shared singleton
-    /// so the top-toolbar button and the settings page see the same state.
+    /// so this property and the export-options dialog (VerilogAExportDialog,
+    /// wired via <c>Views.Dialogs.ExportDialogWiring</c>) see the same state.
     /// </summary>
     public VerilogAExportViewModel VerilogAExport { get; }
 
@@ -1095,7 +1096,9 @@ public partial class FileOperationsViewModel : ObservableObject
             if (!File.Exists(filePath))
                 return;
 
-            // Try to open with default application first
+            // Try to open with default application first; on systems without a registered
+            // handler Process.Start raises Win32Exception. Fall back to selecting the file
+            // in the system file manager so the user can still locate the export.
             try
             {
                 var startInfo = new System.Diagnostics.ProcessStartInfo
@@ -1106,9 +1109,9 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 System.Diagnostics.Process.Start(startInfo);
             }
-            catch
+            catch (System.ComponentModel.Win32Exception ex)
             {
-                // No default app - open file explorer and select the file
+                _errorConsole?.LogWarning($"No default app for {Path.GetFileName(filePath)} ({ex.Message}). Falling back to file explorer.");
                 OpenFileExplorer(filePath);
             }
         }

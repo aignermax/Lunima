@@ -104,7 +104,7 @@ public class ExportMenuViewModelTests
     [Fact]
     public void VerilogAExportFormat_HasCorrectMetadata()
     {
-        var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
+        var verilogAVm = FormatAdapterTestHelpers.CreateVerilogAExportVm();
         var format = new VerilogAExportFormat(verilogAVm);
 
         format.Name.ShouldBe("Verilog-A / SPICE");
@@ -131,7 +131,7 @@ public class ExportMenuViewModelTests
     [Fact]
     public async Task VerilogAExportFormat_WithoutDialogWired_Throws()
     {
-        var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
+        var verilogAVm = FormatAdapterTestHelpers.CreateVerilogAExportVm();
         var format = new VerilogAExportFormat(verilogAVm);
 
         await Should.ThrowAsync<InvalidOperationException>(
@@ -157,7 +157,7 @@ public class ExportMenuViewModelTests
     [Fact]
     public async Task VerilogAExportFormat_InvokesDialogCallbackExactlyOnce()
     {
-        var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
+        var verilogAVm = FormatAdapterTestHelpers.CreateVerilogAExportVm();
         var format = new VerilogAExportFormat(verilogAVm);
         var invocationCount = 0;
         format.ShowOptionsDialogAsync = () =>
@@ -174,7 +174,7 @@ public class ExportMenuViewModelTests
     [Fact]
     public void VerilogAExportFormat_ExposesOptionsViewModel()
     {
-        var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
+        var verilogAVm = FormatAdapterTestHelpers.CreateVerilogAExportVm();
         var format = new VerilogAExportFormat(verilogAVm);
 
         format.OptionsViewModel.ShouldBeSameAs(verilogAVm);
@@ -184,7 +184,7 @@ public class ExportMenuViewModelTests
     public void ExportMenu_ContainsAllFourFormats()
     {
         var cmd = new AsyncRelayCommand(() => Task.CompletedTask);
-        var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
+        var verilogAVm = FormatAdapterTestHelpers.CreateVerilogAExportVm();
 
         var formats = new IExportFormat[]
         {
@@ -222,7 +222,7 @@ public class ExportMenuViewModelTests
 /// <summary>
 /// Factory helpers shared across format adapter tests.
 /// </summary>
-internal static class FormatAdapterTests
+internal static class FormatAdapterTestHelpers
 {
     internal static CAP.Avalonia.ViewModels.Export.VerilogAExportViewModel CreateVerilogAExportVm()
     {

@@ -120,6 +120,13 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public PdkOffsetEditorViewModel PdkOffsetEditor { get; }
 
+    /// <summary>
+    /// Bottom-panel error console service. Exposed so view-layer wiring helpers
+    /// (e.g. <see cref="CAP.Avalonia.Views.Dialogs.ExportDialogWiring"/>) can persist
+    /// failures that would otherwise only flash through the ephemeral status bar.
+    /// </summary>
+    public ErrorConsoleService ErrorConsole { get; }
+
     public MainViewModel(
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
@@ -144,6 +151,7 @@ public partial class MainViewModel : ObservableObject
         CommandManager = commandManager;
         _canvas = canvas;
         PdkOffsetEditor = pdkOffsetEditor;
+        ErrorConsole = errorConsoleService;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         Update = updateViewModel;
 

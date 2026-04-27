@@ -4,7 +4,8 @@ namespace CAP.Avalonia.ViewModels.Export.Formats;
 
 /// <summary>
 /// Export format for Verilog-A / SPICE co-simulation netlists.
-/// Opens an options dialog (output directory, circuit name, wavelength) before exporting.
+/// Opens an options dialog (wavelength, test bench) before exporting; the file
+/// path is then chosen via a Save-File-Dialog inside the export flow.
 /// </summary>
 public class VerilogAExportFormat : IExportFormat
 {
@@ -28,14 +29,14 @@ public class VerilogAExportFormat : IExportFormat
 
     /// <summary>
     /// Callback that opens the Verilog-A export options dialog.
-    /// Must be set from the UI layer (e.g., MainWindow.axaml.cs::WireExportDialogs)
+    /// Must be set from the UI layer (see <c>Views.Dialogs.ExportDialogWiring.Wire</c>)
     /// before the command is invoked. Invoking the command before this is wired
     /// throws <see cref="InvalidOperationException"/>.
     /// </summary>
     public Func<Task>? ShowOptionsDialogAsync { get; set; }
 
     /// <summary>
-    /// The export options ViewModel — exposed so MainWindow.axaml.cs::WireExportDialogs
+    /// The export options ViewModel — exposed so <c>Views.Dialogs.ExportDialogWiring.Wire</c>
     /// can inject it as the dialog DataContext. Encapsulation is intentionally relaxed
     /// here because the dialog needs a reference to the underlying VM.
     /// </summary>
@@ -54,7 +55,7 @@ public class VerilogAExportFormat : IExportFormat
         if (ShowOptionsDialogAsync == null)
             throw new InvalidOperationException(
                 $"{nameof(VerilogAExportFormat)}.{nameof(ShowOptionsDialogAsync)} has not been wired. " +
-                "The UI layer (MainWindow.axaml.cs::WireExportDialogs) must set this callback before the export command can run.");
+                "The UI layer (Views.Dialogs.ExportDialogWiring.Wire) must set this callback before the export command can run.");
         await ShowOptionsDialogAsync();
     }
 }
