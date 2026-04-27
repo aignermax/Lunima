@@ -695,7 +695,8 @@ public class SimpleNazcaExporter
             // Keep dots (for module attribute access like demo.mmi2x2_dp), replace other invalid chars
             var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_.]", "_");
 
-            // Real PDK functions support arbitrary parameters — include them when present
+            // Forward stored parameters verbatim — the caller (component model)
+            // is responsible for ensuring they match the target PDK function's signature.
             var funcParams = comp.NazcaFunctionParameters;
             if (!string.IsNullOrEmpty(funcParams))
                 return $"{pythonFuncName}({funcParams})";
