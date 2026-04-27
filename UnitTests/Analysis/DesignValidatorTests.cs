@@ -276,6 +276,30 @@ public class DesignValidatorBoundsTests
     }
 
     [Fact]
+    public void ValidateComponentBounds_ComponentAtNegativeY_ReturnsIssue()
+    {
+        // Top-edge case — symmetric with the right/bottom/left tests above.
+        var comp = CreateComponentAt(0, -10);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result.Count.ShouldBe(1);
+        result[0].Type.ShouldBe(DesignIssueType.OutOfBounds);
+    }
+
+    [Fact]
+    public void ValidateComponentBounds_ComponentExactlyAtRightEdge_ReturnsNoIssue()
+    {
+        // Width=250 starts at x=4750 → right edge exactly at 5000. Half-open [0, ChipWidth]
+        // contract: equality is inside.
+        var comp = CreateComponentAt(4750, 0);
+
+        var result = _validator.ValidateComponentBounds(new[] { comp }, 5000, 5000);
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void ValidateComponentBounds_MultipleComponents_FlagsOnlyOutOfBounds()
     {
         var inside  = CreateComponentAt(0, 0);

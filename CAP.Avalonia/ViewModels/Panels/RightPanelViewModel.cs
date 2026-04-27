@@ -134,7 +134,6 @@ public partial class RightPanelViewModel : ObservableObject
         _preferencesService = preferencesService;
 
         ChipSize = chipSize;
-        ChipSize.Configure(canvas);
 
         Sweep = sweep;
         RoutingDiagnostics = routingDiagnostics;

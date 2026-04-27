@@ -121,7 +121,7 @@ public static class MainViewModelTestHelper
         return new RightPanelViewModel(
             canvas,
             preferencesService,
-            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(preferencesService),
+            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(preferencesService, canvas),
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
             new DesignValidationViewModel(),

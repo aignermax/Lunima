@@ -40,6 +40,33 @@ public class ChipSizeConfigurationTests
             new ChipSizeConfiguration(1000.0, height));
     }
 
+    [Fact]
+    public void Constructor_WithSubTileWidth_Throws()
+    {
+        // Smaller than one tile pitch — would silently produce a 0-tile grid.
+        var subTile = PhotonicConstants.GridSizeMicrometers - 1;
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new ChipSizeConfiguration(subTile, 1000.0));
+    }
+
+    [Fact]
+    public void Constructor_WithExcessiveWidth_Throws()
+    {
+        // Beyond MaxDimensionMicrometers — would cause A* grid allocation to OOM.
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new ChipSizeConfiguration(ChipSizeConfiguration.MaxDimensionMicrometers + 1, 1000.0));
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void Constructor_WithNonFiniteWidth_Throws(double width)
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new ChipSizeConfiguration(width, 1000.0));
+    }
+
     // ── Tile-count conversion ─────────────────────────────────────────────
 
     [Fact]
@@ -131,16 +158,22 @@ public class ChipSizeConfigurationTests
     [Fact]
     public void ChipSizePreset_IsCustom_ReturnsFalseForNamedPresets()
     {
-        var preset = new ChipSizePreset("5 × 5 mm", 5.0, 5.0);
+        var preset = new ChipSizePreset("5 × 5 mm", 5.0, 5.0, isCustom: false);
 
         preset.IsCustom.ShouldBeFalse();
     }
 
     [Fact]
-    public void ChipSizePreset_IsCustom_ReturnsTrueForZeroDimensions()
+    public void ChipSizePreset_IsCustom_ReturnsTrueWhenFlagSet()
     {
-        var sentinel = new ChipSizePreset("Custom", 0.0, 0.0);
+        var sentinel = new ChipSizePreset("Custom", 0.0, 0.0, isCustom: true);
 
         sentinel.IsCustom.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ChipSizeConfiguration_Custom_IsSameInstanceAsPresetsLastEntry()
+    {
+        ChipSizeConfiguration.Custom.ShouldBeSameAs(ChipSizeConfiguration.Presets[^1]);
     }
 }

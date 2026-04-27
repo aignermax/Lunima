@@ -582,12 +582,22 @@ public partial class FileOperationsViewModel : ObservableObject
                     conn.NotifyPathChanged();
                 }
 
-                // Restore chip size if saved; fall back to canvas default (5000 × 5000 μm)
-                if (designData.ChipWidthMicrometers.HasValue && designData.ChipHeightMicrometers.HasValue)
+                // Restore chip size if saved. The two fields are written together by Save(), so
+                // a half-present pair indicates a truncated/edited file — warn the user via the
+                // error console rather than silently applying half the chip size.
+                bool hasWidth  = designData.ChipWidthMicrometers.HasValue;
+                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
+                if (hasWidth && hasHeight)
                 {
                     ApplyChipSizeAfterLoad?.Invoke(
-                        designData.ChipWidthMicrometers.Value,
-                        designData.ChipHeightMicrometers.Value);
+                        designData.ChipWidthMicrometers!.Value,
+                        designData.ChipHeightMicrometers!.Value);
+                }
+                else if (hasWidth || hasHeight)
+                {
+                    _errorConsole?.LogWarning(
+                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
+                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
                 }
 
                 // Preserve PIR metadata so Created date survives subsequent saves

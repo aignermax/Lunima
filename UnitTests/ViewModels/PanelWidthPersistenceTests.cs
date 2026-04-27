@@ -59,7 +59,7 @@ public class PanelWidthPersistenceTests : IDisposable
     /// <summary>Creates a RightPanelViewModel with all required sub-VM dependencies.</summary>
     private RightPanelViewModel CreateRightPanelViewModel() =>
         new(_canvas, _preferencesService,
-            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(_preferencesService),
+            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(_preferencesService, _canvas),
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
             new DesignValidationViewModel(),

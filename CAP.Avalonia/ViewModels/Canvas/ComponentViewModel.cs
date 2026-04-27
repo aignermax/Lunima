@@ -45,13 +45,6 @@ public partial class ComponentViewModel : ObservableObject
     [ObservableProperty] private bool _isSelected;
 
     /// <summary>
-    /// Whether this component is outside the current chip boundary.
-    /// Set by <see cref="ChipSizeViewModel"/> when chip size changes.
-    /// Components flagged here retain their position — they must be moved back manually.
-    /// </summary>
-    [ObservableProperty] private bool _isOutOfBounds;
-
-    /// <summary>
     /// Whether this component is locked (cannot be moved, rotated, or deleted).
     /// </summary>
     public bool IsLocked => Component.IsLocked;

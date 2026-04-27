@@ -8,6 +8,8 @@
     <StackPanel>
         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
         <TextBlock Text="Chip Size:" Foreground="LightCyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Text="(0.25–100 mm; values outside this range are rejected on Apply.)"
+                   Foreground="Gray" FontSize="9" Margin="0,0,0,4" TextWrapping="Wrap"/>
 
         <!-- Preset dropdown -->
         <TextBlock Text="Preset:" Foreground="Gray" Margin="0,4,0,2" FontSize="10"/>
@@ -20,7 +22,7 @@
         <!-- Width -->
         <TextBlock Text="Width (mm):" Foreground="Gray" Margin="0,4,0,2" FontSize="10"/>
         <NumericUpDown Value="{Binding RightPanel.ChipSize.WidthMillimeters}"
-                       Minimum="0.1" Maximum="100"
+                       Minimum="0.25" Maximum="100"
                        Increment="1" FormatString="F2"
                        HorizontalAlignment="Stretch"
                        Margin="0,0,0,4"/>
@@ -28,7 +30,7 @@
         <!-- Height -->
         <TextBlock Text="Height (mm):" Foreground="Gray" Margin="0,4,0,2" FontSize="10"/>
         <NumericUpDown Value="{Binding RightPanel.ChipSize.HeightMillimeters}"
-                       Minimum="0.1" Maximum="100"
+                       Minimum="0.25" Maximum="100"
                        Increment="1" FormatString="F2"
                        HorizontalAlignment="Stretch"
                        Margin="0,0,0,6"/>

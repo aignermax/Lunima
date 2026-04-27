@@ -1,3 +1,4 @@
+using System.Globalization;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using Component = CAP_Core.Components.Core.Component;
@@ -141,7 +142,11 @@ public class DesignValidator
                 connection: null,
                 x: centerX,
                 y: centerY,
-                description: $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)"));
+                // Invariant culture: '5.0' is part of the test contract and the user-facing
+                // unit format. Without this, de-DE / fr-FR machines render '5,0'.
+                description: string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)")));
         }
 
         return issues;
