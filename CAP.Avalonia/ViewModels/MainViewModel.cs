@@ -91,9 +91,6 @@ public partial class MainViewModel : ObservableObject
     /// <summary>PhotonTorch format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
     public PhotonTorchExportFormat PhotonTorchExportFormat { get; private set; } = null!;
 
-    /// <summary>GDS format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
-    public GdsExportFormat GdsExportFormat { get; private set; } = null!;
-
     /// <summary>Verilog-A format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
     public VerilogAExportFormat VerilogAExportFormat { get; private set; } = null!;
 
@@ -109,6 +106,7 @@ public partial class MainViewModel : ObservableObject
         {
             FileOperations.FileDialogService = value;
             FileOperations.PhotonTorchExport.FileDialogService = value;
+            FileOperations.VerilogAExport.FileDialogService = value;
             LeftPanel.FileDialogService = value;
             RightPanel.SParameterImport.FileDialogService = value;
         }
@@ -164,14 +162,12 @@ public partial class MainViewModel : ObservableObject
 
         // Build the unified Export menu (add new IExportFormat here for new formats)
         PhotonTorchExportFormat = new PhotonTorchExportFormat();
-        GdsExportFormat = new GdsExportFormat();
         VerilogAExportFormat = new VerilogAExportFormat(verilogAExport);
         ExportMenu = new ExportMenuViewModel(new IExportFormat[]
         {
             new NazcaExportFormat(FileOperations.ExportNazcaCommand),
             new PicWaveExportFormat(FileOperations.ExportPicWaveCommand),
             PhotonTorchExportFormat,
-            GdsExportFormat,
             VerilogAExportFormat,
         });
 

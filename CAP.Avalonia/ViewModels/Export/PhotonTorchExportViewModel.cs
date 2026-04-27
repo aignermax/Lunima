@@ -108,6 +108,8 @@ public partial class PhotonTorchExportViewModel : ObservableObject
 
             LastExportStatus = $"Exported to {Path.GetFileName(filePath)}";
             UpdateStatus?.Invoke($"PhotonTorch script saved: {Path.GetFileName(filePath)}");
+
+            OpenContainingDirectoryInFileManager(filePath);
         }
         catch (InvalidOperationException ex)
         {
@@ -130,6 +132,29 @@ public partial class PhotonTorchExportViewModel : ObservableObject
         finally
         {
             IsExporting = false;
+        }
+    }
+
+    private void OpenContainingDirectoryInFileManager(string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = directory,
+                UseShellExecute = true
+            });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Best effort — failing to open the folder is not an export failure.
+        }
+        catch (InvalidOperationException)
+        {
+            // Best effort — failing to open the folder is not an export failure.
         }
     }
 

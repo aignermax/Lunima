@@ -102,17 +102,6 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
-    public void GdsExportFormat_HasCorrectMetadata()
-    {
-        var format = new GdsExportFormat();
-
-        format.Name.ShouldBe("GDS Layout");
-        format.Icon.ShouldBe("📐");
-        format.Description.ShouldNotBeNullOrEmpty();
-        format.ExportCommand.ShouldNotBeNull();
-    }
-
-    [Fact]
     public void VerilogAExportFormat_HasCorrectMetadata()
     {
         var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
@@ -134,15 +123,6 @@ public class ExportMenuViewModelTests
     public async Task PhotonTorchExportFormat_WithoutDialogWired_Throws()
     {
         var format = new PhotonTorchExportFormat();
-
-        await Should.ThrowAsync<InvalidOperationException>(
-            async () => await format.ExportCommand.ExecuteAsync(null));
-    }
-
-    [Fact]
-    public async Task GdsExportFormat_WithoutDialogWired_Throws()
-    {
-        var format = new GdsExportFormat();
 
         await Should.ThrowAsync<InvalidOperationException>(
             async () => await format.ExportCommand.ExecuteAsync(null));
@@ -192,22 +172,6 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
-    public async Task GdsExportFormat_InvokesDialogCallbackExactlyOnce()
-    {
-        var format = new GdsExportFormat();
-        var invocationCount = 0;
-        format.ShowOptionsDialogAsync = () =>
-        {
-            invocationCount++;
-            return Task.CompletedTask;
-        };
-
-        await format.ExportCommand.ExecuteAsync(null);
-
-        invocationCount.ShouldBe(1);
-    }
-
-    [Fact]
     public void VerilogAExportFormat_ExposesOptionsViewModel()
     {
         var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
@@ -217,7 +181,7 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
-    public void ExportMenu_ContainsAllFiveFormats()
+    public void ExportMenu_ContainsAllFourFormats()
     {
         var cmd = new AsyncRelayCommand(() => Task.CompletedTask);
         var verilogAVm = FormatAdapterTests.CreateVerilogAExportVm();
@@ -227,32 +191,29 @@ public class ExportMenuViewModelTests
             new NazcaExportFormat(cmd),
             new PicWaveExportFormat(cmd),
             new PhotonTorchExportFormat(),
-            new GdsExportFormat(),
             new VerilogAExportFormat(verilogAVm),
         };
 
         var menu = new ExportMenuViewModel(formats);
 
-        menu.Formats.Count.ShouldBe(5);
+        menu.Formats.Count.ShouldBe(4);
         menu.Formats.Select(f => f.Name).ShouldContain("Nazca Python");
         menu.Formats.Select(f => f.Name).ShouldContain("PICWave");
         menu.Formats.Select(f => f.Name).ShouldContain("PhotonTorch");
-        menu.Formats.Select(f => f.Name).ShouldContain("GDS Layout");
         menu.Formats.Select(f => f.Name).ShouldContain("Verilog-A / SPICE");
     }
 
     [Fact]
-    public void MainViewModel_ExportMenu_HasFiveFormatsInExpectedOrder()
+    public void MainViewModel_ExportMenu_HasFourFormatsInExpectedOrder()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
 
-        vm.ExportMenu.Formats.Count.ShouldBe(5);
+        vm.ExportMenu.Formats.Count.ShouldBe(4);
         vm.ExportMenu.Formats.Select(f => f.Name).ShouldBe(new[]
         {
             "Nazca Python",
             "PICWave",
             "PhotonTorch",
-            "GDS Layout",
             "Verilog-A / SPICE",
         });
     }

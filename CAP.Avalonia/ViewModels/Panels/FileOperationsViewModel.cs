@@ -998,12 +998,14 @@ public partial class FileOperationsViewModel : ObservableObject
                 else if (result.Success)
                 {
                     UpdateStatus?.Invoke($"Exported to {Path.GetFileName(filePath)}");
+                    OpenFileExplorer(filePath);
                 }
                 else
                 {
                     // Log full Python error to Error Console for visibility
                     _errorConsole?.LogError($"GDS generation failed: {result.ErrorMessage}");
                     UpdateStatus?.Invoke($"Exported {Path.GetFileName(filePath)} (GDS generation failed: {result.ErrorMessage})");
+                    OpenFileExplorer(filePath);
                 }
             }
             catch (Exception ex)
@@ -1047,6 +1049,7 @@ public partial class FileOperationsViewModel : ObservableObject
             var script = _picWaveExporter.Export(components, connections);
             await File.WriteAllTextAsync(filePath, script);
             UpdateStatus?.Invoke($"Exported PICWave script: {Path.GetFileName(filePath)}");
+            OpenFileExplorer(filePath);
         }
         catch (Exception ex)
         {

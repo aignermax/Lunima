@@ -20,10 +20,6 @@ public static class ExportDialogWiring
             ShowSafelyAsync(vm, owner, "PhotonTorch",
                 () => new PhotonTorchExportDialog { DataContext = vm.FileOperations.PhotonTorchExport });
 
-        vm.GdsExportFormat.ShowOptionsDialogAsync = () =>
-            ShowSafelyAsync(vm, owner, "GDS",
-                () => new GdsExportDialog { DataContext = vm.FileOperations.GdsExport });
-
         vm.VerilogAExportFormat.ShowOptionsDialogAsync = () =>
             ShowSafelyAsync(vm, owner, "Verilog-A",
                 () => new VerilogAExportDialog { DataContext = vm.VerilogAExportFormat.OptionsViewModel });
