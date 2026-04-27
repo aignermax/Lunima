@@ -90,10 +90,11 @@ public partial class VerilogAExportViewModel : ObservableObject
                 return;
             }
 
+            var sanitizedName = SanitizeCircuitName(CircuitName);
             var options = new VerilogAExportOptions
             {
                 WavelengthNm = WavelengthNm,
-                CircuitName = SanitizeCircuitName(CircuitName),
+                CircuitName = sanitizedName,
                 IncludeTestBench = IncludeTestBench
             };
 
@@ -105,10 +106,13 @@ public partial class VerilogAExportViewModel : ObservableObject
                 return;
             }
 
-            await _fileWriter.WriteAsync(result, OutputDirectory);
+            // Write into a per-circuit subfolder so re-exporting a different circuit
+            // never overwrites a previous export (issue #493).
+            var circuitOutputDir = Path.Combine(OutputDirectory, sanitizedName);
+            await _fileWriter.WriteAsync(result, circuitOutputDir);
             LastFileCount = result.TotalFileCount;
             LastExportSucceeded = true;
-            StatusText = $"✓ Exported {result.TotalFileCount} files to {OutputDirectory}";
+            StatusText = $"✓ Exported {result.TotalFileCount} files to {circuitOutputDir}";
         }
         catch (InvalidOperationException ex)
         {
