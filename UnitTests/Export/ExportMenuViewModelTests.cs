@@ -71,7 +71,7 @@ public class ExportMenuViewModelTests
         var cmd = new AsyncRelayCommand(() => Task.CompletedTask);
         var format = new NazcaExportFormat(cmd);
 
-        format.Name.ShouldBe("Nazca Python");
+        format.Name.ShouldBe("Nazca Python + GDS");
         format.Icon.ShouldBe("🐍");
         format.Description.ShouldNotBeNullOrEmpty();
         format.Background.ShouldNotBeNullOrEmpty();
@@ -197,7 +197,7 @@ public class ExportMenuViewModelTests
         var menu = new ExportMenuViewModel(formats);
 
         menu.Formats.Count.ShouldBe(4);
-        menu.Formats.Select(f => f.Name).ShouldContain("Nazca Python");
+        menu.Formats.Select(f => f.Name).ShouldContain("Nazca Python + GDS");
         menu.Formats.Select(f => f.Name).ShouldContain("PICWave");
         menu.Formats.Select(f => f.Name).ShouldContain("PhotonTorch");
         menu.Formats.Select(f => f.Name).ShouldContain("Verilog-A / SPICE");
@@ -211,7 +211,7 @@ public class ExportMenuViewModelTests
         vm.ExportMenu.Formats.Count.ShouldBe(4);
         vm.ExportMenu.Formats.Select(f => f.Name).ShouldBe(new[]
         {
-            "Nazca Python",
+            "Nazca Python + GDS",
             "PICWave",
             "PhotonTorch",
             "Verilog-A / SPICE",

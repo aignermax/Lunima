@@ -10,13 +10,13 @@ public class NazcaExportFormat : IExportFormat
     private readonly IAsyncRelayCommand _exportCommand;
 
     /// <inheritdoc/>
-    public string Name => "Nazca Python";
+    public string Name => "Nazca Python + GDS";
 
     /// <inheritdoc/>
     public string Icon => "🐍";
 
     /// <inheritdoc/>
-    public string Description => "Export to Nazca Python script for photonic layout (+ optional GDS)";
+    public string Description => "Export Nazca Python script (+ GDS layout if Nazca is installed)";
 
     /// <inheritdoc/>
     public string Background => "#3d5d3d";
