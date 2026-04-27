@@ -98,10 +98,8 @@ public partial class App : Application
             return vm;
         });
 
-        // PhotonTorchExportViewModel is a singleton so FileOperations (top-toolbar
-        // export button) and PhotonTorchExportSettingsPage (settings page config)
-        // bind to the same instance — otherwise editing wavelength / time-domain
-        // settings in the dialog would not apply to the toolbar-triggered export.
+        // PhotonTorchExportViewModel: singleton so the dialog and any other
+        // consumer of FileOperations.PhotonTorchExport see the same state.
         services.AddSingleton<CAP_Core.Export.PhotonTorchExporter>();
         services.AddSingleton<PhotonTorchExportViewModel>();
 
@@ -148,9 +146,8 @@ public partial class App : Application
         services.AddTransient<PdkConsistencyViewModel>();
         services.AddTransient<SParameterImportViewModel>();
 
-        // VerilogAExportViewModel is a singleton because both FileOperations
-        // (top-toolbar Verilog-A button) and VerilogAExportSettingsPage
-        // (settings page config) must share state.
+        // VerilogAExportViewModel: singleton so the dialog and FileOperations
+        // share the same state.
         services.AddSingleton<VerilogAExportViewModel>();
 
         // Register sub-ViewModels (Bottom panel)
@@ -164,8 +161,6 @@ public partial class App : Application
         services.AddTransient<ISettingsPage, GridSnapSettingsPage>();
         services.AddTransient<ISettingsPage, UpdateSettingsPage>();
         services.AddTransient<ISettingsPage, GdsExportSettingsPage>();
-        services.AddTransient<ISettingsPage, VerilogAExportSettingsPage>();
-        services.AddTransient<ISettingsPage, PhotonTorchExportSettingsPage>();
         services.AddTransient<ISettingsPage, AiAssistantSettingsPage>();
         services.AddTransient<SettingsWindowViewModel>();
 
