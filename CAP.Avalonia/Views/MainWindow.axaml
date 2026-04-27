@@ -11,7 +11,7 @@
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Lunima"
-        Width="1500" Height="900">
+        Width="1800" Height="900">
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+G" Command="{Binding CreateGroupCommand}" />
