@@ -9,7 +9,6 @@ namespace CAP.Avalonia.ViewModels.Export.Formats;
 /// </summary>
 public class PhotonTorchExportFormat : IExportFormat
 {
-    private readonly PhotonTorchExportViewModel _vm;
     private readonly AsyncRelayCommand _exportCommand;
 
     /// <inheritdoc/>
@@ -29,23 +28,24 @@ public class PhotonTorchExportFormat : IExportFormat
 
     /// <summary>
     /// Callback that opens the PhotonTorch export options dialog.
-    /// Must be set from the UI layer (e.g., MainWindow.axaml.cs) before the command is invoked.
+    /// Must be set from the UI layer (e.g., MainWindow.axaml.cs::WireExportDialogs)
+    /// before the command is invoked. Invoking the command before this is wired
+    /// throws <see cref="InvalidOperationException"/>.
     /// </summary>
     public Func<Task>? ShowOptionsDialogAsync { get; set; }
 
-    /// <summary>Initializes with the PhotonTorch export ViewModel.</summary>
-    /// <param name="vm">Provides export settings and the core export command.</param>
-    public PhotonTorchExportFormat(PhotonTorchExportViewModel vm)
+    /// <summary>Initializes the PhotonTorch export format adapter.</summary>
+    public PhotonTorchExportFormat()
     {
-        _vm = vm;
         _exportCommand = new AsyncRelayCommand(RunExportFlowAsync);
     }
 
     private async Task RunExportFlowAsync()
     {
-        if (ShowOptionsDialogAsync != null)
-            await ShowOptionsDialogAsync();
-        else
-            await _vm.ExportCommand.ExecuteAsync(null);
+        if (ShowOptionsDialogAsync == null)
+            throw new InvalidOperationException(
+                $"{nameof(PhotonTorchExportFormat)}.{nameof(ShowOptionsDialogAsync)} has not been wired. " +
+                "The UI layer (MainWindow.axaml.cs::WireExportDialogs) must set this callback before the export command can run.");
+        await ShowOptionsDialogAsync();
     }
 }

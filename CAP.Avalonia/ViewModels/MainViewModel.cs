@@ -163,8 +163,8 @@ public partial class MainViewModel : ObservableObject
         RightPanel.SParameterImport.StoredSMatrices = FileOperations.StoredSMatrices;
 
         // Build the unified Export menu (add new IExportFormat here for new formats)
-        PhotonTorchExportFormat = new PhotonTorchExportFormat(photonTorchExport);
-        GdsExportFormat = new GdsExportFormat(gdsExportViewModel);
+        PhotonTorchExportFormat = new PhotonTorchExportFormat();
+        GdsExportFormat = new GdsExportFormat();
         VerilogAExportFormat = new VerilogAExportFormat(verilogAExport);
         ExportMenu = new ExportMenuViewModel(new IExportFormat[]
         {

@@ -9,7 +9,6 @@ namespace CAP.Avalonia.ViewModels.Export.Formats;
 /// </summary>
 public class GdsExportFormat : IExportFormat
 {
-    private readonly GdsExportViewModel _vm;
     private readonly AsyncRelayCommand _exportCommand;
 
     /// <inheritdoc/>
@@ -29,21 +28,24 @@ public class GdsExportFormat : IExportFormat
 
     /// <summary>
     /// Callback that opens the GDS configuration dialog.
-    /// Must be set from the UI layer (e.g., MainWindow.axaml.cs) before the command is invoked.
+    /// Must be set from the UI layer (e.g., MainWindow.axaml.cs::WireExportDialogs)
+    /// before the command is invoked. Invoking the command before this is wired
+    /// throws <see cref="InvalidOperationException"/>.
     /// </summary>
     public Func<Task>? ShowOptionsDialogAsync { get; set; }
 
-    /// <summary>Initializes with the GDS export ViewModel.</summary>
-    /// <param name="vm">Provides Python configuration and environment check commands.</param>
-    public GdsExportFormat(GdsExportViewModel vm)
+    /// <summary>Initializes the GDS export format adapter.</summary>
+    public GdsExportFormat()
     {
-        _vm = vm;
         _exportCommand = new AsyncRelayCommand(RunExportFlowAsync);
     }
 
     private async Task RunExportFlowAsync()
     {
-        if (ShowOptionsDialogAsync != null)
-            await ShowOptionsDialogAsync();
+        if (ShowOptionsDialogAsync == null)
+            throw new InvalidOperationException(
+                $"{nameof(GdsExportFormat)}.{nameof(ShowOptionsDialogAsync)} has not been wired. " +
+                "The UI layer (MainWindow.axaml.cs::WireExportDialogs) must set this callback before the export command can run.");
+        await ShowOptionsDialogAsync();
     }
 }
