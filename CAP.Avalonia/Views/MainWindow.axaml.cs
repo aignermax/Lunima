@@ -5,6 +5,7 @@ using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
+using CAP.Avalonia.Views.Dialogs;
 using CAP.Avalonia.Views.PdkImport;
 using System.ComponentModel;
 using System.Linq;
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
+                ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
                 // Wire up rename dialog for group templates
@@ -495,5 +497,4 @@ public partial class MainWindow : Window
             }
         }
     }
-
 }

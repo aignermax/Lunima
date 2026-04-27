@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.Export"
+        x:Class="CAP.Avalonia.Views.Dialogs.VerilogAExportDialog"
+        x:DataType="vm:VerilogAExportViewModel"
+        Title="Export — Verilog-A / SPICE"
+        Width="440" Height="290"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#1e1e1e"
+        Foreground="White">
+
+    <DockPanel Margin="16" LastChildFill="True">
+
+        <!-- Buttons docked at the bottom so they're always visible -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <Button Content="Open Folder"
+                    Command="{Binding OpenOutputDirectoryCommand}"
+                    Width="100" Background="#2d4d3d" FontSize="11"
+                    IsVisible="{Binding LastExportSucceeded}"/>
+            <Button Content="Export…"
+                    Command="{Binding ExportCommand}"
+                    Width="90" Background="#3d6d4d"
+                    IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
+            <Button Content="Close" x:Name="CloseButton" Width="70" Click="OnCloseClicked"/>
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+            <TextBlock Text="📊 Verilog-A / SPICE Export" FontSize="15" FontWeight="SemiBold"
+                       Foreground="#7BC8A4"/>
+            <TextBlock Text="Export photonic circuit for co-simulation with electronic circuits (ngspice, Xyce). Click Export… to choose where to save."
+                       Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
+
+            <Separator Background="#3d3d3d"/>
+
+            <!-- Wavelength -->
+            <TextBlock Text="Wavelength for S-parameters:" Foreground="Gray" FontSize="11"/>
+            <ComboBox ItemsSource="{Binding WavelengthOptions}"
+                      SelectedValue="{Binding WavelengthNm}"
+                      HorizontalAlignment="Stretch"
+                      Background="#2d2d2d"/>
+
+            <!-- Options -->
+            <CheckBox Content="Include SPICE test bench (.sp)"
+                      IsChecked="{Binding IncludeTestBench}"
+                      Foreground="White"/>
+
+            <!-- Status -->
+            <TextBlock Text="{Binding StatusText}"
+                       Foreground="LightGreen" FontSize="10" TextWrapping="Wrap"
+                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+    </DockPanel>
+</Window>

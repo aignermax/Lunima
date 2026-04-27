@@ -6,12 +6,13 @@ namespace UnitTests.Architecture;
 /// <summary>
 /// Pins the DI-lifetime contract for export ViewModels. Both
 /// <c>VerilogAExportViewModel</c> and <c>PhotonTorchExportViewModel</c> must
-/// be registered as Singleton so that the top-toolbar export buttons and the
-/// Settings pages bind to the same instance. If either is accidentally
-/// flipped to Transient, the toolbar button and the settings dialog desync
-/// — user edits wavelength / output dir in Settings, clicks Export on the
-/// toolbar, and the export runs with stale values. This test catches that
-/// regression by scanning the App DI registration directly.
+/// be registered as Singleton so that <c>FileOperations.{VerilogA,PhotonTorch}Export</c>
+/// and the dialog DataContext (set in <c>Views.Dialogs.ExportDialogWiring.Wire</c>)
+/// resolve to the same instance. If either is accidentally flipped to Transient,
+/// the dialog edits state that the export command never sees — the user changes
+/// wavelength in the dialog, hits Export, and the underlying export VM still has
+/// the old value. This test catches that regression by scanning the App DI
+/// registration directly.
 /// </summary>
 public class ExportViewModelLifetimeTests
 {
