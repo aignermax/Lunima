@@ -79,7 +79,8 @@ public static class MainViewModelTestHelper
             new ViewportControlViewModel(canvas),
             new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
             photonTorchVm,
-            verilogAVm);
+            verilogAVm,
+            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(preferencesService, canvas));
     }
 
     /// <summary>
@@ -121,7 +122,6 @@ public static class MainViewModelTestHelper
         return new RightPanelViewModel(
             canvas,
             preferencesService,
-            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(preferencesService, canvas),
             new ParameterSweepViewModel(),
             new RoutingDiagnosticsViewModel(),
             new DesignValidationViewModel(),

@@ -107,16 +107,10 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public SParameterImportViewModel SParameterImport { get; }
 
-    /// <summary>
-    /// ViewModel for the Chip Size settings panel.
-    /// </summary>
-    public ChipSizeViewModel ChipSize { get; }
-
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
         UserPreferencesService preferencesService,
-        ChipSizeViewModel chipSize,
         ParameterSweepViewModel sweep,
         RoutingDiagnosticsViewModel routingDiagnostics,
         DesignValidationViewModel designValidation,
@@ -132,8 +126,6 @@ public partial class RightPanelViewModel : ObservableObject
         SParameterImportViewModel sParameterImport)
     {
         _preferencesService = preferencesService;
-
-        ChipSize = chipSize;
 
         Sweep = sweep;
         RoutingDiagnostics = routingDiagnostics;

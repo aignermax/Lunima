@@ -127,6 +127,12 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public ErrorConsoleService ErrorConsole { get; }
 
+    /// <summary>
+    /// Chip-size ViewModel. Singleton — same instance is bound by the Settings window
+    /// page and consulted here for save/load and design-checks bounds.
+    /// </summary>
+    public ViewModels.Canvas.ChipSizeViewModel ChipSize { get; }
+
     public MainViewModel(
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
@@ -145,13 +151,15 @@ public partial class MainViewModel : ObservableObject
         ViewportControlViewModel viewportControl,
         PdkOffsetEditorViewModel pdkOffsetEditor,
         ViewModels.Export.PhotonTorchExportViewModel photonTorchExport,
-        ViewModels.Export.VerilogAExportViewModel verilogAExport)
+        ViewModels.Export.VerilogAExportViewModel verilogAExport,
+        ViewModels.Canvas.ChipSizeViewModel chipSize)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
         _canvas = canvas;
         PdkOffsetEditor = pdkOffsetEditor;
         ErrorConsole = errorConsoleService;
+        ChipSize = chipSize;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         Update = updateViewModel;
 
@@ -366,7 +374,7 @@ public partial class MainViewModel : ObservableObject
 
         // Restore chip size from saved file without overwriting the user preference default
         FileOperations.ApplyChipSizeAfterLoad = (widthUm, heightUm) =>
-            RightPanel.ChipSize.ApplyFromMicrometers(widthUm, heightUm);
+            ChipSize.ApplyFromMicrometers(widthUm, heightUm);
 
         // Auto-check Python/Nazca environment on startup
         // If no custom path is set, trigger auto-discovery
@@ -616,8 +624,8 @@ public partial class MainViewModel : ObservableObject
             connections,
             groups,
             allComponents,
-            RightPanel.ChipSize.CurrentWidthMicrometers,
-            RightPanel.ChipSize.CurrentHeightMicrometers);
+            ChipSize.CurrentWidthMicrometers,
+            ChipSize.CurrentHeightMicrometers);
 
         StatusText = RightPanel.DesignValidation.StatusText;
     }

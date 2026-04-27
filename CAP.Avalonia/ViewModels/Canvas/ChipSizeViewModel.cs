@@ -189,6 +189,12 @@ public partial class ChipSizeViewModel : ObservableObject
         _canvas.ChipMaxY = heightUm;
 
         _canvas.InitializeAStarRouting(0, 0, widthUm, heightUm);
+
+        // ChipMaxX/Y on DesignCanvasViewModel are plain forwarder properties without
+        // PropertyChanged notifications, and DesignCanvas only invalidates on a small
+        // allow-list of bound properties — so a fresh chip size never reaches the
+        // GridRenderer without an explicit repaint request.
+        _canvas.RepaintRequested?.Invoke();
     }
 
     // The authoritative out-of-bounds check lives in DesignValidator.ValidateComponentBounds
