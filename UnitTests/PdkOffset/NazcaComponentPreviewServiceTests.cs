@@ -271,6 +271,9 @@ public class NazcaComponentPreviewServiceTests
     [InlineData("ebeam_y_1550")]
     [InlineData("ebeam_dc_te1550")]
     [InlineData("gc_te1550_8deg_oxide_1")]
+    [InlineData("GC_TE_1550_8degOxide_BB")]      // uppercase GC_ — SiEPIC ships these too
+    [InlineData("GC_SiN_TE_1310_8degOxide_BB")]  // and the SiN variants
+    [InlineData("EBEAM_y_branch")]               // case-insensitive ebeam_ (defensive)
     public void ResolveModuleAndFunction_SiepicPrefixedFlatName_RoutesToSiepicEbeamPdk(string fn)
     {
         var (module, function) = PdkOffsetEditorViewModel.ResolveModuleAndFunction(fn);

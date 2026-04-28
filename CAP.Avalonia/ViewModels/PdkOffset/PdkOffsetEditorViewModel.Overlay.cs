@@ -226,13 +226,16 @@ public partial class PdkOffsetEditorViewModel
             return (prefix, fn);
         }
 
-        // SiEPIC EBeam PDK ships flat names — these prefixes are the existing
-        // convention used elsewhere in the repo (see SimpleNazcaExporter.IsPdkFunction).
-        if (nazcaFunction.StartsWith("ebeam_", StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("gc_",    StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("ANT_",   StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("crossing_", StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("taper_", StringComparison.Ordinal))
+        // SiEPIC EBeam PDK ships flat names. Match case-insensitively because
+        // SiEPIC's bundled PDK contains both ``ebeam_y_1550`` (lower) and
+        // ``GC_TE_1550_8degOxide_BB`` (upper). A case-sensitive prefix list
+        // would route the upper-case GC_ cells to nazca.demofab and surface
+        // them as RenderFailed in the Check-All report.
+        if (nazcaFunction.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
+            nazcaFunction.StartsWith("gc_",    StringComparison.OrdinalIgnoreCase) ||
+            nazcaFunction.StartsWith("ANT_",   StringComparison.OrdinalIgnoreCase) ||
+            nazcaFunction.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
+            nazcaFunction.StartsWith("taper_", StringComparison.OrdinalIgnoreCase))
         {
             return ("siepic_ebeam_pdk", nazcaFunction);
         }

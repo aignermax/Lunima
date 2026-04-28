@@ -301,44 +301,91 @@ def _fetch_siepic_source(module_name, function_name):
         return f"# Source unavailable: {exc}"
 
 
-def _instantiate_siepic_pcell(kdb, function_name, parameters_string):
-    """
-    Build a one-shot KLayout Layout containing the named EBeam PCell, with
-    user parameters merged onto the PCell's defaults. Returns (layout, cell).
-    """
-    ebeam_lib = None
+def _siepic_libraries(kdb):
+    """Yield every EBeam* KLayout library, in registration order."""
     for lid in kdb.Library.library_ids():
         lib = kdb.Library.library_by_id(lid)
-        if lib is not None and lib.name() == "EBeam":
-            ebeam_lib = lib
-            break
-    if ebeam_lib is None:
+        if lib is None:
+            continue
+        if lib.name().startswith("EBeam"):
+            yield lib
+
+
+def _resolve_siepic_cell(kdb, function_name, parameters_string):
+    """
+    Locate ``function_name`` across every EBeam* KLayout library and return
+    a ``(layout, cell)`` tuple ready for pin/polygon extraction.
+
+    Resolution order, from cheapest to most invasive:
+
+    1. Static cell inside a library layout (e.g. ``GC_TE_1550_8degOxide_BB``
+       lives baked-into the EBeam library, not as a PCell). Re-emitted as a
+       deep copy into a fresh layout so the caller can read pins/polygons
+       without holding a library reference.
+    2. PCell with the exact name (verified via ``pcell_names()`` to dodge
+       the KLayout API quirk where ``pcell_id("nonexistent")`` returns 0
+       instead of -1 — that bug previously made every unknown name resolve
+       to PCell #0, which is ``contra_directional_coupler`` and is why
+       every "PinCountMismatch x/4" actually rendered the wrong cell).
+
+    Raises FileNotFoundError with a list of likely matches so the caller can
+    surface a useful error.
+    """
+    libs = list(_siepic_libraries(kdb))
+    if not libs:
         raise RuntimeError(
-            "EBeam KLayout library is not registered. "
-            "Importing siepic_ebeam_pdk should register it — check the install.")
+            "No EBeam* KLayout libraries are registered. "
+            "Importing siepic_ebeam_pdk should register them — check the install.")
 
-    pcell_id = ebeam_lib.layout().pcell_id(function_name)
-    if pcell_id < 0:
-        raise FileNotFoundError(
-            f"'{function_name}' is neither a fixed-cell GDS nor a registered "
-            f"PCell in the EBeam library. Available PCells: "
-            f"{', '.join(ebeam_lib.layout().pcell_names())}")
+    # 1. Static cell in any library layout
+    for lib in libs:
+        lib_layout = lib.layout()
+        for c in lib_layout.each_cell():
+            if c.name == function_name:
+                return _copy_cell_into_fresh_layout(kdb, lib_layout, c)
 
-    pcell_decl = ebeam_lib.layout().pcell_declaration(pcell_id)
+    # 2. PCell — but only if the name actually appears in pcell_names()
     user_kwargs = _parse_kwargs(parameters_string)
+    for lib in libs:
+        lib_layout = lib.layout()
+        if function_name not in lib_layout.pcell_names():
+            continue
+        pcell_id = lib_layout.pcell_id(function_name)
+        pcell_decl = lib_layout.pcell_declaration(pcell_id)
+        param_values = []
+        for p in pcell_decl.get_parameters():
+            param_values.append(user_kwargs.get(p.name, p.default))
 
-    # Merge user parameters with defaults; preserve original order.
-    param_values = []
-    for p in pcell_decl.get_parameters():
-        if p.name in user_kwargs:
-            param_values.append(user_kwargs[p.name])
-        else:
-            param_values.append(p.default)
+        ly = kdb.Layout()
+        ly.dbu = 0.001  # 1 nm — matches what siepic_ebeam_pdk targets
+        var_id = ly.add_pcell_variant(lib, pcell_id, param_values)
+        return ly, ly.cell(var_id)
 
+    # Not found anywhere — give the user something actionable.
+    suggestions = []
+    for lib in libs:
+        lib_layout = lib.layout()
+        suggestions.extend(c.name for c in lib_layout.each_cell())
+        suggestions.extend(lib_layout.pcell_names())
+    near = [s for s in suggestions if function_name.lower() in s.lower() or s.lower() in function_name.lower()][:5]
+    hint = f" Did you mean: {', '.join(near)}?" if near else ""
+    raise FileNotFoundError(
+        f"'{function_name}' is neither a fixed-cell GDS nor a static cell nor a "
+        f"PCell in any EBeam* library ({', '.join(lib.name() for lib in libs)}).{hint}"
+    )
+
+
+def _copy_cell_into_fresh_layout(kdb, source_layout, source_cell):
+    """
+    Copy ``source_cell`` (and its hierarchy) into a brand-new ``kdb.Layout``
+    so subsequent pin/polygon extraction doesn't mutate the shared library
+    layout. Uses KLayout's ``Layout.cell.copy_tree`` semantics via copy().
+    """
     ly = kdb.Layout()
-    ly.dbu = 0.001  # 1 nm — matches what siepic_ebeam_pdk targets
-    var_id = ly.add_pcell_variant(ebeam_lib, pcell_id, param_values)
-    return ly, ly.cell(var_id)
+    ly.dbu = source_layout.dbu
+    new_cell = ly.create_cell(source_cell.name)
+    new_cell.copy_tree(source_cell)
+    return ly, new_cell
 
 
 def _looks_like_siepic(module_name):
@@ -385,8 +432,7 @@ def _render_siepic_via_klayout(module_name, function_name, stub_length, paramete
         ly.read(gds_path)
         cell = next(ly.each_cell())
     else:
-        # Fall back to the PCell library.
-        ly, cell = _instantiate_siepic_pcell(kdb, function_name, parameters_string)
+        ly, cell = _resolve_siepic_cell(kdb, function_name, parameters_string)
 
     # bbox is in database units (typically 1nm); convert to micrometres.
     dbu = ly.dbu
