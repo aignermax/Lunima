@@ -80,38 +80,15 @@ public partial class PdkOffsetEditorWindow : Window
         OverlayCanvas.Width  = vm.CanvasTotalWidth;
         OverlayCanvas.Height = vm.CanvasTotalHeight;
 
-        // Draw Nazca GDS polygons behind the Lunima box.
-        // ShowNazcaOverlay is the user-facing toggle; HasNazcaOverlay is set
-        // when a render result is cached. Both required to actually paint.
-        if (vm.HasNazcaOverlay && vm.ShowNazcaOverlay)
-        {
-            foreach (var poly in vm.NazcaPolygons)
-            {
-                var polygon = new Polygon
-                {
-                    Points = new AvaloniaList<global::Avalonia.Point>(
-                        poly.CanvasPoints.Select(p => new global::Avalonia.Point(p.X, p.Y))),
-                    Fill = NazcaPolygonBrush,
-                    Stroke = NazcaPolygonBorderBrush,
-                    StrokeThickness = 0.5,
-                };
-                OverlayCanvas.Children.Add(polygon);
-            }
+        // Layering, bottom → top:
+        //   1. Lunima component bbox (the user's offset visualization)
+        //   2. Lunima pin dots + labels
+        //   3. Origin crosshair + label
+        //   4. Nazca GDS polygons + pin stubs ON TOP
+        // Nazca on top means the user sees the actual GDS geometry
+        // unobscured by the Lunima box, while the Lunima reference still
+        // shows through the semi-transparent polygon fill.
 
-            foreach (var stub in vm.NazcaPinStubs)
-            {
-                var line = new Line
-                {
-                    StartPoint = new global::Avalonia.Point(stub.X0, stub.Y0),
-                    EndPoint   = new global::Avalonia.Point(stub.X1, stub.Y1),
-                    Stroke     = NazcaStubBrush,
-                    StrokeThickness = 2.0,
-                };
-                OverlayCanvas.Children.Add(line);
-            }
-        }
-
-        // Draw Lunima component bounding box
         var box = new Rectangle
         {
             Width  = vm.CanvasComponentWidth,
@@ -159,6 +136,37 @@ public partial class PdkOffsetEditorWindow : Window
         Canvas.SetLeft(originLabel, vm.CanvasOriginX + CrosshairLength + 2);
         Canvas.SetTop(originLabel, vm.CanvasOriginY - 6);
         OverlayCanvas.Children.Add(originLabel);
+
+        // Nazca layer on top — drawn last so it appears above the Lunima
+        // overlay. The polygon fill is semi-transparent so the Lunima
+        // reference is still visible underneath where they overlap.
+        if (vm.HasNazcaOverlay && vm.ShowNazcaOverlay)
+        {
+            foreach (var poly in vm.NazcaPolygons)
+            {
+                var polygon = new Polygon
+                {
+                    Points = new AvaloniaList<global::Avalonia.Point>(
+                        poly.CanvasPoints.Select(p => new global::Avalonia.Point(p.X, p.Y))),
+                    Fill = NazcaPolygonBrush,
+                    Stroke = NazcaPolygonBorderBrush,
+                    StrokeThickness = 0.5,
+                };
+                OverlayCanvas.Children.Add(polygon);
+            }
+
+            foreach (var stub in vm.NazcaPinStubs)
+            {
+                var line = new Line
+                {
+                    StartPoint = new global::Avalonia.Point(stub.X0, stub.Y0),
+                    EndPoint   = new global::Avalonia.Point(stub.X1, stub.Y1),
+                    Stroke     = NazcaStubBrush,
+                    StrokeThickness = 2.0,
+                };
+                OverlayCanvas.Children.Add(line);
+            }
+        }
     }
 
     private void DrawCrosshair(double cx, double cy)

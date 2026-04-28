@@ -78,9 +78,11 @@ def _build_cell(module_name, function_name, parameters_string):
         if module_name in (None, "", "demo") or module_name == prefix:
             module_name = prefix
 
-    if module_name == "demo":
-        # The bundled demo PDK in nazca ships as `demofab` — same name used
-        # everywhere else in this codebase (NazcaHeader.txt, reference scripts).
+    # The bundled demo PDK in Nazca ships as `nazca.demofab`. Lunima's PDK
+    # JSON refers to it as either "demo" (after our C# split) or sometimes
+    # "demo_pdk". Map both to demofab so the user doesn't have to know the
+    # internal Nazca naming.
+    if module_name in ("demo", "demo_pdk"):
         import nazca.demofab as mod
     else:
         import importlib
@@ -106,10 +108,21 @@ def _extract_bbox(cell):
 
 
 def _extract_pins(cell, stub_length):
-    """Return list of pin dicts with stub endpoints."""
+    """Return list of pin dicts with stub endpoints.
+
+    Nazca puts a fixed set of bookkeeping pins on every cell — origin, the
+    nine bbox-corner/edge anchors (lb, lc, lt, tl, tc, tr, rt, rc, rb, br,
+    bc, bl) and the center 'cc'. These are not optical ports and would
+    clutter the offset editor with phantom pin dots. Filter them out.
+    """
+    INTERNAL = {"org", "cc",
+                "lb", "lc", "lt",
+                "tl", "tc", "tr",
+                "rt", "rc", "rb",
+                "br", "bc", "bl"}
     pins = []
     for name, pin in cell.pin.items():
-        if name in ("org",):
+        if name in INTERNAL:
             continue
         x, y, angle = pin.xya()
         rad = math.radians(angle)

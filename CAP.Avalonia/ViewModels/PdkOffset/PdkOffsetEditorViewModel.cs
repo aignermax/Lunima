@@ -453,7 +453,15 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         var lastDot = nazcaFunction.LastIndexOf('.');
         if (lastDot > 0)
-            return (nazcaFunction[..lastDot], nazcaFunction[(lastDot + 1)..]);
+        {
+            var prefix = nazcaFunction[..lastDot];
+            var fn = nazcaFunction[(lastDot + 1)..];
+            // Both 'demo.foo' and 'demo_pdk.foo' (the latter appears in some
+            // Lunima PDK JSONs) resolve to nazca.demofab — let the script see
+            // the canonical 'demo' so it doesn't try to importlib 'demo_pdk'.
+            if (prefix == "demo_pdk") prefix = "demo";
+            return (prefix, fn);
+        }
 
         // SiEPIC EBeam PDK ships flat names — these prefixes are the existing
         // convention used elsewhere in the repo (see SimpleNazcaExporter.IsPdkFunction).
