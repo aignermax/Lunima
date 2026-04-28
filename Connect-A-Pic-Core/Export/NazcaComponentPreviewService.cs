@@ -163,9 +163,19 @@ public class NazcaComponentPreviewService
     {
         if (string.IsNullOrWhiteSpace(stdout))
             return NazcaPreviewResult.Fail("Preview script produced no output.");
+
+        // Nazca writes log lines (e.g. "INFO   : pin2pin drc: True") on stdout
+        // through sys.__stdout__, which bypasses Python's contextlib.redirect_stdout
+        // in the helper script. Pick the LAST line that parses as JSON instead
+        // of trying to parse the whole stdout — that's the result line we wrote.
+        var jsonLine = ExtractTrailingJsonLine(stdout);
+        if (jsonLine == null)
+            return NazcaPreviewResult.Fail(
+                $"failed to parse preview output, no JSON object found in stdout: {Truncate(stdout, 200)}");
+
         try
         {
-            var doc = JsonDocument.Parse(stdout);
+            var doc = JsonDocument.Parse(jsonLine);
             var root = doc.RootElement;
 
             if (root.TryGetProperty("success", out var sp) && !sp.GetBoolean())
@@ -191,6 +201,35 @@ public class NazcaComponentPreviewService
             return NazcaPreviewResult.Fail($"Failed to parse preview output: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Walks the stdout from the bottom up and returns the first line that
+    /// parses as a JSON object. Nazca's logging chatter ("INFO : ...") never
+    /// produces a JSON-shaped line, so the last line that does is our payload.
+    /// </summary>
+    private static string? ExtractTrailingJsonLine(string stdout)
+    {
+        var lines = stdout.Split('\n');
+        for (int i = lines.Length - 1; i >= 0; i--)
+        {
+            var trimmed = lines[i].Trim();
+            if (trimmed.Length == 0) continue;
+            if (!trimmed.StartsWith('{')) continue;
+            try
+            {
+                using var _ = JsonDocument.Parse(trimmed);
+                return trimmed;
+            }
+            catch (JsonException)
+            {
+                // Not valid JSON — keep looking upwards
+            }
+        }
+        return null;
+    }
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max] + "…";
 
     private static List<NazcaPreviewPolygon> ParsePolygons(JsonElement root)
     {

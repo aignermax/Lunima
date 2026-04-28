@@ -92,10 +92,17 @@ def _build_cell(module_name, function_name, parameters_string):
 
 
 def _extract_bbox(cell):
-    """Return (xmin, ymin, xmax, ymax) from a Nazca cell."""
+    """Return (xmin, ymin, xmax, ymax) from a Nazca cell.
+
+    Nazca exposes cell.bbox as a flat 4-tuple (xmin, ymin, xmax, ymax). Older
+    revisions used a nested [[xmin, ymin], [xmax, ymax]] form — accept both.
+    """
     bb = cell.bbox
-    # bb is [[xmin, ymin], [xmax, ymax]] in Nazca
-    return bb[0][0], bb[0][1], bb[1][0], bb[1][1]
+    if len(bb) == 4 and not hasattr(bb[0], "__len__"):
+        # flat tuple: (xmin, ymin, xmax, ymax)
+        return float(bb[0]), float(bb[1]), float(bb[2]), float(bb[3])
+    # nested [[xmin, ymin], [xmax, ymax]]
+    return float(bb[0][0]), float(bb[0][1]), float(bb[1][0]), float(bb[1][1])
 
 
 def _extract_pins(cell, stub_length):

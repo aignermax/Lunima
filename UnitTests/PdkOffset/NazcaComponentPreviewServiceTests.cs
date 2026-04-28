@@ -239,6 +239,63 @@ public class NazcaComponentPreviewServiceTests
         result.Pins[0].StubY1.ShouldBe(0.0);
     }
 
+    // ─── ResolveModuleAndFunction (split nazcaFunction → module + function) ──
+    //
+    // These guard the bug that the previous E2E tests missed: the ViewModel
+    // calls `RenderAsync(null, draft.NazcaFunction, …)` with the unsplit
+    // function string, and the bug was that the dot in "demo.mmi2x2_dp" was
+    // never peeled off (so the script looked up the dotted name as an attribute
+    // on nazca.demofab and threw "no attribute 'demo.mmi2x2_dp'"). The earlier
+    // E2E tests called the service with the already-split form ("demo",
+    // "mmi2x2_dp") and so passed even with the bug present.
+
+    [Fact]
+    public void ResolveModuleAndFunction_DottedDemoNotation_SplitsAtLastDot()
+    {
+        var (module, function) = PdkOffsetEditorViewModel.ResolveModuleAndFunction("demo.mmi2x2_dp");
+        module.ShouldBe("demo");
+        function.ShouldBe("mmi2x2_dp");
+    }
+
+    [Fact]
+    public void ResolveModuleAndFunction_NestedDottedNotation_SplitsAtLastDotOnly()
+    {
+        // Real PDKs sometimes use deeper paths like "siepic_ebeam_pdk.mmi.dc_1550".
+        // Only the last segment is the function name.
+        var (module, function) = PdkOffsetEditorViewModel.ResolveModuleAndFunction("siepic_ebeam_pdk.mmi.dc_1550");
+        module.ShouldBe("siepic_ebeam_pdk.mmi");
+        function.ShouldBe("dc_1550");
+    }
+
+    [Theory]
+    [InlineData("ebeam_y_1550")]
+    [InlineData("ebeam_dc_te1550")]
+    [InlineData("gc_te1550_8deg_oxide_1")]
+    public void ResolveModuleAndFunction_SiepicPrefixedFlatName_RoutesToSiepicEbeamPdk(string fn)
+    {
+        var (module, function) = PdkOffsetEditorViewModel.ResolveModuleAndFunction(fn);
+        module.ShouldBe("siepic_ebeam_pdk");
+        function.ShouldBe(fn);
+    }
+
+    [Fact]
+    public void ResolveModuleAndFunction_UnrecognisedFlatName_FallsBackToDemo()
+    {
+        var (module, function) = PdkOffsetEditorViewModel.ResolveModuleAndFunction("custom_thing");
+        module.ShouldBe("demo");
+        function.ShouldBe("custom_thing");
+    }
+
+    [Fact]
+    public void ResolveModuleAndFunction_NullOrEmpty_FallsBackToDemo()
+    {
+        var (m1, f1) = PdkOffsetEditorViewModel.ResolveModuleAndFunction(null);
+        m1.ShouldBe("demo"); f1.ShouldBe("");
+
+        var (m2, f2) = PdkOffsetEditorViewModel.ResolveModuleAndFunction("");
+        m2.ShouldBe("demo"); f2.ShouldBe("");
+    }
+
     // ─── End-to-end against real Nazca ────────────────────────────────────────
     //
     // Run the real render_component_preview.py script through a real Python
@@ -332,6 +389,116 @@ public class NazcaComponentPreviewServiceTests
         // the module isn't available — this is the realistic case on a fresh
         // Lunima dev box without explicit PDK installation.
         await AssertRendersValidPreviewOrSkip("siepic_ebeam_pdk", "ebeam_dc_te1550");
+    }
+
+    // ─── End-to-end through the ViewModel ─────────────────────────────────────
+    //
+    // The earlier "EndToEnd_*" tests above call the service directly with the
+    // module + function already split. That bypasses ResolveModuleAndFunction
+    // — which is exactly where the previous "no attribute 'demo.mmi2x2_dp'"
+    // bug lived. These tests drive the actual user flow: build a real draft
+    // with a NazcaFunction string, set it on the real ViewModel, wait for
+    // the async render to finish, then check the resulting overlay state.
+
+    /// <summary>
+    /// Drives the ViewModel through SelectedComponent assignment and waits up
+    /// to <paramref name="timeoutMs"/> for the async render to populate the
+    /// overlay (or for a non-empty status text reporting failure).
+    /// </summary>
+    private static async Task<PdkOffsetEditorViewModel?> TryRenderThroughViewModel(
+        string nazcaFunction, string? nazcaParameters = null, int timeoutMs = 30000)
+    {
+        var python = FindWorkingPython3();
+        if (python == null) return null;
+        var script = FindRealPreviewScript();
+        if (script == null) return null;
+
+        var svc = new NazcaComponentPreviewService(python, script);
+        var vm = new PdkOffsetEditorViewModel(
+            new PdkLoader(), new PdkJsonSaver(),
+            new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
+            previewService: svc);
+
+        var draft = new PdkComponentDraft
+        {
+            Name = nazcaFunction,
+            NazcaFunction = nazcaFunction,
+            NazcaParameters = nazcaParameters ?? "",
+            WidthMicrometers = 50,
+            HeightMicrometers = 20,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "a0", OffsetXMicrometers = 0, OffsetYMicrometers = 10 }
+            }
+        };
+        vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "Test"));
+
+        // Selecting the component triggers TriggerNazcaRenderAsync via the
+        // [ObservableProperty] partial method — the very path the user clicks.
+        vm.SelectedComponent = vm.Components[0];
+
+        // Poll until the render is finished. Done == HasNazcaOverlay flipped to
+        // true OR a terminal status arrived OR the rendering flag dropped
+        // back to false (failure path).
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (vm.HasNazcaOverlay) return vm;
+            if (!vm.IsNazcaRendering &&
+                !string.IsNullOrEmpty(vm.NazcaOverlayStatus) &&
+                !vm.NazcaOverlayStatus.StartsWith("Rendering"))
+                return vm;
+            await Task.Delay(100);
+        }
+        return vm;
+    }
+
+    [Fact]
+    public async Task EndToEnd_ViewModel_DemoMmi2x2Dp_RendersOverlay()
+    {
+        // Reproduces the exact user click that produced
+        //   "Preview unavailable: module 'nazca.demofab' has no attribute 'demo.mmi2x2_dp'"
+        // before ResolveModuleAndFunction was added.
+        var vm = await TryRenderThroughViewModel("demo.mmi2x2_dp");
+        if (vm == null) return;  // python or script missing — skip
+
+        // If the environment has Nazca, we expect a populated overlay.
+        // If Nazca isn't installed, NazcaOverlayStatus reports the import
+        // error and HasNazcaOverlay stays false — that's an environment
+        // skip, not a test failure.
+        if (!vm.HasNazcaOverlay)
+        {
+            vm.IsNazcaRendering.ShouldBeFalse(
+                "Render never completed. The async UI-thread dispatch likely hung. " +
+                $"Last status seen: '{vm.NazcaOverlayStatus}'");
+            vm.NazcaOverlayStatus.Contains("no attribute").ShouldBeFalse(
+                $"ResolveModuleAndFunction did not split the dotted name. Status: {vm.NazcaOverlayStatus}");
+            // Anything else (e.g. "No module named 'nazca'") is an environment skip.
+            return;
+        }
+
+        vm.NazcaPinStubs.Count.ShouldBeGreaterThanOrEqualTo(2,
+            "a 2x2 MMI coupler should expose at least 2 pin stubs in the overlay");
+    }
+
+    [Fact]
+    public async Task EndToEnd_ViewModel_SiepicEbeamYJunction_RendersOverlay()
+    {
+        // 'ebeam_y_1550' has no dot in the NazcaFunction — this is the
+        // SiEPIC-EBeam flat-name case ResolveModuleAndFunction maps to
+        // 'siepic_ebeam_pdk'. Skips gracefully when SiEPIC isn't installed.
+        var vm = await TryRenderThroughViewModel("ebeam_y_1550");
+        if (vm == null) return;
+
+        if (!vm.HasNazcaOverlay)
+        {
+            vm.NazcaOverlayStatus.Contains("no attribute 'ebeam_y_1550'").ShouldBeFalse(
+                $"Flat SiEPIC name was not routed to siepic_ebeam_pdk. Status: {vm.NazcaOverlayStatus}");
+            return;
+        }
+
+        vm.NazcaPinStubs.Count.ShouldBeGreaterThanOrEqualTo(2,
+            "a Y-junction should expose at least 2 pin stubs");
     }
 
     // ─── ViewModel integration ────────────────────────────────────────────────

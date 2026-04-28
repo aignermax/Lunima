@@ -434,8 +434,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     ///   <item><c>"ebeam_y_1550"</c> — SiEPIC EBeam exposes flat names; the
     ///     name prefix tells us which Python module owns it.</item>
     /// </list>
+    /// Exposed as internal so the unit tests can lock the mapping in directly
+    /// rather than going through the full async render pipeline.
     /// </summary>
-    private static (string module, string function) ResolveModuleAndFunction(string? nazcaFunction)
+    internal static (string module, string function) ResolveModuleAndFunction(string? nazcaFunction)
     {
         if (string.IsNullOrWhiteSpace(nazcaFunction))
             return ("demo", "");
