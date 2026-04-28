@@ -15,17 +15,62 @@ public partial class PdkOffsetEditorWindow : Window
     private const double PinDotRadius = 5.0;
     private const double CrosshairLength = 12.0;
 
-    // Semi-transparent fill so the Nazca GDS polygons drawn behind the box
-    // remain visible — alignment-by-eye is the whole point of the editor.
-    // Border stays fully opaque so the Lunima bbox is still clearly readable.
+    // When the GDS overlay is OFF the box is the only thing the user sees,
+    // so it gets a fill. When the overlay is on the box becomes a dashed
+    // outline so the actual chip geometry shows through unobstructed.
     private static readonly IBrush ComponentBoxBrush =
         new SolidColorBrush(Color.FromArgb(0x4D, 0x1a, 0x3a, 0x6a));   // ~30% alpha
     private static readonly IBrush ComponentBorderBrush = new SolidColorBrush(Color.Parse("#4080c0"));
     private static readonly IBrush PinBrush = new SolidColorBrush(Colors.Cyan);
     private static readonly IBrush OriginBrush = new SolidColorBrush(Colors.Orange);
-    private static readonly IBrush NazcaPolygonBrush = new SolidColorBrush(Color.FromArgb(100, 0, 100, 50));
-    private static readonly IBrush NazcaPolygonBorderBrush = new SolidColorBrush(Color.Parse("#00c060"));
     private static readonly IBrush NazcaStubBrush = new SolidColorBrush(Color.Parse("#00ff80"));
+
+    /// <summary>
+    /// Per-GDS-layer colour. Picks readable colours for the layers SiEPIC and
+    /// Nazca demofab actually use, so silicon, doping, metals and grating
+    /// teeth are immediately distinguishable instead of all-green blob soup.
+    /// Unknown layers fall back to a neutral gray so they still render but
+    /// don't claim more attention than the known ones.
+    /// </summary>
+    private static IBrush BrushForLayer(int layer)
+    {
+        // Alpha 180/255 ≈ 70% — high enough that geometry reads as solid,
+        // low enough that overlapping shapes / pin dots still peek through.
+        Color c = layer switch
+        {
+            1   => Color.FromArgb(180, 0x40, 0x90, 0xd0),  // silicon waveguide — blue
+            2   => Color.FromArgb(180, 0x80, 0xc0, 0xff),  // shallow etch — light blue
+            3   => Color.FromArgb(180, 0xa0, 0x60, 0xc0),  // deep etch — purple
+            12 or 13 => Color.FromArgb(180, 0xff, 0x90, 0x40),  // N / N+ doped — orange
+            14 or 15 => Color.FromArgb(180, 0xd0, 0x40, 0x80),  // P / P+ doped — magenta
+            21  => Color.FromArgb(180, 0xb0, 0xb0, 0xb0),  // silicide — gray
+            23 or 24 => Color.FromArgb(180, 0xff, 0xd0, 0x20),  // metal 1 / via 1 — gold
+            41 or 42 => Color.FromArgb(180, 0xff, 0x80, 0xc0),  // metal 2 — pink
+            998 => Color.FromArgb(190, 0x20, 0xc0, 0x60),  // grating teeth — green
+            _   => Color.FromArgb(140, 0x70, 0x70, 0x80),  // unknown — dim neutral
+        };
+        return new SolidColorBrush(c);
+    }
+
+    private static IBrush BorderForLayer(int layer)
+    {
+        // Same hue family as fill but fully opaque so polygon edges stay crisp
+        // even where two same-layer shapes overlap.
+        Color c = layer switch
+        {
+            1   => Color.FromArgb(255, 0x60, 0xb0, 0xf0),
+            2   => Color.FromArgb(255, 0xa0, 0xd0, 0xff),
+            3   => Color.FromArgb(255, 0xc0, 0x80, 0xe0),
+            12 or 13 => Color.FromArgb(255, 0xff, 0xb0, 0x60),
+            14 or 15 => Color.FromArgb(255, 0xf0, 0x60, 0xa0),
+            21  => Color.FromArgb(255, 0xd0, 0xd0, 0xd0),
+            23 or 24 => Color.FromArgb(255, 0xff, 0xe0, 0x40),
+            41 or 42 => Color.FromArgb(255, 0xff, 0xa0, 0xd0),
+            998 => Color.FromArgb(255, 0x40, 0xff, 0x80),
+            _   => Color.FromArgb(255, 0x90, 0x90, 0xa0),
+        };
+        return new SolidColorBrush(c);
+    }
 
     /// <summary>
     /// Initializes the window and subscribes to ViewModel property changes for canvas rendering.
@@ -150,26 +195,64 @@ public partial class PdkOffsetEditorWindow : Window
         OverlayCanvas.Width  = vm.CanvasTotalWidth;
         OverlayCanvas.Height = vm.CanvasTotalHeight;
 
+        bool gdsShown = vm.HasNazcaOverlay && vm.ShowNazcaOverlay;
+
         // Layering, bottom → top:
-        //   1. Lunima component bbox (the user's offset visualization)
-        //   2. Lunima pin dots + labels
-        //   3. Origin crosshair + label
-        //   4. Nazca GDS polygons + pin stubs ON TOP
-        // Nazca on top means the user sees the actual GDS geometry
-        // unobscured by the Lunima box, while the Lunima reference still
-        // shows through the semi-transparent polygon fill.
+        //   1. Nazca GDS polygons (the actual chip geometry — the picture)
+        //   2. Lunima component bbox — solid when no GDS, dashed outline when
+        //      GDS is shown so it's a calibration reference rather than the
+        //      thing pretending to BE the component.
+        //   3. Nazca pin stubs (truth)
+        //   4. Lunima pin dots + labels (what the JSON says)
+        //   5. Origin crosshair + label
+        // GDS at the bottom means the polygons read as the canvas, and pins
+        // / box / origin float on top, all visible.
+
+        if (gdsShown)
+        {
+            foreach (var poly in vm.NazcaPolygons)
+            {
+                var polygon = new Polygon
+                {
+                    Points = new AvaloniaList<global::Avalonia.Point>(
+                        poly.CanvasPoints.Select(p => new global::Avalonia.Point(p.X, p.Y))),
+                    Fill = BrushForLayer(poly.Layer),
+                    Stroke = BorderForLayer(poly.Layer),
+                    StrokeThickness = 0.6,
+                };
+                ToolTip.SetTip(polygon, $"layer {poly.Layer}");
+                OverlayCanvas.Children.Add(polygon);
+            }
+        }
 
         var box = new Rectangle
         {
             Width  = vm.CanvasComponentWidth,
             Height = vm.CanvasComponentHeight,
-            Fill   = ComponentBoxBrush,
+            Fill   = gdsShown ? null : ComponentBoxBrush,
             Stroke = ComponentBorderBrush,
-            StrokeThickness = 1.5,
+            StrokeThickness = gdsShown ? 1.0 : 1.5,
+            StrokeDashArray = gdsShown ? new AvaloniaList<double> { 4, 4 } : null,
         };
         Canvas.SetLeft(box, vm.CanvasComponentLeft);
         Canvas.SetTop(box, vm.CanvasComponentTop);
         OverlayCanvas.Children.Add(box);
+
+        if (gdsShown)
+        {
+            foreach (var stub in vm.NazcaPinStubs)
+            {
+                var line = new Line
+                {
+                    StartPoint = new global::Avalonia.Point(stub.X0, stub.Y0),
+                    EndPoint   = new global::Avalonia.Point(stub.X1, stub.Y1),
+                    Stroke     = NazcaStubBrush,
+                    StrokeThickness = 2.0,
+                };
+                ToolTip.SetTip(line, $"Nazca pin {stub.Name}");
+                OverlayCanvas.Children.Add(line);
+            }
+        }
 
         foreach (var pin in vm.PinMarkers)
         {
@@ -206,37 +289,6 @@ public partial class PdkOffsetEditorWindow : Window
         Canvas.SetLeft(originLabel, vm.CanvasOriginX + CrosshairLength + 2);
         Canvas.SetTop(originLabel, vm.CanvasOriginY - 6);
         OverlayCanvas.Children.Add(originLabel);
-
-        // Nazca layer on top — drawn last so it appears above the Lunima
-        // overlay. The polygon fill is semi-transparent so the Lunima
-        // reference is still visible underneath where they overlap.
-        if (vm.HasNazcaOverlay && vm.ShowNazcaOverlay)
-        {
-            foreach (var poly in vm.NazcaPolygons)
-            {
-                var polygon = new Polygon
-                {
-                    Points = new AvaloniaList<global::Avalonia.Point>(
-                        poly.CanvasPoints.Select(p => new global::Avalonia.Point(p.X, p.Y))),
-                    Fill = NazcaPolygonBrush,
-                    Stroke = NazcaPolygonBorderBrush,
-                    StrokeThickness = 0.5,
-                };
-                OverlayCanvas.Children.Add(polygon);
-            }
-
-            foreach (var stub in vm.NazcaPinStubs)
-            {
-                var line = new Line
-                {
-                    StartPoint = new global::Avalonia.Point(stub.X0, stub.Y0),
-                    EndPoint   = new global::Avalonia.Point(stub.X1, stub.Y1),
-                    Stroke     = NazcaStubBrush,
-                    StrokeThickness = 2.0,
-                };
-                OverlayCanvas.Children.Add(line);
-            }
-        }
     }
 
     private void DrawCrosshair(double cx, double cy)

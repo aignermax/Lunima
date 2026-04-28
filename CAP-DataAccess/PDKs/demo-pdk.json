@@ -211,6 +211,18 @@
           "offsetXMicrometers": 500,
           "offsetYMicrometers": 30,
           "angleDegrees": 0
+        },
+        {
+          "name": "elec_in",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "elec_out",
+          "offsetXMicrometers": 485,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
         }
       ],
       "sliders": [
@@ -254,6 +266,12 @@
       "nazcaOriginOffsetY": 9.5,
       "pins": [
         {
+          "name": "fiber",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 9.5,
+          "angleDegrees": 180
+        },
+        {
           "name": "waveguide",
           "offsetXMicrometers": 100,
           "offsetYMicrometers": 9.5,
@@ -264,9 +282,15 @@
         "wavelengthNm": 1550,
         "connections": [
           {
-            "fromPin": "waveguide",
+            "fromPin": "fiber",
             "toPin": "waveguide",
-            "magnitude": 0.3,
+            "magnitude": 0.55,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "waveguide",
+            "toPin": "fiber",
+            "magnitude": 0.55,
             "phaseDegrees": 0
           }
         ]
@@ -286,6 +310,12 @@
           "offsetXMicrometers": 0,
           "offsetYMicrometers": 27.5,
           "angleDegrees": 180
+        },
+        {
+          "name": "elec_out",
+          "offsetXMicrometers": 70,
+          "offsetYMicrometers": 27.5,
+          "angleDegrees": 0
         }
       ],
       "sMatrix": {
@@ -347,31 +377,31 @@
       }
     },
     {
-      "name": "Ring Resonator",
+      "name": "DBR Filter",
       "category": "Filters",
-      "nazcaFunction": "demo_pdk.ring_resonator",
-      "widthMicrometers": 80,
-      "heightMicrometers": 55,
+      "nazcaFunction": "demo.dbr",
+      "widthMicrometers": 100,
+      "heightMicrometers": 200,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 27.5,
+      "nazcaOriginOffsetY": 100,
       "pins": [
         {
           "name": "in",
           "offsetXMicrometers": 0,
-          "offsetYMicrometers": 22.5,
+          "offsetYMicrometers": 170,
           "angleDegrees": 180
         },
         {
-          "name": "through",
-          "offsetXMicrometers": 80,
-          "offsetYMicrometers": 22.5,
+          "name": "out",
+          "offsetXMicrometers": 100,
+          "offsetYMicrometers": 170,
           "angleDegrees": 0
         },
         {
-          "name": "drop",
-          "offsetXMicrometers": 80,
-          "offsetYMicrometers": 47.5,
-          "angleDegrees": 0
+          "name": "elec",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 95,
+          "angleDegrees": 90
         }
       ],
       "sMatrix": {
@@ -379,14 +409,14 @@
         "connections": [
           {
             "fromPin": "in",
-            "toPin": "through",
-            "magnitude": 0.837,
+            "toPin": "out",
+            "magnitude": 0.85,
             "phaseDegrees": 0
           },
           {
-            "fromPin": "in",
-            "toPin": "drop",
-            "magnitude": 0.5,
+            "fromPin": "out",
+            "toPin": "in",
+            "magnitude": 0.85,
             "phaseDegrees": 0
           }
         ]
@@ -402,6 +432,12 @@
       "nazcaOriginOffsetY": 9.5,
       "pins": [
         {
+          "name": "fiber",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 9.5,
+          "angleDegrees": 180
+        },
+        {
           "name": "waveguide",
           "offsetXMicrometers": 100,
           "offsetYMicrometers": 9.5,
@@ -412,9 +448,15 @@
         "wavelengthNm": 1550,
         "connections": [
           {
-            "fromPin": "waveguide",
+            "fromPin": "fiber",
             "toPin": "waveguide",
-            "magnitude": 0.5,
+            "magnitude": 0.7,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "waveguide",
+            "toPin": "fiber",
+            "magnitude": 0.7,
             "phaseDegrees": 0
           }
         ]
