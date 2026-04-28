@@ -406,7 +406,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                 if (result.Success)
                 {
                     SetNazcaOverlay(result);
-                    NazcaOverlayStatus = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
+                    var status = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
+                    if (!string.IsNullOrEmpty(result.PolygonWarning))
+                        status += "  " + result.PolygonWarning;
+                    NazcaOverlayStatus = status;
                 }
                 else
                 {

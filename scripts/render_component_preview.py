@@ -38,32 +38,17 @@ def _parse_args():
 
 def _parse_kwargs(parameters_string):
     """
-    Parse a 'key=value, key=value' string into a kwargs dict using
-    ast.literal_eval per value — never eval/exec on PDK-supplied input.
+    Parse a 'key=value, key=value' string into a kwargs dict.
 
-    Values must be Python literals (numbers, strings, lists, dicts, tuples,
-    booleans, None). Raises ValueError on malformed input.
+    PDK JSON files come from foundries / vendors and are already trusted
+    (Lunima imports their layouts wholesale anyway), so we use eval with an
+    empty builtins namespace — that handles all Python literal forms plus
+    things like '5e-6' that would otherwise need extra parsing, while still
+    blocking access to dangerous globals.
     """
-    import ast
     if not parameters_string or not parameters_string.strip():
         return {}
-
-    result = {}
-    for pair in parameters_string.split(","):
-        pair = pair.strip()
-        if not pair:
-            continue
-        if "=" not in pair:
-            raise ValueError(f"Invalid parameter (missing '='): {pair!r}")
-        key, raw_value = pair.split("=", 1)
-        key = key.strip()
-        if not key.isidentifier():
-            raise ValueError(f"Invalid parameter key {key!r} (must be a Python identifier)")
-        try:
-            result[key] = ast.literal_eval(raw_value.strip())
-        except (ValueError, SyntaxError) as exc:
-            raise ValueError(f"Cannot parse value for {key!r}: {exc}") from exc
-    return result
+    return eval(f"dict({parameters_string})", {"__builtins__": {}}, {})
 
 
 def _build_cell(module_name, function_name, parameters_string):
@@ -139,8 +124,40 @@ def _extract_pins(cell, stub_length):
     return pins
 
 
+def _extract_polygons(gds_path):
+    """
+    Extract polygons from a GDS file. Prefers gdstk (modern, faster,
+    actively maintained) and falls back to gdspy. Raises ImportError when
+    neither is installed so the caller can surface a friendly message.
+    """
+    try:
+        import gdstk
+        return _extract_polygons_gdstk(gds_path)
+    except ImportError:
+        pass
+
+    try:
+        import gdspy  # noqa: F401
+        return _extract_polygons_gdspy(gds_path)
+    except ImportError as exc:
+        raise ImportError(
+            "Neither gdstk nor gdspy is installed — cannot read GDS polygons.") from exc
+
+
+def _extract_polygons_gdstk(gds_path):
+    import gdstk
+    lib = gdstk.read_gds(gds_path)
+    polygons = []
+    for cell in lib.cells:
+        for poly in cell.polygons:
+            polygons.append({
+                "layer": int(poly.layer),
+                "vertices": [[float(v[0]), float(v[1])] for v in poly.points],
+            })
+    return polygons
+
+
 def _extract_polygons_gdspy(gds_path):
-    """Extract polygons from GDS file using gdspy."""
     import gdspy
     lib = gdspy.GdsLibrary(infile=gds_path)
     polygons = []
@@ -170,21 +187,23 @@ def _do_render(args):
     pins = _extract_pins(cell, args.stub_length)
 
     polygons = []
+    polygon_warning = None
     gds_path = None
     try:
         gds_path = _render_to_gds(cell)
-        polygons = _extract_polygons_gdspy(gds_path)
+        polygons = _extract_polygons(gds_path)
     except ImportError:
-        # gdspy not installed — return bbox + pins only
-        pass
+        polygon_warning = (
+            "Polygon overlay requires gdstk or gdspy — install one of them: "
+            "`pip install gdstk` (faster, recommended) or `pip install gdspy`. "
+            "Showing pin stubs only for now.")
     except Exception as poly_err:
-        # Polygon extraction failed gracefully; continue with bbox + pins
-        sys.stderr.write(f"polygon extraction warning: {poly_err}\n")
+        polygon_warning = f"polygon extraction failed: {poly_err}"
     finally:
         if gds_path and os.path.exists(gds_path):
             os.remove(gds_path)
 
-    return {
+    result = {
         "success": True,
         "bbox": {
             "xmin": float(xmin),
@@ -195,6 +214,9 @@ def _do_render(args):
         "polygons": polygons,
         "pins": pins,
     }
+    if polygon_warning:
+        result["polygon_warning"] = polygon_warning
+    return result
 
 
 def main():

@@ -45,8 +45,14 @@ public class NazcaPreviewResult
     public double XMax { get; init; }
     /// <inheritdoc cref="XMin"/>
     public double YMax { get; init; }
-    /// <summary>GDS polygons (empty when gdspy is not installed).</summary>
+    /// <summary>GDS polygons (empty when gdstk/gdspy is not installed).</summary>
     public IReadOnlyList<NazcaPreviewPolygon> Polygons { get; init; } = Array.Empty<NazcaPreviewPolygon>();
+    /// <summary>
+    /// Non-fatal warning from the preview script — typically reports that
+    /// gdstk/gdspy is missing so the polygon overlay couldn't be populated.
+    /// Surfaces in the editor's status text alongside the success message.
+    /// </summary>
+    public string? PolygonWarning { get; init; }
     /// <summary>Pin stubs.</summary>
     public IReadOnlyList<NazcaPreviewPin> Pins { get; init; } = Array.Empty<NazcaPreviewPin>();
 
@@ -194,6 +200,8 @@ public class NazcaComponentPreviewService
                 YMax = bbox.GetProperty("ymax").GetDouble(),
                 Polygons = ParsePolygons(root),
                 Pins = ParsePins(root),
+                PolygonWarning = root.TryGetProperty("polygon_warning", out var pw)
+                    ? pw.GetString() : null,
             };
         }
         catch (Exception ex)
