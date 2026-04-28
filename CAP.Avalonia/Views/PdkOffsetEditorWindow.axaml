@@ -122,9 +122,20 @@
                         <ProgressBar IsIndeterminate="True"
                                      IsVisible="{Binding IsNazcaRendering}"
                                      Height="3" Foreground="#00c060"/>
-                        <TextBlock Text="{Binding NazcaOverlayStatus}"
-                                   Foreground="Gray" FontSize="11"
-                                   IsVisible="{Binding NazcaOverlayStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding NazcaOverlayStatus}"
+                                       Foreground="Gray" FontSize="11"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding NazcaOverlayStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <CheckBox Grid.Column="1"
+                                      Content="Show Nazca GDS"
+                                      IsChecked="{Binding ShowNazcaOverlay}"
+                                      Foreground="LightGray" FontSize="11"
+                                      ToolTip.Tip="Toggle the Nazca GDS overlay (dark green polygons + cyan pin stubs)"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 

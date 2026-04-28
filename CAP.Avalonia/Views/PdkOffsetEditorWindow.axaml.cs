@@ -49,7 +49,8 @@ public partial class PdkOffsetEditorWindow : Window
                 nameof(vm.CanvasComponentHeight) or
                 nameof(vm.CanvasComponentLeft) or
                 nameof(vm.CanvasComponentTop) or
-                nameof(vm.HasNazcaOverlay))
+                nameof(vm.HasNazcaOverlay) or
+                nameof(vm.ShowNazcaOverlay))
             {
                 RedrawOverlay(vm);
             }
@@ -75,8 +76,10 @@ public partial class PdkOffsetEditorWindow : Window
         OverlayCanvas.Width  = vm.CanvasTotalWidth;
         OverlayCanvas.Height = vm.CanvasTotalHeight;
 
-        // Draw Nazca GDS polygons behind the Lunima box
-        if (vm.HasNazcaOverlay)
+        // Draw Nazca GDS polygons behind the Lunima box.
+        // ShowNazcaOverlay is the user-facing toggle; HasNazcaOverlay is set
+        // when a render result is cached. Both required to actually paint.
+        if (vm.HasNazcaOverlay && vm.ShowNazcaOverlay)
         {
             foreach (var poly in vm.NazcaPolygons)
             {

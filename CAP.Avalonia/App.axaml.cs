@@ -181,7 +181,7 @@ public partial class App : Application
         services.AddSingleton(sp =>
         {
             var prefs = sp.GetRequiredService<UserPreferencesService>();
-            var python = prefs.GetCustomPythonPath() ?? "python3";
+            var python = prefs.GetCustomPythonPath() ?? ResolvePythonExecutable();
             var script = FindPreviewScript();
             return new NazcaComponentPreviewService(python, script);
         });
@@ -241,5 +241,49 @@ public partial class App : Application
         // Return primary candidate — NazcaComponentPreviewService returns a
         // graceful failure result when the script is not found.
         return candidates[0];
+    }
+
+    /// <summary>
+    /// Picks the first runnable Python interpreter from a per-platform candidate
+    /// list. Windows installers map differently (`python`, `py`-launcher) than
+    /// most Linux distros (`python3`); falling back to a single hard-coded name
+    /// caused the Nazca-preview to silently fail on default Windows installs.
+    /// </summary>
+    private static string ResolvePythonExecutable()
+    {
+        var candidates = OperatingSystem.IsWindows()
+            ? new[] { "python", "py", "python3" }
+            : new[] { "python3", "python" };
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = candidate,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+                if (p == null) continue;
+                p.WaitForExit(2000);
+                if (p.ExitCode == 0) return candidate;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Candidate not on PATH — try next
+            }
+            catch (Exception)
+            {
+                // Anything else: skip and try next
+            }
+        }
+
+        // Best-effort fallback — preview service returns a clear error message
+        // when this turns out not to be runnable.
+        return OperatingSystem.IsWindows() ? "python" : "python3";
     }
 }

@@ -39,6 +39,13 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     [ObservableProperty] private string _nazcaOverlayStatus = "";
     [ObservableProperty] private bool _hasNazcaOverlay;
 
+    /// <summary>
+    /// User toggle for the Nazca GDS overlay. When false the overlay is hidden
+    /// even if a successful render is cached — useful when the overlay clutters
+    /// the visual or when comparing pin alignment without the polygon noise.
+    /// </summary>
+    [ObservableProperty] private bool _showNazcaOverlay = true;
+
     /// <summary>Currently selected PDK from the installed-PDK dropdown; triggers load on change.</summary>
     [ObservableProperty]
     private PdkInfoViewModel? _selectedInstalledPdk;
