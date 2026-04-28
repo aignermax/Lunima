@@ -37,7 +37,15 @@ public partial class PdkOffsetEditorWindow : Window
         DataContextChanged += (_, _) =>
         {
             if (DataContext is PdkOffsetEditorViewModel vm)
+            {
                 SubscribeToViewModel(vm);
+                vm.CopyToClipboard = async text =>
+                {
+                    var clipboard = Clipboard;
+                    if (clipboard != null)
+                        await clipboard.SetTextAsync(text);
+                };
+            }
         };
     }
 

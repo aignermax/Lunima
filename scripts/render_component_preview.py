@@ -189,8 +189,10 @@ def _do_render(args):
     and other Nazca-renderable PDKs, build the cell via Nazca and export.
     """
     if _looks_like_siepic(args.module_name):
-        return _render_siepic_via_klayout(
+        result = _render_siepic_via_klayout(
             args.module_name, args.function_name, args.stub_length)
+        result["source"] = _fetch_siepic_source(args.module_name, args.function_name)
+        return result
 
     cell = _build_cell(args.module_name, args.function_name, args.parameters_string)
     xmin, ymin, xmax, ymax = _extract_bbox(cell)
@@ -226,7 +228,63 @@ def _do_render(args):
     }
     if polygon_warning:
         result["polygon_warning"] = polygon_warning
+    result["source"] = _fetch_nazca_source(args.module_name, args.function_name)
     return result
+
+
+def _fetch_nazca_source(module_name, function_name):
+    """
+    Pull the actual Python source of a Nazca-renderable cell function via
+    inspect. For demofab, this surfaces the real `nazca.demofab.<name>`
+    body — what the package actually computes when we call it. Returns a
+    descriptive note when the source can't be retrieved (e.g. C-extension).
+    """
+    try:
+        import inspect
+        if module_name == "demo":
+            import nazca.demofab as mod
+        else:
+            import importlib
+            mod = importlib.import_module(module_name)
+        target = function_name.rsplit(".", 1)[-1]
+        func = getattr(mod, target, None)
+        if func is None:
+            return f"# {module_name}.{target}: attribute not found"
+        try:
+            return inspect.getsource(func)
+        except (TypeError, OSError) as exc:
+            return f"# Could not read source for {module_name}.{target}: {exc}"
+    except Exception as exc:
+        return f"# Source unavailable: {exc}"
+
+
+def _fetch_siepic_source(module_name, function_name):
+    """
+    For SiEPIC, components live in two places: fixed cells under gds/EBeam/
+    (no Python — return GDS path + size), or PCells under
+    pymacros/pcells_EBeam/<name>.py (read the file directly).
+    """
+    try:
+        import importlib
+        mod = importlib.import_module(module_name)
+        pkg_dir = os.path.dirname(mod.__file__)
+        # PCell: real Python source under pymacros/pcells_EBeam/<name>.py
+        pcell_path = os.path.join(pkg_dir, "pymacros", "pcells_EBeam", f"{function_name}.py")
+        if os.path.exists(pcell_path):
+            with open(pcell_path, "r", encoding="utf-8") as f:
+                return f.read()
+        # Fixed-cell GDS: no Python; describe the file Lunima will read
+        gds_path = os.path.join(pkg_dir, "gds", "EBeam", f"{function_name}.gds")
+        if os.path.exists(gds_path):
+            size = os.path.getsize(gds_path)
+            return (
+                f"# {function_name} is a fixed-cell GDS in the SiEPIC package — no Python source.\n"
+                f"# Lunima loads the foundry layout directly from:\n"
+                f"#   {gds_path}\n"
+                f"# Size: {size} bytes\n")
+        return f"# Source unavailable: no PCell or fixed-cell GDS found for '{function_name}' in {module_name}"
+    except Exception as exc:
+        return f"# Source unavailable: {exc}"
 
 
 def _looks_like_siepic(module_name):

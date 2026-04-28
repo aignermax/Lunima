@@ -53,6 +53,20 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// </summary>
     [ObservableProperty] private string _previewSource = "";
 
+    /// <summary>
+    /// Callback for copying text to the OS clipboard. Wired by the window's
+    /// code-behind via <c>TopLevel.GetTopLevel(this).Clipboard</c>.
+    /// </summary>
+    public Func<string, Task>? CopyToClipboard { get; set; }
+
+    /// <summary>Copies the Nazca overlay status text to the clipboard.</summary>
+    [RelayCommand]
+    private async Task CopyStatus()
+    {
+        if (CopyToClipboard == null || string.IsNullOrEmpty(NazcaOverlayStatus)) return;
+        await CopyToClipboard(NazcaOverlayStatus);
+    }
+
     /// <summary>Currently selected PDK from the installed-PDK dropdown; triggers load on change.</summary>
     [ObservableProperty]
     private PdkInfoViewModel? _selectedInstalledPdk;
@@ -418,6 +432,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                     if (!string.IsNullOrEmpty(result.PolygonWarning))
                         status += "  " + result.PolygonWarning;
                     NazcaOverlayStatus = status;
+                    // Replace the synthetic Lunima-side snippet with the actual
+                    // PDK function source pulled live by the helper script.
+                    if (!string.IsNullOrEmpty(result.Source))
+                        PreviewSource = result.Source;
                 }
                 else
                 {

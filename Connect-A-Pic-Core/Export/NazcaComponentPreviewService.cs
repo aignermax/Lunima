@@ -53,6 +53,12 @@ public class NazcaPreviewResult
     /// Surfaces in the editor's status text alongside the success message.
     /// </summary>
     public string? PolygonWarning { get; init; }
+    /// <summary>
+    /// Real PDK source for the rendered component — the actual Nazca cell
+    /// function body via <c>inspect.getsource</c>, or the SiEPIC PCell
+    /// Python file content. <c>null</c> when the script could not retrieve it.
+    /// </summary>
+    public string? Source { get; init; }
     /// <summary>Pin stubs.</summary>
     public IReadOnlyList<NazcaPreviewPin> Pins { get; init; } = Array.Empty<NazcaPreviewPin>();
 
@@ -202,6 +208,7 @@ public class NazcaComponentPreviewService
                 Pins = ParsePins(root),
                 PolygonWarning = root.TryGetProperty("polygon_warning", out var pw)
                     ? pw.GetString() : null,
+                Source = root.TryGetProperty("source", out var sourceEl) ? sourceEl.GetString() : null,
             };
         }
         catch (Exception ex)

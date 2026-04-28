@@ -122,13 +122,21 @@
                         <ProgressBar IsIndeterminate="True"
                                      IsVisible="{Binding IsNazcaRendering}"
                                      Height="3" Foreground="#00c060"/>
-                        <Grid ColumnDefinitions="*,Auto">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
                             <TextBlock Grid.Column="0"
                                        Text="{Binding NazcaOverlayStatus}"
                                        Foreground="LightYellow" FontSize="11"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap"/>
-                            <CheckBox Grid.Column="1"
+                            <Button Grid.Column="1"
+                                    Content="📋"
+                                    Command="{Binding CopyStatusCommand}"
+                                    FontSize="11" Padding="6,2" Margin="4,0"
+                                    Background="#3d3d3d" Foreground="LightGray"
+                                    ToolTip.Tip="Copy status text to clipboard"
+                                    IsVisible="{Binding NazcaOverlayStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    VerticalAlignment="Center"/>
+                            <CheckBox Grid.Column="2"
                                       Content="Show Nazca GDS"
                                       IsChecked="{Binding ShowNazcaOverlay}"
                                       Foreground="LightGray" FontSize="11"
