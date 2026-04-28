@@ -168,11 +168,8 @@ public partial class LeftPanelViewModel : ObservableObject
 
     private void LoadBundledPdks()
     {
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var pdkDir = Path.Combine(baseDir, "PDKs");
-
-        if (!Directory.Exists(pdkDir))
-            return;
+        var pdkDir = ResolveBundledPdkDirectory(AppDomain.CurrentDomain.BaseDirectory);
+        if (pdkDir == null) return;
 
         foreach (var pdkFile in Directory.GetFiles(pdkDir, "*.json"))
         {
@@ -202,6 +199,34 @@ public partial class LeftPanelViewModel : ObservableObject
                 _errorConsole?.LogError($"Failed to load PDK '{Path.GetFileName(pdkFile)}': {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Resolves which PDK directory to load and save against. In a dev build —
+    /// running from <c>bin/Debug</c> or <c>bin/Release</c> inside the source
+    /// tree — prefers the repo-tracked <c>CAP-DataAccess/PDKs</c> sibling so
+    /// the offset editor's saves land in the git working tree instead of the
+    /// build artefact (which the next build would silently overwrite and
+    /// which is never committed). Falls back to the bundled copy next to the
+    /// executable for deployed builds.
+    /// </summary>
+    /// <remarks>Internal so unit tests can drive it with a fake start dir.</remarks>
+    internal static string? ResolveBundledPdkDirectory(string baseDir)
+    {
+        var bundled = Path.Combine(baseDir, "PDKs");
+
+        // Walk up to the repo root looking for a CAP-DataAccess/PDKs sibling.
+        // 6 levels covers bin/<config>/<tfm>/<runtime>/ plus the project dir.
+        var dir = new DirectoryInfo(baseDir);
+        for (int i = 0; i < 6 && dir != null; i++, dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, "CAP-DataAccess", "PDKs");
+            if (Directory.Exists(candidate) &&
+                Directory.GetFiles(candidate, "*.json").Length > 0)
+                return candidate;
+        }
+
+        return Directory.Exists(bundled) ? bundled : null;
     }
 
     private void FilterComponents()
