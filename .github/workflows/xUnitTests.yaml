@@ -94,4 +94,9 @@ jobs:
           # FindWorkingPython3 checks this env var first so the test subprocess
           # uses the same interpreter we just pip-installed nazca/klayout into.
           LUNIMA_TEST_PYTHON3: ${{ steps.setup-python.outputs.python-path }}
+          # Force matplotlib + Qt to non-interactive backends — Nazca's import
+          # chain pulls these in, and on a headless CI runner they otherwise
+          # block the render subprocess waiting for a display.
+          MPLBACKEND: Agg
+          QT_QPA_PLATFORM: offscreen
         run: dotnet test --no-restore
