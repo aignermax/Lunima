@@ -15,7 +15,11 @@ public partial class PdkOffsetEditorWindow : Window
     private const double PinDotRadius = 5.0;
     private const double CrosshairLength = 12.0;
 
-    private static readonly IBrush ComponentBoxBrush = new SolidColorBrush(Color.Parse("#1a3a6a"));
+    // Semi-transparent fill so the Nazca GDS polygons drawn behind the box
+    // remain visible — alignment-by-eye is the whole point of the editor.
+    // Border stays fully opaque so the Lunima bbox is still clearly readable.
+    private static readonly IBrush ComponentBoxBrush =
+        new SolidColorBrush(Color.FromArgb(0x4D, 0x1a, 0x3a, 0x6a));   // ~30% alpha
     private static readonly IBrush ComponentBorderBrush = new SolidColorBrush(Color.Parse("#4080c0"));
     private static readonly IBrush PinBrush = new SolidColorBrush(Colors.Cyan);
     private static readonly IBrush OriginBrush = new SolidColorBrush(Colors.Orange);
