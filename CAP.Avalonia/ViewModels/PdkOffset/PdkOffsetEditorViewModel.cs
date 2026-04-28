@@ -5,6 +5,8 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
+// PdkOffsetCalibration lives in CAP_DataAccess.Components.ComponentDraftMapper —
+// the using directive above already pulls it into scope.
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -15,6 +17,10 @@ namespace CAP.Avalonia.ViewModels.PdkOffset;
 /// Allows browsing all PDK components, inspecting NazcaOriginOffset status,
 /// editing offset values with a live pin-position preview, and saving back to JSON.
 /// Optionally displays a Nazca GDS overlay when a preview service is provided.
+/// Split across three partial files to stay within the file-size limits:
+/// this file owns state + load/save/select; <see cref="PdkOffsetEditorViewModel.Calibration"/>
+/// owns the pin-alignment + Auto-Calibrate + Check-All / Try-Fix-All commands;
+/// <see cref="PdkOffsetEditorViewModel.Overlay"/> owns the Nazca render + canvas math.
 /// </summary>
 public partial class PdkOffsetEditorViewModel : ObservableObject
 {
@@ -77,6 +83,23 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>Per-pin alignment detail. Populated by <see cref="ComputePinAlignment"/>.</summary>
     public ObservableCollection<PinAlignmentInfo> PinAlignmentResults { get; } = new();
 
+    /// <summary>One row per component from the most recent Check-All / Try-Fix-All run.</summary>
+    public ObservableCollection<ComponentCheckResult> BatchCheckResults { get; } = new();
+
+    /// <summary>True while a batch (Check-All or Try-Fix-All) is iterating components.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckAllCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TryFixAllCommand))]
+    private bool _isBatchRunning;
+
+    /// <summary>Status line shown above the batch report ("[3/14] ebeam_y_1550…").</summary>
+    [ObservableProperty] private string _batchProgress = "";
+
+    /// <summary>One-line summary shown after a batch completes.</summary>
+    [ObservableProperty] private string _batchSummary = "";
+
+    private CancellationTokenSource? _batchCts;
+
     /// <summary>
     /// Source snippet for the currently selected component — what the preview
     /// would tell Python to render. Empty until a component is selected.
@@ -96,187 +119,6 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     {
         if (CopyToClipboard == null || string.IsNullOrEmpty(NazcaOverlayStatus)) return;
         await CopyToClipboard(NazcaOverlayStatus);
-    }
-
-    /// <summary>
-    /// Compares Lunima's PDK-JSON pin positions against the Nazca render's
-    /// pin stubs (in Nazca-space micrometres) and populates
-    /// <see cref="PinAlignmentResults"/> + <see cref="PinAlignmentSummary"/>.
-    /// Each Lunima pin is matched to its nearest Nazca pin by Euclidean
-    /// distance — name-matching is unreliable across PDKs (Lunima uses
-    /// "in"/"out", SiEPIC uses "opt1"/"opt2").
-    /// </summary>
-    internal void ComputePinAlignment(NazcaPreviewResult result, PdkComponentDraft draft)
-    {
-        PinAlignmentResults.Clear();
-        if (result.Pins.Count == 0 || draft.Pins.Count == 0)
-        {
-            PinAlignmentSummary = result.Pins.Count == 0
-                ? "Nazca cell exposes no pins — Lunima pin positions cannot be cross-checked."
-                : "Lunima component has no pins defined.";
-            return;
-        }
-
-        int aligned = 0;
-        foreach (var lp in draft.Pins)
-        {
-            // Lunima pin position in Nazca-space micrometres. Lunima offsets
-            // are measured from the bbox top-left in y-down. The Nazca origin
-            // sits at (NazcaOriginOffsetX, ComponentHeight - NazcaOriginOffsetY)
-            // inside that bbox in y-down — i.e. the offset Y is measured from
-            // the bottom edge upward, the Lunima pin Y from the top edge down.
-            // The y-flip therefore needs the ComponentHeight term to subtract
-            // the Lunima distance from the bottom, then push to Nazca origin.
-            // Same formula as PinPositionViewModel.NazcaRelY.
-            var lunimaNazcaX = lp.OffsetXMicrometers - (draft.NazcaOriginOffsetX ?? 0);
-            var lunimaNazcaY = (draft.HeightMicrometers - lp.OffsetYMicrometers)
-                               - (draft.NazcaOriginOffsetY ?? 0);
-
-            var nearest = result.Pins
-                .Select(np => (np, dist: Math.Sqrt(
-                    (np.X - lunimaNazcaX) * (np.X - lunimaNazcaX) +
-                    (np.Y - lunimaNazcaY) * (np.Y - lunimaNazcaY))))
-                .OrderBy(t => t.dist)
-                .First();
-
-            var dx = nearest.np.X - lunimaNazcaX;
-            var dy = nearest.np.Y - lunimaNazcaY;
-            var isAligned = nearest.dist <= PinAlignmentToleranceMicrometers;
-            if (isAligned) aligned++;
-
-            PinAlignmentResults.Add(new PinAlignmentInfo(
-                lp.Name, nearest.np.Name, dx, dy, nearest.dist, isAligned));
-        }
-
-        PinAlignmentSummary = aligned == draft.Pins.Count
-            ? $"✓ All {aligned}/{draft.Pins.Count} Lunima pins align with Nazca pins (≤{PinAlignmentToleranceMicrometers:F1} µm)."
-            : $"⚠ {aligned}/{draft.Pins.Count} pins aligned. Worst delta: " +
-              $"{PinAlignmentResults.Max(p => p.DistanceMicrometers):F2} µm — adjust NazcaOriginOffset.";
-    }
-
-    /// <summary>
-    /// Derives Width / Height / NazcaOriginOffset from the cached Nazca bbox
-    /// and snaps every Lunima pin to its matched Nazca pin position. The user
-    /// no longer has to reverse-engineer the bbox math — one click and the
-    /// JSON aligns with the GDS down to the pin.
-    ///
-    /// Pin matching is greedy bipartite by Euclidean distance using the
-    /// component's CURRENT calibration as the projection space, so a
-    /// roughly-correct starting offset is enough. Pin counts must match —
-    /// otherwise the command refuses with an explicit error so the user
-    /// knows the mismatch is real (e.g. SiEPIC GC has 'io' + 'wg' but the
-    /// Lunima JSON only declares one pin).
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(CanAutoCalibrate))]
-    private void AutoCalibrate()
-    {
-        if (_lastNazcaResult is not { Success: true } r || SelectedComponent == null)
-        {
-            StatusText = "Auto-calibrate needs a successful Nazca preview.";
-            return;
-        }
-
-        var draft = SelectedComponent.Draft;
-
-        if (r.XMax <= r.XMin || r.YMax <= r.YMin)
-        {
-            StatusText = "Auto-calibrate aborted: Nazca bbox is degenerate " +
-                         $"(XMin={r.XMin}, XMax={r.XMax}, YMin={r.YMin}, YMax={r.YMax}).";
-            return;
-        }
-
-        if (r.Pins.Count != draft.Pins.Count)
-        {
-            StatusText = $"Auto-calibrate aborted: Lunima component '{SelectedComponent.ComponentName}' " +
-                         $"declares {draft.Pins.Count} pins but the Nazca cell exposes {r.Pins.Count} — " +
-                         "pin counts must match for unambiguous alignment.";
-            return;
-        }
-
-        var pairs = MatchPinsByGreedyNearest(draft, r);
-
-        draft.WidthMicrometers = r.XMax - r.XMin;
-        draft.HeightMicrometers = r.YMax - r.YMin;
-        draft.NazcaOriginOffsetX = -r.XMin;
-        draft.NazcaOriginOffsetY = -r.YMin;
-
-        foreach (var (lp, np) in pairs)
-        {
-            lp.OffsetXMicrometers = np.X - r.XMin;
-            lp.OffsetYMicrometers = r.YMax - np.Y;
-        }
-
-        // Mirror back into the bound numeric controls so the editor reflects
-        // the new calibration without requiring the user to re-select the row.
-        OffsetX = draft.NazcaOriginOffsetX.Value;
-        OffsetY = draft.NazcaOriginOffsetY.Value;
-        ComponentWidth = draft.WidthMicrometers;
-        ComponentHeight = draft.HeightMicrometers;
-
-        SelectedComponent.RefreshStatus();
-        RefreshPinPositions(draft);
-        RefreshCanvasMarkers(draft);
-        ComputePinAlignment(r, draft);
-        HasUnsavedChanges = true;
-        StatusText = $"Auto-calibrated '{SelectedComponent.ComponentName}' from GDS bbox " +
-                     $"({draft.WidthMicrometers:F2} × {draft.HeightMicrometers:F2} µm, " +
-                     $"origin {draft.NazcaOriginOffsetX:F2}/{draft.NazcaOriginOffsetY:F2}). " +
-                     "Click Save to persist.";
-    }
-
-    private bool CanAutoCalibrate() =>
-        _lastNazcaResult is { Success: true } && SelectedComponent != null;
-
-    /// <summary>
-    /// Test seam: lets unit tests place a synthetic <see cref="NazcaPreviewResult"/>
-    /// into the cache slot the AutoCalibrate command reads from, without spinning
-    /// up the Python preview pipeline.
-    /// </summary>
-    internal void SeedNazcaResultForTesting(NazcaPreviewResult result)
-    {
-        _lastNazcaResult = result;
-        AutoCalibrateCommand.NotifyCanExecuteChanged();
-    }
-
-    /// <summary>
-    /// Greedy bipartite pin matcher: repeatedly takes the closest Lunima/Nazca
-    /// pair (in current Lunima→Nazca-space projection) and removes both from
-    /// the candidate sets. Returns one pair per Lunima pin assuming counts
-    /// match. Exposed as internal so the unit tests can pin the assignment.
-    /// </summary>
-    internal static List<(PhysicalPinDraft Lunima, NazcaPreviewPin Nazca)>
-        MatchPinsByGreedyNearest(PdkComponentDraft draft, NazcaPreviewResult result)
-    {
-        var pairs = new List<(PhysicalPinDraft, NazcaPreviewPin)>();
-        // Project Lunima pins to Nazca-space with the CURRENT calibration so a
-        // roughly-correct starting offset still matches pins correctly even if
-        // the box dimensions are off.
-        var projections = draft.Pins
-            .Select(lp => (
-                lp,
-                x: lp.OffsetXMicrometers - (draft.NazcaOriginOffsetX ?? 0),
-                y: (draft.HeightMicrometers - lp.OffsetYMicrometers) - (draft.NazcaOriginOffsetY ?? 0)))
-            .ToList();
-        var availableNazca = result.Pins.ToList();
-
-        while (projections.Count > 0 && availableNazca.Count > 0)
-        {
-            var best = (lpIdx: -1, npIdx: -1, dist: double.MaxValue);
-            for (var i = 0; i < projections.Count; i++)
-            {
-                for (var j = 0; j < availableNazca.Count; j++)
-                {
-                    var dx = availableNazca[j].X - projections[i].x;
-                    var dy = availableNazca[j].Y - projections[i].y;
-                    var d = Math.Sqrt(dx * dx + dy * dy);
-                    if (d < best.dist) best = (i, j, d);
-                }
-            }
-            pairs.Add((projections[best.lpIdx].lp, availableNazca[best.npIdx]));
-            projections.RemoveAt(best.lpIdx);
-            availableNazca.RemoveAt(best.npIdx);
-        }
-        return pairs;
     }
 
     /// <summary>Window-side hook that resets the canvas zoom slider to 1.0.</summary>
@@ -540,6 +382,12 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         StatusText = $"Loaded {_loadedPdk.Name}: {Components.Count} components " +
                      $"({missing} missing offset, {zero} at zero).";
         SelectedComponent = null;
+        // Components.Count is not an ObservableProperty — manually nudge so the
+        // batch buttons re-evaluate CanExecute now that the list has rows.
+        CheckAllCommand.NotifyCanExecuteChanged();
+        TryFixAllCommand.NotifyCanExecuteChanged();
+        BatchCheckResults.Clear();
+        BatchSummary = "";
     }
 
     private void RefreshPinPositions(PdkComponentDraft draft)
@@ -557,236 +405,6 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         }
     }
 
-    private void RefreshCanvasMarkers(PdkComponentDraft draft)
-    {
-        CanvasComponentWidth = ComponentWidth * CanvasScale;
-        CanvasComponentHeight = ComponentHeight * CanvasScale;
-
-        if (HasNazcaOverlay)
-        {
-            // Nazca geometry is fixed; move Lunima box as offset changes
-            CanvasComponentLeft = _nazcaCanvasRefX - OffsetX * CanvasScale;
-            CanvasComponentTop = _nazcaCanvasRefY - (ComponentHeight - OffsetY) * CanvasScale;
-            CanvasOriginX = _nazcaCanvasRefX;
-            CanvasOriginY = _nazcaCanvasRefY;
-        }
-        else
-        {
-            CanvasComponentLeft = CanvasPadding;
-            CanvasComponentTop = CanvasPadding;
-            CanvasOriginX = CanvasPadding + OffsetX * CanvasScale;
-            CanvasOriginY = CanvasPadding + (ComponentHeight - OffsetY) * CanvasScale;
-        }
-
-        PinMarkers.Clear();
-        foreach (var pin in draft.Pins)
-        {
-            PinMarkers.Add(new PinMarker(
-                pin.Name,
-                CanvasComponentLeft + pin.OffsetXMicrometers * CanvasScale,
-                CanvasComponentTop + pin.OffsetYMicrometers * CanvasScale));
-        }
-    }
-
-    /// <summary>
-    /// Applies a Nazca preview result, transforming coordinates to canvas space
-    /// and populating the overlay collections.
-    /// </summary>
-    private void SetNazcaOverlay(NazcaPreviewResult result)
-    {
-        // Nazca origin is at (0,0) in Nazca space; map to canvas
-        _nazcaCanvasRefX = CanvasPadding + (-result.XMin) * CanvasScale;
-        _nazcaCanvasRefY = CanvasPadding + result.YMax * CanvasScale;
-        // Track the Nazca bbox right/bottom so the total canvas size grows to
-        // fit polygons that extend past the Lunima JSON's WidthMicrometers.
-        _nazcaCanvasRight = _nazcaCanvasRefX + result.XMax * CanvasScale;
-        _nazcaCanvasBottom = _nazcaCanvasRefY - result.YMin * CanvasScale;
-        OnPropertyChanged(nameof(CanvasTotalWidth));
-        OnPropertyChanged(nameof(CanvasTotalHeight));
-
-        NazcaPolygons.Clear();
-        foreach (var poly in result.Polygons)
-        {
-            var canvasPts = poly.Vertices
-                .Select(v => (
-                    X: _nazcaCanvasRefX + v.X * CanvasScale,
-                    Y: _nazcaCanvasRefY - v.Y * CanvasScale))
-                .ToList();
-            NazcaPolygons.Add(new NazcaPolygonMarker(poly.Layer, canvasPts));
-        }
-
-        NazcaPinStubs.Clear();
-        foreach (var pin in result.Pins)
-        {
-            var x0 = _nazcaCanvasRefX + pin.X * CanvasScale;
-            var y0 = _nazcaCanvasRefY - pin.Y * CanvasScale;
-            var x1 = _nazcaCanvasRefX + pin.StubX1 * CanvasScale;
-            var y1 = _nazcaCanvasRefY - pin.StubY1 * CanvasScale;
-            NazcaPinStubs.Add(new NazcaStubMarker(pin.Name, x0, y0, x1, y1));
-        }
-
-        HasNazcaOverlay = true;
-        if (SelectedComponent != null)
-            RefreshCanvasMarkers(SelectedComponent.Draft);
-    }
-
-    /// <summary>Triggers an async Nazca render for the given component draft.</summary>
-    private async Task TriggerNazcaRenderAsync(PdkComponentDraft draft)
-    {
-        _renderCts?.Cancel();
-        _renderCts = new CancellationTokenSource();
-        var token = _renderCts.Token;
-
-        // Capture the draft this render was started for so a fast user-click that
-        // changes SelectedComponent mid-flight cannot stamp our overlay on top of
-        // a newer component's offsets.
-        var draftAtStart = draft;
-
-        IsNazcaRendering = true;
-        NazcaOverlayStatus = "Rendering Nazca GDS preview…";
-
-        try
-        {
-            var (module, function) = ResolveModuleAndFunction(draft.NazcaFunction);
-            var result = await _previewService!.RenderAsync(
-                module,
-                function,
-                draft.NazcaParameters,
-                token);
-
-            if (token.IsCancellationRequested) return;
-            // SelectedComponent has moved on while we were waiting — drop result.
-            if (SelectedComponent?.Draft != draftAtStart) return;
-
-            // RenderAsync returns on a thread-pool thread; ObservableCollection
-            // mutations downstream must happen on the UI thread.
-            await UiThreadMarshaller(() =>
-            {
-                if (token.IsCancellationRequested) return;
-                if (SelectedComponent?.Draft != draftAtStart) return;
-
-                if (result.Success)
-                {
-                    _lastNazcaResult = result;
-                    SetNazcaOverlay(result);
-                    var status = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
-                    if (!string.IsNullOrEmpty(result.PolygonWarning))
-                        status += "  " + result.PolygonWarning;
-                    NazcaOverlayStatus = status;
-                    // Replace the synthetic Lunima-side snippet with the actual
-                    // PDK function source pulled live by the helper script.
-                    if (!string.IsNullOrEmpty(result.Source))
-                        PreviewSource = result.Source;
-                    ComputePinAlignment(result, draftAtStart);
-                }
-                else
-                {
-                    _lastNazcaResult = null;
-                    HasNazcaOverlay = false;
-                    NazcaOverlayStatus = $"Preview unavailable: {result.Error}";
-                }
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            // Superseded by a newer selection — no status update needed
-        }
-        catch (Exception ex)
-        {
-            await UiThreadMarshaller(() =>
-            {
-                HasNazcaOverlay = false;
-                NazcaOverlayStatus = $"Preview error: {ex.Message}";
-            });
-        }
-        finally
-        {
-            if (!token.IsCancellationRequested)
-                IsNazcaRendering = false;
-        }
-    }
-
-    /// <summary>
-    /// Renders the same Python the preview helper would execute, as a string
-    /// the user can read and copy. Different shape per render path:
-    /// SiEPIC → klayout GDS load; demofab → Nazca cell call.
-    /// </summary>
-    private static string BuildPreviewSource(PdkComponentDraft draft)
-    {
-        var (module, function) = ResolveModuleAndFunction(draft.NazcaFunction);
-        var paramsBlock = string.IsNullOrWhiteSpace(draft.NazcaParameters)
-            ? "" : draft.NazcaParameters;
-
-        if (module.StartsWith("siepic", StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Join("\n",
-                "# SiEPIC components are read from their bundled fixed-cell GDS:",
-                $"#   <{module}-package>/gds/EBeam/{function}.gds",
-                "",
-                "import os, klayout.db as kdb",
-                $"import {module}",
-                $"pkg_dir = os.path.dirname({module}.__file__)",
-                $"gds = os.path.join(pkg_dir, 'gds', 'EBeam', '{function}.gds')",
-                "ly = kdb.Layout(); ly.read(gds)",
-                "cell = next(ly.each_cell())",
-                "# polygons on layer 1/0, pins on layer 1/10");
-        }
-
-        var moduleImport = module == "demo" ? "import nazca.demofab as demo" : $"import {module} as mod";
-        var modAlias = module == "demo" ? "demo" : "mod";
-        var paramsRepr = string.IsNullOrEmpty(paramsBlock) ? "" : paramsBlock;
-        return string.Join("\n",
-            "# The preview helper builds the cell, exports a temp GDS,",
-            "# and reads back polygons + pins via klayout/gdstk.",
-            "import nazca as nd",
-            moduleImport,
-            $"cell = {modAlias}.{function}({paramsRepr})",
-            "nd.export_gds(topcells=[cell], filename='preview.gds')");
-    }
-
-    /// <summary>
-    /// Splits a NazcaFunction string into a Python module name and a bare
-    /// function name. Two cases the PDKs use today:
-    /// <list type="bullet">
-    ///   <item><c>"demo.mmi2x2_dp"</c> — demofab uses dotted notation; split
-    ///     at the last dot.</item>
-    ///   <item><c>"ebeam_y_1550"</c> — SiEPIC EBeam exposes flat names; the
-    ///     name prefix tells us which Python module owns it.</item>
-    /// </list>
-    /// Exposed as internal so the unit tests can lock the mapping in directly
-    /// rather than going through the full async render pipeline.
-    /// </summary>
-    internal static (string module, string function) ResolveModuleAndFunction(string? nazcaFunction)
-    {
-        if (string.IsNullOrWhiteSpace(nazcaFunction))
-            return ("demo", "");
-
-        var lastDot = nazcaFunction.LastIndexOf('.');
-        if (lastDot > 0)
-        {
-            var prefix = nazcaFunction[..lastDot];
-            var fn = nazcaFunction[(lastDot + 1)..];
-            // Both 'demo.foo' and 'demo_pdk.foo' (the latter appears in some
-            // Lunima PDK JSONs) resolve to nazca.demofab — let the script see
-            // the canonical 'demo' so it doesn't try to importlib 'demo_pdk'.
-            if (prefix == "demo_pdk") prefix = "demo";
-            return (prefix, fn);
-        }
-
-        // SiEPIC EBeam PDK ships flat names — these prefixes are the existing
-        // convention used elsewhere in the repo (see SimpleNazcaExporter.IsPdkFunction).
-        if (nazcaFunction.StartsWith("ebeam_", StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("gc_",    StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("ANT_",   StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("crossing_", StringComparison.Ordinal) ||
-            nazcaFunction.StartsWith("taper_", StringComparison.Ordinal))
-        {
-            return ("siepic_ebeam_pdk", nazcaFunction);
-        }
-
-        // Anything else: assume demofab, the bundled Nazca PDK.
-        return ("demo", nazcaFunction);
-    }
 }
 
 /// <summary>

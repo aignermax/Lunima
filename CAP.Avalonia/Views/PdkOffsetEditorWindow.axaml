@@ -36,6 +36,37 @@
                 </ComboBox>
             </StackPanel>
 
+            <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="6"
+                    Background="#1a2a3a" CornerRadius="4">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Batch operations" FontWeight="Bold" Foreground="LightGray" FontSize="11"/>
+                    <Grid ColumnDefinitions="*,4,*">
+                        <Button Grid.Column="0" Content="🔍 Check All"
+                                Command="{Binding CheckAllCommand}"
+                                HorizontalAlignment="Stretch" Padding="6,4"
+                                Background="#3d3d5d" Foreground="White" FontSize="11"
+                                ToolTip.Tip="Render every component and report alignment status"/>
+                        <Button Grid.Column="2" Content="🪄 Try-Fix All"
+                                Command="{Binding TryFixAllCommand}"
+                                HorizontalAlignment="Stretch" Padding="6,4"
+                                Background="#5d3d8d" Foreground="White" FontSize="11"
+                                ToolTip.Tip="Auto-Calibrate every fixable component, then re-check"/>
+                    </Grid>
+                    <ProgressBar IsIndeterminate="True" Height="3" Foreground="#a080ff"
+                                 IsVisible="{Binding IsBatchRunning}"/>
+                    <TextBlock Text="{Binding BatchProgress}"
+                               IsVisible="{Binding BatchProgress, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Foreground="LightGray" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                    <Button Content="✕ Cancel" Command="{Binding CancelBatchCommand}"
+                            IsVisible="{Binding IsBatchRunning}"
+                            HorizontalAlignment="Stretch" Padding="6,2"
+                            Background="#5d3d3d" Foreground="LightGray" FontSize="10"/>
+                    <TextBlock Text="{Binding BatchSummary}"
+                               IsVisible="{Binding BatchSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Foreground="LightYellow" FontSize="10" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
             <ListBox ItemsSource="{Binding Components}"
                      SelectedItem="{Binding SelectedComponent}"
                      Background="#252525"
@@ -261,6 +292,43 @@
                                         <TextBlock Grid.Column="2" Text="{Binding LocalYText}" Foreground="LightGray"/>
                                         <TextBlock Grid.Column="3" Text="{Binding NazcaXText}" Foreground="Cyan"/>
                                         <TextBlock Grid.Column="4" Text="{Binding NazcaYText}" Foreground="Cyan"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Batch report -->
+                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                        IsVisible="{Binding BatchCheckResults.Count}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Batch report (Check-All / Try-Fix-All)"
+                                   FontWeight="Bold" Foreground="LightGray"/>
+                        <Grid ColumnDefinitions="20,*,80,80,140" Margin="0,4,0,2">
+                            <TextBlock Grid.Column="0" Text="" Foreground="Gray"/>
+                            <TextBlock Grid.Column="1" Text="Component" Foreground="Gray" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="2" Text="Pins L/N" Foreground="Gray" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="3" Text="Δ max" Foreground="Gray" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="4" Text="Status" Foreground="Gray" FontWeight="Bold"/>
+                        </Grid>
+                        <Rectangle Height="1" Fill="#3d3d3d"/>
+                        <ItemsControl ItemsSource="{Binding BatchCheckResults}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="20,*,80,80,140" Margin="0,2"
+                                          ToolTip.Tip="{Binding Message}">
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusBadge}" FontSize="14"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ComponentName}" Foreground="White"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding LunimaPinCount, StringFormat='{}{0}/'}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding NazcaPinCount}"
+                                                   Foreground="LightGray" Margin="20,0,0,0"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding WorstDeltaMicrometers, StringFormat='{}{0:F2} µm'}"
+                                                   Foreground="LightGray"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding Status}" Foreground="LightYellow"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
