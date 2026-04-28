@@ -274,6 +274,20 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Builds the PDK-template-scoped store key (<c>"{pdkSource}::{templateName}"</c>) for a component,
+    /// or <c>null</c> when the component has no matching template (e.g. user group). Used as the
+    /// fallback lookup in <see cref="Services.SMatrixOverrideApplicator.ApplyAll"/> so PDK-template
+    /// overrides reach every instance of the template.
+    /// </summary>
+    private string? ResolveTemplateKey(Component component)
+    {
+        var pdkSource = FindTemplatePdkSource(component);
+        if (pdkSource == null) return null;
+        var templateName = FindTemplateName(component);
+        return $"{pdkSource}::{templateName}";
+    }
+
+    /// <summary>
     /// Finds the PDK source for a component by matching its NazcaFunctionName against the library.
     /// Returns null if no match is found.
     /// </summary>
@@ -612,8 +626,14 @@ public partial class FileOperationsViewModel : ObservableObject
 
                     // Apply per-instance overrides to live components so the
                     // next simulation run picks up the stored S-matrices.
+                    // Falls back to "{pdkSource}::{templateName}" so PDK-template-scoped
+                    // overrides reach every instance of the template, not just renamed instances.
                     var allComponents = _canvas.Components.Select(vm => vm.Component);
-                    Services.SMatrixOverrideApplicator.ApplyAll(allComponents, StoredSMatrices);
+                    Services.SMatrixOverrideApplicator.ApplyAll(
+                        allComponents,
+                        StoredSMatrices,
+                        templateKeyResolver: ResolveTemplateKey,
+                        errorConsole: _errorConsole);
                 }
 
                 _currentFilePath = filePath;

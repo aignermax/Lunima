@@ -1,10 +1,12 @@
 using System.IO;
 using System.Numerics;
 using System.Text.Json;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP_DataAccess.Import;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
+using UnitTests;
 
 namespace UnitTests.Import;
 
@@ -73,6 +75,50 @@ public class SParameterPersistenceRoundTripTests
         e1550.Real[3].ShouldBe(0.2 * 1550, tolerance: 1e-6);
         e1550.PortNames.ShouldNotBeNull();
         e1550.PortNames!.ShouldBe(new[] { "port 1", "port 2" });
+    }
+
+    [Fact]
+    public void SaveLoad_SMatrixOverride_AppliesToReloadedComponentWithCorrectConvention()
+    {
+        // End-to-end contract: a serialized override deserializes and ApplyAll
+        // produces the same (InFlow, OutFlow) → value mapping that Apply does
+        // on a freshly imported live SMatrix. Catches a regression where the
+        // JSON layer drops dimensions, port names, or row-major ordering — any
+        // of which would silently produce wrong physics on reload.
+        var component = TestComponentFactory.CreateSimpleTwoPortComponent();
+        component.Identifier = "comp_42";
+        var pinIn = component.PhysicalPins[0].LogicalPin!;
+        var pinOut = component.PhysicalPins[1].LogicalPin!;
+
+        var data = new ComponentSMatrixData
+        {
+            Wavelengths =
+            {
+                ["1550"] = new SMatrixWavelengthEntry
+                {
+                    Rows = 2, Cols = 2,
+                    Real = new List<double> { 1, 2, 3, 4 },
+                    Imag = new List<double> { 0, 0, 0, 0 }
+                }
+            }
+        };
+
+        var designData = new DesignFileData
+        {
+            SMatrices = new Dictionary<string, ComponentSMatrixData> { ["comp_42"] = data }
+        };
+        var json = JsonSerializer.Serialize(designData);
+        var reloaded = JsonSerializer.Deserialize<DesignFileData>(json)!;
+
+        var result = SMatrixOverrideApplicator.ApplyAll(new[] { component }, reloaded.SMatrices!);
+
+        result.PerComponent["comp_42"].Applied.ShouldBe(1);
+        result.OrphanKeys.ShouldBeEmpty();
+        var transfers = component.WaveLengthToSMatrixMap[1550].GetNonNullValues();
+        transfers[(pinIn.IDInFlow, pinIn.IDOutFlow)].ShouldBe(new Complex(1, 0));
+        transfers[(pinOut.IDInFlow, pinIn.IDOutFlow)].ShouldBe(new Complex(2, 0));
+        transfers[(pinIn.IDInFlow, pinOut.IDOutFlow)].ShouldBe(new Complex(3, 0));
+        transfers[(pinOut.IDInFlow, pinOut.IDOutFlow)].ShouldBe(new Complex(4, 0));
     }
 
     [Fact]

@@ -6,7 +6,6 @@ using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
-using CAP.Avalonia.ViewModels.Import;
 using CAP_Core.Export;
 using Moq;
 using CAP.Avalonia.Services;

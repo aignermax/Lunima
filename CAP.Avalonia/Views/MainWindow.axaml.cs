@@ -475,10 +475,17 @@ public partial class MainWindow : Window
         CAP_Core.Components.Core.Component? liveComponent,
         MainViewModel vm)
     {
-        var dialogVm = new ComponentSettingsDialogViewModel();
-        dialogVm.FileDialogService = new FileDialogService(this);
-        dialogVm.OnSMatrixStoreChanged = () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
-        dialogVm.Configure(entityKey, displayName, vm.FileOperations.StoredSMatrices, liveComponent);
+        var errorConsole = App.Services.GetService(typeof(CAP_Core.ErrorConsoleService))
+            as CAP_Core.ErrorConsoleService;
+        var dialogVm = new ComponentSettingsDialogViewModel(
+            new FileDialogService(this),
+            errorConsole);
+        dialogVm.Configure(
+            entityKey,
+            displayName,
+            vm.FileOperations.StoredSMatrices,
+            liveComponent,
+            onChanged: () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers());
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);
