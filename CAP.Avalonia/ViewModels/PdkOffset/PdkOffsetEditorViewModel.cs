@@ -105,6 +105,15 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>
     /// Initializes the ViewModel with required services and optional preview service.
     /// </summary>
+    /// <summary>
+    /// UI-thread marshaller for async render results. Default uses Avalonia's
+    /// dispatcher; tests can inject a synchronous executor so the unit-test
+    /// runner doesn't have to host an Avalonia application just to wait for
+    /// the render to apply.
+    /// </summary>
+    internal Func<Action, Task> UiThreadMarshaller { get; set; } =
+        static async action => await Dispatcher.UIThread.InvokeAsync(action);
+
     public PdkOffsetEditorViewModel(
         PdkLoader pdkLoader,
         PdkJsonSaver pdkSaver,
@@ -389,7 +398,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
             // RenderAsync returns on a thread-pool thread; ObservableCollection
             // mutations downstream must happen on the UI thread.
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await UiThreadMarshaller(() =>
             {
                 if (token.IsCancellationRequested) return;
                 if (SelectedComponent?.Draft != draftAtStart) return;
@@ -412,7 +421,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await UiThreadMarshaller(() =>
             {
                 HasNazcaOverlay = false;
                 NazcaOverlayStatus = $"Preview error: {ex.Message}";
