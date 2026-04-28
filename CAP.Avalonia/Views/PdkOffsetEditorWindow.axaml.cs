@@ -45,8 +45,25 @@ public partial class PdkOffsetEditorWindow : Window
                     if (clipboard != null)
                         await clipboard.SetTextAsync(text);
                 };
+                vm.ResetZoomHook = () =>
+                {
+                    if (ZoomSlider != null) ZoomSlider.Value = 1.0;
+                };
             }
         };
+
+        // Mouse-wheel zoom: scroll up = zoom in, scroll down = zoom out, anchored
+        // on whatever the ZoomSlider currently shows. 1.2× per notch.
+        if (this.FindControl<global::Avalonia.Controls.Canvas>("OverlayCanvas") is { } canvas)
+        {
+            canvas.PointerWheelChanged += (_, e) =>
+            {
+                if (ZoomSlider == null) return;
+                var factor = e.Delta.Y > 0 ? 1.2 : 1.0 / 1.2;
+                ZoomSlider.Value = Math.Clamp(ZoomSlider.Value * factor, ZoomSlider.Minimum, ZoomSlider.Maximum);
+                e.Handled = true;
+            };
+        }
     }
 
     private void SubscribeToViewModel(PdkOffsetEditorViewModel vm)

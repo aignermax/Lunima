@@ -164,15 +164,40 @@
                 <Border Background="#252525" CornerRadius="4" Padding="10,8"
                         IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="Visual Pin Overlay" FontWeight="Bold" Foreground="LightGray"/>
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Grid.Column="0" Text="Visual Pin Overlay" FontWeight="Bold"
+                                       Foreground="LightGray" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                        HorizontalAlignment="Right" Spacing="4">
+                                <TextBlock Text="Zoom:" Foreground="LightGray" FontSize="11"
+                                           VerticalAlignment="Center"/>
+                                <Slider x:Name="ZoomSlider"
+                                        Minimum="0.25" Maximum="8.0" Value="1.0"
+                                        Width="160"
+                                        TickFrequency="0.25" IsSnapToTickEnabled="False"
+                                        ToolTip.Tip="Drag to zoom the overlay; mouse wheel over the canvas also works"/>
+                                <TextBlock Text="{Binding #ZoomSlider.Value, StringFormat={}{0:F2}x}"
+                                           Foreground="LightGray" FontSize="11"
+                                           VerticalAlignment="Center" Width="40"/>
+                                <Button Content="1:1" Command="{Binding ResetZoomCommand}"
+                                        FontSize="11" Padding="6,2" Background="#3d3d3d" Foreground="LightGray"
+                                        ToolTip.Tip="Reset zoom to 100%"/>
+                            </StackPanel>
+                        </Grid>
                         <TextBlock Text="Blue = component bounding box  |  Cyan dots = pins  |  Orange crosshair = Nazca origin  |  Dark green = Nazca GDS polygons  |  Cyan stubs = Nazca pin exits"
                                    Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                      MaxHeight="280">
+                                      MaxHeight="320">
                             <Canvas x:Name="OverlayCanvas"
                                     Width="500" Height="260"
                                     Background="#1a1a2e"
-                                    ClipToBounds="True"/>
+                                    ClipToBounds="True">
+                                <Canvas.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding #ZoomSlider.Value}"
+                                                    ScaleY="{Binding #ZoomSlider.Value}"/>
+                                </Canvas.RenderTransform>
+                                <Canvas.RenderTransformOrigin>0,0</Canvas.RenderTransformOrigin>
+                            </Canvas>
                         </ScrollViewer>
                     </StackPanel>
                 </Border>

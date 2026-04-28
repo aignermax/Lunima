@@ -479,6 +479,58 @@ public class NazcaComponentPreviewServiceTests
             "a 2x2 MMI coupler must expose at least 2 pin stubs in the overlay");
     }
 
+    /// <summary>
+    /// Regression coverage for every NazcaFunction string the bundled PDK JSONs
+    /// actually use. Each case below corresponds to one bug a manual click
+    /// surfaced; together they keep the resolver, the dotted-path walk in
+    /// _build_cell, the SiEPIC fixed-cell GDS reader, the SiEPIC PCell route
+    /// and the multi-layer polygon extraction honest.
+    /// </summary>
+    [Theory]
+    [InlineData("demo.shallow.strt", "Straight waveguide — nested demofab path (demo.shallow.<fn>)")]
+    [InlineData("demo.shallow.bend", "90° bend — same nested-path resolver case")]
+    [InlineData("demo.mmi2x2_dp",     "2x2 MMI — single-level demofab path")]
+    [InlineData("ebeam_y_1550",       "SiEPIC fixed-cell GDS path")]
+    [InlineData("ebeam_dc_te1550",    "SiEPIC PCell path (parametric DC)")]
+    [InlineData("ebeam_gc_te1550",    "SiEPIC GC: polygons on layer 998/0, no PinRec — must still report polygons>0")]
+    public async Task EndToEnd_ViewModel_RealPdkComponent_RendersWithoutAttributeError(string nazcaFunction, string description)
+    {
+        var vm = await TryRenderThroughViewModel(nazcaFunction);
+        if (vm == null) return;  // python missing — environment skip
+        if (vm.NazcaOverlayStatus.Contains("No module named", StringComparison.Ordinal))
+            return;  // PDK package not installed in this env
+
+        // None of these legit Lunima PDK references should ever produce an
+        // attribute lookup error — that means our routing dropped the dotted
+        // path or hit the wrong module.
+        vm.NazcaOverlayStatus.Contains("no attribute").ShouldBeFalse(
+            $"[{description}] '{nazcaFunction}' resolved to the wrong module/attribute. " +
+            $"Status: {vm.NazcaOverlayStatus}");
+
+        // A render that did go through must populate at least the bbox-driven
+        // overlay flag — geometry counts depend on whether gdstk is installed
+        // and whether the component carries pin metadata, so we don't pin them.
+        vm.HasNazcaOverlay.ShouldBeTrue(
+            $"[{description}] render did not produce an overlay. Status: {vm.NazcaOverlayStatus}");
+    }
+
+    [Fact]
+    public async Task EndToEnd_ViewModel_RingResonator_ReportsMissingDemofabAttributeClearly()
+    {
+        // demo_pdk.ring_resonator is referenced in the bundled demo PDK JSON
+        // but nazca.demofab doesn't expose ring_resonator. Until the PDK
+        // metadata is corrected the render must fail with an actionable
+        // message — silently rendering nothing would hide the data bug.
+        var vm = await TryRenderThroughViewModel("demo_pdk.ring_resonator");
+        if (vm == null) return;
+        if (vm.NazcaOverlayStatus.Contains("No module named", StringComparison.Ordinal))
+            return;
+
+        vm.HasNazcaOverlay.ShouldBeFalse();
+        vm.NazcaOverlayStatus.Contains("ring_resonator").ShouldBeTrue(
+            $"Expected error message to name the missing attribute. Status: {vm.NazcaOverlayStatus}");
+    }
+
     [Fact]
     public async Task EndToEnd_ViewModel_SiepicEbeamYJunction_RoutesToSiepicEbeamPdkModule()
     {

@@ -67,6 +67,13 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         await CopyToClipboard(NazcaOverlayStatus);
     }
 
+    /// <summary>Window-side hook that resets the canvas zoom slider to 1.0.</summary>
+    public Action? ResetZoomHook { get; set; }
+
+    /// <summary>Resets the overlay zoom to 1:1 via the window's slider.</summary>
+    [RelayCommand]
+    private void ResetZoom() => ResetZoomHook?.Invoke();
+
     /// <summary>Currently selected PDK from the installed-PDK dropdown; triggers load on change.</summary>
     [ObservableProperty]
     private PdkInfoViewModel? _selectedInstalledPdk;

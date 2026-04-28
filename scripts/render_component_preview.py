@@ -54,7 +54,12 @@ def _parse_kwargs(parameters_string):
 
 
 def _build_cell(module_name, function_name, parameters_string):
-    """Import module, call function, return nazca cell."""
+    """Import module, call function, return nazca cell.
+
+    The module argument can be a dotted attribute path under the demofab
+    namespace (e.g. "demo.shallow" → nazca.demofab.shallow). Walk the chain
+    so callers don't need to know nazca's internal layout.
+    """
     import nazca  # noqa: F401  — initialises Nazca state
 
     # Defensive: if the function name is dotted (e.g. "demo.mmi2x2_dp" was passed
@@ -66,11 +71,17 @@ def _build_cell(module_name, function_name, parameters_string):
             module_name = prefix
 
     # The bundled demo PDK in Nazca ships as `nazca.demofab`. Lunima's PDK
-    # JSON refers to it as either "demo" (after our C# split) or sometimes
-    # "demo_pdk". Map both to demofab so the user doesn't have to know the
-    # internal Nazca naming.
-    if module_name in ("demo", "demo_pdk"):
+    # JSON refers to it as "demo", "demo_pdk", or with a sub-path like
+    # "demo.shallow" / "demo_pdk.shallow.deeper". Resolve all of those.
+    if module_name and (module_name == "demo" or module_name.startswith("demo.")
+                        or module_name == "demo_pdk" or module_name.startswith("demo_pdk.")):
         import nazca.demofab as mod
+        # Walk any sub-path after the leading "demo"/"demo_pdk" segment.
+        # "demo.shallow" → mod = mod.shallow
+        # "demo_pdk.shallow.deeper" → mod = mod.shallow.deeper
+        sub_parts = module_name.split(".", 1)[1:]  # ['shallow'] or []
+        for part in (sub_parts[0].split(".") if sub_parts else []):
+            mod = getattr(mod, part)
     else:
         import importlib
         mod = importlib.import_module(module_name)
@@ -383,21 +394,26 @@ def _render_siepic_via_klayout(module_name, function_name, stub_length, paramete
     xmin, ymin = bb.left * dbu, bb.bottom * dbu
     xmax, ymax = bb.right * dbu, bb.top * dbu
 
-    # Pull every polygon on the silicon waveguide layer (1/0). Other layers
-    # are device outline / floorplan and would clutter the overlay.
-    si_layer = ly.layer(1, 0)
+    # Pull polygons from every drawing layer that holds geometry. SiEPIC
+    # uses 1/0 for silicon on most components but grating couplers etc.
+    # live on dedicated layers (e.g. 998/0). Skip the bookkeeping layers:
+    #   1/10 = PinRec   68/0 = DevRec   10/0 = FloorPlan / Text labels
+    SKIP_LAYERS = {(1, 10), (68, 0), (10, 0)}
     polygons = []
-    for shape in cell.shapes(si_layer).each():
-        # shape.polygon converts boxes / paths to a polygon for free.
-        try:
-            poly = shape.polygon
-        except Exception:
+    for li in ly.layer_indexes():
+        info = ly.get_info(li)
+        if (info.layer, info.datatype) in SKIP_LAYERS:
             continue
-        if poly is None:
-            continue
-        verts = [[float(p.x * dbu), float(p.y * dbu)] for p in poly.each_point_hull()]
-        if len(verts) >= 3:
-            polygons.append({"layer": 1, "vertices": verts})
+        for shape in cell.shapes(li).each():
+            try:
+                poly = shape.polygon
+            except Exception:
+                continue
+            if poly is None:
+                continue
+            verts = [[float(p.x * dbu), float(p.y * dbu)] for p in poly.each_point_hull()]
+            if len(verts) >= 3:
+                polygons.append({"layer": info.layer, "vertices": verts})
 
     # Pins: SiEPIC stores them on layer 1/10 (PinRec) as a Path + a Text.
     # The text label ("opt1", "opt2", …) sits at the pin's xy.
