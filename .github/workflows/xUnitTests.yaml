@@ -29,6 +29,7 @@ jobs:
         run: dotnet restore
 
       - name: 🐍 Setup Python
+        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -88,4 +89,9 @@ jobs:
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
+        env:
+          # actions/setup-python installs into /opt/hostedtoolcache, not /usr/bin.
+          # FindWorkingPython3 checks this env var first so the test subprocess
+          # uses the same interpreter we just pip-installed nazca/klayout into.
+          LUNIMA_TEST_PYTHON3: ${{ steps.setup-python.outputs.python-path }}
         run: dotnet test --no-restore

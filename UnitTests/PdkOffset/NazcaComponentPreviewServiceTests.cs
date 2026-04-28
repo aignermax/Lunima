@@ -18,9 +18,14 @@ public class NazcaComponentPreviewServiceTests
     /// </summary>
     private static string? FindWorkingPython3()
     {
-        // Prefer system Python over venv paths — venvs on NTFS mounts can be unreliable
-        // when invoked from a subprocess without the venv being activated.
-        var candidates = new[] { "/usr/bin/python3", "/usr/local/bin/python3", "python3" };
+        // CI uses actions/setup-python, which installs into /opt/hostedtoolcache
+        // rather than /usr/bin — let the workflow point us at the right binary
+        // via env var so the SiEPIC pip-installed packages are actually visible
+        // to the subprocess. Falls back to the autodiscovery list otherwise.
+        var envOverride = Environment.GetEnvironmentVariable("LUNIMA_TEST_PYTHON3");
+        var candidates = !string.IsNullOrWhiteSpace(envOverride)
+            ? new[] { envOverride, "/usr/bin/python3", "/usr/local/bin/python3", "python3" }
+            : new[] { "/usr/bin/python3", "/usr/local/bin/python3", "python3" };
         foreach (var c in candidates)
         {
             try
