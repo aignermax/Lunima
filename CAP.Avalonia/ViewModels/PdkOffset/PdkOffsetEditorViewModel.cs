@@ -376,9 +376,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         try
         {
+            var (module, function) = ResolveModuleAndFunction(draft.NazcaFunction);
             var result = await _previewService!.RenderAsync(
-                null,
-                draft.NazcaFunction,
+                module,
+                function,
                 draft.NazcaParameters,
                 token);
 
@@ -422,5 +423,39 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
             if (!token.IsCancellationRequested)
                 IsNazcaRendering = false;
         }
+    }
+
+    /// <summary>
+    /// Splits a NazcaFunction string into a Python module name and a bare
+    /// function name. Two cases the PDKs use today:
+    /// <list type="bullet">
+    ///   <item><c>"demo.mmi2x2_dp"</c> — demofab uses dotted notation; split
+    ///     at the last dot.</item>
+    ///   <item><c>"ebeam_y_1550"</c> — SiEPIC EBeam exposes flat names; the
+    ///     name prefix tells us which Python module owns it.</item>
+    /// </list>
+    /// </summary>
+    private static (string module, string function) ResolveModuleAndFunction(string? nazcaFunction)
+    {
+        if (string.IsNullOrWhiteSpace(nazcaFunction))
+            return ("demo", "");
+
+        var lastDot = nazcaFunction.LastIndexOf('.');
+        if (lastDot > 0)
+            return (nazcaFunction[..lastDot], nazcaFunction[(lastDot + 1)..]);
+
+        // SiEPIC EBeam PDK ships flat names — these prefixes are the existing
+        // convention used elsewhere in the repo (see SimpleNazcaExporter.IsPdkFunction).
+        if (nazcaFunction.StartsWith("ebeam_", StringComparison.Ordinal) ||
+            nazcaFunction.StartsWith("gc_",    StringComparison.Ordinal) ||
+            nazcaFunction.StartsWith("ANT_",   StringComparison.Ordinal) ||
+            nazcaFunction.StartsWith("crossing_", StringComparison.Ordinal) ||
+            nazcaFunction.StartsWith("taper_", StringComparison.Ordinal))
+        {
+            return ("siepic_ebeam_pdk", nazcaFunction);
+        }
+
+        // Anything else: assume demofab, the bundled Nazca PDK.
+        return ("demo", nazcaFunction);
     }
 }

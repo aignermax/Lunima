@@ -70,6 +70,14 @@ def _build_cell(module_name, function_name, parameters_string):
     """Import module, call function, return nazca cell."""
     import nazca  # noqa: F401  — initialises Nazca state
 
+    # Defensive: if the function name is dotted (e.g. "demo.mmi2x2_dp" was passed
+    # whole), peel the leading module path off so we look up `mmi2x2_dp` against
+    # the correct module — not for `demo.mmi2x2_dp` as an attribute name.
+    if "." in function_name:
+        prefix, function_name = function_name.rsplit(".", 1)
+        if module_name in (None, "", "demo") or module_name == prefix:
+            module_name = prefix
+
     if module_name == "demo":
         # The bundled demo PDK in nazca ships as `demofab` — same name used
         # everywhere else in this codebase (NazcaHeader.txt, reference scripts).
