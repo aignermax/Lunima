@@ -35,26 +35,51 @@ def _parse_args():
     return parser.parse_args()
 
 
+def _parse_kwargs(parameters_string):
+    """
+    Parse a 'key=value, key=value' string into a kwargs dict using
+    ast.literal_eval per value — never eval/exec on PDK-supplied input.
+
+    Values must be Python literals (numbers, strings, lists, dicts, tuples,
+    booleans, None). Raises ValueError on malformed input.
+    """
+    import ast
+    if not parameters_string or not parameters_string.strip():
+        return {}
+
+    result = {}
+    for pair in parameters_string.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        if "=" not in pair:
+            raise ValueError(f"Invalid parameter (missing '='): {pair!r}")
+        key, raw_value = pair.split("=", 1)
+        key = key.strip()
+        if not key.isidentifier():
+            raise ValueError(f"Invalid parameter key {key!r} (must be a Python identifier)")
+        try:
+            result[key] = ast.literal_eval(raw_value.strip())
+        except (ValueError, SyntaxError) as exc:
+            raise ValueError(f"Cannot parse value for {key!r}: {exc}") from exc
+    return result
+
+
 def _build_cell(module_name, function_name, parameters_string):
     """Import module, call function, return nazca cell."""
     import nazca  # noqa: F401  — initialises Nazca state
 
     if module_name == "demo":
-        import nazca.demopdk as mod
+        # The bundled demo PDK in nazca ships as `demofab` — same name used
+        # everywhere else in this codebase (NazcaHeader.txt, reference scripts).
+        import nazca.demofab as mod
     else:
         import importlib
         mod = importlib.import_module(module_name)
 
     func = getattr(mod, function_name)
-
-    if parameters_string and parameters_string.strip():
-        # Evaluate parameter string as keyword arguments
-        kwargs = eval(f"dict({parameters_string})", {}, {})  # noqa: S307
-        cell = func(**kwargs)
-    else:
-        cell = func()
-
-    return cell
+    kwargs = _parse_kwargs(parameters_string)
+    return func(**kwargs) if kwargs else func()
 
 
 def _extract_bbox(cell):

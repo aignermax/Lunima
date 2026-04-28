@@ -141,7 +141,7 @@ public class NazcaComponentPreviewService
                     : NazcaPreviewResult.Fail($"Preview script timed out after {_timeout.TotalSeconds:F0}s.");
             }
 
-            process.WaitForExit();
+            await process.WaitForExitAsync(ct);
             return ParseOutput(await stdoutTask);
         }
         catch (System.ComponentModel.Win32Exception ex)
@@ -154,7 +154,12 @@ public class NazcaComponentPreviewService
         }
     }
 
-    private static NazcaPreviewResult ParseOutput(string stdout)
+    /// <summary>
+    /// Parses the JSON document the Python helper script writes on stdout.
+    /// Exposed as <c>internal</c> so unit tests can exercise the JSON path
+    /// without spawning a real subprocess (which the CI Linux box may lack).
+    /// </summary>
+    internal static NazcaPreviewResult ParseOutput(string stdout)
     {
         if (string.IsNullOrWhiteSpace(stdout))
             return NazcaPreviewResult.Fail("Preview script produced no output.");

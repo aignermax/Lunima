@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Export;
@@ -358,6 +359,11 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         _renderCts = new CancellationTokenSource();
         var token = _renderCts.Token;
 
+        // Capture the draft this render was started for so a fast user-click that
+        // changes SelectedComponent mid-flight cannot stamp our overlay on top of
+        // a newer component's offsets.
+        var draftAtStart = draft;
+
         IsNazcaRendering = true;
         NazcaOverlayStatus = "Rendering Nazca GDS preview…";
 
@@ -370,17 +376,27 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                 token);
 
             if (token.IsCancellationRequested) return;
+            // SelectedComponent has moved on while we were waiting — drop result.
+            if (SelectedComponent?.Draft != draftAtStart) return;
 
-            if (result.Success)
+            // RenderAsync returns on a thread-pool thread; ObservableCollection
+            // mutations downstream must happen on the UI thread.
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                SetNazcaOverlay(result);
-                NazcaOverlayStatus = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
-            }
-            else
-            {
-                HasNazcaOverlay = false;
-                NazcaOverlayStatus = $"Preview unavailable: {result.Error}";
-            }
+                if (token.IsCancellationRequested) return;
+                if (SelectedComponent?.Draft != draftAtStart) return;
+
+                if (result.Success)
+                {
+                    SetNazcaOverlay(result);
+                    NazcaOverlayStatus = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
+                }
+                else
+                {
+                    HasNazcaOverlay = false;
+                    NazcaOverlayStatus = $"Preview unavailable: {result.Error}";
+                }
+            });
         }
         catch (OperationCanceledException)
         {
@@ -388,8 +404,11 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            HasNazcaOverlay = false;
-            NazcaOverlayStatus = $"Preview error: {ex.Message}";
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                HasNazcaOverlay = false;
+                NazcaOverlayStatus = $"Preview error: {ex.Message}";
+            });
         }
         finally
         {
