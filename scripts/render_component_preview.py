@@ -181,7 +181,17 @@ def _render_to_gds(cell):
 
 
 def _do_render(args):
-    """Run the actual Nazca + GDS extraction, return result dict."""
+    """
+    Run the actual rendering, return result dict.
+
+    For SiEPIC EBeam PDK components, route through klayout — siepic_ebeam_pdk
+    ships fixed-cell GDS files with the real foundry geometry. For demofab
+    and other Nazca-renderable PDKs, build the cell via Nazca and export.
+    """
+    if _looks_like_siepic(args.module_name):
+        return _render_siepic_via_klayout(
+            args.module_name, args.function_name, args.stub_length)
+
     cell = _build_cell(args.module_name, args.function_name, args.parameters_string)
     xmin, ymin, xmax, ymax = _extract_bbox(cell)
     pins = _extract_pins(cell, args.stub_length)
@@ -217,6 +227,102 @@ def _do_render(args):
     if polygon_warning:
         result["polygon_warning"] = polygon_warning
     return result
+
+
+def _looks_like_siepic(module_name):
+    """Cheap routing predicate — anything starting with 'siepic' goes through
+    the klayout path. The Lunima ViewModel maps every flat ebeam_/gc_ name
+    to 'siepic_ebeam_pdk' before we even get the call."""
+    return module_name and module_name.lower().startswith("siepic")
+
+
+def _render_siepic_via_klayout(module_name, function_name, stub_length):
+    """
+    Read SiEPIC's bundled fixed-cell GDS (siepic_ebeam_pdk/gds/EBeam/<name>.gds)
+    via klayout python and return the same JSON shape as the Nazca path —
+    polygons from the silicon layer, pins from layer 1/10 (PinRec).
+    """
+    try:
+        import klayout.db as kdb
+    except ImportError as exc:
+        raise ImportError(
+            "Rendering SiEPIC components requires klayout-python: "
+            "`pip install klayout`."
+        ) from exc
+
+    try:
+        import siepic_ebeam_pdk
+    except ImportError as exc:
+        raise ImportError(
+            "siepic_ebeam_pdk is not installed in this Python environment. "
+            "Install via `pip install siepic_ebeam_pdk`."
+        ) from exc
+
+    pkg_dir = os.path.dirname(siepic_ebeam_pdk.__file__)
+    # SiEPIC organises fixed-cell GDS files under gds/EBeam/<function>.gds.
+    # Only the EBeam library is in scope for now — the SiN, Beta, ANT,
+    # Dream variants follow the same pattern and could be added by name.
+    gds_path = os.path.join(pkg_dir, "gds", "EBeam", f"{function_name}.gds")
+    if not os.path.exists(gds_path):
+        raise FileNotFoundError(
+            f"No fixed-cell GDS for '{function_name}' under {os.path.dirname(gds_path)}. "
+            "Parametric SiEPIC components (PCells) are not yet supported in the preview.")
+
+    ly = kdb.Layout()
+    ly.read(gds_path)
+    cell = next(ly.each_cell())
+
+    # bbox is in database units (typically 1nm); convert to micrometres.
+    dbu = ly.dbu
+    bb = cell.bbox()
+    xmin, ymin = bb.left * dbu, bb.bottom * dbu
+    xmax, ymax = bb.right * dbu, bb.top * dbu
+
+    # Pull every polygon on the silicon waveguide layer (1/0). Other layers
+    # are device outline / floorplan and would clutter the overlay.
+    si_layer = ly.layer(1, 0)
+    polygons = []
+    for shape in cell.shapes(si_layer).each():
+        # shape.polygon converts boxes / paths to a polygon for free.
+        try:
+            poly = shape.polygon
+        except Exception:
+            continue
+        if poly is None:
+            continue
+        verts = [[float(p.x * dbu), float(p.y * dbu)] for p in poly.each_point_hull()]
+        if len(verts) >= 3:
+            polygons.append({"layer": 1, "vertices": verts})
+
+    # Pins: SiEPIC stores them on layer 1/10 (PinRec) as a Path + a Text.
+    # The text label ("opt1", "opt2", …) sits at the pin's xy.
+    pin_layer = ly.layer(1, 10)
+    pins = []
+    for shape in cell.shapes(pin_layer).each():
+        if not shape.is_text():
+            continue
+        t = shape.text
+        x = t.x * dbu
+        y = t.y * dbu
+        # We don't have the exit angle directly from the text; SiEPIC paths
+        # carry it, but for the overlay a pin dot at (x, y) is enough.
+        # Stub endpoint: extend horizontally by stub_length toward the bbox
+        # edge nearest to the pin.
+        sign = -1.0 if x < (xmin + xmax) / 2 else 1.0
+        stub_x = x + sign * stub_length
+        pins.append({
+            "name": t.string,
+            "x": x, "y": y,
+            "angle": 180.0 if sign < 0 else 0.0,
+            "stubX1": stub_x, "stubY1": y,
+        })
+
+    return {
+        "success": True,
+        "bbox": {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax},
+        "polygons": polygons,
+        "pins": pins,
+    }
 
 
 def main():
