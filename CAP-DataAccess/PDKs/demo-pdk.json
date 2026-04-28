@@ -5,7 +5,6 @@
   "foundry": "Demo Foundry",
   "version": "2.0.0",
   "defaultWavelengthNm": 1550,
-  "nazcaModuleName": null,
   "components": [
     {
       "name": "1x2 MMI Splitter",
@@ -13,8 +12,6 @@
       "nazcaFunction": "demo.mmi1x2_sh",
       "widthMicrometers": 80,
       "heightMicrometers": 55,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 27.5,
       "pins": [
         {
           "name": "in",
@@ -51,7 +48,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 27.5
     },
     {
       "name": "2x2 MMI Coupler",
@@ -59,8 +58,6 @@
       "nazcaFunction": "demo.mmi2x2_dp",
       "widthMicrometers": 250,
       "heightMicrometers": 60,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 30.0,
       "pins": [
         {
           "name": "in1",
@@ -115,7 +112,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 30
     },
     {
       "name": "Directional Coupler",
@@ -123,8 +122,6 @@
       "nazcaFunction": "demo.mmi2x2_dp",
       "widthMicrometers": 250,
       "heightMicrometers": 60,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 30.0,
       "pins": [
         {
           "name": "in1",
@@ -149,15 +146,6 @@
           "offsetXMicrometers": 250,
           "offsetYMicrometers": 34,
           "angleDegrees": 0
-        }
-      ],
-      "sliders": [
-        {
-          "sliderNumber": 0,
-          "godotSliderName": "slider0",
-          "godotSliderLabelName": "label0",
-          "minVal": 0,
-          "maxVal": 100
         }
       ],
       "sMatrix": {
@@ -188,7 +176,20 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 30,
+      "sliders": [
+        {
+          "sliderNumber": 0,
+          "godotSliderName": "slider0",
+          "godotSliderLabelName": "label0",
+          "minVal": 0,
+          "maxVal": 100,
+          "steps": 100,
+          "type": 0
+        }
+      ]
     },
     {
       "name": "Phase Shifter",
@@ -197,8 +198,6 @@
       "nazcaParameters": "length=500",
       "widthMicrometers": 500,
       "heightMicrometers": 60,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 30,
       "pins": [
         {
           "name": "in",
@@ -225,36 +224,42 @@
           "angleDegrees": 90
         }
       ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "in",
+            "toPin": "out",
+            "magnitude": 0,
+            "phaseDegrees": 0,
+            "magnitudeFormula": "1.0",
+            "phaseDegreesFormula": "phase_shift"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "phase_shift",
+            "defaultValue": 0,
+            "minValue": 0,
+            "maxValue": 360,
+            "label": "Phase (degrees)",
+            "sliderNumber": 0
+          }
+        ]
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 30,
       "sliders": [
         {
           "sliderNumber": 0,
           "godotSliderName": "slider0",
           "godotSliderLabelName": "label0",
           "minVal": 0,
-          "maxVal": 360
+          "maxVal": 360,
+          "steps": 100,
+          "type": 0
         }
-      ],
-      "sMatrix": {
-        "wavelengthNm": 1550,
-        "parameters": [
-          {
-            "name": "phase_shift",
-            "sliderNumber": 0,
-            "defaultValue": 0,
-            "minValue": 0,
-            "maxValue": 360,
-            "label": "Phase (degrees)"
-          }
-        ],
-        "connections": [
-          {
-            "fromPin": "in",
-            "toPin": "out",
-            "magnitudeFormula": "1.0",
-            "phaseDegreesFormula": "phase_shift"
-          }
-        ]
-      }
+      ]
     },
     {
       "name": "Grating Coupler",
@@ -262,8 +267,6 @@
       "nazcaFunction": "demo.io",
       "widthMicrometers": 100,
       "heightMicrometers": 19,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 9.5,
       "pins": [
         {
           "name": "fiber",
@@ -294,7 +297,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 9.5
     },
     {
       "name": "Photodetector",
@@ -302,8 +307,6 @@
       "nazcaFunction": "demo.pd",
       "widthMicrometers": 70,
       "heightMicrometers": 55,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 27.5,
       "pins": [
         {
           "name": "in",
@@ -328,7 +331,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 27.5
     },
     {
       "name": "Y-Junction",
@@ -336,8 +341,6 @@
       "nazcaFunction": "demo.mmi1x2_sh",
       "widthMicrometers": 80,
       "heightMicrometers": 55,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 27.5,
       "pins": [
         {
           "name": "in",
@@ -374,7 +377,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 27.5
     },
     {
       "name": "DBR Filter",
@@ -382,8 +387,6 @@
       "nazcaFunction": "demo.dbr",
       "widthMicrometers": 100,
       "heightMicrometers": 200,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 100,
       "pins": [
         {
           "name": "in",
@@ -420,7 +423,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 100
     },
     {
       "name": "Edge Coupler",
@@ -428,8 +433,6 @@
       "nazcaFunction": "demo.io",
       "widthMicrometers": 100,
       "heightMicrometers": 19,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 9.5,
       "pins": [
         {
           "name": "fiber",
@@ -460,17 +463,17 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 9.5
     },
     {
-      "name": "Straight Waveguide 100\u00c2\u00b5m",
+      "name": "Straight Waveguide 100\u00C2\u00B5m",
       "category": "Waveguides",
       "nazcaFunction": "demo.shallow.strt",
       "nazcaParameters": "length=100",
       "widthMicrometers": 100,
       "heightMicrometers": 10,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "a0",
@@ -495,28 +498,28 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 5
     },
     {
-      "name": "90\u00c2\u00b0 Bend",
+      "name": "90\u00C2\u00B0 Bend",
       "category": "Waveguides",
       "nazcaFunction": "demo.shallow.bend",
       "nazcaParameters": "angle=90",
-      "widthMicrometers": 30,
-      "heightMicrometers": 30,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15.0,
+      "widthMicrometers": 209.4,
+      "heightMicrometers": 209.4,
       "pins": [
         {
           "name": "a0",
           "offsetXMicrometers": 0,
-          "offsetYMicrometers": 5,
+          "offsetYMicrometers": 200,
           "angleDegrees": 180
         },
         {
           "name": "b0",
-          "offsetXMicrometers": 25,
-          "offsetYMicrometers": 30,
+          "offsetXMicrometers": 200,
+          "offsetYMicrometers": 2.842170943040401E-14,
           "angleDegrees": 90
         }
       ],
@@ -530,7 +533,9 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "nazcaOriginOffsetX": -0,
+      "nazcaOriginOffsetY": 9.400000000000006
     }
   ]
 }
