@@ -105,6 +105,10 @@ public partial class PdkOffsetEditorWindow : Window
             e.Pointer.Capture(null);
             e.Handled = true;
         };
+
+        // If the pointer capture is lost mid-drag (alt-tab, focus stolen by a
+        // modal popup, …), reset state so the next hover doesn't keep panning.
+        scrollViewer.PointerCaptureLost += (_, _) => { isPanning = false; };
     }
 
     private void SubscribeToViewModel(PdkOffsetEditorViewModel vm)

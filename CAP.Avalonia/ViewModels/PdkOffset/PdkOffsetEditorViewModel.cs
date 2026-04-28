@@ -111,11 +111,16 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         foreach (var lp in draft.Pins)
         {
             // Lunima pin position in Nazca-space micrometres. Lunima offsets
-            // are measured from the bbox top-left; the Nazca origin sits at
-            // (NazcaOriginOffsetX, ComponentHeight - NazcaOriginOffsetY) inside
-            // that bbox (Nazca y-up vs canvas y-down).
+            // are measured from the bbox top-left in y-down. The Nazca origin
+            // sits at (NazcaOriginOffsetX, ComponentHeight - NazcaOriginOffsetY)
+            // inside that bbox in y-down — i.e. the offset Y is measured from
+            // the bottom edge upward, the Lunima pin Y from the top edge down.
+            // The y-flip therefore needs the ComponentHeight term to subtract
+            // the Lunima distance from the bottom, then push to Nazca origin.
+            // Same formula as PinPositionViewModel.NazcaRelY.
             var lunimaNazcaX = lp.OffsetXMicrometers - (draft.NazcaOriginOffsetX ?? 0);
-            var lunimaNazcaY = (draft.NazcaOriginOffsetY ?? 0) - lp.OffsetYMicrometers;
+            var lunimaNazcaY = (draft.HeightMicrometers - lp.OffsetYMicrometers)
+                               - (draft.NazcaOriginOffsetY ?? 0);
 
             var nearest = result.Pins
                 .Select(np => (np, dist: Math.Sqrt(

@@ -600,6 +600,93 @@ public class NazcaComponentPreviewServiceTests
         return null;
     }
 
+    // ─── ComputePinAlignment math (no Python required) ─────────────────────────
+    //
+    // The integration tests above feed real PDK data and assert only on the
+    // shape of the comparison, not on the actual delta — calibration drift is
+    // a real workflow problem the editor exists to surface. These synthetic
+    // tests pin the Lunima→Nazca coordinate transform itself so a regression
+    // in ComputePinAlignment is caught even on a Python-less CI box.
+
+    [Fact]
+    public void ComputePinAlignment_PinAtNazcaOrigin_ReportsZeroDistance()
+    {
+        // Lunima pin sits at OffsetX=5, OffsetY=7 from the bbox top-left in y-down.
+        // ComponentHeight=10, NazcaOriginOffset=(5,3). The Nazca origin is therefore
+        // at (5, 10-3) = (5, 7) in the same y-down system → exactly where the pin is.
+        // In Nazca-space (y-up) the pin should land at (0, 0).
+        var draft = new PdkComponentDraft
+        {
+            WidthMicrometers = 20,
+            HeightMicrometers = 10,
+            NazcaOriginOffsetX = 5,
+            NazcaOriginOffsetY = 3,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "in", OffsetXMicrometers = 5, OffsetYMicrometers = 7 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "opt1", X = 0, Y = 0 }  // sits at the Nazca origin
+            }
+        };
+
+        var vm = new PdkOffsetEditorViewModel(
+            new PdkLoader(), new PdkJsonSaver(),
+            new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
+            previewService: null);
+        vm.ComputePinAlignment(result, draft);
+
+        vm.PinAlignmentResults.Count.ShouldBe(1);
+        var info = vm.PinAlignmentResults[0];
+        info.DistanceMicrometers.ShouldBe(0.0, tolerance: 0.001);
+        info.IsAligned.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ComputePinAlignment_PinFiveMicrometresAway_ReportsExactDelta()
+    {
+        // Lunima pin at top-left (0,0); NazcaOrigin at the centre of a 10×10
+        // bbox: (5, 5). In y-down distance-from-origin: (-5, -5) but we flip
+        // Y so Nazca-space coords become (-5, +5). A Nazca pin at (0,0) is
+        // therefore 5√2 ≈ 7.07 µm away.
+        var draft = new PdkComponentDraft
+        {
+            WidthMicrometers = 10,
+            HeightMicrometers = 10,
+            NazcaOriginOffsetX = 5,
+            NazcaOriginOffsetY = 5,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "edge", OffsetXMicrometers = 0, OffsetYMicrometers = 0 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "centre", X = 0, Y = 0 }
+            }
+        };
+
+        var vm = new PdkOffsetEditorViewModel(
+            new PdkLoader(), new PdkJsonSaver(),
+            new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
+            previewService: null);
+        vm.ComputePinAlignment(result, draft);
+
+        var info = vm.PinAlignmentResults[0];
+        info.DeltaXMicrometers.ShouldBe(5.0, tolerance: 0.001);
+        info.DeltaYMicrometers.ShouldBe(-5.0, tolerance: 0.001);
+        info.DistanceMicrometers.ShouldBe(Math.Sqrt(50), tolerance: 0.001);
+        info.IsAligned.ShouldBeFalse();
+    }
+
     [Fact]
     public async Task EndToEnd_ViewModel_RingResonator_ReportsMissingDemofabAttributeClearly()
     {
