@@ -48,7 +48,9 @@ def _parse_kwargs(parameters_string):
     """
     if not parameters_string or not parameters_string.strip():
         return {}
-    return eval(f"dict({parameters_string})", {"__builtins__": {}}, {})
+    # Empty __builtins__ blocks attribute-access escapes; expose dict so the
+    # eval'd "dict(a=1, b=2)" form actually has a dict to call.
+    return eval(f"dict({parameters_string})", {"__builtins__": {}, "dict": dict}, {})
 
 
 def _build_cell(module_name, function_name, parameters_string):
@@ -190,7 +192,8 @@ def _do_render(args):
     """
     if _looks_like_siepic(args.module_name):
         result = _render_siepic_via_klayout(
-            args.module_name, args.function_name, args.stub_length)
+            args.module_name, args.function_name, args.stub_length,
+            args.parameters_string)
         result["source"] = _fetch_siepic_source(args.module_name, args.function_name)
         return result
 
@@ -287,6 +290,46 @@ def _fetch_siepic_source(module_name, function_name):
         return f"# Source unavailable: {exc}"
 
 
+def _instantiate_siepic_pcell(kdb, function_name, parameters_string):
+    """
+    Build a one-shot KLayout Layout containing the named EBeam PCell, with
+    user parameters merged onto the PCell's defaults. Returns (layout, cell).
+    """
+    ebeam_lib = None
+    for lid in kdb.Library.library_ids():
+        lib = kdb.Library.library_by_id(lid)
+        if lib is not None and lib.name() == "EBeam":
+            ebeam_lib = lib
+            break
+    if ebeam_lib is None:
+        raise RuntimeError(
+            "EBeam KLayout library is not registered. "
+            "Importing siepic_ebeam_pdk should register it — check the install.")
+
+    pcell_id = ebeam_lib.layout().pcell_id(function_name)
+    if pcell_id < 0:
+        raise FileNotFoundError(
+            f"'{function_name}' is neither a fixed-cell GDS nor a registered "
+            f"PCell in the EBeam library. Available PCells: "
+            f"{', '.join(ebeam_lib.layout().pcell_names())}")
+
+    pcell_decl = ebeam_lib.layout().pcell_declaration(pcell_id)
+    user_kwargs = _parse_kwargs(parameters_string)
+
+    # Merge user parameters with defaults; preserve original order.
+    param_values = []
+    for p in pcell_decl.get_parameters():
+        if p.name in user_kwargs:
+            param_values.append(user_kwargs[p.name])
+        else:
+            param_values.append(p.default)
+
+    ly = kdb.Layout()
+    ly.dbu = 0.001  # 1 nm — matches what siepic_ebeam_pdk targets
+    var_id = ly.add_pcell_variant(ebeam_lib, pcell_id, param_values)
+    return ly, ly.cell(var_id)
+
+
 def _looks_like_siepic(module_name):
     """Cheap routing predicate — anything starting with 'siepic' goes through
     the klayout path. The Lunima ViewModel maps every flat ebeam_/gc_ name
@@ -294,11 +337,18 @@ def _looks_like_siepic(module_name):
     return module_name and module_name.lower().startswith("siepic")
 
 
-def _render_siepic_via_klayout(module_name, function_name, stub_length):
+def _render_siepic_via_klayout(module_name, function_name, stub_length, parameters_string=""):
     """
-    Read SiEPIC's bundled fixed-cell GDS (siepic_ebeam_pdk/gds/EBeam/<name>.gds)
-    via klayout python and return the same JSON shape as the Nazca path —
-    polygons from the silicon layer, pins from layer 1/10 (PinRec).
+    Render a SiEPIC component to polygons + pins. Two paths:
+
+    1. Fixed-cell GDS — siepic_ebeam_pdk/gds/EBeam/<name>.gds. Static
+       foundry layout, just read it.
+    2. PCell — siepic_ebeam_pdk/pymacros/pcells_EBeam/<name>.py. Goes
+       through the EBeam KLayout Library, which siepic_ebeam_pdk
+       registers on import.
+
+    Both produce the same JSON shape: polygons from the silicon layer
+    (1/0), pins from layer 1/10 (PinRec).
     """
     try:
         import klayout.db as kdb
@@ -317,18 +367,15 @@ def _render_siepic_via_klayout(module_name, function_name, stub_length):
         ) from exc
 
     pkg_dir = os.path.dirname(siepic_ebeam_pdk.__file__)
-    # SiEPIC organises fixed-cell GDS files under gds/EBeam/<function>.gds.
-    # Only the EBeam library is in scope for now — the SiN, Beta, ANT,
-    # Dream variants follow the same pattern and could be added by name.
     gds_path = os.path.join(pkg_dir, "gds", "EBeam", f"{function_name}.gds")
-    if not os.path.exists(gds_path):
-        raise FileNotFoundError(
-            f"No fixed-cell GDS for '{function_name}' under {os.path.dirname(gds_path)}. "
-            "Parametric SiEPIC components (PCells) are not yet supported in the preview.")
 
-    ly = kdb.Layout()
-    ly.read(gds_path)
-    cell = next(ly.each_cell())
+    if os.path.exists(gds_path):
+        ly = kdb.Layout()
+        ly.read(gds_path)
+        cell = next(ly.each_cell())
+    else:
+        # Fall back to the PCell library.
+        ly, cell = _instantiate_siepic_pcell(kdb, function_name, parameters_string)
 
     # bbox is in database units (typically 1nm); convert to micrometres.
     dbu = ly.dbu
