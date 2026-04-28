@@ -154,9 +154,11 @@ public partial class PdkOffsetEditorViewModel
 
     /// <summary>
     /// Runs Check-All, applies Auto-Calibrate to every fixable component,
-    /// then re-runs Check-All. The remaining report rows are exactly the
+    /// then re-evaluates each fixed component in-place against the same
+    /// render result so the remaining report rows are exactly the
     /// components whose JSON / GDS combination cannot be auto-fixed
-    /// (pin-count mismatch, render error).
+    /// (pin-count mismatch, render error). Avoids a second full Check-All
+    /// pass — one Python render per component is enough to know the outcome.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanRunBatch))]
     private async Task TryFixAll()
@@ -172,37 +174,42 @@ public partial class PdkOffsetEditorViewModel
             await RunCheckAllInternal(token);
             if (token.IsCancellationRequested) return;
 
-            var fixable = BatchCheckResults
-                .Where(r => r.Status == ComponentCheckStatus.Misaligned)
-                .Select(r => r.ComponentName)
-                .ToHashSet();
-
             int fixedCount = 0;
-            for (int i = 0; i < Components.Count; i++)
+            // BatchCheckResults and Components share the same index order
+            // because RunCheckAllInternal walks Components sequentially.
+            for (int i = 0; i < Components.Count && i < BatchCheckResults.Count; i++)
             {
                 if (token.IsCancellationRequested) break;
+                if (BatchCheckResults[i].Status != ComponentCheckStatus.Misaligned) continue;
                 var item = Components[i];
-                if (!fixable.Contains(item.Draft.Name ?? "")) continue;
-                BatchProgress = $"Fixing [{++fixedCount}] {item.Draft.Name}…";
+                BatchProgress = $"Fixing {item.Draft.Name}…";
                 var result = await RenderForBatch(item.Draft, token);
                 if (result?.Success != true) continue;
-                if (PdkOffsetCalibration.ApplyAutoCalibrate(item.Draft, result) ==
-                    AutoCalibrateOutcome.Success)
+                var outcome = PdkOffsetCalibration.ApplyAutoCalibrate(item.Draft, result);
+                if (outcome != AutoCalibrateOutcome.Success) continue;
+
+                int idx = i;
+                fixedCount++;
+                await UiThreadMarshaller(() =>
                 {
-                    await UiThreadMarshaller(() =>
-                    {
-                        item.RefreshStatus();
-                        HasUnsavedChanges = true;
-                    });
-                }
+                    item.RefreshStatus();
+                    HasUnsavedChanges = true;
+                    // Re-evaluate the same draft against the same render result.
+                    // The post-fix Δmax should be 0 by construction since pins
+                    // were just snapped to the Nazca positions. Replacing the
+                    // row keeps the report and the underlying state coherent
+                    // without paying for a full second Check-All pass.
+                    BatchCheckResults[idx] = PdkOffsetCalibration.Evaluate(
+                        item.Draft, result, PinAlignmentToleranceMicrometers);
+                });
             }
 
-            await RunCheckAllInternal(token);
-            int remaining = BatchCheckResults.Count(r => r.Status != ComponentCheckStatus.Aligned);
             int total = BatchCheckResults.Count;
+            int aligned = BatchCheckResults.Count(r => r.Status == ComponentCheckStatus.Aligned);
+            int remaining = total - aligned;
             BatchSummary = remaining == 0
-                ? $"✓ Try-Fix-All: all {total} components aligned. Click Save PDK to persist."
-                : $"⚠ Try-Fix-All: {total - remaining}/{total} aligned, " +
+                ? $"✓ Try-Fix-All: fixed {fixedCount}, all {total} components aligned. Click Save PDK to persist."
+                : $"⚠ Try-Fix-All: fixed {fixedCount}, {aligned}/{total} aligned, " +
                   $"{remaining} need manual edits (see report below).";
             // Refresh the currently-selected component's overlay so the user
             // sees their fix without having to re-click the row.
@@ -214,6 +221,59 @@ public partial class PdkOffsetEditorViewModel
             IsBatchRunning = false;
             BatchProgress = "";
         }
+    }
+
+    /// <summary>Copies the full batch report (markdown table) to the clipboard.</summary>
+    [RelayCommand]
+    private async Task CopyBatchReport()
+    {
+        if (CopyToClipboard == null || BatchCheckResults.Count == 0) return;
+        await CopyToClipboard(FormatBatchReport(BatchCheckResults, errorsOnly: false));
+        StatusText = $"Copied report ({BatchCheckResults.Count} rows) to clipboard.";
+    }
+
+    /// <summary>Copies only the rows that aren't fully aligned — the bits a human still has to investigate.</summary>
+    [RelayCommand]
+    private async Task CopyBatchErrors()
+    {
+        if (CopyToClipboard == null) return;
+        var errors = BatchCheckResults
+            .Where(r => r.Status != ComponentCheckStatus.Aligned)
+            .ToList();
+        if (errors.Count == 0)
+        {
+            StatusText = "All components aligned — no errors to copy.";
+            return;
+        }
+        await CopyToClipboard(FormatBatchReport(errors, errorsOnly: true));
+        StatusText = $"Copied {errors.Count} error row(s) to clipboard.";
+    }
+
+    /// <summary>
+    /// Formats <paramref name="rows"/> as a markdown table. Designed to be
+    /// pasted into a chat with Claude — the header line tells the assistant
+    /// what kind of data follows, and the table is render-friendly.
+    /// </summary>
+    internal static string FormatBatchReport(
+        IEnumerable<ComponentCheckResult> rows, bool errorsOnly)
+    {
+        var list = rows.ToList();
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(errorsOnly
+            ? $"PDK calibration — {list.Count} unresolved component(s)"
+            : $"PDK calibration report — {list.Count} component(s)");
+        sb.AppendLine();
+        sb.AppendLine("| Component | Status | Pins L/N | Δmax (µm) | Message |");
+        sb.AppendLine("|---|---|---|---|---|");
+        foreach (var r in list)
+        {
+            var delta = double.IsNaN(r.WorstDeltaMicrometers)
+                ? "—"
+                : r.WorstDeltaMicrometers.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            sb.AppendLine($"| {r.ComponentName} | {r.Status} | " +
+                          $"{r.LunimaPinCount}/{r.NazcaPinCount} | {delta} | {r.Message} |");
+        }
+        return sb.ToString();
     }
 
     private async Task RunCheckAll()
