@@ -143,6 +143,33 @@
                                       ToolTip.Tip="Toggle the Nazca GDS overlay (dark green polygons + cyan pin stubs)"
                                       VerticalAlignment="Center"/>
                         </Grid>
+                        <TextBlock Text="{Binding PinAlignmentSummary}"
+                                   Foreground="LightCyan" FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding PinAlignmentSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <Expander Header="Show per-pin deltas (Lunima vs Nazca)"
+                                  Foreground="LightGray" FontSize="11"
+                                  IsExpanded="False"
+                                  IsVisible="{Binding PinAlignmentResults.Count}">
+                            <ItemsControl ItemsSource="{Binding PinAlignmentResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="80,80,80,80,Auto" Margin="0,2">
+                                            <TextBlock Grid.Column="0" Text="{Binding LunimaPinName}"
+                                                       Foreground="LightGray" FontSize="11"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding NearestNazcaPinName, StringFormat='→ {0}'}"
+                                                       Foreground="Gray" FontSize="11"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding DeltaXMicrometers, StringFormat='Δx={0:F2}µm'}"
+                                                       Foreground="LightGray" FontSize="11"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding DeltaYMicrometers, StringFormat='Δy={0:F2}µm'}"
+                                                       Foreground="LightGray" FontSize="11"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding AlignedLabel}"
+                                                       Foreground="LightYellow" FontSize="11" Margin="6,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
                         <Expander Header="Show preview source (Python)"
                                   Foreground="LightGray" FontSize="11"
                                   IsExpanded="False"
@@ -184,14 +211,16 @@
                                         ToolTip.Tip="Reset zoom to 100%"/>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="Blue = component bounding box  |  Cyan dots = pins  |  Orange crosshair = Nazca origin  |  Dark green = Nazca GDS polygons  |  Cyan stubs = Nazca pin exits"
+                        <TextBlock Text="Blue = component bounding box  |  Cyan dots = pins  |  Orange crosshair = Nazca origin  |  Dark green = Nazca GDS polygons  |  Cyan stubs = Nazca pin exits  |  Drag with left mouse to pan, mouse-wheel to zoom"
                                    Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                      MaxHeight="320">
+                        <ScrollViewer x:Name="OverlayScrollViewer"
+                                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      Height="450"
+                                      Background="#1a1a2e"
+                                      Cursor="Hand">
                             <!-- LayoutTransformControl re-measures its child after applying
                                  the scale, so the ScrollViewer learns the true rendered size
-                                 and produces scrollbars on zoom-in. RenderTransform alone
-                                 paints bigger but keeps the layout the original size. -->
+                                 and produces scrollbars on zoom-in. -->
                             <LayoutTransformControl>
                                 <LayoutTransformControl.LayoutTransform>
                                     <ScaleTransform ScaleX="{Binding #ZoomSlider.Value}"

@@ -52,18 +52,59 @@ public partial class PdkOffsetEditorWindow : Window
             }
         };
 
-        // Mouse-wheel zoom: scroll up = zoom in, scroll down = zoom out, anchored
-        // on whatever the ZoomSlider currently shows. 1.2× per notch.
-        if (this.FindControl<global::Avalonia.Controls.Canvas>("OverlayCanvas") is { } canvas)
+        WireOverlayInteractions();
+    }
+
+    private void WireOverlayInteractions()
+    {
+        var scrollViewer = this.FindControl<global::Avalonia.Controls.ScrollViewer>("OverlayScrollViewer");
+        if (scrollViewer == null) return;
+
+        // Mouse-wheel zoom anywhere over the viewport. 1.2× per notch.
+        scrollViewer.PointerWheelChanged += (_, e) =>
         {
-            canvas.PointerWheelChanged += (_, e) =>
-            {
-                if (ZoomSlider == null) return;
-                var factor = e.Delta.Y > 0 ? 1.2 : 1.0 / 1.2;
-                ZoomSlider.Value = Math.Clamp(ZoomSlider.Value * factor, ZoomSlider.Minimum, ZoomSlider.Maximum);
-                e.Handled = true;
-            };
-        }
+            if (ZoomSlider == null) return;
+            var factor = e.Delta.Y > 0 ? 1.2 : 1.0 / 1.2;
+            ZoomSlider.Value = Math.Clamp(ZoomSlider.Value * factor, ZoomSlider.Minimum, ZoomSlider.Maximum);
+            e.Handled = true;
+        };
+
+        // Left-mouse-drag pan: change ScrollViewer.Offset by the negative
+        // mouse delta. Captures the pointer so the gesture survives a quick
+        // exit out of the viewport bounds.
+        bool isPanning = false;
+        global::Avalonia.Point panStart = default;
+        global::Avalonia.Vector panStartOffset = default;
+
+        scrollViewer.PointerPressed += (_, e) =>
+        {
+            var props = e.GetCurrentPoint(scrollViewer).Properties;
+            if (!props.IsLeftButtonPressed) return;
+            isPanning = true;
+            panStart = e.GetPosition(scrollViewer);
+            panStartOffset = scrollViewer.Offset;
+            e.Pointer.Capture(scrollViewer);
+            e.Handled = true;
+        };
+
+        scrollViewer.PointerMoved += (_, e) =>
+        {
+            if (!isPanning) return;
+            var current = e.GetPosition(scrollViewer);
+            var delta = current - panStart;
+            scrollViewer.Offset = new global::Avalonia.Vector(
+                Math.Max(0, panStartOffset.X - delta.X),
+                Math.Max(0, panStartOffset.Y - delta.Y));
+            e.Handled = true;
+        };
+
+        scrollViewer.PointerReleased += (_, e) =>
+        {
+            if (!isPanning) return;
+            isPanning = false;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+        };
     }
 
     private void SubscribeToViewModel(PdkOffsetEditorViewModel vm)

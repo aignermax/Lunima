@@ -52,6 +52,22 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     [ObservableProperty] private bool _showNazcaOverlay = true;
 
     /// <summary>
+    /// One-line summary of the pin-alignment check ("3/4 pins aligned" etc.)
+    /// computed against the cached Nazca render. Empty until the first render.
+    /// </summary>
+    [ObservableProperty] private string _pinAlignmentSummary = "";
+
+    /// <summary>
+    /// Tolerance in micrometres below which a Lunima pin is considered to be
+    /// aligned with its nearest Nazca pin. 0.5 µm is generous enough to ignore
+    /// sub-grid rounding noise without masking real offset errors.
+    /// </summary>
+    public const double PinAlignmentToleranceMicrometers = 0.5;
+
+    /// <summary>Per-pin alignment detail. Populated by <see cref="ComputePinAlignment"/>.</summary>
+    public ObservableCollection<PinAlignmentInfo> PinAlignmentResults { get; } = new();
+
+    /// <summary>
     /// Source snippet for the currently selected component — what the preview
     /// would tell Python to render. Empty until a component is selected.
     /// Populated by <see cref="OnSelectedComponentChanged"/>.
@@ -70,6 +86,57 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     {
         if (CopyToClipboard == null || string.IsNullOrEmpty(NazcaOverlayStatus)) return;
         await CopyToClipboard(NazcaOverlayStatus);
+    }
+
+    /// <summary>
+    /// Compares Lunima's PDK-JSON pin positions against the Nazca render's
+    /// pin stubs (in Nazca-space micrometres) and populates
+    /// <see cref="PinAlignmentResults"/> + <see cref="PinAlignmentSummary"/>.
+    /// Each Lunima pin is matched to its nearest Nazca pin by Euclidean
+    /// distance — name-matching is unreliable across PDKs (Lunima uses
+    /// "in"/"out", SiEPIC uses "opt1"/"opt2").
+    /// </summary>
+    internal void ComputePinAlignment(NazcaPreviewResult result, PdkComponentDraft draft)
+    {
+        PinAlignmentResults.Clear();
+        if (result.Pins.Count == 0 || draft.Pins.Count == 0)
+        {
+            PinAlignmentSummary = result.Pins.Count == 0
+                ? "Nazca cell exposes no pins — Lunima pin positions cannot be cross-checked."
+                : "Lunima component has no pins defined.";
+            return;
+        }
+
+        int aligned = 0;
+        foreach (var lp in draft.Pins)
+        {
+            // Lunima pin position in Nazca-space micrometres. Lunima offsets
+            // are measured from the bbox top-left; the Nazca origin sits at
+            // (NazcaOriginOffsetX, ComponentHeight - NazcaOriginOffsetY) inside
+            // that bbox (Nazca y-up vs canvas y-down).
+            var lunimaNazcaX = lp.OffsetXMicrometers - (draft.NazcaOriginOffsetX ?? 0);
+            var lunimaNazcaY = (draft.NazcaOriginOffsetY ?? 0) - lp.OffsetYMicrometers;
+
+            var nearest = result.Pins
+                .Select(np => (np, dist: Math.Sqrt(
+                    (np.X - lunimaNazcaX) * (np.X - lunimaNazcaX) +
+                    (np.Y - lunimaNazcaY) * (np.Y - lunimaNazcaY))))
+                .OrderBy(t => t.dist)
+                .First();
+
+            var dx = nearest.np.X - lunimaNazcaX;
+            var dy = nearest.np.Y - lunimaNazcaY;
+            var isAligned = nearest.dist <= PinAlignmentToleranceMicrometers;
+            if (isAligned) aligned++;
+
+            PinAlignmentResults.Add(new PinAlignmentInfo(
+                lp.Name, nearest.np.Name, dx, dy, nearest.dist, isAligned));
+        }
+
+        PinAlignmentSummary = aligned == draft.Pins.Count
+            ? $"✓ All {aligned}/{draft.Pins.Count} Lunima pins align with Nazca pins (≤{PinAlignmentToleranceMicrometers:F1} µm)."
+            : $"⚠ {aligned}/{draft.Pins.Count} pins aligned. Worst delta: " +
+              $"{PinAlignmentResults.Max(p => p.DistanceMicrometers):F2} µm — adjust NazcaOriginOffset.";
     }
 
     /// <summary>Window-side hook that resets the canvas zoom slider to 1.0.</summary>
@@ -118,15 +185,16 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     [ObservableProperty] private double _canvasComponentTop = CanvasPadding;
 
     /// <summary>
-    /// Total canvas width in pixels — large enough to cover both the Lunima
-    /// box and any Nazca geometry that extends past it. Without the Nazca
-    /// term wider PCells (e.g. ebeam_dc_te1550 at 22µm vs JSON's 12µm)
-    /// would render off the right edge and the user couldn't scroll there.
+    /// Total canvas width in pixels — sized to fit both the Lunima box and
+    /// any Nazca geometry that extends past it. The user pans the
+    /// surrounding ScrollViewer to bring off-screen geometry into view; the
+    /// canvas itself stays at its natural size so the offset/alignment
+    /// visualisation is geometrically meaningful and doesn't squish.
     /// </summary>
     public double CanvasTotalWidth =>
         Math.Max(CanvasComponentWidth + CanvasPadding * 2, _nazcaCanvasRight + CanvasPadding);
 
-    /// <summary>Total canvas height in pixels (Lunima box and Nazca extent, plus padding).</summary>
+    /// <inheritdoc cref="CanvasTotalWidth"/>
     public double CanvasTotalHeight =>
         Math.Max(CanvasComponentHeight + CanvasPadding * 2, _nazcaCanvasBottom + CanvasPadding);
 
@@ -293,6 +361,8 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         NazcaPolygons.Clear();
         NazcaPinStubs.Clear();
         NazcaOverlayStatus = "";
+        PinAlignmentSummary = "";
+        PinAlignmentResults.Clear();
         _nazcaCanvasRight = 0;
         _nazcaCanvasBottom = 0;
         OnPropertyChanged(nameof(CanvasTotalWidth));
@@ -465,6 +535,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                     // PDK function source pulled live by the helper script.
                     if (!string.IsNullOrEmpty(result.Source))
                         PreviewSource = result.Source;
+                    ComputePinAlignment(result, draftAtStart);
                 }
                 else
                 {
@@ -573,4 +644,20 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         // Anything else: assume demofab, the bundled Nazca PDK.
         return ("demo", nazcaFunction);
     }
+}
+
+/// <summary>
+/// Per-pin alignment record produced by
+/// <see cref="PdkOffsetEditorViewModel.ComputePinAlignment"/>.
+/// </summary>
+public record PinAlignmentInfo(
+    string LunimaPinName,
+    string NearestNazcaPinName,
+    double DeltaXMicrometers,
+    double DeltaYMicrometers,
+    double DistanceMicrometers,
+    bool IsAligned)
+{
+    /// <summary>Display-only label — '✓ aligned' or '✗ off' for the per-pin row.</summary>
+    public string AlignedLabel => IsAligned ? "✓ aligned" : "✗ off";
 }
