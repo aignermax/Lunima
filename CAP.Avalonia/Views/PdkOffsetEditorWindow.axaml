@@ -125,10 +125,9 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0"
                                        Text="{Binding NazcaOverlayStatus}"
-                                       Foreground="Gray" FontSize="11"
+                                       Foreground="LightYellow" FontSize="11"
                                        VerticalAlignment="Center"
-                                       TextWrapping="Wrap"
-                                       IsVisible="{Binding NazcaOverlayStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                       TextWrapping="Wrap"/>
                             <CheckBox Grid.Column="1"
                                       Content="Show Nazca GDS"
                                       IsChecked="{Binding ShowNazcaOverlay}"

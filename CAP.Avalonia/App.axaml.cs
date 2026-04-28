@@ -223,24 +223,27 @@ public partial class App : Application
     /// </summary>
     private static string FindPreviewScript()
     {
+        const string scriptName = "render_component_preview.py";
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var candidates = new[]
-        {
-            Path.Combine(baseDir, "scripts", "render_component_preview.py"),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "scripts", "render_component_preview.py")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "scripts", "render_component_preview.py")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "scripts", "render_component_preview.py")),
-        };
 
-        foreach (var candidate in candidates)
+        // First: a "scripts" folder copied next to the binary (publish path).
+        var local = Path.Combine(baseDir, "scripts", scriptName);
+        if (File.Exists(local)) return local;
+
+        // Otherwise walk up the directory tree looking for repo/scripts/<name>.
+        // Hard-coded "..","..",".." chains break whenever the running configuration's
+        // depth changes (debug vs release vs single-file publish vs net8.0 subfolder).
+        var current = new DirectoryInfo(baseDir);
+        while (current != null)
         {
-            if (File.Exists(candidate))
-                return candidate;
+            var candidate = Path.Combine(current.FullName, "scripts", scriptName);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
         }
 
-        // Return primary candidate — NazcaComponentPreviewService returns a
-        // graceful failure result when the script is not found.
-        return candidates[0];
+        // Best-effort fallback — NazcaComponentPreviewService returns a graceful
+        // failure with a clear message when the path doesn't resolve.
+        return local;
     }
 
     /// <summary>
