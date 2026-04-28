@@ -22,6 +22,7 @@ import math
 import argparse
 import tempfile
 import os
+import contextlib
 
 
 def _parse_args():
@@ -134,46 +135,57 @@ def _render_to_gds(cell):
     return tmp
 
 
+def _do_render(args):
+    """Run the actual Nazca + GDS extraction, return result dict."""
+    cell = _build_cell(args.module_name, args.function_name, args.parameters_string)
+    xmin, ymin, xmax, ymax = _extract_bbox(cell)
+    pins = _extract_pins(cell, args.stub_length)
+
+    polygons = []
+    gds_path = None
+    try:
+        gds_path = _render_to_gds(cell)
+        polygons = _extract_polygons_gdspy(gds_path)
+    except ImportError:
+        # gdspy not installed — return bbox + pins only
+        pass
+    except Exception as poly_err:
+        # Polygon extraction failed gracefully; continue with bbox + pins
+        sys.stderr.write(f"polygon extraction warning: {poly_err}\n")
+    finally:
+        if gds_path and os.path.exists(gds_path):
+            os.remove(gds_path)
+
+    return {
+        "success": True,
+        "bbox": {
+            "xmin": float(xmin),
+            "ymin": float(ymin),
+            "xmax": float(xmax),
+            "ymax": float(ymax),
+        },
+        "polygons": polygons,
+        "pins": pins,
+    }
+
+
 def main():
     args = _parse_args()
 
-    try:
-        cell = _build_cell(args.module_name, args.function_name, args.parameters_string)
-        xmin, ymin, xmax, ymax = _extract_bbox(cell)
-        pins = _extract_pins(cell, args.stub_length)
-
-        polygons = []
-        gds_path = None
+    # Nazca prints various chatter on stdout during import and rendering
+    # ("loaded ...", "layer ...", etc.). Redirect that to stderr so it doesn't
+    # corrupt the JSON our caller (NazcaComponentPreviewService) expects on
+    # stdout. The caller already reads stderr separately for diagnostics.
+    result = None
+    with contextlib.redirect_stdout(sys.stderr):
         try:
-            gds_path = _render_to_gds(cell)
-            polygons = _extract_polygons_gdspy(gds_path)
-        except ImportError:
-            # gdspy not installed — return bbox + pins only
-            pass
-        except Exception as poly_err:
-            # Polygon extraction failed gracefully; continue with bbox + pins
-            sys.stderr.write(f"polygon extraction warning: {poly_err}\n")
-        finally:
-            if gds_path and os.path.exists(gds_path):
-                os.remove(gds_path)
+            result = _do_render(args)
+        except Exception as exc:
+            result = {"success": False, "error": str(exc)}
 
-        result = {
-            "success": True,
-            "bbox": {
-                "xmin": float(xmin),
-                "ymin": float(ymin),
-                "xmax": float(xmax),
-                "ymax": float(ymax),
-            },
-            "polygons": polygons,
-            "pins": pins,
-        }
-        print(json.dumps(result))
-
-    except Exception as exc:
-        error_result = {"success": False, "error": str(exc)}
-        print(json.dumps(error_result))
-        sys.exit(0)  # non-exception exit so C# reads stdout
+    # Outside the redirect — write the JSON to the real stdout.
+    print(json.dumps(result))
+    sys.exit(0)  # non-exception exit so the C# parser reads our stdout
 
 
 if __name__ == "__main__":

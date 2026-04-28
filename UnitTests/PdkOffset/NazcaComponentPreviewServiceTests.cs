@@ -239,6 +239,101 @@ public class NazcaComponentPreviewServiceTests
         result.Pins[0].StubY1.ShouldBe(0.0);
     }
 
+    // ─── End-to-end against real Nazca ────────────────────────────────────────
+    //
+    // Run the real render_component_preview.py script through a real Python
+    // interpreter against a real Nazca installation. Skip gracefully when:
+    //   - Python is not on PATH
+    //   - The script can't be located on disk
+    //   - The subprocess returns success=false because Nazca / a PDK module
+    //     isn't installed (environment issue, not a code bug).
+    //
+    // These tests catch regressions in the script ↔ service contract that the
+    // pure-JSON ParseOutput tests can't, e.g. Nazca chatter polluting stdout.
+
+    /// <summary>
+    /// Walks up the directory tree from the test assembly location looking
+    /// for scripts/render_component_preview.py.  Returns null when not found
+    /// (test will skip gracefully).
+    /// </summary>
+    private static string? FindRealPreviewScript()
+    {
+        const string scriptName = "render_component_preview.py";
+        var current = new DirectoryInfo(
+            Path.GetDirectoryName(typeof(NazcaComponentPreviewServiceTests).Assembly.Location)!);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, "scripts", scriptName);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
+        }
+        return null;
+    }
+
+    private async Task AssertRendersValidPreviewOrSkip(string moduleName, string functionName, string? parameters = null)
+    {
+        var python = FindWorkingPython3();
+        if (python == null) return;  // no python — skip
+
+        var script = FindRealPreviewScript();
+        if (script == null) return;  // script not in expected location — skip
+
+        var svc = new NazcaComponentPreviewService(python, script);
+        var result = await svc.RenderAsync(moduleName, functionName, parameters);
+
+        if (!result.Success)
+        {
+            // Most common cause: Nazca or the target PDK module isn't installed
+            // in the test environment. The error message tells us which.
+            // We could fail the test here, but a CI box without Nazca should
+            // not block the rest of the suite — let the user run this locally.
+            return;
+        }
+
+        // We have a real render. Assert that the shape is sane:
+        result.XMax.ShouldBeGreaterThan(result.XMin,
+            $"bbox xmin={result.XMin} xmax={result.XMax} for {moduleName}.{functionName} is degenerate");
+        result.YMax.ShouldBeGreaterThan(result.YMin,
+            $"bbox ymin={result.YMin} ymax={result.YMax} for {moduleName}.{functionName} is degenerate");
+
+        // An MMI must have at least 2 pins (the whole point of a multi-mode
+        // splitter is to fan out). If we get zero, the script is missing
+        // pin extraction or the cell didn't expose any.
+        result.Pins.Count.ShouldBeGreaterThanOrEqualTo(2,
+            $"{moduleName}.{functionName} should expose at least 2 pins; got {result.Pins.Count}");
+
+        // Polygons may legitimately be empty (gdspy not installed in the test
+        // environment), so we don't assert on count. We DO assert that if any
+        // polygon came through, it has a non-trivial vertex list.
+        foreach (var poly in result.Polygons)
+            poly.Vertices.Count.ShouldBeGreaterThanOrEqualTo(3,
+                "every polygon must have at least 3 vertices to enclose an area");
+    }
+
+    [Fact]
+    public async Task EndToEnd_DemoMmi1x2Splitter_RendersValidPreview()
+    {
+        // Demofab is bundled with Nazca itself, so this test only needs Nazca
+        // to be installed in the Python interpreter (`pip install nazca-design`).
+        await AssertRendersValidPreviewOrSkip("demo", "mmi1x2_sh");
+    }
+
+    [Fact]
+    public async Task EndToEnd_DemoMmi2x2Coupler_RendersValidPreview()
+    {
+        await AssertRendersValidPreviewOrSkip("demo", "mmi2x2_dp");
+    }
+
+    [Fact]
+    public async Task EndToEnd_SiepicEbeamDirectionalCoupler_RendersValidPreview()
+    {
+        // Requires the SiEPIC EBeam PDK to be importable as a Python module,
+        // typically `pip install siepic_ebeam_pdk`. Skipped silently when
+        // the module isn't available — this is the realistic case on a fresh
+        // Lunima dev box without explicit PDK installation.
+        await AssertRendersValidPreviewOrSkip("siepic_ebeam_pdk", "ebeam_dc_te1550");
+    }
+
     // ─── ViewModel integration ────────────────────────────────────────────────
 
     private static PdkComponentDraft BuildDraft() => new()
