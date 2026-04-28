@@ -414,7 +414,7 @@ public class NazcaComponentPreviewServiceTests
     /// overlay (or for a non-empty status text reporting failure).
     /// </summary>
     private static async Task<PdkOffsetEditorViewModel?> TryRenderThroughViewModel(
-        string nazcaFunction, string? nazcaParameters = null, int timeoutMs = 30000)
+        string nazcaFunction, string? nazcaParameters = null, int timeoutMs = 120000)
     {
         var python = FindWorkingPython3();
         if (python == null) return null;

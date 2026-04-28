@@ -86,15 +86,6 @@ jobs:
           # Upstream source: https://nazca-design.org/download/
           pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
           python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk; print('PDK preview deps ok')"
-          # Diagnostic: time the actual demo MMI render so we know whether the
-          # 30s test deadline is realistic on CI hardware.
-          export MPLBACKEND=Agg QT_QPA_PLATFORM=offscreen
-          echo "=== Timing demo MMI render ==="
-          time timeout 60 python3 scripts/render_component_preview.py demo mmi2x2_dp 2>&1 | tail -1 | head -c 200
-          echo ""
-          echo "=== Timing SiEPIC ebeam_y_1550 render ==="
-          time timeout 60 python3 scripts/render_component_preview.py siepic_ebeam_pdk ebeam_y_1550 2>&1 | tail -1 | head -c 200
-          echo ""
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
