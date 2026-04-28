@@ -687,6 +687,199 @@ public class NazcaComponentPreviewServiceTests
         info.IsAligned.ShouldBeFalse();
     }
 
+    // ─── Auto-Calibrate (no Python required) ───────────────────────────────────
+    //
+    // These tests pin the Lunima→Nazca bbox transform that the AutoCalibrate
+    // command applies. The math is the same as ComputePinAlignment (just
+    // inverted), so a regression in either formula breaks both.
+
+    private static PdkOffsetEditorViewModel BuildVmWithSelection(
+        PdkComponentDraft draft, NazcaPreviewResult cachedResult)
+    {
+        var vm = new PdkOffsetEditorViewModel(
+            new PdkLoader(), new PdkJsonSaver(),
+            new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
+            previewService: null);
+        vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "auto-calib-test"));
+        vm.SelectedComponent = vm.Components[0];
+        vm.SeedNazcaResultForTesting(cachedResult);
+        return vm;
+    }
+
+    [Fact]
+    public void AutoCalibrate_AppliesNazcaBboxToWidthHeightAndOrigin()
+    {
+        // Nazca bbox: x ∈ [-2, 8], y ∈ [-3, 7]. Origin (0,0) sits 2 µm from
+        // the left edge and 3 µm from the bottom edge → NazcaOriginOffset=(2,3).
+        var draft = new PdkComponentDraft
+        {
+            Name = "test_comp", NazcaFunction = "pdk.test",
+            WidthMicrometers = 1, HeightMicrometers = 1,  // intentionally wrong
+            NazcaOriginOffsetX = 0, NazcaOriginOffsetY = 0,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "in", OffsetXMicrometers = 0, OffsetYMicrometers = 0 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            XMin = -2, YMin = -3, XMax = 8, YMax = 7,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "opt1", X = 5, Y = 4 }
+            }
+        };
+
+        var vm = BuildVmWithSelection(draft, result);
+        vm.AutoCalibrateCommand.Execute(null);
+
+        draft.WidthMicrometers.ShouldBe(10.0, tolerance: 0.001);
+        draft.HeightMicrometers.ShouldBe(10.0, tolerance: 0.001);
+        draft.NazcaOriginOffsetX!.Value.ShouldBe(2.0, tolerance: 0.001);
+        draft.NazcaOriginOffsetY!.Value.ShouldBe(3.0, tolerance: 0.001);
+        // The single Lunima pin gets snapped to the Nazca pin position:
+        //   OffsetX = nazcaX - XMin = 5 - (-2) = 7
+        //   OffsetY = YMax - nazcaY = 7 - 4 = 3
+        draft.Pins[0].OffsetXMicrometers.ShouldBe(7.0, tolerance: 0.001);
+        draft.Pins[0].OffsetYMicrometers.ShouldBe(3.0, tolerance: 0.001);
+        vm.HasUnsavedChanges.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AutoCalibrate_AfterApplying_AlignmentSummaryReportsAllAligned()
+    {
+        // Calibrating must leave every pin within tolerance of its matched
+        // Nazca pin — that's the whole point of the command.
+        var draft = new PdkComponentDraft
+        {
+            Name = "two_port", NazcaFunction = "pdk.two_port",
+            WidthMicrometers = 1, HeightMicrometers = 1,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "in",  OffsetXMicrometers = 0, OffsetYMicrometers = 0 },
+                new() { Name = "out", OffsetXMicrometers = 1, OffsetYMicrometers = 1 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            XMin = 0, YMin = 0, XMax = 12, YMax = 6,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "a0", X = 0,  Y = 3 },
+                new() { Name = "b0", X = 12, Y = 3 }
+            }
+        };
+
+        var vm = BuildVmWithSelection(draft, result);
+        vm.AutoCalibrateCommand.Execute(null);
+
+        vm.PinAlignmentResults.Count.ShouldBe(2);
+        vm.PinAlignmentResults.ShouldAllBe(p => p.IsAligned);
+        vm.PinAlignmentSummary.ShouldContain("All 2/2");
+    }
+
+    [Fact]
+    public void AutoCalibrate_PinCountMismatch_AbortsAndLeavesDraftUnchanged()
+    {
+        // The Lunima JSON for SiEPIC's GC sometimes declares only one pin
+        // even though the cell exposes 'io' + 'wg'. Auto-calibrate must
+        // refuse rather than silently drop or duplicate a pin.
+        var draft = new PdkComponentDraft
+        {
+            Name = "single_pin", NazcaFunction = "pdk.single",
+            WidthMicrometers = 5, HeightMicrometers = 5,
+            NazcaOriginOffsetX = 0, NazcaOriginOffsetY = 0,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "io", OffsetXMicrometers = 0, OffsetYMicrometers = 2.5 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            XMin = 0, YMin = 0, XMax = 30, YMax = 10,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "io", X = 0,  Y = 5 },
+                new() { Name = "wg", X = 30, Y = 5 }
+            }
+        };
+
+        var vm = BuildVmWithSelection(draft, result);
+        vm.AutoCalibrateCommand.Execute(null);
+
+        // Bbox + pins must stay at their pre-calibration values
+        draft.WidthMicrometers.ShouldBe(5.0);
+        draft.HeightMicrometers.ShouldBe(5.0);
+        draft.Pins[0].OffsetXMicrometers.ShouldBe(0);
+        draft.Pins[0].OffsetYMicrometers.ShouldBe(2.5);
+        vm.HasUnsavedChanges.ShouldBeFalse();
+        vm.StatusText.ShouldContain("pin counts must match");
+    }
+
+    [Fact]
+    public void AutoCalibrate_MatchesPinsByNearestNotByOrder()
+    {
+        // Lunima order: [in (left-bottom), out (right-top)].
+        // Nazca order:  [opt1 (right-top), opt2 (left-bottom)] — REVERSED.
+        // Greedy nearest-neighbour must pair in↔opt2 and out↔opt1, not by index.
+        var draft = new PdkComponentDraft
+        {
+            Name = "reversed", NazcaFunction = "pdk.rev",
+            WidthMicrometers = 10, HeightMicrometers = 10,
+            NazcaOriginOffsetX = 0, NazcaOriginOffsetY = 0,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "in",  OffsetXMicrometers = 0,  OffsetYMicrometers = 10 },
+                new() { Name = "out", OffsetXMicrometers = 10, OffsetYMicrometers = 0 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            XMin = 0, YMin = 0, XMax = 10, YMax = 10,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "opt1", X = 10, Y = 10 },  // matches 'out'
+                new() { Name = "opt2", X = 0,  Y = 0  }   // matches 'in'
+            }
+        };
+
+        var vm = BuildVmWithSelection(draft, result);
+        vm.AutoCalibrateCommand.Execute(null);
+
+        // 'in' must end up at (0, 10) (Nazca (0,0) → top-left), 'out' at (10,0)
+        var inPin  = draft.Pins.First(p => p.Name == "in");
+        var outPin = draft.Pins.First(p => p.Name == "out");
+        inPin.OffsetXMicrometers.ShouldBe(0.0,  tolerance: 0.001);
+        inPin.OffsetYMicrometers.ShouldBe(10.0, tolerance: 0.001);
+        outPin.OffsetXMicrometers.ShouldBe(10.0, tolerance: 0.001);
+        outPin.OffsetYMicrometers.ShouldBe(0.0,  tolerance: 0.001);
+    }
+
+    [Fact]
+    public void AutoCalibrate_WithoutCachedPreview_CannotExecute()
+    {
+        // The button is disabled until a successful render lands; programmatic
+        // Execute must short-circuit with a status message instead of crashing.
+        var draft = new PdkComponentDraft
+        {
+            Name = "no_render", NazcaFunction = "pdk.none",
+            WidthMicrometers = 1, HeightMicrometers = 1,
+            Pins = new List<PhysicalPinDraft>()
+        };
+        var vm = new PdkOffsetEditorViewModel(
+            new PdkLoader(), new PdkJsonSaver(),
+            new CAP.Avalonia.ViewModels.Library.PdkManagerViewModel(),
+            previewService: null);
+        vm.Components.Add(new PdkComponentOffsetItemViewModel(draft, "no-render-test"));
+        vm.SelectedComponent = vm.Components[0];
+
+        vm.AutoCalibrateCommand.CanExecute(null).ShouldBeFalse();
+    }
+
     [Fact]
     public async Task EndToEnd_ViewModel_RingResonator_ReportsMissingDemofabAttributeClearly()
     {

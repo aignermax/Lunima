@@ -32,9 +32,16 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     private double _nazcaCanvasRight;
     private double _nazcaCanvasBottom;
     private CancellationTokenSource? _renderCts;
+    // Cached so the Auto-Calibrate command can read the bbox + pin positions
+    // of the most recent successful render without rerunning the Python helper.
+    private NazcaPreviewResult? _lastNazcaResult;
 
     [ObservableProperty] private string _statusText = "Load a PDK file to begin.";
-    [ObservableProperty] private PdkComponentOffsetItemViewModel? _selectedComponent;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AutoCalibrateCommand))]
+    private PdkComponentOffsetItemViewModel? _selectedComponent;
+
     [ObservableProperty] private double _offsetX;
     [ObservableProperty] private double _offsetY;
     [ObservableProperty] private bool _hasUnsavedChanges;
@@ -42,7 +49,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     [ObservableProperty] private double _componentHeight;
     [ObservableProperty] private bool _isNazcaRendering;
     [ObservableProperty] private string _nazcaOverlayStatus = "";
-    [ObservableProperty] private bool _hasNazcaOverlay;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AutoCalibrateCommand))]
+    private bool _hasNazcaOverlay;
 
     /// <summary>
     /// User toggle for the Nazca GDS overlay. When false the overlay is hidden
@@ -142,6 +152,131 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
             ? $"✓ All {aligned}/{draft.Pins.Count} Lunima pins align with Nazca pins (≤{PinAlignmentToleranceMicrometers:F1} µm)."
             : $"⚠ {aligned}/{draft.Pins.Count} pins aligned. Worst delta: " +
               $"{PinAlignmentResults.Max(p => p.DistanceMicrometers):F2} µm — adjust NazcaOriginOffset.";
+    }
+
+    /// <summary>
+    /// Derives Width / Height / NazcaOriginOffset from the cached Nazca bbox
+    /// and snaps every Lunima pin to its matched Nazca pin position. The user
+    /// no longer has to reverse-engineer the bbox math — one click and the
+    /// JSON aligns with the GDS down to the pin.
+    ///
+    /// Pin matching is greedy bipartite by Euclidean distance using the
+    /// component's CURRENT calibration as the projection space, so a
+    /// roughly-correct starting offset is enough. Pin counts must match —
+    /// otherwise the command refuses with an explicit error so the user
+    /// knows the mismatch is real (e.g. SiEPIC GC has 'io' + 'wg' but the
+    /// Lunima JSON only declares one pin).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanAutoCalibrate))]
+    private void AutoCalibrate()
+    {
+        if (_lastNazcaResult is not { Success: true } r || SelectedComponent == null)
+        {
+            StatusText = "Auto-calibrate needs a successful Nazca preview.";
+            return;
+        }
+
+        var draft = SelectedComponent.Draft;
+
+        if (r.XMax <= r.XMin || r.YMax <= r.YMin)
+        {
+            StatusText = "Auto-calibrate aborted: Nazca bbox is degenerate " +
+                         $"(XMin={r.XMin}, XMax={r.XMax}, YMin={r.YMin}, YMax={r.YMax}).";
+            return;
+        }
+
+        if (r.Pins.Count != draft.Pins.Count)
+        {
+            StatusText = $"Auto-calibrate aborted: Lunima component '{SelectedComponent.ComponentName}' " +
+                         $"declares {draft.Pins.Count} pins but the Nazca cell exposes {r.Pins.Count} — " +
+                         "pin counts must match for unambiguous alignment.";
+            return;
+        }
+
+        var pairs = MatchPinsByGreedyNearest(draft, r);
+
+        draft.WidthMicrometers = r.XMax - r.XMin;
+        draft.HeightMicrometers = r.YMax - r.YMin;
+        draft.NazcaOriginOffsetX = -r.XMin;
+        draft.NazcaOriginOffsetY = -r.YMin;
+
+        foreach (var (lp, np) in pairs)
+        {
+            lp.OffsetXMicrometers = np.X - r.XMin;
+            lp.OffsetYMicrometers = r.YMax - np.Y;
+        }
+
+        // Mirror back into the bound numeric controls so the editor reflects
+        // the new calibration without requiring the user to re-select the row.
+        OffsetX = draft.NazcaOriginOffsetX.Value;
+        OffsetY = draft.NazcaOriginOffsetY.Value;
+        ComponentWidth = draft.WidthMicrometers;
+        ComponentHeight = draft.HeightMicrometers;
+
+        SelectedComponent.RefreshStatus();
+        RefreshPinPositions(draft);
+        RefreshCanvasMarkers(draft);
+        ComputePinAlignment(r, draft);
+        HasUnsavedChanges = true;
+        StatusText = $"Auto-calibrated '{SelectedComponent.ComponentName}' from GDS bbox " +
+                     $"({draft.WidthMicrometers:F2} × {draft.HeightMicrometers:F2} µm, " +
+                     $"origin {draft.NazcaOriginOffsetX:F2}/{draft.NazcaOriginOffsetY:F2}). " +
+                     "Click Save to persist.";
+    }
+
+    private bool CanAutoCalibrate() =>
+        _lastNazcaResult is { Success: true } && SelectedComponent != null;
+
+    /// <summary>
+    /// Test seam: lets unit tests place a synthetic <see cref="NazcaPreviewResult"/>
+    /// into the cache slot the AutoCalibrate command reads from, without spinning
+    /// up the Python preview pipeline.
+    /// </summary>
+    internal void SeedNazcaResultForTesting(NazcaPreviewResult result)
+    {
+        _lastNazcaResult = result;
+        AutoCalibrateCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Greedy bipartite pin matcher: repeatedly takes the closest Lunima/Nazca
+    /// pair (in current Lunima→Nazca-space projection) and removes both from
+    /// the candidate sets. Returns one pair per Lunima pin assuming counts
+    /// match. Exposed as internal so the unit tests can pin the assignment.
+    /// </summary>
+    internal static List<(PhysicalPinDraft Lunima, NazcaPreviewPin Nazca)>
+        MatchPinsByGreedyNearest(PdkComponentDraft draft, NazcaPreviewResult result)
+    {
+        var pairs = new List<(PhysicalPinDraft, NazcaPreviewPin)>();
+        // Project Lunima pins to Nazca-space with the CURRENT calibration so a
+        // roughly-correct starting offset still matches pins correctly even if
+        // the box dimensions are off.
+        var projections = draft.Pins
+            .Select(lp => (
+                lp,
+                x: lp.OffsetXMicrometers - (draft.NazcaOriginOffsetX ?? 0),
+                y: (draft.HeightMicrometers - lp.OffsetYMicrometers) - (draft.NazcaOriginOffsetY ?? 0)))
+            .ToList();
+        var availableNazca = result.Pins.ToList();
+
+        while (projections.Count > 0 && availableNazca.Count > 0)
+        {
+            var best = (lpIdx: -1, npIdx: -1, dist: double.MaxValue);
+            for (var i = 0; i < projections.Count; i++)
+            {
+                for (var j = 0; j < availableNazca.Count; j++)
+                {
+                    var dx = availableNazca[j].X - projections[i].x;
+                    var dy = availableNazca[j].Y - projections[i].y;
+                    var d = Math.Sqrt(dx * dx + dy * dy);
+                    if (d < best.dist) best = (i, j, d);
+                }
+            }
+            pairs.Add((projections[best.lpIdx].lp, availableNazca[best.npIdx]));
+            projections.RemoveAt(best.lpIdx);
+            availableNazca.RemoveAt(best.npIdx);
+        }
+        return pairs;
     }
 
     /// <summary>Window-side hook that resets the canvas zoom slider to 1.0.</summary>
@@ -363,6 +498,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
         // Reset overlay state for new component
         HasNazcaOverlay = false;
+        _lastNazcaResult = null;
         NazcaPolygons.Clear();
         NazcaPinStubs.Clear();
         NazcaOverlayStatus = "";
@@ -531,6 +667,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
 
                 if (result.Success)
                 {
+                    _lastNazcaResult = result;
                     SetNazcaOverlay(result);
                     var status = $"GDS overlay loaded ({result.Polygons.Count} polygons, {result.Pins.Count} pins).";
                     if (!string.IsNullOrEmpty(result.PolygonWarning))
@@ -544,6 +681,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
                 }
                 else
                 {
+                    _lastNazcaResult = null;
                     HasNazcaOverlay = false;
                     NazcaOverlayStatus = $"Preview unavailable: {result.Error}";
                 }

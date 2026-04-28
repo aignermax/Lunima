@@ -117,6 +117,11 @@
                                           Minimum="0.001"
                                           Background="#2d2d2d" Foreground="White"/>
                         </Grid>
+                        <Button Content="🪄 Auto-Calibrate from GDS"
+                                Command="{Binding AutoCalibrateCommand}"
+                                HorizontalAlignment="Stretch"
+                                Padding="12,6" Background="#5d3d8d" Foreground="White"
+                                ToolTip.Tip="Derive Width / Height / NazcaOriginOffset from the rendered GDS bounding box and snap every Lunima pin to its matching Nazca pin. Available once the GDS preview has loaded."/>
                         <TextBlock Text="Apply updates the preview and marks the file as changed. Click Save PDK to persist."
                                    Foreground="Gray" FontSize="11"/>
                         <ProgressBar IsIndeterminate="True"
