@@ -26,6 +26,11 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     private string? _loadedFilePath;
     private double _nazcaCanvasRefX;
     private double _nazcaCanvasRefY;
+    // Right / bottom extent of the rendered Nazca geometry in canvas pixels.
+    // Used so CanvasTotalWidth/Height also covers SiEPIC PCells whose actual
+    // bbox is wider than the Lunima JSON's WidthMicrometers/HeightMicrometers.
+    private double _nazcaCanvasRight;
+    private double _nazcaCanvasBottom;
     private CancellationTokenSource? _renderCts;
 
     [ObservableProperty] private string _statusText = "Load a PDK file to begin.";
@@ -112,11 +117,18 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// <summary>Y offset of the component bounding box inside the canvas.</summary>
     [ObservableProperty] private double _canvasComponentTop = CanvasPadding;
 
-    /// <summary>Total canvas width in pixels (component plus both paddings).</summary>
-    public double CanvasTotalWidth => CanvasComponentWidth + CanvasPadding * 2;
+    /// <summary>
+    /// Total canvas width in pixels — large enough to cover both the Lunima
+    /// box and any Nazca geometry that extends past it. Without the Nazca
+    /// term wider PCells (e.g. ebeam_dc_te1550 at 22µm vs JSON's 12µm)
+    /// would render off the right edge and the user couldn't scroll there.
+    /// </summary>
+    public double CanvasTotalWidth =>
+        Math.Max(CanvasComponentWidth + CanvasPadding * 2, _nazcaCanvasRight + CanvasPadding);
 
-    /// <summary>Total canvas height in pixels (component plus both paddings).</summary>
-    public double CanvasTotalHeight => CanvasComponentHeight + CanvasPadding * 2;
+    /// <summary>Total canvas height in pixels (Lunima box and Nazca extent, plus padding).</summary>
+    public double CanvasTotalHeight =>
+        Math.Max(CanvasComponentHeight + CanvasPadding * 2, _nazcaCanvasBottom + CanvasPadding);
 
     /// <summary>Pin markers for visual canvas overlay (canvas-pixel coordinates).</summary>
     public ObservableCollection<PinMarker> PinMarkers { get; } = new();
@@ -281,6 +293,10 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         NazcaPolygons.Clear();
         NazcaPinStubs.Clear();
         NazcaOverlayStatus = "";
+        _nazcaCanvasRight = 0;
+        _nazcaCanvasBottom = 0;
+        OnPropertyChanged(nameof(CanvasTotalWidth));
+        OnPropertyChanged(nameof(CanvasTotalHeight));
         PreviewSource = BuildPreviewSource(value.Draft);
 
         RefreshPinPositions(value.Draft);
@@ -370,6 +386,12 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         // Nazca origin is at (0,0) in Nazca space; map to canvas
         _nazcaCanvasRefX = CanvasPadding + (-result.XMin) * CanvasScale;
         _nazcaCanvasRefY = CanvasPadding + result.YMax * CanvasScale;
+        // Track the Nazca bbox right/bottom so the total canvas size grows to
+        // fit polygons that extend past the Lunima JSON's WidthMicrometers.
+        _nazcaCanvasRight = _nazcaCanvasRefX + result.XMax * CanvasScale;
+        _nazcaCanvasBottom = _nazcaCanvasRefY - result.YMin * CanvasScale;
+        OnPropertyChanged(nameof(CanvasTotalWidth));
+        OnPropertyChanged(nameof(CanvasTotalHeight));
 
         NazcaPolygons.Clear();
         foreach (var poly in result.Polygons)

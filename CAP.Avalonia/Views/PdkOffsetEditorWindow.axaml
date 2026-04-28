@@ -188,16 +188,19 @@
                                    Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                                       MaxHeight="320">
-                            <Canvas x:Name="OverlayCanvas"
-                                    Width="500" Height="260"
-                                    Background="#1a1a2e"
-                                    ClipToBounds="True">
-                                <Canvas.RenderTransform>
+                            <!-- LayoutTransformControl re-measures its child after applying
+                                 the scale, so the ScrollViewer learns the true rendered size
+                                 and produces scrollbars on zoom-in. RenderTransform alone
+                                 paints bigger but keeps the layout the original size. -->
+                            <LayoutTransformControl>
+                                <LayoutTransformControl.LayoutTransform>
                                     <ScaleTransform ScaleX="{Binding #ZoomSlider.Value}"
                                                     ScaleY="{Binding #ZoomSlider.Value}"/>
-                                </Canvas.RenderTransform>
-                                <Canvas.RenderTransformOrigin>0,0</Canvas.RenderTransformOrigin>
-                            </Canvas>
+                                </LayoutTransformControl.LayoutTransform>
+                                <Canvas x:Name="OverlayCanvas"
+                                        Background="#1a1a2e"
+                                        ClipToBounds="True"/>
+                            </LayoutTransformControl>
                         </ScrollViewer>
                     </StackPanel>
                 </Border>
