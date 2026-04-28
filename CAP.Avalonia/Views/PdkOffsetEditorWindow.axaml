@@ -135,6 +135,20 @@
                                       ToolTip.Tip="Toggle the Nazca GDS overlay (dark green polygons + cyan pin stubs)"
                                       VerticalAlignment="Center"/>
                         </Grid>
+                        <Expander Header="Show preview source (Python)"
+                                  Foreground="LightGray" FontSize="11"
+                                  IsExpanded="False"
+                                  IsVisible="{Binding PreviewSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBox Text="{Binding PreviewSource}"
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="10"
+                                     Background="#1a1a1a"
+                                     Foreground="#c0e8c0"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     Height="140"/>
+                        </Expander>
                     </StackPanel>
                 </Border>
 

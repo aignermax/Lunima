@@ -46,6 +46,13 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _showNazcaOverlay = true;
 
+    /// <summary>
+    /// Source snippet for the currently selected component — what the preview
+    /// would tell Python to render. Empty until a component is selected.
+    /// Populated by <see cref="OnSelectedComponentChanged"/>.
+    /// </summary>
+    [ObservableProperty] private string _previewSource = "";
+
     /// <summary>Currently selected PDK from the installed-PDK dropdown; triggers load on change.</summary>
     [ObservableProperty]
     private PdkInfoViewModel? _selectedInstalledPdk;
@@ -253,6 +260,7 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
         NazcaPolygons.Clear();
         NazcaPinStubs.Clear();
         NazcaOverlayStatus = "";
+        PreviewSource = BuildPreviewSource(value.Draft);
 
         RefreshPinPositions(value.Draft);
         RefreshCanvasMarkers(value.Draft);
@@ -435,6 +443,44 @@ public partial class PdkOffsetEditorViewModel : ObservableObject
             if (!token.IsCancellationRequested)
                 IsNazcaRendering = false;
         }
+    }
+
+    /// <summary>
+    /// Renders the same Python the preview helper would execute, as a string
+    /// the user can read and copy. Different shape per render path:
+    /// SiEPIC → klayout GDS load; demofab → Nazca cell call.
+    /// </summary>
+    private static string BuildPreviewSource(PdkComponentDraft draft)
+    {
+        var (module, function) = ResolveModuleAndFunction(draft.NazcaFunction);
+        var paramsBlock = string.IsNullOrWhiteSpace(draft.NazcaParameters)
+            ? "" : draft.NazcaParameters;
+
+        if (module.StartsWith("siepic", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Join("\n",
+                "# SiEPIC components are read from their bundled fixed-cell GDS:",
+                $"#   <{module}-package>/gds/EBeam/{function}.gds",
+                "",
+                "import os, klayout.db as kdb",
+                $"import {module}",
+                $"pkg_dir = os.path.dirname({module}.__file__)",
+                $"gds = os.path.join(pkg_dir, 'gds', 'EBeam', '{function}.gds')",
+                "ly = kdb.Layout(); ly.read(gds)",
+                "cell = next(ly.each_cell())",
+                "# polygons on layer 1/0, pins on layer 1/10");
+        }
+
+        var moduleImport = module == "demo" ? "import nazca.demofab as demo" : $"import {module} as mod";
+        var modAlias = module == "demo" ? "demo" : "mod";
+        var paramsRepr = string.IsNullOrEmpty(paramsBlock) ? "" : paramsBlock;
+        return string.Join("\n",
+            "# The preview helper builds the cell, exports a temp GDS,",
+            "# and reads back polygons + pins via klayout/gdstk.",
+            "import nazca as nd",
+            moduleImport,
+            $"cell = {modAlias}.{function}({paramsRepr})",
+            "nd.export_gds(topcells=[cell], filename='preview.gds')");
     }
 
     /// <summary>
