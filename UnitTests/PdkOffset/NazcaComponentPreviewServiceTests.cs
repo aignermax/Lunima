@@ -505,8 +505,7 @@ public class NazcaComponentPreviewServiceTests
     {
         var vm = await TryRenderThroughViewModel(nazcaFunction);
         if (vm == null) return;  // python missing — environment skip
-        if (vm.NazcaOverlayStatus.Contains("No module named", StringComparison.Ordinal))
-            return;  // PDK package not installed in this env
+        if (IsEnvironmentSkip(vm.NazcaOverlayStatus)) return;
 
         // None of these legit Lunima PDK references should ever produce an
         // attribute lookup error — that means our routing dropped the dotted
@@ -521,6 +520,18 @@ public class NazcaComponentPreviewServiceTests
         vm.HasNazcaOverlay.ShouldBeTrue(
             $"[{description}] render did not produce an overlay. Status: {vm.NazcaOverlayStatus}");
     }
+
+    /// <summary>
+    /// Recognises preview-script error messages that mean "this environment
+    /// is missing a Python package required to render this kind of cell" so
+    /// the tests skip gracefully on a lean CI runner instead of reporting
+    /// an environment gap as a Lunima bug.
+    /// </summary>
+    private static bool IsEnvironmentSkip(string status) =>
+        status.Contains("No module named",                StringComparison.Ordinal) ||
+        status.Contains("requires klayout-python",        StringComparison.Ordinal) ||
+        status.Contains("siepic_ebeam_pdk is not installed", StringComparison.Ordinal) ||
+        status.Contains("Neither gdstk nor gdspy",        StringComparison.Ordinal);
 
     /// <summary>
     /// Cross-checks Lunima's PDK JSON pin positions against the actual Nazca
