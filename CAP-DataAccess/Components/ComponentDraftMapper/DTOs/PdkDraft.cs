@@ -101,6 +101,21 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public double HeightMicrometers { get; set; }
 
         /// <summary>
+        /// Optional explicit Nazca origin offset X in micrometers.
+        /// Overrides the default first-pin heuristic when set.
+        /// </summary>
+        // Declared right after HeightMicrometers (and not at the end of the
+        // class) so the saver emits these next to the bbox dimensions —
+        // matches the original hand-written PDK JSON layout and prevents
+        // the saver from churning the file every time it's saved.
+        [JsonPropertyName("nazcaOriginOffsetX")]
+        public double? NazcaOriginOffsetX { get; set; }
+
+        /// <inheritdoc cref="NazcaOriginOffsetX"/>
+        [JsonPropertyName("nazcaOriginOffsetY")]
+        public double? NazcaOriginOffsetY { get; set; }
+
+        /// <summary>
         /// Physical pin definitions with µm coordinates.
         /// </summary>
         [JsonPropertyName("pins")]
@@ -112,20 +127,6 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         /// </summary>
         [JsonPropertyName("sMatrix")]
         public PdkSMatrixDraft? SMatrix { get; set; }
-
-        /// <summary>
-        /// Optional explicit Nazca origin offset X in micrometers.
-        /// Overrides the default first-pin heuristic when set.
-        /// </summary>
-        [JsonPropertyName("nazcaOriginOffsetX")]
-        public double? NazcaOriginOffsetX { get; set; }
-
-        /// <summary>
-        /// Optional explicit Nazca origin offset Y in micrometers.
-        /// Overrides the default first-pin heuristic when set.
-        /// </summary>
-        [JsonPropertyName("nazcaOriginOffsetY")]
-        public double? NazcaOriginOffsetY { get; set; }
 
         /// <summary>
         /// Optional slider parameters (e.g., for phase shifters).

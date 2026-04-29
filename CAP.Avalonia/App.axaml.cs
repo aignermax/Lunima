@@ -178,7 +178,18 @@ public partial class App : Application
         // when the user re-opens the window. Transient here would give the
         // MainViewModel a different instance than any other DI resolution.
         services.AddSingleton<PdkJsonSaver>();
-        services.AddSingleton<PdkOffsetEditorViewModel>();
+        services.AddSingleton(sp =>
+        {
+            var prefs = sp.GetRequiredService<UserPreferencesService>();
+            var python = prefs.GetCustomPythonPath() ?? ResolvePythonExecutable();
+            var script = FindPreviewScript();
+            return new NazcaComponentPreviewService(python, script);
+        });
+        services.AddSingleton(sp => new PdkOffsetEditorViewModel(
+            sp.GetRequiredService<PdkLoader>(),
+            sp.GetRequiredService<PdkJsonSaver>(),
+            sp.GetRequiredService<PdkManagerViewModel>(),
+            sp.GetRequiredService<NazcaComponentPreviewService>()));
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();
@@ -203,5 +214,79 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Searches for render_component_preview.py relative to the application base directory.
+    /// Returns the first candidate path found, or the primary candidate when none exist
+    /// (the service will return a graceful failure result at render time).
+    /// </summary>
+    private static string FindPreviewScript()
+    {
+        const string scriptName = "render_component_preview.py";
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+        // First: a "scripts" folder copied next to the binary (publish path).
+        var local = Path.Combine(baseDir, "scripts", scriptName);
+        if (File.Exists(local)) return local;
+
+        // Otherwise walk up the directory tree looking for repo/scripts/<name>.
+        // Hard-coded "..","..",".." chains break whenever the running configuration's
+        // depth changes (debug vs release vs single-file publish vs net8.0 subfolder).
+        var current = new DirectoryInfo(baseDir);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, "scripts", scriptName);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
+        }
+
+        // Best-effort fallback — NazcaComponentPreviewService returns a graceful
+        // failure with a clear message when the path doesn't resolve.
+        return local;
+    }
+
+    /// <summary>
+    /// Picks the first runnable Python interpreter from a per-platform candidate
+    /// list. Windows installers map differently (`python`, `py`-launcher) than
+    /// most Linux distros (`python3`); falling back to a single hard-coded name
+    /// caused the Nazca-preview to silently fail on default Windows installs.
+    /// </summary>
+    private static string ResolvePythonExecutable()
+    {
+        var candidates = OperatingSystem.IsWindows()
+            ? new[] { "python", "py", "python3" }
+            : new[] { "python3", "python" };
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = candidate,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+                if (p == null) continue;
+                p.WaitForExit(2000);
+                if (p.ExitCode == 0) return candidate;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Candidate not on PATH — try next
+            }
+            catch (Exception)
+            {
+                // Anything else: skip and try next
+            }
+        }
+
+        // Best-effort fallback — preview service returns a clear error message
+        // when this turns out not to be runnable.
+        return OperatingSystem.IsWindows() ? "python" : "python3";
     }
 }

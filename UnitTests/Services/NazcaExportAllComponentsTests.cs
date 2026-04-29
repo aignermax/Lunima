@@ -225,20 +225,17 @@ public class NazcaExportAllComponentsTests
     [Fact]
     public void Export_GratingCouplerTE1550_CorrectPositionWithRotation()
     {
-        // Issue #66: Verify Grating Coupler TE 1550 position offset is correctly handled
+        // Issue #66: Verify Grating Coupler TE 1550 position offset is correctly
+        // handled. Expected coords are derived from the loaded JSON instead of
+        // hardcoded — the JSON is the calibration source of truth.
         var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
         if (pdkPath == null) return;
 
         var loader = new PdkLoader();
         var pdk = loader.LoadFromFile(pdkPath);
         var gratingCoupler = pdk.Components.First(c => c.Name == "Grating Coupler TE 1550");
-
-        // Convert to template with correct NazcaOriginOffset
         var template = ConvertPdkComponentToTemplate(gratingCoupler, pdk.Name, pdk.NazcaModuleName);
-        template.NazcaOriginOffsetX.ShouldBe(15, "First pin X offset should be 15");
-        template.NazcaOriginOffsetY.ShouldBe(30, "First pin Y offset should be 30");
 
-        // Place at (100, 100) without rotation
         var canvas = new DesignCanvasViewModel();
         var component = ComponentTemplates.CreateFromTemplate(template, 100, 100);
         canvas.AddComponent(component, template.Name);
@@ -246,38 +243,40 @@ public class NazcaExportAllComponentsTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // Component should be placed at physical position + pin offset
-        // Physical (100, 100) + pin offset (15, 30) = Nazca position (115, -130)
+        // Physical (100, 100) + Nazca origin offset, Y-flipped:
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        var nx = (100 + template.NazcaOriginOffsetX).ToString("F2", ci);
+        var ny = -(100 + template.NazcaOriginOffsetY);
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain(".put(115.00, -130.00, 0)");
+        result.ShouldContain($".put({nx}, {ny.ToString("F2", ci)}, 0)");
     }
 
     [Fact]
     public void Export_GratingCouplerTE1550_CorrectPositionWithRotation180()
     {
-        // Issue #66: Verify rotated Grating Coupler TE 1550 has correct position
         var pdkPath = FindPdkFile("siepic-ebeam-pdk.json");
         if (pdkPath == null) return;
 
         var loader = new PdkLoader();
         var pdk = loader.LoadFromFile(pdkPath);
         var gratingCoupler = pdk.Components.First(c => c.Name == "Grating Coupler TE 1550");
-
         var template = ConvertPdkComponentToTemplate(gratingCoupler, pdk.Name, pdk.NazcaModuleName);
+
         var canvas = new DesignCanvasViewModel();
         var component = ComponentTemplates.CreateFromTemplate(template, 100, 100);
-
-        // Rotate 180 degrees
         component.RotationDegrees = 180;
         canvas.AddComponent(component, template.Name);
 
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // With 180° rotation, pin offset (15, 30) becomes (-15, -30) in rotated coords
-        // Physical (100, 100) + rotated offset (-15, -30) = Nazca position (85, -70)
+        // 180° rotation: rotated offset = (-originX, -originY).
+        // Physical + rotated offset, Y-flipped:
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        var nx = (100 - template.NazcaOriginOffsetX).ToString("F2", ci);
+        var ny = -(100 - template.NazcaOriginOffsetY);
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain(".put(85.00, -70.00, -180)");
+        result.ShouldContain($".put({nx}, {ny.ToString("F2", ci)}, -180)");
     }
 
     private static string? FindPdkFile(string fileName)

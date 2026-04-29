@@ -116,6 +116,9 @@ public class FileSizeLimitTests
             .Where(f => !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
             .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar))
             .Where(f => !f.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar))
+            // Local-only agent worktrees mirror the main tree and skew the
+            // limit check; they're never committed (see .gitignore).
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + ".claude" + Path.DirectorySeparatorChar))
             .Where(f => !f.Contains(Path.DirectorySeparatorChar + "UnitTests" + Path.DirectorySeparatorChar));
     }
 

@@ -29,6 +29,7 @@ jobs:
         run: dotnet restore
 
       - name: 🐍 Setup Python
+        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -71,6 +72,31 @@ jobs:
           sudo apt-get install -y ngspice
           ngspice --version | head -1
 
+      - name: 🎨 Install Nazca + KLayout + SiEPIC PDK (for PDK Offset Editor tests)
+        run: |
+          set -euo pipefail
+          # gdstk: GDS polygon reader for the demo-PDK render path.
+          # klayout / siepic_ebeam_pdk: required for the SiEPIC fixed-cell
+          # and PCell rendering paths exercised by NazcaComponentPreviewService.
+          pip install gdstk klayout siepic_ebeam_pdk
+          # Nazca is AGPLv3+ but not published on PyPI (the PyPI 'nazca'
+          # package is an unrelated Logilab data-mining library). We mirror
+          # the upstream tarball as a Lunima release asset and install from
+          # there — Lunima only invokes Nazca as a subprocess, so no linking.
+          # Upstream source: https://nazca-design.org/download/
+          pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
+          python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk; print('PDK preview deps ok')"
+
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
+        env:
+          # actions/setup-python installs into /opt/hostedtoolcache, not /usr/bin.
+          # FindWorkingPython3 checks this env var first so the test subprocess
+          # uses the same interpreter we just pip-installed nazca/klayout into.
+          LUNIMA_TEST_PYTHON3: ${{ steps.setup-python.outputs.python-path }}
+          # Force matplotlib + Qt to non-interactive backends — Nazca's import
+          # chain pulls these in, and on a headless CI runner they otherwise
+          # block the render subprocess waiting for a display.
+          MPLBACKEND: Agg
+          QT_QPA_PLATFORM: offscreen
         run: dotnet test --no-restore

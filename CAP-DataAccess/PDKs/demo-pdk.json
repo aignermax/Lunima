@@ -5,7 +5,6 @@
   "foundry": "Demo Foundry",
   "version": "2.0.0",
   "defaultWavelengthNm": 1550,
-  "nazcaModuleName": null,
   "components": [
     {
       "name": "1x2 MMI Splitter",
@@ -60,7 +59,7 @@
       "widthMicrometers": 250,
       "heightMicrometers": 60,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 30.0,
+      "nazcaOriginOffsetY": 30,
       "pins": [
         {
           "name": "in1",
@@ -124,7 +123,7 @@
       "widthMicrometers": 250,
       "heightMicrometers": 60,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 30.0,
+      "nazcaOriginOffsetY": 30,
       "pins": [
         {
           "name": "in1",
@@ -151,15 +150,6 @@
           "angleDegrees": 0
         }
       ],
-      "sliders": [
-        {
-          "sliderNumber": 0,
-          "godotSliderName": "slider0",
-          "godotSliderLabelName": "label0",
-          "minVal": 0,
-          "maxVal": 100
-        }
-      ],
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [
@@ -188,7 +178,18 @@
             "phaseDegrees": 0
           }
         ]
-      }
+      },
+      "sliders": [
+        {
+          "sliderNumber": 0,
+          "godotSliderName": "slider0",
+          "godotSliderLabelName": "label0",
+          "minVal": 0,
+          "maxVal": 100,
+          "steps": 100,
+          "type": 0
+        }
+      ]
     },
     {
       "name": "Phase Shifter",
@@ -211,38 +212,54 @@
           "offsetXMicrometers": 500,
           "offsetYMicrometers": 30,
           "angleDegrees": 0
+        },
+        {
+          "name": "elec_in",
+          "offsetXMicrometers": 15,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
+        },
+        {
+          "name": "elec_out",
+          "offsetXMicrometers": 485,
+          "offsetYMicrometers": 30,
+          "angleDegrees": 90
         }
       ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "in",
+            "toPin": "out",
+            "magnitude": 0,
+            "phaseDegrees": 0,
+            "magnitudeFormula": "1.0",
+            "phaseDegreesFormula": "phase_shift"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "phase_shift",
+            "defaultValue": 0,
+            "minValue": 0,
+            "maxValue": 360,
+            "label": "Phase (degrees)",
+            "sliderNumber": 0
+          }
+        ]
+      },
       "sliders": [
         {
           "sliderNumber": 0,
           "godotSliderName": "slider0",
           "godotSliderLabelName": "label0",
           "minVal": 0,
-          "maxVal": 360
+          "maxVal": 360,
+          "steps": 100,
+          "type": 0
         }
-      ],
-      "sMatrix": {
-        "wavelengthNm": 1550,
-        "parameters": [
-          {
-            "name": "phase_shift",
-            "sliderNumber": 0,
-            "defaultValue": 0,
-            "minValue": 0,
-            "maxValue": 360,
-            "label": "Phase (degrees)"
-          }
-        ],
-        "connections": [
-          {
-            "fromPin": "in",
-            "toPin": "out",
-            "magnitudeFormula": "1.0",
-            "phaseDegreesFormula": "phase_shift"
-          }
-        ]
-      }
+      ]
     },
     {
       "name": "Grating Coupler",
@@ -254,6 +271,12 @@
       "nazcaOriginOffsetY": 9.5,
       "pins": [
         {
+          "name": "fiber",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 9.5,
+          "angleDegrees": 180
+        },
+        {
           "name": "waveguide",
           "offsetXMicrometers": 100,
           "offsetYMicrometers": 9.5,
@@ -264,9 +287,15 @@
         "wavelengthNm": 1550,
         "connections": [
           {
-            "fromPin": "waveguide",
+            "fromPin": "fiber",
             "toPin": "waveguide",
-            "magnitude": 0.3,
+            "magnitude": 0.55,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "waveguide",
+            "toPin": "fiber",
+            "magnitude": 0.55,
             "phaseDegrees": 0
           }
         ]
@@ -286,6 +315,12 @@
           "offsetXMicrometers": 0,
           "offsetYMicrometers": 27.5,
           "angleDegrees": 180
+        },
+        {
+          "name": "elec_out",
+          "offsetXMicrometers": 70,
+          "offsetYMicrometers": 27.5,
+          "angleDegrees": 0
         }
       ],
       "sMatrix": {
@@ -347,31 +382,31 @@
       }
     },
     {
-      "name": "Ring Resonator",
+      "name": "DBR Filter",
       "category": "Filters",
-      "nazcaFunction": "demo_pdk.ring_resonator",
-      "widthMicrometers": 80,
-      "heightMicrometers": 55,
+      "nazcaFunction": "demo.dbr",
+      "widthMicrometers": 100,
+      "heightMicrometers": 200,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 27.5,
+      "nazcaOriginOffsetY": 100,
       "pins": [
         {
           "name": "in",
           "offsetXMicrometers": 0,
-          "offsetYMicrometers": 22.5,
+          "offsetYMicrometers": 170,
           "angleDegrees": 180
         },
         {
-          "name": "through",
-          "offsetXMicrometers": 80,
-          "offsetYMicrometers": 22.5,
+          "name": "out",
+          "offsetXMicrometers": 100,
+          "offsetYMicrometers": 170,
           "angleDegrees": 0
         },
         {
-          "name": "drop",
-          "offsetXMicrometers": 80,
-          "offsetYMicrometers": 47.5,
-          "angleDegrees": 0
+          "name": "elec",
+          "offsetXMicrometers": 50,
+          "offsetYMicrometers": 95,
+          "angleDegrees": 90
         }
       ],
       "sMatrix": {
@@ -379,14 +414,14 @@
         "connections": [
           {
             "fromPin": "in",
-            "toPin": "through",
-            "magnitude": 0.837,
+            "toPin": "out",
+            "magnitude": 0.85,
             "phaseDegrees": 0
           },
           {
-            "fromPin": "in",
-            "toPin": "drop",
-            "magnitude": 0.5,
+            "fromPin": "out",
+            "toPin": "in",
+            "magnitude": 0.85,
             "phaseDegrees": 0
           }
         ]
@@ -402,6 +437,12 @@
       "nazcaOriginOffsetY": 9.5,
       "pins": [
         {
+          "name": "fiber",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 9.5,
+          "angleDegrees": 180
+        },
+        {
           "name": "waveguide",
           "offsetXMicrometers": 100,
           "offsetYMicrometers": 9.5,
@@ -412,16 +453,22 @@
         "wavelengthNm": 1550,
         "connections": [
           {
-            "fromPin": "waveguide",
+            "fromPin": "fiber",
             "toPin": "waveguide",
-            "magnitude": 0.5,
+            "magnitude": 0.7,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "waveguide",
+            "toPin": "fiber",
+            "magnitude": 0.7,
             "phaseDegrees": 0
           }
         ]
       }
     },
     {
-      "name": "Straight Waveguide 100\u00c2\u00b5m",
+      "name": "Straight Waveguide 100\u00C2\u00B5m",
       "category": "Waveguides",
       "nazcaFunction": "demo.shallow.strt",
       "nazcaParameters": "length=100",
@@ -456,25 +503,25 @@
       }
     },
     {
-      "name": "90\u00c2\u00b0 Bend",
+      "name": "90\u00C2\u00B0 Bend",
       "category": "Waveguides",
       "nazcaFunction": "demo.shallow.bend",
       "nazcaParameters": "angle=90",
-      "widthMicrometers": 30,
-      "heightMicrometers": 30,
+      "widthMicrometers": 209.4,
+      "heightMicrometers": 209.4,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15.0,
+      "nazcaOriginOffsetY": 9.400000000000006,
       "pins": [
         {
           "name": "a0",
           "offsetXMicrometers": 0,
-          "offsetYMicrometers": 5,
+          "offsetYMicrometers": 200,
           "angleDegrees": 180
         },
         {
           "name": "b0",
-          "offsetXMicrometers": 25,
-          "offsetYMicrometers": 30,
+          "offsetXMicrometers": 200,
+          "offsetYMicrometers": 2.842170943040401E-14,
           "angleDegrees": 90
         }
       ],

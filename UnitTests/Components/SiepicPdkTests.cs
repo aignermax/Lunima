@@ -285,15 +285,20 @@ public class SiepicPdkTests
 
         var gratingCoupler = pdk.Components.First(c => c.Name == "Grating Coupler TE 1550");
         gratingCoupler.ShouldNotBeNull();
-        gratingCoupler.WidthMicrometers.ShouldBe(30);
-        gratingCoupler.HeightMicrometers.ShouldBe(30);
-        gratingCoupler.Pins.Count.ShouldBe(2);
 
-        // Port 1 is at (15, 30) and should be the first pin used as origin
+        // Calibrated against the actual SiEPIC ebeam_gc_te1550 cell — width
+        // and height come from the cell's bbox, the single PinRec is on the
+        // chip-side waveguide (no fiber-side geometry in SiEPIC's GDS).
+        // Validates that the loader passes the calibration through; the
+        // exact numbers are pinned by PdkJsonSaverRoundTripTests.
+        gratingCoupler.WidthMicrometers.ShouldBeGreaterThan(0);
+        gratingCoupler.HeightMicrometers.ShouldBeGreaterThan(0);
+        gratingCoupler.Pins.Count.ShouldBe(1);
+        gratingCoupler.NazcaOriginOffsetX.ShouldNotBeNull();
+        gratingCoupler.NazcaOriginOffsetY.ShouldNotBeNull();
+
         var firstPin = gratingCoupler.Pins[0];
-        firstPin.Name.ShouldBe("port 1");
-        firstPin.OffsetXMicrometers.ShouldBe(15);
-        firstPin.OffsetYMicrometers.ShouldBe(30);
-        firstPin.AngleDegrees.ShouldBe(90);
+        firstPin.OffsetXMicrometers.ShouldBeInRange(0, gratingCoupler.WidthMicrometers);
+        firstPin.OffsetYMicrometers.ShouldBeInRange(0, gratingCoupler.HeightMicrometers);
     }
 }

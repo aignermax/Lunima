@@ -678,6 +678,9 @@ public class SimpleNazcaExporter
         name.StartsWith("ANT_", StringComparison.Ordinal) ||
         name.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
         name.StartsWith("taper_", StringComparison.OrdinalIgnoreCase) ||
+        // SiEPIC ships a few generic-named PCells too (the `contra_*` family
+        // is the directional-coupler set under the EBeam library).
+        name.StartsWith("contra_", StringComparison.OrdinalIgnoreCase) ||
         (name.Contains(".", StringComparison.Ordinal) &&
          !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
 

@@ -154,4 +154,89 @@ public class LeftPanelViewModelTests : IDisposable
 
         vm.FilteredTemplates.Count.ShouldBe(initialCount);
     }
+
+    [Fact]
+    public void ResolveBundledPdkDirectory_PrefersRepoSourceWhenAvailable()
+    {
+        // Lay out the dev-build shape we want to detect:
+        //   <root>/CAP.Avalonia/bin/Debug/net8.0/        ← simulated baseDir
+        //   <root>/CAP-DataAccess/PDKs/demo.json         ← repo source we want
+        var root = Path.Combine(Path.GetTempPath(), $"cap_pdkdir_{Guid.NewGuid():N}");
+        var baseDir = Path.Combine(root, "CAP.Avalonia", "bin", "Debug", "net8.0");
+        var repoPdks = Path.Combine(root, "CAP-DataAccess", "PDKs");
+        var bundledPdks = Path.Combine(baseDir, "PDKs");
+        try
+        {
+            Directory.CreateDirectory(baseDir);
+            Directory.CreateDirectory(repoPdks);
+            Directory.CreateDirectory(bundledPdks);
+            File.WriteAllText(Path.Combine(repoPdks, "demo.json"), "{}");
+            File.WriteAllText(Path.Combine(bundledPdks, "demo.json"), "{}");
+
+            var resolved = LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir);
+
+            // Edits saved through the editor must land in the repo copy so they
+            // get committed — the bundled-next-to-exe copy is a build artefact.
+            Path.GetFullPath(resolved!).ShouldBe(Path.GetFullPath(repoPdks));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void ResolveBundledPdkDirectory_FallsBackToBundledWhenRepoMissing()
+    {
+        // Deployed-build shape: no CAP-DataAccess sibling exists, only the
+        // bundled PDKs folder next to the executable.
+        var root = Path.Combine(Path.GetTempPath(), $"cap_pdkdir_{Guid.NewGuid():N}");
+        var baseDir = Path.Combine(root, "app");
+        var bundledPdks = Path.Combine(baseDir, "PDKs");
+        try
+        {
+            Directory.CreateDirectory(bundledPdks);
+            File.WriteAllText(Path.Combine(bundledPdks, "demo.json"), "{}");
+
+            var resolved = LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir);
+
+            Path.GetFullPath(resolved!).ShouldBe(Path.GetFullPath(bundledPdks));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void ResolveBundledPdkDirectory_ReturnsNullWhenNothingExists()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"cap_pdkdir_{Guid.NewGuid():N}");
+        var baseDir = Path.Combine(root, "app");
+        try
+        {
+            Directory.CreateDirectory(baseDir);
+
+            LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir).ShouldBeNull();
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void ResolveBundledPdkDirectory_IgnoresEmptyRepoFolder()
+    {
+        // A bare CAP-DataAccess/PDKs without any *.json must not be treated as
+        // the source of truth — it would mask the bundled copy and leave the
+        // editor with nothing to load.
+        var root = Path.Combine(Path.GetTempPath(), $"cap_pdkdir_{Guid.NewGuid():N}");
+        var baseDir = Path.Combine(root, "CAP.Avalonia", "bin", "Debug", "net8.0");
+        var emptyRepoPdks = Path.Combine(root, "CAP-DataAccess", "PDKs");
+        var bundledPdks = Path.Combine(baseDir, "PDKs");
+        try
+        {
+            Directory.CreateDirectory(baseDir);
+            Directory.CreateDirectory(emptyRepoPdks);
+            Directory.CreateDirectory(bundledPdks);
+            File.WriteAllText(Path.Combine(bundledPdks, "demo.json"), "{}");
+
+            var resolved = LeftPanelViewModel.ResolveBundledPdkDirectory(baseDir);
+
+            Path.GetFullPath(resolved!).ShouldBe(Path.GetFullPath(bundledPdks));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
 }
