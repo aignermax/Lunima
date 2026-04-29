@@ -14,6 +14,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 14.95,
       "heightMicrometers": 7,
+      "nazcaOriginOffsetX": 7.5,
+      "nazcaOriginOffsetY": 3.5,
       "pins": [
         {
           "name": "port 1",
@@ -743,17 +745,17 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 7.5,
-      "nazcaOriginOffsetY": 3.5
+      }
     },
     {
       "name": "Directional Coupler TE 1550",
       "category": "Couplers",
       "nazcaFunction": "ebeam_dc_te1550",
-      "nazcaParameters": "gap=200e-9",
+      "nazcaParameters": "gap=200E-9",
       "widthMicrometers": 22.02,
       "heightMicrometers": 6.2,
+      "nazcaOriginOffsetX": 11.01,
+      "nazcaOriginOffsetY": 3.1,
       "pins": [
         {
           "name": "port 1",
@@ -1993,17 +1995,17 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 11.01,
-      "nazcaOriginOffsetY": 3.1
+      }
     },
     {
       "name": "Directional Coupler TE 1550 (Lc=5um)",
       "category": "Couplers",
       "nazcaFunction": "ebeam_dc_te1550",
-      "nazcaParameters": "gap=200e-9,Lc=5e-6",
+      "nazcaParameters": "gap=200E-9,Lc=5E-6",
       "widthMicrometers": 12.02,
       "heightMicrometers": 6.2,
+      "nazcaOriginOffsetX": 6.01,
+      "nazcaOriginOffsetY": 3.1,
       "pins": [
         {
           "name": "port 1",
@@ -3243,9 +3245,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 6.01,
-      "nazcaOriginOffsetY": 3.1
+      }
     },
     {
       "name": "Broadband DC TE 1550",
@@ -3254,6 +3254,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 70.85,
       "heightMicrometers": 7.2,
+      "nazcaOriginOffsetX": 35.5,
+      "nazcaOriginOffsetY": 3.6,
       "pins": [
         {
           "name": "port 1",
@@ -4493,17 +4495,17 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 35.5,
-      "nazcaOriginOffsetY": 3.6
+      }
     },
     {
       "name": "DC Halfring-Straight",
       "category": "Couplers",
       "nazcaFunction": "ebeam_dc_halfring_straight",
-      "nazcaParameters": "gap=100e-9,radius=3e-6",
+      "nazcaParameters": "gap=100E-9,radius=3E-6",
       "widthMicrometers": 21.52,
       "heightMicrometers": 11.46,
+      "nazcaOriginOffsetX": 10.76,
+      "nazcaOriginOffsetY": 0.75,
       "pins": [
         {
           "name": "port 1",
@@ -5743,17 +5745,17 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 10.76,
-      "nazcaOriginOffsetY": 0.75
+      }
     },
     {
       "name": "Contra-Directional Coupler",
       "category": "Filters",
       "nazcaFunction": "ebeam_contra_dc",
-      "nazcaParameters": "N=1000,gap=100e-9",
+      "nazcaParameters": "N=1000,gap=100E-9",
       "widthMicrometers": 320,
       "heightMicrometers": 12,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 6,
       "pins": [
         {
           "name": "port 1",
@@ -5930,7 +5932,7 @@
                 "fromPin": "port 2",
                 "toPin": "port 4",
                 "magnitude": 0.953604,
-                "phaseDegrees": -0
+                "phaseDegrees": 0
               },
               {
                 "fromPin": "port 3",
@@ -5966,7 +5968,7 @@
                 "fromPin": "port 4",
                 "toPin": "port 2",
                 "magnitude": 0.953604,
-                "phaseDegrees": -0
+                "phaseDegrees": 0
               },
               {
                 "fromPin": "port 4",
@@ -6993,9 +6995,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 6
+      }
     },
     {
       "name": "Grating Coupler TE 1550",
@@ -7004,6 +7004,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -7367,9 +7369,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "Grating Coupler TE 1310",
@@ -7378,6 +7378,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -7712,17 +7714,17 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "Taper TE 1550",
       "category": "I/O",
       "nazcaFunction": "ebeam_taper_te1550",
-      "nazcaParameters": "w1=0.5e-6,w2=3e-6,length=10e-6",
+      "nazcaParameters": "w1=0.5E-6,w2=3E-6,length=10E-6",
       "widthMicrometers": 50.019999999999996,
       "heightMicrometers": 12,
+      "nazcaOriginOffsetX": 0.01,
+      "nazcaOriginOffsetY": 6,
       "pins": [
         {
           "name": "port 1",
@@ -8086,9 +8088,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0.01,
-      "nazcaOriginOffsetY": 6
+      }
     },
     {
       "name": "Terminator TE 1550",
@@ -8097,6 +8097,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 5,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 2.5,
       "pins": [
         {
           "name": "port 1",
@@ -8238,9 +8240,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 2.5
+      }
     },
     {
       "name": "Terminator TM 1550",
@@ -8249,6 +8249,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 5,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 2.5,
       "pins": [
         {
           "name": "port 1",
@@ -8390,9 +8392,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 2.5
+      }
     },
     {
       "name": "Disconnected Waveguide TE 1550",
@@ -8401,6 +8401,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 5,
       "heightMicrometers": 5,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 2.5,
       "pins": [
         {
           "name": "port 1",
@@ -8542,9 +8544,7 @@
             ]
           }
         ]
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 2.5
+      }
     },
     {
       "name": "GC SiN TE 1310 8deg",
@@ -8553,6 +8553,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -8596,9 +8598,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "GC SiN TE 1550 8deg",
@@ -8607,6 +8607,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -8650,9 +8652,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "GC TE 1310 8deg",
@@ -8661,6 +8661,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -8704,9 +8706,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "GC TE 1550 8deg",
@@ -8715,6 +8715,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -8758,9 +8760,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "GC TM 1310 8deg",
@@ -8769,6 +8769,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -8812,9 +8814,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "GC TM 1550 8deg",
@@ -8823,6 +8823,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -8866,9 +8868,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "MMI 1x2 TE 1550 3dB",
@@ -8877,6 +8877,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 25.78,
       "heightMicrometers": 3.9,
+      "nazcaOriginOffsetX": 12.89,
+      "nazcaOriginOffsetY": 1.95,
       "pins": [
         {
           "name": "port 1",
@@ -8956,9 +8958,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 12.89,
-      "nazcaOriginOffsetY": 1.95
+      }
     },
     {
       "name": "Y-Branch 895",
@@ -8967,6 +8967,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 15.02,
       "heightMicrometers": 7.95,
+      "nazcaOriginOffsetX": 0.01,
+      "nazcaOriginOffsetY": 3.975,
       "pins": [
         {
           "name": "port 1",
@@ -9046,9 +9048,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0.01,
-      "nazcaOriginOffsetY": 3.975
+      }
     },
     {
       "name": "Y-Branch TE 1310",
@@ -9057,6 +9057,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 23.21,
       "heightMicrometers": 5.434,
+      "nazcaOriginOffsetX": 7.7,
+      "nazcaOriginOffsetY": 2.717,
       "pins": [
         {
           "name": "port 1",
@@ -9136,9 +9138,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 7.7,
-      "nazcaOriginOffsetY": 2.717
+      }
     },
     {
       "name": "Y-Branch Adiabatic",
@@ -9147,6 +9147,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 50.1,
       "heightMicrometers": 4.5,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 2.25,
       "pins": [
         {
           "name": "port 1",
@@ -9226,9 +9228,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": -0,
-      "nazcaOriginOffsetY": 2.25
+      }
     },
     {
       "name": "Y-Branch Adiabatic 500nm",
@@ -9237,6 +9237,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 52.040000000000006,
       "heightMicrometers": 4.5,
+      "nazcaOriginOffsetX": 1.02,
+      "nazcaOriginOffsetY": 2.25,
       "pins": [
         {
           "name": "port 1",
@@ -9316,9 +9318,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 1.02,
-      "nazcaOriginOffsetY": 2.25
+      }
     },
     {
       "name": "SWG Splitter TE 1310",
@@ -9327,6 +9327,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 12,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 6,
       "pins": [
         {
           "name": "port 1",
@@ -9406,9 +9408,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 6
+      }
     },
     {
       "name": "SWG Splitter TE 1550",
@@ -9417,6 +9417,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 12,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 6,
       "pins": [
         {
           "name": "port 1",
@@ -9496,9 +9498,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 6
+      }
     },
     {
       "name": "DC 2-1 TE 895",
@@ -9507,6 +9507,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 29.14,
       "heightMicrometers": 5.92,
+      "nazcaOriginOffsetX": 14.57,
+      "nazcaOriginOffsetY": 2.96,
       "pins": [
         {
           "name": "port 1",
@@ -9634,9 +9636,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 14.57,
-      "nazcaOriginOffsetY": 2.96
+      }
     },
     {
       "name": "DC TE 895",
@@ -9645,6 +9645,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 28.294,
       "heightMicrometers": 5.92,
+      "nazcaOriginOffsetX": 14.147,
+      "nazcaOriginOffsetY": 2.96,
       "pins": [
         {
           "name": "port 1",
@@ -9772,9 +9774,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 14.147,
-      "nazcaOriginOffsetY": 2.96
+      }
     },
     {
       "name": "MMI 2x2 50/50 TE 1310",
@@ -9783,6 +9783,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 33.46,
       "heightMicrometers": 5.64,
+      "nazcaOriginOffsetX": 16.73,
+      "nazcaOriginOffsetY": 2.82,
       "pins": [
         {
           "name": "port 1",
@@ -9910,9 +9912,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 16.73,
-      "nazcaOriginOffsetY": 2.82
+      }
     },
     {
       "name": "Adiabatic Coupler TE 1550",
@@ -9921,6 +9921,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 50,
       "heightMicrometers": 10,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "port 1",
@@ -10048,9 +10050,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5
+      }
     },
     {
       "name": "Adiabatic Coupler TM 1550",
@@ -10059,6 +10059,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 50,
       "heightMicrometers": 10,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "port 1",
@@ -10186,9 +10188,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5
+      }
     },
     {
       "name": "Routing Taper TE 1550 (L=20um)",
@@ -10197,6 +10197,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 20,
       "heightMicrometers": 3,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 1.5,
       "pins": [
         {
           "name": "port 1",
@@ -10240,9 +10242,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 1.5
+      }
     },
     {
       "name": "Routing Taper TE 1550 (L=40um)",
@@ -10251,6 +10251,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 40,
       "heightMicrometers": 3,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 1.5,
       "pins": [
         {
           "name": "port 1",
@@ -10294,9 +10296,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 1.5
+      }
     },
     {
       "name": "SiN Taper 750-3000",
@@ -10305,6 +10305,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 50.019999999999996,
       "heightMicrometers": 6,
+      "nazcaOriginOffsetX": 0.01,
+      "nazcaOriginOffsetY": 3,
       "pins": [
         {
           "name": "port 1",
@@ -10348,9 +10350,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0.01,
-      "nazcaOriginOffsetY": 3
+      }
     },
     {
       "name": "Si SIMM Taper 1310",
@@ -10359,6 +10359,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 50.1,
       "heightMicrometers": 3.6,
+      "nazcaOriginOffsetX": 0.05,
+      "nazcaOriginOffsetY": 1.8,
       "pins": [
         {
           "name": "port 1",
@@ -10402,9 +10404,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0.05,
-      "nazcaOriginOffsetY": 1.8
+      }
     },
     {
       "name": "Si SIMM Taper 1550",
@@ -10413,6 +10413,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 50.06,
       "heightMicrometers": 3.6,
+      "nazcaOriginOffsetX": 0.01,
+      "nazcaOriginOffsetY": 1.8,
       "pins": [
         {
           "name": "port 1",
@@ -10456,9 +10458,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0.01,
-      "nazcaOriginOffsetY": 1.8
+      }
     },
     {
       "name": "Terminator SiN 1550",
@@ -10467,6 +10467,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 10,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "port 1",
@@ -10486,9 +10488,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5
+      }
     },
     {
       "name": "Terminator SiN TE 895",
@@ -10497,6 +10497,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 10,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "port 1",
@@ -10516,9 +10518,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5
+      }
     },
     {
       "name": "Terminator TE 1310",
@@ -10527,6 +10527,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 10,
       "heightMicrometers": 10,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "port 1",
@@ -10546,9 +10548,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 5
+      }
     },
     {
       "name": "Grating Coupler TE 895",
@@ -10557,6 +10557,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 30,
       "heightMicrometers": 30,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 15,
       "pins": [
         {
           "name": "port 1",
@@ -10600,9 +10602,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 15
+      }
     },
     {
       "name": "Crossing Horizontal",
@@ -10611,6 +10611,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 75.76,
       "heightMicrometers": 35.74,
+      "nazcaOriginOffsetX": 37.88,
+      "nazcaOriginOffsetY": 17.87,
       "pins": [
         {
           "name": "port 1",
@@ -10738,9 +10740,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 37.88,
-      "nazcaOriginOffsetY": 17.87
+      }
     },
     {
       "name": "Crossing Manhattan",
@@ -10749,6 +10749,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 7.1000000000000005,
       "heightMicrometers": 7.1000000000000005,
+      "nazcaOriginOffsetX": 3.5500000000000003,
+      "nazcaOriginOffsetY": 3.5500000000000003,
       "pins": [
         {
           "name": "port 1",
@@ -10876,9 +10878,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 3.5500000000000003,
-      "nazcaOriginOffsetY": 3.5500000000000003
+      }
     },
     {
       "name": "Crossing 4-Port",
@@ -10887,6 +10887,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 9.700000000000001,
       "heightMicrometers": 9.700000000000001,
+      "nazcaOriginOffsetX": 4.8500000000000005,
+      "nazcaOriginOffsetY": 4.8500000000000005,
       "pins": [
         {
           "name": "port 1",
@@ -11014,9 +11016,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 4.8500000000000005,
-      "nazcaOriginOffsetY": 4.8500000000000005
+      }
     },
     {
       "name": "Bond Pad",
@@ -11025,6 +11025,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 100,
       "heightMicrometers": 100,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 50,
       "pins": [
         {
           "name": "elec",
@@ -11037,9 +11039,7 @@
         "wavelengthNm": 1550,
         "connections": [],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 50
+      }
     },
     {
       "name": "Polarizer TM 1550",
@@ -11048,6 +11048,8 @@
       "nazcaParameters": "",
       "widthMicrometers": 12.002,
       "heightMicrometers": 2.476,
+      "nazcaOriginOffsetX": 6.001,
+      "nazcaOriginOffsetY": 1.238,
       "pins": [
         {
           "name": "port 1",
@@ -11091,9 +11093,7 @@
           }
         ],
         "wavelengthData": []
-      },
-      "nazcaOriginOffsetX": 6.001,
-      "nazcaOriginOffsetY": 1.238
+      }
     }
   ]
 }
