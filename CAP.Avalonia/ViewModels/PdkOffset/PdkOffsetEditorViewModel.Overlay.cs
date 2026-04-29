@@ -235,7 +235,8 @@ public partial class PdkOffsetEditorViewModel
             nazcaFunction.StartsWith("gc_",    StringComparison.OrdinalIgnoreCase) ||
             nazcaFunction.StartsWith("ANT_",   StringComparison.OrdinalIgnoreCase) ||
             nazcaFunction.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
-            nazcaFunction.StartsWith("taper_", StringComparison.OrdinalIgnoreCase))
+            nazcaFunction.StartsWith("taper_", StringComparison.OrdinalIgnoreCase) ||
+            nazcaFunction.StartsWith("contra_", StringComparison.OrdinalIgnoreCase))
         {
             return ("siepic_ebeam_pdk", nazcaFunction);
         }
