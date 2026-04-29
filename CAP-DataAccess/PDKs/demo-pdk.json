@@ -212,18 +212,6 @@
           "offsetXMicrometers": 500,
           "offsetYMicrometers": 30,
           "angleDegrees": 0
-        },
-        {
-          "name": "elec_in",
-          "offsetXMicrometers": 15,
-          "offsetYMicrometers": 30,
-          "angleDegrees": 90
-        },
-        {
-          "name": "elec_out",
-          "offsetXMicrometers": 485,
-          "offsetYMicrometers": 30,
-          "angleDegrees": 90
         }
       ],
       "sMatrix": {
@@ -315,12 +303,6 @@
           "offsetXMicrometers": 0,
           "offsetYMicrometers": 27.5,
           "angleDegrees": 180
-        },
-        {
-          "name": "elec_out",
-          "offsetXMicrometers": 70,
-          "offsetYMicrometers": 27.5,
-          "angleDegrees": 0
         }
       ],
       "sMatrix": {
@@ -401,12 +383,6 @@
           "offsetXMicrometers": 100,
           "offsetYMicrometers": 170,
           "angleDegrees": 0
-        },
-        {
-          "name": "elec",
-          "offsetXMicrometers": 50,
-          "offsetYMicrometers": 95,
-          "angleDegrees": 90
         }
       ],
       "sMatrix": {
