@@ -24,4 +24,8 @@
     <ProjectReference Include="..\Connect-A-Pic-Core\CAP-Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="UnitTests" />
+  </ItemGroup>
+
 </Project>

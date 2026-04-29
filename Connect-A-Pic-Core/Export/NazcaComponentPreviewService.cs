@@ -187,7 +187,10 @@ public class NazcaComponentPreviewService
 
         try
         {
-            var doc = JsonDocument.Parse(jsonLine);
+            // 'using' returns the rented buffer to ArrayPool eagerly; without
+            // it Check-All on a 40-component PDK keeps ~40 buffers out of the
+            // pool until the next GC pass.
+            using var doc = JsonDocument.Parse(jsonLine);
             var root = doc.RootElement;
 
             if (root.TryGetProperty("success", out var sp) && !sp.GetBoolean())

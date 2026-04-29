@@ -828,6 +828,141 @@ public class NazcaComponentPreviewServiceTests
     }
 
     [Fact]
+    public void AutoCalibrate_AngleAware_DoesNotCrossPairSymmetricCrossingPorts()
+    {
+        // Crossing 4-Port has 4 ports, each at the centre of one bbox edge.
+        // After a wrong starting calibration the 4 Lunima projections land
+        // roughly equidistant from each Nazca pin. Without the angle term,
+        // greedy nearest can cross-pair (left-pointing pin matches the right
+        // edge etc). The angle term must dominate the position tie.
+        var draft = new PdkComponentDraft
+        {
+            Name = "crossing", NazcaFunction = "ebeam_crossing4",
+            // Calibration starts roughly correct but with two pin POSITIONS swapped —
+            // simulating the corrupted-state-from-buggy-prior-run scenario.
+            WidthMicrometers = 9.7, HeightMicrometers = 9.7,
+            NazcaOriginOffsetX = 4.85, NazcaOriginOffsetY = 4.85,
+            Pins = new List<PhysicalPinDraft>
+            {
+                // port 1 angle 180 (Left) but currently parked at the RIGHT edge
+                new() { Name = "port 1", OffsetXMicrometers = 9.65, OffsetYMicrometers = 4.85, AngleDegrees = 180 },
+                // port 2 angle 0 (Right) but currently parked at the LEFT edge
+                new() { Name = "port 2", OffsetXMicrometers = 0.05, OffsetYMicrometers = 4.85, AngleDegrees = 0   },
+                new() { Name = "port 3", OffsetXMicrometers = 4.85, OffsetYMicrometers = 9.65, AngleDegrees = 270 },
+                new() { Name = "port 4", OffsetXMicrometers = 4.85, OffsetYMicrometers = 0.05, AngleDegrees = 90  },
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            XMin = -4.85, YMin = -4.85, XMax = 4.85, YMax = 4.85,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "left",   X = -4.85, Y = 0,     Angle = 180 },
+                new() { Name = "right",  X =  4.85, Y = 0,     Angle = 0   },
+                new() { Name = "bottom", X = 0,     Y = -4.85, Angle = 270 },
+                new() { Name = "top",    X = 0,     Y =  4.85, Angle = 90  },
+            }
+        };
+
+        PdkOffsetCalibration.ApplyAutoCalibrate(draft, result)
+            .ShouldBe(AutoCalibrateOutcome.Success);
+
+        // After calibration each Lunima pin should sit at the edge that
+        // matches its angle, not be silently permuted onto another pin.
+        var p1 = draft.Pins.First(p => p.Name == "port 1");
+        var p2 = draft.Pins.First(p => p.Name == "port 2");
+        p1.AngleDegrees.ShouldBe(180);
+        p1.OffsetXMicrometers.ShouldBe(0, tolerance: 0.01);    // left edge
+        p2.AngleDegrees.ShouldBe(0);
+        p2.OffsetXMicrometers.ShouldBe(9.7, tolerance: 0.01);  // right edge
+    }
+
+    [Fact]
+    public void AutoCalibrate_PropagatesNazcaAngleToLunimaPin()
+    {
+        // The Nazca pin angle is ground truth — leaving the Lunima
+        // AngleDegrees on a stale value let us ship pin records where the
+        // angle implied a different bbox edge than the position.
+        var draft = new PdkComponentDraft
+        {
+            Name = "rot", NazcaFunction = "x", WidthMicrometers = 10, HeightMicrometers = 10,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "p", OffsetXMicrometers = 0, OffsetYMicrometers = 5, AngleDegrees = 999 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true, XMin = 0, YMin = 0, XMax = 10, YMax = 10,
+            Pins = new List<NazcaPreviewPin> { new() { X = 0, Y = 5, Angle = 180 } }
+        };
+
+        PdkOffsetCalibration.ApplyAutoCalibrate(draft, result);
+        draft.Pins[0].AngleDegrees.ShouldBe(180);
+    }
+
+    [Fact]
+    public void AngleDisagreement_OppositeAngles_CostsFullDiagonal()
+    {
+        // 180° apart pins on a 10×10 bbox should incur a 10√2 µm penalty —
+        // larger than any same-edge position tie, so the matcher refuses
+        // the cross-pair.
+        var penalty = PdkOffsetCalibration.AngleDisagreementMicrometers(0, 180, Math.Sqrt(200));
+        penalty.ShouldBe(Math.Sqrt(200), tolerance: 0.001);
+    }
+
+    [Fact]
+    public void AngleDisagreement_SameAngle_ReturnsZero()
+    {
+        PdkOffsetCalibration.AngleDisagreementMicrometers(90, 90, 50)
+            .ShouldBe(0, tolerance: 0.001);
+        // 360 ≡ 0 so a wrap-around comparison must also be free.
+        PdkOffsetCalibration.AngleDisagreementMicrometers(0, 360, 50)
+            .ShouldBe(0, tolerance: 0.001);
+    }
+
+    [Fact]
+    public void ComputePinAlignment_BipartiteMatchesEvaluate()
+    {
+        // Reproduces ultrareview bug 1: two Lunima pins clustered near one
+        // Nazca pin used to collapse onto it (independent NN), masking that
+        // the second Nazca pin had no Lunima counterpart. The inline
+        // overlay would say "all aligned" while Check-All said "Misaligned".
+        var draft = new PdkComponentDraft
+        {
+            Name = "twin", NazcaFunction = "x",
+            WidthMicrometers = 12, HeightMicrometers = 1,
+            NazcaOriginOffsetX = 0, NazcaOriginOffsetY = 0,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "in",  OffsetXMicrometers = 0,    OffsetYMicrometers = 0 },
+                new() { Name = "in2", OffsetXMicrometers = 0.4,  OffsetYMicrometers = 0 },
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true,
+            XMin = 0, YMin = 0, XMax = 12, YMax = 1,
+            Pins = new List<NazcaPreviewPin>
+            {
+                new() { Name = "n1", X = 0,  Y = 1, Angle = 0 },
+                new() { Name = "n2", X = 12, Y = 1, Angle = 0 },
+            }
+        };
+
+        var vm = BuildVmWithSelection(draft, result);
+        vm.ComputePinAlignment(result, draft);
+
+        // The forced second pair (in2 ↔ n2) is 11.6 µm away — the inline
+        // verdict must reflect that, not silently collapse 'in2' onto n1.
+        vm.PinAlignmentResults.Count.ShouldBe(2);
+        vm.PinAlignmentResults.ShouldContain(p =>
+            p.LunimaPinName == "in2" && p.DistanceMicrometers > 10);
+        vm.PinAlignmentSummary.ShouldContain("1/2");
+    }
+
+    [Fact]
     public void AutoCalibrate_MatchesPinsByNearestNotByOrder()
     {
         // Lunima order: [in (left-bottom), out (right-top)].

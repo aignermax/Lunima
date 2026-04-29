@@ -16,8 +16,10 @@ public partial class PdkOffsetEditorViewModel
     /// Compares Lunima's PDK-JSON pin positions against the Nazca render's
     /// pin stubs (in Nazca-space micrometres) and populates
     /// <see cref="PinAlignmentResults"/> + <see cref="PinAlignmentSummary"/>.
-    /// Each Lunima pin is matched to its nearest Nazca pin by Euclidean
-    /// distance — name-matching is unreliable across PDKs (Lunima uses
+    /// Pin matching is delegated to <see cref="PdkOffsetCalibration.MatchPinsByGreedyNearest"/>
+    /// so the inline overlay verdict and the Check-All / Try-Fix-All batch
+    /// report (which goes through the same matcher) cannot disagree on the
+    /// same component — name-matching is unreliable across PDKs (Lunima uses
     /// "in"/"out", SiEPIC uses "opt1"/"opt2").
     /// </summary>
     internal void ComputePinAlignment(NazcaPreviewResult result, PdkComponentDraft draft)
@@ -31,35 +33,31 @@ public partial class PdkOffsetEditorViewModel
             return;
         }
 
-        int aligned = 0;
-        foreach (var lp in draft.Pins)
+        if (result.Pins.Count != draft.Pins.Count)
         {
-            // Lunima pin position in Nazca-space micrometres. Lunima offsets
-            // are measured from the bbox top-left in y-down. The Nazca origin
-            // sits at (NazcaOriginOffsetX, ComponentHeight - NazcaOriginOffsetY)
-            // inside that bbox in y-down — i.e. the offset Y is measured from
-            // the bottom edge upward, the Lunima pin Y from the top edge down.
-            // The y-flip therefore needs the ComponentHeight term to subtract
-            // the Lunima distance from the bottom, then push to Nazca origin.
-            // Same formula as PinPositionViewModel.NazcaRelY.
+            PinAlignmentSummary =
+                $"⚠ Pin count mismatch — Lunima declares {draft.Pins.Count} pins, " +
+                $"Nazca exposes {result.Pins.Count}. Auto-Calibrate cannot run.";
+            return;
+        }
+
+        var pairs = PdkOffsetCalibration.MatchPinsByGreedyNearest(draft, result);
+        int aligned = 0;
+        foreach (var (lp, np) in pairs)
+        {
+            // Same projection as the matcher — see MatchPinsByGreedyNearest
+            // for the y-flip derivation (Lunima y-down vs Nazca y-up).
             var lunimaNazcaX = lp.OffsetXMicrometers - (draft.NazcaOriginOffsetX ?? 0);
             var lunimaNazcaY = (draft.HeightMicrometers - lp.OffsetYMicrometers)
                                - (draft.NazcaOriginOffsetY ?? 0);
-
-            var nearest = result.Pins
-                .Select(np => (np, dist: Math.Sqrt(
-                    (np.X - lunimaNazcaX) * (np.X - lunimaNazcaX) +
-                    (np.Y - lunimaNazcaY) * (np.Y - lunimaNazcaY))))
-                .OrderBy(t => t.dist)
-                .First();
-
-            var dx = nearest.np.X - lunimaNazcaX;
-            var dy = nearest.np.Y - lunimaNazcaY;
-            var isAligned = nearest.dist <= PinAlignmentToleranceMicrometers;
+            var dx = np.X - lunimaNazcaX;
+            var dy = np.Y - lunimaNazcaY;
+            var dist = Math.Sqrt(dx * dx + dy * dy);
+            var isAligned = dist <= PinAlignmentToleranceMicrometers;
             if (isAligned) aligned++;
 
             PinAlignmentResults.Add(new PinAlignmentInfo(
-                lp.Name, nearest.np.Name, dx, dy, nearest.dist, isAligned));
+                lp.Name, np.Name, dx, dy, dist, isAligned));
         }
 
         PinAlignmentSummary = aligned == draft.Pins.Count

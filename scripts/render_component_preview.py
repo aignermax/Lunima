@@ -461,27 +461,53 @@ def _render_siepic_via_klayout(module_name, function_name, stub_length, paramete
             if len(verts) >= 3:
                 polygons.append({"layer": info.layer, "vertices": verts})
 
-    # Pins: SiEPIC stores them on layer 1/10 (PinRec) as a Path + a Text.
-    # The text label ("opt1", "opt2", …) sits at the pin's xy.
+    # Pins: SiEPIC stores each pin on layer 1/10 (PinRec) as a Path + a Text.
+    # The text label ("opt1", "opt2", …) sits at the pin's xy. The Path
+    # encodes the exit direction in its two endpoints — we read the angle
+    # from the path nearest to each text label so vertical pins (top/bottom
+    # edge) on crossings get reported as 90°/270°, not 0°/180°.
     pin_layer = ly.layer(1, 10)
-    pins = []
+    paths = []   # (cx, cy, angle_deg)
+    texts = []   # (x, y, name)
     for shape in cell.shapes(pin_layer).each():
-        if not shape.is_text():
+        if shape.is_text():
+            t = shape.text
+            texts.append((t.x * dbu, t.y * dbu, t.string))
             continue
-        t = shape.text
-        x = t.x * dbu
-        y = t.y * dbu
-        # We don't have the exit angle directly from the text; SiEPIC paths
-        # carry it, but for the overlay a pin dot at (x, y) is enough.
-        # Stub endpoint: extend horizontally by stub_length toward the bbox
-        # edge nearest to the pin.
-        sign = -1.0 if x < (xmin + xmax) / 2 else 1.0
-        stub_x = x + sign * stub_length
+        if shape.is_path():
+            p = shape.path
+            pts = list(p.each_point())
+            if len(pts) < 2:
+                continue
+            # SiEPIC convention: path goes FROM the pin position OUTWARD,
+            # so the direction from pts[0] to pts[-1] is the exit direction.
+            x0, y0 = pts[0].x * dbu, pts[0].y * dbu
+            x1, y1 = pts[-1].x * dbu, pts[-1].y * dbu
+            angle = math.degrees(math.atan2(y1 - y0, x1 - x0))
+            if angle < 0:
+                angle += 360
+            paths.append((x0, y0, angle))
+
+    pins = []
+    for tx, ty, tname in texts:
+        # Pair the text with the closest path endpoint — the path's first
+        # vertex is the pin position, which colocates with the text label.
+        if paths:
+            cx, cy, angle = min(
+                paths, key=lambda p: (p[0] - tx) ** 2 + (p[1] - ty) ** 2)
+        else:
+            # No paths on PinRec — fall back to the bbox-side guess so older
+            # cells without explicit paths still get a sensible stub direction.
+            cx, cy = tx, ty
+            angle = 180.0 if tx < (xmin + xmax) / 2 else 0.0
+        rad = math.radians(angle)
+        stub_x = tx + stub_length * math.cos(rad)
+        stub_y = ty + stub_length * math.sin(rad)
         pins.append({
-            "name": t.string,
-            "x": x, "y": y,
-            "angle": 180.0 if sign < 0 else 0.0,
-            "stubX1": stub_x, "stubY1": y,
+            "name": tname,
+            "x": tx, "y": ty,
+            "angle": angle,
+            "stubX1": stub_x, "stubY1": stub_y,
         })
 
     return {

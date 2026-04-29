@@ -69,6 +69,14 @@ public static class PdkOffsetCalibration
     /// pair (in current Lunima→Nazca-space projection) and removes both from
     /// the candidate sets. Returns one pair per Lunima pin assuming counts
     /// match, otherwise pairs up to <c>min(lunima, nazca)</c> pins.
+    ///
+    /// Cost = Euclidean distance + an angle-disagreement penalty so symmetric
+    /// multi-port components (crossings, 2x2 MMIs, DCs) don't cross-pair when
+    /// the pre-calibration projection lands roughly equidistant from each
+    /// Nazca pin. The penalty is scaled by the component's bbox diagonal so
+    /// it's commensurable with the Euclidean term: pins pointing in opposite
+    /// directions (180° apart) are forbidden in practice. Pins on small
+    /// components and pins on large components both behave correctly.
     /// </summary>
     public static List<(PhysicalPinDraft Lunima, NazcaPreviewPin Nazca)>
         MatchPinsByGreedyNearest(PdkComponentDraft draft, NazcaPreviewResult result)
@@ -82,17 +90,27 @@ public static class PdkOffsetCalibration
             .ToList();
         var availableNazca = result.Pins.ToList();
 
+        // Bbox diagonal — used to scale the angle penalty so its contribution
+        // is comparable to the Euclidean distance term. For a degenerate bbox
+        // we fall back to 1 µm to keep the penalty meaningful.
+        var bboxW = Math.Max(0.001, draft.WidthMicrometers);
+        var bboxH = Math.Max(0.001, draft.HeightMicrometers);
+        var diag  = Math.Sqrt(bboxW * bboxW + bboxH * bboxH);
+
         while (projections.Count > 0 && availableNazca.Count > 0)
         {
-            var best = (lpIdx: -1, npIdx: -1, dist: double.MaxValue);
+            var best = (lpIdx: -1, npIdx: -1, cost: double.MaxValue);
             for (var i = 0; i < projections.Count; i++)
             {
                 for (var j = 0; j < availableNazca.Count; j++)
                 {
                     var dx = availableNazca[j].X - projections[i].x;
                     var dy = availableNazca[j].Y - projections[i].y;
-                    var d = Math.Sqrt(dx * dx + dy * dy);
-                    if (d < best.dist) best = (i, j, d);
+                    var d  = Math.Sqrt(dx * dx + dy * dy);
+                    var penalty = AngleDisagreementMicrometers(
+                        projections[i].lp.AngleDegrees, availableNazca[j].Angle, diag);
+                    var cost = d + penalty;
+                    if (cost < best.cost) best = (i, j, cost);
                 }
             }
             pairs.Add((projections[best.lpIdx].lp, availableNazca[best.npIdx]));
@@ -100,6 +118,28 @@ public static class PdkOffsetCalibration
             availableNazca.RemoveAt(best.npIdx);
         }
         return pairs;
+    }
+
+    /// <summary>
+    /// Returns a distance-equivalent penalty for a pair whose declared angles
+    /// disagree. 0° apart → 0 µm; 90° apart → ½·diag; 180° apart → diag.
+    /// Scaling against the bbox diagonal keeps the penalty large enough to
+    /// dominate position ties on symmetric components but small enough that
+    /// it doesn't override a real positional match on asymmetric ones.
+    /// </summary>
+    internal static double AngleDisagreementMicrometers(
+        double lunimaAngleDegrees, double nazcaAngleDegrees, double bboxDiagonal)
+    {
+        var delta = Math.Abs(NormalizeAngle(lunimaAngleDegrees - nazcaAngleDegrees));
+        if (delta > 180) delta = 360 - delta;  // wrap to [0, 180]
+        return (delta / 180.0) * bboxDiagonal;
+    }
+
+    private static double NormalizeAngle(double a)
+    {
+        a %= 360;
+        if (a < 0) a += 360;
+        return a;
     }
 
     /// <summary>
@@ -125,6 +165,11 @@ public static class PdkOffsetCalibration
         {
             lp.OffsetXMicrometers = np.X - result.XMin;
             lp.OffsetYMicrometers = result.YMax - np.Y;
+            // Adopt the Nazca pin's angle as well — leaving it on a stale
+            // hand-written value let us ship pin records where the angle
+            // implied a different edge than the position. With angle-aware
+            // matching the Nazca pin we picked is the right one to copy.
+            lp.AngleDegrees = np.Angle;
         }
         return AutoCalibrateOutcome.Success;
     }

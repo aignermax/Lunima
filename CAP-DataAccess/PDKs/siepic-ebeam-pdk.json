@@ -10630,13 +10630,13 @@
           "name": "port 3",
           "offsetXMicrometers": 0.05000000000000426,
           "offsetYMicrometers": 34.99,
-          "angleDegrees": 270
+          "angleDegrees": 180
         },
         {
           "name": "port 4",
           "offsetXMicrometers": 75.71000000000001,
           "offsetYMicrometers": 34.99,
-          "angleDegrees": 90
+          "angleDegrees": 0
         }
       ],
       "sMatrix": {
@@ -10760,20 +10760,20 @@
         },
         {
           "name": "port 2",
-          "offsetXMicrometers": 3.5500000000000003,
-          "offsetYMicrometers": 7.050000000000001,
+          "offsetXMicrometers": 7.050000000000001,
+          "offsetYMicrometers": 3.5500000000000003,
           "angleDegrees": 0
         },
         {
           "name": "port 3",
           "offsetXMicrometers": 3.5500000000000003,
-          "offsetYMicrometers": 0.050000000000000266,
+          "offsetYMicrometers": 7.050000000000001,
           "angleDegrees": 270
         },
         {
           "name": "port 4",
-          "offsetXMicrometers": 7.050000000000001,
-          "offsetYMicrometers": 3.5500000000000003,
+          "offsetXMicrometers": 3.5500000000000003,
+          "offsetYMicrometers": 0.050000000000000266,
           "angleDegrees": 90
         }
       ],
@@ -10892,26 +10892,26 @@
       "pins": [
         {
           "name": "port 1",
-          "offsetXMicrometers": 9.65,
+          "offsetXMicrometers": 0.05000000000000071,
           "offsetYMicrometers": 4.8500000000000005,
           "angleDegrees": 180
         },
         {
           "name": "port 2",
-          "offsetXMicrometers": 0.05000000000000071,
+          "offsetXMicrometers": 9.65,
           "offsetYMicrometers": 4.8500000000000005,
           "angleDegrees": 0
         },
         {
           "name": "port 3",
           "offsetXMicrometers": 4.8500000000000005,
-          "offsetYMicrometers": 0.05000000000000071,
+          "offsetYMicrometers": 9.65,
           "angleDegrees": 270
         },
         {
           "name": "port 4",
           "offsetXMicrometers": 4.8500000000000005,
-          "offsetYMicrometers": 9.65,
+          "offsetYMicrometers": 0.05000000000000071,
           "angleDegrees": 90
         }
       ],
