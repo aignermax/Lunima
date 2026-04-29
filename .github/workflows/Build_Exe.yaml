@@ -30,8 +30,30 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      # Python tooling mirrors xUnitTests.yaml so the same integration tests
+      # that run on push/PR also run on the release-build path. Without this
+      # the SiEPIC PdkOffset tests skip silently here (graceful skip), which
+      # means the release build never actually validates the SiEPIC render
+      # path that's the core of this release.
+      - name: Setup Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Nazca + KLayout + SiEPIC PDK + gdstk (for PdkOffset tests)
+        run: |
+          set -euo pipefail
+          pip install gdstk klayout siepic_ebeam_pdk
+          pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
+          python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk; print('PDK preview deps ok')"
+
       - name: Test
         working-directory: UnitTests
+        env:
+          LUNIMA_TEST_PYTHON3: ${{ steps.setup-python.outputs.python-path }}
+          MPLBACKEND: Agg
+          QT_QPA_PLATFORM: offscreen
         run: dotnet test --no-restore
 
   build:
