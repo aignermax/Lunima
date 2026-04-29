@@ -7,7 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
     <!-- Lunima application icon (embedded in the .exe) -->
     <ApplicationIcon>LunimaIcon.ico</ApplicationIcon>
   </PropertyGroup>
@@ -19,5 +19,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CAP.Avalonia\CAP.Avalonia.csproj" />
+  </ItemGroup>
+
+  <!-- Python helper script for the PDK Offset Editor's Nazca/SiEPIC preview.
+       FindPreviewScript() in App.axaml.cs looks for `<baseDir>/scripts/render_component_preview.py`,
+       so the file must land next to the published binary. Without this entry
+       the editor surfaces "Preview script not found" on every install. -->
+  <ItemGroup>
+    <Content Include="..\scripts\render_component_preview.py"
+             Link="scripts\render_component_preview.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
