@@ -301,6 +301,39 @@ def _fetch_siepic_source(module_name, function_name):
         return f"# Source unavailable: {exc}"
 
 
+def _pick_top_cell(layout, function_name):
+    """Return the cell that represents the user-named component.
+
+    SiEPIC fixed-cell GDS files often hold helper sub-cells (TEXT labels,
+    inlined fixed geometries like ``TE1550_SubGC_neg31_oxide``) alongside
+    the actual top cell. ``next(layout.each_cell())`` happens to return
+    them in storage order, which is *not* the top cell — we ended up
+    rendering the TEXT helper for ``ebeam_gc_te1550`` and reporting zero
+    pins for every grating coupler.
+
+    Resolution:
+      1. Cell whose name matches ``function_name`` (most reliable).
+      2. Top cell — the one no other cell instantiates.
+      3. Fall back to first-iterated cell (preserves old behaviour for
+         single-cell GDS files).
+    """
+    by_name = layout.cell(function_name)
+    if by_name is not None:
+        return by_name
+    # KLayout's top_cells() returns layout-level top cells only when there's
+    # exactly one (otherwise raises). Walk manually.
+    tops = [c for c in layout.each_cell() if c.parent_cells == 0]
+    if len(tops) == 1:
+        return tops[0]
+    if tops:
+        # Pick the one with the most layers used — heuristic for the
+        # "real" component over auxiliary tops.
+        return max(tops, key=lambda c: sum(1 for _ in c.shapes(0).each()) +
+                                       sum(1 for li in layout.layer_indexes()
+                                           for _ in c.shapes(li).each()))
+    return next(layout.each_cell())
+
+
 def _siepic_libraries(kdb):
     """Yield every EBeam* KLayout library, in registration order."""
     for lid in kdb.Library.library_ids():
@@ -430,7 +463,7 @@ def _render_siepic_via_klayout(module_name, function_name, stub_length, paramete
     if os.path.exists(gds_path):
         ly = kdb.Layout()
         ly.read(gds_path)
-        cell = next(ly.each_cell())
+        cell = _pick_top_cell(ly, function_name)
     else:
         ly, cell = _resolve_siepic_cell(kdb, function_name, parameters_string)
 

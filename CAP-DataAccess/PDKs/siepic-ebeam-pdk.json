@@ -5750,8 +5750,8 @@
     {
       "name": "Contra-Directional Coupler",
       "category": "Filters",
-      "nazcaFunction": "ebeam_contra_dc",
-      "nazcaParameters": "N=1000,gap=100E-9",
+      "nazcaFunction": "contra_directional_coupler",
+      "nazcaParameters": "",
       "widthMicrometers": 320,
       "heightMicrometers": 12,
       "nazcaOriginOffsetX": 0,
@@ -8397,7 +8397,7 @@
     {
       "name": "Disconnected Waveguide TE 1550",
       "category": "Termination",
-      "nazcaFunction": "ebeam_disconnected_te1550",
+      "nazcaFunction": "ebeam_terminator_te1550",
       "nazcaParameters": "",
       "widthMicrometers": 5,
       "heightMicrometers": 5,
