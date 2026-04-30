@@ -248,7 +248,7 @@ public class NazcaExportAllComponentsTests
         var nx = (100 + template.NazcaOriginOffsetX).ToString("F2", ci);
         var ny = -(100 + template.NazcaOriginOffsetY);
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain($".put({nx}, {ny.ToString("F2", ci)}, 0)");
+        result.ShouldContain($".put('org', {nx}, {ny.ToString("F2", ci)}, 0)");
     }
 
     [Fact]
@@ -276,7 +276,7 @@ public class NazcaExportAllComponentsTests
         var nx = (100 - template.NazcaOriginOffsetX).ToString("F2", ci);
         var ny = -(100 - template.NazcaOriginOffsetY);
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain($".put({nx}, {ny.ToString("F2", ci)}, -180)");
+        result.ShouldContain($".put('org', {nx}, {ny.ToString("F2", ci)}, -180)");
     }
 
     private static string? FindPdkFile(string fileName)

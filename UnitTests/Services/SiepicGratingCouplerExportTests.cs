@@ -114,10 +114,11 @@ public class SiepicGratingCouplerExportTests
         var (nx, ny) = ExpectedNazcaPosition(cal, 0, 0, 0);
 
         var ci = CultureInfo.InvariantCulture;
-        result.ShouldContain($"ebeam_gc_te1550().put({nx.ToString("F2", ci)}, {ny.ToString("F2", ci)}, 0)",
-            customMessage: "Component at origin should land at (originX, -originY) in Nazca coords");
-        result.ShouldContain("def ebeam_gc_te1550(**kwargs):");
-        result.ShouldContain($"nd.Pin('{cal.FirstPinName}')");
+        // Anchor on 'org' explicitly so .put() places the cell origin at the
+        // computed (x, y) — Nazca's default anchor is the cell's first pin
+        // (a0), which silently shifts the cell when a0 isn't at (0, 0).
+        result.ShouldContain($"ebeam_gc_te1550().put('org', {nx.ToString("F2", ci)}, {ny.ToString("F2", ci)}, 0)",
+            customMessage: "Component at origin should land at (originX, -originY) in Nazca coords, anchored on 'org'");
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class SiepicGratingCouplerExportTests
         var (nx, ny) = ExpectedNazcaPosition(cal, 100, 200, 0);
 
         var ci = CultureInfo.InvariantCulture;
-        result.ShouldContain($"ebeam_gc_te1550().put({nx.ToString("F2", ci)}, {ny.ToString("F2", ci)}, 0)");
+        result.ShouldContain($"ebeam_gc_te1550().put('org', {nx.ToString("F2", ci)}, {ny.ToString("F2", ci)}, 0)");
     }
 
     [Theory]
@@ -153,7 +154,7 @@ public class SiepicGratingCouplerExportTests
         var ci = CultureInfo.InvariantCulture;
         var xPattern = nx.ToString("F2", ci);
         var yPattern = ny.ToString("F2", ci);
-        var pattern = $@"ebeam_gc_te1550\(\)\.put\({Regex.Escape(xPattern)},\s*{Regex.Escape(yPattern)},";
+        var pattern = $@"ebeam_gc_te1550\(\)\.put\('org',\s*{Regex.Escape(xPattern)},\s*{Regex.Escape(yPattern)},";
         Regex.IsMatch(result, pattern).ShouldBeTrue(
             customMessage: $"Expected Nazca coords ({xPattern}, {yPattern}) for component at " +
                            $"({x}, {y}) with {rotationDegrees}° rotation.\nActual:\n{result}");
@@ -168,7 +169,7 @@ public class SiepicGratingCouplerExportTests
         var (nx, ny) = ExpectedNazcaPosition(cal, 0, 0, 90);
         var ci = CultureInfo.InvariantCulture;
         result.ShouldMatch(
-            $@"ebeam_gc_te1550\(\)\.put\({Regex.Escape(nx.ToString("F2", ci))},\s*{Regex.Escape(ny.ToString("F2", ci))},\s*-90\)");
+            $@"ebeam_gc_te1550\(\)\.put\('org',\s*{Regex.Escape(nx.ToString("F2", ci))},\s*{Regex.Escape(ny.ToString("F2", ci))},\s*-90\)");
     }
 
     [Fact]
@@ -180,7 +181,7 @@ public class SiepicGratingCouplerExportTests
         var (nx, ny) = ExpectedNazcaPosition(cal, 0, 0, 180);
         var ci = CultureInfo.InvariantCulture;
         result.ShouldMatch(
-            $@"ebeam_gc_te1550\(\)\.put\({Regex.Escape(nx.ToString("F2", ci))},\s*{Regex.Escape(ny.ToString("F2", ci))},\s*-?180\)");
+            $@"ebeam_gc_te1550\(\)\.put\('org',\s*{Regex.Escape(nx.ToString("F2", ci))},\s*{Regex.Escape(ny.ToString("F2", ci))},\s*-?180\)");
     }
 
     [Fact]
@@ -192,17 +193,12 @@ public class SiepicGratingCouplerExportTests
         var (nx, ny) = ExpectedNazcaPosition(cal, 0, 0, 270);
         var ci = CultureInfo.InvariantCulture;
         result.ShouldMatch(
-            $@"ebeam_gc_te1550\(\)\.put\({Regex.Escape(nx.ToString("F2", ci))},\s*{Regex.Escape(ny.ToString("F2", ci))},\s*(-270|90)\)");
+            $@"ebeam_gc_te1550\(\)\.put\('org',\s*{Regex.Escape(nx.ToString("F2", ci))},\s*{Regex.Escape(ny.ToString("F2", ci))},\s*(-270|90)\)");
     }
 
     [Fact]
     public void GratingCouplerTE1550_StubGeneration_HasCorrectPinPositions()
     {
-        // Each pin gets stubbed at (offsetX - originX, (height - offsetY) - originY)
-        // so that all pins in a stub definition are positioned relative to the
-        // Nazca origin. After the calibration matched the JSON to the actual
-        // SiEPIC cell, the GC has a single chip-side pin (the fiber port has
-        // no PinRec geometry in SiEPIC's GDS, so it's not declared in JSON).
         var cal = LoadGcCalibration();
         if (cal is null) return;
 

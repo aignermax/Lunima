@@ -297,7 +297,21 @@ public class SimpleNazcaExporter
             sb.AppendLine($"        # PIN: {pin.Name} expected_nazca=({pinNazcaX.ToString("F2", ci)},{pinNazcaY.ToString("F2", ci)})");
         }
 
-        sb.AppendLine($"        {varName} = {nazcaFunc}.put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
+        // Nazca's Cell.put() defaults to anchoring on the cell's first pin
+        // (typically 'a0'), NOT on the cell origin. For demofab components
+        // whose 'a0' isn't at (0,0) — e.g. demo.mmi2x2_dp has a0 at y=+4,
+        // demo.dbr has a0 at y=-70 — the default anchor shifts the placed
+        // cell relative to where Lunima's NazcaOriginOffset math expects.
+        // Result: visible Y mismatch in the rendered GDS even though the
+        // calibration editor (which reads the same Python-rendered cell)
+        // shows alignment as correct.
+        //
+        // Pin 'org' is the cell-origin marker every demofab/SiEPIC cell
+        // ships (set up via bbu.put_boundingbox('org', ...)). Anchoring
+        // on 'org' explicitly makes .put() place the cell origin at the
+        // computed (x, y) — which IS the contract Lunima's calibration
+        // and export math both assume.
+        sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
         compIndex++;
     }
 
