@@ -466,8 +466,9 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Creates and shows the Component Settings dialog for the given entity.
-    /// Wires <see cref="ComponentSettingsDialogViewModel.OnSMatrixStoreChanged"/> so the
-    /// hierarchy panel refreshes its 📊 override badges after every import or delete.
+    /// The dialog's <see cref="ComponentSettingsDialogViewModel.Configure"/>
+    /// onChanged callback refreshes the hierarchy panel's 📊 override badges
+    /// after every import or delete.
     /// </summary>
     private void ShowComponentSettingsDialog(
         string entityKey,

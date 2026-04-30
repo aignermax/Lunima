@@ -155,6 +155,27 @@ public class SMatrixOverrideApplicatorTests
     }
 
     [Fact]
+    public void Apply_DimensionLessThanPinCount_PositionalPathRejectsSilentTruncation()
+    {
+        // Symmetric to Apply_DimensionExceedsPinCount_IsSkipped: a 2-pin
+        // component with a 1×1 import (no PortNames). Without explicit
+        // mapping, the only safe answer is "fail loud" — silently keeping
+        // the first pin would replace the wavelength's whole SMatrix with
+        // a 1×1 and orphan the second pin for that wavelength (the
+        // simulator would route light through a port that no longer
+        // exists in this wavelength's map).
+        var component = TestComponentFactory.CreateSimpleTwoPortComponent();
+        var data = MakeData("1550", portCount: 1);
+
+        var result = SMatrixOverrideApplicator.Apply(component, data);
+
+        result.Applied.ShouldBe(0);
+        result.Skipped.Count.ShouldBe(1);
+        result.Skipped[0].Reason.ShouldContain("PortNames",
+            customMessage: "skip message must point the user at PortNames as the unambiguous fix");
+    }
+
+    [Fact]
     public void Apply_TwoWavelengths_BothApplied()
     {
         var component = TestComponentFactory.CreateSimpleTwoPortComponent();

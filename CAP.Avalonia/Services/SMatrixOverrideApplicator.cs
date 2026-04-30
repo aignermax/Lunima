@@ -201,17 +201,25 @@ public static class SMatrixOverrideApplicator
             return (ordered, null);
         }
 
-        var positional = physPins
+        // Positional fallback when the import didn't supply PortNames.
+        // Must be EXACT match — if we silently kept only the first n pins of
+        // a larger component, the wavelength's whole SMatrix would be
+        // replaced with a smaller one and the unmapped pins would lose
+        // their entries entirely. That's a "no silent fallbacks" violation
+        // (the simulator would route light through ports that no longer
+        // exist for this wavelength).
+        var usablePins = physPins
             .Select(pp => pp.LogicalPin)
             .Where(p => p != null)
             .Select(p => p!)
-            .Take(n)
             .ToList();
 
-        if (positional.Count != n)
-            return (null, $"component has {positional.Count} usable pins; need {n}");
+        if (usablePins.Count != n)
+            return (null,
+                $"matrix has {n} ports but component has {usablePins.Count} usable pins — " +
+                "supply PortNames in the import file to map ports unambiguously, or fix the matrix dimensions.");
 
-        return (positional, null);
+        return (usablePins, null);
     }
 
     private static SMatrix BuildSMatrix(

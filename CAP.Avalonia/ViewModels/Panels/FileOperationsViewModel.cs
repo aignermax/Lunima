@@ -127,6 +127,33 @@ public partial class FileOperationsViewModel : ObservableObject
         // Track changes to mark project as unsaved
         _canvas.Components.CollectionChanged += (s, e) => HasUnsavedChanges = true;
         _canvas.Connections.CollectionChanged += (s, e) => HasUnsavedChanges = true;
+
+        // Apply any stored S-matrix override the moment a component lands
+        // on the canvas. Without this, the override only takes effect after
+        // a Save → Reload cycle — a "did the import even work?" surprise
+        // when the user just imported an override on a PDK template and
+        // then dragged a fresh instance onto the canvas. The lookup is the
+        // same one ApplyAll uses on project load (Identifier-first, then
+        // template-key fallback), so existing tests pin the contract.
+        _canvas.Components.CollectionChanged += OnComponentsChangedApplyStoredOverrides;
+    }
+
+    private void OnComponentsChangedApplyStoredOverrides(object? sender,
+        System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (StoredSMatrices.Count == 0 || e.NewItems == null) return;
+
+        // Reuse ApplyAll with a single-component view so the identifier /
+        // template-key lookup logic stays in one place. Re-applying the
+        // same matrix to an already-up-to-date component is a no-op.
+        var addedComponents = e.NewItems
+            .OfType<ComponentViewModel>()
+            .Select(vm => vm.Component);
+        Services.SMatrixOverrideApplicator.ApplyAll(
+            addedComponents,
+            StoredSMatrices,
+            templateKeyResolver: ResolveTemplateKey,
+            errorConsole: _errorConsole);
     }
 
     [RelayCommand]
@@ -708,6 +735,12 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Clears all components and connections from the canvas.
+    /// Also clears the per-component S-matrix override store: without this,
+    /// File → New (which calls ClearCanvas) leaves overrides from the
+    /// previous design behind. A subsequent Save would write them as
+    /// orphan entries (no matching component by Identifier or template
+    /// key) into the new file — the user gets warnings on next Load and
+    /// state from the prior design leaks into a "fresh" project.
     /// </summary>
     private void ClearCanvas()
     {
@@ -716,6 +749,7 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas.AllPins.Clear();
         _canvas.ConnectionManager.Clear();
         _commandManager.ClearHistory();
+        StoredSMatrices.Clear();
     }
 
     /// <summary>

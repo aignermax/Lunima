@@ -35,7 +35,7 @@ public class FileSizeLimitTests
         "ComponentGroupRenderer.cs",        // 597 lines  - Rendering logic, refactor planned
         "WaveguideConnectionManager.cs",    // 592 lines  - Connection tracking, refactor planned
         "GroupTemplateSerializer.cs",       // 559 lines  - Serialization, refactor planned
-        "MainWindow.axaml.cs",              // 543 lines  - View code-behind, grew with Issue #510 component settings wiring
+        "MainWindow.axaml.cs",              // 559 lines  - View code-behind, grew with Issue #510 component settings wiring
     };
 
     /// <summary>
