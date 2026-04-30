@@ -126,6 +126,7 @@ public partial class App : Application
             new UserSMatrixOverrideStore(sp.GetService<CAP_Core.ErrorConsoleService>()));
         services.AddSingleton<Services.GroupPreviewGenerator>();
         services.AddSingleton<IInputDialogService, InputDialogService>();
+        services.AddSingleton<IPortMappingDialogService, PortMappingDialogService>();
 
         // Register DesignCanvasViewModel as singleton (shared across all panel VMs)
         services.AddSingleton<DesignCanvasViewModel>();

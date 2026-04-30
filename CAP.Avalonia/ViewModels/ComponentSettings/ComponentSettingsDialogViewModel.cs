@@ -20,14 +20,17 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     private readonly IFileDialogService _fileDialogService;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly IReadOnlyList<ISParameterImporter> _importers;
+    private readonly IPortMappingDialogService? _portMappingDialog;
 
     private Dictionary<string, ComponentSMatrixData>? _storedSMatrices;
     private Component? _liveComponent;
     private string _entityKey = string.Empty;
+    private string _displayName = string.Empty;
     private Action? _onChanged;
     private bool _isUserGlobalScope;
     private Dictionary<int, SMatrix>? _effectiveSMatrices;
     private IReadOnlyList<Pin>? _effectivePins;
+    private IReadOnlyList<string>? _availablePinNames;
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -66,13 +69,21 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// <param name="fileDialogService">Service used to open the file picker for imports.</param>
     /// <param name="errorConsole">Optional error console for surfacing import failures and partial overrides.</param>
     /// <param name="importers">Optional importer set; defaults to Lumerical + Touchstone.</param>
+    /// <param name="portMappingDialog">
+    /// Optional dialog service used when imported port names don't match the
+    /// component's pin names. Required for production use; tests can pass null
+    /// to skip the interactive step (which causes the import to abort with a
+    /// status-text explanation when names mismatch).
+    /// </param>
     public ComponentSettingsDialogViewModel(
         IFileDialogService fileDialogService,
         ErrorConsoleService? errorConsole = null,
-        IReadOnlyList<ISParameterImporter>? importers = null)
+        IReadOnlyList<ISParameterImporter>? importers = null,
+        IPortMappingDialogService? portMappingDialog = null)
     {
         _fileDialogService = fileDialogService;
         _errorConsole = errorConsole;
+        _portMappingDialog = portMappingDialog;
         _importers = importers ?? new ISParameterImporter[]
         {
             new LumericalSParameterImporter(),
@@ -126,15 +137,18 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         Action? onChanged = null,
         bool isUserGlobalScope = false,
         Dictionary<int, SMatrix>? effectiveSMatrices = null,
-        IReadOnlyList<Pin>? effectivePins = null)
+        IReadOnlyList<Pin>? effectivePins = null,
+        IReadOnlyList<string>? availablePinNames = null)
     {
         _entityKey = entityKey;
+        _displayName = displayName;
         _storedSMatrices = storedSMatrices;
         _liveComponent = liveComponent;
         _onChanged = onChanged;
         _isUserGlobalScope = isUserGlobalScope;
         _effectiveSMatrices = effectiveSMatrices;
         _effectivePins = effectivePins;
+        _availablePinNames = availablePinNames;
         Title = isUserGlobalScope
             ? $"Component Settings: {displayName} (applies to all projects)"
             : $"Component Settings: {displayName}";
@@ -174,14 +188,24 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         try
         {
             var imported = await importer.ImportAsync(path);
-            var smatrixData = SParameterConverter.ToComponentSMatrixData(imported);
+
+            // Reconcile imported port names with the component's pin names.
+            // If they don't already align and we have both the available pin
+            // names and a mapping-dialog service, ask the user up-front. This
+            // is much friendlier than letting SMatrixOverrideApplicator skip
+            // every wavelength later with a "port name X not found" warning.
+            var resolved = await ReconcilePortNamesAsync(imported);
+            if (resolved == null)
+                return; // user cancelled — StatusText already set
+
+            var smatrixData = SParameterConverter.ToComponentSMatrixData(resolved);
             _storedSMatrices[_entityKey] = smatrixData;
 
             ApplyResult? applyResult = null;
             if (_liveComponent != null)
                 applyResult = SMatrixOverrideApplicator.Apply(_liveComponent, smatrixData, _errorConsole);
 
-            StatusText = BuildImportStatus(path, imported, applyResult);
+            StatusText = BuildImportStatus(path, resolved, applyResult);
         }
         catch (Exception ex)
         {
@@ -193,6 +217,48 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             IsImporting = false;
             RefreshEntries(notifyChanged: true);
         }
+    }
+
+    /// <summary>
+    /// Returns <paramref name="imported"/> unchanged when port names already
+    /// align, the result of <see cref="PortNameMapping.Remap"/> with a
+    /// user-supplied mapping when they don't, or <c>null</c> when the user
+    /// cancelled the mapping dialog (in which case <see cref="StatusText"/>
+    /// is set so the caller can return without storing anything).
+    /// </summary>
+    private async Task<ImportedSParameters?> ReconcilePortNamesAsync(ImportedSParameters imported)
+    {
+        if (_availablePinNames == null || _availablePinNames.Count == 0)
+            return imported; // caller didn't tell us the pin names — proceed and let Apply complain if anything's wrong
+
+        if (PortNameMapping.NamesAlignWithComponent(imported.PortNames, _availablePinNames))
+            return imported;
+
+        if (imported.PortNames.Count != _availablePinNames.Count)
+        {
+            // Different port counts is structurally unmappable — bail out
+            // loudly rather than open a dialog the user couldn't satisfy.
+            StatusText = $"Cannot import: file has {imported.PortNames.Count} port(s), " +
+                         $"but '{_displayName}' has {_availablePinNames.Count} pin(s).";
+            return null;
+        }
+
+        if (_portMappingDialog == null)
+        {
+            // No interactive surface available (typically test or headless).
+            StatusText = $"Imported port names don't match component pins on '{_displayName}'. " +
+                         $"Re-run with a port-mapping dialog wired up to resolve this interactively.";
+            return null;
+        }
+
+        var mapping = await _portMappingDialog.ShowAsync(_displayName, imported.PortNames, _availablePinNames);
+        if (mapping == null)
+        {
+            StatusText = "Import cancelled — no port mapping was confirmed.";
+            return null;
+        }
+
+        return PortNameMapping.Remap(imported, mapping);
     }
 
     private static string BuildImportStatus(

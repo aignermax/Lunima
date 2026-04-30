@@ -508,9 +508,13 @@ public partial class MainWindow : Window
             as CAP_Core.ErrorConsoleService;
         var userStore = App.Services.GetService(typeof(UserSMatrixOverrideStore))
             as UserSMatrixOverrideStore;
+        var portMappingDialog = App.Services.GetService(typeof(IPortMappingDialogService))
+            as IPortMappingDialogService;
         var dialogVm = new ComponentSettingsDialogViewModel(
             new FileDialogService(this),
-            errorConsole);
+            errorConsole,
+            importers: null,
+            portMappingDialog: portMappingDialog);
 
         bool isTemplateMode = liveComponent == null && userStore != null;
         var store = isTemplateMode
@@ -534,12 +538,20 @@ public partial class MainWindow : Window
         // the PDK default without requiring a canvas instance.
         Dictionary<int, CAP_Core.LightCalculation.SMatrix>? effectiveSMatrices = null;
         IReadOnlyList<CAP_Core.Components.Core.Pin>? effectivePins = null;
+        IReadOnlyList<string>? availablePinNames = null;
         if (liveComponent != null)
         {
             effectiveSMatrices = liveComponent.WaveLengthToSMatrixMap;
             effectivePins = liveComponent.PhysicalPins
                 .Where(pp => pp.LogicalPin != null)
                 .Select(pp => pp.LogicalPin!)
+                .ToList();
+            // Pin-name list drives the port-mapping dialog. Use PhysicalPin
+            // names (what the user sees in the UI), not the LogicalPin's
+            // internal id, so the dialog matches the rest of the dialog.
+            availablePinNames = liveComponent.PhysicalPins
+                .Where(pp => pp.LogicalPin != null)
+                .Select(pp => pp.Name)
                 .ToList();
         }
         else if (templateForDefaults != null)
@@ -549,6 +561,9 @@ public partial class MainWindow : Window
             effectivePins = tempInstance.PhysicalPins
                 .Where(pp => pp.LogicalPin != null)
                 .Select(pp => pp.LogicalPin!)
+                .ToList();
+            availablePinNames = templateForDefaults.PinDefinitions
+                .Select(pd => pd.Name)
                 .ToList();
         }
 
@@ -560,7 +575,8 @@ public partial class MainWindow : Window
             onChanged: onChanged,
             isUserGlobalScope: isTemplateMode,
             effectiveSMatrices: effectiveSMatrices,
-            effectivePins: effectivePins);
+            effectivePins: effectivePins,
+            availablePinNames: availablePinNames);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);
