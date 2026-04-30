@@ -466,9 +466,17 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Creates and shows the Component Settings dialog for the given entity.
-    /// The dialog's <see cref="ComponentSettingsDialogViewModel.Configure"/>
-    /// onChanged callback refreshes the hierarchy panel's 📊 override badges
-    /// after every import or delete.
+    ///
+    /// Per-Instance mode (<paramref name="liveComponent"/> non-null): the dialog
+    /// reads/writes <c>FileOperations.StoredSMatrices</c>, so the override is
+    /// scoped to this canvas instance and persisted in the .lun file.
+    ///
+    /// Per-Template mode (<paramref name="liveComponent"/> null): the dialog
+    /// reads/writes the user-global <see cref="UserSMatrixOverrideStore"/>, so
+    /// the override applies to every instance of that template across every
+    /// project the user opens. After a successful import/delete the store is
+    /// flushed to disk and live components matching the template are
+    /// re-applied so the change takes effect immediately without reloading.
     /// </summary>
     private void ShowComponentSettingsDialog(
         string entityKey,
@@ -478,15 +486,33 @@ public partial class MainWindow : Window
     {
         var errorConsole = App.Services.GetService(typeof(CAP_Core.ErrorConsoleService))
             as CAP_Core.ErrorConsoleService;
+        var userStore = App.Services.GetService(typeof(UserSMatrixOverrideStore))
+            as UserSMatrixOverrideStore;
         var dialogVm = new ComponentSettingsDialogViewModel(
             new FileDialogService(this),
             errorConsole);
+
+        bool isTemplateMode = liveComponent == null && userStore != null;
+        var store = isTemplateMode
+            ? userStore!.Overrides
+            : vm.FileOperations.StoredSMatrices;
+
+        Action onChanged = isTemplateMode
+            ? () =>
+              {
+                  userStore!.Save();
+                  vm.FileOperations.ReapplyTemplateOverrides();
+                  vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+              }
+            : () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+
         dialogVm.Configure(
             entityKey,
             displayName,
-            vm.FileOperations.StoredSMatrices,
+            store,
             liveComponent,
-            onChanged: () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers());
+            onChanged: onChanged,
+            isUserGlobalScope: isTemplateMode);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);

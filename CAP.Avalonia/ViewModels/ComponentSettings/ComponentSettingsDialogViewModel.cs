@@ -24,6 +24,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     private Component? _liveComponent;
     private string _entityKey = string.Empty;
     private Action? _onChanged;
+    private bool _isUserGlobalScope;
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -83,18 +84,28 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// Optional callback invoked after every successful import or delete so observers
     /// (e.g. the hierarchy panel) can refresh derived state such as override badges.
     /// </param>
+    /// <param name="isUserGlobalScope">
+    /// When true, the dialog title flags that the override applies to all projects
+    /// — used when <paramref name="storedSMatrices"/> is the user-global store
+    /// rather than the project's <c>.lun</c>-backed store. Purely a UX hint;
+    /// persistence behaviour is determined by the store the caller passes in.
+    /// </param>
     public void Configure(
         string entityKey,
         string displayName,
         Dictionary<string, ComponentSMatrixData> storedSMatrices,
         Component? liveComponent = null,
-        Action? onChanged = null)
+        Action? onChanged = null,
+        bool isUserGlobalScope = false)
     {
         _entityKey = entityKey;
         _storedSMatrices = storedSMatrices;
         _liveComponent = liveComponent;
         _onChanged = onChanged;
-        Title = $"Component Settings: {displayName}";
+        _isUserGlobalScope = isUserGlobalScope;
+        Title = isUserGlobalScope
+            ? $"Component Settings: {displayName} (applies to all projects)"
+            : $"Component Settings: {displayName}";
         StatusText = string.Empty;
         RefreshEntries(notifyChanged: false);
     }
