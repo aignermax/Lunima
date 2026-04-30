@@ -79,7 +79,11 @@ public static class MainViewModelTestHelper
             new PdkOffsetEditorViewModel(pdkLoader, new PdkJsonSaver(), new PdkManagerViewModel()),
             photonTorchVm,
             verilogAVm,
-            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(preferencesService, canvas));
+            new CAP.Avalonia.ViewModels.Canvas.ChipSizeViewModel(preferencesService, canvas),
+            // Test-isolated user S-matrix store: a unique temp path per call so
+            // tests don't contaminate each other or the developer's real file.
+            new CAP.Avalonia.Services.UserSMatrixOverrideStore(
+                Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")));
     }
 
     /// <summary>

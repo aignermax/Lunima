@@ -25,9 +25,14 @@ public class SMatrixEntryViewModel
     public string? SourceNote { get; }
 
     /// <summary>
-    /// Short preview of the diagonal magnitudes (|S11|, |S22|, …) truncated at 4 entries.
+    /// Short preview of the strongest off-diagonal couplings — i.e. the largest
+    /// |S_ij| transmissions between distinct ports, formatted as "P_i→P_j=value".
+    /// We deliberately skip the diagonal: |S_ii| is the reflection at port i,
+    /// which is engineered to be ≈0 for passive photonic devices (couplers,
+    /// splitters, MMIs) and so was the least informative thing to preview.
+    /// Top 4 couplings shown, sorted by magnitude desc.
     /// </summary>
-    public string DiagonalPreview { get; }
+    public string MagnitudePreview { get; }
 
     /// <summary>
     /// Initialises the entry from the raw DTO and optional source note.
@@ -43,34 +48,45 @@ public class SMatrixEntryViewModel
             ? string.Join(", ", entry.PortNames)
             : "(no port names)";
 
-        DiagonalPreview = BuildDiagonalPreview(entry);
+        MagnitudePreview = BuildMagnitudePreview(entry);
     }
 
-    private static string BuildDiagonalPreview(SMatrixWavelengthEntry entry)
+    private static string BuildMagnitudePreview(SMatrixWavelengthEntry entry)
     {
         if (entry.Rows == 0 || entry.Real.Count == 0)
             return string.Empty;
 
         int n = entry.Rows;
-        var parts = new List<string>();
-        int maxPreview = Math.Min(n, 4);
+        var couplings = new List<(int From, int To, double Magnitude)>();
 
-        for (int i = 0; i < maxPreview; i++)
+        // Convention: entry.Real[r*n + c] = S[r=out, c=in]. We want
+        // "input port from → output port to" labels, so iterate (in=from, out=to).
+        for (int from = 0; from < n; from++)
         {
-            int idx = i * n + i;
-            if (idx >= entry.Real.Count)
-                break;
+            for (int to = 0; to < n; to++)
+            {
+                if (from == to) continue; // skip reflection (always ≈0 for passive devices)
+                int idx = to * n + from;
+                if (idx >= entry.Real.Count) continue;
 
-            double mag = Math.Sqrt(
-                entry.Real[idx] * entry.Real[idx] +
-                entry.Imag[idx] * entry.Imag[idx]);
+                double mag = Math.Sqrt(
+                    entry.Real[idx] * entry.Real[idx] +
+                    entry.Imag[idx] * entry.Imag[idx]);
+                if (mag < 1e-6) continue; // hide noise floor
 
-            // InvariantCulture so the "0.950" form is stable on de-DE / fr-FR locales
-            // (which would otherwise render "0,950" and break log parsing & screenshots).
-            parts.Add($"|S{i + 1}{i + 1}|={mag.ToString("F3", CultureInfo.InvariantCulture)}");
+                couplings.Add((from, to, mag));
+            }
         }
 
-        var preview = string.Join("  ", parts);
-        return n > 4 ? preview + " …" : preview;
+        if (couplings.Count == 0)
+            return "(no significant couplings)";
+
+        couplings.Sort((a, b) => b.Magnitude.CompareTo(a.Magnitude));
+        var top = couplings.Take(4)
+            // InvariantCulture so the "0.707" form is stable on de-DE / fr-FR locales.
+            .Select(c => $"P{c.From + 1}→P{c.To + 1}={c.Magnitude.ToString("F3", CultureInfo.InvariantCulture)}");
+
+        var preview = string.Join("  ", top);
+        return couplings.Count > 4 ? preview + " …" : preview;
     }
 }

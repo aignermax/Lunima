@@ -151,13 +151,20 @@ public class ComponentSettingsDialogViewModelTests
     }
 
     [Fact]
-    public void SMatrixEntryViewModel_DiagonalPreview_ShowsMagnitudes()
+    public void SMatrixEntryViewModel_MagnitudePreview_ShowsStrongestCouplings()
     {
+        // Off-diagonal couplings (the engineering-meaningful values) — diagonals
+        // are reflections ≈0 for passive devices, which is why we don't preview them.
+        // Real layout: row-major, S[r=out, c=in].
+        // S(out=0, in=0) = 0.05 reflection at port 1
+        // S(out=0, in=1) = 0.95 transmission Port 2 → Port 1
+        // S(out=1, in=0) = 0.95 transmission Port 1 → Port 2
+        // S(out=1, in=1) = 0.05 reflection at port 2
         var entry = new SMatrixWavelengthEntry
         {
             Rows = 2,
             Cols = 2,
-            Real = new List<double> { 0.9, 0.1, 0.1, 0.9 },
+            Real = new List<double> { 0.05, 0.95, 0.95, 0.05 },
             Imag = new List<double> { 0, 0, 0, 0 },
             PortNames = new List<string> { "port1", "port2" }
         };
@@ -167,7 +174,9 @@ public class ComponentSettingsDialogViewModelTests
         vm.WavelengthLabel.ShouldBe("1550 nm");
         vm.Dimensions.ShouldBe("2 × 2");
         vm.PortNamesDisplay.ShouldBe("port1, port2");
-        vm.DiagonalPreview.ShouldContain("|S11|=");
+        vm.MagnitudePreview.ShouldContain("P1→P2=0.950");
+        vm.MagnitudePreview.ShouldContain("P2→P1=0.950");
+        vm.MagnitudePreview.ShouldNotContain("|S11|");
         vm.SourceNote.ShouldBe("TestSource");
     }
 

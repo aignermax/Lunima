@@ -87,7 +87,7 @@
                                            FontSize="10"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2"
-                                           Text="{Binding DiagonalPreview}"
+                                           Text="{Binding MagnitudePreview}"
                                            Foreground="#88ccaa"
                                            FontFamily="Consolas, Courier New, monospace"
                                            FontSize="10"
@@ -128,7 +128,8 @@
               IsVisible="{Binding HasSMatrices}">
             <TextBlock Grid.Column="0" Text="Wavelength" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
             <TextBlock Grid.Column="1" Text="Size" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="2" Text="Diagonal magnitudes" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="2" Text="Strongest couplings" Foreground="#888888" FontSize="10" FontWeight="SemiBold"
+                       ToolTip.Tip="Top off-diagonal magnitudes |S_ij| in the form input port → output port. Diagonal entries (reflections) are skipped because they're ≈0 for passive devices."/>
             <TextBlock Grid.Column="3" Text="" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
         </Grid>
 
@@ -163,9 +164,9 @@
                                            FontSize="11"
                                            VerticalAlignment="Center"/>
 
-                                <!-- Diagonal preview -->
+                                <!-- Strongest couplings preview -->
                                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding DiagonalPreview}"
+                                    <TextBlock Text="{Binding MagnitudePreview}"
                                                Foreground="#88ccaa"
                                                FontFamily="Consolas, Courier New, monospace"
                                                FontSize="10"

@@ -151,7 +151,8 @@ public partial class MainViewModel : ObservableObject
         PdkOffsetEditorViewModel pdkOffsetEditor,
         ViewModels.Export.PhotonTorchExportViewModel photonTorchExport,
         ViewModels.Export.VerilogAExportViewModel verilogAExport,
-        ViewModels.Canvas.ChipSizeViewModel chipSize)
+        ViewModels.Canvas.ChipSizeViewModel chipSize,
+        Services.UserSMatrixOverrideStore userSMatrixOverrideStore)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
@@ -169,7 +170,7 @@ public partial class MainViewModel : ObservableObject
 
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
 
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService, userSMatrixOverrideStore);
         ViewportControl = viewportControl;
 
         // Build the unified Export menu (add new IExportFormat here for new formats)

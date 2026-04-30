@@ -73,14 +73,14 @@ public class ComponentSettingsDialogImportIntegrationTests
         vm.StatusText.ShouldContain("Imported");
 
         // Each entry must carry the data the delete-button row renders so the
-        // AXAML binding paths (Dimensions, DiagonalPreview, PortNamesDisplay)
+        // AXAML binding paths (Dimensions, MagnitudePreview, PortNamesDisplay)
         // never hit nulls and the deferred DataTemplate build can complete.
         foreach (var entryVm in vm.SMatrixEntries)
         {
             entryVm.WavelengthLabel.ShouldNotBeNullOrEmpty();
             entryVm.Dimensions.ShouldBe("4 × 4");
             entryVm.PortNamesDisplay.ShouldNotBeNullOrEmpty();
-            entryVm.DiagonalPreview.ShouldNotBeNullOrEmpty();
+            entryVm.MagnitudePreview.ShouldNotBeNullOrEmpty();
         }
     }
 

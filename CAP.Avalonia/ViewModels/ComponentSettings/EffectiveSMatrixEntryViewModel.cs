@@ -31,9 +31,11 @@ public class EffectiveSMatrixEntryViewModel
     public bool IsOverridden { get; }
 
     /// <summary>
-    /// Diagonal magnitudes preview (|S11|, |S22|, …) for the first four ports.
+    /// Strongest off-diagonal couplings (top 4) as "P_i→P_j=value". Skips the
+    /// diagonal because |S_ii| is the reflection at port i, which is ≈0 for
+    /// the passive photonic devices in our PDKs and so makes a useless preview.
     /// </summary>
-    public string DiagonalPreview { get; }
+    public string MagnitudePreview { get; }
 
     /// <summary>
     /// Builds an entry from a live <see cref="SMatrix"/> and the component's
@@ -52,35 +54,46 @@ public class EffectiveSMatrixEntryViewModel
         Dimensions = $"{pins.Count} × {pins.Count}";
         IsOverridden = isOverridden;
         SourceTag = isOverridden ? "Override active" : "PDK Default";
-        DiagonalPreview = BuildDiagonalPreview(sMatrix, pins);
+        MagnitudePreview = BuildMagnitudePreview(sMatrix, pins);
     }
 
-    private static string BuildDiagonalPreview(SMatrix sMatrix, IReadOnlyList<Pin> pins)
+    private static string BuildMagnitudePreview(SMatrix sMatrix, IReadOnlyList<Pin> pins)
     {
         if (pins.Count == 0)
             return string.Empty;
 
-        var parts = new List<string>();
-        int maxPreview = Math.Min(pins.Count, 4);
+        var couplings = new List<(int From, int To, double Magnitude)>();
 
-        for (int i = 0; i < maxPreview; i++)
+        // S[out, in] convention. We label pairs as "input → output" so the
+        // user reads them as "Port 1 input couples 70% into Port 3 output" etc.
+        for (int from = 0; from < pins.Count; from++)
         {
-            // S[out, in] convention — diagonal = |S(pin_i_out, pin_i_in)|.
-            // A missing pin id (rare but possible for unusual templates)
-            // skips that diagonal entry rather than failing the whole row.
-            if (!sMatrix.PinReference.TryGetValue(pins[i].IDOutFlow, out var outIdx))
-                continue;
-            if (!sMatrix.PinReference.TryGetValue(pins[i].IDInFlow, out var inIdx))
+            if (!sMatrix.PinReference.TryGetValue(pins[from].IDInFlow, out var inIdx))
                 continue;
 
-            var v = sMatrix.SMat[outIdx, inIdx];
-            double mag = Math.Sqrt(v.Real * v.Real + v.Imaginary * v.Imaginary);
-            // Invariant culture so the "0.950" form is stable on de-DE/fr-FR locales
-            // — those would otherwise render "0,950" and break round-trip / log parsing.
-            parts.Add($"|S{i + 1}{i + 1}|={mag.ToString("F3", CultureInfo.InvariantCulture)}");
+            for (int to = 0; to < pins.Count; to++)
+            {
+                if (from == to) continue; // skip reflection
+                if (!sMatrix.PinReference.TryGetValue(pins[to].IDOutFlow, out var outIdx))
+                    continue;
+
+                var v = sMatrix.SMat[outIdx, inIdx];
+                double mag = Math.Sqrt(v.Real * v.Real + v.Imaginary * v.Imaginary);
+                if (mag < 1e-6) continue; // hide noise-floor entries
+
+                couplings.Add((from, to, mag));
+            }
         }
 
-        var preview = string.Join("  ", parts);
-        return pins.Count > 4 ? preview + " …" : preview;
+        if (couplings.Count == 0)
+            return "(no significant couplings)";
+
+        couplings.Sort((a, b) => b.Magnitude.CompareTo(a.Magnitude));
+        var top = couplings.Take(4)
+            // InvariantCulture so "0.707" stays "0.707" on de-DE / fr-FR locales.
+            .Select(c => $"P{c.From + 1}→P{c.To + 1}={c.Magnitude.ToString("F3", CultureInfo.InvariantCulture)}");
+
+        var preview = string.Join("  ", top);
+        return couplings.Count > 4 ? preview + " …" : preview;
     }
 }
