@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels.ComponentSettings"
         x:Class="CAP.Avalonia.Views.ComponentSettingsDialog"
+        x:Name="DialogRoot"
         x:DataType="vm:ComponentSettingsDialogViewModel"
         Title="{Binding Title}"
         Width="560" Height="500"
@@ -107,10 +108,18 @@
                                 </StackPanel>
 
                                 <!-- Delete button -->
+                                <!--
+                                    NOTE: We bind the parent VM's command via #DialogRoot (the Window's
+                                    x:Name) instead of $parent[ItemsControl].((vm:ComponentSettingsDialogViewModel)DataContext).
+                                    The cast form fails at runtime in deferred DataTemplate scope with
+                                    "Unable to resolve type vm:ComponentSettingsDialogViewModel" because
+                                    the vm: namespace prefix isn't reliably available when the template
+                                    is materialised (Avalonia issue with XamlIl + DataTemplate type casts).
+                                -->
                                 <Button Grid.Column="3"
                                         Content="×"
                                         CommandParameter="{Binding}"
-                                        Command="{Binding $parent[ItemsControl].((vm:ComponentSettingsDialogViewModel)DataContext).DeleteEntryCommand}"
+                                        Command="{Binding #DialogRoot.DataContext.DeleteEntryCommand}"
                                         Width="28" Height="24"
                                         Padding="0"
                                         Background="#5d2020"
