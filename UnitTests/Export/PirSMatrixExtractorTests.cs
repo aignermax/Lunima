@@ -9,7 +9,7 @@ namespace UnitTests.Export;
 
 /// <summary>
 /// Tests for the shared <see cref="PirSMatrixExtractor"/> that underlies the
-/// Verilog-A and PICWave export pipelines. Covers all three exit paths: a
+/// Verilog-A and SAX export pipelines. Covers all three exit paths: a
 /// successful pin-GUID lookup, the null return when no S-matrix is registered
 /// at the target wavelength, and the two loud-failure guards (missing
 /// LogicalPin, and registered S-matrix whose GUIDs drifted from the

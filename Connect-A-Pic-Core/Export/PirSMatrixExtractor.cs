@@ -16,7 +16,7 @@ namespace CAP_Core.Export;
 /// <para>
 /// The extractor is deliberately policy-free: it returns <c>null</c> when no
 /// S-matrix is registered at the given wavelength, letting each caller decide
-/// whether to fall back to a heuristic (Verilog-A) or throw (PICWave / future
+/// whether to fall back to a heuristic (Verilog-A) or throw (SAX / future
 /// targets). Two internal inconsistencies are reported as loud exceptions —
 /// no silent fallbacks here: a pin missing its <see cref="PhysicalPin.LogicalPin"/>
 /// link, and a registered S-matrix whose pin GUIDs do not line up with any

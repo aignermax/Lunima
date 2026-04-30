@@ -27,7 +27,7 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly DesignCanvasViewModel _canvas;
     private readonly CommandManager _commandManager;
     private readonly SimpleNazcaExporter _nazcaExporter;
-    private readonly PicWaveExporter _picWaveExporter;
+    private readonly SaxExporter _saxExporter;
     private readonly ObservableCollection<ComponentTemplate> _componentLibrary;
     private readonly ErrorConsoleService? _errorConsole;
 
@@ -107,7 +107,7 @@ public partial class FileOperationsViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
         SimpleNazcaExporter nazcaExporter,
-        PicWaveExporter picWaveExporter,
+        SaxExporter saxExporter,
         ObservableCollection<ComponentTemplate> componentLibrary,
         GdsExportViewModel gdsExport,
         PhotonTorchExportViewModel photonTorchExport,
@@ -117,7 +117,7 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas = canvas;
         _commandManager = commandManager;
         _nazcaExporter = nazcaExporter;
-        _picWaveExporter = picWaveExporter;
+        _saxExporter = saxExporter;
         _componentLibrary = componentLibrary;
         GdsExport = gdsExport;
         PhotonTorchExport = photonTorchExport;
@@ -1044,10 +1044,14 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Exports the current design to a PICWave Python simulation script.
+    /// Exports the current design to a SAX/Simphony-compatible Python
+    /// simulation script. Historically labelled "PICWave" because issue #474
+    /// requested that target — the implementation always emitted sax-based
+    /// Python (see <c>SaxScriptWriter</c>). Renamed so the UI label, file
+    /// header and status messages all describe the actual output.
     /// </summary>
     [RelayCommand]
-    private async Task ExportPicWave()
+    private async Task ExportSax()
     {
         if (FileDialogService == null)
         {
@@ -1062,7 +1066,7 @@ public partial class FileOperationsViewModel : ObservableObject
         }
 
         var filePath = await FileDialogService.ShowSaveFileDialogAsync(
-            "Export to PICWave Python",
+            "Export to SAX (Simphony) Python",
             "py",
             "Python Files|*.py|All Files|*.*");
 
@@ -1073,14 +1077,14 @@ public partial class FileOperationsViewModel : ObservableObject
         {
             var components = _canvas.Components.Select(vm => vm.Component);
             var connections = _canvas.Connections.Select(vm => vm.Connection);
-            var script = _picWaveExporter.Export(components, connections);
+            var script = _saxExporter.Export(components, connections);
             await File.WriteAllTextAsync(filePath, script);
-            UpdateStatus?.Invoke($"Exported PICWave script: {Path.GetFileName(filePath)}");
+            UpdateStatus?.Invoke($"Exported SAX script: {Path.GetFileName(filePath)}");
         }
         catch (Exception ex)
         {
-            _errorConsole?.LogError($"Failed to export PICWave script: {ex.Message}", ex);
-            UpdateStatus?.Invoke($"PICWave export failed: {ex.Message}");
+            _errorConsole?.LogError($"Failed to export SAX script: {ex.Message}", ex);
+            UpdateStatus?.Invoke($"SAX export failed: {ex.Message}");
         }
     }
 

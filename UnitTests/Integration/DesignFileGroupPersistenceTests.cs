@@ -614,7 +614,7 @@ public class DesignFileGroupPersistenceTests
             new CAP_Core.Export.PhotonTorchExporter(), canvas);
 
         var vm = new FileOperationsViewModel(
-            canvas, commandManager, nazcaExporter, new CAP_Core.Export.PicWaveExporter(), _library, gdsExport, photonTorchExport, null!, errorConsole);
+            canvas, commandManager, nazcaExporter, new CAP_Core.Export.SaxExporter(), _library, gdsExport, photonTorchExport, null!, errorConsole);
 
         return (vm, canvas);
     }

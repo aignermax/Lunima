@@ -18,7 +18,7 @@ using Component = CAP_Core.Components.Core.Component;
 namespace UnitTests.Export;
 
 /// <summary>
-/// End-to-end tests for <see cref="PicWaveExporter"/>: the generated script is
+/// End-to-end tests for <see cref="SaxExporter"/>: the generated script is
 /// executed with real sax, numpy, and matplotlib and the resulting circuit
 /// state is introspected and asserted on. Catches the class of bug that
 /// string-contains assertions miss — e.g. a <c>connect()</c> pointing at a
@@ -32,12 +32,12 @@ namespace UnitTests.Export;
 /// <c>python3</c>, <c>python</c>.
 /// </para>
 /// </summary>
-public class PicWaveScriptExecutionTests
+public class SaxScriptExecutionTests
 {
     private readonly ITestOutputHelper _output;
-    private readonly PicWaveExporter _exporter = new();
+    private readonly SaxExporter _exporter = new();
 
-    public PicWaveScriptExecutionTests(ITestOutputHelper output) => _output = output;
+    public SaxScriptExecutionTests(ITestOutputHelper output) => _output = output;
 
     [SkippableFact]
     public void ExportedScript_WithMeasuredSMatrix_RunsAndReturnsExpectedTransmission()
