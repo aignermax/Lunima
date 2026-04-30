@@ -30,6 +30,7 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly SaxExporter _saxExporter;
     private readonly ObservableCollection<ComponentTemplate> _componentLibrary;
     private readonly ErrorConsoleService? _errorConsole;
+    private readonly UserSMatrixOverrideStore? _userSMatrixOverrideStore;
 
     /// <summary>
     /// Current .lun format version this build reads and writes. Files with any other value are rejected at load time.
@@ -112,7 +113,8 @@ public partial class FileOperationsViewModel : ObservableObject
         GdsExportViewModel gdsExport,
         PhotonTorchExportViewModel photonTorchExport,
         VerilogAExportViewModel verilogAExport,
-        ErrorConsoleService? errorConsole = null)
+        ErrorConsoleService? errorConsole = null,
+        UserSMatrixOverrideStore? userSMatrixOverrideStore = null)
     {
         _canvas = canvas;
         _commandManager = commandManager;
@@ -123,6 +125,7 @@ public partial class FileOperationsViewModel : ObservableObject
         PhotonTorchExport = photonTorchExport;
         VerilogAExport = verilogAExport;
         _errorConsole = errorConsole;
+        _userSMatrixOverrideStore = userSMatrixOverrideStore;
 
         // Track changes to mark project as unsaved
         _canvas.Components.CollectionChanged += (s, e) => HasUnsavedChanges = true;
@@ -141,19 +144,57 @@ public partial class FileOperationsViewModel : ObservableObject
     private void OnComponentsChangedApplyStoredOverrides(object? sender,
         System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
-        if (StoredSMatrices.Count == 0 || e.NewItems == null) return;
+        if (e.NewItems == null) return;
+
+        var addedComponents = e.NewItems
+            .OfType<ComponentViewModel>()
+            .Select(vm => vm.Component)
+            .ToList();
+        if (addedComponents.Count == 0) return;
 
         // Reuse ApplyAll with a single-component view so the identifier /
         // template-key lookup logic stays in one place. Re-applying the
         // same matrix to an already-up-to-date component is a no-op.
-        var addedComponents = e.NewItems
-            .OfType<ComponentViewModel>()
-            .Select(vm => vm.Component);
+        if (StoredSMatrices.Count > 0)
+        {
+            Services.SMatrixOverrideApplicator.ApplyAll(
+                addedComponents,
+                StoredSMatrices,
+                templateKeyResolver: ResolveTemplateKey,
+                errorConsole: _errorConsole);
+        }
+
+        ApplyUserGlobalOverrides(addedComponents);
+    }
+
+    /// <summary>
+    /// Applies the user-global PDK template S-matrix overrides to a set of
+    /// components. Project-local instance overrides (in <see cref="StoredSMatrices"/>)
+    /// take precedence and are intentionally applied first; this fills the
+    /// gap for components that don't have a project-local override.
+    /// </summary>
+    private void ApplyUserGlobalOverrides(IEnumerable<Component> components)
+    {
+        if (_userSMatrixOverrideStore == null ||
+            _userSMatrixOverrideStore.Overrides.Count == 0)
+            return;
+
         Services.SMatrixOverrideApplicator.ApplyAll(
-            addedComponents,
-            StoredSMatrices,
+            components,
+            _userSMatrixOverrideStore.Overrides,
             templateKeyResolver: ResolveTemplateKey,
             errorConsole: _errorConsole);
+    }
+
+    /// <summary>
+    /// Re-applies all user-global PDK template overrides to every live canvas
+    /// component. Called by the Component Settings dialog after a successful
+    /// import or delete in Per-Template mode so the change propagates to
+    /// existing instances without requiring a project reload.
+    /// </summary>
+    public void ReapplyTemplateOverrides()
+    {
+        ApplyUserGlobalOverrides(_canvas.Components.Select(vm => vm.Component));
     }
 
     [RelayCommand]
@@ -299,6 +340,14 @@ public partial class FileOperationsViewModel : ObservableObject
             HumanReadableName = c.Component.HumanReadableName
         };
     }
+
+    /// <summary>
+    /// Returns true when the given store key is shaped like a PDK-template-scoped
+    /// key (<c>"{pdkSource}::{templateName}"</c>) rather than a per-instance key
+    /// (a bare <c>component.Identifier</c> with no <c>::</c> separator). Used during
+    /// project load to migrate template-scoped entries to the user-global store.
+    /// </summary>
+    private static bool IsTemplateScopedKey(string key) => key.Contains("::", StringComparison.Ordinal);
 
     /// <summary>
     /// Builds the PDK-template-scoped store key (<c>"{pdkSource}::{templateName}"</c>) for a component,
@@ -648,19 +697,51 @@ public partial class FileOperationsViewModel : ObservableObject
                 StoredSMatrices.Clear();
                 if (designData.SMatrices != null)
                 {
+                    int migratedCount = 0;
                     foreach (var kv in designData.SMatrices)
-                        StoredSMatrices[kv.Key] = kv.Value;
+                    {
+                        // Migration: PDK-template-scoped keys ("{pdkSource}::{templateName}")
+                        // used to live in the project file. They now belong to the user-global
+                        // store so the override applies to every project the user opens.
+                        // Move them out so a subsequent save writes a clean project file.
+                        if (_userSMatrixOverrideStore != null && IsTemplateScopedKey(kv.Key))
+                        {
+                            _userSMatrixOverrideStore.Overrides[kv.Key] = kv.Value;
+                            migratedCount++;
+                        }
+                        else
+                        {
+                            StoredSMatrices[kv.Key] = kv.Value;
+                        }
+                    }
+
+                    if (migratedCount > 0)
+                    {
+                        _userSMatrixOverrideStore!.Save();
+                        _errorConsole?.LogWarning(
+                            $"Migrated {migratedCount} PDK template S-matrix override(s) from project file to user-global storage. " +
+                            "These now apply to all projects. Save this project to finalise the migration.");
+                        HasUnsavedChanges = true;
+                    }
 
                     // Apply per-instance overrides to live components so the
                     // next simulation run picks up the stored S-matrices.
                     // Falls back to "{pdkSource}::{templateName}" so PDK-template-scoped
                     // overrides reach every instance of the template, not just renamed instances.
-                    var allComponents = _canvas.Components.Select(vm => vm.Component);
+                    var allComponents = _canvas.Components.Select(vm => vm.Component).ToList();
                     Services.SMatrixOverrideApplicator.ApplyAll(
                         allComponents,
                         StoredSMatrices,
                         templateKeyResolver: ResolveTemplateKey,
                         errorConsole: _errorConsole);
+                    ApplyUserGlobalOverrides(allComponents);
+                }
+                else
+                {
+                    // No project overrides — still apply user-global ones so the
+                    // user's PDK template edits show up in projects that never
+                    // had any project-scoped overrides of their own.
+                    ApplyUserGlobalOverrides(_canvas.Components.Select(vm => vm.Component));
                 }
 
                 _currentFilePath = filePath;

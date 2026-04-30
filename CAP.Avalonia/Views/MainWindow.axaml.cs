@@ -124,6 +124,11 @@ public partial class MainWindow : Window
                 vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
                     id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
 
+                // Initial badge population for PDK templates (covers user-global
+                // overrides loaded from disk on app start). Updated again every
+                // time the dialog mutates the user store, see ShowComponentSettingsDialog.
+                RefreshTemplateOverrideBadges(vm);
+
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
 
@@ -450,6 +455,20 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Refreshes the 📊 user-global-override badges on every PDK template in the
+    /// library list. Called on initial wire-up and after every dialog mutation in
+    /// template mode so the badge tracks the on-disk store without manual reloads.
+    /// </summary>
+    private static void RefreshTemplateOverrideBadges(MainViewModel vm)
+    {
+        var userStore = App.Services.GetService(typeof(UserSMatrixOverrideStore))
+            as UserSMatrixOverrideStore;
+        if (userStore == null) return;
+
+        vm.LeftPanel.RefreshUserGlobalOverrideBadges(userStore.Overrides.ContainsKey);
+    }
+
+    /// <summary>
     /// Handles "Component Settings…" click in the PDK template list context menu.
     /// </summary>
     private void TemplateComponentSettings_Click(object? sender, RoutedEventArgs e)
@@ -460,33 +479,104 @@ public partial class MainWindow : Window
         if (sender is MenuItem { DataContext: ComponentTemplate template })
         {
             var key = $"{template.PdkSource}::{template.Name}";
-            ShowComponentSettingsDialog(key, template.Name, null, vm);
+            ShowComponentSettingsDialog(key, template.Name, null, vm, template);
         }
     }
 
     /// <summary>
     /// Creates and shows the Component Settings dialog for the given entity.
-    /// The dialog's <see cref="ComponentSettingsDialogViewModel.Configure"/>
-    /// onChanged callback refreshes the hierarchy panel's 📊 override badges
-    /// after every import or delete.
+    ///
+    /// Per-Instance mode (<paramref name="liveComponent"/> non-null): the dialog
+    /// reads/writes <c>FileOperations.StoredSMatrices</c>, so the override is
+    /// scoped to this canvas instance and persisted in the .lun file.
+    ///
+    /// Per-Template mode (<paramref name="liveComponent"/> null): the dialog
+    /// reads/writes the user-global <see cref="UserSMatrixOverrideStore"/>, so
+    /// the override applies to every instance of that template across every
+    /// project the user opens. After a successful import/delete the store is
+    /// flushed to disk and live components matching the template are
+    /// re-applied so the change takes effect immediately without reloading.
     /// </summary>
     private void ShowComponentSettingsDialog(
         string entityKey,
         string displayName,
         CAP_Core.Components.Core.Component? liveComponent,
-        MainViewModel vm)
+        MainViewModel vm,
+        ComponentTemplate? templateForDefaults = null)
     {
         var errorConsole = App.Services.GetService(typeof(CAP_Core.ErrorConsoleService))
             as CAP_Core.ErrorConsoleService;
+        var userStore = App.Services.GetService(typeof(UserSMatrixOverrideStore))
+            as UserSMatrixOverrideStore;
+        var portMappingDialog = App.Services.GetService(typeof(IPortMappingDialogService))
+            as IPortMappingDialogService;
         var dialogVm = new ComponentSettingsDialogViewModel(
             new FileDialogService(this),
-            errorConsole);
+            errorConsole,
+            importers: null,
+            portMappingDialog: portMappingDialog);
+
+        bool isTemplateMode = liveComponent == null && userStore != null;
+        var store = isTemplateMode
+            ? userStore!.Overrides
+            : vm.FileOperations.StoredSMatrices;
+
+        Action onChanged = isTemplateMode
+            ? () =>
+              {
+                  userStore!.Save();
+                  vm.FileOperations.ReapplyTemplateOverrides();
+                  vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+                  RefreshTemplateOverrideBadges(vm);
+              }
+            : () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+
+        // Effective S-matrix data feeds the read-only "Currently effective" section.
+        // Per-Instance: read straight off the live component (its WaveLengthToSMatrixMap
+        // is exactly what the simulator will use, including any override already applied).
+        // Per-Template: build a throwaway component from the template so we can show
+        // the PDK default without requiring a canvas instance.
+        Dictionary<int, CAP_Core.LightCalculation.SMatrix>? effectiveSMatrices = null;
+        IReadOnlyList<CAP_Core.Components.Core.Pin>? effectivePins = null;
+        IReadOnlyList<string>? availablePinNames = null;
+        if (liveComponent != null)
+        {
+            effectiveSMatrices = liveComponent.WaveLengthToSMatrixMap;
+            effectivePins = liveComponent.PhysicalPins
+                .Where(pp => pp.LogicalPin != null)
+                .Select(pp => pp.LogicalPin!)
+                .ToList();
+            // Pin-name list drives the port-mapping dialog. Use PhysicalPin
+            // names (what the user sees in the UI), not the LogicalPin's
+            // internal id, so the dialog matches the rest of the dialog.
+            availablePinNames = liveComponent.PhysicalPins
+                .Where(pp => pp.LogicalPin != null)
+                .Select(pp => pp.Name)
+                .ToList();
+        }
+        else if (templateForDefaults != null)
+        {
+            var tempInstance = ComponentTemplates.CreateFromTemplate(templateForDefaults, 0, 0);
+            effectiveSMatrices = tempInstance.WaveLengthToSMatrixMap;
+            effectivePins = tempInstance.PhysicalPins
+                .Where(pp => pp.LogicalPin != null)
+                .Select(pp => pp.LogicalPin!)
+                .ToList();
+            availablePinNames = templateForDefaults.PinDefinitions
+                .Select(pd => pd.Name)
+                .ToList();
+        }
+
         dialogVm.Configure(
             entityKey,
             displayName,
-            vm.FileOperations.StoredSMatrices,
+            store,
             liveComponent,
-            onChanged: () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers());
+            onChanged: onChanged,
+            isUserGlobalScope: isTemplateMode,
+            effectiveSMatrices: effectiveSMatrices,
+            effectivePins: effectivePins,
+            availablePinNames: availablePinNames);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);

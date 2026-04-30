@@ -2,6 +2,7 @@ using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.LightCalculation;
 using CAP_Core.Tiles;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CAP.Avalonia.ViewModels.Library;
 
@@ -129,7 +130,7 @@ public static class ComponentTemplates
 
 }
 
-public class ComponentTemplate
+public partial class ComponentTemplate : ObservableObject
 {
     public string Name { get; set; } = "";
     public string Category { get; set; } = "";
@@ -139,6 +140,17 @@ public class ComponentTemplate
     public bool HasSlider { get; set; }
     public double SliderMin { get; set; }
     public double SliderMax { get; set; }
+
+    /// <summary>
+    /// True when the user-global <see cref="Services.UserSMatrixOverrideStore"/>
+    /// holds an entry under this template's <c>"{PdkSource}::{Name}"</c> key —
+    /// drives the 📊 badge in the PDK library list. Refreshed by
+    /// <see cref="ComponentLibraryViewModel.RefreshUserGlobalOverrideBadges"/>
+    /// after any import or delete in the Component Settings dialog and after
+    /// project load (which can migrate template overrides from .lun files).
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasUserGlobalSMatrixOverride;
     public Func<List<Pin>, SMatrix>? CreateSMatrix { get; set; }
     public Func<List<Pin>, List<Slider>, SMatrix>? CreateSMatrixWithSliders { get; set; }
 

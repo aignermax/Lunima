@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP_Core;
 using CAP_Core.Components.Core;
+using CAP_Core.LightCalculation;
 using CAP_DataAccess.Import;
 using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
@@ -19,11 +20,17 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     private readonly IFileDialogService _fileDialogService;
     private readonly ErrorConsoleService? _errorConsole;
     private readonly IReadOnlyList<ISParameterImporter> _importers;
+    private readonly IPortMappingDialogService? _portMappingDialog;
 
     private Dictionary<string, ComponentSMatrixData>? _storedSMatrices;
     private Component? _liveComponent;
     private string _entityKey = string.Empty;
+    private string _displayName = string.Empty;
     private Action? _onChanged;
+    private bool _isUserGlobalScope;
+    private Dictionary<int, SMatrix>? _effectiveSMatrices;
+    private IReadOnlyList<Pin>? _effectivePins;
+    private IReadOnlyList<string>? _availablePinNames;
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -41,8 +48,20 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasSMatrices;
 
+    /// <summary>True when the "Currently effective S-matrix" section has rows.</summary>
+    [ObservableProperty]
+    private bool _hasEffectiveEntries;
+
     /// <summary>Per-wavelength S-matrix entries shown in the dialog list.</summary>
     public ObservableCollection<SMatrixEntryViewModel> SMatrixEntries { get; } = new();
+
+    /// <summary>
+    /// Read-only "currently effective" S-matrix entries — what the simulator
+    /// will use for each wavelength right now. Combines the PDK default with
+    /// any active override and tags each row accordingly so the user can see
+    /// the source without cross-referencing <see cref="SMatrixEntries"/>.
+    /// </summary>
+    public ObservableCollection<EffectiveSMatrixEntryViewModel> EffectiveEntries { get; } = new();
 
     /// <summary>
     /// Initialises a new instance with constructor-injected dependencies.
@@ -50,13 +69,21 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// <param name="fileDialogService">Service used to open the file picker for imports.</param>
     /// <param name="errorConsole">Optional error console for surfacing import failures and partial overrides.</param>
     /// <param name="importers">Optional importer set; defaults to Lumerical + Touchstone.</param>
+    /// <param name="portMappingDialog">
+    /// Optional dialog service used when imported port names don't match the
+    /// component's pin names. Required for production use; tests can pass null
+    /// to skip the interactive step (which causes the import to abort with a
+    /// status-text explanation when names mismatch).
+    /// </param>
     public ComponentSettingsDialogViewModel(
         IFileDialogService fileDialogService,
         ErrorConsoleService? errorConsole = null,
-        IReadOnlyList<ISParameterImporter>? importers = null)
+        IReadOnlyList<ISParameterImporter>? importers = null,
+        IPortMappingDialogService? portMappingDialog = null)
     {
         _fileDialogService = fileDialogService;
         _errorConsole = errorConsole;
+        _portMappingDialog = portMappingDialog;
         _importers = importers ?? new ISParameterImporter[]
         {
             new LumericalSParameterImporter(),
@@ -83,20 +110,51 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// Optional callback invoked after every successful import or delete so observers
     /// (e.g. the hierarchy panel) can refresh derived state such as override badges.
     /// </param>
+    /// <param name="isUserGlobalScope">
+    /// When true, the dialog title flags that the override applies to all projects
+    /// — used when <paramref name="storedSMatrices"/> is the user-global store
+    /// rather than the project's <c>.lun</c>-backed store. Purely a UX hint;
+    /// persistence behaviour is determined by the store the caller passes in.
+    /// </param>
+    /// <param name="effectiveSMatrices">
+    /// Optional per-wavelength S-matrix map representing what the simulator
+    /// actually uses for this entity (PDK default merged with any active
+    /// override). When supplied alongside <paramref name="effectivePins"/>,
+    /// the dialog renders a read-only "Currently effective" section so the
+    /// user can see the source of truth without inferring it from the
+    /// override list.
+    /// </param>
+    /// <param name="effectivePins">
+    /// Pin order matching <paramref name="effectiveSMatrices"/>'s S-matrix
+    /// indexing. Required to read diagonal magnitudes from the SMatrix
+    /// (which is keyed by <see cref="Pin.IDInFlow"/> / <see cref="Pin.IDOutFlow"/>).
+    /// </param>
     public void Configure(
         string entityKey,
         string displayName,
         Dictionary<string, ComponentSMatrixData> storedSMatrices,
         Component? liveComponent = null,
-        Action? onChanged = null)
+        Action? onChanged = null,
+        bool isUserGlobalScope = false,
+        Dictionary<int, SMatrix>? effectiveSMatrices = null,
+        IReadOnlyList<Pin>? effectivePins = null,
+        IReadOnlyList<string>? availablePinNames = null)
     {
         _entityKey = entityKey;
+        _displayName = displayName;
         _storedSMatrices = storedSMatrices;
         _liveComponent = liveComponent;
         _onChanged = onChanged;
-        Title = $"Component Settings: {displayName}";
+        _isUserGlobalScope = isUserGlobalScope;
+        _effectiveSMatrices = effectiveSMatrices;
+        _effectivePins = effectivePins;
+        _availablePinNames = availablePinNames;
+        Title = isUserGlobalScope
+            ? $"Component Settings: {displayName} (applies to all projects)"
+            : $"Component Settings: {displayName}";
         StatusText = string.Empty;
         RefreshEntries(notifyChanged: false);
+        RefreshEffectiveEntries();
     }
 
     /// <summary>
@@ -130,14 +188,24 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         try
         {
             var imported = await importer.ImportAsync(path);
-            var smatrixData = SParameterConverter.ToComponentSMatrixData(imported);
+
+            // Reconcile imported port names with the component's pin names.
+            // If they don't already align and we have both the available pin
+            // names and a mapping-dialog service, ask the user up-front. This
+            // is much friendlier than letting SMatrixOverrideApplicator skip
+            // every wavelength later with a "port name X not found" warning.
+            var resolved = await ReconcilePortNamesAsync(imported);
+            if (resolved == null)
+                return; // user cancelled — StatusText already set
+
+            var smatrixData = SParameterConverter.ToComponentSMatrixData(resolved);
             _storedSMatrices[_entityKey] = smatrixData;
 
             ApplyResult? applyResult = null;
             if (_liveComponent != null)
                 applyResult = SMatrixOverrideApplicator.Apply(_liveComponent, smatrixData, _errorConsole);
 
-            StatusText = BuildImportStatus(path, imported, applyResult);
+            StatusText = BuildImportStatus(path, resolved, applyResult);
         }
         catch (Exception ex)
         {
@@ -149,6 +217,48 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             IsImporting = false;
             RefreshEntries(notifyChanged: true);
         }
+    }
+
+    /// <summary>
+    /// Returns <paramref name="imported"/> unchanged when port names already
+    /// align, the result of <see cref="PortNameMapping.Remap"/> with a
+    /// user-supplied mapping when they don't, or <c>null</c> when the user
+    /// cancelled the mapping dialog (in which case <see cref="StatusText"/>
+    /// is set so the caller can return without storing anything).
+    /// </summary>
+    private async Task<ImportedSParameters?> ReconcilePortNamesAsync(ImportedSParameters imported)
+    {
+        if (_availablePinNames == null || _availablePinNames.Count == 0)
+            return imported; // caller didn't tell us the pin names — proceed and let Apply complain if anything's wrong
+
+        if (PortNameMapping.NamesAlignWithComponent(imported.PortNames, _availablePinNames))
+            return imported;
+
+        if (imported.PortNames.Count != _availablePinNames.Count)
+        {
+            // Different port counts is structurally unmappable — bail out
+            // loudly rather than open a dialog the user couldn't satisfy.
+            StatusText = $"Cannot import: file has {imported.PortNames.Count} port(s), " +
+                         $"but '{_displayName}' has {_availablePinNames.Count} pin(s).";
+            return null;
+        }
+
+        if (_portMappingDialog == null)
+        {
+            // No interactive surface available (typically test or headless).
+            StatusText = $"Imported port names don't match component pins on '{_displayName}'. " +
+                         $"Re-run with a port-mapping dialog wired up to resolve this interactively.";
+            return null;
+        }
+
+        var mapping = await _portMappingDialog.ShowAsync(_displayName, imported.PortNames, _availablePinNames);
+        if (mapping == null)
+        {
+            StatusText = "Import cancelled — no port mapping was confirmed.";
+            return null;
+        }
+
+        return PortNameMapping.Remap(imported, mapping);
     }
 
     private static string BuildImportStatus(
@@ -201,7 +311,11 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
         {
             HasSMatrices = false;
-            if (notifyChanged) _onChanged?.Invoke();
+            if (notifyChanged)
+            {
+                RefreshEffectiveEntries();
+                _onChanged?.Invoke();
+            }
             return;
         }
 
@@ -209,7 +323,37 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             SMatrixEntries.Add(new SMatrixEntryViewModel(kvp.Key, kvp.Value, data.SourceNote));
 
         HasSMatrices = SMatrixEntries.Count > 0;
-        if (notifyChanged) _onChanged?.Invoke();
+        if (notifyChanged)
+        {
+            RefreshEffectiveEntries();
+            _onChanged?.Invoke();
+        }
+    }
+
+    private void RefreshEffectiveEntries()
+    {
+        EffectiveEntries.Clear();
+        if (_effectiveSMatrices == null || _effectivePins == null)
+        {
+            HasEffectiveEntries = false;
+            return;
+        }
+
+        foreach (var kvp in _effectiveSMatrices.OrderBy(k => k.Key))
+        {
+            // A wavelength is "overridden" iff the active store has an entry
+            // with the same wavelength key — a wavelength present in the
+            // PDK default but not in the override is still PDK-driven.
+            bool isOverridden =
+                _storedSMatrices != null &&
+                _storedSMatrices.TryGetValue(_entityKey, out var data) &&
+                data.Wavelengths.ContainsKey(kvp.Key.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            EffectiveEntries.Add(new EffectiveSMatrixEntryViewModel(
+                kvp.Key, kvp.Value, _effectivePins, isOverridden));
+        }
+
+        HasEffectiveEntries = EffectiveEntries.Count > 0;
     }
 
     private ISParameterImporter? FindImporter(string path)

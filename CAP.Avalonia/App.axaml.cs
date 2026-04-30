@@ -119,8 +119,14 @@ public partial class App : Application
         services.AddSingleton<Commands.CommandManager>();
         services.AddSingleton<UserPreferencesService>();
         services.AddSingleton<ProjectPersistenceService>();
+        // User-global PDK template S-matrix overrides — persists across projects
+        // so editing a template's S-matrix isn't silently confined to the .lun
+        // file the user happened to be in.
+        services.AddSingleton<UserSMatrixOverrideStore>(sp =>
+            new UserSMatrixOverrideStore(sp.GetService<CAP_Core.ErrorConsoleService>()));
         services.AddSingleton<Services.GroupPreviewGenerator>();
         services.AddSingleton<IInputDialogService, InputDialogService>();
+        services.AddSingleton<IPortMappingDialogService, PortMappingDialogService>();
 
         // Register DesignCanvasViewModel as singleton (shared across all panel VMs)
         services.AddSingleton<DesignCanvasViewModel>();

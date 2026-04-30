@@ -255,6 +255,22 @@ public partial class LeftPanelViewModel : ObservableObject
             || t.PdkSource.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Updates the <see cref="ComponentTemplate.HasUserGlobalSMatrixOverride"/> flag on
+    /// every template, so the 📊 badge in the PDK list reflects the current state of
+    /// the user-global override store. The lookup uses the same key shape the dialog
+    /// writes (<c>"{PdkSource}::{Name}"</c>); callers pass that as a predicate so this
+    /// VM stays unaware of the store implementation.
+    /// </summary>
+    public void RefreshUserGlobalOverrideBadges(Func<string, bool> hasUserOverride)
+    {
+        foreach (var t in AllTemplates)
+        {
+            var key = $"{t.PdkSource}::{t.Name}";
+            t.HasUserGlobalSMatrixOverride = hasUserOverride(key);
+        }
+    }
+
     private void RestorePdkFilterState()
     {
         var enabledPdks = _preferencesService.GetEnabledPdks();
