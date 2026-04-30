@@ -4,7 +4,7 @@
         x:Class="CAP.Avalonia.Views.Dialogs.VerilogAExportDialog"
         x:DataType="vm:VerilogAExportViewModel"
         Title="Export — Verilog-A / SPICE"
-        Width="440" Height="370"
+        Width="440" Height="290"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         Background="#1e1e1e"
@@ -26,6 +26,7 @@
             <Button Content="Close" x:Name="CloseButton" Width="70" Click="OnCloseClicked"/>
         </StackPanel>
 
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="10">
             <TextBlock Text="📊 Verilog-A / SPICE Export" FontSize="15" FontWeight="SemiBold"
                        Foreground="#7BC8A4"/>
@@ -62,5 +63,6 @@
                        Foreground="LightGreen" FontSize="10" TextWrapping="Wrap"
                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         </StackPanel>
+        </ScrollViewer>
     </DockPanel>
 </Window>
