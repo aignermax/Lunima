@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP_Core;
 using CAP_Core.Components.Core;
+using CAP_Core.LightCalculation;
 using CAP_DataAccess.Import;
 using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
@@ -25,6 +26,8 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     private string _entityKey = string.Empty;
     private Action? _onChanged;
     private bool _isUserGlobalScope;
+    private Dictionary<int, SMatrix>? _effectiveSMatrices;
+    private IReadOnlyList<Pin>? _effectivePins;
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -42,8 +45,20 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasSMatrices;
 
+    /// <summary>True when the "Currently effective S-matrix" section has rows.</summary>
+    [ObservableProperty]
+    private bool _hasEffectiveEntries;
+
     /// <summary>Per-wavelength S-matrix entries shown in the dialog list.</summary>
     public ObservableCollection<SMatrixEntryViewModel> SMatrixEntries { get; } = new();
+
+    /// <summary>
+    /// Read-only "currently effective" S-matrix entries — what the simulator
+    /// will use for each wavelength right now. Combines the PDK default with
+    /// any active override and tags each row accordingly so the user can see
+    /// the source without cross-referencing <see cref="SMatrixEntries"/>.
+    /// </summary>
+    public ObservableCollection<EffectiveSMatrixEntryViewModel> EffectiveEntries { get; } = new();
 
     /// <summary>
     /// Initialises a new instance with constructor-injected dependencies.
@@ -90,24 +105,42 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// rather than the project's <c>.lun</c>-backed store. Purely a UX hint;
     /// persistence behaviour is determined by the store the caller passes in.
     /// </param>
+    /// <param name="effectiveSMatrices">
+    /// Optional per-wavelength S-matrix map representing what the simulator
+    /// actually uses for this entity (PDK default merged with any active
+    /// override). When supplied alongside <paramref name="effectivePins"/>,
+    /// the dialog renders a read-only "Currently effective" section so the
+    /// user can see the source of truth without inferring it from the
+    /// override list.
+    /// </param>
+    /// <param name="effectivePins">
+    /// Pin order matching <paramref name="effectiveSMatrices"/>'s S-matrix
+    /// indexing. Required to read diagonal magnitudes from the SMatrix
+    /// (which is keyed by <see cref="Pin.IDInFlow"/> / <see cref="Pin.IDOutFlow"/>).
+    /// </param>
     public void Configure(
         string entityKey,
         string displayName,
         Dictionary<string, ComponentSMatrixData> storedSMatrices,
         Component? liveComponent = null,
         Action? onChanged = null,
-        bool isUserGlobalScope = false)
+        bool isUserGlobalScope = false,
+        Dictionary<int, SMatrix>? effectiveSMatrices = null,
+        IReadOnlyList<Pin>? effectivePins = null)
     {
         _entityKey = entityKey;
         _storedSMatrices = storedSMatrices;
         _liveComponent = liveComponent;
         _onChanged = onChanged;
         _isUserGlobalScope = isUserGlobalScope;
+        _effectiveSMatrices = effectiveSMatrices;
+        _effectivePins = effectivePins;
         Title = isUserGlobalScope
             ? $"Component Settings: {displayName} (applies to all projects)"
             : $"Component Settings: {displayName}";
         StatusText = string.Empty;
         RefreshEntries(notifyChanged: false);
+        RefreshEffectiveEntries();
     }
 
     /// <summary>
@@ -212,7 +245,11 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
         {
             HasSMatrices = false;
-            if (notifyChanged) _onChanged?.Invoke();
+            if (notifyChanged)
+            {
+                RefreshEffectiveEntries();
+                _onChanged?.Invoke();
+            }
             return;
         }
 
@@ -220,7 +257,37 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             SMatrixEntries.Add(new SMatrixEntryViewModel(kvp.Key, kvp.Value, data.SourceNote));
 
         HasSMatrices = SMatrixEntries.Count > 0;
-        if (notifyChanged) _onChanged?.Invoke();
+        if (notifyChanged)
+        {
+            RefreshEffectiveEntries();
+            _onChanged?.Invoke();
+        }
+    }
+
+    private void RefreshEffectiveEntries()
+    {
+        EffectiveEntries.Clear();
+        if (_effectiveSMatrices == null || _effectivePins == null)
+        {
+            HasEffectiveEntries = false;
+            return;
+        }
+
+        foreach (var kvp in _effectiveSMatrices.OrderBy(k => k.Key))
+        {
+            // A wavelength is "overridden" iff the active store has an entry
+            // with the same wavelength key — a wavelength present in the
+            // PDK default but not in the override is still PDK-driven.
+            bool isOverridden =
+                _storedSMatrices != null &&
+                _storedSMatrices.TryGetValue(_entityKey, out var data) &&
+                data.Wavelengths.ContainsKey(kvp.Key.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            EffectiveEntries.Add(new EffectiveSMatrixEntryViewModel(
+                kvp.Key, kvp.Value, _effectivePins, isOverridden));
+        }
+
+        HasEffectiveEntries = EffectiveEntries.Count > 0;
     }
 
     private ISParameterImporter? FindImporter(string path)

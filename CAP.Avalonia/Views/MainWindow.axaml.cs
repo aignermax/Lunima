@@ -124,6 +124,11 @@ public partial class MainWindow : Window
                 vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
                     id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
 
+                // Initial badge population for PDK templates (covers user-global
+                // overrides loaded from disk on app start). Updated again every
+                // time the dialog mutates the user store, see ShowComponentSettingsDialog.
+                RefreshTemplateOverrideBadges(vm);
+
                 // Wire up GridSplitter resize events
                 SetupPanelResizing(vm);
 
@@ -450,6 +455,20 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Refreshes the 📊 user-global-override badges on every PDK template in the
+    /// library list. Called on initial wire-up and after every dialog mutation in
+    /// template mode so the badge tracks the on-disk store without manual reloads.
+    /// </summary>
+    private static void RefreshTemplateOverrideBadges(MainViewModel vm)
+    {
+        var userStore = App.Services.GetService(typeof(UserSMatrixOverrideStore))
+            as UserSMatrixOverrideStore;
+        if (userStore == null) return;
+
+        vm.LeftPanel.RefreshUserGlobalOverrideBadges(userStore.Overrides.ContainsKey);
+    }
+
+    /// <summary>
     /// Handles "Component Settings…" click in the PDK template list context menu.
     /// </summary>
     private void TemplateComponentSettings_Click(object? sender, RoutedEventArgs e)
@@ -460,7 +479,7 @@ public partial class MainWindow : Window
         if (sender is MenuItem { DataContext: ComponentTemplate template })
         {
             var key = $"{template.PdkSource}::{template.Name}";
-            ShowComponentSettingsDialog(key, template.Name, null, vm);
+            ShowComponentSettingsDialog(key, template.Name, null, vm, template);
         }
     }
 
@@ -482,7 +501,8 @@ public partial class MainWindow : Window
         string entityKey,
         string displayName,
         CAP_Core.Components.Core.Component? liveComponent,
-        MainViewModel vm)
+        MainViewModel vm,
+        ComponentTemplate? templateForDefaults = null)
     {
         var errorConsole = App.Services.GetService(typeof(CAP_Core.ErrorConsoleService))
             as CAP_Core.ErrorConsoleService;
@@ -503,8 +523,34 @@ public partial class MainWindow : Window
                   userStore!.Save();
                   vm.FileOperations.ReapplyTemplateOverrides();
                   vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+                  RefreshTemplateOverrideBadges(vm);
               }
             : () => vm.LeftPanel.HierarchyPanel.RefreshOverrideMarkers();
+
+        // Effective S-matrix data feeds the read-only "Currently effective" section.
+        // Per-Instance: read straight off the live component (its WaveLengthToSMatrixMap
+        // is exactly what the simulator will use, including any override already applied).
+        // Per-Template: build a throwaway component from the template so we can show
+        // the PDK default without requiring a canvas instance.
+        Dictionary<int, CAP_Core.LightCalculation.SMatrix>? effectiveSMatrices = null;
+        IReadOnlyList<CAP_Core.Components.Core.Pin>? effectivePins = null;
+        if (liveComponent != null)
+        {
+            effectiveSMatrices = liveComponent.WaveLengthToSMatrixMap;
+            effectivePins = liveComponent.PhysicalPins
+                .Where(pp => pp.LogicalPin != null)
+                .Select(pp => pp.LogicalPin!)
+                .ToList();
+        }
+        else if (templateForDefaults != null)
+        {
+            var tempInstance = ComponentTemplates.CreateFromTemplate(templateForDefaults, 0, 0);
+            effectiveSMatrices = tempInstance.WaveLengthToSMatrixMap;
+            effectivePins = tempInstance.PhysicalPins
+                .Where(pp => pp.LogicalPin != null)
+                .Select(pp => pp.LogicalPin!)
+                .ToList();
+        }
 
         dialogVm.Configure(
             entityKey,
@@ -512,7 +558,9 @@ public partial class MainWindow : Window
             store,
             liveComponent,
             onChanged: onChanged,
-            isUserGlobalScope: isTemplateMode);
+            isUserGlobalScope: isTemplateMode,
+            effectiveSMatrices: effectiveSMatrices,
+            effectivePins: effectivePins);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);

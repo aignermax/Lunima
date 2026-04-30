@@ -503,7 +503,18 @@
                                             PinDefinitions="{Binding PinDefinitions}"
                                             Margin="0,0,6,0"/>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
+                                                <!-- User-global S-matrix override badge: signals that this template's
+                                                     S-matrix has been replaced by an imported override that applies
+                                                     to every project the user opens. -->
+                                                <TextBlock Text="📊"
+                                                           FontSize="11"
+                                                           VerticalAlignment="Center"
+                                                           Margin="4,0,0,0"
+                                                           IsVisible="{Binding HasUserGlobalSMatrixOverride}"
+                                                           ToolTip.Tip="User-global S-matrix override active — applies to all projects"/>
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
                                         </StackPanel>
                                     </StackPanel>

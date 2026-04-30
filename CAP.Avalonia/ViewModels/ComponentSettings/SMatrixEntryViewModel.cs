@@ -1,3 +1,4 @@
+using System.Globalization;
 using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.ViewModels.ComponentSettings;
@@ -64,7 +65,9 @@ public class SMatrixEntryViewModel
                 entry.Real[idx] * entry.Real[idx] +
                 entry.Imag[idx] * entry.Imag[idx]);
 
-            parts.Add($"|S{i + 1}{i + 1}|={mag:F3}");
+            // InvariantCulture so the "0.950" form is stable on de-DE / fr-FR locales
+            // (which would otherwise render "0,950" and break log parsing & screenshots).
+            parts.Add($"|S{i + 1}{i + 1}|={mag.ToString("F3", CultureInfo.InvariantCulture)}");
         }
 
         var preview = string.Join("  ", parts);

@@ -52,6 +52,75 @@
                    TextWrapping="Wrap"
                    IsVisible="{Binding HasSMatrices, Converter={x:Static BoolConverters.Not}}"/>
 
+        <!-- Currently effective S-matrix (read-only): shows what the simulator
+             actually uses for this entity right now, with a per-row tag that
+             distinguishes "PDK Default" from "Override active" so the user can
+             see the source of truth without inferring it from the override list. -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Currently effective S-matrix"
+                   Foreground="#aaaacc"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,4"
+                   IsVisible="{Binding HasEffectiveEntries}"/>
+        <Border DockPanel.Dock="Top"
+                Background="#161616"
+                CornerRadius="4"
+                Padding="6"
+                Margin="0,0,0,10"
+                MaxHeight="140"
+                IsVisible="{Binding HasEffectiveEntries}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding EffectiveEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EffectiveSMatrixEntryViewModel">
+                            <Grid ColumnDefinitions="80,60,*,90" Margin="0,1">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding WavelengthLabel}"
+                                           Foreground="White"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Dimensions}"
+                                           Foreground="#aaaaaa"
+                                           FontSize="10"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding DiagonalPreview}"
+                                           Foreground="#88ccaa"
+                                           FontFamily="Consolas, Courier New, monospace"
+                                           FontSize="10"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"/>
+                                <!-- Source tag: orange when override active, dim when PDK default.
+                                     Uses two overlapping TextBlocks toggled by IsOverridden — Avalonia
+                                     compiled bindings can't take a foreground brush from a binding
+                                     in this scope, so two pre-coloured rows is the cleanest path. -->
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding SourceTag}"
+                                           Foreground="#FFA500"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           IsVisible="{Binding IsOverridden}"
+                                           ToolTip.Tip="A user import has replaced the PDK default for this wavelength"/>
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding SourceTag}"
+                                           Foreground="#777777"
+                                           FontSize="10"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           IsVisible="{Binding !IsOverridden}"
+                                           ToolTip.Tip="Comes from the PDK definition; no user override"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
         <!-- S-matrix list header -->
         <Grid DockPanel.Dock="Top"
               ColumnDefinitions="110,80,*,80"
