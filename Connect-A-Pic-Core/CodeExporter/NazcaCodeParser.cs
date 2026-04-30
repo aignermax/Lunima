@@ -9,8 +9,13 @@ namespace CAP_Core.CodeExporter;
 /// </summary>
 public class NazcaCodeParser
 {
+    // Component placement: optionally accepts a leading anchor-pin string
+    // (e.g. ``.put('org', x, y, angle)``) which Lunima now emits to force
+    // Nazca to anchor on the cell origin instead of its default first-pin
+    // anchor. The anchor argument is captured but not exposed in the
+    // parsed result — downstream consumers only need the (x, y, angle).
     private static readonly Regex ComponentPlacementRegex = new(
-        @"^\s*(\w+)\s*=\s*([^\s\(]+(?:\([^\)]*\))?)\s*\.put\((-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)",
+        @"^\s*(\w+)\s*=\s*([^\s\(]+(?:\([^\)]*\))?)\s*\.put\((?:'[^']*',\s*)?(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     private static readonly Regex WaveguideStrtRegex = new(

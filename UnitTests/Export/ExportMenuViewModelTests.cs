@@ -79,12 +79,12 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
-    public void PicWaveExportFormat_HasCorrectMetadata()
+    public void SaxExportFormat_HasCorrectMetadata()
     {
         var cmd = new AsyncRelayCommand(() => Task.CompletedTask);
-        var format = new PicWaveExportFormat(cmd);
+        var format = new SaxExportFormat(cmd);
 
-        format.Name.ShouldBe("PICWave");
+        format.Name.ShouldBe("SAX (Simphony)");
         format.Icon.ShouldBe("🌊");
         format.Description.ShouldNotBeNullOrEmpty();
         format.ExportCommand.ShouldBeSameAs(cmd);
@@ -189,7 +189,7 @@ public class ExportMenuViewModelTests
         var formats = new IExportFormat[]
         {
             new NazcaExportFormat(cmd),
-            new PicWaveExportFormat(cmd),
+            new SaxExportFormat(cmd),
             new PhotonTorchExportFormat(),
             new VerilogAExportFormat(verilogAVm),
         };
@@ -198,7 +198,7 @@ public class ExportMenuViewModelTests
 
         menu.Formats.Count.ShouldBe(4);
         menu.Formats.Select(f => f.Name).ShouldContain("Nazca Python + GDS");
-        menu.Formats.Select(f => f.Name).ShouldContain("PICWave");
+        menu.Formats.Select(f => f.Name).ShouldContain("SAX (Simphony)");
         menu.Formats.Select(f => f.Name).ShouldContain("PhotonTorch");
         menu.Formats.Select(f => f.Name).ShouldContain("Verilog-A / SPICE");
     }
@@ -212,7 +212,7 @@ public class ExportMenuViewModelTests
         vm.ExportMenu.Formats.Select(f => f.Name).ShouldBe(new[]
         {
             "Nazca Python + GDS",
-            "PICWave",
+            "SAX (Simphony)",
             "PhotonTorch",
             "Verilog-A / SPICE",
         });

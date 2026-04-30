@@ -65,7 +65,7 @@ public static class MainViewModelTestHelper
             canvas,
             simulationService,
             new SimpleNazcaExporter(),
-            new CAP_Core.Export.PicWaveExporter(),
+            new CAP_Core.Export.SaxExporter(),
             commandManager,
             preferencesService,
             new GroupPreviewGenerator(),

@@ -17,7 +17,7 @@ namespace CAP_Core.Export;
 /// input/output explicitly.
 /// </para>
 /// </summary>
-internal static class PicWaveNetlistEmitter
+internal static class SaxNetlistEmitter
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -49,7 +49,7 @@ internal static class PicWaveNetlistEmitter
         sb.AppendLine("    'instances': {");
         foreach (var comp in components)
         {
-            var varName = PicWaveIdentifier.ForVar(comp);
+            var varName = SaxIdentifier.ForVar(comp);
             sb.AppendLine($"        '{varName}': '{varName}_model',");
         }
         sb.AppendLine("    },");
@@ -57,10 +57,10 @@ internal static class PicWaveNetlistEmitter
         sb.AppendLine("    'connections': {");
         foreach (var conn in connections)
         {
-            var aVar = PicWaveIdentifier.ForVar(conn.Start.ParentComponent);
-            var aPin = PicWaveIdentifier.ForPin(conn.Start.Name);
-            var bVar = PicWaveIdentifier.ForVar(conn.End.ParentComponent);
-            var bPin = PicWaveIdentifier.ForPin(conn.End.Name);
+            var aVar = SaxIdentifier.ForVar(conn.Start.ParentComponent);
+            var aPin = SaxIdentifier.ForPin(conn.Start.Name);
+            var bVar = SaxIdentifier.ForVar(conn.End.ParentComponent);
+            var bPin = SaxIdentifier.ForPin(conn.End.Name);
             sb.AppendLine($"        '{aVar},{aPin}': '{bVar},{bPin}',");
         }
         sb.AppendLine("    },");
@@ -91,7 +91,7 @@ internal static class PicWaveNetlistEmitter
         var emittedModels = new HashSet<string>(StringComparer.Ordinal);
         foreach (var comp in components)
         {
-            var varName = PicWaveIdentifier.ForVar(comp);
+            var varName = SaxIdentifier.ForVar(comp);
             if (!emittedModels.Add(varName)) continue;
             sb.AppendLine($"        '{varName}_model': {varName}_model,");
         }
@@ -249,7 +249,7 @@ internal static class PicWaveNetlistEmitter
     private static Component? FindComponentByVar(string varName, IEnumerable<Component> pool)
     {
         foreach (var c in pool)
-            if (PicWaveIdentifier.ForVar(c) == varName)
+            if (SaxIdentifier.ForVar(c) == varName)
                 return c;
         return null;
     }
@@ -279,12 +279,12 @@ internal static class PicWaveNetlistEmitter
 
         foreach (var comp in components)
         {
-            var varName = PicWaveIdentifier.ForVar(comp);
+            var varName = SaxIdentifier.ForVar(comp);
             foreach (var pin in comp.PhysicalPins)
             {
                 if (usedPins.Contains((comp, pin.Name))) continue;
 
-                var pinId = PicWaveIdentifier.ForPin(pin.Name);
+                var pinId = SaxIdentifier.ForPin(pin.Name);
                 var portName = $"{varName}_{pinId}";
                 // Dedupe in the unlikely case two dangling pins collide after
                 // identifier sanitisation — suffix with an index.

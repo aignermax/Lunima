@@ -4,7 +4,7 @@
         x:Class="CAP.Avalonia.Views.Dialogs.VerilogAExportDialog"
         x:DataType="vm:VerilogAExportViewModel"
         Title="Export — Verilog-A / SPICE"
-        Width="440" Height="290"
+        Width="440" Height="380"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         Background="#1e1e1e"
@@ -26,6 +26,7 @@
             <Button Content="Close" x:Name="CloseButton" Width="70" Click="OnCloseClicked"/>
         </StackPanel>
 
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="10">
             <TextBlock Text="📊 Verilog-A / SPICE Export" FontSize="15" FontWeight="SemiBold"
                        Foreground="#7BC8A4"/>
@@ -46,10 +47,22 @@
                       IsChecked="{Binding IncludeTestBench}"
                       Foreground="White"/>
 
+            <!-- Tooling requirements: tells the user up-front which simulator
+                 chain the generated files target. Mirko hit this when the
+                 modules looked like "weird Verilog-A" in his usual flow —
+                 they're correct for OpenVAF + NGSpice OSDI, not arbitrary SPICE. -->
+            <Expander Header="ℹ Compatible simulators / known caveats"
+                      Foreground="LightGray" FontSize="10"
+                      IsExpanded="False">
+                <TextBlock Foreground="LightGray" FontSize="10" TextWrapping="Wrap"
+                           Text="Generated for the OpenVAF + NGSpice OSDI flow.&#x0a;&#x0a;• Compile each *.va to *.osdi with OpenVAF.&#x0a;• The SPICE test bench loads the OSDI artefacts via the NGSpice-specific 'pre_osdi' directive.&#x0a;• Each optical port is exported as TWO electrical nodes — *_re and *_im — because Verilog-A has no native complex voltages. Driving only the real node simulates a real-valued source; driving both reproduces the photonic complex amplitude.&#x0a;&#x0a;Other simulators (Cadence Spectre, Synopsys HSPICE, Mentor AMS) need adaptation — 'pre_osdi' is an NGSpice extension, and the twin-node model is a Lunima convention, not a Verilog-A standard."/>
+            </Expander>
+
             <!-- Status -->
             <TextBlock Text="{Binding StatusText}"
                        Foreground="LightGreen" FontSize="10" TextWrapping="Wrap"
                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         </StackPanel>
+        </ScrollViewer>
     </DockPanel>
 </Window>

@@ -5,14 +5,28 @@ using CAP_Core.Components.Connections;
 namespace CAP_Core.Export;
 
 /// <summary>
-/// Exports Lunima designs to a PICWave-compatible Python circuit-simulator script.
-/// Errors are loud: missing S-matrices on unrecognised components, unwired LogicalPins,
-/// port-less components, or S-matrices whose pin GUIDs drifted from the component's
-/// PhysicalPins all throw <see cref="InvalidOperationException"/> instead of emitting
-/// a silently-wrong stub. See the generated script header for notes on running the
-/// output against real PICWave (COM) or Simphony (open-source).
+/// Exports Lunima designs to a SAX-based Python circuit-simulator script
+/// (https://flaport.github.io/sax/) — also drops in to Simphony 0.7+, which
+/// builds on sax internally.
+///
+/// <para>
+/// Originally introduced as a "PICWave" export (issue #474), but the
+/// implementation has always emitted sax-based Python — the commercial
+/// PICWave (Photon Design) COM interface is not on disk. The class and UI
+/// label were renamed to match what the script actually does. See the
+/// generated script header for notes on adapting the netlist to the real
+/// PICWave COM API for users who have a license.
+/// </para>
+///
+/// <para>
+/// Errors are loud: missing S-matrices on unrecognised components,
+/// unwired LogicalPins, port-less components, or S-matrices whose pin
+/// GUIDs drifted from the component's PhysicalPins all throw
+/// <see cref="InvalidOperationException"/> instead of emitting a silently
+/// wrong stub.
+/// </para>
 /// </summary>
-public class PicWaveExporter
+public class SaxExporter
 {
     /// <summary>Target wavelength at which S-parameters are extracted.</summary>
     public const int DefaultWavelengthNm = 1550;
@@ -26,7 +40,7 @@ public class PicWaveExporter
     /// <summary>Default number of wavelength sweep points.</summary>
     public const int DefaultNumPoints = 100;
 
-    /// <summary>Exports the design to a PICWave Python script.</summary>
+    /// <summary>Exports the design to a SAX (Simphony-compatible) Python script.</summary>
     /// <param name="components">Flat list of components on the canvas. ComponentGroups are flattened.</param>
     /// <param name="connections">Waveguide connections between pins.</param>
     /// <param name="wavelengthNm">Wavelength at which to extract S-parameters.</param>
@@ -56,7 +70,7 @@ public class PicWaveExporter
         allConnections.AddRange(CollectInternalGroupConnections(topLevel));
         allConnections = DeduplicateConnections(allConnections);
 
-        return PicWaveScriptWriter.Write(
+        return SaxScriptWriter.Write(
             allComponents, allConnections,
             wavelengthNm, wavelengthMinNm, wavelengthMaxNm, numPoints);
     }

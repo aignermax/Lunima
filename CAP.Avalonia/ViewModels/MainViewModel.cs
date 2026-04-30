@@ -137,7 +137,7 @@ public partial class MainViewModel : ObservableObject
         DesignCanvasViewModel canvas,
         SimulationService simulationService,
         SimpleNazcaExporter nazcaExporter,
-        PicWaveExporter picWaveExporter,
+        SaxExporter saxExporter,
         Commands.CommandManager commandManager,
         UserPreferencesService preferencesService,
         Services.GroupPreviewGenerator previewGenerator,
@@ -170,7 +170,7 @@ public partial class MainViewModel : ObservableObject
 
         CanvasInteraction = new CanvasInteractionViewModel(_canvas, commandManager, LeftPanel.ComponentLibrary, previewGenerator, inputDialogService);
 
-        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, picWaveExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService);
+        FileOperations = new FileOperationsViewModel(_canvas, commandManager, nazcaExporter, saxExporter, LeftPanel.AllTemplates, gdsExportViewModel, photonTorchExport, verilogAExport, errorConsoleService);
         ViewportControl = viewportControl;
 
         // Link S-parameter import store so imported data is included in saves
@@ -182,7 +182,7 @@ public partial class MainViewModel : ObservableObject
         ExportMenu = new ExportMenuViewModel(new IExportFormat[]
         {
             new NazcaExportFormat(FileOperations.ExportNazcaCommand),
-            new PicWaveExportFormat(FileOperations.ExportPicWaveCommand),
+            new SaxExportFormat(FileOperations.ExportSaxCommand),
             PhotonTorchExportFormat,
             VerilogAExportFormat,
         });
@@ -458,7 +458,7 @@ public partial class MainViewModel : ObservableObject
     private async Task ExportNazca() => await FileOperations.ExportNazcaCommand.ExecuteAsync(null);
 
     [RelayCommand]
-    private async Task ExportPicWave() => await FileOperations.ExportPicWaveCommand.ExecuteAsync(null);
+    private async Task ExportSax() => await FileOperations.ExportSaxCommand.ExecuteAsync(null);
 
     [RelayCommand]
     private async Task LoadPdk() => await LeftPanel.LoadPdkCommand.ExecuteAsync(null);

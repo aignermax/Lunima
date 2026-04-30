@@ -79,7 +79,7 @@ public class GratingCouplerRotationTests
         // The component instance should be placed with rotation -0 = 0
         // With NazcaOriginOffset (50, 15), the placement is at:
         // nazcaX = 0 + 50 = 50, nazcaY = -(0 + 15) = -15
-        result.ShouldContain("demo_pdk_grating_coupler().put(50.00, -15.00, 0)");
+        result.ShouldContain("demo_pdk_grating_coupler().put('org', 50.00, -15.00, 0)");
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class GratingCouplerRotationTests
 
         // The component instance should be rotated: -180 = -180 (or 180)
         // In Nazca, -180 and 180 are equivalent
-        result.ShouldMatch(@"demo_pdk_grating_coupler\(\)\.put\([^,]+,\s*[^,]+,\s*-?180\)");
+        result.ShouldMatch(@"demo_pdk_grating_coupler\(\)\.put\('org',\s*[^,]+,\s*[^,]+,\s*-?180\)");
     }
 
     [Fact]
@@ -117,8 +117,8 @@ public class GratingCouplerRotationTests
 
         // Assert
         // The component should be rotated -90 degrees for Y-axis flip
-        result.ShouldContain("demo_pdk_grating_coupler().put(");
-        result.ShouldMatch(@"demo_pdk_grating_coupler\(\)\.put\([^,]+,\s*[^,]+,\s*-90\)");
+        result.ShouldContain("demo_pdk_grating_coupler().put('org', ");
+        result.ShouldMatch(@"demo_pdk_grating_coupler\(\)\.put\('org',\s*[^,]+,\s*[^,]+,\s*-90\)");
     }
 
     [Fact]
@@ -161,9 +161,10 @@ public class GratingCouplerRotationTests
         while (normalizedExpected < -180) normalizedExpected += 360;
         while (normalizedExpected > 180) normalizedExpected -= 360;
 
-        // Accept either the raw angle or the normalized angle
-        var pattern1 = $@"\.put\([^,]+,\s*[^,]+,\s*{expectedNazcaRotation:F0}\)";
-        var pattern2 = $@"\.put\([^,]+,\s*[^,]+,\s*{normalizedExpected:F0}\)";
+        // Accept either the raw angle or the normalized angle.
+        // Anchor pin is 'org' so the cell is placed by origin, not by a0.
+        var pattern1 = $@"\.put\('org',\s*[^,]+,\s*[^,]+,\s*{expectedNazcaRotation:F0}\)";
+        var pattern2 = $@"\.put\('org',\s*[^,]+,\s*[^,]+,\s*{normalizedExpected:F0}\)";
 
         bool matchesEither = System.Text.RegularExpressions.Regex.IsMatch(result, pattern1) ||
                             System.Text.RegularExpressions.Regex.IsMatch(result, pattern2);

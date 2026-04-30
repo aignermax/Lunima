@@ -15,7 +15,7 @@ namespace CAP_Core.Export;
 /// Two paths:
 /// <list type="bullet">
 ///   <item><description><b>Measured</b>: a <c>_s_&lt;var&gt;</c> dict is present
-///   (see <see cref="PicWaveSMatrixEmitter"/>). The model does a nearest-
+///   (see <see cref="SaxSMatrixEmitter"/>). The model does a nearest-
 ///   measured-wavelength lookup and rebuilds the SDict from the matrix.</description></item>
 ///   <item><description><b>Analytic waveguide</b>: a 2-port component whose
 ///   name matches a waveguide pattern. The model returns the canonical
@@ -26,7 +26,7 @@ namespace CAP_Core.Export;
 /// pattern.
 /// </para>
 /// </summary>
-internal static class PicWaveModelEmitter
+internal static class SaxModelEmitter
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -49,7 +49,7 @@ internal static class PicWaveModelEmitter
         var emitted = new HashSet<string>(StringComparer.Ordinal);
         foreach (var comp in components)
         {
-            var varName = PicWaveIdentifier.ForVar(comp);
+            var varName = SaxIdentifier.ForVar(comp);
             if (!emitted.Add(varName)) continue;
 
             if (comp.WaveLengthToSMatrixMap.Count > 0)
@@ -73,7 +73,7 @@ internal static class PicWaveModelEmitter
 
         // Emit one sdict entry per matrix index pair. Pin ordering is the
         // component's PhysicalPins order — this mirrors the matrix rows/cols
-        // produced by PicWaveSMatrixEmitter and PirSMatrixExtractor.
+        // produced by SaxSMatrixEmitter and PirSMatrixExtractor.
         sb.AppendLine("    return sax.reciprocal({");
         for (int r = 0; r < n; r++)
         {
@@ -82,8 +82,8 @@ internal static class PicWaveModelEmitter
                 // sax.reciprocal fills in (b, a) from (a, b); emit only the
                 // upper triangle (including diagonal) to avoid duplicate keys.
                 if (c < r) continue;
-                var from = PicWaveIdentifier.ForPin(comp.PhysicalPins[r].Name);
-                var to = PicWaveIdentifier.ForPin(comp.PhysicalPins[c].Name);
+                var from = SaxIdentifier.ForPin(comp.PhysicalPins[r].Name);
+                var to = SaxIdentifier.ForPin(comp.PhysicalPins[c].Name);
                 sb.AppendLine($"        ('{from}', '{to}'): complex(m[{r}, {c}]),");
             }
         }
@@ -131,8 +131,8 @@ internal static class PicWaveModelEmitter
         // Real designs should provide a length via the PDK once there's a
         // dedicated length field.
         double lengthUm = comp.WidthMicrometers > 0 ? comp.WidthMicrometers : 10.0;
-        var p0 = PicWaveIdentifier.ForPin(comp.PhysicalPins[0].Name);
-        var p1 = PicWaveIdentifier.ForPin(comp.PhysicalPins[1].Name);
+        var p0 = SaxIdentifier.ForPin(comp.PhysicalPins[0].Name);
+        var p1 = SaxIdentifier.ForPin(comp.PhysicalPins[1].Name);
 
         sb.AppendLine($"def {varName}_model(wl={DefaultWlUm.ToString(Inv)}, ");
         sb.AppendLine($"                    length_um={lengthUm.ToString("G6", Inv)}, ");

@@ -13,15 +13,15 @@ using Xunit;
 namespace UnitTests.Services;
 
 /// <summary>
-/// Structural tests for <see cref="PicWaveExporter"/>. These assert on the
+/// Structural tests for <see cref="SaxExporter"/>. These assert on the
 /// shape of the emitted sax-based Python script: presence of the expected
 /// netlist sections, correct pin-name routing through ComponentGroups, loud
 /// failures on unrecognised components. The "does the script actually run?"
-/// question lives in <see cref="UnitTests.Export.PicWaveScriptExecutionTests"/>.
+/// question lives in <see cref="UnitTests.Export.SaxScriptExecutionTests"/>.
 /// </summary>
-public class PicWaveExporterTests
+public class SaxExporterTests
 {
-    private readonly PicWaveExporter _exporter = new();
+    private readonly SaxExporter _exporter = new();
 
     // --- Helper factories ---
 
@@ -76,7 +76,7 @@ public class PicWaveExporterTests
     }
 
     [Fact]
-    public void Export_HeaderPointsAtSaxAndPicWaveCom_NotHallucinatedSimphonyApi()
+    public void Export_HeaderPointsAtSaxAndSaxCom_NotHallucinatedSimphonyApi()
     {
         var script = _exporter.Export([], []);
 

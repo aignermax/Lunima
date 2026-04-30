@@ -13,7 +13,7 @@ namespace CAP_Core.Export;
 /// script that runs after <c>pip install sax numpy matplotlib</c> without
 /// depending on a specific Simphony version's public surface.
 /// </summary>
-internal static class PicWaveScriptWriter
+internal static class SaxScriptWriter
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -34,9 +34,9 @@ internal static class PicWaveScriptWriter
         var sb = new StringBuilder();
         AppendHeader(sb);
         AppendImports(sb);
-        PicWaveSMatrixEmitter.AppendAll(sb, components);
-        PicWaveModelEmitter.AppendModels(sb, components, wavelengthNm);
-        PicWaveNetlistEmitter.AppendNetlistAndSweep(
+        SaxSMatrixEmitter.AppendAll(sb, components);
+        SaxModelEmitter.AppendModels(sb, components, wavelengthNm);
+        SaxNetlistEmitter.AppendNetlistAndSweep(
             sb, components, resolvedConnections,
             wavelengthMinNm, wavelengthMaxNm, numPoints);
         return sb.ToString();
@@ -116,7 +116,7 @@ internal readonly record struct ResolvedConnection(PhysicalPin Start, PhysicalPi
 /// Digits at the start are prefixed with <c>_</c>; non-alphanumeric runs collapse
 /// to a single underscore.
 /// </summary>
-internal static class PicWaveIdentifier
+internal static class SaxIdentifier
 {
     internal static string ForVar(Component comp)
     {
