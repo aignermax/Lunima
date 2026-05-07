@@ -259,6 +259,58 @@ public class PdkOffsetEditorLoadSaveTests
         }
     }
 
+    /// <summary>
+    /// Regression test for issue #518: whole-number doubles (e.g. nazcaOriginOffsetY: 6)
+    /// must be written as "6.0" in the saved JSON, not "6", so that a round-trip through
+    /// PdkJsonSaver does not churn hand-authored PDK files with 200+ cosmetic diff lines.
+    /// </summary>
+    [Fact]
+    public void SaveToFile_WholeNumberDoubles_AreWrittenWithDecimalPoint()
+    {
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            var pdk = new CAP_DataAccess.Components.ComponentDraftMapper.DTOs.PdkDraft
+            {
+                Name = "TestPdk",
+                Components = new()
+                {
+                    new()
+                    {
+                        Name = "Comp",
+                        NazcaFunction = "f",
+                        WidthMicrometers = 100,   // whole number
+                        HeightMicrometers = 20,   // whole number
+                        NazcaOriginOffsetX = 6,   // whole number
+                        NazcaOriginOffsetY = 0,   // whole number (zero)
+                        Pins = new()
+                        {
+                            new() { Name = "a0", OffsetXMicrometers = 0, OffsetYMicrometers = 2.5 }
+                        }
+                    }
+                }
+            };
+
+            new PdkJsonSaver().SaveToFile(pdk, tempFile);
+            var json = File.ReadAllText(tempFile);
+
+            // Whole-number doubles must use the decimal form
+            json.ShouldContain("\"widthMicrometers\": 100.0");
+            json.ShouldContain("\"heightMicrometers\": 20.0");
+            json.ShouldContain("\"nazcaOriginOffsetX\": 6.0");
+            json.ShouldContain("\"nazcaOriginOffsetY\": 0.0");
+            // Non-integer values must keep their natural precision
+            json.ShouldContain("\"offsetYMicrometers\": 2.5");
+            // The plain integer form must NOT appear for any double field
+            json.ShouldNotContain("\"widthMicrometers\": 100,");
+            json.ShouldNotContain("\"heightMicrometers\": 20,");
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
     private static CAP_DataAccess.Components.ComponentDraftMapper.DTOs.PdkDraft BuildMinimalPdk() =>
         new()
         {
