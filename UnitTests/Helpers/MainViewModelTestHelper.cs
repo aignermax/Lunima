@@ -4,6 +4,7 @@ using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
@@ -136,7 +137,8 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new OnaSweepViewModel());
     }
 
     /// <summary>

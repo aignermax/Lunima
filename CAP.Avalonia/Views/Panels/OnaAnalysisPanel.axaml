@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:oxy="using:OxyPlot.Avalonia"
+             x:Class="CAP.Avalonia.Views.Panels.OnaAnalysisPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="ONA — Wavelength Sweep:" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap">
+            Sweeps the simulation across a wavelength range and plots insertion loss (dB) vs wavelength.
+        </TextBlock>
+
+        <!-- Wavelength range inputs -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="Start (nm):" Foreground="Gray" VerticalAlignment="Center" Width="70"/>
+            <NumericUpDown Value="{Binding RightPanel.OnaAnalysis.StartNm}"
+                           Minimum="400" Maximum="2500"
+                           Increment="10" Width="110" FormatString="F0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="End (nm):" Foreground="Gray" VerticalAlignment="Center" Width="70"/>
+            <NumericUpDown Value="{Binding RightPanel.OnaAnalysis.EndNm}"
+                           Minimum="400" Maximum="2500"
+                           Increment="10" Width="110" FormatString="F0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="Steps:" Foreground="Gray" VerticalAlignment="Center" Width="70"/>
+            <NumericUpDown Value="{Binding RightPanel.OnaAnalysis.StepCount}"
+                           Minimum="2" Maximum="500"
+                           Increment="1" Width="110" FormatString="F0"/>
+        </StackPanel>
+
+        <!-- Action buttons -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,5" Spacing="6">
+            <Button Content="Run ONA" Command="{Binding RightPanel.OnaAnalysis.RunSweepCommand}"
+                    Width="90" Background="#3d5d5d"
+                    IsEnabled="{Binding RightPanel.OnaAnalysis.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+            <Button Content="Export CSV" Command="{Binding RightPanel.OnaAnalysis.ExportCsvCommand}"
+                    Width="90" Background="#3d3d5d"
+                    IsVisible="{Binding RightPanel.OnaAnalysis.HasResult}"/>
+        </StackPanel>
+
+        <!-- Status -->
+        <TextBlock Text="{Binding RightPanel.OnaAnalysis.StatusText}"
+                   Foreground="Gray" FontSize="10" Margin="0,0,0,4"
+                   IsVisible="{Binding RightPanel.OnaAnalysis.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Warnings -->
+        <ScrollViewer MaxHeight="80" Margin="0,0,0,4"
+                      IsVisible="{Binding RightPanel.OnaAnalysis.WarningText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding RightPanel.OnaAnalysis.WarningText}"
+                       Foreground="Gold" FontSize="9" TextWrapping="Wrap"/>
+        </ScrollViewer>
+
+        <!-- OxyPlot chart -->
+        <oxy:PlotView Model="{Binding RightPanel.OnaAnalysis.PlotModel}"
+                      Height="220" Margin="0,4,0,0"
+                      Background="#1e1e1e"
+                      IsVisible="{Binding RightPanel.OnaAnalysis.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+    </StackPanel>
+
+</UserControl>
