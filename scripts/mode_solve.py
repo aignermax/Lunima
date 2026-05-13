@@ -61,32 +61,35 @@ def _load_request():
     return json.loads(sys.stdin.read())
 
 
-def _write_result(result: dict):
-    """Write the JSON result to the real stdout."""
-    print(json.dumps(result), flush=True)
-
-
 # ---------------------------------------------------------------------------
 # Backend: gdsfactory.simulation.modes / femwell
 # ---------------------------------------------------------------------------
 
+_MISSING_PKG_SENTINEL = "__missing_pkg__:"
+
+
+def _missing_pkg(pkg: str) -> str:
+    """Return a sentinel string that _dispatch can recognise as a missing-package hint."""
+    return f"{_MISSING_PKG_SENTINEL}{pkg}"
+
+
 def _solve_gdsfactory(req: dict) -> tuple:
     """
     Attempt to solve using gdsfactory + femwell.
-    Returns (modes_list, None) on success or (None, missing_pkg_name) on
-    ImportError so the caller can surface a helpful install hint.
+    Returns (modes_list, None) on success or (None, sentinel) on ImportError
+    so the caller can surface a helpful install hint.
     """
     try:
         import gdsfactory as gf  # noqa: F401
     except ImportError:
-        return None, "gdsfactory"
+        return None, _missing_pkg("gdsfactory")
 
     # gdsfactory ≥ 7 ships mode solving via femwell under
     # gdsfactory.simulation.fem.mode_solver.  Earlier versions used
     # gdsfactory.simulation.modes.  Try both.
     solver_fn = _try_import_gdsfactory_solver()
     if solver_fn is None:
-        return None, "gdsfactory[femwell]"
+        return None, _missing_pkg("gdsfactory[femwell]")
 
     width       = req["width"]
     height      = req["height"]
@@ -191,13 +194,13 @@ def _solve_empy(req: dict) -> tuple:
     try:
         import EMpy  # noqa: F401
     except ImportError:
-        return None, "EMpy"
+        return None, _missing_pkg("EMpy")
 
     try:
         import numpy as np
         from EMpy.modesolvers.FD import VFDModeSolver
     except ImportError:
-        return None, "EMpy"
+        return None, _missing_pkg("EMpy")
 
     width       = float(req["width"])
     height      = float(req["height"])
@@ -275,7 +278,7 @@ def _solve_tidy3d(req: dict) -> tuple:
         import tidy3d as td
         import tidy3d.plugins.mode as mode_plugin
     except ImportError:
-        return None, "tidy3d"
+        return None, _missing_pkg("tidy3d")
 
     try:
         import numpy as np
@@ -323,6 +326,8 @@ def _solve_tidy3d(req: dict) -> tuple:
                     "mode_index":     i,
                     "n_eff":          n_eff,
                     "n_g":            n_g,
+                    # TODO: classify from data.Ex / data.Ey field magnitudes
+                    # instead of assuming TE for every mode.
                     "polarisation":   "TE",   # Tidy3D enumerates TE-first
                     "mode_field_png": None,
                 })
@@ -359,16 +364,15 @@ def _dispatch(req: dict) -> dict:
     modes, error = solver_fn(req)
 
     if modes is None:
-        # error may be a missing-package name or a solve-error string
-        if error and "." not in error and " " not in error:
-            # Looks like a bare package name → surface as missing_backend
+        if error and error.startswith(_MISSING_PKG_SENTINEL):
+            pkg = error[len(_MISSING_PKG_SENTINEL):]
             return {
                 "success":        False,
                 "error":          (
-                    f"Backend '{backend_name}' requires the '{error}' Python package. "
-                    f"Install it with: pip install {error}"
+                    f"Backend '{backend_name}' requires the '{pkg}' Python package. "
+                    f"Install it with: pip install {pkg}"
                 ),
-                "missing_backend": error,
+                "missing_backend": pkg,
             }
         return {"success": False, "error": str(error)}
 

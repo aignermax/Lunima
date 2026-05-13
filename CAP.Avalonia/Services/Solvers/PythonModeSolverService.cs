@@ -42,16 +42,17 @@ public class PythonModeSolverService : IModeSolverService
         try
         {
             using var process = new Process();
-            process.StartInfo = new ProcessStartInfo
+            var si = new ProcessStartInfo
             {
                 FileName = _pythonExecutable,
-                Arguments = $"\"{_scriptPath}\"",
                 RedirectStandardInput  = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true,
                 UseShellExecute  = false,
                 CreateNoWindow   = true,
             };
+            si.ArgumentList.Add(_scriptPath);
+            process.StartInfo = si;
 
             process.Start();
 
