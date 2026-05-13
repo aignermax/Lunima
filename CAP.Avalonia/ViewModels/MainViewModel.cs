@@ -660,6 +660,14 @@ public class DesignFileData
     public Dictionary<string, ComponentSMatrixData>? SMatrices { get; set; }
 
     /// <summary>
+    /// Per-instance Nazca function parameter overrides, keyed by component Identifier.
+    /// Null or empty for designs without Nazca overrides.
+    /// Each entry stores the overridden function name and parameters plus the original
+    /// template values to allow "Reset to template" after a project reload.
+    /// </summary>
+    public Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride>? NazcaOverrides { get; set; }
+
+    /// <summary>
     /// Most recent simulation results and any stored parameter sweep results.
     /// Null if no simulation has been run and saved.
     /// </summary>
