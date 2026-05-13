@@ -101,6 +101,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public AiAssistantViewModel AiAssistant { get; }
 
+    /// <summary>
+    /// ViewModel for the time-domain (transient) simulation panel.
+    /// </summary>
+    public TimeDomainViewModel TimeDomain { get; }
+
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
         DesignCanvasViewModel canvas,
@@ -116,7 +121,8 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrixViewModel groupSMatrix,
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
-        AiAssistantViewModel aiAssistant)
+        AiAssistantViewModel aiAssistant,
+        TimeDomainViewModel timeDomain)
     {
         _preferencesService = preferencesService;
 
@@ -132,11 +138,13 @@ public partial class RightPanelViewModel : ObservableObject
         ArchitectureReport = architectureReport;
         PdkConsistency = pdkConsistency;
         AiAssistant = aiAssistant;
+        TimeDomain = timeDomain;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
         DimensionValidator.Configure(canvas);
         CompressLayout.Configure(canvas);
+        TimeDomain.Configure(canvas);
     }
 
     /// <summary>

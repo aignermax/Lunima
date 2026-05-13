@@ -136,7 +136,8 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new TimeDomainViewModel());
     }
 
     /// <summary>

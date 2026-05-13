@@ -151,6 +151,7 @@ public partial class App : Application
         services.AddTransient<GroupSMatrixViewModel>();
         services.AddTransient<ArchitectureReportViewModel>();
         services.AddTransient<PdkConsistencyViewModel>();
+        services.AddTransient<TimeDomainViewModel>();
 
         // VerilogAExportViewModel: singleton so the dialog and FileOperations
         // share the same state.

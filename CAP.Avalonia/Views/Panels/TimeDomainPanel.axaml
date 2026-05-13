@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.TimeDomainPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Transient (Time-Domain):" Foreground="Plum" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap">
+            IFFT of S-parameters → impulse response → convolve with Gaussian pulse.
+            Linear circuits only (Phase 1).
+        </TextBlock>
+
+        <!-- Sweep parameters -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="λ centre (nm):" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
+            <NumericUpDown Value="{Binding RightPanel.TimeDomain.CenterWavelengthNm}"
+                           Minimum="800" Maximum="2000" Increment="10"
+                           Width="110" FormatString="F0"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="Span (nm):" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
+            <NumericUpDown Value="{Binding RightPanel.TimeDomain.SpanNm}"
+                           Minimum="1" Maximum="500" Increment="10"
+                           Width="110" FormatString="F0"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="Freq. points:" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
+            <NumericUpDown Value="{Binding RightPanel.TimeDomain.FreqPoints}"
+                           Minimum="16" Maximum="1024" Increment="64"
+                           Width="110" FormatString="F0"/>
+        </StackPanel>
+
+        <!-- Pulse parameters -->
+        <Separator Margin="0,8,0,8" Background="#2d2d2d"/>
+        <TextBlock Text="Gaussian input pulse:" Foreground="Gray" FontSize="10" Margin="0,0,0,4"/>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="Centre (ps):" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
+            <NumericUpDown Value="{Binding RightPanel.TimeDomain.PulseCenterPs}"
+                           Minimum="0" Maximum="100" Increment="0.5"
+                           Width="110" FormatString="F2"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="σ width (ps):" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
+            <NumericUpDown Value="{Binding RightPanel.TimeDomain.PulseSigmaPs}"
+                           Minimum="0.01" Maximum="50" Increment="0.1"
+                           Width="110" FormatString="F2"/>
+        </StackPanel>
+
+        <!-- Run button -->
+        <Button Content="Run Transient"
+                Command="{Binding RightPanel.TimeDomain.RunTransientCommand}"
+                Width="140" Margin="0,0,0,5" Background="#5d3d5d"
+                IsEnabled="{Binding RightPanel.TimeDomain.IsRunning, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Status -->
+        <TextBlock Text="{Binding RightPanel.TimeDomain.StatusText}"
+                   Foreground="Gray" FontSize="10" Margin="0,0,0,4"
+                   IsVisible="{Binding RightPanel.TimeDomain.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   TextWrapping="Wrap"/>
+
+        <!-- Result table -->
+        <ScrollViewer MaxHeight="180" Margin="0,4,0,0"
+                      IsVisible="{Binding RightPanel.TimeDomain.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding RightPanel.TimeDomain.ResultText}"
+                       Foreground="Plum" FontFamily="Consolas" FontSize="10"
+                       TextWrapping="NoWrap"/>
+        </ScrollViewer>
+
+        <!-- Export -->
+        <Button Content="Export CSV"
+                Command="{Binding RightPanel.TimeDomain.ExportCsvCommand}"
+                Width="110" Margin="0,5,0,0" Background="#3d3d5d"
+                IsVisible="{Binding RightPanel.TimeDomain.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </StackPanel>
+
+</UserControl>
