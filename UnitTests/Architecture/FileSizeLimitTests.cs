@@ -165,11 +165,15 @@ public class FileSizeLimitTests
     private static string GetRepositoryRoot()
     {
         var dir = Directory.GetCurrentDirectory();
-        while (dir != null && !Directory.Exists(Path.Combine(dir, ".git")))
+        while (dir != null)
         {
+            var gitPath = Path.Combine(dir, ".git");
+            // In a normal clone .git is a directory; in a git worktree it is a file.
+            if (Directory.Exists(gitPath) || File.Exists(gitPath))
+                return dir;
             dir = Directory.GetParent(dir)?.FullName;
         }
 
-        return dir ?? throw new InvalidOperationException("Could not find repository root (.git directory).");
+        throw new InvalidOperationException("Could not find repository root (.git directory or file).");
     }
 }

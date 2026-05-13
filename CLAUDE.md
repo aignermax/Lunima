@@ -16,6 +16,61 @@ C# / Avalonia / MVVM photonic simulation tool. Stability, clarity, and architect
 
 ---
 
+## 1.1 Vertical Slice Convention
+
+Lunima uses a **vertical-slice** layout: each feature ships with mirrored subfolders across all layers, named identically.
+
+### Folder pattern
+
+```
+Connect-A-Pic-Core/<DomainArea>/<FeatureName>/
+CAP-DataAccess/<RelevantArea>/<FeatureName>/   (only if persistence is touched)
+CAP.Avalonia/ViewModels/<RelevantArea>/<FeatureName>/
+CAP.Avalonia/Views/Panels/<FeatureName>Panel.axaml   (only for panel features)
+UnitTests/<RelevantArea>/<FeatureName>/
+```
+
+**Concrete examples:**
+- GDS preview (Issue #525): `CAP.Avalonia/Controls/Canvas/ComponentPreview/` + tests
+- ONA sweep (Issue #526): `Connect-A-Pic-Core/Analysis/OnaAnalysis/` + `CAP.Avalonia/ViewModels/Analysis/OnaAnalysis/` + tests
+- Time-domain (Issue #527): `Connect-A-Pic-Core/LightCalculation/TimeDomainSimulation/` + tests
+- Nazca override (Issue #528): `CAP.Avalonia/Services/ComponentInstanceOverride/` + tests
+
+### Cross-feature dependency rule
+
+A feature's code **must only** import from:
+- Its own namespace
+- The shared kernel (see allow-list below)
+- Platform / framework namespaces (`System.*`, `Avalonia.*`, `Microsoft.*`, `CommunityToolkit.*`)
+
+**Shared kernel allow-list:**
+`CAP_Core.Components`, `CAP_Core.Helpers`, `CAP_Core.Grid`, `CAP_Core.Tiles`,
+`CAP_Core.ExternalPorts`, `CAP_Core.Routing`, `CAP_Core.LightCalculation`,
+`CAP_Core.Resources`, `CAP_Contracts`, `CAP.Avalonia.Services`,
+`CAP.Avalonia.ViewModels.Canvas`, `CAP.Avalonia.ViewModels.Panels`, `CAP_DataAccess`
+
+Architecture tests in `UnitTests/Architecture/VerticalSliceConventionTests.cs` enforce this rule for enumerated features and will fail CI if violated.
+
+### DI registration
+
+Each feature group has a dedicated extension method in `CAP.Avalonia/DI/`:
+
+```csharp
+public static IServiceCollection AddExportFeature(this IServiceCollection s);
+public static IServiceCollection AddAiAssistantFeature(this IServiceCollection s);
+```
+
+`App.axaml.cs` calls these methods instead of raw `services.AddSingleton<X>()` lines.
+To add a service: add the registration inside the relevant extension method, not directly in `App.axaml.cs`.
+
+### What "vertical slice" is NOT
+
+- Prism, MediatR, or any modular plug-in framework — **not adopted**.
+- Splitting the solution into multiple `.csproj` files — **out of scope**.
+- Mandatory for every single file — **only for new cross-cutting features**.
+
+---
+
 ## 1. Architecture Rules
 
 - Follow SOLID principles strictly.
