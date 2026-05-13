@@ -61,7 +61,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
                 var inputVector = UsedInputConverter.ToVectorOfFields(usedInputs, systemMatrix);
 
                 int stepCount = systemMatrix.PinReference.Count * 2;
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var fields = await systemMatrix.CalcFieldAtPinsAfterStepsAsync(inputVector, stepCount, cts)
                     ?? new Dictionary<Guid, Complex>();
 
@@ -93,15 +93,31 @@ namespace CAP_Core.Analysis.OnaAnalysis
 
             foreach (var component in gridManager.TileManager.GetAllComponents())
             {
-                if (component.WaveLengthToSMatrixMap.Count == 1)
+                string key = component.NazcaFunctionName ?? component.Identifier;
+                var definedWavelengths = component.WaveLengthToSMatrixMap.Keys;
+
+                if (definedWavelengths.Count == 1)
                 {
-                    string key = component.NazcaFunctionName ?? component.Identifier;
                     if (seenTypes.Add(key))
                     {
                         warnings.Add(
                             $"Component '{key}' has only one defined wavelength " +
-                            $"({component.WaveLengthToSMatrixMap.Keys.First()} nm). " +
+                            $"({definedWavelengths.First()} nm). " +
                             "Nearest-neighbour fallback will be used — spectrum may appear flat.");
+                    }
+                }
+                else if (definedWavelengths.Count > 1)
+                {
+                    int minDefined = definedWavelengths.Min();
+                    int maxDefined = definedWavelengths.Max();
+                    bool sweepExtrapolates = config.StartNm < minDefined || config.EndNm > maxDefined;
+
+                    if (sweepExtrapolates && seenTypes.Add(key))
+                    {
+                        warnings.Add(
+                            $"Component '{key}' is defined only between {minDefined}–{maxDefined} nm " +
+                            $"but the sweep range is {config.StartNm}–{config.EndNm} nm. " +
+                            "Nearest-neighbour fallback will be used outside the defined bracket — results may be inaccurate.");
                     }
                 }
             }

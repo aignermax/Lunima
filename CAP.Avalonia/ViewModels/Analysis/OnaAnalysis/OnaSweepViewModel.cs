@@ -29,6 +29,9 @@ public partial class OnaSweepViewModel : ObservableObject
     [ObservableProperty] private string _warningText = "";
     [ObservableProperty] private PlotModel _plotModel = CreateEmptyPlotModel();
 
+    /// <summary>True when a completed sweep result is available to export.</summary>
+    public bool HasResult => _lastResult != null;
+
     private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
@@ -58,6 +61,7 @@ public partial class OnaSweepViewModel : ObservableObject
         StatusText = "Preparing ONA sweep...";
         WarningText = "";
         _lastResult = null;
+        OnPropertyChanged(nameof(HasResult));
 
         try
         {
@@ -75,6 +79,7 @@ public partial class OnaSweepViewModel : ObservableObject
 
             StatusText = $"Running ONA sweep ({StepCount} steps)...";
             _lastResult = await sweeper.RunSweepAsync(config, gridManager, cts.Token);
+            OnPropertyChanged(nameof(HasResult));
 
             if (_lastResult.Warnings.Count > 0)
                 WarningText = string.Join("\n", _lastResult.Warnings);

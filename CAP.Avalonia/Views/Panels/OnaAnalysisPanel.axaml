@@ -39,7 +39,7 @@
                     IsEnabled="{Binding RightPanel.OnaAnalysis.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
             <Button Content="Export CSV" Command="{Binding RightPanel.OnaAnalysis.ExportCsvCommand}"
                     Width="90" Background="#3d3d5d"
-                    IsVisible="{Binding RightPanel.OnaAnalysis.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    IsVisible="{Binding RightPanel.OnaAnalysis.HasResult}"/>
         </StackPanel>
 
         <!-- Status -->
