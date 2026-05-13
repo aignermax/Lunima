@@ -9,6 +9,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
 using CAP.Avalonia.Views.Dialogs;
 using CAP.Avalonia.Views.PdkImport;
+using CAP.Avalonia.ViewModels.Solvers;
 using System.ComponentModel;
 using System.Linq;
 
@@ -343,6 +344,17 @@ public partial class MainWindow : Window
 
         e.Handled = true;
         DesignCanvasControl.InvalidateVisual();
+    }
+
+    /// <summary>
+    /// Opens the "Compute Modes for Waveguide" dialog from the Tools menu.
+    /// </summary>
+    private void OpenModeSolverDialog_Click(object? sender, RoutedEventArgs e)
+    {
+        var vm = App.Services.GetService(typeof(ModeSolverViewModel)) as ModeSolverViewModel;
+        if (vm == null) return;
+        var dialog = new ModeSolverDialog { DataContext = vm };
+        dialog.Show(this);
     }
 
     private void ZoomToFitButton_Click(object? sender, RoutedEventArgs e)
