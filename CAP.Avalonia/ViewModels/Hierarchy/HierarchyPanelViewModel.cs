@@ -52,6 +52,13 @@ public partial class HierarchyPanelViewModel : ObservableObject
     /// </summary>
     public Func<string, bool>? CheckHasSMatrixOverride { get; set; }
 
+    /// <summary>
+    /// Returns <c>true</c> when a per-instance Nazca parameter override exists for the
+    /// given component identifier. Wired to <c>FileOperationsViewModel.StoredNazcaOverrides</c>
+    /// by <see cref="CAP.Avalonia.Views.MainWindow"/>.
+    /// </summary>
+    public Func<string, bool>? CheckHasNazcaOverride { get; set; }
+
     public HierarchyPanelViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -95,6 +102,7 @@ public partial class HierarchyPanelViewModel : ObservableObject
     private void RefreshOverrideMarkersRecursive(HierarchyNodeViewModel node)
     {
         node.HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(node.Component.Identifier) ?? false;
+        node.HasNazcaOverride = CheckHasNazcaOverride?.Invoke(node.Component.Identifier) ?? false;
         foreach (var child in node.Children)
             RefreshOverrideMarkersRecursive(child);
     }
@@ -111,7 +119,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
             SelectionRequested = SelectComponent,
             RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName),
             OpenSettingsRequested = n => OpenComponentSettings?.Invoke(n),
-            HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(component.Identifier) ?? false
+            HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(component.Identifier) ?? false,
+            HasNazcaOverride = CheckHasNazcaOverride?.Invoke(component.Identifier) ?? false
         };
 
         // If this is a group, recursively add its children

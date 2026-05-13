@@ -52,6 +52,13 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     public Dictionary<string, ComponentSMatrixData> StoredSMatrices { get; } = new();
 
+    /// <summary>
+    /// Per-instance Nazca function parameter overrides. Keyed by component Identifier;
+    /// values hold the override and the original template values for reset.
+    /// Serialised to/from the .lun file's <c>NazcaOverrides</c> section.
+    /// </summary>
+    public Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride> StoredNazcaOverrides { get; } = new();
+
     [ObservableProperty]
     private bool _hasUnsavedChanges;
 
@@ -165,6 +172,7 @@ public partial class FileOperationsViewModel : ObservableObject
         }
 
         ApplyUserGlobalOverrides(addedComponents);
+        ApplyAllNazcaOverrides(addedComponents);
     }
 
     /// <summary>
@@ -298,6 +306,8 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.Metadata = BuildMetadataForSave();
             if (StoredSMatrices.Count > 0)
                 designData.SMatrices = new Dictionary<string, ComponentSMatrixData>(StoredSMatrices);
+            if (StoredNazcaOverrides.Count > 0)
+                designData.NazcaOverrides = new Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride>(StoredNazcaOverrides);
             designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
             designData.ChipHeightMicrometers = _canvas.ChipMaxY;
 
@@ -744,6 +754,16 @@ public partial class FileOperationsViewModel : ObservableObject
                     ApplyUserGlobalOverrides(_canvas.Components.Select(vm => vm.Component));
                 }
 
+                // Restore per-instance Nazca overrides and apply them to live components
+                StoredNazcaOverrides.Clear();
+                if (designData.NazcaOverrides != null)
+                {
+                    foreach (var kv in designData.NazcaOverrides)
+                        StoredNazcaOverrides[kv.Key] = kv.Value;
+
+                    ApplyAllNazcaOverrides(_canvas.Components.Select(vm => vm.Component));
+                }
+
                 _currentFilePath = filePath;
                 HasUnsavedChanges = false;
                 UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
@@ -831,6 +851,28 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas.ConnectionManager.Clear();
         _commandManager.ClearHistory();
         StoredSMatrices.Clear();
+        StoredNazcaOverrides.Clear();
+    }
+
+    /// <summary>
+    /// Applies any stored per-instance Nazca overrides to the given components.
+    /// Called on project load and when a new component is added to the canvas.
+    /// </summary>
+    private void ApplyAllNazcaOverrides(IEnumerable<Component> components)
+    {
+        if (StoredNazcaOverrides.Count == 0)
+            return;
+
+        foreach (var component in components)
+        {
+            if (StoredNazcaOverrides.TryGetValue(component.Identifier, out var nazcaOverride))
+            {
+                component.NazcaFunctionName = nazcaOverride.FunctionName ?? component.NazcaFunctionName;
+                component.NazcaFunctionParameters = nazcaOverride.FunctionParameters ?? component.NazcaFunctionParameters;
+                if (nazcaOverride.ModuleName != null)
+                    component.NazcaModuleName = nazcaOverride.ModuleName;
+            }
+        }
     }
 
     /// <summary>

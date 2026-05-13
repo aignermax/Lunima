@@ -124,6 +124,10 @@ public partial class MainWindow : Window
                 vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
                     id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
 
+                // Wire up per-instance Nazca override marker in hierarchy
+                vm.LeftPanel.HierarchyPanel.CheckHasNazcaOverride =
+                    id => vm.FileOperations.StoredNazcaOverrides.ContainsKey(id);
+
                 // Initial badge population for PDK templates (covers user-global
                 // overrides loaded from disk on app start). Updated again every
                 // time the dialog mutates the user store, see ShowComponentSettingsDialog.
@@ -567,6 +571,30 @@ public partial class MainWindow : Window
                 .ToList();
         }
 
+        // Resolve Nazca template values for per-instance mode.
+        // When no override is stored yet, the live component's current values ARE the template values.
+        // When an override was applied from a previous session, use the saved template reference
+        // from within the stored override record so "Reset to template" always targets the
+        // correct PDK defaults rather than the already-overridden live values.
+        string? templateFunctionName = null;
+        string? templateFunctionParameters = null;
+        string? templateModuleName = null;
+        if (liveComponent != null)
+        {
+            if (vm.FileOperations.StoredNazcaOverrides.TryGetValue(entityKey, out var existingNazca))
+            {
+                templateFunctionName = existingNazca.TemplateFunctionName ?? liveComponent.NazcaFunctionName;
+                templateFunctionParameters = existingNazca.TemplateFunctionParameters ?? liveComponent.NazcaFunctionParameters;
+                templateModuleName = existingNazca.TemplateModuleName ?? liveComponent.NazcaModuleName;
+            }
+            else
+            {
+                templateFunctionName = liveComponent.NazcaFunctionName;
+                templateFunctionParameters = liveComponent.NazcaFunctionParameters;
+                templateModuleName = liveComponent.NazcaModuleName;
+            }
+        }
+
         dialogVm.Configure(
             entityKey,
             displayName,
@@ -576,7 +604,11 @@ public partial class MainWindow : Window
             isUserGlobalScope: isTemplateMode,
             effectiveSMatrices: effectiveSMatrices,
             effectivePins: effectivePins,
-            availablePinNames: availablePinNames);
+            availablePinNames: availablePinNames,
+            storedNazcaOverrides: isTemplateMode ? null : vm.FileOperations.StoredNazcaOverrides,
+            templateFunctionName: templateFunctionName,
+            templateFunctionParameters: templateFunctionParameters,
+            templateModuleName: templateModuleName);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);
