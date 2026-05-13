@@ -1,3 +1,4 @@
+using Avalonia.Media.Imaging;
 using CAP_Core.Export;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
@@ -13,4 +14,13 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 public sealed record GdsPreviewData(
     NazcaPreviewResult Result,
     double WidthMicrometers,
-    double HeightMicrometers);
+    double HeightMicrometers)
+{
+    /// <summary>
+    /// Pre-rasterised bitmap created on the UI thread after polygon fetch.
+    /// Null only during the brief window between cache population and bitmap creation.
+    /// When non-null, <see cref="GdsPolygonRenderer.DrawGdsPreview"/> blits this
+    /// directly instead of rebuilding geometry.
+    /// </summary>
+    public RenderTargetBitmap? Bitmap { get; init; }
+}

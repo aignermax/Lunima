@@ -24,6 +24,9 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// </remarks>
 public sealed class GdsPreviewRenderService
 {
+    /// <summary>Lower bound on bitmap dimensions to avoid zero-size bitmaps.</summary>
+    internal const int MinBitmapPixels = 16;
+
     private readonly NazcaComponentPreviewService _previewService;
     private readonly GdsPreviewCache _cache = new();
 
@@ -94,18 +97,27 @@ public sealed class GdsPreviewRenderService
         {
             result = NazcaPreviewResult.Fail("Unexpected error during GDS preview fetch.");
         }
-        finally
-        {
-            _pendingFetches.TryRemove(cacheKey, out _);
-        }
 
         var data = result.Success && result.Polygons.Count > 0
             ? new GdsPreviewData(result, comp.Width, comp.Height)
             : null;
 
+        // Cache before removing the pending-fetch marker so a concurrent caller
+        // that arrives between these two lines will find the cached entry rather
+        // than enqueue a duplicate fetch.
         _cache.Set(cacheKey, data);
+        _pendingFetches.TryRemove(cacheKey, out _);
 
         if (data != null)
-            Dispatcher.UIThread.Post(() => OnPreviewLoaded?.Invoke());
+        {
+            int bitmapW = Math.Max(GdsPreviewRenderService.MinBitmapPixels, (int)Math.Ceiling(comp.Width));
+            int bitmapH = Math.Max(GdsPreviewRenderService.MinBitmapPixels, (int)Math.Ceiling(comp.Height));
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var bitmap = GdsPolygonRenderer.RasterizeToBitmap(data.Result, bitmapW, bitmapH);
+                _cache.Set(cacheKey, data with { Bitmap = bitmap });
+                OnPreviewLoaded?.Invoke();
+            });
+        }
     }
 }

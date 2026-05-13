@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Export;
 
@@ -12,21 +13,29 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// </summary>
 public static class GdsPolygonRenderer
 {
-    // ── Layer colour palette ────────────────────────────────────────────────
+    // ── Layer colour palette (static readonly — never allocate per-frame) ───
     // Add new layers here without touching any other file.
 
-    private static readonly Color WaveguideColor = Color.FromArgb(180, 100, 160, 220); // layer 1/0
-    private static readonly Color PortColor      = Color.FromArgb(140,  60, 200, 120); // layer 1/10 PinRec
-    private static readonly Color DefaultColor   = Color.FromArgb(120, 160, 160, 160); // all other layers
+    private static readonly IBrush WaveguideBrush = new SolidColorBrush(Color.FromArgb(180, 100, 160, 220)); // layer 1
+    private static readonly IBrush DefaultBrush   = new SolidColorBrush(Color.FromArgb(120, 160, 160, 160)); // all other layers
 
     private const int WaveguideLayer = 1;
-    private const int PortLayer      = 10;
+
+    /// <summary>
+    /// Bitmap width/height used when rasterising a preview at exact pixel dimensions.
+    /// Used as a lower bound to avoid zero-size bitmaps.
+    /// </summary>
+    private const int MinBitmapPixels = 16;
 
     // ── Public API ─────────────────────────────────────────────────────────
 
     /// <summary>
     /// Renders GDS polygons for <paramref name="comp"/> using
     /// <paramref name="previewData"/>. No-ops when the result has no polygons.
+    /// When a pre-rasterised <see cref="GdsPreviewData.Bitmap"/> is available the
+    /// method blits it directly (O(1) per frame). Otherwise it falls back to
+    /// rebuilding geometry — this only occurs in the brief window between cache
+    /// population and bitmap creation on the UI thread.
     /// </summary>
     /// <param name="context">Avalonia drawing context (world-space transform already active).</param>
     /// <param name="previewData">Cached preview data for the component template.</param>
@@ -40,26 +49,53 @@ public static class GdsPolygonRenderer
         if (result.Polygons.Count == 0)
             return;
 
-        double bboxW = result.XMax - result.XMin;
-        double bboxH = result.YMax - result.YMin;
-        if (bboxW <= 0 || bboxH <= 0)
-            return;
-
-        double scaleX = comp.Width  / bboxW;
-        double scaleY = comp.Height / bboxH;
-
         double centerX = comp.X + comp.Width  / 2.0;
         double centerY = comp.Y + comp.Height / 2.0;
+        var destRect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
 
         using (context.PushTransform(BuildRotationMatrix(comp.Component.RotationDegrees, centerX, centerY)))
         {
+            if (previewData.Bitmap != null)
+            {
+                context.DrawImage(previewData.Bitmap, destRect);
+                return;
+            }
+
+            // Fallback: rebuild geometry (only during the brief pre-bitmap window)
+            DrawPolygonsAsGeometry(context, result, comp.X, comp.Y, comp.Width, comp.Height);
+        }
+    }
+
+    /// <summary>
+    /// Rasterises all polygons in <paramref name="result"/> to a
+    /// <see cref="RenderTargetBitmap"/> at the requested pixel dimensions.
+    /// Must be called on the UI thread.
+    /// Returns <c>null</c> if the bbox is degenerate or bitmap creation fails.
+    /// </summary>
+    internal static RenderTargetBitmap? RasterizeToBitmap(NazcaPreviewResult result, int width, int height)
+    {
+        double bboxW = result.XMax - result.XMin;
+        double bboxH = result.YMax - result.YMin;
+        if (bboxW <= 0 || bboxH <= 0)
+            return null;
+
+        double scaleX = width  / bboxW;
+        double scaleY = height / bboxH;
+
+        try
+        {
+            var bitmap = new RenderTargetBitmap(new PixelSize(width, height));
+            using var ctx = bitmap.CreateDrawingContext();
             foreach (var poly in result.Polygons)
             {
-                var geometry = BuildPolygonGeometry(
-                    poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, comp.X, comp.Y);
-                var brush = new SolidColorBrush(LayerColor(poly.Layer));
-                context.DrawGeometry(brush, null, geometry);
+                var geo = BuildPolygonGeometry(poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, 0, 0);
+                ctx.DrawGeometry(GetBrushForLayer(poly.Layer), null, geo);
             }
+            return bitmap;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -98,6 +134,27 @@ public static class GdsPolygonRenderer
 
     // ── Private helpers ─────────────────────────────────────────────────────
 
+    private static void DrawPolygonsAsGeometry(
+        DrawingContext context,
+        NazcaPreviewResult result,
+        double compX, double compY,
+        double compWidth, double compHeight)
+    {
+        double bboxW = result.XMax - result.XMin;
+        double bboxH = result.YMax - result.YMin;
+        if (bboxW <= 0 || bboxH <= 0)
+            return;
+
+        double scaleX = compWidth  / bboxW;
+        double scaleY = compHeight / bboxH;
+
+        foreach (var poly in result.Polygons)
+        {
+            var geo = BuildPolygonGeometry(poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, compX, compY);
+            context.DrawGeometry(GetBrushForLayer(poly.Layer), null, geo);
+        }
+    }
+
     private static StreamGeometry BuildPolygonGeometry(
         IReadOnlyList<(double X, double Y)> vertices,
         double xMin, double yMax,
@@ -117,10 +174,9 @@ public static class GdsPolygonRenderer
         return geo;
     }
 
-    private static Color LayerColor(int layer) => layer switch
+    private static IBrush GetBrushForLayer(int layer) => layer switch
     {
-        WaveguideLayer => WaveguideColor,
-        PortLayer      => PortColor,
-        _              => DefaultColor,
+        WaveguideLayer => WaveguideBrush,
+        _              => DefaultBrush,
     };
 }
