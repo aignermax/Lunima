@@ -118,7 +118,8 @@ public class DesignCanvas : Control
             MainViewModel = MainViewModel,
             InteractionState = _interactionState,
             Zoom = Zoom,
-            Bounds = Bounds
+            Bounds = Bounds,
+            GdsPreviewRenderService = MainViewModel?.GdsPreviewRenderService
         };
 
         context.FillRectangle(Brushes.Black, Bounds);
@@ -252,9 +253,15 @@ public class DesignCanvas : Control
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
     {
         if (e.OldValue is MainViewModel oldVm)
+        {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
+            oldVm.GdsPreviewRenderService.OnPreviewLoaded = null;
+        }
         if (e.NewValue is MainViewModel newVm)
+        {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
+            newVm.GdsPreviewRenderService.OnPreviewLoaded = InvalidateVisual;
+        }
     }
 
     private void OnViewModelChanged(AvaloniaPropertyChangedEventArgs e)

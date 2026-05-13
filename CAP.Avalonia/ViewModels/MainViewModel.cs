@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components.Core;
 using CAP_Core;
 using CAP.Avalonia.Commands;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -120,6 +121,13 @@ public partial class MainViewModel : ObservableObject
     public PdkOffsetEditorViewModel PdkOffsetEditor { get; }
 
     /// <summary>
+    /// Service that fetches and caches GDS polygon previews for canvas components.
+    /// Exposed so <see cref="CAP.Avalonia.Controls.DesignCanvas"/> can wire up a
+    /// repaint callback and pass the service into the render context.
+    /// </summary>
+    public GdsPreviewRenderService GdsPreviewRenderService { get; }
+
+    /// <summary>
     /// Bottom-panel error console service. Exposed so view-layer wiring helpers
     /// (e.g. <see cref="CAP.Avalonia.Views.Dialogs.ExportDialogWiring"/>) can persist
     /// failures that would otherwise only flash through the ephemeral status bar.
@@ -152,12 +160,14 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Export.PhotonTorchExportViewModel photonTorchExport,
         ViewModels.Export.VerilogAExportViewModel verilogAExport,
         ViewModels.Canvas.ChipSizeViewModel chipSize,
-        Services.UserSMatrixOverrideStore userSMatrixOverrideStore)
+        Services.UserSMatrixOverrideStore userSMatrixOverrideStore,
+        GdsPreviewRenderService gdsPreviewRenderService)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
         _canvas = canvas;
         PdkOffsetEditor = pdkOffsetEditor;
+        GdsPreviewRenderService = gdsPreviewRenderService;
         ErrorConsole = errorConsoleService;
         ChipSize = chipSize;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();

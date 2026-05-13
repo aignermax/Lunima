@@ -13,6 +13,7 @@ using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP.Avalonia.ViewModels.Settings;
@@ -194,6 +195,8 @@ public partial class App : Application
             sp.GetRequiredService<PdkJsonSaver>(),
             sp.GetRequiredService<PdkManagerViewModel>(),
             sp.GetRequiredService<NazcaComponentPreviewService>()));
+        services.AddSingleton(sp =>
+            new GdsPreviewRenderService(sp.GetRequiredService<NazcaComponentPreviewService>()));
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();

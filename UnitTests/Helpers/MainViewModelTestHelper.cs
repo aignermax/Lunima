@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using CAP.Avalonia.Commands;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Analysis;
@@ -83,7 +84,8 @@ public static class MainViewModelTestHelper
             // Test-isolated user S-matrix store: a unique temp path per call so
             // tests don't contaminate each other or the developer's real file.
             new CAP.Avalonia.Services.UserSMatrixOverrideStore(
-                Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")));
+                Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")),
+            new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")));
     }
 
     /// <summary>

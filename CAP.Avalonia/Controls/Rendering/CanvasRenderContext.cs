@@ -1,4 +1,5 @@
 using Avalonia;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 
@@ -24,4 +25,11 @@ public sealed class CanvasRenderContext
 
     /// <summary>Gets the canvas control bounds in screen coordinates.</summary>
     public Rect Bounds { get; init; }
+
+    /// <summary>
+    /// Gets the GDS preview render service used to supply polygon thumbnails to
+    /// <see cref="CAP.Avalonia.Controls.Rendering.ComponentRenderer"/>.
+    /// <c>null</c> when the service is not available (e.g. design-time).
+    /// </summary>
+    public GdsPreviewRenderService? GdsPreviewRenderService { get; init; }
 }
