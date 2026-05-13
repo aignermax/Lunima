@@ -5,8 +5,11 @@ namespace CAP_Core.LightCalculation.TimeDomainSimulation;
 /// <summary>
 /// Orchestrates circuit-level time-domain simulation via IFFT of S-parameters.
 /// Phase 1: linear circuits only (nonlinear connections cause an exception).
+/// Implements <see cref="ILightCalculator"/> for polymorphic registration alongside
+/// <see cref="GridLightCalculator"/>; steady-state field propagation is not applicable
+/// for time-domain mode — use <see cref="Run"/> instead.
 /// </summary>
-public class TimeDomainSimulator
+public class TimeDomainSimulator : ILightCalculator
 {
     /// <summary>Default centre wavelength in nm.</summary>
     public const double DefaultCenterWavelengthNm = 1550;
@@ -67,36 +70,44 @@ public class TimeDomainSimulator
 
         foreach (var outputPin in outputPinIds)
         {
-            double[]? combinedField = null;
+            double[]? combinedIntensity = null;
 
             foreach (var ir in impulseResponses.Where(r => r.OutputPinId == outputPin))
             {
                 if (!inputSignals.TryGetValue(ir.InputPinId, out var inputSignal))
                     continue;
 
-                // Convolve input signal with impulse response, get real-valued field output
-                var fieldSamples = TimeDomainConvolver.Convolve(inputSignal, ir.Samples);
-                var realField = ToRealField(fieldSamples, timeDef.NSamples);
+                // Convolve input signal with impulse response → intensity |y(t)|² = Re²+Im²
+                var intensity = TimeDomainConvolver.ConvolveToIntensity(inputSignal, ir.Samples);
+                var trimmed = TrimToLength(intensity, timeDef.NSamples);
 
-                combinedField = combinedField == null
-                    ? realField
-                    : SumArrays(combinedField, realField);
+                combinedIntensity = combinedIntensity == null
+                    ? trimmed
+                    : SumArrays(combinedIntensity, trimmed);
             }
 
-            if (combinedField != null)
-                outputTraces[outputPin] = combinedField.Select(v => v * v).ToArray();
+            if (combinedIntensity != null)
+                outputTraces[outputPin] = combinedIntensity;
         }
 
         return new TimeDomainResult(timeDef.TimeAxis, outputTraces);
     }
 
-    /// <summary>Extracts the real part of complex field samples, trimmed to <paramref name="length"/>.</summary>
-    private static double[] ToRealField(Complex[] complexField, int length)
+    /// <summary>
+    /// Not applicable for time-domain simulation. Returns an empty dictionary so that
+    /// <see cref="TimeDomainSimulator"/> can be registered as <see cref="ILightCalculator"/>
+    /// alongside <see cref="GridLightCalculator"/>. Use <see cref="Run"/> for transient analysis.
+    /// </summary>
+    public Task<Dictionary<Guid, Complex>> CalculateFieldPropagationAsync(
+        CancellationTokenSource cancelToken, int LaserWaveLengthInNm)
+        => Task.FromResult(new Dictionary<Guid, Complex>());
+
+    /// <summary>Trims or zero-pads <paramref name="source"/> to exactly <paramref name="length"/> samples.</summary>
+    private static double[] TrimToLength(double[] source, int length)
     {
-        int len = Math.Min(length, complexField.Length);
+        if (source.Length == length) return source;
         var result = new double[length];
-        for (int i = 0; i < len; i++)
-            result[i] = complexField[i].Real;
+        Array.Copy(source, result, Math.Min(length, source.Length));
         return result;
     }
 
@@ -105,11 +116,7 @@ public class TimeDomainSimulator
         int len = Math.Max(a.Length, b.Length);
         var result = new double[len];
         for (int i = 0; i < len; i++)
-        {
-            double va = i < a.Length ? a[i] : 0;
-            double vb = i < b.Length ? b[i] : 0;
-            result[i] = va + vb;
-        }
+            result[i] = (i < a.Length ? a[i] : 0) + (i < b.Length ? b[i] : 0);
         return result;
     }
 }

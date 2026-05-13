@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.ComponentHelpers;
@@ -37,6 +36,13 @@ public partial class TimeDomainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isRunning;
+
+    /// <summary>
+    /// True = Time Domain (Transient) mode active; False = Frequency Domain (CW) mode active.
+    /// Controls which simulation mode is visible in the panel.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isTimeDomainMode = true;
 
     [ObservableProperty]
     private string _statusText = "";
@@ -87,7 +93,7 @@ public partial class TimeDomainViewModel : ObservableObject
         {
             var result = await Task.Run(() => RunSimulationCore());
             _lastResult = result;
-            ResultText = FormatResult(result);
+            ResultText = TimeDomainResultFormatter.FormatResult(result);
             StatusText = $"Done — {result.PinTraces.Count} output pin(s)";
         }
         catch (InvalidOperationException ex)
@@ -129,7 +135,7 @@ public partial class TimeDomainViewModel : ObservableObject
                 return;
             }
 
-            var csv = BuildCsvContent(_lastResult);
+            var csv = TimeDomainResultFormatter.BuildCsvContent(_lastResult);
             await File.WriteAllTextAsync(path, csv);
             StatusText = $"Exported to {Path.GetFileName(path)}";
         }
@@ -207,51 +213,4 @@ public partial class TimeDomainViewModel : ObservableObject
         return signals;
     }
 
-    private static string FormatResult(TimeDomainResult result)
-    {
-        if (result.PinTraces.Count == 0) return "No signal at any output pin.";
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"{"Pin (short)",-20} {"Peak Power",12} {"Peak Time (ps)",14}");
-        sb.AppendLine(new string('-', 48));
-
-        double dt = result.TimeAxis.Length > 1
-            ? result.TimeAxis[1] - result.TimeAxis[0]
-            : 1e-12;
-
-        foreach (var (pinId, trace) in result.PinTraces)
-        {
-            if (trace.Max() < 1e-12) continue;
-            int peakIdx = trace.Select((v, i) => (v, i)).MaxBy(x => x.v).i;
-            double peakPs = result.TimeAxis[peakIdx] * 1e12;
-            string shortId = pinId.ToString()[..6];
-            sb.AppendLine($"{shortId,-20} {trace[peakIdx],12:F6} {peakPs,14:F2}");
-        }
-        return sb.ToString();
-    }
-
-    private static string BuildCsvContent(TimeDomainResult result)
-    {
-        var sb = new StringBuilder();
-
-        // Header: time, then one column per output pin
-        sb.Append("time_ps");
-        var pinIds = result.PinTraces.Keys.ToList();
-        foreach (var pid in pinIds)
-            sb.Append($",pin_{pid.ToString()[..8]}");
-        sb.AppendLine();
-
-        for (int n = 0; n < result.TimeAxis.Length; n++)
-        {
-            sb.Append($"{result.TimeAxis[n] * 1e12:F4}");
-            foreach (var pid in pinIds)
-            {
-                var trace = result.PinTraces[pid];
-                double val = n < trace.Length ? trace[n] : 0;
-                sb.Append($",{val:F8}");
-            }
-            sb.AppendLine();
-        }
-        return sb.ToString();
-    }
 }

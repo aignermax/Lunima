@@ -39,7 +39,7 @@ public class ImpulseResponseBuilder
         if (nPoints < 2) throw new ArgumentOutOfRangeException(nameof(nPoints), "Need at least 2 frequency points.");
         if (spanNm <= 0) throw new ArgumentOutOfRangeException(nameof(spanNm));
 
-        WarnIfMemoryExceeded(nPoints);
+        ThrowIfMemoryLimitExceeded(nPoints);
 
         var (freqGrid, dt) = BuildFrequencyGrid(centerWavelengthNm, spanNm, nPoints);
 
@@ -124,7 +124,7 @@ public class ImpulseResponseBuilder
     private static int FreqToWavelengthNmInt(double freqHz) =>
         (int)Math.Round(SpeedOfLightNmPerS / freqHz);
 
-    private static void WarnIfMemoryExceeded(int nPoints)
+    private static void ThrowIfMemoryLimitExceeded(int nPoints)
     {
         // Rough estimate: 200 connections × N points × 16 bytes/complex × 2 (hFreq + ht)
         const int EstimatedConnections = 200;

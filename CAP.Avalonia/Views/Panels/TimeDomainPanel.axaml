@@ -7,6 +7,28 @@
     <StackPanel>
         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
         <TextBlock Text="Transient (Time-Domain):" Foreground="Plum" Margin="0,0,0,5" FontWeight="SemiBold"/>
+
+        <!-- Mode selector: flips between frequency-domain and time-domain without restart -->
+        <TextBlock Text="Simulation mode:" Foreground="Gray" FontSize="10" Margin="0,0,0,4"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8" Spacing="10">
+            <RadioButton Content="Frequency Domain (CW)"
+                         GroupName="TimeDomainMode"
+                         IsChecked="{Binding RightPanel.TimeDomain.IsTimeDomainMode, Converter={x:Static BoolConverters.Not}}"
+                         Foreground="LightGray" FontSize="10"/>
+            <RadioButton Content="Time Domain (Transient)"
+                         GroupName="TimeDomainMode"
+                         IsChecked="{Binding RightPanel.TimeDomain.IsTimeDomainMode}"
+                         Foreground="Plum" FontSize="10"/>
+        </StackPanel>
+
+        <!-- Frequency Domain hint (shown when CW mode is selected) -->
+        <TextBlock Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8"
+                   IsVisible="{Binding RightPanel.TimeDomain.IsTimeDomainMode, Converter={x:Static BoolConverters.Not}}">
+            Use "Run Simulation" (L key) for CW frequency-domain steady-state analysis.
+        </TextBlock>
+
+        <!-- Time-Domain controls (shown when Transient mode is selected) -->
+        <StackPanel IsVisible="{Binding RightPanel.TimeDomain.IsTimeDomainMode}">
         <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap">
             IFFT of S-parameters → impulse response → convolve with Gaussian pulse.
             Linear circuits only (Phase 1).
@@ -77,6 +99,7 @@
                 Command="{Binding RightPanel.TimeDomain.ExportCsvCommand}"
                 Width="110" Margin="0,5,0,0" Background="#3d3d5d"
                 IsVisible="{Binding RightPanel.TimeDomain.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel><!-- end Time-Domain controls -->
     </StackPanel>
 
 </UserControl>
