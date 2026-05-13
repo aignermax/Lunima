@@ -125,4 +125,61 @@ public class DispersionPdkExtensionsTests
 
         component.MaterialDispersion.ToDispersionModel().ShouldBeNull();
     }
+
+    [Fact]
+    public void GetNoDispersionDiagnostic_NoPdkWideAndNoComponentDispersion_ReturnsWarning()
+    {
+        var pdk = new PdkDraft
+        {
+            Name = "demo-pdk",
+            MaterialDispersion = null,
+            Components = new List<PdkComponentDraft>
+            {
+                new PdkComponentDraft { Name = "Waveguide", MaterialDispersion = null },
+                new PdkComponentDraft { Name = "MMI",       MaterialDispersion = null },
+            }
+        };
+
+        string? diagnostic = DispersionPdkExtensions.GetNoDispersionDiagnostic(pdk);
+
+        diagnostic.ShouldNotBeNull();
+        diagnostic.ShouldContain("demo-pdk");
+    }
+
+    [Fact]
+    public void GetNoDispersionDiagnostic_PdkWideDispersionSet_ReturnsNull()
+    {
+        var pdk = new PdkDraft
+        {
+            Name = "full-pdk",
+            MaterialDispersion = new MaterialDispersionDraft { Type = "polynomial", CenterWavelengthNm = 1550 },
+            Components = new List<PdkComponentDraft>
+            {
+                new PdkComponentDraft { Name = "Waveguide", MaterialDispersion = null },
+            }
+        };
+
+        DispersionPdkExtensions.GetNoDispersionDiagnostic(pdk).ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetNoDispersionDiagnostic_SingleComponentHasDispersion_ReturnsNull()
+    {
+        var pdk = new PdkDraft
+        {
+            Name = "partial-pdk",
+            MaterialDispersion = null,
+            Components = new List<PdkComponentDraft>
+            {
+                new PdkComponentDraft { Name = "Waveguide", MaterialDispersion = null },
+                new PdkComponentDraft
+                {
+                    Name = "Si Strip",
+                    MaterialDispersion = new MaterialDispersionDraft { Type = "polynomial", CenterWavelengthNm = 1550 }
+                },
+            }
+        };
+
+        DispersionPdkExtensions.GetNoDispersionDiagnostic(pdk).ShouldBeNull();
+    }
 }

@@ -24,11 +24,42 @@ public static class DispersionPdkExtensions
         if (draft == null)
             return null;
 
-        return draft.Type?.ToLowerInvariant() switch
+        string? type = draft.Type?.ToLowerInvariant();
+        if (type != null && type != "polynomial" && type != "tabulated")
+            System.Diagnostics.Trace.TraceWarning(
+                $"[DispersionPdkExtensions] Unknown materialDispersion type '{draft.Type}' — " +
+                "falling back to polynomial. Check PDK JSON for typos.");
+
+        return type switch
         {
             "tabulated" => BuildTabulated(draft, fallbackLossDbPerCm),
-            _ => BuildPolynomial(draft, fallbackLossDbPerCm),   // "polynomial" or unknown → polynomial
+            _ => BuildPolynomial(draft, fallbackLossDbPerCm),   // "polynomial" or null → polynomial
         };
+    }
+
+    /// <summary>
+    /// Returns a diagnostic warning when the PDK declares no <c>materialDispersion</c> block
+    /// on any component or at the PDK root.  Returns <c>null</c> when at least one dispersion
+    /// model is present.
+    /// </summary>
+    /// <remarks>
+    /// Call this before starting a multi-wavelength operation (ONA sweep, time-domain IFFT) so
+    /// that PDK authors are alerted rather than silently receiving a flat constant-loss curve.
+    /// </remarks>
+    /// <param name="pdk">The parsed PDK draft to inspect.</param>
+    /// <returns>
+    /// A human-readable warning string if no dispersion model is found; otherwise <c>null</c>.
+    /// </returns>
+    public static string? GetNoDispersionDiagnostic(PdkDraft pdk)
+    {
+        if (pdk.MaterialDispersion != null)
+            return null;
+        if (pdk.Components.Any(c => c.MaterialDispersion != null))
+            return null;
+
+        return $"PDK '{pdk.Name}' declares no materialDispersion block on any component or at the " +
+               "PDK root. Multi-wavelength operations (ONA, time-domain) will use flat " +
+               "constant-loss behaviour.";
     }
 
     // ---- private builders ----

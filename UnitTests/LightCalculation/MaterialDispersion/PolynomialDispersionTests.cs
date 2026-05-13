@@ -91,4 +91,25 @@ public class PolynomialDispersionTests
         Should.Throw<ArgumentOutOfRangeException>(() =>
             new PolynomialDispersion(0, n0: 2.45));
     }
+
+    [Fact]
+    public void RingResonator_FsrDrifts_AcrossWavelengthRange()
+    {
+        // FSR = λ²/(n_g · L)
+        // n_g varies with λ when n2 ≠ 0, so FSR shifts across the band.
+        // Using SiP-like parameters from the issue: n0=2.45, n1=-1e-3, n2=3.5e-8.
+        const double RingLengthNm = 50_000.0; // 50 µm ring circumference in nm
+        var model = new PolynomialDispersion(Lambda0, n0: 2.45, n1: -1e-3, n2: 3.5e-8);
+
+        double ng1500 = model.GroupIndexAt(1500.0);
+        double ng1600 = model.GroupIndexAt(1600.0);
+
+        double fsr1500 = (1500.0 * 1500.0) / (ng1500 * RingLengthNm);
+        double fsr1600 = (1600.0 * 1600.0) / (ng1600 * RingLengthNm);
+
+        // FSRs must differ — dispersion causes wavelength-dependent FSR drift
+        fsr1500.ShouldNotBe(fsr1600);
+        // At longer wavelength both λ² is larger and n_g is smaller → FSR1600 > FSR1500
+        fsr1600.ShouldBeGreaterThan(fsr1500);
+    }
 }
