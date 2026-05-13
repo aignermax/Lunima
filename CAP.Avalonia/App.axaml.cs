@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Export;
@@ -141,6 +142,7 @@ public partial class App : Application
         // Singleton so the Settings-window page and the RightPanel reference share state.
         services.AddSingleton<ChipSizeViewModel>();
         services.AddTransient<ParameterSweepViewModel>();
+        services.AddTransient<OnaSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();
         services.AddTransient<ComponentDimensionDiagnosticsViewModel>();

@@ -1,6 +1,7 @@
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
@@ -69,7 +70,8 @@ public class PanelWidthPersistenceTests : IDisposable
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
+            new OnaSweepViewModel());
 
     [Fact]
     public void LeftPanelWidth_DefaultsTo220()

@@ -1,12 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Controls;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.AI;
-using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.Services;
 
 namespace CAP.Avalonia.ViewModels.Panels;
@@ -97,6 +97,11 @@ public partial class RightPanelViewModel : ObservableObject
     public PdkConsistencyViewModel PdkConsistency { get; }
 
     /// <summary>
+    /// ViewModel for the ONA (Optical Network Analyzer) wavelength-sweep panel.
+    /// </summary>
+    public OnaSweepViewModel OnaAnalysis { get; }
+
+    /// <summary>
     /// ViewModel for the in-app AI Design Assistant chat panel.
     /// </summary>
     public AiAssistantViewModel AiAssistant { get; }
@@ -116,7 +121,8 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrixViewModel groupSMatrix,
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
-        AiAssistantViewModel aiAssistant)
+        AiAssistantViewModel aiAssistant,
+        OnaSweepViewModel onaAnalysis)
     {
         _preferencesService = preferencesService;
 
@@ -132,11 +138,13 @@ public partial class RightPanelViewModel : ObservableObject
         ArchitectureReport = architectureReport;
         PdkConsistency = pdkConsistency;
         AiAssistant = aiAssistant;
+        OnaAnalysis = onaAnalysis;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
         DimensionValidator.Configure(canvas);
         CompressLayout.Configure(canvas);
+        OnaAnalysis.Configure(canvas);
     }
 
     /// <summary>
