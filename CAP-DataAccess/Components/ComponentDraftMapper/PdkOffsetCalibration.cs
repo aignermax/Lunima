@@ -107,8 +107,14 @@ public static class PdkOffsetCalibration
                     var dx = availableNazca[j].X - projections[i].x;
                     var dy = availableNazca[j].Y - projections[i].y;
                     var d  = Math.Sqrt(dx * dx + dy * dy);
+                    // Convert the Lunima (Y-down) angle into Nazca (Y-up) convention so
+                    // the comparison stays inside one coordinate system. Without the
+                    // flip a correctly-set Lunima angle of 90° would look 180° apart
+                    // from its true Nazca match at 270°, and the matcher would
+                    // cross-pair vertical pins on symmetric components.
                     var penalty = AngleDisagreementMicrometers(
-                        projections[i].lp.AngleDegrees, availableNazca[j].Angle, diag);
+                        FlipAngleConvention(projections[i].lp.AngleDegrees),
+                        availableNazca[j].Angle, diag);
                     var cost = d + penalty;
                     if (cost < best.cost) best = (i, j, cost);
                 }
@@ -126,13 +132,29 @@ public static class PdkOffsetCalibration
     /// Scaling against the bbox diagonal keeps the penalty large enough to
     /// dominate position ties on symmetric components but small enough that
     /// it doesn't override a real positional match on asymmetric ones.
+    /// Both inputs must be in the same convention (typically Nazca, since
+    /// callers convert Lunima angles via <see cref="FlipAngleConvention"/>
+    /// before passing them in).
     /// </summary>
     internal static double AngleDisagreementMicrometers(
-        double lunimaAngleDegrees, double nazcaAngleDegrees, double bboxDiagonal)
+        double angleDegreesA, double angleDegreesB, double bboxDiagonal)
     {
-        var delta = Math.Abs(NormalizeAngle(lunimaAngleDegrees - nazcaAngleDegrees));
+        var delta = Math.Abs(NormalizeAngle(angleDegreesA - angleDegreesB));
         if (delta > 180) delta = 360 - delta;  // wrap to [0, 180]
         return (delta / 180.0) * bboxDiagonal;
+    }
+
+    /// <summary>
+    /// Maps a pin angle between the Nazca (Y-up, mathematical) and Lunima
+    /// (Y-down, screen) conventions. The mapping is its own inverse:
+    /// <c>lunima = (360 − nazca) mod 360</c>. Angles 0° and 180° are invariant
+    /// under the flip; 90° and 270° swap. Used both when writing a Nazca pin
+    /// angle into a Lunima draft and when comparing Lunima angles against
+    /// Nazca ground truth.
+    /// </summary>
+    internal static double FlipAngleConvention(double angleDegrees)
+    {
+        return NormalizeAngle(360 - angleDegrees);
     }
 
     private static double NormalizeAngle(double a)
@@ -165,11 +187,13 @@ public static class PdkOffsetCalibration
         {
             lp.OffsetXMicrometers = np.X - result.XMin;
             lp.OffsetYMicrometers = result.YMax - np.Y;
-            // Adopt the Nazca pin's angle as well — leaving it on a stale
-            // hand-written value let us ship pin records where the angle
-            // implied a different edge than the position. With angle-aware
-            // matching the Nazca pin we picked is the right one to copy.
-            lp.AngleDegrees = np.Angle;
+            // Nazca pin angles live in Y-up math convention; Lunima renders in
+            // Avalonia's Y-down screen space. The Y-flip swaps 90° and 270° while
+            // leaving 0°/180° invariant — copying the raw Nazca angle into the
+            // draft produced vertical pin stubs that pointed into the component
+            // body instead of out of it (visible only after PR #539 made GDS
+            // polygons render on the canvas).
+            lp.AngleDegrees = FlipAngleConvention(np.Angle);
         }
         return AutoCalibrateOutcome.Success;
     }

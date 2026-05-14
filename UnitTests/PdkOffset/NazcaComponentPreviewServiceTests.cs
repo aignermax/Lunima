@@ -855,12 +855,14 @@ public class NazcaComponentPreviewServiceTests
             NazcaOriginOffsetX = 4.85, NazcaOriginOffsetY = 4.85,
             Pins = new List<PhysicalPinDraft>
             {
-                // port 1 angle 180 (Left) but currently parked at the RIGHT edge
+                // port 1 angle 180 (Left in both conventions) but parked at the RIGHT edge
                 new() { Name = "port 1", OffsetXMicrometers = 9.65, OffsetYMicrometers = 4.85, AngleDegrees = 180 },
-                // port 2 angle 0 (Right) but currently parked at the LEFT edge
+                // port 2 angle 0 (Right in both conventions) but parked at the LEFT edge
                 new() { Name = "port 2", OffsetXMicrometers = 0.05, OffsetYMicrometers = 4.85, AngleDegrees = 0   },
-                new() { Name = "port 3", OffsetXMicrometers = 4.85, OffsetYMicrometers = 9.65, AngleDegrees = 270 },
-                new() { Name = "port 4", OffsetXMicrometers = 4.85, OffsetYMicrometers = 0.05, AngleDegrees = 90  },
+                // port 3 angle 90 in Lunima Y-down = stub points DOWN visually = away from box body at the BOTTOM edge
+                new() { Name = "port 3", OffsetXMicrometers = 4.85, OffsetYMicrometers = 9.65, AngleDegrees = 90  },
+                // port 4 angle 270 in Lunima Y-down = stub points UP visually = away from box body at the TOP edge
+                new() { Name = "port 4", OffsetXMicrometers = 4.85, OffsetYMicrometers = 0.05, AngleDegrees = 270 },
             }
         };
         var result = new NazcaPreviewResult
@@ -883,10 +885,16 @@ public class NazcaComponentPreviewServiceTests
         // matches its angle, not be silently permuted onto another pin.
         var p1 = draft.Pins.First(p => p.Name == "port 1");
         var p2 = draft.Pins.First(p => p.Name == "port 2");
-        p1.AngleDegrees.ShouldBe(180);
-        p1.OffsetXMicrometers.ShouldBe(0, tolerance: 0.01);    // left edge
-        p2.AngleDegrees.ShouldBe(0);
-        p2.OffsetXMicrometers.ShouldBe(9.7, tolerance: 0.01);  // right edge
+        var p3 = draft.Pins.First(p => p.Name == "port 3");
+        var p4 = draft.Pins.First(p => p.Name == "port 4");
+        p1.AngleDegrees.ShouldBe(180);                          // Nazca 180 → Lunima 180 (invariant)
+        p1.OffsetXMicrometers.ShouldBe(0, tolerance: 0.01);     // left edge
+        p2.AngleDegrees.ShouldBe(0);                            // Nazca 0   → Lunima 0   (invariant)
+        p2.OffsetXMicrometers.ShouldBe(9.7, tolerance: 0.01);   // right edge
+        p3.AngleDegrees.ShouldBe(90);                           // Nazca 270 → Lunima 90  (Y-flip)
+        p3.OffsetYMicrometers.ShouldBe(9.7, tolerance: 0.01);   // bottom edge in Y-down
+        p4.AngleDegrees.ShouldBe(270);                          // Nazca 90  → Lunima 270 (Y-flip)
+        p4.OffsetYMicrometers.ShouldBe(0, tolerance: 0.01);     // top edge in Y-down
     }
 
     [Fact]
@@ -895,6 +903,8 @@ public class NazcaComponentPreviewServiceTests
         // The Nazca pin angle is ground truth — leaving the Lunima
         // AngleDegrees on a stale value let us ship pin records where the
         // angle implied a different bbox edge than the position.
+        // 180° is invariant under the Y-flip convention so this case
+        // exercises the propagation path without the convention mapping.
         var draft = new PdkComponentDraft
         {
             Name = "rot", NazcaFunction = "x", WidthMicrometers = 10, HeightMicrometers = 10,
@@ -911,6 +921,55 @@ public class NazcaComponentPreviewServiceTests
 
         PdkOffsetCalibration.ApplyAutoCalibrate(draft, result);
         draft.Pins[0].AngleDegrees.ShouldBe(180);
+    }
+
+    [Theory]
+    [InlineData(0,   0)]    // invariant
+    [InlineData(180, 180)]  // invariant
+    [InlineData(90,  270)]  // Y-flip: Nazca up → Lunima up (in Y-down screen, 270 = stub up)
+    [InlineData(270, 90)]   // Y-flip: Nazca down → Lunima down (in Y-down screen, 90 = stub down)
+    [InlineData(360, 0)]    // wrap
+    [InlineData(45,  315)]  // diagonals also flip
+    public void AutoCalibrate_AppliesYFlipConventionToWrittenAngle(double nazcaAngle, double expectedLunima)
+    {
+        // Without the Y-flip, a Nazca pin angle of 90° landed in Lunima JSON as 90°
+        // and rendered as a downward stub on Avalonia's Y-down canvas — pointing
+        // into the component body instead of up out of it. The reverse for 270°.
+        // PR #539's GDS overlay made this visible; this test pins the conversion
+        // so future calibrations can't silently regress.
+        var draft = new PdkComponentDraft
+        {
+            Name = "vp", NazcaFunction = "x", WidthMicrometers = 10, HeightMicrometers = 10,
+            Pins = new List<PhysicalPinDraft>
+            {
+                new() { Name = "p", OffsetXMicrometers = 5, OffsetYMicrometers = 5, AngleDegrees = 0 }
+            }
+        };
+        var result = new NazcaPreviewResult
+        {
+            Success = true, XMin = 0, YMin = 0, XMax = 10, YMax = 10,
+            Pins = new List<NazcaPreviewPin> { new() { X = 5, Y = 5, Angle = nazcaAngle } }
+        };
+
+        PdkOffsetCalibration.ApplyAutoCalibrate(draft, result);
+        draft.Pins[0].AngleDegrees.ShouldBe(expectedLunima);
+    }
+
+    [Theory]
+    [InlineData(0,    0)]
+    [InlineData(90,   270)]
+    [InlineData(180,  180)]
+    [InlineData(270,  90)]
+    [InlineData(360,  0)]
+    [InlineData(-90,  90)]   // negative input
+    [InlineData(450,  270)]  // > 360 input
+    public void FlipAngleConvention_IsSelfInverseAndNormalisesInput(double input, double expected)
+    {
+        var flipped = PdkOffsetCalibration.FlipAngleConvention(input);
+        flipped.ShouldBe(expected, tolerance: 1e-9);
+        // Selbstinvers: applying twice returns the normalised input
+        var roundTrip = PdkOffsetCalibration.FlipAngleConvention(flipped);
+        roundTrip.ShouldBe(((input % 360) + 360) % 360, tolerance: 1e-9);
     }
 
     [Fact]
