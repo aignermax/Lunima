@@ -186,7 +186,16 @@ public partial class App : Application
         services.AddSingleton(sp =>
         {
             var prefs = sp.GetRequiredService<UserPreferencesService>();
-            var python = prefs.GetCustomPythonPath() ?? ResolvePythonExecutable();
+            // Resolution order:
+            //  1. User's saved CustomPythonPath (set via GdsExport settings dialog).
+            //  2. PythonDiscoveryService — checks VIRTUAL_ENV, system python3, and
+            //     ~/.venvs/*/bin/python; only returns a path whose `import nazca`
+            //     succeeds. Avoids reinventing venv discovery for the preview path.
+            //  3. ResolvePythonExecutable — naive PATH search; final fallback so
+            //     the service stays constructable on a machine without nazca.
+            var python = prefs.GetCustomPythonPath()
+                         ?? DiscoverNazcaPython()
+                         ?? ResolvePythonExecutable();
             var script = FindPreviewScript();
             return new NazcaComponentPreviewService(python, script);
         });
@@ -221,6 +230,29 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Runs <see cref="PythonDiscoveryService"/> synchronously and returns the first
+    /// Python installation that has nazca importable, or <c>null</c> if none is found.
+    /// Used as a fallback for <see cref="NazcaComponentPreviewService"/> before the naive
+    /// PATH-based <see cref="ResolvePythonExecutable"/> kicks in, so users with
+    /// <c>~/.venvs/nazca</c>-style virtualenvs get a working preview out of the box
+    /// without having to set CustomPythonPath manually.
+    /// Failures (subprocess errors, IO) are swallowed so this never breaks DI.
+    /// </summary>
+    private static string? DiscoverNazcaPython()
+    {
+        try
+        {
+            var discovery = new PythonDiscoveryService();
+            var found = discovery.DiscoverPythonWithNazcaAsync().GetAwaiter().GetResult();
+            return found.FirstOrDefault()?.Path;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
