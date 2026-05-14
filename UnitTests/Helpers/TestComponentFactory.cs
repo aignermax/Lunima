@@ -1,3 +1,4 @@
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
@@ -282,6 +283,22 @@ namespace UnitTests
             };
 
             return connection;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="ComponentViewModel"/> for testing with a configurable
+        /// Nazca function name and optional dimensions.
+        /// </summary>
+        public static ComponentViewModel CreateComponentViewModel(
+            string? nazcaFunctionName = "demo.shallow.strt",
+            double widthMicrometers = 10,
+            double heightMicrometers = 10)
+        {
+            var component = CreateStraightWaveGuide();
+            component.NazcaFunctionName = nazcaFunctionName ?? "";
+            component.WidthMicrometers = widthMicrometers;
+            component.HeightMicrometers = heightMicrometers;
+            return new ComponentViewModel(component);
         }
 
         /// <summary>
