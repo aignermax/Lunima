@@ -35,6 +35,7 @@ public partial class OnaSweepViewModel : ObservableObject
     private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
+    private CancellationTokenSource? _sweepCts;
 
     /// <summary>File dialog service for CSV export. Set by MainViewModel.</summary>
     public Services.IFileDialogService? FileDialogService { get; set; }
@@ -75,10 +76,11 @@ public partial class OnaSweepViewModel : ObservableObject
 
             var builder = new SystemMatrixBuilder(gridManager);
             var sweeper = new WavelengthSweeper(builder, portManager);
-            var cts = new CancellationTokenSource();
+            _sweepCts?.Dispose();
+            _sweepCts = new CancellationTokenSource();
 
             StatusText = $"Running ONA sweep ({StepCount} steps)...";
-            _lastResult = await sweeper.RunSweepAsync(config, gridManager, cts.Token);
+            _lastResult = await sweeper.RunSweepAsync(config, gridManager, _sweepCts.Token);
             OnPropertyChanged(nameof(HasResult));
 
             if (_lastResult.Warnings.Count > 0)
@@ -99,7 +101,16 @@ public partial class OnaSweepViewModel : ObservableObject
         finally
         {
             IsSweeping = false;
+            _sweepCts?.Dispose();
+            _sweepCts = null;
         }
+    }
+
+    /// <summary>Cancels a running ONA sweep.</summary>
+    [RelayCommand]
+    private void CancelSweep()
+    {
+        _sweepCts?.Cancel();
     }
 
     /// <summary>Exports the last sweep result as CSV.</summary>

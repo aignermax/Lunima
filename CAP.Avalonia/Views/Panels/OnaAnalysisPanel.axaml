@@ -37,6 +37,9 @@
             <Button Content="Run ONA" Command="{Binding RightPanel.OnaAnalysis.RunSweepCommand}"
                     Width="90" Background="#3d5d5d"
                     IsEnabled="{Binding RightPanel.OnaAnalysis.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+            <Button Content="Cancel" Command="{Binding RightPanel.OnaAnalysis.CancelSweepCommand}"
+                    Width="90" Background="#5d3d3d"
+                    IsVisible="{Binding RightPanel.OnaAnalysis.IsSweeping}"/>
             <Button Content="Export CSV" Command="{Binding RightPanel.OnaAnalysis.ExportCsvCommand}"
                     Width="90" Background="#3d3d5d"
                     IsVisible="{Binding RightPanel.OnaAnalysis.HasResult}"/>
