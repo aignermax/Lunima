@@ -3,7 +3,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.ComponentSettings;
+using CAP_Core.Components.Core;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
@@ -33,6 +35,7 @@ public partial class MainWindow : Window
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RightPanel.OnaAnalysis.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.OnaAnalysis.OpenWindowAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
@@ -646,5 +649,20 @@ public partial class MainWindow : Window
                 ClearUserGroupsSelection();
             }
         }
+    }
+
+    /// <summary>
+    /// Opens a new ONA Analyzer tool window bound to the given analyzer component.
+    /// Each call creates a fresh <see cref="OnaSweepViewModel"/> so several
+    /// analyzers can be inspected side-by-side; the window is non-modal.
+    /// </summary>
+    private System.Threading.Tasks.Task OpenOnaAnalyzerWindow(CAP_Core.Components.Core.Component analyzer, MainViewModel vm)
+    {
+        var sweepVm = new OnaSweepViewModel(vm.ErrorConsole) { Analyzer = analyzer };
+        sweepVm.Configure(vm.Canvas);
+        sweepVm.FileDialogService = vm.FileDialogService;
+        var window = new OnaAnalyzerWindow { DataContext = sweepVm };
+        window.Show(this);
+        return System.Threading.Tasks.Task.CompletedTask;
     }
 }

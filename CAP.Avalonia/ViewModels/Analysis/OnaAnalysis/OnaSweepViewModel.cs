@@ -33,6 +33,19 @@ public partial class OnaSweepViewModel : ObservableObject
     /// <summary>True when a completed sweep result is available to export.</summary>
     public bool HasResult => _lastResult != null;
 
+    /// <summary>
+    /// The ONA Analyzer component this sweep is bound to. When set, the sweep
+    /// uses the analyzer's <c>source</c> pin as the light input and treats the
+    /// remaining pins as measurement points. When null, the sweep falls back
+    /// to the legacy canvas-wide light-source detection.
+    /// </summary>
+    public Component? Analyzer { get; set; }
+
+    /// <summary>Title shown in the tool-window header.</summary>
+    public string WindowTitle => Analyzer != null
+        ? $"ONA Sweep — {(string.IsNullOrEmpty(Analyzer.HumanReadableName) ? Analyzer.Name : Analyzer.HumanReadableName)}"
+        : "ONA Sweep";
+
     private readonly ErrorConsoleService? _errorConsole;
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
@@ -41,6 +54,13 @@ public partial class OnaSweepViewModel : ObservableObject
 
     /// <summary>File dialog service for CSV export. Set by MainViewModel.</summary>
     public Services.IFileDialogService? FileDialogService { get; set; }
+
+    /// <summary>
+    /// Delegate that opens an <c>OnaAnalyzerWindow</c> for the given analyzer
+    /// component. Wired up by MainWindow on startup; null in headless / test
+    /// scenarios, in which case <see cref="OpenWindowCommand"/> is a no-op.
+    /// </summary>
+    public Func<Component, Task>? OpenWindowAsync { get; set; }
 
     /// <summary>Initializes a new instance of <see cref="OnaSweepViewModel"/>.</summary>
     public OnaSweepViewModel(ErrorConsoleService? errorConsole = null)
@@ -119,6 +139,24 @@ public partial class OnaSweepViewModel : ObservableObject
         _sweepCts?.Cancel();
     }
 
+    /// <summary>
+    /// Opens the ONA Analyzer tool window for the currently selected analyzer
+    /// component, via the <see cref="OpenWindowAsync"/> delegate.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenWindow()
+    {
+        if (OpenWindowAsync == null) return;
+        var selected = _canvas?.SelectedComponent?.Component;
+        if (selected == null || !selected.IsAnalysisTool)
+        {
+            _errorConsole?.LogWarning(
+                "Select an ONA Analyzer component on the canvas before opening the sweep window.");
+            return;
+        }
+        await OpenWindowAsync(selected);
+    }
+
     /// <summary>Exports the last sweep result as CSV.</summary>
     [RelayCommand]
     private async Task ExportCsv()
@@ -169,10 +207,11 @@ public partial class OnaSweepViewModel : ObservableObject
     {
         if (_canvas == null) return;
 
-        // Reuse the same logic the L-key simulation uses: walks into groups recursively
-        // and recognises grating/edge couplers via NazcaFunctionName.
         var allComponents = SimulationService.GetAllComponentsRecursively(_canvas.Components);
 
+        // Always build the GUID → readable name map across the full canvas so
+        // CSV columns and plot series titles look right regardless of which
+        // analyzer is driving the sweep.
         foreach (var component in allComponents)
         {
             var displayName = !string.IsNullOrEmpty(component.HumanReadableName)
@@ -186,9 +225,32 @@ public partial class OnaSweepViewModel : ObservableObject
                 pinNameMap[pin.LogicalPin.IDInFlow] = pinLabel;
                 pinNameMap[pin.LogicalPin.IDOutFlow] = pinLabel;
             }
+        }
 
+        // Source selection:
+        //   • If an Analyzer is set, use ONLY its "source" pin as input.
+        //   • Otherwise fall back to the L-key heuristic (grating / edge coupler).
+        if (Analyzer != null)
+        {
+            var sourcePin = Analyzer.PhysicalPins.FirstOrDefault(
+                p => string.Equals(p.Name, "source", StringComparison.OrdinalIgnoreCase));
+            if (sourcePin?.LogicalPin?.MatterType != MatterType.Light)
+            {
+                _errorConsole?.LogError(
+                    $"ONA Analyzer '{Analyzer.Name}' has no usable 'source' pin. " +
+                    "Add a pin named 'source' to the analyzer or connect the analyzer's source pin to the device-under-test.");
+                return;
+            }
+            var input = new ExternalInput(
+                $"ona_{Analyzer.Identifier}_source",
+                LaserType.Red, 0, new Complex(1.0, 0));
+            portManager.AddLightSource(input, sourcePin.LogicalPin.IDInFlow);
+            return;
+        }
+
+        foreach (var component in allComponents)
+        {
             if (!SimulationService.IsLightSource(component)) continue;
-
             foreach (var pin in component.PhysicalPins)
             {
                 if (pin.LogicalPin?.MatterType != MatterType.Light) continue;

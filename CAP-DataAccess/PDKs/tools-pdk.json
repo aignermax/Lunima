@@ -1,0 +1,54 @@
+{
+  "fileFormatVersion": 1,
+  "name": "Analysis Tools",
+  "description": "Virtual analysis components (ONA, future Power Monitor, etc.). Not exported to GDS, not part of the physical chip.",
+  "foundry": "Lunima",
+  "version": "1.0.0",
+  "defaultWavelengthNm": 1550,
+  "nazcaModuleName": null,
+  "components": [
+    {
+      "name": "ONA Analyzer",
+      "category": "Analysis",
+      "nazcaFunction": "__analyzer__",
+      "widthMicrometers": 80,
+      "heightMicrometers": 40,
+      "pins": [
+        {
+          "name": "source",
+          "offsetXMicrometers": 80,
+          "offsetYMicrometers": 20,
+          "angleDegrees": 0
+        },
+        {
+          "name": "measurement_1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 5,
+          "angleDegrees": 180
+        },
+        {
+          "name": "measurement_2",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 15,
+          "angleDegrees": 180
+        },
+        {
+          "name": "measurement_3",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 25,
+          "angleDegrees": 180
+        },
+        {
+          "name": "measurement_4",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 35,
+          "angleDegrees": 180
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": []
+      }
+    }
+  ]
+}
