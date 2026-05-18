@@ -147,7 +147,7 @@ public class SimulationService
     /// Recursively collects all Component instances, including those inside ComponentGroups.
     /// Returns the raw Component objects, not ViewModels, to avoid TemplateName issues.
     /// </summary>
-    private static List<Component> GetAllComponentsRecursively(IEnumerable<ComponentViewModel> components)
+    public static List<Component> GetAllComponentsRecursively(IEnumerable<ComponentViewModel> components)
     {
         var result = new List<Component>();
 
@@ -222,7 +222,7 @@ public class SimulationService
         return false;
     }
 
-    private static bool IsLightSource(Component component)
+    public static bool IsLightSource(Component component)
     {
         var id = component.Identifier?.ToLowerInvariant() ?? "";
         if (id.Contains("grating") || id.Contains("edge coupler"))

@@ -58,13 +58,24 @@ namespace CAP_Core.Analysis.OnaAnalysis
             return series;
         }
 
-        /// <summary>Generates CSV content with wavelength (nm) and insertion loss (dB) per pin.</summary>
-        public string GenerateCsvContent()
+        /// <summary>
+        /// Generates CSV content with wavelength (nm) and insertion loss (dB) per pin.
+        /// When <paramref name="pinNameResolver"/> is supplied and returns a non-null
+        /// human-readable name for a pin GUID, that name is used as the column header
+        /// instead of the GUID-prefix fallback.
+        /// </summary>
+        public string GenerateCsvContent(Func<Guid, string?>? pinNameResolver = null)
         {
             var sb = new StringBuilder();
             sb.Append("Wavelength_nm");
             foreach (var pinId in MonitoredPinIds)
-                sb.Append($",Pin_{pinId.ToString("N")[..8]}_dB");
+            {
+                var name = pinNameResolver?.Invoke(pinId);
+                var header = !string.IsNullOrEmpty(name)
+                    ? name
+                    : $"Pin_{pinId.ToString("N")[..8]}";
+                sb.Append($",{header}_dB");
+            }
             sb.AppendLine();
 
             foreach (var dp in DataPoints)

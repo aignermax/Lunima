@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 
 namespace CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
@@ -36,6 +37,7 @@ public partial class OnaSweepViewModel : ObservableObject
     private DesignCanvasViewModel? _canvas;
     private WavelengthSweepResult? _lastResult;
     private CancellationTokenSource? _sweepCts;
+    private Dictionary<Guid, string> _pinNameMap = new();
 
     /// <summary>File dialog service for CSV export. Set by MainViewModel.</summary>
     public Services.IFileDialogService? FileDialogService { get; set; }
@@ -84,7 +86,11 @@ public partial class OnaSweepViewModel : ObservableObject
             OnPropertyChanged(nameof(HasResult));
 
             if (_lastResult.Warnings.Count > 0)
-                WarningText = string.Join("\n", _lastResult.Warnings);
+            {
+                foreach (var warning in _lastResult.Warnings)
+                    _errorConsole?.LogWarning(warning);
+                WarningText = $"{_lastResult.Warnings.Count} warning(s) — see Error Console";
+            }
 
             UpdatePlotModel(_lastResult);
             StatusText = $"ONA sweep complete: {_lastResult.DataPoints.Count} points";
@@ -130,7 +136,7 @@ public partial class OnaSweepViewModel : ObservableObject
 
             if (path == null) { StatusText = "Export cancelled"; return; }
 
-            await File.WriteAllTextAsync(path, _lastResult.GenerateCsvContent());
+            await File.WriteAllTextAsync(path, _lastResult.GenerateCsvContent(ResolvePinName));
             StatusText = $"Exported to {Path.GetFileName(path)}";
         }
         catch (Exception ex)
@@ -149,35 +155,53 @@ public partial class OnaSweepViewModel : ObservableObject
             tileManager.AddComponent(compVm.Component);
 
         var portManager = new PhysicalExternalPortManager();
-        ConfigureLightSources(portManager);
+        _pinNameMap = new Dictionary<Guid, string>();
+        ConfigureLightSourcesAndBuildPinMap(portManager, _pinNameMap);
 
         var gridManager = GridManager.CreateForSimulation(
             tileManager, _canvas.ConnectionManager, portManager);
         return (gridManager, portManager);
     }
 
-    private void ConfigureLightSources(PhysicalExternalPortManager portManager)
+    private void ConfigureLightSourcesAndBuildPinMap(
+        PhysicalExternalPortManager portManager,
+        Dictionary<Guid, string> pinNameMap)
     {
         if (_canvas == null) return;
-        foreach (var compVm in _canvas.Components)
+
+        // Reuse the same logic the L-key simulation uses: walks into groups recursively
+        // and recognises grating/edge couplers via NazcaFunctionName.
+        var allComponents = SimulationService.GetAllComponentsRecursively(_canvas.Components);
+
+        foreach (var component in allComponents)
         {
-            if (compVm.TemplateName == null) continue;
-            if (!compVm.TemplateName.Contains("Coupler", StringComparison.OrdinalIgnoreCase)) continue;
-            if (compVm.TemplateName.Contains("Directional", StringComparison.OrdinalIgnoreCase)) continue;
+            var displayName = !string.IsNullOrEmpty(component.HumanReadableName)
+                ? component.HumanReadableName!
+                : component.Name;
 
-            var laserConfig = compVm.LaserConfig;
-            double power = laserConfig?.InputPower ?? 1.0;
+            foreach (var pin in component.PhysicalPins)
+            {
+                if (pin.LogicalPin == null) continue;
+                var pinLabel = $"{displayName}.{pin.Name}";
+                pinNameMap[pin.LogicalPin.IDInFlow] = pinLabel;
+                pinNameMap[pin.LogicalPin.IDOutFlow] = pinLabel;
+            }
 
-            foreach (var pin in compVm.Component.PhysicalPins)
+            if (!SimulationService.IsLightSource(component)) continue;
+
+            foreach (var pin in component.PhysicalPins)
             {
                 if (pin.LogicalPin?.MatterType != MatterType.Light) continue;
                 var input = new ExternalInput(
-                    $"ona_{compVm.Component.Identifier}_{pin.Name}",
-                    LaserType.Red, 0, new Complex(power, 0));
+                    $"ona_{component.Identifier}_{pin.Name}",
+                    LaserType.Red, 0, new Complex(1.0, 0));
                 portManager.AddLightSource(input, pin.LogicalPin.IDInFlow);
             }
         }
     }
+
+    private string? ResolvePinName(Guid pinId)
+        => _pinNameMap.TryGetValue(pinId, out var name) ? name : null;
 
     private void UpdatePlotModel(WavelengthSweepResult result)
     {
@@ -192,7 +216,7 @@ public partial class OnaSweepViewModel : ObservableObject
 
             var series = new LineSeries
             {
-                Title = $"Pin {pinId.ToString("N")[..6]}",
+                Title = ResolvePinName(pinId) ?? $"Pin {pinId.ToString("N")[..6]}",
                 StrokeThickness = 1.5,
             };
 
