@@ -89,6 +89,23 @@ public partial class CanvasInteractionViewModel : ObservableObject
         _libraryViewModel = libraryViewModel;
         _previewGenerator = previewGenerator;
         _inputDialogService = inputDialogService;
+
+        // Hierarchy → right panel: when canvas.SelectedComponent changes externally
+        // (e.g. from the hierarchy panel), mirror it so the right-panel property editor updates.
+        _canvas.PropertyChanged += OnCanvasPropertyChanged;
+    }
+
+    /// <summary>
+    /// Keeps <see cref="SelectedComponent"/> in sync when
+    /// <see cref="DesignCanvasViewModel.SelectedComponent"/> is changed externally
+    /// (e.g. by the hierarchy panel).
+    /// CommunityToolkit's equality check prevents the setter from firing again when
+    /// the value is already up-to-date, so there is no feedback loop.
+    /// </summary>
+    private void OnCanvasPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesignCanvasViewModel.SelectedComponent))
+            SelectedComponent = _canvas.SelectedComponent;
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -151,6 +168,10 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     partial void OnSelectedComponentChanged(ComponentViewModel? value)
     {
+        // Keep canvas in sync when this property is set from outside (e.g. tests or mirroring).
+        if (_canvas.SelectedComponent != value)
+            _canvas.SelectedComponent = value;
+
         if (value?.IsLightSource == true)
         {
             var cfg = value.LaserConfig!;
