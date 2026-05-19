@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Simulation;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -36,7 +37,13 @@ public class LightSourceEditorProvider : IComponentEditorProvider
     public object? TryCreateEditor(ComponentViewModel componentVm)
     {
         if (componentVm.Component.IsAnalysisTool) return null;
-        if (!componentVm.IsLightSource) return null;
+        // Match the same NazcaFunctionName-based predicate the L-key simulation
+        // uses (SimulationService.IsLightSource) so PDK-imported couplers with
+        // GUID-based identifiers (e.g. ebeam_gc_te1550) still surface this
+        // editor — not just templates whose display name literally equals
+        // "Grating Coupler" / "Edge Coupler".
+        if (!SimulationService.IsLightSource(componentVm.Component)) return null;
+        if (componentVm.LaserConfig == null) return null;
         return new LightSourceEditorViewModel(componentVm);
     }
 }

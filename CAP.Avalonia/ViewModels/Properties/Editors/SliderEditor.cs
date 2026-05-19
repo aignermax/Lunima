@@ -27,13 +27,20 @@ public partial class SliderEditorViewModel : ObservableObject
     /// <summary>Maximum slider value.</summary>
     public double Max => _componentVm.SliderMax;
 
+    /// <summary>
+    /// Tolerance for slider-value de-duping. Matches the granularity used by
+    /// the underlying <see cref="ComponentViewModel.SliderValue"/> setter so
+    /// the two layers agree on what counts as "unchanged".
+    /// </summary>
+    private const double ValueEpsilon = 0.001;
+
     /// <summary>Current slider value; writes propagate into the component's S-matrix.</summary>
     public double Value
     {
         get => _componentVm.SliderValue;
         set
         {
-            if (Math.Abs(_componentVm.SliderValue - value) < double.Epsilon) return;
+            if (Math.Abs(_componentVm.SliderValue - value) < ValueEpsilon) return;
             _componentVm.SliderValue = value;
             OnPropertyChanged(nameof(Value));
         }

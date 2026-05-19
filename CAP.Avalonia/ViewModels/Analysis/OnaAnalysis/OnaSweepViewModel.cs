@@ -96,6 +96,20 @@ public partial class OnaSweepViewModel : ObservableObject
                 return;
             }
 
+            // No-silent-fallback guard: if neither the selected analyzer nor any
+            // canvas-wide light-source-detection turned up an input, the sweep
+            // would emit a uniform -120 dB plot with no diagnostic. Bail out
+            // visibly instead and surface the cause in the Error Console.
+            if (portManager.GetAllExternalInputs().Count == 0)
+            {
+                var hint = Analyzer != null
+                    ? $"ONA Analyzer '{Analyzer.Name}' source pin is not connected to a light input."
+                    : "No light source found on the canvas (place a Grating Coupler / Edge Coupler, or select an ONA Analyzer and connect its source pin).";
+                _errorConsole?.LogError($"ONA sweep aborted: {hint}");
+                StatusText = "Aborted — no light source. See Error Console.";
+                return;
+            }
+
             var builder = new SystemMatrixBuilder(gridManager);
             var sweeper = new WavelengthSweeper(builder, portManager);
             _sweepCts?.Dispose();
