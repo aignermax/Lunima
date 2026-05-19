@@ -717,8 +717,9 @@
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
 
-                    <!-- ONA Wavelength Sweep Panel -->
-                    <panels:OnaAnalysisPanel/>
+                    <!-- Selection-driven Component Properties (replaces fixed
+                         per-feature side panels for analysis tools etc.) -->
+                    <panels:SelectedComponentPropertiesPanel/>
 
                     <!-- Element Lock Panel -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>

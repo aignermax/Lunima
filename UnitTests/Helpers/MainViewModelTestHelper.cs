@@ -10,6 +10,8 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Properties;
+using CAP.Avalonia.ViewModels.Properties.Editors;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
@@ -138,7 +140,11 @@ public static class MainViewModelTestHelper
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
             new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
-            new OnaSweepViewModel());
+            new OnaSweepViewModel(),
+            new ComponentEditorFactory(new IComponentEditorProvider[]
+            {
+                new GenericComponentEditorProvider()
+            }));
     }
 
     /// <summary>

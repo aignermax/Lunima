@@ -10,37 +10,19 @@
       "name": "ONA Analyzer",
       "category": "Analysis",
       "nazcaFunction": "__analyzer__",
-      "widthMicrometers": 80,
-      "heightMicrometers": 40,
+      "widthMicrometers": 60,
+      "heightMicrometers": 30,
       "pins": [
         {
           "name": "source",
-          "offsetXMicrometers": 80,
-          "offsetYMicrometers": 20,
+          "offsetXMicrometers": 60,
+          "offsetYMicrometers": 15,
           "angleDegrees": 0
         },
         {
-          "name": "measurement_1",
-          "offsetXMicrometers": 0,
-          "offsetYMicrometers": 5,
-          "angleDegrees": 180
-        },
-        {
-          "name": "measurement_2",
+          "name": "measurement",
           "offsetXMicrometers": 0,
           "offsetYMicrometers": 15,
-          "angleDegrees": 180
-        },
-        {
-          "name": "measurement_3",
-          "offsetXMicrometers": 0,
-          "offsetYMicrometers": 25,
-          "angleDegrees": 180
-        },
-        {
-          "name": "measurement_4",
-          "offsetXMicrometers": 0,
-          "offsetYMicrometers": 35,
           "angleDegrees": 180
         }
       ],

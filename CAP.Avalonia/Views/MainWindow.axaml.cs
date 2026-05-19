@@ -36,6 +36,13 @@ public partial class MainWindow : Window
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
                 vm.RightPanel.OnaAnalysis.FileDialogService = vm.FileDialogService;
                 vm.RightPanel.OnaAnalysis.OpenWindowAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
+                // Wire the per-component editor for analyzers so the right-panel
+                // properties section can also open the ONA tool window.
+                var onaEditorProvider = App.Services.GetService(
+                    typeof(CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider))
+                    as CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider;
+                if (onaEditorProvider != null)
+                    onaEditorProvider.OpenSweepAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;

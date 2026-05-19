@@ -106,7 +106,7 @@ namespace UnitTests.Components
             analyzer.Category.ShouldBe("Analysis");
             analyzer.NazcaFunction.ShouldBe("__analyzer__");
             analyzer.Pins.Any(p => p.Name == "source").ShouldBeTrue();
-            analyzer.Pins.Count(p => p.Name.StartsWith("measurement_")).ShouldBeGreaterThanOrEqualTo(1);
+            analyzer.Pins.Any(p => p.Name.StartsWith("measurement")).ShouldBeTrue();
         }
 
         [Fact]
