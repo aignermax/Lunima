@@ -5,7 +5,6 @@
   "foundry": "Lunima",
   "version": "1.0.0",
   "defaultWavelengthNm": 1550,
-  "nazcaModuleName": null,
   "components": [
     {
       "name": "ONA Analyzer",
