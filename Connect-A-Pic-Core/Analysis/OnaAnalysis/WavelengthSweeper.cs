@@ -93,6 +93,12 @@ namespace CAP_Core.Analysis.OnaAnalysis
 
             foreach (var component in gridManager.TileManager.GetAllComponents())
             {
+                // Virtual analysis tools (e.g. ONA Analyzer) don't have meaningful
+                // wavelength data — they're simulation-only probes. Their map gets
+                // populated from a synthetic 980/1310/1550 triple by the template
+                // loader, which would spuriously trigger this warning.
+                if (component.IsAnalysisTool) continue;
+
                 string key = component.NazcaFunctionName ?? component.Identifier;
                 var definedWavelengths = component.WaveLengthToSMatrixMap.Keys;
 

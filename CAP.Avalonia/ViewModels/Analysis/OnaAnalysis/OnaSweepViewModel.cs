@@ -284,11 +284,21 @@ public partial class OnaSweepViewModel : ObservableObject
         var model = CreateEmptyPlotModel();
         var wavelengths = result.GetWavelengthValues();
 
+        // Decide which pins to plot:
+        //   • Analyzer mode: only the analyzer's measurement pin(s) — that's
+        //     the explicit user intent ("measure here").
+        //   • Fallback (no analyzer): every monitored pin, with the noise-
+        //     floor lines kept visible so the user can see SOMETHING was
+        //     measured rather than facing a blank chart.
+        var measurementPinIds = ResolveMeasurementPinIds(result);
+
         int seriesCount = 0;
-        foreach (var pinId in result.MonitoredPinIds)
+        bool anyAboveFloor = false;
+        foreach (var pinId in measurementPinIds)
         {
             var losses = result.GetInsertionLossSeriesForPin(pinId);
-            if (losses.All(v => v <= WavelengthDataPoint.MinInsertionLossDb + 1)) continue;
+            if (losses.Any(v => v > WavelengthDataPoint.MinInsertionLossDb + 1))
+                anyAboveFloor = true;
 
             var series = new LineSeries
             {
@@ -303,8 +313,46 @@ public partial class OnaSweepViewModel : ObservableObject
             if (++seriesCount >= 8) break; // cap series to prevent plot overload
         }
 
+        // No-silent-fallback diagnostic: a sweep that produced N series, all
+        // pinned at the −120 dB floor, almost certainly means the analyzer's
+        // measurement pin never received any light. Tell the user that
+        // explicitly instead of letting them stare at a flat line.
+        if (model.Series.Count > 0 && !anyAboveFloor)
+        {
+            var hint = Analyzer != null
+                ? $"All output series for analyzer '{Analyzer.Name}' are at the −120 dB floor. Connect the analyzer's 'source' pin to your device input and its 'measurement' pin to the device output, then run again."
+                : "All output series are at the −120 dB floor. No light reached any measurement pin — check that the path from light source to output is connected through your design.";
+            _errorConsole?.LogWarning(hint);
+            StatusText = "Sweep complete — all outputs at noise floor (see Error Console).";
+        }
+
         model.InvalidatePlot(true);
         PlotModel = model;
+    }
+
+    /// <summary>
+    /// Returns the pin IDs to draw. With an analyzer set, returns the
+    /// pin IDs of its non-source pins (the measurement ports). Without one,
+    /// returns every monitored pin so the legacy heuristic path still
+    /// produces something visible.
+    /// </summary>
+    private IReadOnlyList<Guid> ResolveMeasurementPinIds(WavelengthSweepResult result)
+    {
+        if (Analyzer == null) return result.MonitoredPinIds.ToList();
+
+        var measurementIds = new List<Guid>();
+        var monitored = new HashSet<Guid>(result.MonitoredPinIds);
+        foreach (var pin in Analyzer.PhysicalPins)
+        {
+            if (pin.LogicalPin == null) continue;
+            if (string.Equals(pin.Name, "source", StringComparison.OrdinalIgnoreCase)) continue;
+            if (monitored.Contains(pin.LogicalPin.IDInFlow))
+                measurementIds.Add(pin.LogicalPin.IDInFlow);
+        }
+        // Fall back to the full monitor list if the analyzer's measurement
+        // pins aren't in the simulation result — better to show too much
+        // than nothing.
+        return measurementIds.Count > 0 ? measurementIds : result.MonitoredPinIds.ToList();
     }
 
     private static PlotModel CreateEmptyPlotModel()
