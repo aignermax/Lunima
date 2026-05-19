@@ -77,6 +77,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public Action? ClearComponentTemplateSelection { get; set; }
 
+    /// <summary>
+    /// Callback invoked when the user requests "Component Settings…" from the canvas context menu.
+    /// Wired by <c>MainWindow.axaml.cs</c> to open the component settings dialog.
+    /// </summary>
+    public Action<ComponentViewModel>? OpenComponentSettings { get; set; }
+
     public CanvasInteractionViewModel(
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
@@ -158,6 +164,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         OnSelectionChanged?.Invoke(value);
+        OpenSelectedComponentSettingsCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -762,4 +769,19 @@ public partial class CanvasInteractionViewModel : ObservableObject
                _libraryViewModel != null &&
                _inputDialogService != null;
     }
+
+    /// <summary>
+    /// Opens the Component Settings dialog for the currently selected canvas component.
+    /// Only enabled when exactly one component is selected.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedComponentSettings))]
+    private void OpenSelectedComponentSettings()
+    {
+        var selected = SelectedComponent;
+        if (selected != null)
+            OpenComponentSettings?.Invoke(selected);
+    }
+
+    private bool CanOpenSelectedComponentSettings()
+        => SelectedComponent != null;
 }

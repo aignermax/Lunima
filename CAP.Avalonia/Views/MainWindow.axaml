@@ -875,6 +875,12 @@
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Component Settings…" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}">
+                        <MenuItem.Icon>
+                            <TextBlock Text="⚙️" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
                     <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon>
                             <TextBlock Text="📋" FontSize="14"/>

@@ -120,6 +120,16 @@ public partial class MainWindow : Window
                         vm);
                 };
 
+                // Wire up Component Settings dialog for canvas context menu
+                vm.CanvasInteraction.OpenComponentSettings = compVm =>
+                {
+                    ShowComponentSettingsDialog(
+                        compVm.Component.Identifier,
+                        compVm.Component.HumanReadableName ?? compVm.Component.Identifier,
+                        compVm.Component,
+                        vm);
+                };
+
                 // Wire up per-instance S-matrix override marker in hierarchy
                 vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
                     id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
