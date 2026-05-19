@@ -142,7 +142,8 @@ public static class SMatrixOverrideApplicator
         IEnumerable<Component> components,
         IReadOnlyDictionary<string, ComponentSMatrixData> storedSMatrices,
         Func<Component, string?>? templateKeyResolver = null,
-        ErrorConsoleService? errorConsole = null)
+        ErrorConsoleService? errorConsole = null,
+        Func<string, bool>? keyMatchesKnownTemplate = null)
     {
         var componentList = components.ToList();
         var perComponent = new Dictionary<string, ApplyResult>();
@@ -167,7 +168,20 @@ public static class SMatrixOverrideApplicator
             }
         }
 
-        var orphans = storedSMatrices.Keys.Where(k => !matchedKeys.Contains(k)).ToList();
+        var unmatched = storedSMatrices.Keys.Where(k => !matchedKeys.Contains(k)).ToList();
+
+        // Split into "truly orphan" (no matching template anywhere — the
+        // component was renamed or removed) and "deferred" (matches a known
+        // library template but no instance is currently on the canvas). Only
+        // the truly-orphan set deserves a user-visible warning; deferred
+        // overrides will just get applied the next time the user places
+        // that template.
+        List<string> orphans;
+        if (keyMatchesKnownTemplate != null)
+            orphans = unmatched.Where(k => !keyMatchesKnownTemplate(k)).ToList();
+        else
+            orphans = unmatched;
+
         if (errorConsole != null && orphans.Count > 0)
         {
             errorConsole.LogWarning(
