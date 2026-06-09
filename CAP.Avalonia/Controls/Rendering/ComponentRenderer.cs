@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
@@ -41,6 +42,10 @@ public sealed class ComponentRenderer : ICanvasRenderer
             ? new SolidColorBrush(Color.FromArgb(alpha, 60, 80, 120))
             : new SolidColorBrush(Color.FromArgb(alpha, 40, 50, 70));
         context.FillRectangle(fillBrush, rect);
+
+        var previewData = rc.GdsPreviewRenderService?.TryGetPreview(comp);
+        if (previewData != null)
+            GdsPolygonRenderer.DrawGdsPreview(context, previewData, comp);
 
         var borderPen = comp.IsSelected
             ? new Pen(new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255)), 2)
