@@ -34,7 +34,11 @@ public class GdsRoundtripTests
     /// <summary>Initializes the test suite with the full component library.</summary>
     public GdsRoundtripTests()
     {
-        _library = new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates());
+        // Filter out analysis tools (e.g. ONA Analyzer) — they are intentionally
+        // skipped during GDS export and have no physical pin layout to validate.
+        _library = new ObservableCollection<ComponentTemplate>(
+            TestPdkLoader.LoadAllTemplates()
+                .Where(t => t.NazcaFunctionName != "__analyzer__"));
     }
 
     /// <summary>
