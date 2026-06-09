@@ -15,11 +15,21 @@ namespace CAP.Avalonia.Controls.Plotting;
 public class XTrackingLineSeries : LineSeries
 {
     /// <summary>
+    /// Optional formatter for the tracker label given the interpolated data point.
+    /// Keeps this control domain-agnostic: callers supply their own units
+    /// (e.g. wavelength / insertion loss). When null, a generic
+    /// "Title / X / Y" label is used.
+    /// </summary>
+    public Func<DataPoint, string>? TrackerTextProvider { get; set; }
+
+    /// <summary>
     /// Returns the point on the line at the cursor's X coordinate. The
     /// <paramref name="interpolate"/> flag is intentionally ignored: this series
     /// always interpolates along X so tracking behaves consistently whether the
     /// controller is bound to Track or SnapTrack.
     /// </summary>
+    /// <returns>The interpolated hit at the cursor's X, or <c>null</c> when the
+    /// series has no points (OxyPlot treats a null result as "no hit").</returns>
     public override TrackerHitResult GetNearestPoint(ScreenPoint point, bool interpolate)
     {
         var points = ActualPoints;
@@ -55,6 +65,7 @@ public class XTrackingLineSeries : LineSeries
         DataPoint = dataPoint,
         Position = Transform(dataPoint),
         Index = index,
-        Text = $"{Title}\nλ = {dataPoint.X:0} nm\nIL = {dataPoint.Y:0.00} dB",
+        Text = TrackerTextProvider?.Invoke(dataPoint)
+               ?? $"{Title}\n{dataPoint.X:0}\n{dataPoint.Y:0.00}",
     };
 }

@@ -123,7 +123,10 @@ public class OnaAnalyzerSimulationTests
         // The path source → (lossless straight DUT) → measurement is lossless, so the
         // measurement pin must receive the full injected power → ~0 dB insertion loss.
         var dataPoint = result.DataPoints.First(dp => dp.WavelengthNm == WavelengthNm);
-        dataPoint.InsertionLossDb.TryGetValue(measurementPin.LogicalPin!.IDInFlow, out double measDb);
+        var measurementKey = measurementPin.LogicalPin!.IDInFlow;
+        dataPoint.InsertionLossDb.ContainsKey(measurementKey).ShouldBeTrue(
+            "The measurement pin must appear in the sweep result — a missing key is itself a regression.");
+        double measDb = dataPoint.InsertionLossDb[measurementKey];
 
         measDb.ShouldBeGreaterThan(WavelengthDataPoint.MinInsertionLossDb + 1,
             "Light injected at the ONA Analyzer 'source' pin must propagate through the DUT " +

@@ -304,11 +304,13 @@ public partial class OnaSweepViewModel : ObservableObject
             if (losses.Any(v => v > WavelengthDataPoint.MinInsertionLossDb + 1))
                 anyAboveFloor = true;
 
+            var seriesTitle = ResolvePinName(pinId) ?? $"Pin {pinId.ToString("N")[..6]}";
             var series = new XTrackingLineSeries
             {
-                Title = ResolvePinName(pinId) ?? $"Pin {pinId.ToString("N")[..6]}",
+                Title = seriesTitle,
                 StrokeThickness = 1.5,
                 CanTrackerInterpolatePoints = true,
+                TrackerTextProvider = dp => $"{seriesTitle}\nλ = {dp.X:0} nm\nIL = {dp.Y:0.00} dB",
             };
 
             for (int i = 0; i < wavelengths.Length; i++)
