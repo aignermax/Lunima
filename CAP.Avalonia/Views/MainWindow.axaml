@@ -590,6 +590,12 @@
                         <TextBlock Text=" um" Foreground="Gray"/>
                     </StackPanel>
 
+                    <!-- Selection-driven per-component editors (ONA Analyzer sweep
+                         button, sliders, light-source config…). Placed directly under
+                         the position/dimensions readout so component-specific actions
+                         are near the top instead of buried below other panels. -->
+                    <panels:SelectedComponentPropertiesPanel/>
+
                     <!-- Laser Configuration (visible only for light sources) -->
                     <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.IsLightSource, FallbackValue=False}">
                         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
@@ -716,10 +722,6 @@
 
                     <!-- Design Checks Panel -->
                     <panels:DesignChecksPanel/>
-
-                    <!-- Selection-driven Component Properties (replaces fixed
-                         per-feature side panels for analysis tools etc.) -->
-                    <panels:SelectedComponentPropertiesPanel/>
 
                     <!-- Element Lock Panel -->
                     <Separator Margin="0,20,0,10" Background="#3d3d3d"/>

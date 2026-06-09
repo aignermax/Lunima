@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
+using CAP.Avalonia.Controls.Plotting;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 
@@ -236,8 +237,11 @@ public partial class OnaSweepViewModel : ObservableObject
             {
                 if (pin.LogicalPin == null) continue;
                 var pinLabel = $"{displayName}.{pin.Name}";
-                pinNameMap[pin.LogicalPin.IDInFlow] = pinLabel;
-                pinNameMap[pin.LogicalPin.IDOutFlow] = pinLabel;
+                // Distinguish the two light-flow directions so CSV columns and plot
+                // series aren't ambiguous duplicates: IDInFlow is light arriving at
+                // the pin, IDOutFlow is light leaving it.
+                pinNameMap[pin.LogicalPin.IDInFlow] = $"{pinLabel} (in)";
+                pinNameMap[pin.LogicalPin.IDOutFlow] = $"{pinLabel} (out)";
             }
         }
 
@@ -300,10 +304,11 @@ public partial class OnaSweepViewModel : ObservableObject
             if (losses.Any(v => v > WavelengthDataPoint.MinInsertionLossDb + 1))
                 anyAboveFloor = true;
 
-            var series = new LineSeries
+            var series = new XTrackingLineSeries
             {
                 Title = ResolvePinName(pinId) ?? $"Pin {pinId.ToString("N")[..6]}",
                 StrokeThickness = 1.5,
+                CanTrackerInterpolatePoints = true,
             };
 
             for (int i = 0; i < wavelengths.Length; i++)
@@ -355,21 +360,37 @@ public partial class OnaSweepViewModel : ObservableObject
         return measurementIds.Count > 0 ? measurementIds : result.MonitoredPinIds.ToList();
     }
 
+    // Light colors so title, axes, ticks and gridlines are readable on the
+    // dark (#1e1e1e) tool-window background instead of near-invisible black.
+    private static readonly OxyColor PlotForeground = OxyColor.Parse("#E0E0E0");
+    private static readonly OxyColor PlotGridline = OxyColor.Parse("#404040");
+    private static readonly OxyColor PlotAxisline = OxyColor.Parse("#808080");
+
     private static PlotModel CreateEmptyPlotModel()
     {
-        var model = new PlotModel { Title = "ONA — Insertion Loss", Background = OxyColors.Transparent };
-        model.Axes.Add(new LinearAxis
+        var model = new PlotModel
         {
-            Position = AxisPosition.Bottom,
-            Title = "Wavelength (nm)",
-            MajorGridlineStyle = LineStyle.Dot,
-        });
-        model.Axes.Add(new LinearAxis
-        {
-            Position = AxisPosition.Left,
-            Title = "Insertion Loss (dB)",
-            MajorGridlineStyle = LineStyle.Dot,
-        });
+            Title = "ONA — Insertion Loss",
+            Background = OxyColors.Transparent,
+            TextColor = PlotForeground,
+            TitleColor = PlotForeground,
+            PlotAreaBorderColor = PlotAxisline,
+        };
+        model.Axes.Add(CreateAxis(AxisPosition.Bottom, "Wavelength (nm)"));
+        model.Axes.Add(CreateAxis(AxisPosition.Left, "Insertion Loss (dB)"));
         return model;
     }
+
+    private static LinearAxis CreateAxis(AxisPosition position, string title) => new()
+    {
+        Position = position,
+        Title = title,
+        MajorGridlineStyle = LineStyle.Dot,
+        MajorGridlineColor = PlotGridline,
+        TextColor = PlotForeground,
+        TitleColor = PlotForeground,
+        TicklineColor = PlotAxisline,
+        AxislineColor = PlotAxisline,
+        AxislineStyle = LineStyle.Solid,
+    };
 }

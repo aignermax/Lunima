@@ -28,7 +28,14 @@
       ],
       "sMatrix": {
         "wavelengthNm": 1550,
-        "connections": []
+        "connections": [
+          {
+            "fromPin": "source",
+            "toPin": "source",
+            "magnitude": 1,
+            "phaseDegrees": 0
+          }
+        ]
       }
     }
   ]

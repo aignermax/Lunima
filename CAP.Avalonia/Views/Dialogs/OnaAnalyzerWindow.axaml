@@ -10,6 +10,15 @@
         Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
+    <Window.Styles>
+        <!-- Dark hover-tracker so its (white) text is readable instead of the
+             default lemon-yellow box that clashes with the dark theme. -->
+        <Style Selector="oxy|TrackerControl">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="LineStroke" Value="#A0A0A0"/>
+        </Style>
+    </Window.Styles>
+
     <DockPanel Margin="14">
 
         <!-- Top: Title -->
@@ -46,20 +55,20 @@
         </Border>
 
         <!-- Left: Sweep parameters -->
-        <StackPanel DockPanel.Dock="Left" Width="200" Margin="0,0,12,0" Spacing="6">
+        <StackPanel DockPanel.Dock="Left" Width="230" Margin="0,0,12,0" Spacing="6">
             <TextBlock Text="Sweep parameters" Foreground="LightGray" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,2"/>
 
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Start (nm):" Foreground="Gray" Width="80" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding StartNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0" Width="100"/>
+                <NumericUpDown Value="{Binding StartNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0" Width="135"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="End (nm):" Foreground="Gray" Width="80" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding EndNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0" Width="100"/>
+                <NumericUpDown Value="{Binding EndNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0" Width="135"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Steps:" Foreground="Gray" Width="80" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding StepCount}" Minimum="2" Maximum="500" Increment="1" FormatString="F0" Width="100"/>
+                <NumericUpDown Value="{Binding StepCount}" Minimum="2" Maximum="500" Increment="1" FormatString="F0" Width="135"/>
             </StackPanel>
 
             <TextBlock Text="{Binding WarningText}"
