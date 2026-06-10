@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using CAP.Avalonia.Controls.Handlers;
 using CAP.Avalonia.Controls.Rendering;
@@ -101,6 +102,10 @@ public class DesignCanvas : Control
         _keyboardHandler = new KeyboardHandler(() => ViewModel, () => MainViewModel, () => Bounds);
 
         InitGestures();
+
+        // Select the component under the cursor when the context menu opens, so the menu acts on the
+        // right-clicked element. Tunnel phase runs before the menu evaluates its command CanExecute.
+        AddHandler(ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
     }
 
     // ── Rendering ──────────────────────────────────────────────────────────
@@ -193,6 +198,21 @@ public class DesignCanvas : Control
         if (ViewModel != null)
             _activeGesture?.OnPointerReleased(e, ViewModel, MainViewModel);
         _activeGesture = null;
+    }
+
+    /// <summary>
+    /// Selects the component under the cursor before the context menu opens so its actions
+    /// (Component Settings, Copy, Delete, …) operate on the right-clicked element. A keyboard-invoked
+    /// menu provides no position; in that case the current selection is kept.
+    /// </summary>
+    private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        var mainVm = MainViewModel;
+        if (mainVm == null) return;
+        if (!e.TryGetPosition(this, out var screenPoint)) return;
+        var canvasPoint = ScreenToCanvas(screenPoint);
+        mainVm.CanvasInteraction.SelectComponentAt(canvasPoint.X, canvasPoint.Y);
+        InvalidateVisual();
     }
 
     /// <inheritdoc/>

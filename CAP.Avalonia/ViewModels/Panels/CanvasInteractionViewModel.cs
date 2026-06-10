@@ -315,6 +315,21 @@ public partial class CanvasInteractionViewModel : ObservableObject
         UpdateStatus?.Invoke($"Placed group '{SelectedGroupTemplate.Name}' at ({x:F0}, {y:F0})µm");
     }
 
+    /// <summary>
+    /// Selects the component or connection at the given canvas position, keeping the
+    /// <see cref="DesignCanvasViewModel.Selection"/> set and <see cref="SelectedComponent"/> in sync.
+    /// Invoked by the canvas right-click handler so the context menu acts on the element under the
+    /// cursor rather than the previously selected one.
+    /// </summary>
+    public void SelectComponentAt(double canvasX, double canvasY)
+    {
+        SelectAt(canvasX, canvasY);
+        if (SelectedComponent != null)
+            _canvas.Selection.SelectSingle(SelectedComponent);
+        else
+            _canvas.Selection.ClearSelection();
+    }
+
     private void SelectAt(double x, double y)
     {
         // Deselect all

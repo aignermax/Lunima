@@ -74,6 +74,46 @@ public class CanvasContextMenuComponentSettingsTests
         Should.NotThrow(() => interaction.OpenSelectedComponentSettingsCommand.Execute(null));
     }
 
+    [Fact]
+    public void SelectComponentAt_SelectsComponentUnderCursor_AndSyncsSelectionSet()
+    {
+        var (interaction, canvas) = CreateInteraction();
+        var comp = AddComponentAt(canvas, x: 100, y: 100);
+
+        interaction.SelectComponentAt(110, 110);
+
+        interaction.SelectedComponent.ShouldBe(comp);
+        canvas.Selection.SelectedComponents.ShouldContain(comp);
+        interaction.OpenSelectedComponentSettingsCommand.CanExecute(null).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SelectComponentAt_SwitchesToRightClickedComponent_NotPreviousSelection()
+    {
+        var (interaction, canvas) = CreateInteraction();
+        var a = AddComponentAt(canvas, x: 0, y: 0);
+        var b = AddComponentAt(canvas, x: 200, y: 200);
+
+        interaction.SelectComponentAt(10, 10);   // select A first
+        interaction.SelectComponentAt(210, 210); // right-click B while A is selected
+
+        interaction.SelectedComponent.ShouldBe(b);
+        canvas.Selection.SelectedComponents.ShouldHaveSingleItem().ShouldBe(b);
+    }
+
+    [Fact]
+    public void SelectComponentAt_EmptySpace_ClearsSelection()
+    {
+        var (interaction, canvas) = CreateInteraction();
+        var comp = AddComponentAt(canvas, x: 0, y: 0);
+        interaction.SelectComponentAt(10, 10);
+
+        interaction.SelectComponentAt(5000, 5000); // empty canvas region
+
+        interaction.SelectedComponent.ShouldBeNull();
+        canvas.Selection.SelectedComponents.ShouldBeEmpty();
+    }
+
     // -------------------------------------------------------------------------
 
     private static (CanvasInteractionViewModel interaction, DesignCanvasViewModel canvas) CreateInteraction()
@@ -81,5 +121,16 @@ public class CanvasContextMenuComponentSettingsTests
         var canvas = new DesignCanvasViewModel();
         var commandManager = new CommandManager();
         return (new CanvasInteractionViewModel(canvas, commandManager), canvas);
+    }
+
+    private static ComponentViewModel AddComponentAt(
+        DesignCanvasViewModel canvas, double x, double y, double width = 50, double height = 50)
+    {
+        var component = TestComponentFactory.CreateStraightWaveGuide();
+        component.PhysicalX = x;
+        component.PhysicalY = y;
+        component.WidthMicrometers = width;
+        component.HeightMicrometers = height;
+        return canvas.AddComponent(component);
     }
 }
