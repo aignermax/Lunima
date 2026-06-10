@@ -154,6 +154,33 @@
 
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
+                <!-- Tools -->
+                <Button MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
+                        ToolTip.Tip="Tools">
+                    <Button.Content>
+                        <TextBlock Text="🔧 Tools ▾"/>
+                    </Button.Content>
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <StackPanel MinWidth="200" Margin="6">
+                                <Button HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,7"
+                                        Background="#3d3d5d"
+                                        Click="OpenModeSolverDialog_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="📡" FontSize="15" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Compute Modes for Waveguide…"
+                                                   Foreground="White" FontSize="12"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+
+                <Separator Width="1" Background="Gray" Margin="10,5"/>
+
                 <!-- Settings -->
                 <Button Command="{Binding OpenSettingsWindowCommand}"
                         Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="Open Settings (grid snap, updates, Python environment, AI key)">
