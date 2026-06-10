@@ -6,7 +6,6 @@
              x:DataType="vm:MainViewModel">
 
     <StackPanel>
-        <Separator Margin="0,8,0,8" Background="#3d3d3d"/>
         <TextBlock Text="Selected Component:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
 
         <!-- Empty state -->
@@ -14,14 +13,50 @@
                    Text="No component selected. Click a component on the canvas to see its properties here."
                    IsVisible="{Binding !RightPanel.HasSelectedComponentEditor}"/>
 
-        <!-- Editor host: DataTemplates pick the right view per editor VM type -->
+        <!-- Name / position / size readout. Bound to the canonical canvas selection so the
+             group name is correct and the position updates live while the component is dragged. -->
+        <StackPanel IsVisible="{Binding RightPanel.HasSelectedComponentEditor}">
+            <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.DisplayName, FallbackValue='None'}"
+                       Foreground="White" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                        IsVisible="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}">
+                <TextBlock Text="Type: " Foreground="Gray"/>
+                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName}"
+                           Foreground="#aaaaaa" FontStyle="Italic"/>
+            </StackPanel>
+
+            <TextBlock Text="Position:" Foreground="Gray" Margin="0,10,0,3"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="X: " Foreground="Gray"/>
+                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"
+                           Foreground="White"/>
+                <TextBlock Text=" µm    Y: " Foreground="Gray"/>
+                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"
+                           Foreground="White"/>
+                <TextBlock Text=" µm" Foreground="Gray"/>
+            </StackPanel>
+
+            <TextBlock Text="Dimensions:" Foreground="Gray" Margin="0,8,0,3"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"
+                           Foreground="White"/>
+                <TextBlock Text=" × " Foreground="Gray"/>
+                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"
+                           Foreground="White"/>
+                <TextBlock Text=" µm" Foreground="Gray"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Editor host: DataTemplates pick the right view per editor VM type.
+             Name/position/size are shown by the readout above, so the templates
+             only carry component-specific controls. -->
         <ContentControl Content="{Binding RightPanel.SelectedComponentEditor}"
+                        Margin="0,4,0,0"
                         IsVisible="{Binding RightPanel.HasSelectedComponentEditor}">
             <ContentControl.Resources>
                 <!-- ONA Analyzer: just an "open window" button -->
                 <DataTemplate x:Key="OnaAnalyzerTpl" x:DataType="editors:OnaAnalyzerEditorViewModel">
                     <StackPanel>
-                        <TextBlock Text="{Binding AnalyzerName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                         <TextBlock Text="Wavelength sweep is configured in the dedicated tool window."
                                    Foreground="Gray" FontSize="10" Margin="0,2,0,8" TextWrapping="Wrap"/>
                         <Button Content="Open ONA Sweep…"
@@ -33,7 +68,6 @@
                 <!-- Slider-driven components (phase shifter, tunable coupler) -->
                 <DataTemplate x:Key="SliderTpl" x:DataType="editors:SliderEditorViewModel">
                     <StackPanel>
-                        <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding SliderLabel}" Foreground="Gray" FontSize="10" Margin="0,4,0,2"/>
                         <Grid ColumnDefinitions="*,80">
                             <Slider Grid.Column="0"
@@ -48,37 +82,31 @@
                     </StackPanel>
                 </DataTemplate>
 
-                <!-- Light-source components (grating coupler, edge coupler) -->
+                <!-- Light-source components (grating coupler, edge coupler).
+                     Wavelength is a curated dropdown of simulation-supported values,
+                     not a free numeric field. -->
                 <DataTemplate x:Key="LightSourceTpl" x:DataType="editors:LightSourceEditorViewModel">
                     <StackPanel>
-                        <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
-                        <Grid ColumnDefinitions="80,*" Margin="0,4,0,2">
-                            <TextBlock Grid.Column="0" Text="Wavelength" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
-                            <NumericUpDown Grid.Column="1"
-                                           Value="{Binding LaserConfig.WavelengthNm, Mode=TwoWay}"
-                                           Minimum="400" Maximum="2500" Increment="10" FormatString="F0"/>
-                        </Grid>
-                        <Grid ColumnDefinitions="80,*">
-                            <TextBlock Grid.Column="0" Text="Input power" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
-                            <NumericUpDown Grid.Column="1"
-                                           Value="{Binding LaserConfig.InputPower, Mode=TwoWay}"
-                                           Minimum="0" Maximum="10" Increment="0.1" FormatString="F2"/>
-                        </Grid>
+                        <TextBlock Text="Wavelength" Foreground="Gray" FontSize="10" Margin="0,4,0,2"/>
+                        <ComboBox ItemsSource="{Binding WavelengthOptions}"
+                                  SelectedValue="{Binding LaserConfig.WavelengthNm, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding WavelengthNm}"
+                                  DisplayMemberBinding="{Binding Label}"
+                                  HorizontalAlignment="Stretch" Margin="0,0,0,6"/>
+                        <TextBlock Text="Input power" Foreground="Gray" FontSize="10" Margin="0,0,0,2"/>
+                        <Slider Minimum="0" Maximum="1"
+                                Value="{Binding LaserConfig.InputPower, Mode=TwoWay}"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                        <TextBlock Foreground="#cccccc" FontSize="10">
+                            <Run Text="Power: "/>
+                            <Run Text="{Binding LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
+                        </TextBlock>
                     </StackPanel>
                 </DataTemplate>
 
-                <!-- Fallback: read-only summary -->
+                <!-- Fallback: PDK function only (name/position/size come from the readout above) -->
                 <DataTemplate x:Key="GenericTpl" x:DataType="editors:GenericComponentEditorViewModel">
-                    <StackPanel>
-                        <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding NazcaFunction}" Foreground="#888" FontSize="9" Margin="0,2,0,4"/>
-                        <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto">
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Position" Foreground="Gray" FontSize="10"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Position}" Foreground="#cccccc" FontSize="10"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Size" Foreground="Gray" FontSize="10"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Size}" Foreground="#cccccc" FontSize="10"/>
-                        </Grid>
-                    </StackPanel>
+                    <TextBlock Text="{Binding NazcaFunction}" Foreground="#888" FontSize="9" Margin="0,2,0,4"/>
                 </DataTemplate>
             </ContentControl.Resources>
             <ContentControl.DataTemplates>

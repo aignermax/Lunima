@@ -23,6 +23,12 @@ public partial class LightSourceEditorViewModel : ObservableObject
     /// <summary>The per-instance laser configuration bound by the panel.</summary>
     public LaserConfig? LaserConfig => _componentVm.LaserConfig;
 
+    /// <summary>
+    /// Discrete wavelengths the simulation supports. The editor offers only these
+    /// (not a free numeric field) so a source can't be set to an unsupported wavelength.
+    /// </summary>
+    public IReadOnlyList<WavelengthOption> WavelengthOptions => WavelengthOption.All;
+
     /// <summary>Creates the editor for the given light-source component.</summary>
     public LightSourceEditorViewModel(ComponentViewModel componentVm)
     {
