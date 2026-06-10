@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:editors="using:CAP.Avalonia.ViewModels.Properties.Editors"
+             x:Class="CAP.Avalonia.Views.Panels.SelectedComponentPropertiesPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,8,0,8" Background="#3d3d3d"/>
+        <TextBlock Text="Selected Component:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
+
+        <!-- Empty state -->
+        <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"
+                   Text="No component selected. Click a component on the canvas to see its properties here."
+                   IsVisible="{Binding !RightPanel.HasSelectedComponentEditor}"/>
+
+        <!-- Editor host: DataTemplates pick the right view per editor VM type -->
+        <ContentControl Content="{Binding RightPanel.SelectedComponentEditor}"
+                        IsVisible="{Binding RightPanel.HasSelectedComponentEditor}">
+            <ContentControl.Resources>
+                <!-- ONA Analyzer: just an "open window" button -->
+                <DataTemplate x:Key="OnaAnalyzerTpl" x:DataType="editors:OnaAnalyzerEditorViewModel">
+                    <StackPanel>
+                        <TextBlock Text="{Binding AnalyzerName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="Wavelength sweep is configured in the dedicated tool window."
+                                   Foreground="Gray" FontSize="10" Margin="0,2,0,8" TextWrapping="Wrap"/>
+                        <Button Content="Open ONA Sweep…"
+                                Command="{Binding OpenSweepCommand}"
+                                Width="180" HorizontalAlignment="Left" Background="#3d5d5d"/>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- Slider-driven components (phase shifter, tunable coupler) -->
+                <DataTemplate x:Key="SliderTpl" x:DataType="editors:SliderEditorViewModel">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SliderLabel}" Foreground="Gray" FontSize="10" Margin="0,4,0,2"/>
+                        <Grid ColumnDefinitions="*,80">
+                            <Slider Grid.Column="0"
+                                    Minimum="{Binding Min}" Maximum="{Binding Max}"
+                                    Value="{Binding Value, Mode=TwoWay}"/>
+                            <NumericUpDown Grid.Column="1"
+                                           Value="{Binding Value, Mode=TwoWay}"
+                                           Minimum="{Binding Min}" Maximum="{Binding Max}"
+                                           Increment="1" FormatString="F2"
+                                           Margin="6,0,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- Light-source components (grating coupler, edge coupler) -->
+                <DataTemplate x:Key="LightSourceTpl" x:DataType="editors:LightSourceEditorViewModel">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="80,*" Margin="0,4,0,2">
+                            <TextBlock Grid.Column="0" Text="Wavelength" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Column="1"
+                                           Value="{Binding LaserConfig.WavelengthNm, Mode=TwoWay}"
+                                           Minimum="400" Maximum="2500" Increment="10" FormatString="F0"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="80,*">
+                            <TextBlock Grid.Column="0" Text="Input power" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Column="1"
+                                           Value="{Binding LaserConfig.InputPower, Mode=TwoWay}"
+                                           Minimum="0" Maximum="10" Increment="0.1" FormatString="F2"/>
+                        </Grid>
+                    </StackPanel>
+                </DataTemplate>
+
+                <!-- Fallback: read-only summary -->
+                <DataTemplate x:Key="GenericTpl" x:DataType="editors:GenericComponentEditorViewModel">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ComponentName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding NazcaFunction}" Foreground="#888" FontSize="9" Margin="0,2,0,4"/>
+                        <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Position" Foreground="Gray" FontSize="10"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Position}" Foreground="#cccccc" FontSize="10"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Size" Foreground="Gray" FontSize="10"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Size}" Foreground="#cccccc" FontSize="10"/>
+                        </Grid>
+                    </StackPanel>
+                </DataTemplate>
+            </ContentControl.Resources>
+            <ContentControl.DataTemplates>
+                <StaticResource ResourceKey="OnaAnalyzerTpl"/>
+                <StaticResource ResourceKey="SliderTpl"/>
+                <StaticResource ResourceKey="LightSourceTpl"/>
+                <StaticResource ResourceKey="GenericTpl"/>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+    </StackPanel>
+
+</UserControl>

@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Export;
@@ -142,6 +143,7 @@ public partial class App : Application
         // Singleton so the Settings-window page and the RightPanel reference share state.
         services.AddSingleton<ChipSizeViewModel>();
         services.AddTransient<ParameterSweepViewModel>();
+        services.AddTransient<OnaSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();
         services.AddTransient<ComponentDimensionDiagnosticsViewModel>();
@@ -152,6 +154,21 @@ public partial class App : Application
         services.AddTransient<GroupSMatrixViewModel>();
         services.AddTransient<ArchitectureReportViewModel>();
         services.AddTransient<PdkConsistencyViewModel>();
+
+        // Selection-driven component property editors (right panel).
+        // Order matters: most specific first, generic fallback last. The
+        // factory walks them and returns the first non-null editor for the
+        // currently selected component on the canvas.
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider>(
+            sp => sp.GetRequiredService<CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider>());
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider,
+            CAP.Avalonia.ViewModels.Properties.Editors.LightSourceEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider,
+            CAP.Avalonia.ViewModels.Properties.Editors.SliderEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider,
+            CAP.Avalonia.ViewModels.Properties.Editors.GenericComponentEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.ComponentEditorFactory>();
 
         // VerilogAExportViewModel: singleton so the dialog and FileOperations
         // share the same state.

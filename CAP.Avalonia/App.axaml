@@ -4,5 +4,8 @@
              RequestedThemeVariant="Dark">
     <Application.Styles>
         <FluentTheme />
+        <!-- OxyPlot.Avalonia ships its control templates here. Without this include
+             the <oxy:PlotView> control has no template and renders blank. -->
+        <StyleInclude Source="avares://OxyPlot.Avalonia/Themes/Default.axaml" />
     </Application.Styles>
 </Application>

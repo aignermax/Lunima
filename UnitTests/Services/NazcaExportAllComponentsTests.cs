@@ -17,7 +17,12 @@ public class NazcaExportAllComponentsTests
     public void Export_AllBuiltInTemplates_EachComponentAppearsInOutput()
     {
         var canvas = new DesignCanvasViewModel();
-        var templates = TestPdkLoader.LoadAllTemplates();
+        // Analysis tools (e.g. ONA Analyzer) are intentionally skipped during
+        // GDS / Nazca export — they have no physical counterpart. Filter them
+        // out before placing so the per-index assertion below stays in sync.
+        var templates = TestPdkLoader.LoadAllTemplates()
+            .Where(t => t.NazcaFunctionName != "__analyzer__")
+            .ToList();
 
         double xOffset = 0;
         foreach (var template in templates)

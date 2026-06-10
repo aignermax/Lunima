@@ -154,8 +154,12 @@ public class PythonDiscoveryService
     /// </summary>
     private static string[] GetSystemPythonCommands()
     {
+        // On Windows, "py" (the official launcher) is included because bare
+        // "python"/"python3" frequently resolve to the Microsoft Store
+        // execution-alias stub, which is not a real interpreter. The launcher
+        // resolves to an actual install (where nazca is reachable).
         return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? new[] { "python", "python3" }
+            ? new[] { "py", "python", "python3" }
             : new[] { "python3", "python" };
     }
 
