@@ -77,6 +77,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public Action? ClearComponentTemplateSelection { get; set; }
 
+    /// <summary>
+    /// Callback invoked when the user requests "Component Settings…" from the canvas context menu.
+    /// Wired by <c>MainWindow.axaml.cs</c> to open the component settings dialog.
+    /// </summary>
+    public Action<ComponentViewModel>? OpenComponentSettings { get; set; }
+
     public CanvasInteractionViewModel(
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
@@ -179,6 +185,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         OnSelectionChanged?.Invoke(value);
+        OpenSelectedComponentSettingsCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -327,6 +334,21 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
         _commandManager.ExecuteCommand(cmd);
         UpdateStatus?.Invoke($"Placed group '{SelectedGroupTemplate.Name}' at ({x:F0}, {y:F0})µm");
+    }
+
+    /// <summary>
+    /// Selects the component or connection at the given canvas position, keeping the
+    /// <see cref="DesignCanvasViewModel.Selection"/> set and <see cref="SelectedComponent"/> in sync.
+    /// Invoked by the canvas right-click handler so the context menu acts on the element under the
+    /// cursor rather than the previously selected one.
+    /// </summary>
+    public void SelectComponentAt(double canvasX, double canvasY)
+    {
+        SelectAt(canvasX, canvasY);
+        if (SelectedComponent != null)
+            _canvas.Selection.SelectSingle(SelectedComponent);
+        else
+            _canvas.Selection.ClearSelection();
     }
 
     private void SelectAt(double x, double y)
@@ -783,4 +805,19 @@ public partial class CanvasInteractionViewModel : ObservableObject
                _libraryViewModel != null &&
                _inputDialogService != null;
     }
+
+    /// <summary>
+    /// Opens the Component Settings dialog for the currently selected canvas component.
+    /// Only enabled when exactly one component is selected.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedComponentSettings))]
+    private void OpenSelectedComponentSettings()
+    {
+        var selected = SelectedComponent;
+        if (selected != null)
+            OpenComponentSettings?.Invoke(selected);
+    }
+
+    private bool CanOpenSelectedComponentSettings()
+        => SelectedComponent != null;
 }

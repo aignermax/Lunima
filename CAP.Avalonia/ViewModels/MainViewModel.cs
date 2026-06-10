@@ -95,11 +95,6 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Verilog-A format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
     public VerilogAExportFormat VerilogAExportFormat { get; private set; } = null!;
 
-    /// <summary>
-    /// Available wavelength options for the laser configuration dropdown.
-    /// </summary>
-    public IReadOnlyList<WavelengthOption> WavelengthOptions { get; } = WavelengthOption.All;
-
     public IFileDialogService? FileDialogService
     {
         get => FileOperations.FileDialogService;

@@ -115,6 +115,11 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
         {
             var compLabel = !string.IsNullOrWhiteSpace(comp.Name) ? comp.Name : "(unnamed)";
 
+            // Virtual analysis tools (ONA Analyzer, future Power Monitor, etc.)
+            // are not exported to GDS, so the GDS-only validations below do not
+            // apply to them. Detected via the sentinel nazcaFunction value.
+            bool isAnalysisTool = comp.NazcaFunction == "__analyzer__";
+
             if (string.IsNullOrWhiteSpace(comp.Name))
             {
                 errors.Add($"[{pdkName}] Component must have a name");
@@ -138,8 +143,9 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             // NazcaOriginOffset is required on the main load path — no silent
             // fallback allowed. Without it, GDS export produces misaligned
             // waveguides. The Offset Editor bypasses this check (it exists
-            // precisely to fix PDKs in this state).
-            if (requireNazcaOffset)
+            // precisely to fix PDKs in this state). Analysis tools are also
+            // exempt because they are never exported.
+            if (requireNazcaOffset && !isAnalysisTool)
             {
                 if (comp.NazcaOriginOffsetX == null)
                 {

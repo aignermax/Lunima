@@ -1,13 +1,15 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Controls;
-using CAP.Avalonia.ViewModels.Analysis;
-using CAP.Avalonia.ViewModels.Canvas;
-using CAP.Avalonia.ViewModels.Diagnostics;
-using CAP.Avalonia.ViewModels.Converters;
-using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Converters;
+using CAP.Avalonia.ViewModels.Diagnostics;
+using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Properties;
 using CAP.Avalonia.Services;
+using System.ComponentModel;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -97,9 +99,32 @@ public partial class RightPanelViewModel : ObservableObject
     public PdkConsistencyViewModel PdkConsistency { get; }
 
     /// <summary>
+    /// ViewModel for the ONA (Optical Network Analyzer) wavelength-sweep panel.
+    /// </summary>
+    public OnaSweepViewModel OnaAnalysis { get; }
+
+    /// <summary>
     /// ViewModel for the in-app AI Design Assistant chat panel.
     /// </summary>
     public AiAssistantViewModel AiAssistant { get; }
+
+    private readonly ComponentEditorFactory _editorFactory;
+    private readonly DesignCanvasViewModel _canvas;
+
+    /// <summary>
+    /// Editor ViewModel for the currently selected component, picked by
+    /// <see cref="ComponentEditorFactory"/>. Null when no component is
+    /// selected. The right panel binds a ContentControl to this property
+    /// and selects a DataTemplate per editor VM type.
+    /// </summary>
+    [ObservableProperty]
+    private object? _selectedComponentEditor;
+
+    /// <summary>True when a component is selected and an editor is available.</summary>
+    public bool HasSelectedComponentEditor => SelectedComponentEditor != null;
+
+    partial void OnSelectedComponentEditorChanged(object? value)
+        => OnPropertyChanged(nameof(HasSelectedComponentEditor));
 
     /// <summary>Initializes a new instance of <see cref="RightPanelViewModel"/>.</summary>
     public RightPanelViewModel(
@@ -116,9 +141,12 @@ public partial class RightPanelViewModel : ObservableObject
         GroupSMatrixViewModel groupSMatrix,
         ArchitectureReportViewModel architectureReport,
         PdkConsistencyViewModel pdkConsistency,
-        AiAssistantViewModel aiAssistant)
+        AiAssistantViewModel aiAssistant,
+        OnaSweepViewModel onaAnalysis,
+        ComponentEditorFactory editorFactory)
     {
         _preferencesService = preferencesService;
+        _editorFactory = editorFactory;
 
         Sweep = sweep;
         RoutingDiagnostics = routingDiagnostics;
@@ -132,11 +160,28 @@ public partial class RightPanelViewModel : ObservableObject
         ArchitectureReport = architectureReport;
         PdkConsistency = pdkConsistency;
         AiAssistant = aiAssistant;
+        OnaAnalysis = onaAnalysis;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);
         DimensionValidator.Configure(canvas);
         CompressLayout.Configure(canvas);
+        OnaAnalysis.Configure(canvas);
+
+        // Drive the per-component property editor from canvas selection.
+        // Switching the selected component on the canvas swaps the editor
+        // ViewModel in the right panel via the DataTemplate selector.
+        _canvas = canvas;
+        canvas.PropertyChanged += OnCanvasPropertyChanged;
+        SelectedComponentEditor = _editorFactory.CreateEditor(canvas.SelectedComponent);
+    }
+
+    private void OnCanvasPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesignCanvasViewModel.SelectedComponent))
+        {
+            SelectedComponentEditor = _editorFactory.CreateEditor(_canvas.SelectedComponent);
+        }
     }
 
     /// <summary>

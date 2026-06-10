@@ -1,3 +1,4 @@
+using CAP_Core.Analysis.OnaAnalysis;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
@@ -154,17 +155,12 @@ namespace CAP_Core.LightCalculation
         private static void AddComponentSMatrix(
             Component component, int waveLength, List<SMatrix> result)
         {
-            if (component.WaveLengthToSMatrixMap.TryGetValue(waveLength, out var matrixFound))
+            if (component.WaveLengthToSMatrixMap.Count > 0)
             {
-                result.Add(matrixFound);
-            }
-            else if (component.WaveLengthToSMatrixMap.Count > 0)
-            {
-                // Nearest-wavelength fallback for multi-wavelength PDK components
-                var nearestKey = component.WaveLengthToSMatrixMap.Keys
-                    .OrderBy(k => Math.Abs(k - waveLength))
-                    .First();
-                result.Add(component.WaveLengthToSMatrixMap[nearestKey]);
+                // Use WavelengthInterpolator: exact match → linear interpolation → nearest-neighbour
+                var matrix = WavelengthInterpolator.GetMatrix(
+                    component.WaveLengthToSMatrixMap, waveLength, out _);
+                result.Add(matrix);
             }
             else
             {
