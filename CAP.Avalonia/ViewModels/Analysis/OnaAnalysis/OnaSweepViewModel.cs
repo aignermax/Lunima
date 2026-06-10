@@ -25,7 +25,7 @@ public partial class OnaSweepViewModel : ObservableObject
 {
     [ObservableProperty] private int _startNm = 1500;
     [ObservableProperty] private int _endNm = 1600;
-    [ObservableProperty] private int _stepCount = 21;
+    [ObservableProperty] private int _stepCount = 100;
     [ObservableProperty] private bool _isSweeping;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private string _warningText = "";
