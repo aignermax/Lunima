@@ -204,15 +204,26 @@ public partial class App : Application
         {
             var prefs = sp.GetRequiredService<UserPreferencesService>();
             // Resolution order:
-            //  1. User's saved CustomPythonPath (set via GdsExport settings dialog).
-            //  2. PythonDiscoveryService — checks VIRTUAL_ENV, system python3, and
-            //     ~/.venvs/*/bin/python; only returns a path whose `import nazca`
-            //     succeeds. Avoids reinventing venv discovery for the preview path.
+            //  1. User's saved CustomPythonPath — but only if it can actually import
+            //     nazca. A stale value (e.g. the bare "python" Store-alias stub saved
+            //     by an older version) is rejected so it can't silently break the
+            //     preview; we fall through to discovery instead.
+            //  2. PythonDiscoveryService — checks VIRTUAL_ENV, installed interpreters,
+            //     system python, and ~/.venvs/*; only returns a path whose `import
+            //     nazca` succeeds. Avoids reinventing venv discovery for the preview.
             //  3. ResolvePythonExecutable — naive PATH search; final fallback so
             //     the service stays constructable on a machine without nazca.
-            var python = prefs.GetCustomPythonPath()
-                         ?? DiscoverNazcaPython()
-                         ?? ResolvePythonExecutable();
+            var saved = prefs.GetCustomPythonPath();
+            var python = ValidatedNazcaPython(saved);
+            if (python == null)
+            {
+                var discovered = DiscoverNazcaPython();
+                // Self-correct a stale/invalid saved path (e.g. the "python" stub) so the
+                // probe doesn't run on every launch. Only overwrites a non-empty bad value.
+                if (discovered != null && !string.IsNullOrEmpty(saved) && discovered != saved)
+                    prefs.SetCustomPythonPath(discovered);
+                python = discovered ?? ResolvePythonExecutable();
+            }
             var script = FindPreviewScript();
             return new NazcaComponentPreviewService(python, script);
         });
@@ -263,8 +274,46 @@ public partial class App : Application
         try
         {
             var discovery = new PythonDiscoveryService();
-            var found = discovery.DiscoverPythonWithNazcaAsync().GetAwaiter().GetResult();
-            return found.FirstOrDefault()?.Path;
+            // Task.Run offloads the async work to the thread pool. Calling .Result directly
+            // on the UI thread would deadlock: the awaits inside capture the UI
+            // SynchronizationContext, but that thread is blocked here waiting for the result.
+            // FindFirst… short-circuits at the first nazca-capable interpreter so startup
+            // doesn't probe every candidate.
+            return Task.Run(() => discovery.FindFirstNazcaPythonPathAsync()).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Returns <paramref name="customPath"/> only if it points to a Python that can
+    /// import nazca; otherwise <c>null</c>. Guards against a stale saved path (e.g. the
+    /// bare "python" Store-alias stub) silently disabling the GDS preview — an unusable
+    /// value falls through to <see cref="DiscoverNazcaPython"/> instead.
+    /// </summary>
+    private static string? ValidatedNazcaPython(string? customPath)
+    {
+        if (string.IsNullOrWhiteSpace(customPath))
+            return null;
+
+        // A real interpreter file path is trusted as-is — no launch at startup.
+        if (File.Exists(customPath))
+            return customPath;
+
+        // On Windows, never probe a bare command (e.g. "python"): it may be a Microsoft
+        // Store execution-alias stub whose Process.Start blocks indefinitely (Store/App-
+        // Installer activation). Fall through to discovery, which only touches "py" and
+        // real interpreter file paths.
+        if (OperatingSystem.IsWindows())
+            return null;
+        try
+        {
+            var discovery = new PythonDiscoveryService();
+            // Task.Run avoids a UI-thread deadlock — see DiscoverNazcaPython for why.
+            var info = Task.Run(() => discovery.CheckPythonInstallation(customPath, "Custom")).GetAwaiter().GetResult();
+            return info?.HasNazca == true ? customPath : null;
         }
         catch
         {

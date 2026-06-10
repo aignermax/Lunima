@@ -75,6 +75,20 @@ public class PythonDiscoveryService
                 found.Add(installation);
         }
 
+        // 1b. Windows: full paths of installed interpreters (py-launcher / installer).
+        // These resolve to real python.exe files that run reliably from a GUI process,
+        // unlike the bare "py"/"python" PATH entries which are often Microsoft Store
+        // execution-alias stubs that fail when launched with redirected I/O.
+        foreach (var installPath in GetWindowsPythonInstallPaths())
+        {
+            if (checkedPaths.Add(installPath))
+            {
+                var installation = await CheckPythonInstallation(installPath, "Installed");
+                if (installation?.HasNazca == true)
+                    found.Add(installation);
+            }
+        }
+
         // 2. Check standard system commands
         var systemCommands = GetSystemPythonCommands();
         foreach (var cmd in systemCommands)
@@ -101,6 +115,42 @@ public class PythonDiscoveryService
         }
 
         return found;
+    }
+
+    /// <summary>
+    /// Returns the path of the first discovered Python that can import nazca, checking
+    /// sources in priority order (active venv → installed interpreters → "py" launcher →
+    /// common venvs) and stopping at the first match. Cheaper than
+    /// <see cref="DiscoverPythonWithNazcaAsync"/> for the common "just give me one that
+    /// works" case (e.g. resolving the preview interpreter at startup), since it does not
+    /// probe every candidate. Returns <c>null</c> if none is found.
+    /// </summary>
+    public async Task<string?> FindFirstNazcaPythonPathAsync()
+    {
+        var venv = GetActiveVenvPython();
+        if (venv != null && await FirstWithNazca(venv, "Active venv") is { } v)
+            return v;
+
+        foreach (var installPath in GetWindowsPythonInstallPaths())
+            if (await FirstWithNazca(installPath, "Installed") is { } p)
+                return p;
+
+        foreach (var cmd in GetSystemPythonCommands())
+            if (await FirstWithNazca(cmd, "System") is { } p)
+                return p;
+
+        foreach (var venvPath in GetCommonVenvDirectories())
+            if (await FirstWithNazca(venvPath, GetVenvSource(venvPath)) is { } p)
+                return p;
+
+        return null;
+    }
+
+    /// <summary>Returns the path if the candidate has nazca, otherwise null.</summary>
+    private async Task<string?> FirstWithNazca(string path, string source)
+    {
+        var install = await CheckPythonInstallation(path, source);
+        return install?.HasNazca == true ? install.Path : null;
     }
 
     /// <summary>
@@ -154,12 +204,14 @@ public class PythonDiscoveryService
     /// </summary>
     private static string[] GetSystemPythonCommands()
     {
-        // On Windows, "py" (the official launcher) is included because bare
-        // "python"/"python3" frequently resolve to the Microsoft Store
-        // execution-alias stub, which is not a real interpreter. The launcher
-        // resolves to an actual install (where nazca is reachable).
+        // On Windows we deliberately probe ONLY "py" (the official launcher), never
+        // bare "python"/"python3": those usually resolve to the Microsoft Store
+        // execution-alias stub, and starting that stub from a GUI process can block
+        // indefinitely (it triggers Store/App-Installer activation that never returns).
+        // Real interpreters are found via the filesystem scan in
+        // GetWindowsPythonInstallPaths instead.
         return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? new[] { "py", "python", "python3" }
+            ? new[] { "py" }
             : new[] { "python3", "python" };
     }
 
@@ -188,6 +240,54 @@ public class PythonDiscoveryService
         }
 
         return pythonPaths;
+    }
+
+    /// <summary>
+    /// Finds full paths of installed Python interpreters on Windows by scanning the
+    /// standard install roots used by the py-launcher / python.org installers:
+    /// <c>%LOCALAPPDATA%\Python\*</c> (py-manager pythoncore builds),
+    /// <c>%LOCALAPPDATA%\Programs\Python\*</c> (per-user installer) and
+    /// <c>%ProgramFiles%\Python*</c> (machine-wide installer). Returns an empty list
+    /// on non-Windows platforms. Each path is a real <c>python.exe</c> so it can be
+    /// launched directly without going through a PATH execution-alias stub.
+    /// </summary>
+    private static List<string> GetWindowsPythonInstallPaths()
+    {
+        var paths = new List<string>();
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return paths;
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+
+        // (root, pattern) — pattern restricts the ProgramFiles scan to "Python*"
+        // so we don't enumerate every unrelated Program Files folder.
+        var roots = new[]
+        {
+            (System.IO.Path.Combine(localAppData, "Python"), "*"),
+            (System.IO.Path.Combine(localAppData, "Programs", "Python"), "*"),
+            (programFiles, "Python*"),
+        };
+
+        foreach (var (root, pattern) in roots)
+        {
+            if (!Directory.Exists(root)) continue;
+            try
+            {
+                foreach (var dir in Directory.GetDirectories(root, pattern))
+                {
+                    var exe = System.IO.Path.Combine(dir, "python.exe");
+                    if (File.Exists(exe))
+                        paths.Add(exe);
+                }
+            }
+            catch
+            {
+                // Ignore access errors — a single unreadable root must not abort discovery.
+            }
+        }
+
+        return paths;
     }
 
     /// <summary>
@@ -289,7 +389,7 @@ public class PythonDiscoveryService
         try
         {
             var checkScript = "import nazca; print(nazca.__version__)";
-            var (exitCode, output, _) = await RunCommandAsync(pythonPath, $"-c \"{checkScript}\"");
+            var (exitCode, output, _) = await RunCommandAsync(pythonPath, $"-c \"{checkScript}\"", NazcaImportTimeoutMs);
 
             if (exitCode == 0 && !string.IsNullOrWhiteSpace(output))
             {
@@ -305,10 +405,14 @@ public class PythonDiscoveryService
     }
 
     /// <summary>
-    /// Runs a command and captures output.
+    /// Runs a command and captures output, killing it if it does not exit within
+    /// <paramref name="timeoutMs"/>. The timeout is essential on Windows: a bare
+    /// "python"/"python3" command can be a Microsoft Store execution-alias stub that
+    /// hangs (waiting on the Store) instead of exiting — without a kill that would
+    /// block discovery forever. A timed-out command is reported as a failure (exit -1).
     /// </summary>
     private async Task<(int exitCode, string output, string error)> RunCommandAsync(
-        string fileName, string arguments)
+        string fileName, string arguments, int timeoutMs = DefaultCommandTimeoutMs)
     {
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
@@ -326,11 +430,28 @@ public class PythonDiscoveryService
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
 
-        await process.WaitForExitAsync();
+        using var cts = new CancellationTokenSource(timeoutMs);
+        try
+        {
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* already gone */ }
+            return (-1, string.Empty, "Command timed out.");
+        }
 
         var output = await outputTask;
         var error = await errorTask;
 
         return (process.ExitCode, output, error);
     }
+
+    /// <summary>Default timeout for a probe command (version / which). Real interpreters
+    /// answer in well under a second; a longer wait means a hung Store-alias stub.</summary>
+    private const int DefaultCommandTimeoutMs = 5000;
+
+    /// <summary>Timeout for the nazca import check — generous because importing nazca
+    /// (and its heavy deps) on a cold interpreter can legitimately take several seconds.</summary>
+    private const int NazcaImportTimeoutMs = 20000;
 }
