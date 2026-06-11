@@ -1223,7 +1223,7 @@ public partial class FileOperationsViewModel : ObservableObject
             try
             {
                 // Export Python script
-                var nazcaCode = _nazcaExporter.Export(_canvas);
+                var nazcaCode = _nazcaExporter.Export(_canvas, overrides: StoredNazcaOverrides);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
 
                 // Attempt GDS generation if enabled

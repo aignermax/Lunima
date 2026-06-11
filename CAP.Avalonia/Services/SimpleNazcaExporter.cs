@@ -5,6 +5,7 @@ using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
+using CAP_DataAccess.Persistence.PIR;
 
 namespace CAP.Avalonia.Services;
 
@@ -19,17 +20,49 @@ public class SimpleNazcaExporter
     /// </summary>
     /// <param name="canvas">The design canvas to export.</param>
     /// <param name="pdkModuleName">Optional PDK module name (e.g., "siepic_ebeam_pdk") for import.</param>
-    public string Export(DesignCanvasViewModel canvas, string? pdkModuleName = null)
+    /// <param name="overrides">
+    /// Optional per-instance Nazca overrides keyed by component identifier (issue #559).
+    /// For entries whose <see cref="NazcaCodeOverride.RawCode"/> is non-null, the export emits
+    /// a self-contained factory cell and places the instance via that factory instead of the
+    /// PDK template. Connections touching such instances are skipped + warned (v1 follow-up).
+    /// </param>
+    public string Export(
+        DesignCanvasViewModel canvas,
+        string? pdkModuleName = null,
+        IReadOnlyDictionary<string, NazcaCodeOverride>? overrides = null)
     {
         var sb = new StringBuilder();
 
+        // Build a flat map of overridden identifier -> RawCode (only non-null RawCode entries).
+        var rawOverrides = BuildRawOverrides(overrides);
+
         AppendHeader(sb);
-        AppendPdkComponentStubs(sb, canvas);
-        var componentNames = AppendComponents(sb, canvas);
-        AppendConnections(sb, canvas, componentNames);
+        NazcaOverrideFactory.AppendFactories(sb, rawOverrides);
+        AppendPdkComponentStubs(sb, canvas, rawOverrides);
+        var componentNames = AppendComponents(sb, canvas, rawOverrides);
+        AppendConnections(sb, canvas, componentNames, rawOverrides);
         AppendFooter(sb);
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Reduces the full override map to a dictionary of identifier -> RawCode,
+    /// keeping only entries whose RawCode is non-null and non-empty.
+    /// </summary>
+    private static Dictionary<string, string> BuildRawOverrides(
+        IReadOnlyDictionary<string, NazcaCodeOverride>? overrides)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (overrides == null)
+            return result;
+
+        foreach (var kv in overrides)
+        {
+            if (!string.IsNullOrWhiteSpace(kv.Value?.RawCode))
+                result[kv.Key] = kv.Value!.RawCode!;
+        }
+        return result;
     }
 
     private static void AppendHeader(StringBuilder sb)
@@ -53,7 +86,8 @@ public class SimpleNazcaExporter
     /// with correct dimensions and pin positions — no external PDK install needed.
     /// ComponentGroups are flattened — stubs are generated for all child components.
     /// </summary>
-    private static void AppendPdkComponentStubs(StringBuilder sb, DesignCanvasViewModel canvas)
+    private static void AppendPdkComponentStubs(
+        StringBuilder sb, DesignCanvasViewModel canvas, IReadOnlyDictionary<string, string> rawOverrides)
     {
         var ci = CultureInfo.InvariantCulture;
         var generated = new HashSet<string>(StringComparer.Ordinal);
@@ -67,11 +101,15 @@ public class SimpleNazcaExporter
                 foreach (var child in group.GetAllComponentsRecursive())
                 {
                     if (child.IsAnalysisTool) continue;
+                    // Overridden instances are self-defined by their factory; a PDK stub
+                    // would be unused / could conflict, so skip it (issue #559).
+                    if (rawOverrides.ContainsKey(child.Identifier)) continue;
                     AppendComponentStub(sb, child, generated, ci);
                 }
             }
             else
             {
+                if (rawOverrides.ContainsKey(comp.Identifier)) continue;
                 AppendComponentStub(sb, comp, generated, ci);
             }
         }
@@ -241,7 +279,7 @@ public class SimpleNazcaExporter
     }
 
     private static Dictionary<Component, string> AppendComponents(
-        StringBuilder sb, DesignCanvasViewModel canvas)
+        StringBuilder sb, DesignCanvasViewModel canvas, IReadOnlyDictionary<string, string> rawOverrides)
     {
         sb.AppendLine("def create_design():");
         sb.AppendLine("    with nd.Cell(name='ConnectAPIC_Design') as design:");
@@ -261,12 +299,12 @@ public class SimpleNazcaExporter
                 foreach (var child in group.GetAllComponentsRecursive())
                 {
                     if (child.IsAnalysisTool) continue;
-                    AppendSingleComponent(sb, child, componentNames, ref compIndex, ci);
+                    AppendSingleComponent(sb, child, componentNames, ref compIndex, ci, rawOverrides);
                 }
             }
             else
             {
-                AppendSingleComponent(sb, comp, componentNames, ref compIndex, ci);
+                AppendSingleComponent(sb, comp, componentNames, ref compIndex, ci, rawOverrides);
             }
         }
 
@@ -279,7 +317,7 @@ public class SimpleNazcaExporter
     /// </summary>
     private static void AppendSingleComponent(
         StringBuilder sb, Component comp, Dictionary<Component, string> componentNames,
-        ref int compIndex, CultureInfo ci)
+        ref int compIndex, CultureInfo ci, IReadOnlyDictionary<string, string> rawOverrides)
     {
         var varName = $"comp_{compIndex}";
         componentNames[comp] = varName;
@@ -319,7 +357,18 @@ public class SimpleNazcaExporter
         // on 'org' explicitly makes .put() place the cell origin at the
         // computed (x, y) — which IS the contract Lunima's calibration
         // and export math both assume.
-        sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
+        if (rawOverrides.ContainsKey(comp.Identifier))
+        {
+            // Raw-code override (issue #559): the factory builds the cell via
+            // `with nd.Cell()`, which has NO 'org' pin, so anchoring on 'org' would
+            // fail. Use default-anchor placement — correct for v1 geometry-first scope.
+            var factory = NazcaOverrideFactory.FactoryName(comp.Identifier);
+            sb.AppendLine($"        {varName} = {factory}().put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier} (raw-code override)");
+        }
+        else
+        {
+            sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
+        }
         compIndex++;
     }
 
@@ -365,7 +414,8 @@ public class SimpleNazcaExporter
     private static void AppendConnections(
         StringBuilder sb,
         DesignCanvasViewModel canvas,
-        Dictionary<Component, string> componentNames)
+        Dictionary<Component, string> componentNames,
+        IReadOnlyDictionary<string, string> rawOverrides)
     {
         var hasFrozenPaths = canvas.Components.Any(vm => vm.Component is ComponentGroup);
         if (canvas.Connections.Count == 0 && !hasFrozenPaths)
@@ -380,6 +430,12 @@ public class SimpleNazcaExporter
             // have no physical fab counterpart.
             if (conn.StartPin?.ParentComponent?.IsAnalysisTool == true) continue;
             if (conn.EndPin?.ParentComponent?.IsAnalysisTool == true) continue;
+
+            // v1 (issue #559): an overridden instance's RawCode cell may expose pins
+            // that differ from the PDK template, so we cannot reliably wire to it yet.
+            // Skip + warn; wiring overridden instances is a documented follow-up.
+            if (TrySkipOverriddenConnection(sb, conn, rawOverrides)) continue;
+
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
@@ -396,6 +452,34 @@ public class SimpleNazcaExporter
         }
 
         sb.AppendLine();
+    }
+
+    /// <summary>
+    /// If either endpoint of the connection belongs to an overridden instance, emits a
+    /// NOTE comment explaining the skip and returns true (issue #559 v1). Otherwise false.
+    /// </summary>
+    private static bool TrySkipOverriddenConnection(
+        StringBuilder sb, WaveguideConnection conn, IReadOnlyDictionary<string, string> rawOverrides)
+    {
+        if (rawOverrides.Count == 0)
+            return false;
+
+        var startId = conn.StartPin?.ParentComponent?.Identifier;
+        var endId = conn.EndPin?.ParentComponent?.Identifier;
+
+        string? overriddenId = null;
+        if (startId != null && rawOverrides.ContainsKey(startId))
+            overriddenId = startId;
+        else if (endId != null && rawOverrides.ContainsKey(endId))
+            overriddenId = endId;
+
+        if (overriddenId == null)
+            return false;
+
+        sb.AppendLine(
+            $"        # NOTE: connection to overridden instance {overriddenId} skipped — " +
+            "its pins may differ from the template (see issue #559 follow-up).");
+        return true;
     }
 
     /// <summary>

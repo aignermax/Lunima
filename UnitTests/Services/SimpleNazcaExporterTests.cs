@@ -1,11 +1,13 @@
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
+using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using Xunit;
 
@@ -468,6 +470,114 @@ public class SimpleNazcaExporterTests
         // Assert: Verify correct length
         result.ShouldContain("demo_pdk_straight(length=200)");
         result.ShouldContain("comp_0 = demo_pdk_straight(length=200).put(");
+    }
+
+    // ── Per-instance RawCode override export tests (issue #559) ───────────────
+
+    private const string OverrideRawCode = """
+        import nazca as nd
+
+        def component():
+            with nd.Cell() as C:
+                nd.strt(length=42).put()
+                return C
+        """;
+
+    [Fact]
+    public void Export_OverriddenComponent_EmitsFactoryAndPlacesViaFactory()
+    {
+        // Arrange: two components, override only the first.
+        var canvas = new DesignCanvasViewModel();
+        var overridden = CreateComponentWithName("ebeam_y_1550");
+        overridden.Identifier = "My Override Instance";
+        var plain = CreateComponentWithName("splitter_1x2");
+        plain.Identifier = "Plain Splitter";
+        canvas.Components.Add(new ComponentViewModel(overridden));
+        canvas.Components.Add(new ComponentViewModel(plain));
+
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [overridden.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        // Act
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas, overrides: overrides);
+
+        // Assert: factory definition + raw-code body present.
+        var factoryName = "_ovr_My_Override_Instance";
+        result.ShouldContain($"def {factoryName}():");
+        result.ShouldContain("nd.strt(length=42).put()");
+        result.ShouldContain("return component()");
+
+        // Overridden instance placed via factory, WITHOUT 'org' anchor,
+        // and NOT via the PDK template call.
+        result.ShouldContain($"{factoryName}().put(");
+        result.ShouldContain("(raw-code override)");
+        result.ShouldNotContain($"{factoryName}().put('org'");
+        result.ShouldNotContain("ebeam_y_1550().put");
+
+        // No PDK stub emitted for the overridden component.
+        result.ShouldNotContain("with nd.Cell(name='ebeam_y_1550')");
+    }
+
+    [Fact]
+    public void Export_NonOverriddenComponent_StillUsesOrgPlacement()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var overridden = CreateComponentWithName("ebeam_y_1550");
+        overridden.Identifier = "Overridden";
+        var plain = CreateComponentWithName("ebeam_dc_te1550");
+        plain.Identifier = "Plain";
+        canvas.Components.Add(new ComponentViewModel(overridden));
+        canvas.Components.Add(new ComponentViewModel(plain));
+
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [overridden.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas, overrides: overrides);
+
+        // The non-overridden component keeps its normal .put('org', ...) placement.
+        result.ShouldContain(".put('org',");
+        result.ShouldContain("# Plain");
+    }
+
+    [Fact]
+    public void Export_ConnectionTouchingOverriddenInstance_IsSkippedWithNote()
+    {
+        // Arrange: two waveguides connected; override one of them.
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG A";
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG B";
+        compB.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        // Connect A.b0 -> B.a0
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compB.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        // Act
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas, overrides: overrides);
+
+        // Assert: connection skipped with the documented NOTE comment.
+        result.ShouldContain($"# NOTE: connection to overridden instance {compB.Identifier} skipped");
+        result.ShouldContain("issue #559 follow-up");
     }
 
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)
