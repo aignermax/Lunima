@@ -139,7 +139,27 @@
                            TextWrapping="Wrap"
                            IsVisible="{Binding HasEditableSource, Converter={x:Static BoolConverters.Not}}"/>
 
-                <!-- Editor (left) + live preview (right) -->
+                <!-- Original source (READ-ONLY reference). Editing the PDK's real code in
+                     place isn't supported — it's a decorated closure with non-standalone
+                     references — so it's shown for understanding only; use the override
+                     editor below to replace the geometry with your own self-contained code. -->
+                <Expander Header="Original source (read-only reference)"
+                          IsExpanded="False"
+                          Margin="0,2,0,0"
+                          IsVisible="{Binding HasEditableSource}">
+                    <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
+                        <SelectableTextBlock Text="{Binding OriginalSource}"
+                                             FontFamily="Consolas, Courier New, monospace"
+                                             FontSize="10"
+                                             Foreground="#9aa0b0"
+                                             TextWrapping="NoWrap"/>
+                    </ScrollViewer>
+                </Expander>
+
+                <TextBlock Text="Override — your own self-contained Nazca code. Run shows the real component until you define a component()."
+                           Foreground="#8888aa" FontSize="10" Margin="0,4,0,2" TextWrapping="Wrap"/>
+
+                <!-- Override editor (left) + live preview (right) -->
                 <Grid ColumnDefinitions="*,160" Height="220">
                     <edit:TextEditor Grid.Column="0"
                                      behaviors:TextEditorBindingBehavior.BoundText="{Binding Code, Mode=TwoWay}"
@@ -154,7 +174,7 @@
                                      Margin="0,0,8,0"
                                      HorizontalScrollBarVisibility="Auto"
                                      VerticalScrollBarVisibility="Auto"
-                                     ToolTip.Tip="Define component() returning a Nazca cell. Imports/helpers allowed."/>
+                                     ToolTip.Tip="Write self-contained Nazca code that defines component() returning a Cell. Imports/helpers allowed."/>
                     <Border Grid.Column="1"
                             Background="#0a0a10"
                             BorderBrush="#333355"

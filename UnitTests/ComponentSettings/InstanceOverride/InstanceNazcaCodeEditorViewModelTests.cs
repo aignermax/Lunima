@@ -72,7 +72,7 @@ public class InstanceNazcaCodeEditorViewModelTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public async Task Initialize_WithRealSource_SetsCodeToSourceAndEditableTrue()
+    public async Task Initialize_WithRealSource_ShowsSourceReadOnlyAndRenders()
     {
         var mock = MockService();
         SetupModuleRender(mock, OkResult(w: 20, h: 8, source: RealSource));
@@ -80,14 +80,15 @@ public class InstanceNazcaCodeEditorViewModelTests
 
         await vm.InitializeAsync();
 
-        vm.Code.ShouldBe(RealSource);
+        vm.OriginalSource.ShouldBe(RealSource);   // shown read-only for reference
+        vm.Code.ShouldNotBe(RealSource);          // editable box is the override starter
         vm.HasEditableSource.ShouldBeTrue();
         vm.PreviewData.ShouldNotBeNull();
         vm.StatusText.ShouldContain("Loaded");
     }
 
     [Fact]
-    public async Task Initialize_WithSourceNote_SetsCodeToNoteAndEditableFalse_StillRenders()
+    public async Task Initialize_WithSourceNote_MarksNotEditable_StillRenders()
     {
         var mock = MockService();
         SetupModuleRender(mock, OkResult(w: 14, h: 5, source: SourceNote));
@@ -95,13 +96,13 @@ public class InstanceNazcaCodeEditorViewModelTests
 
         await vm.InitializeAsync();
 
-        vm.Code.ShouldBe(SourceNote);
+        vm.OriginalSource.ShouldBe(SourceNote);
         vm.HasEditableSource.ShouldBeFalse();
         vm.PreviewData.ShouldNotBeNull();   // geometry still rendered
     }
 
     [Fact]
-    public async Task Initialize_RenderFails_SetsCommentAndEditableFalseAndError()
+    public async Task Initialize_RenderFails_NotEditableNoSourceAndError()
     {
         var mock = MockService();
         SetupModuleRender(mock, NazcaPreviewResult.Fail("no nazca"));
@@ -112,7 +113,7 @@ public class InstanceNazcaCodeEditorViewModelTests
         vm.HasEditableSource.ShouldBeFalse();
         vm.PreviewData.ShouldBeNull();
         vm.PreviewError.ShouldContain("no nazca");
-        vm.Code.ShouldStartWith("#");
+        vm.OriginalSource.ShouldBeNullOrEmpty();
     }
 
     [Fact]
@@ -282,7 +283,8 @@ public class InstanceNazcaCodeEditorViewModelTests
 
         await vm.ResetToTemplateCommand.ExecuteAsync(null);
 
-        vm.Code.ShouldBe(RealSource);               // restored to original source
+        vm.OriginalSource.ShouldBe(RealSource);     // original source restored (read-only)
+        vm.Code.ShouldNotBe("old code");            // editor reset to the override starter
         vm.HasEditableSource.ShouldBeTrue();
         vm.HasOverride.ShouldBeFalse();
         vm.IsValid.ShouldBeFalse();

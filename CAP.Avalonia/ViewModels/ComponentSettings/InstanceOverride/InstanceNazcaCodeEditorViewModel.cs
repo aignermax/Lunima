@@ -46,9 +46,33 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// </summary>
     private string? _originalSourceCode;
 
-    /// <summary>The editable raw Nazca cell code for this instance.</summary>
+    /// <summary>
+    /// Self-contained starter shown in the (editable) override box. Editing the original
+    /// PDK source in place is not possible — it is a decorated closure with non-standalone
+    /// references — so the editor's honest model is "view the original (read-only) + write
+    /// your own self-contained Nazca code here to override the geometry". Leaving this
+    /// unchanged keeps the preview on the real component (rendered via module mode).
+    /// </summary>
+    private const string OverrideStub =
+        "# Override this component's geometry with your own self-contained Nazca code.\n" +
+        "# Until you define a component() below, Run Preview shows the real component.\n" +
+        "# Example:\n" +
+        "# import nazca as nd\n" +
+        "# def component():\n" +
+        "#     with nd.Cell() as C:\n" +
+        "#         nd.strt(length=20).put()\n" +
+        "#         return C\n";
+
+    /// <summary>The editable override code (your own self-contained Nazca cell).</summary>
     [ObservableProperty]
     private string _code = string.Empty;
+
+    /// <summary>
+    /// The component's original PDK source, shown READ-ONLY for reference. Real Python
+    /// source for demo cells / SiEPIC PCells, or a "# ..." note when none is available.
+    /// </summary>
+    [ObservableProperty]
+    private string _originalSource = string.Empty;
 
     /// <summary>
     /// True when <see cref="Code"/> has been edited away from the seeded original (or was
@@ -110,9 +134,6 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// The last successful preview's geometry. Null until a run succeeds.
     /// </summary>
     public NazcaPreviewResult? PreviewData => _lastSuccessfulPreview;
-
-    /// <summary>Pixel size used when rasterising the live preview bitmap.</summary>
-    private const int PreviewBitmapPixels = 256;
 
     /// <summary>
     /// Rasterised polygon preview of the last successful run, bound to the editor's
@@ -211,11 +232,15 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// </summary>
     private async Task LoadOriginalSourceAsync()
     {
+        // The editable box is always the override starter; the original source (if any)
+        // is shown read-only for reference.
+        Code = OverrideStub;
+
         if (_previewService == null)
         {
-            // No back-end (e.g. headless): keep the runnable fallback seed.
-            Code = _templateCode;
-            HasEditableSource = true;
+            // No back-end (e.g. headless): nothing to fetch.
+            OriginalSource = string.Empty;
+            HasEditableSource = false;
             return;
         }
 
@@ -224,53 +249,42 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
             var result = await _previewService.RenderAsync(_moduleName, _nazcaFunction, _nazcaParameters);
             if (!result.Success)
             {
-                Code = "# No Nazca source could be loaded for this component.\n" +
-                       "# You can still paste your own Nazca code below to override its geometry.\n";
+                OriginalSource = string.Empty;
                 HasEditableSource = false;
                 PreviewBitmap = null;
                 _lastSuccessfulPreview = null;
                 OnPropertyChanged(nameof(PreviewData));
                 PreviewError = result.Error ?? "Could not render this component.";
-                StatusText = "No source available — paste your own Nazca code to override.";
+                StatusText = "Could not render this component — paste your own Nazca code to override.";
                 return;
             }
 
-            // Render succeeded — show the geometry regardless of source availability.
+            // Render succeeded — show the geometry + the original source (read-only).
             _lastSuccessfulPreview = result;
             OnPropertyChanged(nameof(PreviewData));
-            PreviewBitmap = TryRasterize(result);
+            PreviewBitmap = PreviewBitmapFactory.FromResult(result);
             PreviewError = string.Empty;
 
             double w = result.XMax - result.XMin;
             double h = result.YMax - result.YMin;
 
-            if (IsRealSource(result.Source))
-            {
-                Code = result.Source!;
-                HasEditableSource = true;
-                StatusText = $"Loaded — size {w:F2} × {h:F2} µm.";
-            }
-            else
-            {
-                // No real Python source: show the note (the "# ..." text) if present,
-                // else fall back to the runnable template so the editor is never blank.
-                Code = !string.IsNullOrWhiteSpace(result.Source) ? result.Source! : _templateCode;
-                HasEditableSource = false;
-                StatusText = $"Loaded geometry — size {w:F2} × {h:F2} µm. " +
-                             "No editable Nazca source for this component.";
-            }
+            // HasEditableSource here means "real source is available to show as reference".
+            HasEditableSource = IsRealSource(result.Source);
+            OriginalSource = result.Source ?? string.Empty;
+            StatusText = HasEditableSource
+                ? $"Loaded — size {w:F2} × {h:F2} µm. Original source shown below (read-only)."
+                : $"Loaded geometry — size {w:F2} × {h:F2} µm. No editable source; paste your own code to override.";
         }
         catch (Exception ex)
         {
             // InitializeAsync must never bring the dialog down.
-            Code = "# Failed to load Nazca source for this component.\n" +
-                   "# You can still paste your own Nazca code below to override its geometry.\n";
+            OriginalSource = string.Empty;
             HasEditableSource = false;
             PreviewBitmap = null;
             _lastSuccessfulPreview = null;
             OnPropertyChanged(nameof(PreviewData));
             PreviewError = ex.Message;
-            StatusText = "No source available — paste your own Nazca code to override.";
+            StatusText = "Could not render this component — paste your own Nazca code to override.";
         }
     }
 
@@ -312,7 +326,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
             {
                 _lastSuccessfulPreview = result;
                 OnPropertyChanged(nameof(PreviewData));
-                PreviewBitmap = TryRasterize(result);
+                PreviewBitmap = PreviewBitmapFactory.FromResult(result);
                 PreviewError = string.Empty;
                 IsValid = true;
                 StatusText = BuildSuccessStatus(result);
@@ -341,37 +355,6 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         finally
         {
             IsRunning = false;
-        }
-    }
-
-    /// <summary>
-    /// Rasterises the preview polygons to a bitmap, preserving the geometry's aspect
-    /// ratio within a fixed pixel budget. Returns null when there are no polygons or
-    /// when no UI thread is available (e.g. headless unit tests) — both are non-fatal.
-    /// </summary>
-    private static Bitmap? TryRasterize(NazcaPreviewResult result)
-    {
-        if (result.Polygons.Count == 0)
-            return null;
-
-        double bboxW = result.XMax - result.XMin;
-        double bboxH = result.YMax - result.YMin;
-        if (bboxW <= 0 || bboxH <= 0)
-            return null;
-
-        // Fit the longer side to the pixel budget so wide/tall cells keep their shape.
-        double scale = PreviewBitmapPixels / Math.Max(bboxW, bboxH);
-        int w = Math.Max(1, (int)Math.Round(bboxW * scale));
-        int h = Math.Max(1, (int)Math.Round(bboxH * scale));
-
-        try
-        {
-            return GdsPolygonRenderer.RasterizeToBitmap(result, w, h);
-        }
-        catch
-        {
-            // RenderTargetBitmap needs a rendering backend; absent in headless tests.
-            return null;
         }
     }
 
