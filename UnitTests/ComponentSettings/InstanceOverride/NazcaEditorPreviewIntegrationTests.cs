@@ -109,6 +109,22 @@ public class NazcaEditorPreviewIntegrationTests
         vm.PreviewData.ShouldNotBeNull();
     }
 
+    [Fact]
+    public async Task ShowcaseExample_RendersSuccessfully()
+    {
+        var (python, script) = await ResolveEnvironmentAsync();
+        if (python == null || script == null) return;   // env skip
+
+        var svc = new NazcaComponentPreviewService(python, script);
+
+        // The "?" help offers NazcaCodeExamples.Complex as an insertable starter — it
+        // must always render (it's shipped as a working example).
+        var result = await svc.RenderRawCodeAsync(NazcaCodeExamples.Complex);
+
+        result.Success.ShouldBeTrue($"the showcase example must render. Error: {result.Error}");
+        result.Polygons.Count.ShouldBeGreaterThan(0);
+    }
+
     private static InstanceNazcaCodeEditorViewModel BuildEditorVm(
         string? module, string function, NazcaComponentPreviewService svc)
         => new(

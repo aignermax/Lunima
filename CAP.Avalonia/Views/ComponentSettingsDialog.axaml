@@ -3,6 +3,7 @@
         xmlns:vm="using:CAP.Avalonia.ViewModels.ComponentSettings"
         xmlns:io="using:CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride"
         xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+        xmlns:services="using:CAP.Avalonia.Services"
         xmlns:edit="using:AvaloniaEdit"
         x:Class="CAP.Avalonia.Views.ComponentSettingsDialog"
         x:Name="DialogRoot"
@@ -94,27 +95,31 @@
                             ToolTip.Tip="Quick help — most-used Nazca commands">
                         <Button.Flyout>
                             <Flyout>
-                                <StackPanel Spacing="4" MaxWidth="380">
-                                    <TextBlock Text="Quick Nazca example — define component() returning a Cell."
+                                <StackPanel Spacing="4" MaxWidth="460">
+                                    <TextBlock Text="Nazca elements — showcase circuit (Insert, or select &amp; Ctrl+C)"
                                                FontWeight="SemiBold" FontSize="11" Foreground="#aaaacc"
                                                TextWrapping="Wrap"/>
-                                    <!-- Selectable so it can be copied (Ctrl+C); or use Insert below. -->
+                                    <!-- Verified-runnable showcase (NazcaCodeExamples.Complex). Selectable for copy. -->
                                     <Border Background="#101018" BorderBrush="#333355" BorderThickness="1"
                                             CornerRadius="3" Padding="6">
-                                        <SelectableTextBlock FontFamily="Consolas, Courier New, monospace"
-                                                             FontSize="10" Foreground="#dddddd"
-                                                             Text="import nazca as nd&#10;&#10;def component():&#10;    with nd.Cell() as C:&#10;        nd.strt(length=20).put()&#10;        nd.bend(radius=10, angle=90).put()&#10;        return C"/>
+                                        <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
+                                            <SelectableTextBlock FontFamily="Consolas, Courier New, monospace"
+                                                                 FontSize="10" Foreground="#dddddd"
+                                                                 Text="{x:Static services:NazcaCodeExamples.Complex}"/>
+                                        </ScrollViewer>
                                     </Border>
                                     <Button Content="Insert into editor"
                                             Command="{Binding InsertStarterCommand}"
                                             Padding="8,3" FontSize="10"
                                             Background="#2a4a2a" Foreground="#cceecc" BorderThickness="0"
                                             HorizontalAlignment="Left"
-                                            ToolTip.Tip="Replace the editor content with this runnable starter"/>
-                                    <TextBlock Text="More: nd.taper(length=10, width1=.5, width2=2).put() · nd.Pin('a0').put(0,0,180) · nd.bend(radius=5, angle=180).put()"
-                                               FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="9" Foreground="#9aa0b0" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Tip: select any line above and Ctrl+C to copy."
+                                            ToolTip.Tip="Replace the editor content with this showcase circuit"/>
+                                    <TextBlock Text="Common elements (chain with .put(), or .put(x, y, angle)):"
+                                               FontSize="10" Foreground="#aaaacc" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <SelectableTextBlock FontFamily="Consolas, Courier New, monospace"
+                                                         FontSize="9" Foreground="#9aa0b0" TextWrapping="Wrap"
+                                                         Text="strt(length, width) · bend(radius, angle, width) · taper(length, width1, width2) · ptaper(...) · euler(width, radius, angle) · sinebend(width, distance, offset) · cobra(xya=(x,y,a), width1, width2) · ring(radius, width) · text(text, height, layer) · Pin(name).put(x, y, angle)"/>
+                                    <TextBlock Text="Tip: ring()/text() return polygon lists — add them with nd.Polygon(...)/loops, not .put(). Full reference: nazca-design.org/manual."
                                                FontSize="9" Foreground="#777799" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Flyout>

@@ -421,18 +421,9 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     // default, not an override (and its source may not be standalone-runnable on reload).
     private bool CanApplyOverride() => IsValid && !IsRunning && IsCustomCode;
 
-    /// <summary>A complete, runnable starter the user can drop into the editor and tweak.</summary>
-    public const string StarterExample =
-        "import nazca as nd\n\n" +
-        "def component():\n" +
-        "    with nd.Cell() as C:\n" +
-        "        nd.strt(length=20).put()\n" +
-        "        nd.bend(radius=10, angle=90).put()\n" +
-        "        return C\n";
-
-    /// <summary>Replaces the editor content with <see cref="StarterExample"/> (from the help flyout).</summary>
+    /// <summary>Replaces the editor content with the showcase example (from the help flyout).</summary>
     [RelayCommand]
-    private void InsertStarter() => Code = StarterExample;
+    private void InsertStarter() => Code = Services.NazcaCodeExamples.Complex;
 
     /// <summary>
     /// Clears the raw-code override for this instance and restores the editor to the
