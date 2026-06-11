@@ -61,10 +61,14 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             var comp = compVm.Component;
+            if (comp.IsAnalysisTool) continue;
             if (comp is ComponentGroup group)
             {
                 foreach (var child in group.GetAllComponentsRecursive())
+                {
+                    if (child.IsAnalysisTool) continue;
                     AppendComponentStub(sb, child, generated, ci);
+                }
             }
             else
             {
@@ -250,11 +254,15 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             var comp = compVm.Component;
+            if (comp.IsAnalysisTool) continue;
             if (comp is ComponentGroup group)
             {
                 // Flatten group: export all child components at their absolute positions
                 foreach (var child in group.GetAllComponentsRecursive())
+                {
+                    if (child.IsAnalysisTool) continue;
                     AppendSingleComponent(sb, child, componentNames, ref compIndex, ci);
+                }
             }
             else
             {
@@ -368,6 +376,10 @@ public class SimpleNazcaExporter
         foreach (var connVm in canvas.Connections)
         {
             var conn = connVm.Connection;
+            // Skip connections that touch a virtual analysis tool — those pins
+            // have no physical fab counterpart.
+            if (conn.StartPin?.ParentComponent?.IsAnalysisTool == true) continue;
+            if (conn.EndPin?.ParentComponent?.IsAnalysisTool == true) continue;
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)

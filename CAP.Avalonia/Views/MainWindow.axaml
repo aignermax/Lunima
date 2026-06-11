@@ -555,77 +555,10 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="10">
-                    <TextBlock Text="Selected Component:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.DisplayName, FallbackValue='None'}"
-                               Foreground="White" FontWeight="SemiBold"/>
-                    <StackPanel Orientation="Horizontal"
-                                IsVisible="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}"
-                                Margin="0,3,0,0">
-                        <TextBlock Text="Type: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName}"
-                                   Foreground="#aaaaaa" FontStyle="Italic"/>
-                    </StackPanel>
-
-                    <TextBlock Text="Position:" Foreground="Gray" Margin="0,15,0,5"/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="X: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"
-                                   Foreground="White"/>
-                        <TextBlock Text=" um" Foreground="Gray"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Y: " Foreground="Gray"/>
-                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"
-                                   Foreground="White"/>
-                        <TextBlock Text=" um" Foreground="Gray"/>
-                    </StackPanel>
-
-                    <TextBlock Text="Dimensions:" Foreground="Gray" Margin="0,15,0,5"/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"
-                                   Foreground="White"/>
-                        <TextBlock Text=" x " Foreground="Gray"/>
-                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"
-                                   Foreground="White"/>
-                        <TextBlock Text=" um" Foreground="Gray"/>
-                    </StackPanel>
-
-                    <!-- Laser Configuration (visible only for light sources) -->
-                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.IsLightSource, FallbackValue=False}">
-                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                        <TextBlock Text="Laser Configuration:" Foreground="Gold" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <TextBlock Text="Wavelength:" Foreground="Gray" Margin="0,5,0,3"/>
-                        <ComboBox ItemsSource="{Binding WavelengthOptions}"
-                                  SelectedValue="{Binding CanvasInteraction.SelectedComponent.LaserConfig.WavelengthNm}"
-                                  SelectedValueBinding="{Binding WavelengthNm}"
-                                  DisplayMemberBinding="{Binding Label}"
-                                  Width="180" Margin="0,0,0,10"/>
-                        <TextBlock Text="Input Power:" Foreground="Gray" Margin="0,5,0,3"/>
-                        <Slider Minimum="0" Maximum="1"
-                                Value="{Binding CanvasInteraction.SelectedComponent.LaserConfig.InputPower}"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                Width="180" Margin="0,0,0,3"/>
-                        <TextBlock Foreground="White" Margin="0,0,0,5">
-                            <Run Text="Power: "/>
-                            <Run Text="{Binding CanvasInteraction.SelectedComponent.LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
-                        </TextBlock>
-                    </StackPanel>
-
-                    <!-- Component Parameter Slider (e.g., Phase Shifter) -->
-                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
-                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                        <TextBlock Text="Component Parameter:" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.SliderLabel}" Foreground="Gray" Margin="0,5,0,3"/>
-                        <Slider Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                Value="{Binding CanvasInteraction.SelectedComponent.SliderValue}"
-                                Width="180" Margin="0,0,0,3"/>
-                        <TextBlock Foreground="White" Margin="0,0,0,5">
-                            <Run Text="{Binding CanvasInteraction.SelectedComponent.SliderLabel}"/>
-                            <Run Text=" "/>
-                            <Run Text="{Binding CanvasInteraction.SelectedComponent.SliderValue, StringFormat={}{0:F1}}"/>
-                        </TextBlock>
-                    </StackPanel>
+                    <!-- Selection-driven properties: name, position, size and the
+                         per-component editors (ONA Analyzer sweep button, sliders,
+                         light-source config…) all live in this single panel. -->
+                    <panels:SelectedComponentPropertiesPanel/>
 
                     <!-- Parameter Sweep (visible when component has slider) -->
                     <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
@@ -875,6 +808,12 @@
                                    MainViewModel="{Binding}">
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Component Settings…" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}">
+                        <MenuItem.Icon>
+                            <TextBlock Text="⚙️" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
                     <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
                         <MenuItem.Icon>
                             <TextBlock Text="📋" FontSize="14"/>

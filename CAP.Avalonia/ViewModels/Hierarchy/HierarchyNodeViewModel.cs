@@ -236,6 +236,18 @@ public partial class HierarchyNodeViewModel : ObservableObject
     }
 
     /// <summary>
+    /// When the node becomes selected — whether by clicking its row (native tree
+    /// selection, bound two-way) or by code — request the matching canvas selection.
+    /// The handler is idempotent (it no-ops when the canvas already matches), so this
+    /// does not loop with the canvas → hierarchy sync.
+    /// </summary>
+    partial void OnIsSelectedChanged(bool value)
+    {
+        if (value)
+            SelectionRequested?.Invoke(this);
+    }
+
+    /// <summary>
     /// Recursively finds a node by its component reference.
     /// </summary>
     public HierarchyNodeViewModel? FindNodeByComponent(Component component)

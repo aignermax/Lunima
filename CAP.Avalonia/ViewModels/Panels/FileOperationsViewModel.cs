@@ -168,7 +168,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 addedComponents,
                 StoredSMatrices,
                 templateKeyResolver: ResolveTemplateKey,
-                errorConsole: _errorConsole);
+                errorConsole: _errorConsole,
+                keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
         }
 
         ApplyUserGlobalOverrides(addedComponents);
@@ -191,7 +192,8 @@ public partial class FileOperationsViewModel : ObservableObject
             components,
             _userSMatrixOverrideStore.Overrides,
             templateKeyResolver: ResolveTemplateKey,
-            errorConsole: _errorConsole);
+            errorConsole: _errorConsole,
+            keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
     }
 
     /// <summary>
@@ -371,6 +373,26 @@ public partial class FileOperationsViewModel : ObservableObject
         if (pdkSource == null) return null;
         var templateName = FindTemplateName(component);
         return $"{pdkSource}::{templateName}";
+    }
+
+    /// <summary>
+    /// Returns true when the given override-store key (shape
+    /// <c>"{pdkSource}::{templateName}"</c>) corresponds to a template that
+    /// is currently loaded in the component library — even if no instance of
+    /// it is on the canvas right now. Used by
+    /// <see cref="Services.SMatrixOverrideApplicator.ApplyAll"/> to
+    /// distinguish "deferred override, will apply on placement" from
+    /// "truly orphan, the template was renamed or removed". Only the
+    /// latter warrants a user-visible warning.
+    /// </summary>
+    private bool KeyMatchesKnownLibraryTemplate(string key)
+    {
+        var separatorIdx = key.IndexOf("::", StringComparison.Ordinal);
+        if (separatorIdx < 0) return false;
+        var pdkSource = key.Substring(0, separatorIdx);
+        var templateName = key.Substring(separatorIdx + 2);
+        return _componentLibrary.Any(t =>
+            t.PdkSource == pdkSource && t.Name == templateName);
     }
 
     /// <summary>
@@ -743,7 +765,8 @@ public partial class FileOperationsViewModel : ObservableObject
                         allComponents,
                         StoredSMatrices,
                         templateKeyResolver: ResolveTemplateKey,
-                        errorConsole: _errorConsole);
+                        errorConsole: _errorConsole,
+                        keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
                     ApplyUserGlobalOverrides(allComponents);
                 }
                 else

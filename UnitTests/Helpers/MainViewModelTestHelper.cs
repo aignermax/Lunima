@@ -1,14 +1,18 @@
 using System.IO;
 using System.Net.Http;
 using CAP.Avalonia.Commands;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP.Avalonia.ViewModels.Properties;
+using CAP.Avalonia.ViewModels.Properties.Editors;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
@@ -83,7 +87,8 @@ public static class MainViewModelTestHelper
             // Test-isolated user S-matrix store: a unique temp path per call so
             // tests don't contaminate each other or the developer's real file.
             new CAP.Avalonia.Services.UserSMatrixOverrideStore(
-                Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")));
+                Path.Combine(Path.GetTempPath(), $"sparam-overrides-test-{Guid.NewGuid()}.json")),
+            new GdsPreviewRenderService(new NazcaComponentPreviewService("python3", "/nonexistent/script.py")));
     }
 
     /// <summary>
@@ -136,7 +141,12 @@ public static class MainViewModelTestHelper
             new GroupSMatrixViewModel(),
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
-            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService));
+            new AiAssistantViewModel(Mock.Of<IAiService>(), preferencesService),
+            new OnaSweepViewModel(),
+            new ComponentEditorFactory(new IComponentEditorProvider[]
+            {
+                new GenericComponentEditorProvider()
+            }));
     }
 
     /// <summary>

@@ -10563,13 +10563,13 @@
         {
           "name": "port 3",
           "offsetXMicrometers": 3.5500000000000003,
-          "offsetYMicrometers": 7.050000000000001,
+          "offsetYMicrometers": 0.050000000000000266,
           "angleDegrees": 270
         },
         {
           "name": "port 4",
           "offsetXMicrometers": 3.5500000000000003,
-          "offsetYMicrometers": 0.050000000000000266,
+          "offsetYMicrometers": 7.050000000000001,
           "angleDegrees": 90
         }
       ],
@@ -10701,13 +10701,13 @@
         {
           "name": "port 3",
           "offsetXMicrometers": 4.8500000000000005,
-          "offsetYMicrometers": 9.65,
+          "offsetYMicrometers": 0.05000000000000071,
           "angleDegrees": 270
         },
         {
           "name": "port 4",
           "offsetXMicrometers": 4.8500000000000005,
-          "offsetYMicrometers": 0.05000000000000071,
+          "offsetYMicrometers": 9.65,
           "angleDegrees": 90
         }
       ],
