@@ -5,8 +5,8 @@
         x:Name="DialogRoot"
         x:DataType="vm:ComponentSettingsDialogViewModel"
         Title="{Binding Title}"
-        Width="560" Height="500"
-        MinWidth="400" MinHeight="300"
+        Width="560" Height="620"
+        MinWidth="400" MinHeight="350"
         Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
@@ -31,6 +31,83 @@
                        Foreground="#aaaacc"
                        FontSize="11"
                        TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Per-instance Nazca parameter override section (only shown for canvas instances) -->
+        <Border DockPanel.Dock="Bottom"
+                Background="#1a2a1a"
+                CornerRadius="4"
+                Padding="10,8"
+                Margin="0,10,0,0"
+                BorderBrush="#2a4a2a"
+                BorderThickness="1"
+                IsVisible="{Binding NazcaOverride, Converter={x:Static ObjectConverters.IsNotNull}}"
+                DataContext="{Binding NazcaOverride}">
+            <StackPanel Spacing="6">
+                <!-- Section header with override indicator -->
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Nazca Parameters Override"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Foreground="#88cc88"/>
+                    <TextBlock Text="🔧 Override active"
+                               FontSize="10"
+                               Foreground="#FFA500"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasOverride}"/>
+                </StackPanel>
+
+                <!-- Function name -->
+                <Grid ColumnDefinitions="120,*">
+                    <TextBlock Grid.Column="0" Text="Function name:"
+                               Foreground="#aaaaaa" FontSize="11"
+                               VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding FunctionName, Mode=TwoWay}"
+                             FontSize="11" Padding="6,3"
+                             Background="#2a2a2a" Foreground="White"
+                             BorderBrush="#444444" BorderThickness="1"
+                             FontFamily="Consolas, Courier New, monospace"
+                             ToolTip.Tip="Nazca function name for this instance (e.g. ebeam_mmi1x2_te1550)"/>
+                </Grid>
+
+                <!-- Function parameters -->
+                <Grid ColumnDefinitions="120,*">
+                    <TextBlock Grid.Column="0" Text="Parameters:"
+                               Foreground="#aaaaaa" FontSize="11"
+                               VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding FunctionParameters, Mode=TwoWay}"
+                             FontSize="11" Padding="6,3"
+                             Background="#2a2a2a" Foreground="White"
+                             BorderBrush="#444444" BorderThickness="1"
+                             FontFamily="Consolas, Courier New, monospace"
+                             ToolTip.Tip="Nazca function parameters for this instance (e.g. length=3.5,width=2.0)"/>
+                </Grid>
+
+                <!-- Buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Save Nazca Override"
+                            Command="{Binding SaveOverrideCommand}"
+                            Padding="10,5"
+                            Background="#2a5a2a"
+                            Foreground="White"
+                            FontSize="11"/>
+                    <Button Content="Reset to Template"
+                            Command="{Binding ResetToTemplateCommand}"
+                            Padding="10,5"
+                            Background="#3a2a20"
+                            Foreground="#ddaa88"
+                            FontSize="11"
+                            IsEnabled="{Binding HasOverride}"
+                            ToolTip.Tip="Revert this instance to its PDK template values"/>
+                </StackPanel>
+
+                <!-- Nazca status text -->
+                <TextBlock Text="{Binding StatusText}"
+                           Foreground="#aaaacc"
+                           FontSize="10"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
         </Border>
 
         <!-- Load button -->

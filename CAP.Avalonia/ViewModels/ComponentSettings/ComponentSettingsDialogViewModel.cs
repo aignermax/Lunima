@@ -7,6 +7,7 @@ using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NazcaCodeOverride = CAP_DataAccess.Persistence.PIR.NazcaCodeOverride;
 
 namespace CAP.Avalonia.ViewModels.ComponentSettings;
 
@@ -31,6 +32,13 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     private Dictionary<int, SMatrix>? _effectiveSMatrices;
     private IReadOnlyList<Pin>? _effectivePins;
     private IReadOnlyList<string>? _availablePinNames;
+
+    /// <summary>
+    /// ViewModel for the per-instance Nazca parameter override section.
+    /// Null when the dialog is opened in per-template (PDK library) mode, or when
+    /// <see cref="Configure"/> was called without a <c>storedNazcaOverrides</c> dictionary.
+    /// </summary>
+    public InstanceNazcaOverrideViewModel? NazcaOverride { get; private set; }
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -129,6 +137,24 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// indexing. Required to read diagonal magnitudes from the SMatrix
     /// (which is keyed by <see cref="Pin.IDInFlow"/> / <see cref="Pin.IDOutFlow"/>).
     /// </param>
+    /// <param name="storedNazcaOverrides">
+    /// Optional per-instance Nazca override dictionary. When non-null and
+    /// <paramref name="liveComponent"/> is also non-null, the dialog adds a
+    /// Nazca parameter override section backed by an
+    /// <see cref="InstanceNazcaOverrideViewModel"/>. Null in per-template mode
+    /// (PDK library) where Nazca overrides are not supported.
+    /// </param>
+    /// <param name="templateFunctionName">
+    /// Original PDK template function name. Used to seed the editable field
+    /// before the user has saved any override, and as the target for "Reset to
+    /// template". Pass null to skip the Nazca override section.
+    /// </param>
+    /// <param name="templateFunctionParameters">
+    /// Original PDK template function parameters string. See <paramref name="templateFunctionName"/>.
+    /// </param>
+    /// <param name="templateModuleName">
+    /// Original PDK template module name, or null if not set.
+    /// </param>
     public void Configure(
         string entityKey,
         string displayName,
@@ -138,7 +164,11 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         bool isUserGlobalScope = false,
         Dictionary<int, SMatrix>? effectiveSMatrices = null,
         IReadOnlyList<Pin>? effectivePins = null,
-        IReadOnlyList<string>? availablePinNames = null)
+        IReadOnlyList<string>? availablePinNames = null,
+        Dictionary<string, NazcaCodeOverride>? storedNazcaOverrides = null,
+        string? templateFunctionName = null,
+        string? templateFunctionParameters = null,
+        string? templateModuleName = null)
     {
         _entityKey = entityKey;
         _displayName = displayName;
@@ -153,6 +183,25 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             ? $"Component Settings: {displayName} (applies to all projects)"
             : $"Component Settings: {displayName}";
         StatusText = string.Empty;
+
+        // Only create the Nazca override VM for per-instance mode
+        if (liveComponent != null && storedNazcaOverrides != null && templateFunctionName != null)
+        {
+            NazcaOverride = new InstanceNazcaOverrideViewModel(
+                entityKey,
+                storedNazcaOverrides,
+                liveComponent,
+                templateFunctionName,
+                templateFunctionParameters ?? string.Empty,
+                templateModuleName,
+                onChanged);
+        }
+        else
+        {
+            NazcaOverride = null;
+        }
+        OnPropertyChanged(nameof(NazcaOverride));
+
         RefreshEntries(notifyChanged: false);
         RefreshEffectiveEntries();
     }
