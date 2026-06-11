@@ -37,9 +37,35 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
 
     private NazcaPreviewResult? _lastSuccessfulPreview;
 
+    /// <summary>
+    /// The original source the editor was seeded with via module-mode (the component's
+    /// real source / note / fallback). Null when the editor was seeded from a stored
+    /// raw-code override. Used to decide whether "Run Preview" renders the unchanged
+    /// component via module mode (works for demo PDK and SiEPIC PCells alike) or runs
+    /// the user's edited code via raw-code mode.
+    /// </summary>
+    private string? _originalSourceCode;
+
     /// <summary>The editable raw Nazca cell code for this instance.</summary>
     [ObservableProperty]
     private string _code = string.Empty;
+
+    /// <summary>
+    /// True when <see cref="Code"/> has been edited away from the seeded original (or was
+    /// seeded from a stored override) — i.e. it is the user's own runnable code, eligible
+    /// to be run as raw code and persisted via Apply. False while it is the unchanged
+    /// original (which is rendered via module mode and is not itself a persistable override).
+    /// </summary>
+    private bool IsCustomCode =>
+        _originalSourceCode == null
+        || !string.Equals((Code ?? string.Empty).Trim(), _originalSourceCode.Trim(), StringComparison.Ordinal);
+
+    /// <summary>Editing the code invalidates the last run and re-evaluates Apply.</summary>
+    partial void OnCodeChanged(string value)
+    {
+        IsValid = false;
+        ApplyOverrideCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>Error text from the last failed run; empty when the last run succeeded.</summary>
     [ObservableProperty]
@@ -169,10 +195,13 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     public async Task InitializeAsync()
     {
         // A stored raw-code override wins — the constructor already seeded Code from it.
+        // Leave _originalSourceCode null so Run treats the stored code as custom (raw-code).
         if (_storedOverrides.TryGetValue(_componentKey, out var stored) && stored.RawCode != null)
             return;
 
         await LoadOriginalSourceAsync();
+        _originalSourceCode = Code;
+        ApplyOverrideCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -273,7 +302,12 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         StatusText = "Running preview…";
         try
         {
-            var result = await _previewService.RenderRawCodeAsync(Code);
+            // Unedited original → render the real component via module mode (handles demo
+            // PDK and SiEPIC PCells, whose source is not standalone-runnable). Edited code
+            // → run the user's own self-contained snippet via raw-code mode.
+            var result = IsCustomCode
+                ? await _previewService.RenderRawCodeAsync(Code)
+                : await _previewService.RenderAsync(_moduleName, _nazcaFunction, _nazcaParameters);
             if (result.Success)
             {
                 _lastSuccessfulPreview = result;
@@ -400,7 +434,9 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         _onChanged?.Invoke();
     }
 
-    private bool CanApplyOverride() => IsValid && !IsRunning;
+    // Apply only persists genuinely custom code — the unchanged original is the PDK
+    // default, not an override (and its source may not be standalone-runnable on reload).
+    private bool CanApplyOverride() => IsValid && !IsRunning && IsCustomCode;
 
     /// <summary>
     /// Clears the raw-code override for this instance and restores the editor to the
@@ -433,6 +469,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
 
         // Restore the original source + initial preview rather than a stub template.
         await LoadOriginalSourceAsync();
+        _originalSourceCode = Code;
         StatusText = "Reset to original source. Run a preview before applying.";
         _onChanged?.Invoke();
     }

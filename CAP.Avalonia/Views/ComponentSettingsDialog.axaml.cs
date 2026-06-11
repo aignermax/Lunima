@@ -49,4 +49,17 @@ public partial class ComponentSettingsDialog : Window
             return;
         _ = launcher.LaunchUriAsync(new Uri("https://nazca-design.org/manual/"));
     }
+
+    /// <summary>Copies the current preview error to the clipboard so it can be pasted into a report.</summary>
+    private void OnCopyError(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ComponentSettingsDialogViewModel vm)
+            return;
+        var error = vm.NazcaCodeEditor?.PreviewError;
+        if (string.IsNullOrEmpty(error))
+            return;
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard != null)
+            _ = clipboard.SetTextAsync(error);
+    }
 }

@@ -166,14 +166,24 @@
                     </Border>
                 </Grid>
 
-                <!-- Error text -->
-                <TextBlock Text="{Binding PreviewError}"
-                           Foreground="#FF6B6B"
-                           FontSize="10"
-                           FontFamily="Consolas, Courier New, monospace"
-                           TextWrapping="Wrap"
-                           MaxHeight="80"
-                           IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <!-- Error text — selectable + copyable so it can be pasted into a bug report -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0"
+                      IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <ScrollViewer Grid.Column="0" MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                        <SelectableTextBlock Text="{Binding PreviewError}"
+                                             Foreground="#FF6B6B"
+                                             FontSize="10"
+                                             FontFamily="Consolas, Courier New, monospace"
+                                             TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                    <Button Grid.Column="1"
+                            Content="Copy"
+                            Click="OnCopyError"
+                            Padding="6,1" FontSize="10" Margin="6,0,0,0"
+                            VerticalAlignment="Top"
+                            Background="#33335a" Foreground="#ccccff" BorderThickness="0"
+                            ToolTip.Tip="Copy the error message to the clipboard"/>
+                </Grid>
 
                 <!-- Buttons -->
                 <StackPanel Orientation="Horizontal" Spacing="8">
