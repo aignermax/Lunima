@@ -631,6 +631,8 @@ public partial class MainWindow : Window
             {
                 var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
                 compVm?.NotifyDimensionsChanged();
+                // Repaint the canvas immediately so the resized footprint shows on Apply.
+                DesignCanvasControl.InvalidateVisual();
             };
         }
 
