@@ -309,6 +309,10 @@ public partial class HierarchyPanelViewModel : ObservableObject
     private void SelectComponent(HierarchyNodeViewModel node)
     {
         if (node.ComponentViewModel == null) return;
+        // Already the canvas selection — nothing to push. This value-equality guard is
+        // what stops the node.IsSelected → SelectionRequested → canvas → node.IsSelected
+        // cycle from recursing.
+        if (_canvas.SelectedComponent == node.ComponentViewModel) return;
 
         _suppressSync = true;
         try

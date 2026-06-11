@@ -313,8 +313,11 @@ public class DesignCanvas : Control
         if (e.PropertyName is nameof(DesignCanvasViewModel.ShowPowerFlow)
             or nameof(DesignCanvasViewModel.IsRouting)
             or nameof(DesignCanvasViewModel.PanX)
-            or nameof(DesignCanvasViewModel.PanY))
+            or nameof(DesignCanvasViewModel.PanY)
+            or nameof(DesignCanvasViewModel.SelectedComponent))
         {
+            // SelectedComponent: redraw so the highlight follows a selection made
+            // outside the canvas (e.g. clicking a node in the hierarchy panel).
             InvalidateVisual();
         }
     }
