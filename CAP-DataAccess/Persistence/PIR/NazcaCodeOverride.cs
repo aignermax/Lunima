@@ -46,4 +46,25 @@ public class NazcaCodeOverride
     /// Used by the "Reset to template" command.
     /// </summary>
     public string? TemplateModuleName { get; set; }
+
+    /// <summary>
+    /// Complete editable Nazca cell code for this instance (issue #556). When set,
+    /// the geometry preview / size recompute is driven by executing this code rather
+    /// than by calling the PDK template's <see cref="FunctionName"/>.
+    /// Null means no raw-code override is active (parameter-only or PDK template).
+    /// Optical pins and the S-matrix are unaffected — this is geometry-only.
+    /// </summary>
+    public string? RawCode { get; set; }
+
+    /// <summary>
+    /// Component width (µm) recomputed from the rendered raw-code geometry's bounding box.
+    /// Null when no raw-code override has recomputed the size.
+    /// </summary>
+    public double? OverrideWidthMicrometers { get; set; }
+
+    /// <summary>
+    /// Component height (µm) recomputed from the rendered raw-code geometry's bounding box.
+    /// Null when no raw-code override has recomputed the size.
+    /// </summary>
+    public double? OverrideHeightMicrometers { get; set; }
 }

@@ -894,6 +894,15 @@ public partial class FileOperationsViewModel : ObservableObject
                 component.NazcaFunctionParameters = nazcaOverride.FunctionParameters ?? component.NazcaFunctionParameters;
                 if (nazcaOverride.ModuleName != null)
                     component.NazcaModuleName = nazcaOverride.ModuleName;
+
+                // Issue #556: a raw-code override recomputes the component's size.
+                // Restore the persisted bbox-derived dimensions so the canvas thumbnail
+                // and layout reflect the edited geometry on load. Pins/S-matrix are
+                // unchanged (geometry-only override).
+                if (nazcaOverride.OverrideWidthMicrometers is { } w)
+                    component.WidthMicrometers = w;
+                if (nazcaOverride.OverrideHeightMicrometers is { } h)
+                    component.HeightMicrometers = h;
             }
         }
     }

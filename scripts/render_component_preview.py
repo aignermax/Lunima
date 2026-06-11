@@ -27,13 +27,25 @@ import contextlib
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Render Nazca component preview")
-    parser.add_argument("module_name", help="Python module to import (or 'demo')")
-    parser.add_argument("function_name", help="Nazca cell function name")
+    # In raw-code mode (--code-file) the module/function positionals are not
+    # used, so they are optional. In PDK mode they are required (enforced below).
+    parser.add_argument("module_name", nargs="?", default=None,
+                        help="Python module to import (or 'demo')")
+    parser.add_argument("function_name", nargs="?", default=None,
+                        help="Nazca cell function name")
     parser.add_argument("parameters_string", nargs="?", default="",
                         help="Optional keyword arguments as string, e.g. 'length=50'")
     parser.add_argument("--stub-length", type=float, default=3.0,
                         help="Pin stub length in µm (default: 3)")
-    return parser.parse_args()
+    parser.add_argument("--code-file", default=None,
+                        help="Path to a .py file with raw Nazca cell code. When given, "
+                             "the file is imported and its 'component' callable (or a "
+                             "module-level 'cell' variable) builds the cell — module_name "
+                             "and function_name are ignored.")
+    args = parser.parse_args()
+    if not args.code_file and (args.module_name is None or args.function_name is None):
+        parser.error("module_name and function_name are required unless --code-file is given")
+    return args
 
 
 def _parse_kwargs(parameters_string):
@@ -89,6 +101,39 @@ def _build_cell(module_name, function_name, parameters_string):
     func = getattr(mod, function_name)
     kwargs = _parse_kwargs(parameters_string)
     return func(**kwargs) if kwargs else func()
+
+
+def _build_cell_from_code_file(code_file):
+    """Import a user-supplied .py file and build its Nazca cell.
+
+    Execution contract (issue #556): the file must define a ``component()``
+    callable returning a Nazca cell. As a fallback, a module-level ``cell``
+    variable holding an already-built cell is accepted. Imports and helper
+    definitions in the same file are allowed since it becomes a real module.
+
+    Syntax errors raise on import; a missing entry point raises ValueError.
+    Both propagate to the caller, which emits ``{"success": false, ...}``.
+    """
+    import importlib.util
+    import nazca  # noqa: F401  — initialises Nazca state before user code runs
+
+    spec = importlib.util.spec_from_file_location("lunima_raw_nazca_code", code_file)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Could not load code file: {code_file}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    component = getattr(mod, "component", None)
+    if callable(component):
+        return component()
+
+    cell = getattr(mod, "cell", None)
+    if cell is not None:
+        return cell
+
+    raise ValueError(
+        "Raw Nazca code must define a 'component()' function returning a Nazca "
+        "cell, or a module-level 'cell' variable.")
 
 
 def _extract_bbox(cell):
@@ -201,14 +246,17 @@ def _do_render(args):
     ships fixed-cell GDS files with the real foundry geometry. For demofab
     and other Nazca-renderable PDKs, build the cell via Nazca and export.
     """
-    if _looks_like_siepic(args.module_name):
+    if not args.code_file and _looks_like_siepic(args.module_name):
         result = _render_siepic_via_klayout(
             args.module_name, args.function_name, args.stub_length,
             args.parameters_string)
         result["source"] = _fetch_siepic_source(args.module_name, args.function_name)
         return result
 
-    cell = _build_cell(args.module_name, args.function_name, args.parameters_string)
+    if args.code_file:
+        cell = _build_cell_from_code_file(args.code_file)
+    else:
+        cell = _build_cell(args.module_name, args.function_name, args.parameters_string)
     xmin, ymin, xmax, ymax = _extract_bbox(cell)
     pins = _extract_pins(cell, args.stub_length)
 
@@ -242,7 +290,10 @@ def _do_render(args):
     }
     if polygon_warning:
         result["polygon_warning"] = polygon_warning
-    result["source"] = _fetch_nazca_source(args.module_name, args.function_name)
+    # In raw-code mode the source IS the user's own code; don't try to introspect
+    # a PDK module that wasn't named.
+    if not args.code_file:
+        result["source"] = _fetch_nazca_source(args.module_name, args.function_name)
     return result
 
 

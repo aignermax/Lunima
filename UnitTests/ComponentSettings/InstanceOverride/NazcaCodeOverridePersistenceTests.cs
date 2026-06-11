@@ -94,6 +94,50 @@ public class NazcaCodeOverridePersistenceTests
     }
 
     [Fact]
+    public void RoundTrip_RawCodeAndOverrideSize_PreservesValues()
+    {
+        // Issue #556: a raw-code override carries the edited code plus the
+        // bbox-recomputed size. All three must survive a .lun round-trip.
+        var original = new NazcaCodeOverride
+        {
+            RawCode = "def component():\n    return pdk.strt(length=42)\n",
+            OverrideWidthMicrometers = 42.5,
+            OverrideHeightMicrometers = 1.25,
+            TemplateFunctionName = "strt"
+        };
+
+        var json = JsonSerializer.Serialize(original, Options);
+        var restored = JsonSerializer.Deserialize<NazcaCodeOverride>(json, Options);
+
+        restored.ShouldNotBeNull();
+        restored!.RawCode.ShouldBe("def component():\n    return pdk.strt(length=42)\n");
+        restored.OverrideWidthMicrometers!.Value.ShouldBe(42.5);
+        restored.OverrideHeightMicrometers!.Value.ShouldBe(1.25);
+    }
+
+    [Fact]
+    public void RoundTrip_NoRawCode_OmitsFieldsAndLoadsAsNull()
+    {
+        // A parameter-only override (no raw code) must not write the #556 fields,
+        // and an old .lun without them must deserialize them as null.
+        var original = new NazcaCodeOverride
+        {
+            FunctionName = "ebeam_mmi1x2",
+            TemplateFunctionName = "ebeam_mmi1x2",
+            TemplateFunctionParameters = ""
+        };
+
+        var json = JsonSerializer.Serialize(original, Options);
+        json.ShouldNotContain("RawCode");
+        json.ShouldNotContain("OverrideWidthMicrometers");
+
+        var restored = JsonSerializer.Deserialize<NazcaCodeOverride>(json, Options);
+        restored!.RawCode.ShouldBeNull();
+        restored.OverrideWidthMicrometers.ShouldBeNull();
+        restored.OverrideHeightMicrometers.ShouldBeNull();
+    }
+
+    [Fact]
     public void OldLunFile_MissingNazcaOverrides_DeserializesAsNull()
     {
         // Simulate a .lun file that has no NazcaOverrides section

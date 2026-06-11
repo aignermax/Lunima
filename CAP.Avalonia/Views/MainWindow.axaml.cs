@@ -616,6 +616,24 @@ public partial class MainWindow : Window
             }
         }
 
+        // Per-instance raw Nazca code editor (issue #556) — only in per-instance mode.
+        var nazcaPreviewService = App.Services.GetService(typeof(CAP_Core.Export.NazcaComponentPreviewService))
+            as CAP_Core.Export.NazcaComponentPreviewService;
+        string? nazcaTemplateCode = null;
+        Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null;
+        Action? nazcaDimensionsChanged = null;
+        if (liveComponent != null && !isTemplateMode)
+        {
+            nazcaTemplateCode = NazcaCodeTemplateBuilder.Build(
+                templateModuleName, templateFunctionName, templateFunctionParameters);
+            nazcaOverlapCheck = (w, h) => FindOverlappingComponentNames(vm, liveComponent, w, h);
+            nazcaDimensionsChanged = () =>
+            {
+                var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
+                compVm?.NotifyDimensionsChanged();
+            };
+        }
+
         dialogVm.Configure(
             entityKey,
             displayName,
@@ -629,10 +647,45 @@ public partial class MainWindow : Window
             storedNazcaOverrides: isTemplateMode ? null : vm.FileOperations.StoredNazcaOverrides,
             templateFunctionName: templateFunctionName,
             templateFunctionParameters: templateFunctionParameters,
-            templateModuleName: templateModuleName);
+            templateModuleName: templateModuleName,
+            nazcaPreviewService: nazcaPreviewService,
+            nazcaTemplateCode: nazcaTemplateCode,
+            nazcaOverlapCheck: nazcaOverlapCheck,
+            nazcaDimensionsChanged: nazcaDimensionsChanged);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);
+    }
+
+    /// <summary>
+    /// Returns the display names of canvas components the given instance would overlap
+    /// if resized to <paramref name="width"/> × <paramref name="height"/> at its current
+    /// position. Non-blocking advisory used by the Nazca code editor's overlap warning.
+    /// </summary>
+    private static IReadOnlyList<string> FindOverlappingComponentNames(
+        MainViewModel vm, CAP_Core.Components.Core.Component liveComponent, double width, double height)
+    {
+        var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
+        if (compVm == null)
+            return System.Array.Empty<string>();
+
+        // CanPlaceComponent returns false on ANY overlap or chip-boundary violation;
+        // when it reports a clash, enumerate the specific neighbours for the message.
+        if (vm.Canvas.CanPlaceComponent(compVm.X, compVm.Y, width, height, excludeComponent: compVm))
+            return System.Array.Empty<string>();
+
+        var names = new List<string>();
+        foreach (var other in vm.Canvas.Components)
+        {
+            if (other == compVm) continue;
+            bool overlaps = compVm.X < other.X + other.Width &&
+                            compVm.X + width > other.X &&
+                            compVm.Y < other.Y + other.Height &&
+                            compVm.Y + height > other.Y;
+            if (overlaps)
+                names.Add(other.Component.HumanReadableName ?? other.Component.Identifier);
+        }
+        return names;
     }
 
     private void ClearUserGroupsSelection()

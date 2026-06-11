@@ -5,6 +5,8 @@ using CAP_Core.LightCalculation;
 using CAP_DataAccess.Import;
 using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
+using CAP_Core.Export;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NazcaCodeOverride = CAP_DataAccess.Persistence.PIR.NazcaCodeOverride;
@@ -39,6 +41,12 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// <see cref="Configure"/> was called without a <c>storedNazcaOverrides</c> dictionary.
     /// </summary>
     public InstanceNazcaOverrideViewModel? NazcaOverride { get; private set; }
+
+    /// <summary>
+    /// ViewModel for the per-instance editable Nazca code editor section (issue #556).
+    /// Null in per-template mode or when no preview service / template code was supplied.
+    /// </summary>
+    public InstanceNazcaCodeEditorViewModel? NazcaCodeEditor { get; private set; }
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -168,7 +176,11 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         Dictionary<string, NazcaCodeOverride>? storedNazcaOverrides = null,
         string? templateFunctionName = null,
         string? templateFunctionParameters = null,
-        string? templateModuleName = null)
+        string? templateModuleName = null,
+        NazcaComponentPreviewService? nazcaPreviewService = null,
+        string? nazcaTemplateCode = null,
+        Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null,
+        Action? nazcaDimensionsChanged = null)
     {
         _entityKey = entityKey;
         _displayName = displayName;
@@ -201,6 +213,29 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             NazcaOverride = null;
         }
         OnPropertyChanged(nameof(NazcaOverride));
+
+        // Per-instance raw Nazca code editor (issue #556). Only in per-instance mode
+        // with a live component, an override store and a runnable seed template.
+        if (liveComponent != null && storedNazcaOverrides != null && nazcaTemplateCode != null)
+        {
+            NazcaCodeEditor = new InstanceNazcaCodeEditorViewModel(
+                entityKey,
+                storedNazcaOverrides,
+                liveComponent,
+                templateModuleName,
+                templateFunctionName ?? string.Empty,
+                templateFunctionParameters,
+                nazcaTemplateCode,
+                nazcaPreviewService,
+                nazcaOverlapCheck,
+                nazcaDimensionsChanged,
+                onChanged);
+        }
+        else
+        {
+            NazcaCodeEditor = null;
+        }
+        OnPropertyChanged(nameof(NazcaCodeEditor));
 
         RefreshEntries(notifyChanged: false);
         RefreshEffectiveEntries();

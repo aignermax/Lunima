@@ -1,4 +1,8 @@
+using System;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using CAP.Avalonia.ViewModels.ComponentSettings;
 
 namespace CAP.Avalonia.Views;
 
@@ -11,5 +15,38 @@ public partial class ComponentSettingsDialog : Window
     public ComponentSettingsDialog()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    /// <summary>
+    /// Fires the per-instance Nazca code editor's async source load once the dialog
+    /// is visible (issue #556). Fire-and-forget so the dialog opens immediately; the
+    /// editor populates as soon as the (cached) module-mode render returns. The VM's
+    /// InitializeAsync is crash-proof, so a swallowed continuation is safe.
+    /// </summary>
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        if (DataContext is not ComponentSettingsDialogViewModel vm)
+            return;
+        var editor = vm.NazcaCodeEditor;
+        if (editor == null)
+            return;
+
+        // RenderAsync marshals back onto the captured UI context; observable-property
+        // setters in InitializeAsync therefore run on the UI thread.
+        _ = Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            try { await editor.InitializeAsync(); }
+            catch { /* InitializeAsync is crash-proof; this is belt-and-braces. */ }
+        });
+    }
+
+    /// <summary>Opens the Nazca Design manual in the user's default browser (issue #556).</summary>
+    private void OnOpenNazcaDocs(object? sender, RoutedEventArgs e)
+    {
+        var launcher = TopLevel.GetTopLevel(this)?.Launcher;
+        if (launcher == null)
+            return;
+        _ = launcher.LaunchUriAsync(new Uri("https://nazca-design.org/manual/"));
     }
 }

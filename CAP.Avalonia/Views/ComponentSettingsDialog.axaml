@@ -1,6 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels.ComponentSettings"
+        xmlns:io="using:CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride"
+        xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+        xmlns:edit="using:AvaloniaEdit"
         x:Class="CAP.Avalonia.Views.ComponentSettingsDialog"
         x:Name="DialogRoot"
         x:DataType="vm:ComponentSettingsDialogViewModel"
@@ -33,75 +36,170 @@
                        TextWrapping="Wrap"/>
         </Border>
 
-        <!-- Per-instance Nazca parameter override section (only shown for canvas instances) -->
+        <!-- Per-instance editable Nazca code editor (issue #556) -->
+        <!-- NOTE (issue #556): The legacy "Nazca Parameters Override" section (#541,
+             bound to ComponentSettingsDialogViewModel.NazcaOverride) was removed from
+             this dialog because the full code editor below supersedes it. The
+             InstanceNazcaOverrideViewModel class and NazcaCodeOverride parameter
+             persistence are intentionally kept so older .lun files that stored
+             function-name/parameter overrides still load and apply. -->
+
         <Border DockPanel.Dock="Bottom"
-                Background="#1a2a1a"
+                Background="#1a1a2a"
                 CornerRadius="4"
                 Padding="10,8"
                 Margin="0,10,0,0"
-                BorderBrush="#2a4a2a"
+                BorderBrush="#2a2a4a"
                 BorderThickness="1"
-                IsVisible="{Binding NazcaOverride, Converter={x:Static ObjectConverters.IsNotNull}}"
-                DataContext="{Binding NazcaOverride}">
+                IsVisible="{Binding NazcaCodeEditor, Converter={x:Static ObjectConverters.IsNotNull}}"
+                DataContext="{Binding NazcaCodeEditor}"
+                x:DataType="io:InstanceNazcaCodeEditorViewModel">
             <StackPanel Spacing="6">
-                <!-- Section header with override indicator -->
+                <!-- Section header -->
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="Nazca Parameters Override"
+                    <TextBlock Text="Nazca Code (geometry only)"
                                FontWeight="SemiBold"
                                FontSize="12"
-                               Foreground="#88cc88"/>
+                               Foreground="#8888cc"/>
                     <TextBlock Text="🔧 Override active"
                                FontSize="10"
                                Foreground="#FFA500"
                                VerticalAlignment="Center"
                                IsVisible="{Binding HasOverride}"/>
+                    <TextBlock Text="⚠ Overlaps neighbours"
+                               FontSize="10"
+                               Foreground="#FF8888"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasOverlap}"/>
+                    <!-- Nazca docs + cheat-sheet (issue #556) -->
+                    <Button Content="Nazca docs ↗"
+                            Click="OnOpenNazcaDocs"
+                            Padding="6,1"
+                            Background="Transparent"
+                            Foreground="#7faaff"
+                            BorderThickness="0"
+                            FontSize="10"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Open the Nazca Design manual in your browser"/>
+                    <Button Content="?"
+                            Padding="8,1"
+                            Background="#33335a"
+                            Foreground="#ccccff"
+                            BorderThickness="0"
+                            CornerRadius="8"
+                            FontSize="11"
+                            FontWeight="Bold"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Quick help — most-used Nazca commands">
+                        <Button.Flyout>
+                            <Flyout>
+                                <StackPanel Spacing="2" MaxWidth="320">
+                                    <TextBlock Text="Most-used Nazca commands"
+                                               FontWeight="SemiBold"
+                                               FontSize="11"
+                                               Foreground="#aaaacc"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="10"
+                                               Foreground="#dddddd"
+                                               TextWrapping="Wrap"
+                                               Text="with nd.Cell() as C:"/>
+                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="10"
+                                               Foreground="#dddddd"
+                                               TextWrapping="Wrap"
+                                               Text="    nd.strt(length=10).put()"/>
+                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="10"
+                                               Foreground="#dddddd"
+                                               TextWrapping="Wrap"
+                                               Text="    nd.bend(radius=10, angle=90).put()"/>
+                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="10"
+                                               Foreground="#dddddd"
+                                               TextWrapping="Wrap"
+                                               Text="    nd.Pin('a0').put(0, 0, 180)"/>
+                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="10"
+                                               Foreground="#dddddd"
+                                               TextWrapping="Wrap"
+                                               Text="return C"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
 
-                <!-- Function name -->
-                <Grid ColumnDefinitions="120,*">
-                    <TextBlock Grid.Column="0" Text="Function name:"
-                               Foreground="#aaaaaa" FontSize="11"
-                               VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding FunctionName, Mode=TwoWay}"
-                             FontSize="11" Padding="6,3"
-                             Background="#2a2a2a" Foreground="White"
-                             BorderBrush="#444444" BorderThickness="1"
-                             FontFamily="Consolas, Courier New, monospace"
-                             ToolTip.Tip="Nazca function name for this instance (e.g. ebeam_mmi1x2_te1550)"/>
+                <!-- No-editable-source note: shown for fixed-cell GDS / KLayout PCells
+                     whose Python source can't be introspected. The geometry preview
+                     still renders; the user may paste their own Nazca code to override. -->
+                <TextBlock Text="No editable Nazca source for this component; you can still paste your own Nazca code to override its geometry."
+                           Foreground="#ddaa66"
+                           FontSize="10"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasEditableSource, Converter={x:Static BoolConverters.Not}}"/>
+
+                <!-- Editor (left) + live preview (right) -->
+                <Grid ColumnDefinitions="*,160" Height="220">
+                    <edit:TextEditor Grid.Column="0"
+                                     behaviors:TextEditorBindingBehavior.BoundText="{Binding Code, Mode=TwoWay}"
+                                     ShowLineNumbers="True"
+                                     WordWrap="False"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="11"
+                                     Background="#101018"
+                                     Foreground="#dddddd"
+                                     BorderBrush="#333355"
+                                     BorderThickness="1"
+                                     Margin="0,0,8,0"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalScrollBarVisibility="Auto"
+                                     ToolTip.Tip="Define component() returning a Nazca cell. Imports/helpers allowed."/>
+                    <Border Grid.Column="1"
+                            Background="#0a0a10"
+                            BorderBrush="#333355"
+                            BorderThickness="1"
+                            CornerRadius="3">
+                        <Image Source="{Binding PreviewBitmap}"
+                               Stretch="Uniform"
+                               Margin="4"/>
+                    </Border>
                 </Grid>
 
-                <!-- Function parameters -->
-                <Grid ColumnDefinitions="120,*">
-                    <TextBlock Grid.Column="0" Text="Parameters:"
-                               Foreground="#aaaaaa" FontSize="11"
-                               VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding FunctionParameters, Mode=TwoWay}"
-                             FontSize="11" Padding="6,3"
-                             Background="#2a2a2a" Foreground="White"
-                             BorderBrush="#444444" BorderThickness="1"
-                             FontFamily="Consolas, Courier New, monospace"
-                             ToolTip.Tip="Nazca function parameters for this instance (e.g. length=3.5,width=2.0)"/>
-                </Grid>
+                <!-- Error text -->
+                <TextBlock Text="{Binding PreviewError}"
+                           Foreground="#FF6B6B"
+                           FontSize="10"
+                           FontFamily="Consolas, Courier New, monospace"
+                           TextWrapping="Wrap"
+                           MaxHeight="80"
+                           IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                 <!-- Buttons -->
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Save Nazca Override"
-                            Command="{Binding SaveOverrideCommand}"
+                    <Button Content="Run Preview"
+                            Command="{Binding RunPreviewCommand}"
+                            Padding="10,5"
+                            Background="#2a2a6a"
+                            Foreground="White"
+                            FontSize="11"
+                            IsEnabled="{Binding IsRunning, Converter={x:Static BoolConverters.Not}}"/>
+                    <Button Content="Apply"
+                            Command="{Binding ApplyOverrideCommand}"
                             Padding="10,5"
                             Background="#2a5a2a"
                             Foreground="White"
-                            FontSize="11"/>
+                            FontSize="11"
+                            ToolTip.Tip="Persist this code and recompute the component size (enabled after a successful run)"/>
                     <Button Content="Reset to Template"
                             Command="{Binding ResetToTemplateCommand}"
                             Padding="10,5"
                             Background="#3a2a20"
                             Foreground="#ddaa88"
-                            FontSize="11"
-                            IsEnabled="{Binding HasOverride}"
-                            ToolTip.Tip="Revert this instance to its PDK template values"/>
+                            FontSize="11"/>
                 </StackPanel>
 
-                <!-- Nazca status text -->
+                <!-- Status / hint text -->
                 <TextBlock Text="{Binding StatusText}"
                            Foreground="#aaaacc"
                            FontSize="10"
