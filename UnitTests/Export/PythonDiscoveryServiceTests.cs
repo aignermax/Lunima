@@ -168,6 +168,22 @@ public class PythonDiscoveryServiceTests
     }
 
     [Fact]
+    public async Task DiscoverPythonWithNazcaAsync_InstalledEntries_PointToRealExecutables()
+    {
+        // Act
+        var result = await _service.DiscoverPythonWithNazcaAsync();
+
+        // Assert - "Installed" entries come from scanning real install dirs, so their
+        // Path must be an existing python.exe (never a bare PATH alias). Passes
+        // vacuously on machines without such an install.
+        foreach (var install in result.Where(r => r.Source == "Installed"))
+        {
+            File.Exists(install.Path).ShouldBeTrue($"Installed Python should be a real file: {install.Path}");
+            install.HasNazca.ShouldBeTrue();
+        }
+    }
+
+    [Fact]
     public async Task DiscoverPythonWithNazcaAsync_IncludesActiveVenvIfPresent()
     {
         // Arrange - Check if VIRTUAL_ENV is set

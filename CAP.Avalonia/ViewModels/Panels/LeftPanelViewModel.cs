@@ -235,14 +235,17 @@ public partial class LeftPanelViewModel : ObservableObject
         var query = SearchText?.Trim() ?? "";
         var enabledPdks = PdkManager.GetEnabledPdkNames();
 
-        foreach (var t in AllTemplates)
-        {
-            if (!enabledPdks.Contains(t.PdkSource))
-                continue;
+        // Sort by category first so the flat ListBox visually groups
+        // components of the same kind; secondary sort by name within
+        // each category. Analysis tools land in the "Analysis" group.
+        var candidates = AllTemplates
+            .Where(t => enabledPdks.Contains(t.PdkSource))
+            .Where(t => query.Length == 0 || MatchesSearch(t, query))
+            .OrderBy(t => t.Category, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase);
 
-            if (query.Length == 0 || MatchesSearch(t, query))
-                FilteredTemplates.Add(t);
-        }
+        foreach (var t in candidates)
+            FilteredTemplates.Add(t);
 
         SavePdkFilterState();
     }

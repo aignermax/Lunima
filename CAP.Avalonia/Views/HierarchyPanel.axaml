@@ -30,6 +30,10 @@
                     <Style Selector="TreeViewItem">
                         <Setter Property="Padding" Value="2"/>
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                        <!-- Unify the native tree selection with the node's IsSelected so a
+                             single click anywhere on the row selects, and canvas-driven
+                             selection highlights the matching node. -->
+                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
                     </Style>
 
                     <!-- Selected item highlight -->
