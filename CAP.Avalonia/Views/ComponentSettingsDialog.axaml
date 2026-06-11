@@ -8,8 +8,9 @@
         x:Name="DialogRoot"
         x:DataType="vm:ComponentSettingsDialogViewModel"
         Title="{Binding Title}"
-        Width="560" Height="620"
+        Width="620" Height="760"
         MinWidth="400" MinHeight="350"
+        CanResize="True"
         Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
@@ -93,37 +94,28 @@
                             ToolTip.Tip="Quick help — most-used Nazca commands">
                         <Button.Flyout>
                             <Flyout>
-                                <StackPanel Spacing="2" MaxWidth="320">
-                                    <TextBlock Text="Most-used Nazca commands"
-                                               FontWeight="SemiBold"
-                                               FontSize="11"
-                                               Foreground="#aaaacc"
-                                               Margin="0,0,0,4"/>
-                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="10"
-                                               Foreground="#dddddd"
-                                               TextWrapping="Wrap"
-                                               Text="with nd.Cell() as C:"/>
-                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="10"
-                                               Foreground="#dddddd"
-                                               TextWrapping="Wrap"
-                                               Text="    nd.strt(length=10).put()"/>
-                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="10"
-                                               Foreground="#dddddd"
-                                               TextWrapping="Wrap"
-                                               Text="    nd.bend(radius=10, angle=90).put()"/>
-                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="10"
-                                               Foreground="#dddddd"
-                                               TextWrapping="Wrap"
-                                               Text="    nd.Pin('a0').put(0, 0, 180)"/>
-                                    <TextBlock FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="10"
-                                               Foreground="#dddddd"
-                                               TextWrapping="Wrap"
-                                               Text="return C"/>
+                                <StackPanel Spacing="4" MaxWidth="380">
+                                    <TextBlock Text="Quick Nazca example — define component() returning a Cell."
+                                               FontWeight="SemiBold" FontSize="11" Foreground="#aaaacc"
+                                               TextWrapping="Wrap"/>
+                                    <!-- Selectable so it can be copied (Ctrl+C); or use Insert below. -->
+                                    <Border Background="#101018" BorderBrush="#333355" BorderThickness="1"
+                                            CornerRadius="3" Padding="6">
+                                        <SelectableTextBlock FontFamily="Consolas, Courier New, monospace"
+                                                             FontSize="10" Foreground="#dddddd"
+                                                             Text="import nazca as nd&#10;&#10;def component():&#10;    with nd.Cell() as C:&#10;        nd.strt(length=20).put()&#10;        nd.bend(radius=10, angle=90).put()&#10;        return C"/>
+                                    </Border>
+                                    <Button Content="Insert into editor"
+                                            Command="{Binding InsertStarterCommand}"
+                                            Padding="8,3" FontSize="10"
+                                            Background="#2a4a2a" Foreground="#cceecc" BorderThickness="0"
+                                            HorizontalAlignment="Left"
+                                            ToolTip.Tip="Replace the editor content with this runnable starter"/>
+                                    <TextBlock Text="More: nd.taper(length=10, width1=.5, width2=2).put() · nd.Pin('a0').put(0,0,180) · nd.bend(radius=5, angle=180).put()"
+                                               FontFamily="Consolas, Courier New, monospace"
+                                               FontSize="9" Foreground="#9aa0b0" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Tip: select any line above and Ctrl+C to copy."
+                                               FontSize="9" Foreground="#777799" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
@@ -160,7 +152,7 @@
                            Foreground="#8888aa" FontSize="10" Margin="0,4,0,2" TextWrapping="Wrap"/>
 
                 <!-- Override editor (left) + live preview (right) -->
-                <Grid ColumnDefinitions="*,160" Height="220">
+                <Grid ColumnDefinitions="*,160" Height="340">
                     <edit:TextEditor Grid.Column="0"
                                      behaviors:TextEditorBindingBehavior.BoundText="{Binding Code, Mode=TwoWay}"
                                      ShowLineNumbers="True"
