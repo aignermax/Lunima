@@ -193,10 +193,11 @@ public class WaveguideEndpointAlignmentTests
     // ── Multi-segment: verify uniform coordinate transformation (Issue #456) ──
 
     /// <summary>
-    /// Multi-segment path with PDK component: adjacent segments must be continuous in Nazca space.
-    /// Root cause (Issue #456): segment[0] used GetAbsoluteNazcaPosition() (includes NazcaOriginOffset)
-    /// while segment[1+] used a plain Y-flip — different coordinate systems caused a visible Y-gap.
-    /// Fix: all segments use the same delta offset derived from the start pin.
+    /// Multi-segment path with PDK component: adjacent segments must be continuous in Nazca
+    /// space. Guards against mixing coordinate systems between segment[0] and segment[1+]
+    /// (issue #456 was a visible Y-gap from exactly that). Every segment point goes
+    /// through the same universal Y negation (NazcaCoordinateMapper), so no per-segment
+    /// offset machinery exists that could drift apart.
     /// </summary>
     [Fact]
     public void MultiSegmentWaveguide_PdkComponent_SegmentsAreContinuousInNazca_Issue456()

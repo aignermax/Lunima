@@ -567,17 +567,15 @@ public class SimpleNazcaExporter
             double nazcaY;
             if (startPin != null)
             {
-                // FIXED (#329, #338): Use correct Nazca pin position accounting for
-                // NazcaOriginOffset and component rotation transformation.
-                var (pinNazcaX, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
-                nazcaX = pinNazcaX;
-                nazcaY = pinNazcaY;
+                // Anchor the chain on the pin's world position so the waveguide
+                // starts exactly where the component's stub pin sits.
+                (nazcaX, nazcaY) = NazcaCoordinateMapper.GetPinNazcaPosition(startPin);
             }
             else
             {
-                // Fallback: naive coordinate flip (legacy behavior without pin info)
-                nazcaX = straight.StartPoint.X;
-                nazcaY = -straight.StartPoint.Y;
+                // Without pin info the segment's own start point is the best anchor.
+                (nazcaX, nazcaY) = NazcaCoordinateMapper.ToNazca(
+                    straight.StartPoint.X, straight.StartPoint.Y);
             }
 
             var x = NormalizeZero(nazcaX).ToString("F2", ci);
@@ -614,16 +612,14 @@ public class SimpleNazcaExporter
             double nazcaY;
             if (startPin != null)
             {
-                // FIXED (#329, #338): Use correct Nazca pin position accounting for
-                // NazcaOriginOffset and component rotation transformation.
-                var (pinNazcaX, pinNazcaY) = startPin.GetAbsoluteNazcaPosition();
-                nazcaX = pinNazcaX;
-                nazcaY = pinNazcaY;
+                // Anchor the chain on the pin's world position so the waveguide
+                // starts exactly where the component's stub pin sits.
+                (nazcaX, nazcaY) = NazcaCoordinateMapper.GetPinNazcaPosition(startPin);
             }
             else
             {
-                nazcaX = bend.StartPoint.X;
-                nazcaY = -bend.StartPoint.Y;
+                (nazcaX, nazcaY) = NazcaCoordinateMapper.ToNazca(
+                    bend.StartPoint.X, bend.StartPoint.Y);
             }
 
             var x = NormalizeZero(nazcaX).ToString("F2", ci);
