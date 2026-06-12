@@ -50,13 +50,10 @@ public class GdsComplexLayoutTests
             {
                 var (globalX, globalY) = pin.GetAbsoluteNazcaPosition();
 
-                // Manual calculation to verify
-                double compNazcaX = x + mmi2x2Template.NazcaOriginOffsetX;
-                double compNazcaY = -(y + mmi2x2Template.NazcaOriginOffsetY);
-                double pinLocalNazcaY = mmi2x2Template.HeightMicrometers - pin.OffsetYMicrometers;
-
-                double expectedGlobalX = compNazcaX + pin.OffsetXMicrometers;
-                double expectedGlobalY = compNazcaY + pinLocalNazcaY;
+                // Pin Nazca position is the plain Y negation of the app world position —
+                // calibration data only moves the CELL, never the pins (issue #565).
+                double expectedGlobalX = x + pin.OffsetXMicrometers;
+                double expectedGlobalY = -(y + pin.OffsetYMicrometers);
 
                 double xDev = Math.Abs(expectedGlobalX - globalX);
                 double yDev = Math.Abs(expectedGlobalY - globalY);
@@ -97,13 +94,9 @@ public class GdsComplexLayoutTests
             {
                 var (globalX, globalY) = pin.GetAbsoluteNazcaPosition();
 
-                // Manual calculation
-                double compNazcaX = x + mmi1x2Template.NazcaOriginOffsetX;
-                double compNazcaY = -(y + mmi1x2Template.NazcaOriginOffsetY);
-                double pinLocalNazcaY = mmi1x2Template.HeightMicrometers - pin.OffsetYMicrometers;
-
-                double expectedGlobalX = compNazcaX + pin.OffsetXMicrometers;
-                double expectedGlobalY = compNazcaY + pinLocalNazcaY;
+                // Universal Y negation — see MMI2x2 test above for the rationale.
+                double expectedGlobalX = x + pin.OffsetXMicrometers;
+                double expectedGlobalY = -(y + pin.OffsetYMicrometers);
 
                 double xDev = Math.Abs(expectedGlobalX - globalX);
                 double yDev = Math.Abs(expectedGlobalY - globalY);
@@ -141,15 +134,10 @@ public class GdsComplexLayoutTests
             {
                 var (globalX, globalY) = pin.GetAbsoluteNazcaPosition();
 
-                // Manual calculation for stub-based (legacy) component:
-                // The stub cell origin is at the bottom-left (Nazca y=0 = editor y=HeightMicrometers).
-                // NazcaOriginOffsetY applies to real PDK cells; legacy stubs use HeightMicrometers.
-                double compNazcaX = x + gcTemplate.NazcaOriginOffsetX;
-                double compNazcaY = -(y + gcTemplate.HeightMicrometers);
-                double pinLocalNazcaY = gcTemplate.HeightMicrometers - pin.OffsetYMicrometers;
-
-                double expectedGlobalX = compNazcaX + pin.OffsetXMicrometers;
-                double expectedGlobalY = compNazcaY + pinLocalNazcaY;
+                // Y negation applies to legacy stub components exactly like PDK cells:
+                // the legacy (0, Height) origin fallback only affects cell placement.
+                double expectedGlobalX = x + pin.OffsetXMicrometers;
+                double expectedGlobalY = -(y + pin.OffsetYMicrometers);
 
                 double xDev = Math.Abs(expectedGlobalX - globalX);
                 double yDev = Math.Abs(expectedGlobalY - globalY);
@@ -208,19 +196,10 @@ public class GdsComplexLayoutTests
             {
                 var (globalX, globalY) = pin.GetAbsoluteNazcaPosition();
 
-                // Calculate expected position.
-                // "Grating Coupler" has no PDK function name → legacy stub with origin at bottom.
-                // Legacy fallback: CalculateOriginOffset returns (0, HeightMicrometers).
-                bool isPdkFunc = !string.IsNullOrEmpty(template.NazcaFunctionName) &&
-                    (template.NazcaFunctionName.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-                     template.NazcaFunctionName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
-                double effectiveOriginY = isPdkFunc ? template.NazcaOriginOffsetY : template.HeightMicrometers;
-                double compNazcaX = x + template.NazcaOriginOffsetX;
-                double compNazcaY = -(y + effectiveOriginY);
-                double pinLocalNazcaY = template.HeightMicrometers - pin.OffsetYMicrometers;
-
-                double expectedGlobalX = compNazcaX + pin.OffsetXMicrometers;
-                double expectedGlobalY = compNazcaY + pinLocalNazcaY;
+                // One expectation for ALL component kinds: the universal Y negation.
+                // No per-kind branching — exactly the property issue #565 establishes.
+                double expectedGlobalX = x + pin.OffsetXMicrometers;
+                double expectedGlobalY = -(y + pin.OffsetYMicrometers);
 
                 double xDev = Math.Abs(expectedGlobalX - globalX);
                 double yDev = Math.Abs(expectedGlobalY - globalY);

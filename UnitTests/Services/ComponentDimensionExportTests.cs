@@ -91,9 +91,12 @@ public class ComponentDimensionExportTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // Stub should use original dimensions (100x50), not swapped
+        // Stub should use original dimensions (100x50), not swapped.
+        // Cell-internal bbox follows the NazcaCoordinateMapper contract (#565):
+        // with calibration (0,0) the org pin is the box TOP-left, so the polygon
+        // spans [0,-H] .. [W,0] below the origin.
         result.ShouldContain("Auto-generated stub for ebeam_test_device (100x50 µm)");
-        result.ShouldContain("nd.Polygon(points=[(0,0),(100.00,0),(100.00,50.00),(0,50.00)], layer=1)");
+        result.ShouldContain("nd.Polygon(points=[(0.00,-50.00),(100.00,-50.00),(100.00,0.00),(0.00,0.00)], layer=1)");
 
         // Component placement should include rotation angle (pin offset may vary)
         result.ShouldContain(", -90)  #"); // Rotation angle should be -90 (Y-axis flipped)
@@ -135,10 +138,11 @@ public class ComponentDimensionExportTests
         // Verify dimensions in comment
         result.ShouldContain($"Auto-generated stub for ebeam_component ({width}x{height} µm)");
 
-        // Verify polygon coordinates
+        // Verify polygon coordinates: bbox [0,-H] .. [W,0] around the org pin
+        // (NazcaCoordinateMapper contract for calibration (0,0), #565).
         var w = width.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
         var h = height.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-        result.ShouldContain($"nd.Polygon(points=[(0,0),({w},0),({w},{h}),(0,{h})], layer=1)");
+        result.ShouldContain($"nd.Polygon(points=[(0.00,-{h}),({w},-{h}),({w},0.00),(0.00,0.00)], layer=1)");
     }
 
     [Fact]
@@ -202,18 +206,21 @@ public class ComponentDimensionExportTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // Pins use Nazca Y-up coordinate system: nazca_y = height - editor_y
-        // a0: (0, 50 - 12.5 = 37.5), angle 180 -> -180
-        result.ShouldContain("nd.Pin('a0').put(0.00, 37.50, -180)");
+        // Stub pins render at the plain Y negation of the app pin offsets relative
+        // to org (NazcaCoordinateMapper contract, #565): local = (OffsetX, -OffsetY)
+        // for calibration (0,0). This puts the rendered pins exactly where the
+        // exported waveguides expect them.
+        // a0: (0, -12.5), angle 180 -> -180
+        result.ShouldContain("nd.Pin('a0').put(0.00, -12.50, -180)");
 
-        // a1: (0, 50 - 37.5 = 12.5), angle 180 -> -180
-        result.ShouldContain("nd.Pin('a1').put(0.00, 12.50, -180)");
+        // a1: (0, -37.5), angle 180 -> -180
+        result.ShouldContain("nd.Pin('a1').put(0.00, -37.50, -180)");
 
-        // b0: (120, 50 - 12.5 = 37.5), angle 0 -> 0
-        result.ShouldContain("nd.Pin('b0').put(120.00, 37.50, 0)");
+        // b0: (120, -12.5), angle 0 -> 0
+        result.ShouldContain("nd.Pin('b0').put(120.00, -12.50, 0)");
 
-        // b1: (120, 50 - 37.5 = 12.5), angle 0 -> 0
-        result.ShouldContain("nd.Pin('b1').put(120.00, 12.50, 0)");
+        // b1: (120, -37.5), angle 0 -> 0
+        result.ShouldContain("nd.Pin('b1').put(120.00, -37.50, 0)");
     }
 
     private static ComponentTemplate ConvertPdkComponentToTemplate(

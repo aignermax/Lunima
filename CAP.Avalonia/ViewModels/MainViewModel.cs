@@ -369,6 +369,10 @@ public partial class MainViewModel : ObservableObject
     {
         FileOperations.PhotonTorchExport.UpdateStatus = UpdateStatusText;
         FileOperations.RebuildHierarchy = LeftPanel.HierarchyPanel.RebuildTree;
+
+        // Export validation must run against the SAME per-instance Nazca overrides the
+        // production export uses; FileOperations owns the live store (issue #565 F1).
+        RightPanel.ExportValidation.OverridesProvider = () => FileOperations.StoredNazcaOverrides;
         FileOperations.ZoomToFitAfterLoad = (w, h) =>
         {
             var (vpWidth, vpHeight) = ViewportControl.GetViewportSize?.Invoke() ?? (w, h);

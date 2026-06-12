@@ -4,6 +4,7 @@ using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
+using CAP_Core.Export;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
@@ -361,24 +362,26 @@ public class SimpleNazcaExporterTests
         return count;
     }
 
+    // IsPdkFunction lives in NazcaCoordinateMapper (single source of truth, #565);
+    // the exporter consumes it from there.
     [Fact]
     public void IsPdkFunction_RealPdkFunction_ReturnsTrue()
     {
-        var result = SimpleNazcaExporter.IsPdkFunction("ebeam_y_1550");
+        var result = NazcaCoordinateMapper.IsPdkFunction("ebeam_y_1550");
         result.ShouldBeTrue();
     }
 
     [Fact]
     public void IsPdkFunction_DemoPdkFunction_ReturnsFalse()
     {
-        var result = SimpleNazcaExporter.IsPdkFunction("demo_pdk.mmi1x2");
+        var result = NazcaCoordinateMapper.IsPdkFunction("demo_pdk.mmi1x2");
         result.ShouldBeFalse();
     }
 
     [Fact]
     public void IsPdkFunction_ExternalPdkWithDot_ReturnsTrue()
     {
-        var result = SimpleNazcaExporter.IsPdkFunction("siepic.gc_te1550");
+        var result = NazcaCoordinateMapper.IsPdkFunction("siepic.gc_te1550");
         result.ShouldBeTrue();
     }
 
@@ -778,6 +781,40 @@ public class SimpleNazcaExporterTests
         // (300, 5) → (300, −5); a legacy start-pin offset would shift every segment.
         result.ShouldContain("300.00, -5.00");
         result.ShouldNotContain("300.00, 5.00");
+    }
+
+    [Fact]
+    public void Export_DefaultFlags_OmitsVerificationEpilog()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(CreateDemoPdkStraightWaveguide(100)));
+
+        var result = new SimpleNazcaExporter().Export(canvas);
+
+        // The verification epilog is opt-in (issue #565): a regular export must stay
+        // a plain fab script without introspection side effects.
+        result.ShouldNotContain("Alignment verification");
+        result.ShouldNotContain("_verify_instances");
+        result.ShouldNotContain(".pins.json");
+    }
+
+    [Fact]
+    public void Export_WithEmitVerification_AppendsPinEpilogAfterGdsExport()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(CreateDemoPdkStraightWaveguide(100)));
+
+        var result = new SimpleNazcaExporter().Export(canvas, emitVerification: true);
+
+        // The registry bridges the function-local comp_N variables to the module-level
+        // epilog, which dumps every instance's TRUE nazca pin positions to .pins.json.
+        result.ShouldContain("_verify_instances = [('comp_0', comp_0)]");
+        result.ShouldContain("# --- Alignment verification (machine-readable) ---");
+        result.ShouldContain("_pin.xya()");
+        result.ShouldContain(".pins.json");
+        result.IndexOf("nd.export_gds", StringComparison.Ordinal).ShouldBeLessThan(
+            result.IndexOf("# --- Alignment verification", StringComparison.Ordinal),
+            "the epilog must run after the GDS was written");
     }
 
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)

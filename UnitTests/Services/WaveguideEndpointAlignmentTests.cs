@@ -6,6 +6,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Export;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
@@ -19,9 +20,17 @@ namespace UnitTests.Services;
 /// Verifies that exported waveguide paths start and end exactly at the
 /// correct Nazca pin positions for all component types and rotations.
 ///
-/// Issue #355: End pins don't align when NazcaOriginOffsetY ≠ HeightMicrometers.
-/// Root cause: path routing uses editor coordinates; Nazca export uses Nazca coordinates.
-/// For PDK components with NazcaOriginOffset, these differ, causing endpoint errors.
+/// Expected pin positions come from <see cref="NazcaCoordinateMapper.GetPinNazcaPosition"/>
+/// (issue #565): the app model is the truth for where pins are, and the conversion is a
+/// plain Y negation for every component kind. Calibration data only moves the CELL so its
+/// rendered pins coincide with the app pins — it never bends segment coordinates
+/// (an origin-offset-dependent pin formula would diverge wherever oy ≠ H/2).
+///
+/// Scope: this is a STRUCTURAL check that the exporter routes its coordinates through the
+/// mapper (it compares exporter output to the same mapper the exporter calls, so it cannot
+/// catch a wrong mapper FORMULA). Formula correctness is proven independently by
+/// NazcaCoordinateMapperTests (hand-computed expectations) and by GdsExportAlignmentTests
+/// (verified against the real nazca engine that writes the GDS).
 /// </summary>
 public class WaveguideEndpointAlignmentTests
 {
@@ -32,8 +41,7 @@ public class WaveguideEndpointAlignmentTests
     [Fact]
     public void SingleStraightWaveguide_TwoLegacyComponents_StartAndEndAlign()
     {
-        // Legacy components: NazcaOriginOffset uses fallback (height).
-        // delta = H - NazcaOriginOffsetY = 0 → GetAbsoluteNazcaPosition() == (editorX, -editorY)
+        // Legacy components: pin truth is the plain Y negation (editorX, -editorY).
         var (compA, pinOut) = CreateLegacyComponent("CompA", x: 0, y: 0, width: 100, height: 50,
             pinOffsetX: 100, pinOffsetY: 25, pinAngle: 0);
         var (compB, pinIn) = CreateLegacyComponent("CompB", x: 200, y: 0, width: 100, height: 50,
@@ -41,8 +49,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), "start");
         AssertAligned(endPt, (expectedEndX, expectedEndY), "end");
@@ -62,8 +70,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), "start");
         AssertAligned(endPt, (expectedEndX, expectedEndY), "end (Issue #355)");
@@ -80,8 +88,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), "start");
         AssertAligned(endPt, (expectedEndX, expectedEndY), "end (Issue #355)");
@@ -98,8 +106,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), "start");
         AssertAligned(endPt, (expectedEndX, expectedEndY), "end (different PDK offsets)");
@@ -116,8 +124,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), "start");
         AssertAligned(endPt, (expectedEndX, expectedEndY), "end (same PDK offset)");
@@ -137,8 +145,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), "start");
         AssertAligned(endPt, (expectedEndX, expectedEndY), "end (grating coupler)");
@@ -160,8 +168,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), $"start (rot={rotation}°)");
         AssertAligned(endPt, (expectedEndX, expectedEndY), $"end (rot={rotation}°)");
@@ -181,8 +189,8 @@ public class WaveguideEndpointAlignmentTests
 
         var (startPt, endPt) = ExportAndExtractEndpoints(pinOut, pinIn);
 
-        var (expectedStartX, expectedStartY) = pinOut.GetAbsoluteNazcaPosition();
-        var (expectedEndX, expectedEndY) = pinIn.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinIn);
 
         AssertAligned(startPt, (expectedStartX, expectedStartY), $"start PDK (rot={rotation}°)");
         AssertAligned(endPt, (expectedEndX, expectedEndY), $"end PDK (rot={rotation}°)");
@@ -191,10 +199,11 @@ public class WaveguideEndpointAlignmentTests
     // ── Multi-segment: verify uniform coordinate transformation (Issue #456) ──
 
     /// <summary>
-    /// Multi-segment path with PDK component: adjacent segments must be continuous in Nazca space.
-    /// Root cause (Issue #456): segment[0] used GetAbsoluteNazcaPosition() (includes NazcaOriginOffset)
-    /// while segment[1+] used a plain Y-flip — different coordinate systems caused a visible Y-gap.
-    /// Fix: all segments use the same delta offset derived from the start pin.
+    /// Multi-segment path with PDK component: adjacent segments must be continuous in Nazca
+    /// space. Guards against mixing coordinate systems between segment[0] and segment[1+]
+    /// (issue #456 was a visible Y-gap from exactly that). Every segment point goes
+    /// through the same universal Y negation (NazcaCoordinateMapper), so no per-segment
+    /// offset machinery exists that could drift apart.
     /// </summary>
     [Fact]
     public void MultiSegmentWaveguide_PdkComponent_SegmentsAreContinuousInNazca_Issue456()
@@ -264,7 +273,7 @@ public class WaveguideEndpointAlignmentTests
             .First(l => l.Contains("nd.strt(") || l.Contains("nd.bend("));
 
         var (startX, startY) = ExtractStartPoint(firstLine);
-        var (expectedX, expectedY) = pinOut.GetAbsoluteNazcaPosition();
+        var (expectedX, expectedY) = NazcaCoordinateMapper.GetPinNazcaPosition(pinOut);
 
         Math.Abs(startX - expectedX).ShouldBeLessThan(AlignmentTolerance,
             $"Multi-segment start X off: {startX} vs {expectedX}");
@@ -304,7 +313,7 @@ public class WaveguideEndpointAlignmentTests
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    /// <summary>Creates a legacy component (no PDK function → CalculateOriginOffset uses height fallback).</summary>
+    /// <summary>Creates a legacy component (no PDK function → bottom-left origin fallback in the mapper).</summary>
     private static (Component comp, PhysicalPin pin) CreateLegacyComponent(
         string name, double x, double y, double width, double height,
         double pinOffsetX, double pinOffsetY, double pinAngle, double rotation = 0)
@@ -344,7 +353,7 @@ public class WaveguideEndpointAlignmentTests
     }
 
     /// <summary>
-    /// Creates a PDK component (ebeam_ prefix → CalculateOriginOffset uses NazcaOriginOffset).
+    /// Creates a PDK component (ebeam_ prefix → calibrated NazcaOriginOffset cell placement).
     /// </summary>
     private static (Component comp, PhysicalPin pin) CreatePdkComponent(
         string name, double x, double y, double width, double height,
@@ -509,7 +518,7 @@ public class WaveguideEndpointAlignmentTests
 
         // Verify first segment starts at mmi1.out1 pin
         var (firstStartX, firstStartY) = ExtractStartPoint(lines[0]);
-        var (expectedStartX, expectedStartY) = mmi1_out1.GetAbsoluteNazcaPosition();
+        var (expectedStartX, expectedStartY) = NazcaCoordinateMapper.GetPinNazcaPosition(mmi1_out1);
 
         AssertAligned((firstStartX, firstStartY), (expectedStartX, expectedStartY),
             "MMI1.out1 -> PhaseShifter.in: first segment start");
@@ -531,7 +540,7 @@ public class WaveguideEndpointAlignmentTests
         // Verify last segment ends at phase_shifter.in pin
         var lastSegment = lines[lines.Count - 1];
         var (lastEndX, lastEndY) = ComputeEndPoint(lastSegment);
-        var (expectedEndX, expectedEndY) = ps_in.GetAbsoluteNazcaPosition();
+        var (expectedEndX, expectedEndY) = NazcaCoordinateMapper.GetPinNazcaPosition(ps_in);
         AssertAligned((lastEndX, lastEndY), (expectedEndX, expectedEndY),
             "MMI1.out1 -> PhaseShifter.in: last segment end");
     }
