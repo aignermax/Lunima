@@ -52,10 +52,9 @@ public class NazcaCoordinateMapperTests
         comp.RotationDegrees = (comp.RotationDegrees + 90) % 360;
     }
 
-    // Override anchor XMin=-3, YMax=10 with unrotated size W0=45, H0=11 gives the
-    // cell-internal bbox B = [-3, -1, 42, 10] (Nazca Y-up). The put rotation
-    // r = -RotationDegrees rotates B's four corners; the put position is
-    // T = (PhysX - minx', -PhysY - maxy') with the component box at (100, 50):
+    // Override anchor XMin=-3, YMax=10 with unrotated W0=45, H0=11 gives the cell-internal
+    // bbox B = [-3, -1, 42, 10] (Nazca Y-up). Put rotation r = -RotationDegrees rotates B's
+    // four corners; put position T = (PhysX - minx', -PhysY - maxy'), box at (100, 50):
     //  r=0:    B unchanged                                       -> minx'=-3,  maxy'=10 -> T=(103, -60)
     //  r=-90:  (x,y)->(y,-x): (-1,3) (-1,-42) (10,-42) (10,3)    -> minx'=-1,  maxy'=3  -> T=(101, -53)
     //  r=-180: (x,y)->(-x,-y): (3,1) (-42,1) (-42,-10) (3,-10)   -> minx'=-42, maxy'=1  -> T=(142, -51)
@@ -78,15 +77,19 @@ public class NazcaCoordinateMapperTests
     }
 
     // PDK calibration offset (ox=0, oy=30) with W0=250, H0=60 parameterises
-    // B = [-ox, oy-H0, -ox+W0, oy] = [0, -30, 250, 30]; component box at (100, 50):
-    //  r=0:   minx'=0, maxy'=30 -> T=(100, -80) — must equal the calibrated legacy
-    //         convention org = (PhysX + ox, -(PhysY + oy)).
-    //  r=-90: (x,y)->(y,-x): (-30,0) (-30,-250) (30,-250) (30,0) -> minx'=-30, maxy'=0
-    //         -> T=(130, -50)
+    // B = [-ox, oy-H0, -ox+W0, oy] = [0, -30, 250, 30]; component box at (100, 50),
+    // T = (PhysX - minx', -PhysY - maxy'). Hand-derived per put rotation:
+    //  r=0:    B unchanged    -> minx'=0,    maxy'=30  -> T=(100, -80) — must equal the
+    //          calibrated legacy convention org = (PhysX + ox, -(PhysY + oy)).
+    //  r=-90:  (x,y)->(y,-x)  -> minx'=-30,  maxy'=0   -> T=(130, -50)
+    //  r=-180: (x,y)->(-x,-y) -> minx'=-250, maxy'=30  -> T=(350, -80)
+    //  r=-270: (x,y)->(-y,x)  -> minx'=-30,  maxy'=250 -> T=(130, -300)
     [Theory]
     [InlineData(0, 100, -80, 0)]
     [InlineData(1, 130, -50, -90)]
-    public void GetCellPlacement_PdkExplicitOffset_Rotation0And90(
+    [InlineData(2, 350, -80, -180)]
+    [InlineData(3, 130, -300, -270)]
+    public void GetCellPlacement_PdkExplicitOffset_AllRotations(
         int rotationSteps, double expectedX, double expectedY, double expectedRotation)
     {
         var comp = CreateComponent(100, 50, 250, 60, "demo.mmi2x2_dp", rotationSteps);
@@ -117,8 +120,7 @@ public class NazcaCoordinateMapperTests
     [Fact]
     public void GetCellPlacement_ParametricStraight_UsesFirstPinOffsetAsOrigin()
     {
-        // Parametric straights (name contains "straight"/"strt" AND parameters contain
-        // "length=") anchor org on the first pin: (ox, oy) = (0, 125), H0 = 250
+        // Parametric straights anchor org on the first pin: (ox, oy) = (0, 125), H0 = 250
         // -> B = [0, -125, 250, 125]; at rot 0: T = (10 - 0, -20 - 125) = (10, -145).
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         comp.PhysicalX = 10;
@@ -180,10 +182,9 @@ public class NazcaCoordinateMapperTests
     [Fact]
     public void GetPinNazcaPosition_RotatedComponent_UsesPreRotatedOffsets()
     {
-        // The app pre-rotates pin offsets about the box centre: pin (0, 5.5) on a 45x11
-        // box has centre distance (-22.5, 0); CCW screen rotation maps it to (0, -22.5),
-        // re-anchored on the swapped centre (5.5, 22.5) -> offset (5.5, 0).
-        // App world position = (100 + 5.5, 50 + 0) -> Nazca (105.5, -50).
+        // The app pre-rotates pin offsets about the box centre: pin (0, 5.5) on a 45x11 box
+        // has centre distance (-22.5, 0); CCW rotation gives (0, -22.5), re-anchored on the
+        // swapped centre (5.5, 22.5) -> offset (5.5, 0); world (105.5, 50) -> Nazca (105.5, -50).
         var comp = CreateComponent(100, 50, 45, 11);
         comp.PhysicalPins.Add(new PhysicalPin
         { Name = "p", ParentComponent = comp, OffsetXMicrometers = 0, OffsetYMicrometers = 5.5 });
@@ -195,9 +196,8 @@ public class NazcaCoordinateMapperTests
         y.ShouldBe(-50, Tolerance);
     }
 
-    // Nazca pin angle = -(world angle), world angle = AngleDegrees + RotationDegrees
-    // normalised to [0, 360) first — same convention as the exporter's existing
-    // "-pin.GetAbsoluteAngle()" output, so emitted scripts stay byte-identical.
+    // Nazca pin angle = -(AngleDegrees + RotationDegrees normalised to [0, 360)) — same
+    // convention as "-pin.GetAbsoluteAngle()" in the exporter, so scripts stay byte-identical.
     [Theory]
     [InlineData(0, 0, 0)]
     [InlineData(180, 0, -180)]
