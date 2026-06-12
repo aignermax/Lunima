@@ -40,6 +40,12 @@ namespace UnitTests.Integration;
 ///     Mismatch               = 9.5 µm
 ///
 /// These tests FAIL when the bug is present, providing exact deviation data.
+///
+/// Scope: this is a STRUCTURAL check that the exporter routes its coordinates through
+/// <see cref="NazcaCoordinateMapper"/> (it asserts against the same mapper the exporter
+/// uses, so it cannot catch a wrong mapper FORMULA). Formula correctness is proven by
+/// NazcaCoordinateMapperTests (hand-computed expectations) and by GdsExportAlignmentTests
+/// (verified against the real nazca engine that writes the GDS).
 /// </summary>
 public class GdsCoordinateVerificationTests
 {

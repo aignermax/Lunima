@@ -25,6 +25,12 @@ namespace UnitTests.Services;
 /// plain Y negation for every component kind. Calibration data only moves the CELL so its
 /// rendered pins coincide with the app pins — it never bends segment coordinates
 /// (an origin-offset-dependent pin formula would diverge wherever oy ≠ H/2).
+///
+/// Scope: this is a STRUCTURAL check that the exporter routes its coordinates through the
+/// mapper (it compares exporter output to the same mapper the exporter calls, so it cannot
+/// catch a wrong mapper FORMULA). Formula correctness is proven independently by
+/// NazcaCoordinateMapperTests (hand-computed expectations) and by GdsExportAlignmentTests
+/// (verified against the real nazca engine that writes the GDS).
 /// </summary>
 public class WaveguideEndpointAlignmentTests
 {

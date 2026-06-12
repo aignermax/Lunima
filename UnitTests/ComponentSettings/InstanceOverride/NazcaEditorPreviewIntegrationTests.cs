@@ -144,17 +144,6 @@ public class NazcaEditorPreviewIntegrationTests
         return (python, FindRealPreviewScript());
     }
 
-    private static string? FindRealPreviewScript()
-    {
-        const string scriptName = "render_component_preview.py";
-        var current = new DirectoryInfo(
-            Path.GetDirectoryName(typeof(NazcaEditorPreviewIntegrationTests).Assembly.Location)!);
-        while (current != null)
-        {
-            var candidate = Path.Combine(current.FullName, "scripts", scriptName);
-            if (File.Exists(candidate)) return candidate;
-            current = current.Parent;
-        }
-        return null;
-    }
+    private static string? FindRealPreviewScript() =>
+        UnitTests.Integration.GdsAlignmentTestSetup.FindRealPreviewScript();
 }
