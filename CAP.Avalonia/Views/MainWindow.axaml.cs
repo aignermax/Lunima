@@ -622,6 +622,7 @@ public partial class MainWindow : Window
         string? nazcaTemplateCode = null;
         Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null;
         Action? nazcaDimensionsChanged = null;
+        Action<IReadOnlyList<CAP_Core.Components.Core.PhysicalPin>>? nazcaPinsChanged = null;
         if (liveComponent != null && !isTemplateMode)
         {
             nazcaTemplateCode = NazcaCodeTemplateBuilder.Build(
@@ -632,6 +633,15 @@ public partial class MainWindow : Window
                 var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
                 compVm?.NotifyDimensionsChanged();
                 // Repaint the canvas immediately so the resized footprint shows on Apply.
+                DesignCanvasControl.InvalidateVisual();
+            };
+            nazcaPinsChanged = _ =>
+            {
+                // Issue #561: Connections auf die neuen Override-Pins umhaengen bzw.
+                // mit Warnung trennen, Pin-VMs auffrischen, Routen + Simulation neu.
+                var warnings = vm.Canvas.OnComponentPinsChanged(liveComponent);
+                foreach (var warning in warnings)
+                    errorConsole?.LogWarning(warning);
                 DesignCanvasControl.InvalidateVisual();
             };
         }
@@ -653,7 +663,8 @@ public partial class MainWindow : Window
             nazcaPreviewService: nazcaPreviewService,
             nazcaTemplateCode: nazcaTemplateCode,
             nazcaOverlapCheck: nazcaOverlapCheck,
-            nazcaDimensionsChanged: nazcaDimensionsChanged);
+            nazcaDimensionsChanged: nazcaDimensionsChanged,
+            nazcaPinsChanged: nazcaPinsChanged);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);

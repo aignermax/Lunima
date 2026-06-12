@@ -180,7 +180,8 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         NazcaComponentPreviewService? nazcaPreviewService = null,
         string? nazcaTemplateCode = null,
         Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null,
-        Action? nazcaDimensionsChanged = null)
+        Action? nazcaDimensionsChanged = null,
+        Action<IReadOnlyList<PhysicalPin>>? nazcaPinsChanged = null)
     {
         _entityKey = entityKey;
         _displayName = displayName;
@@ -229,7 +230,8 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
                 nazcaPreviewService,
                 nazcaOverlapCheck,
                 nazcaDimensionsChanged,
-                onChanged);
+                onChanged,
+                nazcaPinsChanged);
         }
         else
         {
