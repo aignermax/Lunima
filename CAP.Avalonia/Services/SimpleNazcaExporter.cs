@@ -446,6 +446,8 @@ public class SimpleNazcaExporter
             if (segments.Count > 0)
                 AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin);
             else
+                // No routed segments to emit: anchor both endpoints by absolute
+                // coordinates (PDK cell pin names don't match the in-app names).
                 AppendFallbackExport(sb, conn, componentNames, rawOverrides);
         }
 
