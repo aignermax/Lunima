@@ -432,12 +432,12 @@ public class SimpleNazcaExporter
             if (conn.EndPin?.ParentComponent?.IsAnalysisTool == true) continue;
 
             // Issue #561: connections to raw-code–overridden instances are now exported.
-            // The override cell is placed with a default anchor (first pin), so we use
-            // Nazca's pin-reference syntax (comp_N.pin['name']) rather than absolute
-            // coordinates — Nazca resolves the world position from the cell definition.
+            // The override cell's pins carry the in-app pin names, so those endpoints use
+            // Nazca's pin-reference syntax (comp_N.pin['name']) and Nazca resolves the
+            // world position from the cell definition.
             if (IsOverriddenConnection(conn, rawOverrides))
             {
-                AppendFallbackExport(sb, conn, componentNames);
+                AppendFallbackExport(sb, conn, componentNames, rawOverrides);
                 continue;
             }
 
@@ -446,7 +446,7 @@ public class SimpleNazcaExporter
             if (segments.Count > 0)
                 AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin);
             else
-                AppendFallbackExport(sb, conn, componentNames);
+                AppendFallbackExport(sb, conn, componentNames, rawOverrides);
         }
 
         // Export frozen waveguide paths from ComponentGroups
@@ -739,21 +739,44 @@ public class SimpleNazcaExporter
     private static void AppendFallbackExport(
         StringBuilder sb,
         WaveguideConnection conn,
-        Dictionary<Component, string> componentNames)
+        Dictionary<Component, string> componentNames,
+        IReadOnlyDictionary<string, string> rawOverrides)
     {
-        var startComp = conn.StartPin.ParentComponent;
-        var endComp = conn.EndPin.ParentComponent;
+        var startRef = BuildEndpointReference(conn.StartPin, componentNames, rawOverrides);
+        var endRef = BuildEndpointReference(conn.EndPin, componentNames, rawOverrides);
 
-        if (componentNames.TryGetValue(startComp, out var startName) &&
-            componentNames.TryGetValue(endComp, out var endName))
-        {
-            var startPin = conn.StartPin.Name;
-            var endPin = conn.EndPin.Name;
+        if (startRef != null && endRef != null)
+            sb.AppendLine($"        ic.sbend_p2p({startRef}, {endRef}).put()");
+    }
 
-            sb.AppendLine(
-                $"        ic.sbend_p2p({startName}.pin['{startPin}'], " +
-                $"{endName}.pin['{endPin}']).put()");
-        }
+    /// <summary>
+    /// Builds the Nazca expression anchoring one connection endpoint for the p2p fallback.
+    /// A raw-code–overridden instance exposes the in-app pin names on its cell, so a pin
+    /// reference (<c>comp_N.pin['name']</c>) is exact. A regular PDK cell defines its own
+    /// pin names which generally do NOT match the in-app names (KeyError at script run
+    /// time), so its endpoint is anchored by absolute Nazca position and direction instead.
+    /// </summary>
+    private static string? BuildEndpointReference(
+        PhysicalPin pin,
+        Dictionary<Component, string> componentNames,
+        IReadOnlyDictionary<string, string> rawOverrides)
+    {
+        var component = pin.ParentComponent;
+        if (component == null || !componentNames.TryGetValue(component, out var name))
+            return null;
+
+        bool isOverridden = component.Identifier != null
+            && rawOverrides.ContainsKey(component.Identifier);
+        if (isOverridden)
+            return $"{name}.pin['{pin.Name}']";
+
+        var ci = CultureInfo.InvariantCulture;
+        var (x, y) = pin.GetAbsoluteNazcaPosition();
+        var px = NormalizeZero(x).ToString("F2", ci);
+        var py = NormalizeZero(y).ToString("F2", ci);
+        // App space is Y-down, Nazca is Y-up: negate the world-space pin angle.
+        var pa = NormalizeZero(-pin.GetAbsoluteAngle()).ToString("F0", ci);
+        return $"({px}, {py}, {pa})";
     }
 
     private static void AppendFooter(StringBuilder sb)

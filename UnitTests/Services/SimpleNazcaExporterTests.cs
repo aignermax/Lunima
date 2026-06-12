@@ -575,13 +575,16 @@ public class SimpleNazcaExporterTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas, overrides: overrides);
 
-        // Assert (issue #561): connection is NO LONGER skipped — it is exported via
-        // Nazca pin-reference syntax (ic.sbend_p2p) so Nazca resolves coordinates.
+        // Assert (issue #561): connection is NO LONGER skipped. The overridden endpoint
+        // is wired via Nazca pin reference (its cell defines the in-app pin names); the
+        // regular PDK endpoint is anchored by an absolute (x, y, angle) tuple, because a
+        // PDK cell's own pin names don't match the in-app names (KeyError at run time).
         result.ShouldNotContain("# NOTE: connection to overridden instance");
         result.ShouldNotContain("skipped");
         result.ShouldContain("sbend_p2p");
-        result.ShouldContain(".pin['b0']");
         result.ShouldContain(".pin['a0']");
+        result.ShouldNotContain(".pin['b0']");
+        result.ShouldContain("ic.sbend_p2p((");
     }
 
     [Fact]
