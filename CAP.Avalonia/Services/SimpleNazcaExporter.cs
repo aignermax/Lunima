@@ -28,10 +28,16 @@ public class SimpleNazcaExporter
     /// PDK template — org-anchored on the persisted bbox corner so the geometry lands on the
     /// component's grid rectangle. Connections to such instances export normally (issue #561).
     /// </param>
+    /// <param name="emitVerification">
+    /// When true, appends a machine-readable verification epilog (issue #565) that dumps
+    /// every placed instance's ACTUAL world pin positions — reported by the same nazca
+    /// engine that writes the GDS — to '&lt;script&gt;.pins.json' next to the script.
+    /// </param>
     public string Export(
         DesignCanvasViewModel canvas,
         string? pdkModuleName = null,
-        IReadOnlyDictionary<string, NazcaCodeOverride>? overrides = null)
+        IReadOnlyDictionary<string, NazcaCodeOverride>? overrides = null,
+        bool emitVerification = false)
     {
         var sb = new StringBuilder();
 
@@ -41,9 +47,11 @@ public class SimpleNazcaExporter
         AppendHeader(sb);
         NazcaOverrideFactory.AppendFactories(sb, rawOverrides);
         AppendPdkComponentStubs(sb, canvas, rawOverrides);
-        var componentNames = AppendComponents(sb, canvas, rawOverrides, overrides);
+        var componentNames = AppendComponents(sb, canvas, rawOverrides, overrides, emitVerification);
         AppendConnections(sb, canvas, componentNames, rawOverrides);
         AppendFooter(sb);
+        if (emitVerification)
+            AppendVerificationEpilog(sb);
 
         return sb.ToString();
     }
@@ -237,7 +245,7 @@ public class SimpleNazcaExporter
 
     private static Dictionary<Component, string> AppendComponents(
         StringBuilder sb, DesignCanvasViewModel canvas, IReadOnlyDictionary<string, string> rawOverrides,
-        IReadOnlyDictionary<string, NazcaCodeOverride>? overrides)
+        IReadOnlyDictionary<string, NazcaCodeOverride>? overrides, bool emitVerification = false)
     {
         sb.AppendLine("def create_design():");
         sb.AppendLine("    with nd.Cell(name='ConnectAPIC_Design') as design:");
@@ -266,8 +274,49 @@ public class SimpleNazcaExporter
             }
         }
 
+        if (emitVerification)
+            AppendVerificationRegistry(sb, componentNames);
+
         sb.AppendLine();
         return componentNames;
+    }
+
+    /// <summary>
+    /// Exposes the placed instances to the verification epilog. The comp_N variables
+    /// are locals of create_design(), but the epilog runs at module level after the
+    /// GDS export — a module-level registry bridges the two scopes.
+    /// </summary>
+    private static void AppendVerificationRegistry(
+        StringBuilder sb, Dictionary<Component, string> componentNames)
+    {
+        var pairs = string.Join(", ", componentNames.Values.Select(n => $"('{n}', {n})"));
+        sb.AppendLine();
+        sb.AppendLine("        # Instance registry for the alignment verification epilog.");
+        sb.AppendLine("        global _verify_instances");
+        sb.AppendLine($"        _verify_instances = [{pairs}]");
+    }
+
+    /// <summary>
+    /// Emits the self-verification footer (issue #565): the TRUE world pin positions of
+    /// every placed instance, asked from the same nazca engine that wrote the GDS — the
+    /// GDS itself carries no pins. The result is written as JSON next to the script so
+    /// tests (and tooling) can compare it against <see cref="NazcaCoordinateMapper"/>.
+    /// </summary>
+    private static void AppendVerificationEpilog(StringBuilder sb)
+    {
+        sb.AppendLine();
+        sb.AppendLine("# --- Alignment verification (machine-readable) ---");
+        sb.AppendLine("import json as _json");
+        sb.AppendLine("_verify = {}");
+        sb.AppendLine("for _name, _inst in _verify_instances:");
+        sb.AppendLine("    _pins = {}");
+        sb.AppendLine("    for _pn, _pin in _inst.pin.items():");
+        sb.AppendLine("        _px, _py, _pa = _pin.xya()");
+        sb.AppendLine("        # float() unwraps numpy scalars, which json cannot serialize.");
+        sb.AppendLine("        _pins[_pn] = [float(_px), float(_py), float(_pa)]");
+        sb.AppendLine("    _verify[_name] = _pins");
+        sb.AppendLine("with open(os.path.splitext(script_path)[0] + '.pins.json', 'w') as _f:");
+        sb.AppendLine("    _json.dump(_verify, _f)");
     }
 
     /// <summary>

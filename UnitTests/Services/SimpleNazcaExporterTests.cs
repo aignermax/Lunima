@@ -783,6 +783,40 @@ public class SimpleNazcaExporterTests
         result.ShouldNotContain("300.00, 5.00");
     }
 
+    [Fact]
+    public void Export_DefaultFlags_OmitsVerificationEpilog()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(CreateDemoPdkStraightWaveguide(100)));
+
+        var result = new SimpleNazcaExporter().Export(canvas);
+
+        // The verification epilog is opt-in (issue #565): a regular export must stay
+        // a plain fab script without introspection side effects.
+        result.ShouldNotContain("Alignment verification");
+        result.ShouldNotContain("_verify_instances");
+        result.ShouldNotContain(".pins.json");
+    }
+
+    [Fact]
+    public void Export_WithEmitVerification_AppendsPinEpilogAfterGdsExport()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(CreateDemoPdkStraightWaveguide(100)));
+
+        var result = new SimpleNazcaExporter().Export(canvas, emitVerification: true);
+
+        // The registry bridges the function-local comp_N variables to the module-level
+        // epilog, which dumps every instance's TRUE nazca pin positions to .pins.json.
+        result.ShouldContain("_verify_instances = [('comp_0', comp_0)]");
+        result.ShouldContain("# --- Alignment verification (machine-readable) ---");
+        result.ShouldContain("_pin.xya()");
+        result.ShouldContain(".pins.json");
+        result.IndexOf("nd.export_gds", StringComparison.Ordinal).ShouldBeLessThan(
+            result.IndexOf("# --- Alignment verification", StringComparison.Ordinal),
+            "the epilog must run after the GDS was written");
+    }
+
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)
     {
         var parts = new Part[1, 1];
