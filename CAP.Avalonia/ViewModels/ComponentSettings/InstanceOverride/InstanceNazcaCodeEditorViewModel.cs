@@ -161,29 +161,15 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// <param name="componentKey">The component's Identifier, used as the override-store key.</param>
     /// <param name="storedOverrides">Shared per-instance Nazca override dictionary.</param>
     /// <param name="liveComponent">The live canvas component whose size is recomputed on Apply.</param>
-    /// <param name="moduleName">
-    /// The component's PDK module name (e.g. "demo", a SiEPIC module). Passed to
-    /// <see cref="NazcaComponentPreviewService.RenderAsync"/> in module mode so the
-    /// editor can fetch the component's REAL source and render its geometry.
-    /// </param>
+    /// <param name="moduleName">PDK module name passed to <see cref="NazcaComponentPreviewService.RenderAsync"/> in module mode.</param>
     /// <param name="nazcaFunction">The component's Nazca function / cell name.</param>
     /// <param name="nazcaParameters">Optional keyword-argument string for the function, or null.</param>
-    /// <param name="templateCode">
-    /// A runnable code fallback that reproduces the current component's Nazca call.
-    /// Used only when module-mode <c>RenderAsync</c> yields no real source AND no
-    /// usable note — i.e. as a last-resort seed so the editor is never blank.
-    /// </param>
+    /// <param name="templateCode">Runnable code fallback; used as last-resort seed when no real source is available.</param>
     /// <param name="previewService">Preview back-end. Null disables Run (e.g. headless tests).</param>
-    /// <param name="overlapCheck">
-    /// Optional callback that, given a candidate width/height, returns the display
-    /// names of components the resized instance would overlap. Empty list = no overlap.
-    /// </param>
+    /// <param name="overlapCheck">Optional callback returning names of components the resized instance would overlap.</param>
     /// <param name="onDimensionsChanged">Invoked after the live component's size changes so the canvas can repaint.</param>
     /// <param name="onChanged">Invoked after every successful Apply or Reset so observers refresh badges.</param>
-    /// <param name="onPinsChanged">
-    /// Optional callback invoked after the live component's physical pins are replaced (on Apply or Reset).
-    /// Receives the new pin list so callers can drop stale waveguide connections and repaint.
-    /// </param>
+    /// <param name="onPinsChanged">Invoked after the live component's physical pins are replaced (on Apply or Reset).</param>
     public InstanceNazcaCodeEditorViewModel(
         string componentKey,
         Dictionary<string, NazcaCodeOverride> storedOverrides,
@@ -217,20 +203,8 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// <summary>
     /// Loads the component's REAL Nazca source and an initial geometry preview via
     /// module-mode <see cref="NazcaComponentPreviewService.RenderAsync"/>, UNLESS a
-    /// raw-code override is already stored (in which case the editor keeps the stored
-    /// code seeded by the constructor). Crash-proof: never throws — any failure leaves
-    /// the editor usable with an explanatory note.
+    /// raw-code override is already stored. Crash-proof: never throws.
     /// </summary>
-    /// <remarks>
-    /// Behaviour when no override is stored:
-    /// <list type="bullet">
-    /// <item>Real source available → <see cref="Code"/> = source, <see cref="HasEditableSource"/> = true, preview shown.</item>
-    /// <item>Only a "# ..." note available (fixed-cell GDS / PCell without Python) →
-    ///       <see cref="Code"/> = the note, <see cref="HasEditableSource"/> = false, preview still shown.</item>
-    /// <item>Render failed (no python/nazca) → <see cref="Code"/> = a comment, <see cref="HasEditableSource"/> = false,
-    ///       <see cref="PreviewError"/> set.</item>
-    /// </list>
-    /// </remarks>
     public async Task InitializeAsync()
     {
         // A stored raw-code override wins — the constructor already seeded Code from it.
@@ -243,11 +217,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         ApplyOverrideCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>
-    /// Shared init/Reset logic: fetch the component's original source + geometry via
-    /// module-mode render and populate <see cref="Code"/> / <see cref="HasEditableSource"/>
-    /// / preview accordingly. Never throws.
-    /// </summary>
+    /// <summary>Fetches the component's original source + geometry via module-mode render. Never throws.</summary>
     private async Task LoadOriginalSourceAsync()
     {
         // The editable box is always the override starter; the original source (if any)
@@ -315,10 +285,8 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         => !string.IsNullOrWhiteSpace(source) && !source.TrimStart().StartsWith('#');
 
     /// <summary>
-    /// Runs the editor's code through the preview service. Async, non-blocking and
-    /// crash-proof: any failure (syntax error, infinite loop → timeout, missing
-    /// Python) sets <see cref="PreviewError"/> and leaves <see cref="IsValid"/> false.
-    /// Never throws.
+    /// Runs the editor's code through the preview service. Any failure sets
+    /// <see cref="PreviewError"/> and leaves <see cref="IsValid"/> false. Never throws.
     /// </summary>
     [RelayCommand]
     private async Task RunPreviewAsync()
@@ -412,22 +380,22 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
 
         // Capture template pins on first Apply (before any override pin has been written).
         if (overrideData.TemplatePins == null && _liveComponent != null)
-            overrideData.TemplatePins = CaptureAsPinData(_liveComponent.PhysicalPins);
+            overrideData.TemplatePins = OverridePinMapper.CaptureAsPinData(_liveComponent.PhysicalPins);
 
         // Derive override pins from the preview pin stubs.
-        var overridePins = BuildOverridePins(_lastSuccessfulPreview);
+        var overridePins = OverridePinMapper.BuildOverridePins(_lastSuccessfulPreview);
         overrideData.RawCode = Code;
         overrideData.OverrideWidthMicrometers = width;
         overrideData.OverrideHeightMicrometers = height;
         overrideData.OverridePins = overridePins;
-        overrideData.HasNoSimulationModel = !PinNamesMatch(overrideData.TemplatePins, overridePins);
+        overrideData.HasNoSimulationModel = !OverridePinMapper.PinNamesMatch(overrideData.TemplatePins, overridePins);
         _storedOverrides[_componentKey] = overrideData;
 
         if (_liveComponent != null)
         {
             _liveComponent.WidthMicrometers = width;
             _liveComponent.HeightMicrometers = height;
-            ApplyPinsToComponent(_liveComponent, overridePins);
+            OverridePinMapper.ApplyPinsToComponent(_liveComponent, overridePins);
         }
         _onDimensionsChanged?.Invoke();
         if (_liveComponent != null)
@@ -488,7 +456,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         // Restore template pins to the live component when available.
         if (_liveComponent != null && templatePinsToRestore?.Count > 0)
         {
-            ApplyPinsToComponent(_liveComponent, templatePinsToRestore);
+            OverridePinMapper.ApplyPinsToComponent(_liveComponent, templatePinsToRestore);
             _onPinsChanged?.Invoke(_liveComponent.PhysicalPins);
         }
 
@@ -528,77 +496,4 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         }
     }
 
-    // ─── Pin override helpers ─────────────────────────────────────────────────
-
-    /// <summary>
-    /// Converts the preview's pin stubs to component-local <see cref="OverridePinData"/>
-    /// using a bounding-box–relative coordinate transform:
-    /// <list type="bullet">
-    /// <item><c>OffsetX = previewPin.X − bbox.XMin</c></item>
-    /// <item><c>OffsetY = bbox.YMax − previewPin.Y</c> (Y-axis flip to Y-down app space)</item>
-    /// <item><c>AngleDegrees = −previewPin.Angle</c> (Y-axis flip)</item>
-    /// </list>
-    /// </summary>
-    internal static List<OverridePinData> BuildOverridePins(NazcaPreviewResult preview)
-    {
-        return preview.Pins.Select(p => new OverridePinData
-        {
-            Name = p.Name,
-            OffsetXMicrometers = p.X - preview.XMin,
-            OffsetYMicrometers = preview.YMax - p.Y,
-            AngleDegrees = -p.Angle,
-        }).ToList();
-    }
-
-    /// <summary>
-    /// Returns true when both lists have the same set of pin names (order-independent).
-    /// An empty or null list is considered "matching" to avoid false positives when
-    /// no pins are defined.
-    /// </summary>
-    internal static bool PinNamesMatch(
-        IReadOnlyList<OverridePinData>? a, IReadOnlyList<OverridePinData>? b)
-    {
-        if ((a == null || a.Count == 0) && (b == null || b.Count == 0))
-            return true;
-        if (a == null || b == null)
-            return false;
-        if (a.Count != b.Count)
-            return false;
-        var namesA = a.Select(p => p.Name).OrderBy(n => n).ToList();
-        var namesB = b.Select(p => p.Name).OrderBy(n => n).ToList();
-        return namesA.SequenceEqual(namesB);
-    }
-
-    /// <summary>
-    /// Snapshots the component's current physical pins as <see cref="OverridePinData"/> DTOs.
-    /// </summary>
-    private static List<OverridePinData> CaptureAsPinData(IEnumerable<PhysicalPin> pins)
-        => pins.Select(p => new OverridePinData
-        {
-            Name = p.Name,
-            OffsetXMicrometers = p.OffsetXMicrometers,
-            OffsetYMicrometers = p.OffsetYMicrometers,
-            AngleDegrees = p.AngleDegrees,
-        }).ToList();
-
-    /// <summary>
-    /// Replaces the component's physical pin list with pins derived from
-    /// <paramref name="pinData"/>. <c>LogicalPin</c> links are not restored
-    /// (override pins have no S-matrix tie-in).
-    /// </summary>
-    private static void ApplyPinsToComponent(Component comp, List<OverridePinData> pinData)
-    {
-        comp.PhysicalPins.Clear();
-        foreach (var pd in pinData)
-        {
-            comp.PhysicalPins.Add(new PhysicalPin
-            {
-                Name = pd.Name,
-                OffsetXMicrometers = pd.OffsetXMicrometers,
-                OffsetYMicrometers = pd.OffsetYMicrometers,
-                AngleDegrees = pd.AngleDegrees,
-                ParentComponent = comp,
-            });
-        }
-    }
 }

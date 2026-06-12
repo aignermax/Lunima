@@ -10,6 +10,7 @@ using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Export;
@@ -907,30 +908,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 // Restore the persisted override pins so in-app connections and export use
                 // the correct port layout after project load.
                 if (nazcaOverride.OverridePins?.Count > 0)
-                    RestorePinsFromOverride(component, nazcaOverride.OverridePins);
+                    OverridePinMapper.ApplyPinsToComponent(component, nazcaOverride.OverridePins);
             }
-        }
-    }
-
-    /// <summary>
-    /// Replaces a component's physical pin list with the persisted override pins (issue #561).
-    /// Called on project load when a stored <see cref="NazcaCodeOverride.OverridePins"/> record
-    /// is present so the canvas and export see the correct port layout immediately.
-    /// </summary>
-    private static void RestorePinsFromOverride(
-        Component component, IReadOnlyList<CAP_DataAccess.Persistence.PIR.OverridePinData> overridePins)
-    {
-        component.PhysicalPins.Clear();
-        foreach (var pd in overridePins)
-        {
-            component.PhysicalPins.Add(new PhysicalPin
-            {
-                Name = pd.Name,
-                OffsetXMicrometers = pd.OffsetXMicrometers,
-                OffsetYMicrometers = pd.OffsetYMicrometers,
-                AngleDegrees = pd.AngleDegrees,
-                ParentComponent = component,
-            });
         }
     }
 
