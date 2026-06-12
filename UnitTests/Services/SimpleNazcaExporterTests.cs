@@ -616,6 +616,88 @@ public class SimpleNazcaExporterTests
         result.ShouldContain("# Waveguide Connections");
     }
 
+    // ── Override placement anchoring + segment export (issue #561) ────────────
+
+    [Fact]
+    public void Export_OverrideWithBboxAnchor_PlacesCellOrgAnchoredOnGridRectangle()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateDemoPdkStraightWaveguide(100);
+        comp.Identifier = "Anchored Override";
+        comp.PhysicalX = 100;
+        comp.PhysicalY = 50;
+        canvas.Components.Add(new ComponentViewModel(comp));
+
+        var record = new NazcaCodeOverride { RawCode = OverrideRawCode };
+        // Cell-internal bbox: left edge at -3, top edge at +10 (Nazca Y-up).
+        record.SetOverrideGeometry(width: 45, height: 11, bboxXMin: -3, bboxYMax: 10);
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [comp.Identifier] = record
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // org must land at (PhysicalX − XMin, −(PhysicalY + YMax)) = (103, −60) so the
+        // geometry bbox sits exactly on the component's grid rectangle.
+        result.ShouldContain(".put('org', 103.00, -60.00, 0)");
+    }
+
+    [Fact]
+    public void Export_OverrideWithoutBboxAnchor_KeepsLegacyDefaultAnchorPlacement()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateDemoPdkStraightWaveguide(100);
+        comp.Identifier = "Legacy Override";
+        canvas.Components.Add(new ComponentViewModel(comp));
+
+        // Pre-#561 record: RawCode only, no bbox anchor fields.
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [comp.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        result.ShouldContain("(raw-code override)");
+        result.ShouldNotContain("(raw-code override, bbox-anchored)");
+    }
+
+    [Fact]
+    public void Export_OverriddenConnectionWithRoutedSegments_ExportsSegmentsNotP2p()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG A";
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG B";
+        compB.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        var cachedPath = new RoutedPath();
+        cachedPath.Segments.Add(new StraightSegment(100, 5, 200, 5, 0));
+        conn.RestoreCachedPath(cachedPath);
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compB.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // The UI-routed geometry must be exported 1:1 — no free-form p2p interconnect
+        // with Nazca's own (much larger) default bend radii.
+        result.ShouldNotContain("sbend_p2p");
+        result.ShouldContain("nd.strt(length=100.00)");
+    }
+
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)
     {
         var parts = new Part[1, 1];

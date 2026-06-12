@@ -167,12 +167,17 @@ public class NazcaCodeOverridePersistenceTests
                 new() { Name = "in", OffsetXMicrometers = 0.0, OffsetYMicrometers = 125.0, AngleDegrees = 180 },
             },
         };
+        original.SetOverrideGeometry(width: 20, height: 10, bboxXMin: -2.5, bboxYMax: 7.5);
 
         var json = JsonSerializer.Serialize(original, Options);
         var restored = JsonSerializer.Deserialize<NazcaCodeOverride>(json, Options);
 
         restored.ShouldNotBeNull();
         restored!.HasNoSimulationModel.ShouldBeTrue();
+        restored.OverrideWidthMicrometers!.Value.ShouldBe(20, tolerance: 0.001);
+        restored.OverrideHeightMicrometers!.Value.ShouldBe(10, tolerance: 0.001);
+        restored.OverrideBboxXMinMicrometers!.Value.ShouldBe(-2.5, tolerance: 0.001);
+        restored.OverrideBboxYMaxMicrometers!.Value.ShouldBe(7.5, tolerance: 0.001);
 
         restored.OverridePins.ShouldNotBeNull();
         restored.OverridePins!.Count.ShouldBe(2);

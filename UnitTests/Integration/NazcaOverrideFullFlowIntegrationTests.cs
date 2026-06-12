@@ -77,6 +77,9 @@ public class NazcaOverrideFullFlowIntegrationTests
         var previewPinNames = vm.PreviewData.Pins.Select(p => p.Name).ToList();
         previewPinNames.ShouldContain("in", "showcase defines nd.Pin('in')");
         previewPinNames.ShouldContain("out", "showcase defines nd.Pin('out')");
+        previewPinNames.Count.ShouldBe(2,
+            "nazca's colocated auto-default a0/b0 phantoms must be filtered out — " +
+            "they would render as overlapping pins with opposite direction strokes");
 
         // ── Act 2: Apply — pins replaced, connection re-anchored by name ────────
         vm.ApplyOverrideCommand.Execute(null);

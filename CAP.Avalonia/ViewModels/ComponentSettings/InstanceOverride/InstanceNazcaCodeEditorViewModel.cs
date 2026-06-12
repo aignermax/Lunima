@@ -385,8 +385,8 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         // Derive override pins from the preview pin stubs.
         var overridePins = OverridePinMapper.BuildOverridePins(_lastSuccessfulPreview);
         overrideData.RawCode = Code;
-        overrideData.OverrideWidthMicrometers = width;
-        overrideData.OverrideHeightMicrometers = height;
+        overrideData.SetOverrideGeometry(
+            width, height, _lastSuccessfulPreview.XMin, _lastSuccessfulPreview.YMax);
         overrideData.OverridePins = overridePins;
         overrideData.HasNoSimulationModel = !OverridePinMapper.PinNamesMatch(overrideData.TemplatePins, overridePins);
         _storedOverrides[_componentKey] = overrideData;
@@ -441,12 +441,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         if (_storedOverrides.TryGetValue(_componentKey, out var existing))
         {
             templatePinsToRestore = existing.TemplatePins;
-            existing.RawCode = null;
-            existing.OverrideWidthMicrometers = null;
-            existing.OverrideHeightMicrometers = null;
-            existing.OverridePins = null;
-            existing.TemplatePins = null;
-            existing.HasNoSimulationModel = false;
+            existing.ClearRawCodeOverride();
             // Drop the whole record only if no parameter-override fields remain.
             if (existing.FunctionName == null && existing.FunctionParameters == null
                 && existing.ModuleName == null)

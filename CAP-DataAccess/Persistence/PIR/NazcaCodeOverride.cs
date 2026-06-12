@@ -94,4 +94,49 @@ public class NazcaCodeOverride
     /// or accept geometry/export-only mode.
     /// </summary>
     public bool HasNoSimulationModel { get; set; }
+
+    /// <summary>
+    /// Left edge of the rendered raw-code geometry's bounding box in CELL-INTERNAL
+    /// Nazca coordinates (µm). The in-app pins/size are bbox-relative, so the GDS
+    /// export must anchor the cell's origin at <c>PhysicalX − XMin</c> for the
+    /// geometry to land on the component's grid rectangle. Null for overrides saved
+    /// before this field existed — the export then falls back to default anchoring.
+    /// </summary>
+    public double? OverrideBboxXMinMicrometers { get; set; }
+
+    /// <summary>
+    /// Top edge (Nazca Y-up maximum) of the rendered raw-code geometry's bounding
+    /// box in cell-internal Nazca coordinates (µm). Counterpart of
+    /// <see cref="OverrideBboxXMinMicrometers"/> for the Y axis.
+    /// </summary>
+    public double? OverrideBboxYMaxMicrometers { get; set; }
+
+    /// <summary>
+    /// Records the bbox-derived geometry of an applied raw-code override in one step:
+    /// component size plus the cell-internal bbox anchor the GDS export needs.
+    /// </summary>
+    public void SetOverrideGeometry(double width, double height, double bboxXMin, double bboxYMax)
+    {
+        OverrideWidthMicrometers = width;
+        OverrideHeightMicrometers = height;
+        OverrideBboxXMinMicrometers = bboxXMin;
+        OverrideBboxYMaxMicrometers = bboxYMax;
+    }
+
+    /// <summary>
+    /// Clears every raw-code-override field ("Reset to template"): code, derived
+    /// geometry, pin override and the no-simulation-model flag. Parameter-override
+    /// fields (<see cref="FunctionName"/> etc.) are left untouched.
+    /// </summary>
+    public void ClearRawCodeOverride()
+    {
+        RawCode = null;
+        OverrideWidthMicrometers = null;
+        OverrideHeightMicrometers = null;
+        OverrideBboxXMinMicrometers = null;
+        OverrideBboxYMaxMicrometers = null;
+        OverridePins = null;
+        TemplatePins = null;
+        HasNoSimulationModel = false;
+    }
 }
