@@ -622,6 +622,7 @@ public partial class MainWindow : Window
         string? nazcaTemplateCode = null;
         Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null;
         Action? nazcaDimensionsChanged = null;
+        Action<IReadOnlyList<CAP_Core.Components.Core.PhysicalPin>>? nazcaPinsChanged = null;
         if (liveComponent != null && !isTemplateMode)
         {
             nazcaTemplateCode = NazcaCodeTemplateBuilder.Build(
@@ -633,6 +634,24 @@ public partial class MainWindow : Window
                 compVm?.NotifyDimensionsChanged();
                 // Repaint the canvas immediately so the resized footprint shows on Apply.
                 DesignCanvasControl.InvalidateVisual();
+            };
+            nazcaPinsChanged = newPins =>
+            {
+                // Drop any canvas connections whose StartPin or EndPin belonged to liveComponent
+                // but is no longer present in the new pin list (orphaned after pin rename).
+                var newPinSet = new System.Collections.Generic.HashSet<CAP_Core.Components.Core.PhysicalPin>(newPins);
+                var stale = vm.Canvas.Connections
+                    .Where(c =>
+                        (c.Connection.StartPin.ParentComponent == liveComponent && !newPinSet.Contains(c.Connection.StartPin)) ||
+                        (c.Connection.EndPin.ParentComponent == liveComponent && !newPinSet.Contains(c.Connection.EndPin)))
+                    .ToList();
+                foreach (var conn in stale)
+                {
+                    vm.Canvas.ConnectionManager.RemoveConnectionDeferred(conn.Connection);
+                    vm.Canvas.Connections.Remove(conn);
+                }
+                if (stale.Count > 0)
+                    DesignCanvasControl.InvalidateVisual();
             };
         }
 
@@ -653,7 +672,8 @@ public partial class MainWindow : Window
             nazcaPreviewService: nazcaPreviewService,
             nazcaTemplateCode: nazcaTemplateCode,
             nazcaOverlapCheck: nazcaOverlapCheck,
-            nazcaDimensionsChanged: nazcaDimensionsChanged);
+            nazcaDimensionsChanged: nazcaDimensionsChanged,
+            onPinsChanged: nazcaPinsChanged);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);
