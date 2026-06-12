@@ -1,7 +1,9 @@
 using System.Text.Json;
+using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using Xunit;
+using static UnitTests.TestComponentFactory;
 
 namespace UnitTests.ComponentSettings.InstanceOverride;
 
@@ -146,6 +148,76 @@ public class NazcaCodeOverridePersistenceTests
 
         data.ShouldNotBeNull();
         data!.NazcaOverrides.ShouldBeNull();
+    }
+
+    [Fact]
+    public void RoundTrip_OverridePinsAndTemplatePins_ArePreserved()
+    {
+        var original = new NazcaCodeOverride
+        {
+            RawCode = "def component():\n    return pdk.strt(length=10)\n",
+            HasNoSimulationModel = true,
+            OverridePins = new List<OverridePinData>
+            {
+                new() { Name = "a0", OffsetXMicrometers = 0.0,  OffsetYMicrometers = 5.0,  AngleDegrees = 180 },
+                new() { Name = "b0", OffsetXMicrometers = 20.0, OffsetYMicrometers = 5.0,  AngleDegrees = 0   },
+            },
+            TemplatePins = new List<OverridePinData>
+            {
+                new() { Name = "in", OffsetXMicrometers = 0.0, OffsetYMicrometers = 125.0, AngleDegrees = 180 },
+            },
+        };
+
+        var json = JsonSerializer.Serialize(original, Options);
+        var restored = JsonSerializer.Deserialize<NazcaCodeOverride>(json, Options);
+
+        restored.ShouldNotBeNull();
+        restored!.HasNoSimulationModel.ShouldBeTrue();
+
+        restored.OverridePins.ShouldNotBeNull();
+        restored.OverridePins!.Count.ShouldBe(2);
+        restored.OverridePins[0].Name.ShouldBe("a0");
+        restored.OverridePins[0].OffsetXMicrometers.ShouldBe(0.0, tolerance: 0.001);
+        restored.OverridePins[0].OffsetYMicrometers.ShouldBe(5.0, tolerance: 0.001);
+        restored.OverridePins[0].AngleDegrees.ShouldBe(180, tolerance: 0.001);
+        restored.OverridePins[1].Name.ShouldBe("b0");
+        restored.OverridePins[1].OffsetXMicrometers.ShouldBe(20.0, tolerance: 0.001);
+        restored.OverridePins[1].OffsetYMicrometers.ShouldBe(5.0, tolerance: 0.001);
+        restored.OverridePins[1].AngleDegrees.ShouldBe(0, tolerance: 0.001);
+
+        restored.TemplatePins.ShouldNotBeNull();
+        restored.TemplatePins!.Count.ShouldBe(1);
+        restored.TemplatePins[0].Name.ShouldBe("in");
+        restored.TemplatePins[0].OffsetXMicrometers.ShouldBe(0.0, tolerance: 0.001);
+        restored.TemplatePins[0].OffsetYMicrometers.ShouldBe(125.0, tolerance: 0.001);
+        restored.TemplatePins[0].AngleDegrees.ShouldBe(180, tolerance: 0.001);
+    }
+
+    [Fact]
+    public void LoadPath_DeserializedOverridePins_SameNameKeepsLogicalPin()
+    {
+        var overrideDto = new NazcaCodeOverride
+        {
+            RawCode = "def component():\n    return pdk.strt(length=10)\n",
+            OverridePins = new List<OverridePinData>
+            {
+                new() { Name = "in",      OffsetXMicrometers = 0.0,  OffsetYMicrometers = 5.0, AngleDegrees = 180 },
+                new() { Name = "renamed", OffsetXMicrometers = 20.0, OffsetYMicrometers = 5.0, AngleDegrees = 0   },
+            },
+        };
+
+        var json = JsonSerializer.Serialize(overrideDto, Options);
+        var deserialized = JsonSerializer.Deserialize<NazcaCodeOverride>(json, Options);
+
+        var comp = CreateStraightWaveGuideWithPhysicalPins();
+        var capturedLogicalIn = comp.PhysicalPins.First(p => p.Name == "in").LogicalPin;
+        capturedLogicalIn.ShouldNotBeNull();
+
+        OverridePinMapper.ApplyPinsToComponent(comp, deserialized!.OverridePins!);
+
+        comp.PhysicalPins.Count.ShouldBe(2);
+        comp.PhysicalPins.First(p => p.Name == "in").LogicalPin.ShouldBeSameAs(capturedLogicalIn);
+        comp.PhysicalPins.First(p => p.Name == "renamed").LogicalPin.ShouldBeNull();
     }
 
     /// <summary>Minimal DTO to test backward-compatible deserialization of old .lun files.</summary>
