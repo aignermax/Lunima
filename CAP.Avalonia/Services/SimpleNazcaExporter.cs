@@ -154,13 +154,27 @@ public class SimpleNazcaExporter
     /// <summary>
     /// Generates a parametric straight waveguide stub that uses nd.strt() with length parameter.
     /// The cell-internal layout follows the <see cref="NazcaCoordinateMapper"/> contract:
-    /// org sits oy above the cell bottom, so the waveguide centre line is at oy - H/2
-    /// and pins render at the plain Y negation of their app offsets (oy - OffsetY).
+    /// the cell is org-anchored on the offset (ox, oy) the mapper places it by — for a
+    /// parametric straight that is the FIRST pin's offset, NOT NazcaOriginOffsetY. The
+    /// straight's centre line coincides with its pins (same OffsetY on a straight), so it
+    /// sits at oy - firstPin.OffsetY, and every pin renders at the plain Y negation of its
+    /// app offset relative to org (oy - OffsetY). Using the mapper's own anchor keeps the
+    /// rendered pins coincident with <see cref="NazcaCoordinateMapper.GetPinNazcaPosition"/>;
+    /// the old NazcaOriginOffsetY-based anchor differed from the placement and shifted the
+    /// rendered geometry off the pins (issue #565).
     /// </summary>
     private static void AppendParametricStraightStub(
         StringBuilder sb, string funcName, Component comp, CultureInfo ci)
     {
-        var strtY = NormalizeZero(comp.NazcaOriginOffsetY - comp.HeightMicrometers / 2).ToString("F2", ci);
+        // The cell is rotation-independent (placement applies .put(rot)); use the
+        // UNROTATED first-pin offset as the org anchor (oy), mirroring the mapper. The
+        // straight's centre line coincides with its pins, so it sits at oy - firstPin.oy.
+        var (_, anchorY) = NazcaCoordinateMapper.GetStubAnchor(comp);
+        var firstPin = comp.PhysicalPins.FirstOrDefault();
+        var firstPinY = firstPin != null
+            ? NazcaCoordinateMapper.GetUnrotatedPinOffset(comp, firstPin).OffsetY
+            : 0;
+        var strtY = NazcaCoordinateMapper.NormalizeZero(anchorY - firstPinY).ToString("F2", ci);
 
         // Sanitize function name for valid Python identifier (replace non-alphanumeric/underscore chars)
         var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
@@ -171,21 +185,19 @@ public class SimpleNazcaExporter
         sb.AppendLine($"        # Use nd.strt() for proper waveguide with specified length");
         sb.AppendLine($"        nd.strt(length=length, width=0.45, layer=1).put(0, {strtY})");
 
-        // Generate pins with Nazca coordinates
+        // Generate pins from the UNROTATED offsets, relative to org (the mapper anchor);
+        // a straight's pins share the centre line, so their local Y is oy - OffsetY = 0.
         foreach (var pin in comp.PhysicalPins)
         {
-            var py = NormalizeZero(comp.NazcaOriginOffsetY - pin.OffsetYMicrometers).ToString("F2", ci);
-            var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
+            var (uox, uoy) = NazcaCoordinateMapper.GetUnrotatedPinOffset(comp, pin);
+            var py = NazcaCoordinateMapper.NormalizeZero(anchorY - uoy).ToString("F2", ci);
+            var pa = NazcaCoordinateMapper.NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
 
-            // For straight waveguides: input pin at x=0, output pin at x=length
-            if (pin.OffsetXMicrometers == 0)
-            {
+            // For straight waveguides: input pin at x=0, output pin at x=length.
+            if (uox == 0)
                 sb.AppendLine($"        nd.Pin('{pin.Name}').put(0, {py}, {pa})");
-            }
             else
-            {
                 sb.AppendLine($"        nd.Pin('{pin.Name}').put(length, {py}, {pa})");
-            }
         }
 
         sb.AppendLine($"    return cell");
@@ -220,10 +232,10 @@ public class SimpleNazcaExporter
         double offsetX = comp.NazcaOriginOffsetX;
         double offsetY = comp.NazcaOriginOffsetY;
 
-        var px0 = NormalizeZero(-offsetX).ToString("F2", ci);
-        var py0 = NormalizeZero(offsetY - h).ToString("F2", ci);
-        var px1 = NormalizeZero(w - offsetX).ToString("F2", ci);
-        var py1 = NormalizeZero(offsetY).ToString("F2", ci);
+        var px0 = NazcaCoordinateMapper.NormalizeZero(-offsetX).ToString("F2", ci);
+        var py0 = NazcaCoordinateMapper.NormalizeZero(offsetY - h).ToString("F2", ci);
+        var px1 = NazcaCoordinateMapper.NormalizeZero(w - offsetX).ToString("F2", ci);
+        var py1 = NazcaCoordinateMapper.NormalizeZero(offsetY).ToString("F2", ci);
 
         sb.AppendLine($"    nd.Polygon(points=[({px0},{py0}),({px1},{py0}),({px1},{py1}),({px0},{py1})], layer=1).put(0, 0)");
 
@@ -231,9 +243,9 @@ public class SimpleNazcaExporter
         // of the app pin offsets (NazcaCoordinateMapper.GetPinNazcaPosition contract).
         foreach (var pin in comp.PhysicalPins)
         {
-            var px = NormalizeZero(pin.OffsetXMicrometers - offsetX).ToString("F2", ci);
-            var py = NormalizeZero(offsetY - pin.OffsetYMicrometers).ToString("F2", ci);
-            var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
+            var px = NazcaCoordinateMapper.NormalizeZero(pin.OffsetXMicrometers - offsetX).ToString("F2", ci);
+            var py = NazcaCoordinateMapper.NormalizeZero(offsetY - pin.OffsetYMicrometers).ToString("F2", ci);
+            var pa = NazcaCoordinateMapper.NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
             sb.AppendLine($"    nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
         }
 
@@ -328,7 +340,6 @@ public class SimpleNazcaExporter
         IReadOnlyDictionary<string, NazcaCodeOverride>? overrides)
     {
         var varName = $"comp_{compIndex}";
-        componentNames[comp] = varName;
 
         bool isRawOverride = rawOverrides.ContainsKey(comp.Identifier);
 
@@ -354,8 +365,8 @@ public class SimpleNazcaExporter
         // originOffset is the effective put-position offset relative to the editor
         // top-left, derived from the mapper placement so the diagnosis can never
         // drift from the emitted coordinates.
-        double originOffsetX = NormalizeZero(placement.X - comp.PhysicalX);
-        double originOffsetY = NormalizeZero(-placement.Y - comp.PhysicalY);
+        double originOffsetX = NazcaCoordinateMapper.NormalizeZero(placement.X - comp.PhysicalX);
+        double originOffsetY = NazcaCoordinateMapper.NormalizeZero(-placement.Y - comp.PhysicalY);
         sb.AppendLine($"        # COORD: {comp.Identifier} " +
                       $"editor=({comp.PhysicalX.ToString("F2", ci)},{comp.PhysicalY.ToString("F2", ci)}) " +
                       $"originOffset=({originOffsetX.ToString("F2", ci)},{originOffsetY.ToString("F2", ci)}) " +
@@ -397,6 +408,10 @@ public class SimpleNazcaExporter
         {
             sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
         }
+
+        // Record the variable only after its put-line was emitted: a half-failed append
+        // must not leave a name pointing at a component that was never placed.
+        componentNames[comp] = varName;
         compIndex++;
     }
 
@@ -530,9 +545,9 @@ public class SimpleNazcaExporter
         double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
 
         var l = length.ToString("F2", ci);
-        var x = NormalizeZero(nazcaStartX).ToString("F2", ci);
-        var y = NormalizeZero(nazcaStartY).ToString("F2", ci);
-        var a = NormalizeZero(angleDeg).ToString("F2", ci);
+        var x = NazcaCoordinateMapper.NormalizeZero(nazcaStartX).ToString("F2", ci);
+        var y = NazcaCoordinateMapper.NormalizeZero(nazcaStartY).ToString("F2", ci);
+        var a = NazcaCoordinateMapper.NormalizeZero(angleDeg).ToString("F2", ci);
         return $"        nd.strt(length={l}).put({x}, {y}, {a})";
     }
 
@@ -544,10 +559,10 @@ public class SimpleNazcaExporter
         BendSegment bend, double nazcaX, double nazcaY, CultureInfo ci)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
-        var sweepAngle = NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
-        var x = NormalizeZero(nazcaX).ToString("F2", ci);
-        var y = NormalizeZero(nazcaY).ToString("F2", ci);
-        var angle = NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
+        var sweepAngle = NazcaCoordinateMapper.NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
+        var x = NazcaCoordinateMapper.NormalizeZero(nazcaX).ToString("F2", ci);
+        var y = NazcaCoordinateMapper.NormalizeZero(nazcaY).ToString("F2", ci);
+        var angle = NazcaCoordinateMapper.NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
         return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
     }
 
@@ -567,9 +582,9 @@ public class SimpleNazcaExporter
         double length = Math.Sqrt(dx * dx + dy * dy);
         double angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
 
-        var x = NormalizeZero(sx).ToString("F2", ci);
-        var y = NormalizeZero(sy).ToString("F2", ci);
-        var a = NormalizeZero(angleDeg).ToString("F2", ci);
+        var x = NazcaCoordinateMapper.NormalizeZero(sx).ToString("F2", ci);
+        var y = NazcaCoordinateMapper.NormalizeZero(sy).ToString("F2", ci);
+        var a = NazcaCoordinateMapper.NormalizeZero(angleDeg).ToString("F2", ci);
         var l = length.ToString("F2", ci);
 
         return $"        nd.strt(length={l}).put({x}, {y}, {a})";
@@ -592,12 +607,6 @@ public class SimpleNazcaExporter
             _ => $"        # Unknown segment type: {segment.GetType().Name}"
         };
     }
-
-    /// <summary>
-    /// Normalizes negative zero to positive zero to avoid "-0.00" in output.
-    /// </summary>
-    private static double NormalizeZero(double value) =>
-        value == 0.0 ? 0.0 : value;
 
     private static string FormatStraightSegment(
         StraightSegment straight, CultureInfo ci, bool isFirst, PhysicalPin? startPin = null)
@@ -627,9 +636,9 @@ public class SimpleNazcaExporter
                     straight.StartPoint.X, straight.StartPoint.Y);
             }
 
-            var x = NormalizeZero(nazcaX).ToString("F2", ci);
-            var y = NormalizeZero(nazcaY).ToString("F2", ci);
-            var angle = NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
+            var x = NazcaCoordinateMapper.NormalizeZero(nazcaX).ToString("F2", ci);
+            var y = NazcaCoordinateMapper.NormalizeZero(nazcaY).ToString("F2", ci);
+            var angle = NazcaCoordinateMapper.NormalizeZero(-straight.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.strt(length={lengthStr}).put({x}, {y}, {angle})";
         }
 
@@ -653,7 +662,7 @@ public class SimpleNazcaExporter
     private static string FormatBendSegment(BendSegment bend, CultureInfo ci, bool isFirst, PhysicalPin? startPin = null)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
-        var sweepAngle = NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
+        var sweepAngle = NazcaCoordinateMapper.NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
 
         if (isFirst)
         {
@@ -671,9 +680,9 @@ public class SimpleNazcaExporter
                     bend.StartPoint.X, bend.StartPoint.Y);
             }
 
-            var x = NormalizeZero(nazcaX).ToString("F2", ci);
-            var y = NormalizeZero(nazcaY).ToString("F2", ci);
-            var angle = NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
+            var x = NazcaCoordinateMapper.NormalizeZero(nazcaX).ToString("F2", ci);
+            var y = NazcaCoordinateMapper.NormalizeZero(nazcaY).ToString("F2", ci);
+            var angle = NazcaCoordinateMapper.NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
             return $"        nd.bend(radius={radius}, angle={sweepAngle}).put({x}, {y}, {angle})";
         }
 

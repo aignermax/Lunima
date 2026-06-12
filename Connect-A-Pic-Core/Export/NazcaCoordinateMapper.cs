@@ -108,6 +108,47 @@ public static class NazcaCoordinateMapper
     }
 
     /// <summary>
+    /// Cell-internal origin offset (ox, oy) the placement uses for this component —
+    /// the SAME value <see cref="GetCellPlacement"/> derives the bbox from. The stub
+    /// generator anchors its geometry and pins on this so the rendered cell pins land
+    /// exactly where <see cref="GetPinNazcaPosition"/> places the app pins; computing it
+    /// independently would re-introduce the dual-source drift this mapper removes.
+    /// Returns the calibrated/heuristic offset; raw-code overrides do not use it.
+    /// </summary>
+    public static (double OffsetX, double OffsetY) GetStubAnchor(Component comp)
+    {
+        var (_, h0) = GetUnrotatedDimensions(comp);
+        return GetOriginOffset(comp, h0);
+    }
+
+    /// <summary>
+    /// A pin's offset in the component's UNROTATED frame (its value at RotationDegrees=0).
+    /// A Nazca cell is rotation-independent — the export rotates it via <c>.put(rot)</c> —
+    /// but rotating a component physically mutates its live pin offsets, so a stub built
+    /// from the live offsets would bake the rotation in twice. This inverts the 90°-step
+    /// offset rotation the rotate command applies, giving the stub the rotation-free
+    /// geometry the placement's <c>.put(rot)</c> then orients correctly.
+    /// </summary>
+    public static (double OffsetX, double OffsetY) GetUnrotatedPinOffset(Component comp, PhysicalPin pin)
+    {
+        double x = pin.OffsetXMicrometers;
+        double y = pin.OffsetYMicrometers;
+        // Current live dimensions; each inverse 90° step swaps them back.
+        double width = comp.WidthMicrometers;
+        double height = comp.HeightMicrometers;
+
+        int steps = (((int)Math.Round(comp.RotationDegrees / 90.0)) % 4 + 4) % 4;
+        for (int i = 0; i < steps; i++)
+        {
+            // Inverse of the rotate command's CCW step (x,y)->(H0 - y, x) on dims
+            // (W0,H0)->(H0,W0): with current width W1 = H0, the original is (y, W1 - x).
+            (x, y) = (y, width - x);
+            (width, height) = (height, width);
+        }
+        return (x, y);
+    }
+
+    /// <summary>
     /// Unrotated cell dimensions. Component.Width/Height hold the CURRENT
     /// (rotation-swapped) values, so 90°/270° states swap them back.
     /// </summary>
@@ -157,8 +198,12 @@ public static class NazcaCoordinateMapper
         if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
         {
             var firstPin = comp.PhysicalPins.FirstOrDefault();
+            // The cell is unrotated; anchor on the first pin's UNROTATED offset so the
+            // anchor matches the unrotated bbox even when the live component is rotated.
             if (firstPin != null)
-                return (firstPin.OffsetXMicrometers, firstPin.OffsetYMicrometers);
+                return GetUnrotatedPinOffset(comp, firstPin);
+            // A parametric straight with no pins is a misconfigured PDK component; fall
+            // through to the legacy bottom-left fallback rather than guessing an anchor.
         }
 
         // Legacy components without calibration data: org at the box bottom-left.
@@ -192,8 +237,9 @@ public static class NazcaCoordinateMapper
 
     /// <summary>
     /// Normalizes negative zero to positive zero so formatted output never
-    /// shows "-0.00".
+    /// shows "-0.00". Public so the exporter shares this single definition
+    /// instead of keeping a duplicate copy (issue #565).
     /// </summary>
-    private static double NormalizeZero(double value) =>
+    public static double NormalizeZero(double value) =>
         value == 0.0 ? 0.0 : value;
 }

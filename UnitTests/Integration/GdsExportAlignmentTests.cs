@@ -27,7 +27,16 @@ public class GdsExportAlignmentTests
     private const double ToleranceMicrometers = 0.01;
     private const double ToleranceDegrees = 0.01;
 
+    private readonly System.Collections.ObjectModel.ObservableCollection<ComponentTemplate> _library;
+
+    public GdsExportAlignmentTests()
+    {
+        _library = new System.Collections.ObjectModel.ObservableCollection<ComponentTemplate>(
+            TestPdkLoader.LoadAllTemplates());
+    }
+
     /// <summary>Nazca bookkeeping pins every cell ships; they are not user pins.</summary>
+    // Must match INTERNAL in scripts/render_component_preview.py — keep in sync manually.
     private static readonly HashSet<string> NazcaInternalPins = new(StringComparer.Ordinal)
     {
         "org", "cc", "lb", "lc", "lt", "tl", "tc", "tr", "rt", "rc", "rb", "br", "bc", "bl"
@@ -41,7 +50,7 @@ public class GdsExportAlignmentTests
 
         // "2x2 MMI Coupler" — calibrated against the real demofab cell (org at the
         // left-centre, offset (0, 30)), so its rendered pins must hit the app pins.
-        var template = TestPdkLoader.LoadAllTemplates()
+        var template = _library
             .First(t => t.NazcaFunctionName == "demo.mmi2x2_dp");
         var canvas = new DesignCanvasViewModel();
         var dut = ComponentTemplates.CreateFromTemplate(template, 100, 400);
@@ -64,8 +73,7 @@ public class GdsExportAlignmentTests
         var (python, previewScript) = await GdsAlignmentTestSetup.ResolveEnvironmentAsync();
         if (python == null || previewScript == null) return;   // env skip
 
-        var library = TestPdkLoader.LoadAllTemplates();
-        var mmiTemplate = library.First(t => t.Name == "1x2 MMI Splitter");
+        var mmiTemplate = _library.First(t => t.Name == "1x2 MMI Splitter");
         var canvas = new DesignCanvasViewModel();
         var dut = ComponentTemplates.CreateFromTemplate(mmiTemplate, 100, 400);
         dut.Identifier = "align_override_dut";
@@ -83,6 +91,67 @@ public class GdsExportAlignmentTests
         await RunRotationMatrixAsync(canvas, dutVm, dut, python, store);
     }
 
+    [Fact]
+    public async Task ParametricStraight_Rotated_PinsAlignInGds()
+    {
+        var (python, _) = await GdsAlignmentTestSetup.ResolveEnvironmentAsync();
+        if (python == null) return;   // env skip
+
+        // A parametric demo_pdk.straight with NazcaOriginOffset=(0,0) and pins on the
+        // centre line (OffsetY = H/2). The mapper anchors parametric straights on the
+        // first pin (oy = H/2), but the stub used NazcaOriginOffsetY (=0), so before
+        // the fix the rendered waveguide/pins sat H/2 below where the mapper claims —
+        // a real GDS misalignment that the engine-reported pins expose here.
+        var canvas = new DesignCanvasViewModel();
+        var dut = CreateParametricStraight("align_strt_dut", 100, lengthMicrometers: 200, x: 100, y: 400);
+        var dutVm = canvas.AddComponent(dut);
+        var partner = CreateParametricStraight("align_strt_partner", 100, lengthMicrometers: 200, x: 900, y: 400);
+        canvas.AddComponent(partner);
+
+        canvas.ConnectPins(
+            dut.PhysicalPins.First(p => p.Name == "b0"),
+            partner.PhysicalPins.First(p => p.Name == "a0"));
+
+        // 0° and 90° are sufficient to catch the anchor mismatch on both axes.
+        await RunRotationMatrixAsync(canvas, dutVm, dut, python, overrides: null, maxSteps: 2);
+    }
+
+    /// <summary>
+    /// Builds a parametric straight waveguide (demo_pdk.straight, length=...) with the
+    /// origin offset left at (0,0) and both pins on the cell centre line (OffsetY = H/2),
+    /// mirroring the SimpleNazcaExporterTests straight fixture.
+    /// </summary>
+    private static Component CreateParametricStraight(
+        string identifier, double heightMicrometers, double lengthMicrometers, double x, double y)
+    {
+        var parts = new Part[1, 1];
+        parts[0, 0] = new Part(new List<Pin>());
+        var comp = new Component(
+            laserWaveLengthToSMatrixMap: new Dictionary<int, CAP_Core.LightCalculation.SMatrix>(),
+            sliders: new List<Slider>(),
+            nazcaFunctionName: "demo_pdk.straight",
+            nazcaFunctionParams: $"length={lengthMicrometers.ToString(CultureInfo.InvariantCulture)}",
+            parts: parts,
+            typeNumber: 0,
+            identifier: identifier,
+            rotationCounterClock: DiscreteRotation.R0);
+        comp.WidthMicrometers = lengthMicrometers;
+        comp.HeightMicrometers = heightMicrometers;
+        comp.PhysicalX = x;
+        comp.PhysicalY = y;
+        comp.PhysicalPins.Add(new PhysicalPin
+        {
+            Name = "a0", OffsetXMicrometers = 0, OffsetYMicrometers = heightMicrometers / 2,
+            AngleDegrees = 180, ParentComponent = comp
+        });
+        comp.PhysicalPins.Add(new PhysicalPin
+        {
+            Name = "b0", OffsetXMicrometers = lengthMicrometers, OffsetYMicrometers = heightMicrometers / 2,
+            AngleDegrees = 0, ParentComponent = comp
+        });
+        return comp;
+    }
+
     // ── Matrix driver ────────────────────────────────────────────────────────
 
     /// <summary>
@@ -92,9 +161,9 @@ public class GdsExportAlignmentTests
     /// </summary>
     private static async Task RunRotationMatrixAsync(
         DesignCanvasViewModel canvas, ComponentViewModel dutVm, Component dut,
-        string python, IReadOnlyDictionary<string, NazcaCodeOverride>? overrides)
+        string python, IReadOnlyDictionary<string, NazcaCodeOverride>? overrides, int maxSteps = 4)
     {
-        for (int rotationSteps = 0; rotationSteps < 4; rotationSteps++)
+        for (int rotationSteps = 0; rotationSteps < maxSteps; rotationSteps++)
         {
             if (rotationSteps > 0)
             {

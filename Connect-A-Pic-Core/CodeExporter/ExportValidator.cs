@@ -16,17 +16,28 @@ public class ExportValidator
     /// <summary>
     /// Validates that exported Nazca code correctly represents the design.
     /// </summary>
+    /// <param name="components">The design components.</param>
+    /// <param name="connections">The waveguide connections.</param>
+    /// <param name="nazcaCode">The exported Nazca script to validate against.</param>
+    /// <param name="overrideAnchors">
+    /// Optional per-instance raw-code-override bbox anchors (XMin, YMax) keyed by
+    /// component identifier. Bbox-anchored overrides are placed relative to this anchor,
+    /// so the expected position must use it; omitting it reports false position mismatches
+    /// for overridden instances. A plain (XMin, YMax) tuple is used rather than the
+    /// CAP-DataAccess override type so Core stays free of that dependency.
+    /// </param>
     public ValidationResult Validate(
         List<Component> components,
         List<WaveguideConnection> connections,
-        string nazcaCode)
+        string nazcaCode,
+        IReadOnlyDictionary<string, (double XMin, double YMax)>? overrideAnchors = null)
     {
         var result = new ValidationResult();
         var parser = new NazcaCodeParser();
         var parsed = parser.Parse(nazcaCode);
 
         // Validate component positions
-        ValidateComponentPositions(components, parsed, result);
+        ValidateComponentPositions(components, parsed, result, overrideAnchors);
 
         // Validate waveguide endpoints match pin positions
         ValidateWaveguideEndpoints(connections, components, parsed, result);
@@ -44,7 +55,8 @@ public class ExportValidator
     private static void ValidateComponentPositions(
         List<Component> components,
         ParsedNazcaDesign parsed,
-        ValidationResult result)
+        ValidationResult result,
+        IReadOnlyDictionary<string, (double XMin, double YMax)>? overrideAnchors)
     {
         if (parsed.Components.Count != components.Count)
         {
@@ -62,8 +74,14 @@ public class ExportValidator
 
             var placement = parsed.Components[i];
 
-            // Calculate expected Nazca position
-            var expectedPos = CalculateExpectedNazcaPosition(comp);
+            // Calculate expected Nazca position, honouring a persisted override anchor.
+            (double XMin, double YMax)? anchor = null;
+            if (overrideAnchors != null && comp.Identifier != null
+                && overrideAnchors.TryGetValue(comp.Identifier, out var stored))
+            {
+                anchor = stored;
+            }
+            var expectedPos = CalculateExpectedNazcaPosition(comp, anchor);
 
             // Compare positions
             var xDiff = Math.Abs(placement.X - expectedPos.X);
@@ -194,9 +212,10 @@ public class ExportValidator
     /// <see cref="NazcaCoordinateMapper"/> — the same single source of truth the
     /// exporter uses, so the validator can never drift from the export math.
     /// </summary>
-    private static (double X, double Y) CalculateExpectedNazcaPosition(Component comp)
+    private static (double X, double Y) CalculateExpectedNazcaPosition(
+        Component comp, (double XMin, double YMax)? overrideAnchor)
     {
-        var placement = NazcaCoordinateMapper.GetCellPlacement(comp, rawOverrideAnchor: null);
+        var placement = NazcaCoordinateMapper.GetCellPlacement(comp, overrideAnchor);
         return (placement.X, placement.Y);
     }
 
