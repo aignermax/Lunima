@@ -278,9 +278,9 @@ public class NazcaExportAllComponentsTests
 
         // Rotated placement comes from the bbox re-anchoring formula in
         // NazcaCoordinateMapper (hand-verified per rotation in its unit tests, #565);
-        // the old rotated-origin-offset expectation WAS the rotation misalignment bug.
-        // Here we pin down that the exporter routes through the mapper and emits the
-        // org-anchored put with the negated rotation.
+        // rotating the origin offset instead would misplace the cell — exactly the
+        // misalignment bug #565 covers. Here we pin down that the exporter routes
+        // through the mapper and emits the org-anchored put with the negated rotation.
         var ci = System.Globalization.CultureInfo.InvariantCulture;
         var placement = NazcaCoordinateMapper.GetCellPlacement(component, null);
         result.ShouldContain("ebeam_gc_te1550()");

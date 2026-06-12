@@ -137,7 +137,7 @@ public static class NazcaCoordinateMapper
 
     /// <summary>
     /// Origin offset (ox, oy) of a non-override component. Detection rules are
-    /// behaviour-identical to the heuristics the exporter historically applied:
+    /// the established export heuristics:
     /// PDK name or explicit calibrated offset → stored NazcaOriginOffset (issue #355
     /// covers auto-generated names with a calibrated offset); parametric straights
     /// anchor on their first pin; everything else uses the legacy bottom-left fallback.

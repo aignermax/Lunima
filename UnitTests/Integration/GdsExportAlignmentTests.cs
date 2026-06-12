@@ -16,8 +16,8 @@ namespace UnitTests.Integration;
 /// Acceptance matrix for issue #565: {PDK component, raw-code override} × {0°, 90°,
 /// 180°, 270°}. Each cell exports the design with the verification epilog, EXECUTES
 /// the script with real nazca and compares the engine-reported world pin positions
-/// (.pins.json) against <see cref="NazcaCoordinateMapper"/> — closing the loop that
-/// previously only existed as a comment pair ("must match exactly!").
+/// (.pins.json) against <see cref="NazcaCoordinateMapper"/> — so the alignment
+/// contract is checked by the same nazca engine that writes the GDS.
 ///
 /// Requires a nazca-capable Python (resolved via <see cref="PythonDiscoveryService"/>);
 /// skips cleanly when none is available so CI without nazca still passes.

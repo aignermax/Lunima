@@ -41,7 +41,7 @@ public class ExportValidator
     /// <summary>
     /// Validates that component placements in Nazca code match expected positions.
     /// </summary>
-    private void ValidateComponentPositions(
+    private static void ValidateComponentPositions(
         List<Component> components,
         ParsedNazcaDesign parsed,
         ValidationResult result)

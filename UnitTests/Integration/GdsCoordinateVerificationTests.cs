@@ -500,9 +500,9 @@ public class GdsCoordinateVerificationTests
         }
 
         // Expected via NazcaCoordinateMapper (#565): pin positions convert by plain
-        // Y negation for every rotation — the segment was routed from the app pin
-        // position, so the exported start must be its Y-negated image. The old
-        // rotated-origin-offset pin formula diverged here and was part of the bug.
+        // Y negation for every rotation — the segment is routed from the app pin
+        // position, so the exported start must be its Y-negated image. A rotated
+        // origin-offset pin formula would diverge here (the #565 misalignment).
         var (expectedX, expectedY) = NazcaCoordinateMapper.GetPinNazcaPosition(pin1);
 
         var wg = parsed.WaveguideStubs.First();

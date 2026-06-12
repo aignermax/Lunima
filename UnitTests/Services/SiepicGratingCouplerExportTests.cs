@@ -148,11 +148,11 @@ public class SiepicGratingCouplerExportTests
 
         var (result, component) = ExportAt(cal, x, y, rotationDegrees);
         // Rotated placement comes from the bbox re-anchoring formula in
-        // NazcaCoordinateMapper (hand-verified there per rotation, #565); the old
-        // rotated-origin-offset expectation WAS the rotation misalignment bug.
-        // This test pins down that the exporter routes through the mapper and
-        // formats the org-anchored put correctly. At rotation 0 the values equal
-        // the historical (x+ox, -(y+oy)) convention.
+        // NazcaCoordinateMapper (hand-verified there per rotation, #565); rotating
+        // the origin offset instead would misplace the cell — exactly the
+        // misalignment bug #565 covers. This test pins down that the exporter
+        // routes through the mapper and formats the org-anchored put correctly.
+        // At rotation 0 the values equal the calibrated (x+ox, -(y+oy)) convention.
         var placement = NazcaCoordinateMapper.GetCellPlacement(component, null);
         var (nx, ny) = (placement.X, placement.Y);
 

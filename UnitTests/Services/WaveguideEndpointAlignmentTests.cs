@@ -23,8 +23,8 @@ namespace UnitTests.Services;
 /// Expected pin positions come from <see cref="NazcaCoordinateMapper.GetPinNazcaPosition"/>
 /// (issue #565): the app model is the truth for where pins are, and the conversion is a
 /// plain Y negation for every component kind. Calibration data only moves the CELL so its
-/// rendered pins coincide with the app pins — it never bends segment coordinates, so the
-/// old NazcaOriginOffset-dependent pin formula (which diverged for oy ≠ H/2) is gone.
+/// rendered pins coincide with the app pins — it never bends segment coordinates
+/// (an origin-offset-dependent pin formula would diverge wherever oy ≠ H/2).
 /// </summary>
 public class WaveguideEndpointAlignmentTests
 {
