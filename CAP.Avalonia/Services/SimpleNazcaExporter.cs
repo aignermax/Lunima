@@ -4,6 +4,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Export;
 using CAP_Core.Routing;
 using CAP_DataAccess.Persistence.PIR;
 
@@ -128,7 +129,7 @@ public class SimpleNazcaExporter
         if (!generated.Add(funcName))
             return;
 
-        if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
+        if (NazcaCoordinateMapper.IsParametricStraight(funcName, comp.NazcaFunctionParameters))
             AppendParametricStraightStub(sb, funcName, comp, ci);
         else
             AppendStandardComponentStub(sb, funcName, comp, ci);
@@ -139,31 +140,19 @@ public class SimpleNazcaExporter
     /// Returns true for real PDK functions and demo_pdk functions.
     /// </summary>
     private static bool RequiresStub(string funcName) =>
-        IsPdkFunction(funcName) ||
+        NazcaCoordinateMapper.IsPdkFunction(funcName) ||
         funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Checks if a component is a parametric straight waveguide.
-    /// </summary>
-    private static bool IsParametricStraight(string funcName, string parameters)
-    {
-        if (string.IsNullOrEmpty(parameters))
-            return false;
-
-        var lower = funcName.ToLowerInvariant();
-        var hasLength = parameters.Contains("length=", StringComparison.OrdinalIgnoreCase);
-        var isStraight = lower.Contains("straight") || lower.Contains("strt");
-
-        return hasLength && isStraight;
-    }
-
-    /// <summary>
     /// Generates a parametric straight waveguide stub that uses nd.strt() with length parameter.
+    /// The cell-internal layout follows the <see cref="NazcaCoordinateMapper"/> contract:
+    /// org sits oy above the cell bottom, so the waveguide centre line is at oy - H/2
+    /// and pins render at the plain Y negation of their app offsets (oy - OffsetY).
     /// </summary>
     private static void AppendParametricStraightStub(
         StringBuilder sb, string funcName, Component comp, CultureInfo ci)
     {
-        var h = comp.HeightMicrometers.ToString("F2", ci);
+        var strtY = NormalizeZero(comp.NazcaOriginOffsetY - comp.HeightMicrometers / 2).ToString("F2", ci);
 
         // Sanitize function name for valid Python identifier (replace non-alphanumeric/underscore chars)
         var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_]", "_");
@@ -172,12 +161,12 @@ public class SimpleNazcaExporter
         sb.AppendLine($"    \"\"\"Auto-generated parametric straight waveguide stub for {funcName}.\"\"\"");
         sb.AppendLine($"    with nd.Cell(name='{funcName}_{{length}}') as cell:");
         sb.AppendLine($"        # Use nd.strt() for proper waveguide with specified length");
-        sb.AppendLine($"        nd.strt(length=length, width=0.45, layer=1).put(0, {h}/2)");
+        sb.AppendLine($"        nd.strt(length=length, width=0.45, layer=1).put(0, {strtY})");
 
         // Generate pins with Nazca coordinates
         foreach (var pin in comp.PhysicalPins)
         {
-            var py = NormalizeZero(comp.HeightMicrometers - pin.OffsetYMicrometers).ToString("F2", ci);
+            var py = NormalizeZero(comp.NazcaOriginOffsetY - pin.OffsetYMicrometers).ToString("F2", ci);
             var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
 
             // For straight waveguides: input pin at x=0, output pin at x=length
@@ -197,9 +186,12 @@ public class SimpleNazcaExporter
 
     /// <summary>
     /// Generates a standard non-parametric component stub using a polygon box.
-    /// When NazcaOriginOffset is set, the polygon box is shifted so that the cell's
-    /// (0,0) origin is at the offset position, not the bottom-left corner.
-    /// This ensures component boxes appear in the correct location in KLayout/GDS viewers.
+    /// The cell-internal layout follows the placement contract of
+    /// <see cref="NazcaCoordinateMapper"/>: the geometry bbox is
+    /// [-ox, oy-H] .. [W-ox, oy] around the cell origin, because at rotation 0
+    /// the org pin is put at (PhysicalX+ox, -(PhysicalY+oy)) and the box top edge
+    /// must lie oy above org. Pins render exactly where the app model places them
+    /// (plain Y negation), so exported waveguides meet the stub pins.
     /// </summary>
     private static void AppendStandardComponentStub(
         StringBuilder sb, string funcName, Component comp, CultureInfo ci)
@@ -214,61 +206,25 @@ public class SimpleNazcaExporter
         sb.AppendLine($"with nd.Cell(name='{funcName}') as _{pythonFuncName}_cell:");
         sb.AppendLine($"    \"\"\"Auto-generated stub for {funcName} ({comp.WidthMicrometers}x{comp.HeightMicrometers} µm).\"\"\"");
 
-        // When NazcaOriginOffset is set, the cell origin (0,0) is NOT at the bottom-left corner.
-        // The polygon must be shifted so it appears at the correct position relative to the origin.
-        // Example: GC with offset (15, 30) → polygon from (-15, -30) to (15, 0)
-        // This matches the real PDK behavior where .put() places the origin, not the box corner.
+        // Stubs are only generated for PDK-named components (see RequiresStub), whose
+        // placement always uses the calibrated origin offset — (0,0) means org at the
+        // box top-left. Example: GC with offset (0, 9.5), H=19 → polygon (0,-9.5)..(W,9.5).
         double offsetX = comp.NazcaOriginOffsetX;
         double offsetY = comp.NazcaOriginOffsetY;
 
-        // Check if this component actually uses NazcaOriginOffset
-        bool usesOriginOffset = (offsetX != 0 || offsetY != 0) ||
-                               (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
+        var px0 = NormalizeZero(-offsetX).ToString("F2", ci);
+        var py0 = NormalizeZero(offsetY - h).ToString("F2", ci);
+        var px1 = NormalizeZero(w - offsetX).ToString("F2", ci);
+        var py1 = NormalizeZero(offsetY).ToString("F2", ci);
 
-        if (usesOriginOffset && (offsetX != 0 || offsetY != 0))
-        {
-            // Shifted polygon: corner is at (-offsetX, -offsetY) relative to cell origin
-            double x0 = -offsetX;
-            double y0 = -offsetY;
-            double x1 = w - offsetX;
-            double y1 = h - offsetY;
+        sb.AppendLine($"    nd.Polygon(points=[({px0},{py0}),({px1},{py0}),({px1},{py1}),({px0},{py1})], layer=1).put(0, 0)");
 
-            var px0 = NormalizeZero(x0).ToString("F2", ci);
-            var py0 = NormalizeZero(y0).ToString("F2", ci);
-            var px1 = NormalizeZero(x1).ToString("F2", ci);
-            var py1 = NormalizeZero(y1).ToString("F2", ci);
-
-            sb.AppendLine($"    nd.Polygon(points=[({px0},{py0}),({px1},{py0}),({px1},{py1}),({px0},{py1})], layer=1).put(0, 0)");
-        }
-        else
-        {
-            // Legacy/simple components: box at (0,0) to (w,h)
-            var ws = w.ToString("F2", ci);
-            var hs = h.ToString("F2", ci);
-            sb.AppendLine($"    nd.Polygon(points=[(0,0),({ws},0),({ws},{hs}),(0,{hs})], layer=1).put(0, 0)");
-        }
-
-        // Generate pins with Nazca coordinates
-        // Pin positions must be relative to the cell origin (which may be shifted)
+        // Pins relative to org: local = (OffsetX-ox, oy-OffsetY), the plain Y negation
+        // of the app pin offsets (NazcaCoordinateMapper.GetPinNazcaPosition contract).
         foreach (var pin in comp.PhysicalPins)
         {
-            double pinX, pinY;
-
-            if (usesOriginOffset && (offsetX != 0 || offsetY != 0))
-            {
-                // Pin position relative to shifted origin
-                pinX = pin.OffsetXMicrometers - offsetX;
-                pinY = (comp.HeightMicrometers - pin.OffsetYMicrometers) - offsetY;
-            }
-            else
-            {
-                // Legacy: pin position in standard Nazca Y-up coordinates
-                pinX = pin.OffsetXMicrometers;
-                pinY = comp.HeightMicrometers - pin.OffsetYMicrometers;
-            }
-
-            var px = NormalizeZero(pinX).ToString("F2", ci);
-            var py = NormalizeZero(pinY).ToString("F2", ci);
+            var px = NormalizeZero(pin.OffsetXMicrometers - offsetX).ToString("F2", ci);
+            var py = NormalizeZero(offsetY - pin.OffsetYMicrometers).ToString("F2", ci);
             var pa = NormalizeZero(-pin.AngleDegrees).ToString("F0", ci);
             sb.AppendLine($"    nd.Pin('{pin.Name}').put({px}, {py}, {pa})");
         }
@@ -326,21 +282,31 @@ public class SimpleNazcaExporter
         componentNames[comp] = varName;
 
         bool isRawOverride = rawOverrides.ContainsKey(comp.Identifier);
-        var overrideBbox = isRawOverride ? GetOverrideBboxAnchor(comp, overrides) : null;
 
-        // A bbox-anchored override computes its own origin offset: the cell-internal
-        // bbox corner (XMin, YMax) must land on the component's grid rectangle.
-        var (originOffsetX, originOffsetY) = overrideBbox is { } anchor
-            ? RotateOffset(-anchor.XMin, anchor.YMax, comp.RotationDegrees)
-            : CalculateOriginOffset(comp);
+        // A raw-code override persists the cell-internal bbox anchor (XMin, YMax) so
+        // the mapper can land the rendered geometry on the component's grid rectangle.
+        // Overrides saved before the anchor fields existed leave the anchor null.
+        (double XMin, double YMax)? overrideAnchor = null;
+        if (isRawOverride && overrides != null
+            && overrides.TryGetValue(comp.Identifier, out var overrideRecord)
+            && overrideRecord.OverrideBboxXMinMicrometers is { } anchorXMin
+            && overrideRecord.OverrideBboxYMaxMicrometers is { } anchorYMax)
+        {
+            overrideAnchor = (anchorXMin, anchorYMax);
+        }
 
-        var nazcaX = (comp.PhysicalX + originOffsetX).ToString("F2", ci);
-        var nazcaY = NormalizeZero(-(comp.PhysicalY + originOffsetY)).ToString("F2", ci);
-        var rot = NormalizeZero(-comp.RotationDegrees).ToString("F0", ci);
+        var placement = NazcaCoordinateMapper.GetCellPlacement(comp, overrideAnchor);
+        var nazcaX = placement.X.ToString("F2", ci);
+        var nazcaY = placement.Y.ToString("F2", ci);
+        var rot = placement.RotationDegrees.ToString("F0", ci);
         var nazcaFunc = GetNazcaFunction(comp);
 
         // Diagnostic logging (Issue #334): trace coordinate transform for each component.
-        // Format: # COORD: <id> editor=(<physX>,<physY>) originOffset=(<ox>,<oy>) nazca=(<nx>,<ny>) rot=<r>
+        // originOffset is the effective put-position offset relative to the editor
+        // top-left, derived from the mapper placement so the diagnosis can never
+        // drift from the emitted coordinates.
+        double originOffsetX = NormalizeZero(placement.X - comp.PhysicalX);
+        double originOffsetY = NormalizeZero(-placement.Y - comp.PhysicalY);
         sb.AppendLine($"        # COORD: {comp.Identifier} " +
                       $"editor=({comp.PhysicalX.ToString("F2", ci)},{comp.PhysicalY.ToString("F2", ci)}) " +
                       $"originOffset=({originOffsetX.ToString("F2", ci)},{originOffsetY.ToString("F2", ci)}) " +
@@ -349,7 +315,7 @@ public class SimpleNazcaExporter
         // Pin coordinate diagnostics: show expected Nazca pin positions for alignment verification.
         foreach (var pin in comp.PhysicalPins)
         {
-            var (pinNazcaX, pinNazcaY) = GetNazcaPinPosition(pin, rawOverrides);
+            var (pinNazcaX, pinNazcaY) = NazcaCoordinateMapper.GetPinNazcaPosition(pin);
             sb.AppendLine($"        # PIN: {pin.Name} expected_nazca=({pinNazcaX.ToString("F2", ci)},{pinNazcaY.ToString("F2", ci)})");
         }
 
@@ -374,7 +340,7 @@ public class SimpleNazcaExporter
             // lands exactly on the grid rectangle (issue #561). Every nd.Cell() has
             // an 'org' pin. Overrides saved before the anchor existed fall back to
             // the old default-anchor placement.
-            sb.AppendLine(overrideBbox != null
+            sb.AppendLine(overrideAnchor != null
                 ? $"        {varName} = {factory}().put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier} (raw-code override, bbox-anchored)"
                 : $"        {varName} = {factory}().put({nazcaX}, {nazcaY}, {rot})  # {comp.Identifier} (raw-code override)");
         }
@@ -383,92 +349,6 @@ public class SimpleNazcaExporter
             sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
         }
         compIndex++;
-    }
-
-    /// <summary>
-    /// Returns the persisted cell-internal bbox anchor (XMin, YMax) of a raw-code
-    /// override, or null when the override predates the anchor fields.
-    /// </summary>
-    private static (double XMin, double YMax)? GetOverrideBboxAnchor(
-        Component comp, IReadOnlyDictionary<string, NazcaCodeOverride>? overrides)
-    {
-        if (overrides == null || !overrides.TryGetValue(comp.Identifier, out var record))
-            return null;
-        if (record.OverrideBboxXMinMicrometers is { } xMin
-            && record.OverrideBboxYMaxMicrometers is { } yMax)
-            return (xMin, yMax);
-        return null;
-    }
-
-    /// <summary>
-    /// Rotates a cell-local origin-offset vector by the component rotation — the same
-    /// convention <see cref="CalculateOriginOffset"/> applies to PDK origin offsets.
-    /// </summary>
-    private static (double OffsetX, double OffsetY) RotateOffset(
-        double offsetX, double offsetY, double rotationDegrees)
-    {
-        double rotRad = rotationDegrees * Math.PI / 180.0;
-        return (offsetX * Math.Cos(rotRad) - offsetY * Math.Sin(rotRad),
-                offsetX * Math.Sin(rotRad) + offsetY * Math.Cos(rotRad));
-    }
-
-    /// <summary>
-    /// World-space Nazca position of a connection endpoint pin. Pins of raw-code–
-    /// overridden components are bbox-anchored, so their app-space position converts
-    /// 1:1 (plain Y negation). Regular PDK pins go through the calibrated
-    /// NazcaOriginOffset math in <see cref="PhysicalPin.GetAbsoluteNazcaPosition"/> —
-    /// which, applied to an override pin, would shift the waveguide by the stale
-    /// template offset (manual finding: 109.505 µm in KLayout, issue #561).
-    /// </summary>
-    private static (double X, double Y) GetNazcaPinPosition(
-        PhysicalPin pin, IReadOnlyDictionary<string, string>? rawOverrides)
-    {
-        var identifier = pin.ParentComponent?.Identifier;
-        if (identifier != null && rawOverrides != null && rawOverrides.ContainsKey(identifier))
-        {
-            var (x, y) = pin.GetAbsolutePosition();
-            return (x, -y);
-        }
-        return pin.GetAbsoluteNazcaPosition();
-    }
-
-    /// <summary>
-    /// Calculates the Nazca origin offset for a component based on its type.
-    /// </summary>
-    private static (double OffsetX, double OffsetY) CalculateOriginOffset(Component comp)
-    {
-        var funcName = comp.NazcaFunctionName;
-
-        bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) &&
-            (IsPdkFunction(funcName) || funcName.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
-
-        // Also use explicit NazcaOriginOffset when set (non-zero), regardless of function name.
-        // Fixes components with auto-generated names (e.g. "nazca_grating_coupler") that still
-        // have a physical Nazca origin offset. Issue #355.
-        bool hasExplicitOriginOffset = comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0;
-
-        if (hasPdkFunctionName || hasExplicitOriginOffset)
-        {
-            double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-            double offsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
-            double offsetY = comp.NazcaOriginOffsetX * Math.Sin(rotRad) + comp.NazcaOriginOffsetY * Math.Cos(rotRad);
-            return (offsetX, offsetY);
-        }
-
-        if (IsParametricStraight(funcName, comp.NazcaFunctionParameters))
-        {
-            var firstPin = comp.PhysicalPins.FirstOrDefault();
-            if (firstPin != null)
-            {
-                double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-                double offsetX = firstPin.OffsetXMicrometers * Math.Cos(rotRad) - firstPin.OffsetYMicrometers * Math.Sin(rotRad);
-                double offsetY = firstPin.OffsetXMicrometers * Math.Sin(rotRad) + firstPin.OffsetYMicrometers * Math.Cos(rotRad);
-                return (offsetX, offsetY);
-            }
-        }
-
-        // Fallback for legacy components with no explicit Nazca origin offset
-        return (0, comp.HeightMicrometers);
     }
 
     private static void AppendConnections(
@@ -499,7 +379,7 @@ public class SimpleNazcaExporter
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, rawOverrides);
+                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin);
             else
                 AppendFallbackExport(sb, conn, componentNames, rawOverrides);
         }
@@ -508,7 +388,7 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             if (compVm.Component is ComponentGroup group)
-                AppendGroupFrozenPaths(sb, group, rawOverrides);
+                AppendGroupFrozenPaths(sb, group);
         }
 
         sb.AppendLine();
@@ -517,71 +397,52 @@ public class SimpleNazcaExporter
     /// <summary>
     /// Exports all frozen waveguide paths from a ComponentGroup (and nested groups) as Nazca segments.
     /// </summary>
-    private static void AppendGroupFrozenPaths(
-        StringBuilder sb, ComponentGroup group, IReadOnlyDictionary<string, string> rawOverrides)
+    private static void AppendGroupFrozenPaths(StringBuilder sb, ComponentGroup group)
     {
         foreach (var frozenPath in group.InternalPaths)
         {
             if (frozenPath?.Path?.Segments?.Count > 0)
-                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin, frozenPath.EndPin, rawOverrides);
+                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin, frozenPath.EndPin);
         }
 
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup nestedGroup)
-                AppendGroupFrozenPaths(sb, nestedGroup, rawOverrides);
+                AppendGroupFrozenPaths(sb, nestedGroup);
         }
     }
 
     /// <summary>
     /// Appends segment-by-segment Nazca export for a routed connection.
-    /// Uses absolute .put(x, y, angle) for EVERY segment to avoid coordinate accumulation errors
-    /// that occur with Nazca's chaining syntax (.put() without coordinates).
-    ///
-    /// Fix #355 (single straight): direct pin-to-pin geometry avoids NazcaOriginOffset mismatch.
-    /// Fix #366 (multi-segment): absolute positioning for each segment.
-    /// Fix #456 (last segment Y-offset): all segments now use the SAME delta offset derived from
-    /// startPin, ensuring a continuous waveguide path with no coordinate-system jump between segments.
-    /// Fix #458: straight segment length and angle are recomputed from transformed Nazca endpoints
-    /// instead of relying on editor-space stored values, eliminating misalignment for diagonal segments.
-    /// All segments use the same uniform offset — no per-segment distortion.
+    /// Uses absolute .put(x, y, angle) for EVERY segment to avoid coordinate accumulation
+    /// errors that occur with Nazca's chaining syntax (.put() without coordinates).
+    /// App→Nazca conversion of path geometry is the plain Y negation
+    /// (<see cref="NazcaCoordinateMapper.ToNazca"/>); pins live at the same conversion,
+    /// so no start-pin offset correction exists — cells are placed so their rendered
+    /// pins coincide with the app pins.
     /// </summary>
-    /// <param name="startPin">Start pin used to calculate the editor-to-Nazca offset for all segments.</param>
-    /// <param name="endPin">End pin used only for single-straight-segment paths (direct pin-to-pin geometry).</param>
+    /// <param name="sb">Target script builder.</param>
+    /// <param name="segments">Routed path segments in editor (app) coordinates.</param>
+    /// <param name="startPin">Start pin, used for single-straight pin-to-pin geometry.</param>
+    /// <param name="endPin">End pin, used for single-straight pin-to-pin geometry.</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
-        PhysicalPin? startPin = null, PhysicalPin? endPin = null,
-        IReadOnlyDictionary<string, string>? rawOverrides = null)
+        PhysicalPin? startPin = null, PhysicalPin? endPin = null)
     {
-        // Single straight segment: compute geometry directly from both pin positions.
+        // Single straight segment: compute geometry directly from both pin positions
+        // so the waveguide hits both pins exactly even if the stored segment drifts.
         if (segments.Count == 1 && segments[0] is StraightSegment && startPin != null && endPin != null)
         {
-            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin, rawOverrides));
+            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin));
             return;
         }
 
-        // Multi-segment: Transform all segment endpoints from editor space to Nazca space.
-        // The SAME offset is applied to every segment — no per-segment or end-pin correction.
-        // The routing path geometry must be preserved exactly; if the endpoint doesn't hit the
-        // pin, the issue is in the offset calculation or component placement, not the segments.
-        double offsetX = 0;
-        double offsetY = 0;
-        if (startPin != null && segments.Count > 0)
+        foreach (var segment in segments)
         {
-            var (editorPinX, editorPinY) = startPin.GetAbsolutePosition();
-            var (nazcaPinX, nazcaPinY) = GetNazcaPinPosition(startPin, rawOverrides);
-            offsetX = nazcaPinX - editorPinX;
-            offsetY = nazcaPinY - (-editorPinY);
-        }
+            var (nStartX, nStartY) = NazcaCoordinateMapper.ToNazca(segment.StartPoint.X, segment.StartPoint.Y);
+            var (nEndX, nEndY) = NazcaCoordinateMapper.ToNazca(segment.EndPoint.X, segment.EndPoint.Y);
 
-        for (int i = 0; i < segments.Count; i++)
-        {
-            double nStartX = segments[i].StartPoint.X + offsetX;
-            double nStartY = -segments[i].StartPoint.Y + offsetY;
-            double nEndX = segments[i].EndPoint.X + offsetX;
-            double nEndY = -segments[i].EndPoint.Y + offsetY;
-
-            sb.AppendLine(FormatSegmentAbsolute(segments[i], nStartX, nStartY, nEndX, nEndY));
+            sb.AppendLine(FormatSegmentAbsolute(segment, nStartX, nStartY, nEndX, nEndY));
         }
     }
 
@@ -644,16 +505,13 @@ public class SimpleNazcaExporter
     /// <summary>
     /// Formats a straight waveguide segment using absolute Nazca pin positions.
     /// Computes length and angle from start pin to end pin in Nazca coordinates,
-    /// ensuring the waveguide reaches the end pin exactly regardless of NazcaOriginOffset.
-    /// Fix for Issue #355: end pin misalignment when NazcaOriginOffsetY ≠ HeightMicrometers.
+    /// ensuring the waveguide reaches both pins exactly.
     /// </summary>
-    private static string FormatStraightSegmentFromPins(
-        PhysicalPin startPin, PhysicalPin endPin,
-        IReadOnlyDictionary<string, string>? rawOverrides)
+    private static string FormatStraightSegmentFromPins(PhysicalPin startPin, PhysicalPin endPin)
     {
         var ci = CultureInfo.InvariantCulture;
-        var (sx, sy) = GetNazcaPinPosition(startPin, rawOverrides);
-        var (ex, ey) = GetNazcaPinPosition(endPin, rawOverrides);
+        var (sx, sy) = NazcaCoordinateMapper.GetPinNazcaPosition(startPin);
+        var (ex, ey) = NazcaCoordinateMapper.GetPinNazcaPosition(endPin);
 
         double dx = ex - sx;
         double dy = ey - sy;
@@ -812,11 +670,10 @@ public class SimpleNazcaExporter
             return $"{name}.pin['{pin.Name}']";
 
         var ci = CultureInfo.InvariantCulture;
-        var (x, y) = pin.GetAbsoluteNazcaPosition();
-        var px = NormalizeZero(x).ToString("F2", ci);
-        var py = NormalizeZero(y).ToString("F2", ci);
-        // App space is Y-down, Nazca is Y-up: negate the world-space pin angle.
-        var pa = NormalizeZero(-pin.GetAbsoluteAngle()).ToString("F0", ci);
+        var (x, y) = NazcaCoordinateMapper.GetPinNazcaPosition(pin);
+        var px = x.ToString("F2", ci);
+        var py = y.ToString("F2", ci);
+        var pa = NazcaCoordinateMapper.GetPinNazcaAngle(pin).ToString("F0", ci);
         return $"({px}, {py}, {pa})";
     }
 
@@ -838,22 +695,6 @@ public class SimpleNazcaExporter
     }
 
     /// <summary>
-    /// Returns true if the function name looks like a real PDK function (e.g., "ebeam_y_1550").
-    /// Recognizes SiEPIC EBeam PDK naming patterns.
-    /// </summary>
-    internal static bool IsPdkFunction(string name) =>
-        name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("GC_", StringComparison.Ordinal) ||
-        name.StartsWith("ANT_", StringComparison.Ordinal) ||
-        name.StartsWith("crossing_", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("taper_", StringComparison.OrdinalIgnoreCase) ||
-        // SiEPIC ships a few generic-named PCells too (the `contra_*` family
-        // is the directional-coupler set under the EBeam library).
-        name.StartsWith("contra_", StringComparison.OrdinalIgnoreCase) ||
-        (name.Contains(".", StringComparison.Ordinal) &&
-         !name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase));
-
-    /// <summary>
     /// Maps a component to its Nazca function call string.
     /// Uses the stored NazcaFunctionName when it's a real PDK function,
     /// falls back to heuristic demofab mapping otherwise.
@@ -862,7 +703,7 @@ public class SimpleNazcaExporter
     {
         // Use stored PDK function name if available and looks like a real function
         var funcName = comp.NazcaFunctionName;
-        if (!string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName))
+        if (!string.IsNullOrEmpty(funcName) && NazcaCoordinateMapper.IsPdkFunction(funcName))
         {
             // Keep dots (for module attribute access like demo.mmi2x2_dp), replace other invalid chars
             var pythonFuncName = System.Text.RegularExpressions.Regex.Replace(funcName, @"[^a-zA-Z0-9_.]", "_");
@@ -883,7 +724,7 @@ public class SimpleNazcaExporter
 
             // Skip parameters for stub components - stubs don't support them
             var funcParams = comp.NazcaFunctionParameters;
-            bool isParametricStraight = IsParametricStraight(funcName, funcParams);
+            bool isParametricStraight = NazcaCoordinateMapper.IsParametricStraight(funcName, funcParams);
 
             if (isParametricStraight && !string.IsNullOrEmpty(funcParams))
                 return $"{pythonFuncName}({funcParams})";

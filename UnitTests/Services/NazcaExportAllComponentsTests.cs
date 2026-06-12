@@ -1,6 +1,7 @@
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
+using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
 using Xunit;
@@ -275,13 +276,16 @@ public class NazcaExportAllComponentsTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // 180° rotation: rotated offset = (-originX, -originY).
-        // Physical + rotated offset, Y-flipped:
+        // Rotated placement comes from the bbox re-anchoring formula in
+        // NazcaCoordinateMapper (hand-verified per rotation in its unit tests, #565);
+        // the old rotated-origin-offset expectation WAS the rotation misalignment bug.
+        // Here we pin down that the exporter routes through the mapper and emits the
+        // org-anchored put with the negated rotation.
         var ci = System.Globalization.CultureInfo.InvariantCulture;
-        var nx = (100 - template.NazcaOriginOffsetX).ToString("F2", ci);
-        var ny = -(100 - template.NazcaOriginOffsetY);
+        var placement = NazcaCoordinateMapper.GetCellPlacement(component, null);
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain($".put('org', {nx}, {ny.ToString("F2", ci)}, -180)");
+        result.ShouldContain(
+            $".put('org', {placement.X.ToString("F2", ci)}, {placement.Y.ToString("F2", ci)}, -180)");
     }
 
     private static string? FindPdkFile(string fileName)

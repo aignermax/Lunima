@@ -153,8 +153,9 @@ public class NazcaExportEndToEndTests
         // Assert: Check dimensions in stub comment
         nazcaCode.ShouldContain("(120x50 µm)");
 
-        // Check polygon dimensions in stub: with no offset, box is at origin
-        nazcaCode.ShouldContain("nd.Polygon(points=[(0,0),(120.00,0),(120.00,50.00),(0,50.00)], layer=1)");
+        // Check polygon dimensions in stub: bbox [0,-H] .. [W,0] around the org pin
+        // (NazcaCoordinateMapper contract for calibration (0,0), #565).
+        nazcaCode.ShouldContain("nd.Polygon(points=[(0.00,-50.00),(120.00,-50.00),(120.00,0.00),(0.00,0.00)], layer=1)");
     }
 
     [Fact]
@@ -196,19 +197,20 @@ public class NazcaExportEndToEndTests
 
         parsed.PinDefinitions.Count.ShouldBeGreaterThanOrEqualTo(2);
 
-        // Find a0 pin: With NazcaOriginOffset=(0,0) and demo_pdk prefix, pin coordinates are:
-        // Pin at editor offset (0, 12.5) → Nazca stub coordinates: (0-0, (50-12.5)-0) = (0, 37.5)
+        // Stub pins render at the plain Y negation of the app pin offsets relative
+        // to org (NazcaCoordinateMapper contract, #565): with calibration (0,0)
+        // pin a0 at editor offset (0, 12.5) sits at local (0, -12.5).
         var a0Pin = parsed.PinDefinitions.FirstOrDefault(p => p.Name == "a0");
         a0Pin.ShouldNotBeNull();
         a0Pin.X.ShouldBe(0.00, tolerance: 0.01);
-        a0Pin.Y.ShouldBe(37.50, tolerance: 0.01);
+        a0Pin.Y.ShouldBe(-12.50, tolerance: 0.01);
         a0Pin.AngleDegrees.ShouldBe(-180, tolerance: 0.1);
 
         // Find b0 pin
         var b0Pin = parsed.PinDefinitions.FirstOrDefault(p => p.Name == "b0");
         b0Pin.ShouldNotBeNull();
         b0Pin.X.ShouldBe(120.00, tolerance: 0.01);
-        b0Pin.Y.ShouldBe(37.50, tolerance: 0.01);
+        b0Pin.Y.ShouldBe(-12.50, tolerance: 0.01);
         b0Pin.AngleDegrees.ShouldBe(0, tolerance: 0.1);
     }
 

@@ -1,5 +1,6 @@
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Export;
 
 namespace CAP_Core.CodeExporter;
 
@@ -189,45 +190,15 @@ public class ExportValidator
     }
 
     /// <summary>
-    /// Calculates the expected Nazca position for a component.
-    /// Uses NazcaOriginOffset when explicitly set (non-zero) or for known PDK function names.
-    /// Mirrors the logic in SimpleNazcaExporter.CalculateOriginOffset (Issue #355 fix).
+    /// Calculates the expected Nazca position for a component via
+    /// <see cref="NazcaCoordinateMapper"/> — the same single source of truth the
+    /// exporter uses, so the validator can never drift from the export math.
     /// </summary>
-    private (double X, double Y) CalculateExpectedNazcaPosition(Component comp)
+    private static (double X, double Y) CalculateExpectedNazcaPosition(Component comp)
     {
-        var funcName = comp.NazcaFunctionName;
-
-        bool hasPdkFunctionName = !string.IsNullOrEmpty(funcName) && IsPdkFunction(funcName);
-        bool hasExplicitOriginOffset = comp.NazcaOriginOffsetX != 0 || comp.NazcaOriginOffsetY != 0;
-
-        double originOffsetX = 0;
-        double originOffsetY = 0;
-
-        if (hasPdkFunctionName || hasExplicitOriginOffset)
-        {
-            double rotRad = comp.RotationDegrees * Math.PI / 180.0;
-            originOffsetX = comp.NazcaOriginOffsetX * Math.Cos(rotRad) - comp.NazcaOriginOffsetY * Math.Sin(rotRad);
-            originOffsetY = comp.NazcaOriginOffsetX * Math.Sin(rotRad) + comp.NazcaOriginOffsetY * Math.Cos(rotRad);
-        }
-        else
-        {
-            originOffsetY = comp.HeightMicrometers;
-        }
-
-        var nazcaX = comp.PhysicalX + originOffsetX;
-        var nazcaY = -(comp.PhysicalY + originOffsetY);
-
-        return (nazcaX, nazcaY);
+        var placement = NazcaCoordinateMapper.GetCellPlacement(comp, rawOverrideAnchor: null);
+        return (placement.X, placement.Y);
     }
-
-    /// <summary>
-    /// Checks if a function name looks like a real PDK function.
-    /// </summary>
-    private static bool IsPdkFunction(string name) =>
-        name.StartsWith("ebeam_", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("demo_pdk.", StringComparison.OrdinalIgnoreCase) ||
-        (name.Contains(".", StringComparison.Ordinal) &&
-         !name.StartsWith("demo.", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Normalizes an angle to 0-360 range.
