@@ -887,6 +887,7 @@ public partial class FileOperationsViewModel : ObservableObject
         if (StoredNazcaOverrides.Count == 0)
             return;
 
+        var pinChangedComponents = new List<Component>();
         foreach (var component in components)
         {
             if (StoredNazcaOverrides.TryGetValue(component.Identifier, out var nazcaOverride))
@@ -908,8 +909,22 @@ public partial class FileOperationsViewModel : ObservableObject
                 // Restore the persisted override pins so in-app connections and export use
                 // the correct port layout after project load.
                 if (nazcaOverride.OverridePins?.Count > 0)
+                {
                     OverridePinMapper.ApplyPinsToComponent(component, nazcaOverride.OverridePins);
+                    pinChangedComponents.Add(component);
+                }
             }
+        }
+
+        // Connections (and the canvas pin view-models) were created against the
+        // template pins BEFORE the override replaced them, so they hold stale pin
+        // objects — the GDS export would then reference pins the override cell does
+        // not define. Re-anchor them onto the same-named new pins, drop the rest.
+        foreach (var component in pinChangedComponents)
+        {
+            var warnings = _canvas.OnComponentPinsChanged(component);
+            foreach (var warning in warnings)
+                _errorConsole?.LogWarning(warning);
         }
     }
 
