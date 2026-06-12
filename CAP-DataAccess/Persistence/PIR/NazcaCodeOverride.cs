@@ -52,7 +52,8 @@ public class NazcaCodeOverride
     /// the geometry preview / size recompute is driven by executing this code rather
     /// than by calling the PDK template's <see cref="FunctionName"/>.
     /// Null means no raw-code override is active (parameter-only or PDK template).
-    /// Optical pins and the S-matrix are unaffected — this is geometry-only.
+    /// When applied, the override's ports replace the template pins
+    /// (see <see cref="OverridePins"/> and <see cref="HasNoSimulationModel"/>).
     /// </summary>
     public string? RawCode { get; set; }
 
@@ -67,4 +68,30 @@ public class NazcaCodeOverride
     /// Null when no raw-code override has recomputed the size.
     /// </summary>
     public double? OverrideHeightMicrometers { get; set; }
+
+    /// <summary>
+    /// Physical pins derived from the override's rendered geometry (issue #561).
+    /// When non-null and non-empty, the component's <c>PhysicalPins</c> list is replaced
+    /// with these values on Apply and on project load.
+    /// Null means no pin override is active (template pins remain).
+    /// </summary>
+    public List<OverridePinData>? OverridePins { get; set; }
+
+    /// <summary>
+    /// Snapshot of the PDK-template physical pins captured on the first Apply,
+    /// before the override pins replaced them. Used by "Reset to template" to
+    /// restore the original port layout without a PDK re-query.
+    /// Null when no Apply has been performed yet.
+    /// </summary>
+    public List<OverridePinData>? TemplatePins { get; set; }
+
+    /// <summary>
+    /// True when the override's pin layout differs from the PDK template's, meaning
+    /// the template S-matrix no longer maps to the new ports.
+    /// When true the component has no valid simulation model — the S-matrix shown
+    /// is the old template's and must not be trusted.
+    /// The user should supply a matching S-matrix via the per-instance import (#541)
+    /// or accept geometry/export-only mode.
+    /// </summary>
+    public bool HasNoSimulationModel { get; set; }
 }

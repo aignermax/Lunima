@@ -897,13 +897,40 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Issue #556: a raw-code override recomputes the component's size.
                 // Restore the persisted bbox-derived dimensions so the canvas thumbnail
-                // and layout reflect the edited geometry on load. Pins/S-matrix are
-                // unchanged (geometry-only override).
+                // and layout reflect the edited geometry on load.
                 if (nazcaOverride.OverrideWidthMicrometers is { } w)
                     component.WidthMicrometers = w;
                 if (nazcaOverride.OverrideHeightMicrometers is { } h)
                     component.HeightMicrometers = h;
+
+                // Issue #561: a raw-code override may also redefine the component's ports.
+                // Restore the persisted override pins so in-app connections and export use
+                // the correct port layout after project load.
+                if (nazcaOverride.OverridePins?.Count > 0)
+                    RestorePinsFromOverride(component, nazcaOverride.OverridePins);
             }
+        }
+    }
+
+    /// <summary>
+    /// Replaces a component's physical pin list with the persisted override pins (issue #561).
+    /// Called on project load when a stored <see cref="NazcaCodeOverride.OverridePins"/> record
+    /// is present so the canvas and export see the correct port layout immediately.
+    /// </summary>
+    private static void RestorePinsFromOverride(
+        Component component, IReadOnlyList<CAP_DataAccess.Persistence.PIR.OverridePinData> overridePins)
+    {
+        component.PhysicalPins.Clear();
+        foreach (var pd in overridePins)
+        {
+            component.PhysicalPins.Add(new PhysicalPin
+            {
+                Name = pd.Name,
+                OffsetXMicrometers = pd.OffsetXMicrometers,
+                OffsetYMicrometers = pd.OffsetYMicrometers,
+                AngleDegrees = pd.AngleDegrees,
+                ParentComponent = component,
+            });
         }
     }
 

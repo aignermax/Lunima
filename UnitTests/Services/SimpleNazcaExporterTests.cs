@@ -546,7 +546,7 @@ public class SimpleNazcaExporterTests
     }
 
     [Fact]
-    public void Export_ConnectionTouchingOverriddenInstance_IsSkippedWithNote()
+    public void Export_ConnectionTouchingOverriddenInstance_IsExportedViaPinReference()
     {
         // Arrange: two waveguides connected; override one of them.
         var canvas = new DesignCanvasViewModel();
@@ -575,9 +575,42 @@ public class SimpleNazcaExporterTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas, overrides: overrides);
 
-        // Assert: connection skipped with the documented NOTE comment.
-        result.ShouldContain($"# NOTE: connection to overridden instance {compB.Identifier} skipped");
-        result.ShouldContain("issue #559 follow-up");
+        // Assert (issue #561): connection is NO LONGER skipped — it is exported via
+        // Nazca pin-reference syntax (ic.sbend_p2p) so Nazca resolves coordinates.
+        result.ShouldNotContain("# NOTE: connection to overridden instance");
+        result.ShouldNotContain("skipped");
+        result.ShouldContain("sbend_p2p");
+        result.ShouldContain(".pin['b0']");
+        result.ShouldContain(".pin['a0']");
+    }
+
+    [Fact]
+    public void Export_ConnectionBetweenTwoNonOverriddenComponents_StillUsesSegmentOrFallback()
+    {
+        // Non-overridden connections should not be affected by the fix.
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG A";
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG B";
+        compB.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        // No overrides
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Assert: connection exported normally (no NOTE comment, some connection output)
+        result.ShouldNotContain("# NOTE:");
+        result.ShouldContain("# Waveguide Connections");
     }
 
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)

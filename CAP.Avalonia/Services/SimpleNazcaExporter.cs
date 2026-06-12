@@ -431,10 +431,15 @@ public class SimpleNazcaExporter
             if (conn.StartPin?.ParentComponent?.IsAnalysisTool == true) continue;
             if (conn.EndPin?.ParentComponent?.IsAnalysisTool == true) continue;
 
-            // v1 (issue #559): an overridden instance's RawCode cell may expose pins
-            // that differ from the PDK template, so we cannot reliably wire to it yet.
-            // Skip + warn; wiring overridden instances is a documented follow-up.
-            if (TrySkipOverriddenConnection(sb, conn, rawOverrides)) continue;
+            // Issue #561: connections to raw-code–overridden instances are now exported.
+            // The override cell is placed with a default anchor (first pin), so we use
+            // Nazca's pin-reference syntax (comp_N.pin['name']) rather than absolute
+            // coordinates — Nazca resolves the world position from the cell definition.
+            if (IsOverriddenConnection(conn, rawOverrides))
+            {
+                AppendFallbackExport(sb, conn, componentNames);
+                continue;
+            }
 
             var segments = conn.GetPathSegments();
 
@@ -455,11 +460,12 @@ public class SimpleNazcaExporter
     }
 
     /// <summary>
-    /// If either endpoint of the connection belongs to an overridden instance, emits a
-    /// NOTE comment explaining the skip and returns true (issue #559 v1). Otherwise false.
+    /// Returns true when either endpoint of <paramref name="conn"/> belongs to a
+    /// raw-code–overridden instance (issue #561). Used to route such connections via
+    /// the Nazca pin-reference fallback rather than absolute-coordinate segment export.
     /// </summary>
-    private static bool TrySkipOverriddenConnection(
-        StringBuilder sb, WaveguideConnection conn, IReadOnlyDictionary<string, string> rawOverrides)
+    private static bool IsOverriddenConnection(
+        WaveguideConnection conn, IReadOnlyDictionary<string, string> rawOverrides)
     {
         if (rawOverrides.Count == 0)
             return false;
@@ -467,19 +473,8 @@ public class SimpleNazcaExporter
         var startId = conn.StartPin?.ParentComponent?.Identifier;
         var endId = conn.EndPin?.ParentComponent?.Identifier;
 
-        string? overriddenId = null;
-        if (startId != null && rawOverrides.ContainsKey(startId))
-            overriddenId = startId;
-        else if (endId != null && rawOverrides.ContainsKey(endId))
-            overriddenId = endId;
-
-        if (overriddenId == null)
-            return false;
-
-        sb.AppendLine(
-            $"        # NOTE: connection to overridden instance {overriddenId} skipped — " +
-            "its pins may differ from the template (see issue #559 follow-up).");
-        return true;
+        return (startId != null && rawOverrides.ContainsKey(startId)) ||
+               (endId != null && rawOverrides.ContainsKey(endId));
     }
 
     /// <summary>
