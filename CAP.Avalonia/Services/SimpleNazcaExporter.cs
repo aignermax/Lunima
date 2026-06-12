@@ -349,7 +349,7 @@ public class SimpleNazcaExporter
         // Pin coordinate diagnostics: show expected Nazca pin positions for alignment verification.
         foreach (var pin in comp.PhysicalPins)
         {
-            var (pinNazcaX, pinNazcaY) = pin.GetAbsoluteNazcaPosition();
+            var (pinNazcaX, pinNazcaY) = GetNazcaPinPosition(pin, rawOverrides);
             sb.AppendLine($"        # PIN: {pin.Name} expected_nazca=({pinNazcaX.ToString("F2", ci)},{pinNazcaY.ToString("F2", ci)})");
         }
 
@@ -410,6 +410,26 @@ public class SimpleNazcaExporter
         double rotRad = rotationDegrees * Math.PI / 180.0;
         return (offsetX * Math.Cos(rotRad) - offsetY * Math.Sin(rotRad),
                 offsetX * Math.Sin(rotRad) + offsetY * Math.Cos(rotRad));
+    }
+
+    /// <summary>
+    /// World-space Nazca position of a connection endpoint pin. Pins of raw-code–
+    /// overridden components are bbox-anchored, so their app-space position converts
+    /// 1:1 (plain Y negation). Regular PDK pins go through the calibrated
+    /// NazcaOriginOffset math in <see cref="PhysicalPin.GetAbsoluteNazcaPosition"/> —
+    /// which, applied to an override pin, would shift the waveguide by the stale
+    /// template offset (manual finding: 109.505 µm in KLayout, issue #561).
+    /// </summary>
+    private static (double X, double Y) GetNazcaPinPosition(
+        PhysicalPin pin, IReadOnlyDictionary<string, string>? rawOverrides)
+    {
+        var identifier = pin.ParentComponent?.Identifier;
+        if (identifier != null && rawOverrides != null && rawOverrides.ContainsKey(identifier))
+        {
+            var (x, y) = pin.GetAbsolutePosition();
+            return (x, -y);
+        }
+        return pin.GetAbsoluteNazcaPosition();
     }
 
     /// <summary>
@@ -479,7 +499,7 @@ public class SimpleNazcaExporter
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin);
+                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, rawOverrides);
             else
                 AppendFallbackExport(sb, conn, componentNames, rawOverrides);
         }
@@ -488,7 +508,7 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             if (compVm.Component is ComponentGroup group)
-                AppendGroupFrozenPaths(sb, group);
+                AppendGroupFrozenPaths(sb, group, rawOverrides);
         }
 
         sb.AppendLine();
@@ -497,18 +517,19 @@ public class SimpleNazcaExporter
     /// <summary>
     /// Exports all frozen waveguide paths from a ComponentGroup (and nested groups) as Nazca segments.
     /// </summary>
-    private static void AppendGroupFrozenPaths(StringBuilder sb, ComponentGroup group)
+    private static void AppendGroupFrozenPaths(
+        StringBuilder sb, ComponentGroup group, IReadOnlyDictionary<string, string> rawOverrides)
     {
         foreach (var frozenPath in group.InternalPaths)
         {
             if (frozenPath?.Path?.Segments?.Count > 0)
-                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin, frozenPath.EndPin);
+                AppendSegmentExport(sb, frozenPath.Path.Segments, frozenPath.StartPin, frozenPath.EndPin, rawOverrides);
         }
 
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup nestedGroup)
-                AppendGroupFrozenPaths(sb, nestedGroup);
+                AppendGroupFrozenPaths(sb, nestedGroup, rawOverrides);
         }
     }
 
@@ -529,12 +550,13 @@ public class SimpleNazcaExporter
     /// <param name="endPin">End pin used only for single-straight-segment paths (direct pin-to-pin geometry).</param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
-        PhysicalPin? startPin = null, PhysicalPin? endPin = null)
+        PhysicalPin? startPin = null, PhysicalPin? endPin = null,
+        IReadOnlyDictionary<string, string>? rawOverrides = null)
     {
         // Single straight segment: compute geometry directly from both pin positions.
         if (segments.Count == 1 && segments[0] is StraightSegment && startPin != null && endPin != null)
         {
-            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin));
+            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin, rawOverrides));
             return;
         }
 
@@ -547,7 +569,7 @@ public class SimpleNazcaExporter
         if (startPin != null && segments.Count > 0)
         {
             var (editorPinX, editorPinY) = startPin.GetAbsolutePosition();
-            var (nazcaPinX, nazcaPinY) = startPin.GetAbsoluteNazcaPosition();
+            var (nazcaPinX, nazcaPinY) = GetNazcaPinPosition(startPin, rawOverrides);
             offsetX = nazcaPinX - editorPinX;
             offsetY = nazcaPinY - (-editorPinY);
         }
@@ -625,11 +647,13 @@ public class SimpleNazcaExporter
     /// ensuring the waveguide reaches the end pin exactly regardless of NazcaOriginOffset.
     /// Fix for Issue #355: end pin misalignment when NazcaOriginOffsetY ≠ HeightMicrometers.
     /// </summary>
-    private static string FormatStraightSegmentFromPins(PhysicalPin startPin, PhysicalPin endPin)
+    private static string FormatStraightSegmentFromPins(
+        PhysicalPin startPin, PhysicalPin endPin,
+        IReadOnlyDictionary<string, string>? rawOverrides)
     {
         var ci = CultureInfo.InvariantCulture;
-        var (sx, sy) = startPin.GetAbsoluteNazcaPosition();
-        var (ex, ey) = endPin.GetAbsoluteNazcaPosition();
+        var (sx, sy) = GetNazcaPinPosition(startPin, rawOverrides);
+        var (ex, ey) = GetNazcaPinPosition(endPin, rawOverrides);
 
         double dx = ex - sx;
         double dy = ey - sy;

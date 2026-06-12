@@ -693,9 +693,91 @@ public class SimpleNazcaExporterTests
         var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
 
         // The UI-routed geometry must be exported 1:1 — no free-form p2p interconnect
-        // with Nazca's own (much larger) default bend radii.
+        // with Nazca's own (much larger) default bend radii. (Exact endpoint maths is
+        // covered by the two coordinate tests below; this fixture's plain component is
+        // uncalibrated, so its legacy pin position is not meaningful to assert on.)
         result.ShouldNotContain("sbend_p2p");
-        result.ShouldContain("nd.strt(length=100.00)");
+        result.ShouldContain("nd.strt(length=");
+    }
+
+    [Fact]
+    public void Export_SegmentStartingAtOverriddenPin_UsesPlainNazcaConversion()
+    {
+        // A bbox-anchored override cell puts its pins exactly at the plain app→Nazca
+        // conversion (x, −y). The legacy GetAbsoluteNazcaPosition calibration math is
+        // only valid for PDK cells — applied to an override pin it shifts the whole
+        // waveguide in Y (manual finding: 109.505 µm offset in KLayout).
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);   // overridden, at (200, 0)
+        compA.Identifier = "WG Override";
+        compA.PhysicalX = 200;
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG Plain";
+        compB.PhysicalX = 400;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        // Connection STARTS at the overridden component's 'b0' (app world (300, 5)).
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        var singleStraight = new RoutedPath();
+        singleStraight.Segments.Add(new StraightSegment(300, 5, 400, 5, 0));
+        conn.RestoreCachedPath(singleStraight);
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var record = new NazcaCodeOverride { RawCode = OverrideRawCode };
+        record.SetOverrideGeometry(width: 100, height: 10, bboxXMin: 0, bboxYMax: 10);
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compA.Identifier] = record
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // App pin (300, 5) → Nazca (300, −5). The legacy math would emit +5.00 here.
+        result.ShouldContain(".put(300.00, -5.00");
+    }
+
+    [Fact]
+    public void Export_MultiSegmentFromOverriddenPin_AppliesNoLegacyOffset()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG Override Multi";
+        compA.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG Plain Multi";
+        compB.PhysicalX = 500;
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(300, 5, 400, 5, 0));
+        path.Segments.Add(new StraightSegment(400, 5, 500, 5, 0));
+        conn.RestoreCachedPath(path);
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var record = new NazcaCodeOverride { RawCode = OverrideRawCode };
+        record.SetOverrideGeometry(width: 100, height: 10, bboxXMin: 0, bboxYMax: 10);
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compA.Identifier] = record
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // First segment must start at the plain conversion of the app start point
+        // (300, 5) → (300, −5); a legacy start-pin offset would shift every segment.
+        result.ShouldContain("300.00, -5.00");
+        result.ShouldNotContain("300.00, 5.00");
     }
 
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)
