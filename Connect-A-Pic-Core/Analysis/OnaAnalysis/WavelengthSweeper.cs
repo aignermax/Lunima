@@ -60,7 +60,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
                 var usedInputs = _portManager.GetUsedExternalInputs(); // No wavelength filter for ONA
                 var inputVector = UsedInputConverter.ToVectorOfFields(usedInputs, systemMatrix);
 
-                int stepCount = systemMatrix.PinReference.Count * 2;
+                int stepCount = SMatrix.DefaultMaxIterations;
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var fields = await systemMatrix.CalcFieldAtPinsAfterStepsAsync(inputVector, stepCount, cts)
                     ?? new Dictionary<Guid, Complex>();
