@@ -64,11 +64,19 @@ public static class OverridePinMapper
 
     /// <summary>
     /// Replaces the component's physical pin list with pins derived from
-    /// <paramref name="pinData"/>. <c>LogicalPin</c> links are not restored
-    /// (override pins have no S-matrix tie-in).
+    /// <paramref name="pinData"/>. The <see cref="PhysicalPin.LogicalPin"/> link
+    /// (S-matrix tie-in) is carried over by pin name from the pins being replaced,
+    /// so same-named overrides keep simulating against the template S-matrix.
+    /// Pins whose name has no predecessor get <c>LogicalPin = null</c> — the
+    /// component then has no simulation model for that port (issue #561).
     /// </summary>
     public static void ApplyPinsToComponent(Component comp, IReadOnlyList<OverridePinData> pinData)
     {
+        var logicalByName = comp.PhysicalPins
+            .Where(p => p.LogicalPin != null)
+            .GroupBy(p => p.Name)
+            .ToDictionary(g => g.Key, g => g.First().LogicalPin);
+
         comp.PhysicalPins.Clear();
         foreach (var pd in pinData)
         {
@@ -79,6 +87,7 @@ public static class OverridePinMapper
                 OffsetYMicrometers = pd.OffsetYMicrometers,
                 AngleDegrees = pd.AngleDegrees,
                 ParentComponent = comp,
+                LogicalPin = logicalByName.GetValueOrDefault(pd.Name),
             });
         }
     }

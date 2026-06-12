@@ -453,13 +453,11 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
                 _storedOverrides.Remove(_componentKey);
         }
 
-        // Restore template pins to the live component when available.
         if (_liveComponent != null && templatePinsToRestore?.Count > 0)
         {
             OverridePinMapper.ApplyPinsToComponent(_liveComponent, templatePinsToRestore);
             _onPinsChanged?.Invoke(_liveComponent.PhysicalPins);
         }
-
         _lastSuccessfulPreview = null;
         OnPropertyChanged(nameof(PreviewData));
         PreviewBitmap = null;
@@ -468,13 +466,16 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         HasOverlap = false;
         HasOverride = false;
         HasNoSimulationModel = false;
-
-        // Restore the original source + initial preview rather than a stub template.
         await LoadOriginalSourceAsync();
         _originalSourceCode = Code;
-        StatusText = templatePinsToRestore?.Count > 0
-            ? "Reset to original source — template pins restored. Run a preview before applying."
-            : "Reset to original source. Run a preview before applying.";
+        bool hasPins = templatePinsToRestore?.Count > 0;
+        bool linkLost = hasPins && _liveComponent != null
+            && _liveComponent.PhysicalPins.Any(p => p.LogicalPin == null);
+        StatusText = !hasPins
+            ? "Reset to original source. Run a preview before applying."
+            : linkLost
+                ? "Reset to original source — template pins restored. Reload the project to restore the simulation link."
+                : "Reset to original source — template pins restored. Run a preview before applying.";
         _onChanged?.Invoke();
     }
 

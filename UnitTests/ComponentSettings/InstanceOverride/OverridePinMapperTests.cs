@@ -1,8 +1,10 @@
 using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
+using CAP_Core.Components.Core;
 using CAP_Core.Export;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using Xunit;
+using static UnitTests.TestComponentFactory;
 
 namespace UnitTests.ComponentSettings.InstanceOverride;
 
@@ -88,4 +90,58 @@ public class OverridePinMapperTests
     public void PinNamesMatch_BothEmpty_ReturnsTrue()
         => OverridePinMapper.PinNamesMatch(
             Array.Empty<OverridePinData>(), Array.Empty<OverridePinData>()).ShouldBeTrue();
+
+    // ─── ApplyPinsToComponent: LogicalPin carry-over ──────────────────────────
+
+    [Fact]
+    public void ApplyPinsToComponent_SamePinName_CarriesLogicalPinOver()
+    {
+        var comp = CreateStraightWaveGuideWithPhysicalPins();   // pins "in"/"out" mit LogicalPins
+        var logicalIn = comp.PhysicalPins.First(p => p.Name == "in").LogicalPin;
+        logicalIn.ShouldNotBeNull();
+
+        var pinData = new List<OverridePinData>
+        {
+            new() { Name = "in",  OffsetXMicrometers = 0,  OffsetYMicrometers = 5, AngleDegrees = 180 },
+            new() { Name = "out", OffsetXMicrometers = 20, OffsetYMicrometers = 5, AngleDegrees = 0 },
+        };
+
+        OverridePinMapper.ApplyPinsToComponent(comp, pinData);
+
+        comp.PhysicalPins.First(p => p.Name == "in").LogicalPin.ShouldBeSameAs(logicalIn);
+    }
+
+    [Fact]
+    public void ApplyPinsToComponent_NewPinName_LeavesLogicalPinNull()
+    {
+        var comp = CreateStraightWaveGuideWithPhysicalPins();   // pins "in"/"out"
+
+        var pinData = new List<OverridePinData>
+        {
+            new() { Name = "a0", OffsetXMicrometers = 0, OffsetYMicrometers = 5, AngleDegrees = 180 },
+        };
+
+        OverridePinMapper.ApplyPinsToComponent(comp, pinData);
+
+        comp.PhysicalPins.Single().LogicalPin.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ApplyPinsToComponent_RepeatedApply_KeepsCarryingLogicalPin()
+    {
+        // Zweimal anwenden (typisch: Preview → Apply → Code ändern → Apply):
+        // der LogicalPin muss über beide Applies hinweg erhalten bleiben.
+        var comp = CreateStraightWaveGuideWithPhysicalPins();
+        var logicalIn = comp.PhysicalPins.First(p => p.Name == "in").LogicalPin;
+        var pinData = new List<OverridePinData>
+        {
+            new() { Name = "in",  OffsetXMicrometers = 1, OffsetYMicrometers = 5, AngleDegrees = 180 },
+            new() { Name = "out", OffsetXMicrometers = 19, OffsetYMicrometers = 5, AngleDegrees = 0 },
+        };
+
+        OverridePinMapper.ApplyPinsToComponent(comp, pinData);
+        OverridePinMapper.ApplyPinsToComponent(comp, pinData);
+
+        comp.PhysicalPins.First(p => p.Name == "in").LogicalPin.ShouldBeSameAs(logicalIn);
+    }
 }
