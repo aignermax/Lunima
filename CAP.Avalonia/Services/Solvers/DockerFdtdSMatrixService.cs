@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using CAP_Core.Solvers.Fdtd;
 
@@ -20,6 +21,13 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
 
     private const string ContainerDataDir = "/data";
     private const string ContainerScript = "/work/fdtd_sparams.py";
+
+    /// <summary>Label stamped on every solver container so orphans can be reaped.</summary>
+    private const string ContainerLabel = "lunima.fdtd=1";
+
+    /// <summary>Names of containers currently running, killed on process exit.</summary>
+    private static readonly ConcurrentDictionary<string, byte> ActiveContainers = new();
+    private static int _exitHookInstalled;
 
     /// <summary>Shared-memory budget per MPI rank in MB (UCX inter-rank buffers).</summary>
     private const int ShmMbPerRank = 256;
@@ -61,6 +69,9 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         if (!hasGds && request.Polygons.Count == 0)
             return FdtdSMatrixResult.Fail("No geometry supplied: provide either a GDS file or polygons.");
 
+        InstallExitHook();
+        await ReapOrphanContainersAsync(); // clean up leftovers from a hard-killed session
+
         var provision = await EnsureImageAsync(ct);
         if (provision != null)
             return provision;
@@ -72,15 +83,24 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
             : (CreateTempDir(), true);
         var specPath = Path.Combine(workingDir, "_fdtd_request.json");
         var containerGds = hasGds ? $"{ContainerDataDir}/{Path.GetFileName(request.GdsPath)}" : string.Empty;
+        var containerName = "lunima-fdtd-" + Guid.NewGuid().ToString("N");
 
         try
         {
             await File.WriteAllTextAsync(specPath, FdtdJsonContract.SerialiseRequest(request, containerGds), ct);
+            ActiveContainers[containerName] = 0;
 
             var cores = ResolveCores(request);
             var si = new ProcessStartInfo { FileName = _dockerExe };
             si.ArgumentList.Add("run");
             si.ArgumentList.Add("--rm");
+            // Named + labelled so we can stop it on cancel/exit and reap orphans
+            // (a bare `docker run` leaves the container running in the daemon when
+            // the client process — or the whole app — is killed).
+            si.ArgumentList.Add("--name");
+            si.ArgumentList.Add(containerName);
+            si.ArgumentList.Add("--label");
+            si.ArgumentList.Add(ContainerLabel);
             // MPICH/UCX uses shared memory (/dev/shm) for inter-rank transport.
             // Docker's default /dev/shm is only 64 MB, which makes MPI_Init fail
             // ("Not enough memory ... /dev/shm") once several ranks start. Scale it
@@ -103,10 +123,63 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         }
         finally
         {
+            // Ensure the container is gone even on cancel/timeout (killing the docker
+            // client does not stop the daemon-managed container; --rm only fires on
+            // a clean exit). rm -f is a no-op if it already exited.
+            await ForceRemoveContainerAsync(containerName);
+            ActiveContainers.TryRemove(containerName, out _);
             try { if (File.Exists(specPath)) File.Delete(specPath); } catch { /* best-effort */ }
             if (isTempDir)
                 try { Directory.Delete(workingDir, recursive: true); } catch { /* best-effort */ }
         }
+    }
+
+    private async Task ForceRemoveContainerAsync(string name)
+    {
+        var si = new ProcessStartInfo { FileName = _dockerExe };
+        si.ArgumentList.Add("rm");
+        si.ArgumentList.Add("-f");
+        si.ArgumentList.Add(name);
+        try { await SubprocessJsonRunner.RunAsync(si, string.Empty, TimeSpan.FromSeconds(20), CancellationToken.None); }
+        catch { /* best-effort */ }
+    }
+
+    /// <summary>Removes any solver containers left over from a previous (crashed) session.</summary>
+    private async Task ReapOrphanContainersAsync()
+    {
+        var list = new ProcessStartInfo { FileName = _dockerExe };
+        list.ArgumentList.Add("ps");
+        list.ArgumentList.Add("-aq");
+        list.ArgumentList.Add("--filter");
+        list.ArgumentList.Add($"label={ContainerLabel}");
+        SubprocessJsonRunner.RunResult res;
+        try { res = await SubprocessJsonRunner.RunAsync(list, string.Empty, TimeSpan.FromSeconds(20), CancellationToken.None); }
+        catch { return; }
+
+        if (res.Outcome != SubprocessJsonRunner.Outcome.Completed) return;
+        foreach (var id in res.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            await ForceRemoveContainerAsync(id);
+    }
+
+    private void InstallExitHook()
+    {
+        if (Interlocked.Exchange(ref _exitHookInstalled, 1) == 1) return;
+        var dockerExe = _dockerExe;
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            foreach (var name in ActiveContainers.Keys)
+            {
+                try
+                {
+                    var si = new ProcessStartInfo { FileName = dockerExe, UseShellExecute = false, CreateNoWindow = true };
+                    si.ArgumentList.Add("rm");
+                    si.ArgumentList.Add("-f");
+                    si.ArgumentList.Add(name);
+                    Process.Start(si)?.WaitForExit(5000);
+                }
+                catch { /* best-effort on shutdown */ }
+            }
+        };
     }
 
     private static string CreateTempDir()
