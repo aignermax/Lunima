@@ -21,6 +21,12 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     private const string ContainerDataDir = "/data";
     private const string ContainerScript = "/work/fdtd_sparams.py";
 
+    /// <summary>
+    /// Shared-memory (/dev/shm) size for the container in MB. MPICH/UCX needs this
+    /// for inter-rank transport; Docker's 64 MB default makes MPI_Init fail.
+    /// </summary>
+    private const int ShmSizeMb = 2048;
+
     private readonly string _dockerExe;
     private readonly string _imageTag;
     private readonly string _dockerfilePath;
@@ -71,6 +77,10 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
             var si = new ProcessStartInfo { FileName = _dockerExe };
             si.ArgumentList.Add("run");
             si.ArgumentList.Add("--rm");
+            // MPICH/UCX uses shared memory (/dev/shm) for inter-rank transport.
+            // Docker's default /dev/shm is only 64 MB, which makes MPI_Init fail
+            // ("Not enough memory ... /dev/shm") once several ranks start. Enlarge it.
+            si.ArgumentList.Add($"--shm-size={ShmSizeMb}m");
             si.ArgumentList.Add("-v");
             si.ArgumentList.Add($"{ToDockerPath(workingDir)}:{ContainerDataDir}");
             si.ArgumentList.Add(_imageTag);
