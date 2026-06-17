@@ -50,7 +50,7 @@ public class ComponentSettingsDialogFdtdTests
     public async Task RecalculateSMatrix_OnSuccess_StoresDataAndReportsStatus()
     {
         var service = new Mock<IFdtdSMatrixService>();
-        service.Setup(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<CancellationToken>()))
+        service.Setup(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
                .ReturnsAsync(SuccessResult());
         var store = new Dictionary<string, ComponentSMatrixData>();
 
@@ -74,7 +74,7 @@ public class ComponentSettingsDialogFdtdTests
     public async Task RecalculateSMatrix_OnFailure_SurfacesHintAndStoresNothing()
     {
         var service = new Mock<IFdtdSMatrixService>();
-        service.Setup(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<CancellationToken>()))
+        service.Setup(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
                .ReturnsAsync(FdtdSMatrixResult.Fail("image build failed", missingDependency: "docker"));
         var store = new Dictionary<string, ComponentSMatrixData>();
 

@@ -54,7 +54,8 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     }
 
     /// <inheritdoc/>
-    public async Task<FdtdSMatrixResult> SolveAsync(FdtdSMatrixRequest request, CancellationToken ct = default)
+    public async Task<FdtdSMatrixResult> SolveAsync(
+        FdtdSMatrixRequest request, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var hasGds = !string.IsNullOrWhiteSpace(request.GdsPath) && File.Exists(request.GdsPath);
         if (!hasGds && request.Polygons.Count == 0)
@@ -96,7 +97,8 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
             si.ArgumentList.Add(ContainerScript);
             si.ArgumentList.Add($"--spec={ContainerDataDir}/_fdtd_request.json");
 
-            var run = await SubprocessJsonRunner.RunAsync(si, string.Empty, _timeout, ct);
+            var run = await SubprocessJsonRunner.RunAsync(si, string.Empty, _timeout, ct,
+                onStderrLine: line => { if (IsProgressLine(line)) progress?.Report(line); });
             return MapRun(run);
         }
         finally
@@ -175,6 +177,14 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     /// </summary>
     internal static int ResolveShmMb(int cores) =>
         Math.Clamp(cores * ShmMbPerRank, ShmFloorMb, ShmCeilingMb);
+
+    /// <summary>
+    /// Keeps the noise down: only forward solver lines that carry useful progress
+    /// (a tqdm/meep percentage or time-step), not every warning.
+    /// </summary>
+    private static bool IsProgressLine(string line) =>
+        line.Contains('%') || line.Contains("time step", StringComparison.OrdinalIgnoreCase)
+        || line.Contains("Meep progress", StringComparison.OrdinalIgnoreCase);
 
     private static string ToDockerPath(string path) => path.Replace('\\', '/');
 }

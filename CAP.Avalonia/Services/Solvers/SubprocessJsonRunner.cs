@@ -33,8 +33,13 @@ public static class SubprocessJsonRunner
     /// <paramref name="stdinPayload"/> to its stdin, and captures stdout/stderr.
     /// Kills the process on timeout or cancellation.
     /// </summary>
+    /// <param name="onStderrLine">
+    /// Optional callback invoked for each stderr line as it arrives (used to surface
+    /// live solver progress). Called on a background thread.
+    /// </param>
     public static async Task<RunResult> RunAsync(
-        ProcessStartInfo startInfo, string stdinPayload, TimeSpan timeout, CancellationToken ct)
+        ProcessStartInfo startInfo, string stdinPayload, TimeSpan timeout, CancellationToken ct,
+        Action<string>? onStderrLine = null)
     {
         startInfo.RedirectStandardInput = true;
         startInfo.RedirectStandardOutput = true;
@@ -57,7 +62,7 @@ public static class SubprocessJsonRunner
         process.StandardInput.Close();
 
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
+        var stderrTask = ReadStderrAsync(process, onStderrLine);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var timeoutTask = Task.Delay(timeout, cts.Token);
@@ -73,6 +78,24 @@ public static class SubprocessJsonRunner
         cts.Cancel(); // stop the timeout delay
         await process.WaitForExitAsync(CancellationToken.None);
         return new RunResult(Outcome.Completed, process.ExitCode, await stdoutTask, await stderrTask, null);
+    }
+
+    /// <summary>
+    /// Reads stderr line by line (Meep/tqdm progress uses '\r', which ReadLineAsync
+    /// also treats as a line break), forwarding each line to <paramref name="onLine"/>
+    /// while accumulating the full text for error reporting.
+    /// </summary>
+    private static async Task<string> ReadStderrAsync(Process process, Action<string>? onLine)
+    {
+        var sb = new System.Text.StringBuilder();
+        string? line;
+        while ((line = await process.StandardError.ReadLineAsync()) != null)
+        {
+            sb.AppendLine(line);
+            if (onLine != null && line.Trim().Length > 0)
+                onLine(line.Trim());
+        }
+        return sb.ToString();
     }
 
     /// <summary>

@@ -14,6 +14,8 @@ public interface IFdtdSMatrixService
     /// with a human-readable error and raw stderr.
     /// </summary>
     /// <param name="request">Component GDS, ports, and simulation settings.</param>
+    /// <param name="progress">Optional sink for live solver progress lines.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task<FdtdSMatrixResult> SolveAsync(FdtdSMatrixRequest request, CancellationToken ct = default);
+    Task<FdtdSMatrixResult> SolveAsync(
+        FdtdSMatrixRequest request, IProgress<string>? progress = null, CancellationToken ct = default);
 }

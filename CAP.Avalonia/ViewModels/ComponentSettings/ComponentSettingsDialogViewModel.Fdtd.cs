@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Avalonia.Threading;
 using CAP_Core.Components.Core;
 using CAP_Core.Solvers.Fdtd;
 using CAP.Avalonia.Services;
@@ -64,8 +66,7 @@ public partial class ComponentSettingsDialogViewModel
                 return;
             }
 
-            SolverStatus = "Running FDTD (Meep in Docker). The first run builds the solver image and may take several minutes…";
-            var result = await _fdtdService.SolveAsync(request, _recalcCts.Token);
+            var result = await RunWithLiveStatusAsync(request, _recalcCts.Token);
 
             if (!result.Success)
             {
@@ -101,6 +102,38 @@ public partial class ComponentSettingsDialogViewModel
             RefreshEntries(notifyChanged: true);
         }
     }
+
+    /// <summary>
+    /// Runs the solver while keeping <see cref="SolverStatus"/> alive: a once-per-second
+    /// elapsed-time heartbeat (so the long image build / FDTD run never looks frozen)
+    /// plus the latest progress line streamed from Meep.
+    /// </summary>
+    private async Task<FdtdSMatrixResult> RunWithLiveStatusAsync(FdtdSMatrixRequest request, CancellationToken ct)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        string? lastLine = null;
+        const string baseMsg = "Running FDTD (Meep in Docker). First run builds the solver image (several minutes)";
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        timer.Tick += (_, _) =>
+            SolverStatus = lastLine == null
+                ? $"{baseMsg} — {stopwatch.Elapsed:m\\:ss} elapsed…"
+                : $"FDTD running ({stopwatch.Elapsed:m\\:ss}): {lastLine}";
+        SolverStatus = $"{baseMsg}…";
+        timer.Start();
+
+        var progress = new Progress<string>(line => lastLine = Shorten(line));
+        try
+        {
+            return await _fdtdService!.SolveAsync(request, progress, ct);
+        }
+        finally
+        {
+            timer.Stop();
+        }
+    }
+
+    private static string Shorten(string s) => s.Length <= 80 ? s : s[..80] + "…";
 
     private static string BuildSolverStatus(FdtdSMatrixResult result, ApplyResult? apply)
     {
