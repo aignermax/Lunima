@@ -118,7 +118,7 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
             si.ArgumentList.Add($"--spec={ContainerDataDir}/_fdtd_request.json");
 
             var run = await SubprocessJsonRunner.RunAsync(si, string.Empty, _timeout, ct,
-                onStderrLine: line => { if (IsProgressLine(line)) progress?.Report(line); });
+                onStderrLine: line => { if (IsProgressLine(line)) progress?.Report(CleanProgressLine(line)); });
             return MapRun(run);
         }
         finally
@@ -258,6 +258,16 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     private static bool IsProgressLine(string line) =>
         line.Contains('%') || line.Contains("time step", StringComparison.OrdinalIgnoreCase)
         || line.Contains("Meep progress", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Strips the tqdm bar art (Unicode block-element glyphs and the surrounding
+    /// pipes) so the status shows just the useful "50% 3/4 [00:03&lt;00:01]" parts.
+    /// </summary>
+    internal static string CleanProgressLine(string line)
+    {
+        var noBlocks = System.Text.RegularExpressions.Regex.Replace(line, @"[▀-▟|]+", " ");
+        return System.Text.RegularExpressions.Regex.Replace(noBlocks, @"\s{2,}", " ").Trim();
+    }
 
     private static string ToDockerPath(string path) => path.Replace('\\', '/');
 }

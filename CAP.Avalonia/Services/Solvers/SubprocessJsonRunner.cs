@@ -46,6 +46,10 @@ public static class SubprocessJsonRunner
         startInfo.RedirectStandardError = true;
         startInfo.UseShellExecute = false;
         startInfo.CreateNoWindow = true;
+        // Meep/tqdm progress uses UTF-8 block glyphs; decode them correctly so the
+        // status text isn't mojibake (the caller still strips the bar art for display).
+        startInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+        startInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
 
         using var process = new Process { StartInfo = startInfo };
 

@@ -20,4 +20,15 @@ public class DockerFdtdShmTests
     {
         DockerFdtdSMatrixService.ResolveShmMb(cores).ShouldBe(expectedMb);
     }
+
+    [Fact]
+    public void CleanProgressLine_StripsTqdmBarArt()
+    {
+        var raw = " 50%|███▉     | 3/4 [00:03<00:01, 1.2it/s]";
+
+        var clean = DockerFdtdSMatrixService.CleanProgressLine(raw);
+
+        clean.ShouldBe("50% 3/4 [00:03<00:01, 1.2it/s]");
+        clean.ShouldNotContain("█");
+    }
 }
