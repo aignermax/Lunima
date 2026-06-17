@@ -103,14 +103,47 @@ public partial class ProcessManagementViewModel : ObservableObject
         try
         {
             var process = importer.Import(path);
-            Load(process);
-            StatusText = $"Imported '{process.Name}' via {importer.FormatName}: {Layers.Count} layers, " +
-                         $"{Xsections.Count} cross-sections, {Materials.Count} materials.";
+            Merge(process);
+            StatusText = $"Imported '{process.Name}' via {importer.FormatName}. Now: {Layers.Count} layers, " +
+                         $"{Xsections.Count} cross-sections, {Materials.Count} materials. " +
+                         "Tip: uPDK has cross-sections only — import the CSV tables too for the layer stack.";
         }
         catch (Exception ex)
         {
             StatusText = $"Import failed ({importer.FormatName}): {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Merges an imported process into the current one rather than replacing it,
+    /// so complementary formats accumulate (uPDK supplies cross-section widths +
+    /// metadata; the Nazca CSV supplies the layer stack + bend radii). Existing
+    /// entries are enriched (empty fields filled) rather than duplicated.
+    /// </summary>
+    public void Merge(ProcessDefinition process)
+    {
+        if (string.IsNullOrWhiteSpace(ProcessName) || ProcessName == "New process")
+            ProcessName = process.Name;
+
+        foreach (var layer in process.Layers)
+            if (Layers.All(l => !l.Name.Equals(layer.Name, StringComparison.OrdinalIgnoreCase)))
+                Layers.Add(layer);
+
+        foreach (var xs in process.Xsections)
+        {
+            var existing = Xsections.FirstOrDefault(x => x.Name.Equals(xs.Name, StringComparison.OrdinalIgnoreCase));
+            if (existing == null) { Xsections.Add(xs); continue; }
+            if (existing.WidthUm == 0) existing.WidthUm = xs.WidthUm;
+            if (existing.MinRadiusUm == 0) existing.MinRadiusUm = xs.MinRadiusUm;
+            if (existing.RecommendedRadiusUm == 0) existing.RecommendedRadiusUm = xs.RecommendedRadiusUm;
+            if (string.IsNullOrEmpty(existing.Description)) existing.Description = xs.Description;
+        }
+
+        foreach (var mat in process.Materials)
+            if (Materials.All(m => !m.Name.Equals(mat.Name, StringComparison.OrdinalIgnoreCase)))
+                Materials.Add(mat);
+
+        HasProcess = true;
     }
 
     /// <summary>Starts a blank process seeded with public SOI material defaults.</summary>

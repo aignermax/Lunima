@@ -63,6 +63,32 @@ public class ProcessManagementViewModelTests
     }
 
     [Fact]
+    public void Merge_AccumulatesComplementaryImports_AndEnrichesXsections()
+    {
+        var vm = new ProcessManagementViewModel(Mock.Of<IFileDialogService>());
+
+        // uPDK-style: cross-section width, no layers.
+        vm.Merge(new ProcessDefinition
+        {
+            Name = "HHI",
+            Xsections = { new ProcessXsection { Name = "E1700", WidthUm = 2.3 } },
+        });
+        // CSV-style: layer stack + bend radius, generic width.
+        vm.Merge(new ProcessDefinition
+        {
+            Layers = { new ProcessLayer { Name = "WAVEGUIDE", Layer = 12 } },
+            Xsections = { new ProcessXsection { Name = "E1700", MinRadiusUm = 150 } },
+        });
+
+        vm.ProcessName.ShouldBe("HHI");
+        vm.Layers.Count.ShouldBe(1);                 // layer added by the CSV import
+        vm.Xsections.Count.ShouldBe(1);              // same cross-section, not duplicated
+        var e1700 = vm.Xsections.Single();
+        e1700.WidthUm.ShouldBe(2.3);                 // kept from uPDK
+        e1700.MinRadiusUm.ShouldBe(150);             // enriched from CSV
+    }
+
+    [Fact]
     public async Task ImportFromPdk_Cancelled_LeavesProcessUnloaded()
     {
         var dialog = new Mock<IFileDialogService>();
