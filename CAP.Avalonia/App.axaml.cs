@@ -235,6 +235,17 @@ public partial class App : Application
         services.AddSingleton(sp =>
             new GdsPreviewRenderService(sp.GetRequiredService<NazcaComponentPreviewService>()));
 
+        // Register FDTD S-matrix service (open-source Meep via Docker, self-provisioning)
+        services.AddSingleton<CAP_Core.Solvers.Fdtd.IFdtdSMatrixService>(_ =>
+        {
+            var dockerfile = FindFdtdDockerfile();
+            // Build context = the scripts/ dir (parent of scripts/fdtd) so the small
+            // bridge script is COPYable without shipping the whole repo to the daemon.
+            var buildContext = Directory.GetParent(Path.GetDirectoryName(dockerfile)!)?.FullName
+                               ?? AppDomain.CurrentDomain.BaseDirectory;
+            return new CAP.Avalonia.Services.Solvers.DockerFdtdSMatrixService("lunima-meep:1", dockerfile, buildContext);
+        });
+
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();
 
@@ -348,6 +359,28 @@ public partial class App : Application
 
         // Best-effort fallback — NazcaComponentPreviewService returns a graceful
         // failure with a clear message when the path doesn't resolve.
+        return local;
+    }
+
+    /// <summary>
+    /// Searches for scripts/fdtd/Dockerfile (the FDTD solver image recipe) relative
+    /// to the application base directory, using the same walk-up-the-tree strategy
+    /// as <see cref="FindPreviewScript"/>.
+    /// </summary>
+    private static string FindFdtdDockerfile()
+    {
+        var relative = Path.Combine("scripts", "fdtd", "Dockerfile");
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var local = Path.Combine(baseDir, relative);
+        if (File.Exists(local)) return local;
+
+        var current = new DirectoryInfo(baseDir);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, relative);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
+        }
         return local;
     }
 
