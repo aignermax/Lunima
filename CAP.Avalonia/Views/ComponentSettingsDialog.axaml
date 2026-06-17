@@ -245,6 +245,34 @@
                 Background="#3d5d3d"
                 IsEnabled="{Binding IsImporting, Converter={x:Static BoolConverters.Not}}"/>
 
+        <!-- Recalculate via FDTD: like Load, but the S-matrix is computed from the
+             component geometry with the open-source Meep solver instead of imported. -->
+        <Button DockPanel.Dock="Bottom"
+                Content="Recalculate S-matrix (FDTD)…"
+                Command="{Binding RecalculateSMatrixCommand}"
+                HorizontalAlignment="Left"
+                Margin="0,6,0,0"
+                Padding="12,6"
+                Background="#3d4d6d"
+                IsVisible="{Binding CanRecalculate}"/>
+
+        <!-- Solver / simulation status -->
+        <Border DockPanel.Dock="Bottom"
+                Background="#161616"
+                CornerRadius="4"
+                Padding="8,6"
+                Margin="0,8,0,0"
+                IsVisible="{Binding SolverStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="⏳" FontSize="12" VerticalAlignment="Center"
+                           IsVisible="{Binding IsComputing}"/>
+                <TextBlock Text="{Binding SolverStatus}"
+                           Foreground="#aaccaa"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
         <!-- Empty state -->
         <TextBlock DockPanel.Dock="Top"
                    Text="No S-matrices stored for this component.&#10;Use 'Load S-matrix from file…' to import Lumerical or Touchstone data."
