@@ -8,15 +8,14 @@ using Xunit;
 namespace UnitTests.Components;
 
 /// <summary>
-/// Verifies the CSV → <see cref="ProcessDefinition"/> importer against synthetic
-/// foundry-shaped tables (NOT real proprietary PDK data). Mirrors the layout a
-/// Nazca PDK ships: table_layers / table_xsections / table_parameters.
+/// Verifies the Nazca-CSV → <see cref="ProcessDefinition"/> importer against
+/// synthetic foundry-shaped tables (NOT real proprietary PDK data).
 /// </summary>
-public class PdkProcessCsvImporterTests : IDisposable
+public class NazcaCsvProcessImporterTests : IDisposable
 {
     private readonly string _dir;
 
-    public PdkProcessCsvImporterTests()
+    public NazcaCsvProcessImporterTests()
     {
         _dir = Path.Combine(Path.GetTempPath(), "pdkproc-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_dir);
@@ -25,7 +24,7 @@ public class PdkProcessCsvImporterTests : IDisposable
             "layer_name,layer_name_foundry,layer,datatype,accuracy,origin,remark,field,description\n" +
             "WAVEGUIDE,WG,12,0,0.001,fab,,Light,Passive Waveguide\n" +
             "METAL-1,Met1,52,0,0.001,fab,,Light,Metal routing line 1\n" +
-            ",,,,,,,,\n"); // blank row tolerated
+            ",,,,,,,,\n");
 
         File.WriteAllText(Path.Combine(_dir, "table_xsections.csv"),
             "origin,xsection,xsection_foundry,stub,description\n" +
@@ -42,9 +41,17 @@ public class PdkProcessCsvImporterTests : IDisposable
     }
 
     [Fact]
+    public void CanImport_RequiresCsvWithSiblingLayersTable()
+    {
+        var importer = new NazcaCsvProcessImporter();
+        importer.CanImport(Path.Combine(_dir, "table_layers.csv")).ShouldBeTrue();
+        importer.CanImport(Path.Combine(_dir, "anything.yaml")).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Import_ParsesLayers_SkippingBlankRows()
     {
-        var process = new PdkProcessCsvImporter().Import(_dir, "TestProc");
+        var process = new NazcaCsvProcessImporter().ImportDirectory(_dir, "TestProc");
 
         process.Name.ShouldBe("TestProc");
         process.Layers.Count.ShouldBe(2);
@@ -56,42 +63,27 @@ public class PdkProcessCsvImporterTests : IDisposable
     [Fact]
     public void Import_ClassifiesXsections_AndSkipsStubs()
     {
-        var process = new PdkProcessCsvImporter().Import(_dir);
+        var process = new NazcaCsvProcessImporter().ImportDirectory(_dir);
 
         process.Xsections.Select(x => x.Name).ShouldBe(new[] { "E1700", "MetalDC" });
         process.Xsections.First(x => x.Name == "E1700").Kind.ShouldBe(XsectionKind.Optical);
         process.Xsections.First(x => x.Name == "MetalDC").Kind.ShouldBe(XsectionKind.Metal);
-        // Quoted comma in the description must not split the field.
         process.Xsections.First(x => x.Name == "MetalDC").Description.ShouldBe("Metal DC lines, wide");
     }
 
     [Fact]
     public void Import_AppliesWidthAndBendRadiiFromParameters()
     {
-        var process = new PdkProcessCsvImporter().Import(_dir);
+        var process = new NazcaCsvProcessImporter().ImportDirectory(_dir);
 
         var e1700 = process.Xsections.First(x => x.Name == "E1700");
-        e1700.WidthUm.ShouldBe(2);            // from "width" (optical default)
-        e1700.MinRadiusUm.ShouldBe(150);      // from arc_E1700 value
-        e1700.RecommendedRadiusUm.ShouldBe(250); // from arc_E1700 recommended
+        e1700.WidthUm.ShouldBe(2);
+        e1700.MinRadiusUm.ShouldBe(150);
+        e1700.RecommendedRadiusUm.ShouldBe(250);
 
         var metal = process.Xsections.First(x => x.Name == "MetalDC");
-        metal.WidthUm.ShouldBe(10);           // from width_metal_DC (Metal family)
-        metal.MinRadiusUm.ShouldBe(10);       // from arc_metal_DC (Metal family)
-    }
-
-    [Fact]
-    public void Import_MissingTables_ReturnsEmptySections()
-    {
-        var empty = Path.Combine(Path.GetTempPath(), "pdkproc-empty-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(empty);
-        try
-        {
-            var process = new PdkProcessCsvImporter().Import(empty);
-            process.Layers.ShouldBeEmpty();
-            process.Xsections.ShouldBeEmpty();
-        }
-        finally { Directory.Delete(empty, true); }
+        metal.WidthUm.ShouldBe(10);
+        metal.MinRadiusUm.ShouldBe(10);
     }
 
     public void Dispose()

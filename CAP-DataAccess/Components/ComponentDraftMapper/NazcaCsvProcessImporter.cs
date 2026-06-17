@@ -9,25 +9,44 @@ using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 namespace CAP_DataAccess.Components.ComponentDraftMapper
 {
     /// <summary>
-    /// Builds a <see cref="ProcessDefinition"/> from the CSV tables a Nazca foundry
-    /// PDK ships (table_layers.csv, table_xsections.csv, table_parameters.csv —
-    /// the layout used by e.g. the HHI PDK). Reads from a licensed PDK directory at
-    /// runtime; no proprietary foundry data is bundled with the app.
+    /// Imports a <see cref="ProcessDefinition"/> from the CSV tables a Nazca foundry
+    /// PDK ships (table_layers.csv, table_xsections.csv, table_parameters.csv — the
+    /// layout used by e.g. the HHI PDK). This is the Nazca/Bright-Photonics
+    /// convention, one of several source formats. Reads from a licensed PDK directory
+    /// at runtime; no proprietary foundry data is bundled with the app.
     /// </summary>
-    public class PdkProcessCsvImporter
+    public class NazcaCsvProcessImporter : IProcessImporter
     {
-        /// <summary>
-        /// Reads the CSV tables found in <paramref name="pdkDirectory"/> into a process.
-        /// Missing tables are tolerated (the corresponding section is left empty).
-        /// </summary>
-        public ProcessDefinition Import(string pdkDirectory, string? processName = null)
+        private const string LayersTable = "table_layers.csv";
+
+        /// <inheritdoc/>
+        public string FormatName => "Nazca CSV tables";
+
+        /// <inheritdoc/>
+        public bool CanImport(string path)
+        {
+            if (!path.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) return false;
+            var dir = Path.GetDirectoryName(Path.GetFullPath(path));
+            return dir != null && File.Exists(Path.Combine(dir, LayersTable));
+        }
+
+        /// <inheritdoc/>
+        public ProcessDefinition Import(string path)
+        {
+            // The user picks any CSV in the PDK folder; we read the sibling tables.
+            var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(Path.GetFullPath(path))!;
+            return ImportDirectory(dir);
+        }
+
+        /// <summary>Reads the CSV tables in <paramref name="pdkDirectory"/> into a process.</summary>
+        public ProcessDefinition ImportDirectory(string pdkDirectory, string? processName = null)
         {
             var process = new ProcessDefinition
             {
                 Name = processName ?? new DirectoryInfo(pdkDirectory).Name,
             };
 
-            ImportLayers(Path.Combine(pdkDirectory, "table_layers.csv"), process);
+            ImportLayers(Path.Combine(pdkDirectory, LayersTable), process);
             ImportXsections(Path.Combine(pdkDirectory, "table_xsections.csv"), process);
             EnrichFromParameters(Path.Combine(pdkDirectory, "table_parameters.csv"), process);
             return process;
@@ -39,8 +58,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             foreach (var row in ReadRows(path, out var col))
             {
                 var name = Get(row, col, "layer_name");
-                var layerStr = Get(row, col, "layer");
-                if (name.Length == 0 || !int.TryParse(layerStr, out var layer)) continue;
+                if (name.Length == 0 || !int.TryParse(Get(row, col, "layer"), out var layer)) continue;
                 int.TryParse(Get(row, col, "datatype"), out var datatype);
                 process.Layers.Add(new ProcessLayer
                 {
@@ -60,7 +78,7 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             {
                 var name = Get(row, col, "xsection");
                 if (name.Length == 0) continue;
-                if (name.Contains("stub", StringComparison.OrdinalIgnoreCase)) continue; // helper xsections
+                if (name.Contains("stub", StringComparison.OrdinalIgnoreCase)) continue;
                 if (name.Equals("CellBoundary", StringComparison.OrdinalIgnoreCase)) continue;
 
                 process.Xsections.Add(new ProcessXsection
@@ -73,11 +91,6 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
         }
 
-        /// <summary>
-        /// Pulls widths and bend radii out of table_parameters.csv. Rows like
-        /// <c>arc_E1700,150,um,E1700,250</c> set a cross-section's min/recommended
-        /// radius; <c>width,2,um,WAVEGUIDE</c> seeds the default optical width.
-        /// </summary>
         private static void EnrichFromParameters(string path, ProcessDefinition process)
         {
             if (!File.Exists(path)) return;
@@ -109,10 +122,6 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
             }
         }
 
-        /// <summary>
-        /// Resolves the cross-section(s) a parameter's <c>xsection</c> column refers to:
-        /// an exact name, or a generic family like "Metal" that fans out to all metals.
-        /// </summary>
         private static IEnumerable<ProcessXsection> MatchXsections(ProcessDefinition process, string xsection)
         {
             if (xsection.Length == 0) return Enumerable.Empty<ProcessXsection>();
