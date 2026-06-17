@@ -21,11 +21,14 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     private const string ContainerDataDir = "/data";
     private const string ContainerScript = "/work/fdtd_sparams.py";
 
-    /// <summary>
-    /// Shared-memory (/dev/shm) size for the container in MB. MPICH/UCX needs this
-    /// for inter-rank transport; Docker's 64 MB default makes MPI_Init fail.
-    /// </summary>
-    private const int ShmSizeMb = 2048;
+    /// <summary>Shared-memory budget per MPI rank in MB (UCX inter-rank buffers).</summary>
+    private const int ShmMbPerRank = 256;
+
+    /// <summary>Floor for /dev/shm so even a 1-2 core machine has headroom.</summary>
+    private const int ShmFloorMb = 2048;
+
+    /// <summary>Ceiling so we never request an absurd tmpfs cap on big machines.</summary>
+    private const int ShmCeilingMb = 16384;
 
     private readonly string _dockerExe;
     private readonly string _imageTag;
@@ -79,8 +82,10 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
             si.ArgumentList.Add("--rm");
             // MPICH/UCX uses shared memory (/dev/shm) for inter-rank transport.
             // Docker's default /dev/shm is only 64 MB, which makes MPI_Init fail
-            // ("Not enough memory ... /dev/shm") once several ranks start. Enlarge it.
-            si.ArgumentList.Add($"--shm-size={ShmSizeMb}m");
+            // ("Not enough memory ... /dev/shm") once several ranks start. Scale it
+            // with the rank count (which itself scales with the machine's cores).
+            // /dev/shm is a tmpfs cap, not a reservation, so a generous size is free.
+            si.ArgumentList.Add($"--shm-size={ResolveShmMb(cores)}m");
             si.ArgumentList.Add("-v");
             si.ArgumentList.Add($"{ToDockerPath(workingDir)}:{ContainerDataDir}");
             si.ArgumentList.Add(_imageTag);
@@ -162,6 +167,14 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         var available = Math.Max(1, Environment.ProcessorCount);
         return request.Is3D ? Math.Min(available, 8) : Math.Min(available, 16);
     }
+
+    /// <summary>
+    /// Sizes the container's /dev/shm to the rank count (UCX shared-memory transport
+    /// grows with ranks), clamped to a sane floor/ceiling. Since /dev/shm is a tmpfs
+    /// cap rather than an upfront reservation, over-provisioning is harmless.
+    /// </summary>
+    internal static int ResolveShmMb(int cores) =>
+        Math.Clamp(cores * ShmMbPerRank, ShmFloorMb, ShmCeilingMb);
 
     private static string ToDockerPath(string path) => path.Replace('\\', '/');
 }
