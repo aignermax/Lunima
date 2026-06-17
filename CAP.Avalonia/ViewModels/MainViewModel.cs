@@ -482,6 +482,18 @@ public partial class MainViewModel : ObservableObject
         ShowPdkOffsetEditorRequested?.Invoke();
     }
 
+    /// <summary>
+    /// Raised when the user requests to open the Fabrication Process window
+    /// (process model — issue #570). The View layer subscribes and shows it.
+    /// </summary>
+    public Action? ShowProcessManagerRequested { get; set; }
+
+    [RelayCommand]
+    private void OpenProcessManager()
+    {
+        ShowProcessManagerRequested?.Invoke();
+    }
+
     [RelayCommand]
     private void OpenPdkHelp()
     {

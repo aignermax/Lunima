@@ -477,6 +477,12 @@
                                         Width="75" Height="24" Margin="2" FontSize="10"
                                         Background="#3d3d3d"/>
                             </StackPanel>
+
+                            <!-- Fabrication process (layer stack, cross-sections, materials) — #570 -->
+                            <Button Content="Fabrication Process…" Command="{Binding OpenProcessManagerCommand}"
+                                    HorizontalAlignment="Stretch" Height="24" Margin="2,6,2,0" FontSize="10"
+                                    Background="#3d4d6d"
+                                    ToolTip.Tip="View and adjust the fabrication process; import it from a foundry PDK"/>
                         </StackPanel>
                     </Expander>
 

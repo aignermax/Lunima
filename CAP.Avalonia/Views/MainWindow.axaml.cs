@@ -78,6 +78,17 @@ public partial class MainWindow : Window
                     editorWindow.Show(this);
                 };
 
+                // Wire up Fabrication Process window (process model — #570)
+                vm.ShowProcessManagerRequested = () =>
+                {
+                    var processVm = new ProcessManagementViewModel(new FileDialogService(this));
+                    var processWindow = new ProcessManagementWindow
+                    {
+                        DataContext = processVm
+                    };
+                    processWindow.Show(this);
+                };
+
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {
