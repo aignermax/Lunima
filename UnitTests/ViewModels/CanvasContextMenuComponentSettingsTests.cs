@@ -102,6 +102,44 @@ public class CanvasContextMenuComponentSettingsTests
     }
 
     [Fact]
+    public void SelectComponentAt_OnAlreadySelectedComponent_KeepsMultiSelection_ForCreateGroup()
+    {
+        var (interaction, canvas) = CreateInteraction();
+        var a = AddComponentAt(canvas, x: 0, y: 0);
+        var b = AddComponentAt(canvas, x: 200, y: 200);
+        canvas.Selection.AddToSelection(a);
+        canvas.Selection.AddToSelection(b);
+
+        // Right-click one of the already-selected components.
+        interaction.SelectComponentAt(10, 10);
+
+        // The multi-selection must survive so "Create Group" stays available…
+        canvas.Selection.SelectedComponents.Count.ShouldBe(2);
+        canvas.Selection.SelectedComponents.ShouldContain(a);
+        canvas.Selection.SelectedComponents.ShouldContain(b);
+        interaction.CreateGroupCommand.CanExecute(null).ShouldBeTrue();
+        // …and the clicked component becomes the primary for the context menu.
+        interaction.SelectedComponent.ShouldBe(a);
+    }
+
+    [Fact]
+    public void SelectComponentAt_OnComponentOutsideMultiSelection_CollapsesToThatOne()
+    {
+        var (interaction, canvas) = CreateInteraction();
+        var a = AddComponentAt(canvas, x: 0, y: 0);
+        var b = AddComponentAt(canvas, x: 200, y: 200);
+        var c = AddComponentAt(canvas, x: 400, y: 400);
+        canvas.Selection.AddToSelection(a);
+        canvas.Selection.AddToSelection(b);
+
+        // Right-click a component that is NOT part of the current selection.
+        interaction.SelectComponentAt(410, 410);
+
+        canvas.Selection.SelectedComponents.ShouldHaveSingleItem().ShouldBe(c);
+        interaction.SelectedComponent.ShouldBe(c);
+    }
+
+    [Fact]
     public void SelectComponentAt_EmptySpace_ClearsSelection()
     {
         var (interaction, canvas) = CreateInteraction();
