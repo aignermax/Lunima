@@ -39,7 +39,7 @@ public class ComponentFdtdRequestFactoryTests
     }
 
     [Fact]
-    public void BuildPorts_MapsPinAngleToOrientation()
+    public void BuildPorts_UsesComponentPinNames_KeepsPreviewPositions()
     {
         var pins = new[]
         {
@@ -47,12 +47,32 @@ public class ComponentFdtdRequestFactoryTests
             new NazcaPreviewPin { Name = "b0", X = 80, Y = 2, Angle = 0 },
         };
 
-        var ports = ComponentFdtdRequestFactory.BuildPorts(pins, portWidthUm: 2.0);
+        // Component pin names differ from the Nazca cell pin names — these must win,
+        // matched by index, while positions/angles stay from the preview.
+        var ports = ComponentFdtdRequestFactory.BuildPorts(pins, new[] { "port 1", "port 2" }, portWidthUm: 2.0);
 
         ports.Count.ShouldBe(2);
-        ports[0].Name.ShouldBe("a0");
+        ports[0].Name.ShouldBe("port 1");
         ports[0].Orientation.ShouldBe(180);
+        ports[0].X.ShouldBe(0);
+        ports[1].Name.ShouldBe("port 2");
         ports[1].X.ShouldBe(80);
         ports[1].Width.ShouldBe(2.0);
+    }
+
+    [Fact]
+    public void BuildPorts_FallsBackToPreviewNames_OnCountMismatch()
+    {
+        var pins = new[]
+        {
+            new NazcaPreviewPin { Name = "a0", X = 0, Y = 0, Angle = 180 },
+            new NazcaPreviewPin { Name = "b0", X = 80, Y = 2, Angle = 0 },
+        };
+
+        // Only one component name for two pins → can't safely match → keep preview names.
+        var ports = ComponentFdtdRequestFactory.BuildPorts(pins, new[] { "port 1" }, portWidthUm: 2.0);
+
+        ports[0].Name.ShouldBe("a0");
+        ports[1].Name.ShouldBe("b0");
     }
 }

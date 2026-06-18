@@ -49,10 +49,12 @@ public class ComponentFdtdRequestFactory
         if (!preview.Success || preview.Polygons.Count == 0 || preview.Pins.Count == 0)
             return null;
 
+        var componentPinNames = component.PhysicalPins?.Select(p => p.Name).ToList() ?? new List<string>();
+
         return new FdtdSMatrixRequest
         {
             Polygons = BuildPolygons(preview.Polygons, _siliconLayer),
-            Ports = BuildPorts(preview.Pins, _portWidthUm),
+            Ports = BuildPorts(preview.Pins, componentPinNames, _portWidthUm),
             LayerNumber = _siliconLayer,
             Is3D = false, // 2D for a quick recompute; a 3D/accuracy toggle can come later
         };
@@ -74,14 +76,29 @@ public class ComponentFdtdRequestFactory
         }).ToList();
     }
 
-    /// <summary>Maps Nazca pin stubs to FDTD ports (orientation = pin angle).</summary>
-    internal static IReadOnlyList<FdtdPort> BuildPorts(IReadOnlyList<NazcaPreviewPin> pins, double portWidthUm) =>
-        pins.Select(pin => new FdtdPort
+    /// <summary>
+    /// Builds FDTD ports from the rendered Nazca pin stubs. Positions and angles
+    /// come from the preview (same coordinate frame as the polygons), but the port
+    /// <b>names</b> come from the component's own pins so the resulting S-matrix is
+    /// keyed by the names the simulator expects (e.g. "port 1"), not the Nazca cell
+    /// pin names ("a0"/"pin1"). Without this the override can't be mapped onto the
+    /// component and every wavelength is skipped.
+    ///
+    /// Pins are matched by index (a PDK's pin order matches its Nazca cell's pin
+    /// order). If the counts differ we keep the preview names rather than guess —
+    /// the override will then report the mismatch instead of mislabelling ports.
+    /// </summary>
+    internal static IReadOnlyList<FdtdPort> BuildPorts(
+        IReadOnlyList<NazcaPreviewPin> pins, IReadOnlyList<string> componentPinNames, double portWidthUm)
+    {
+        bool useComponentNames = componentPinNames.Count == pins.Count;
+        return pins.Select((pin, i) => new FdtdPort
         {
-            Name = pin.Name,
+            Name = useComponentNames ? componentPinNames[i] : pin.Name,
             X = pin.X,
             Y = pin.Y,
             Orientation = pin.Angle,
             Width = portWidthUm,
         }).ToList();
+    }
 }
