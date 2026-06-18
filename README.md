@@ -83,7 +83,7 @@ Supported platforms: Windows, macOS, Linux
 
 ### Building from Source
 
-**Prerequisites:** .NET 8.0 SDK
+**Prerequisites:** .NET 10.0 SDK
 
 ```bash
 # Quick start
@@ -150,6 +150,7 @@ See [CHANGELOG.md](CHANGELOG.md) for completed features.
 
 We welcome contributions! Please see:
 
+- [CONTRIBUTING.md](CONTRIBUTING.md) for the branch/PR workflow and conventions
 - [CLAUDE.md](CLAUDE.md) for agent development guidelines
 - [ARCHITECTURE.md](ARCHITECTURE.md) for technical details
 
