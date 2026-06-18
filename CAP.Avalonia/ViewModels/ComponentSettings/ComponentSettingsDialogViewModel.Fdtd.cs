@@ -44,6 +44,12 @@ public partial class ComponentSettingsDialogViewModel
     partial void OnIsComputingChanged(bool value) => RecalculateSMatrixCommand.NotifyCanExecuteChanged();
 
     /// <summary>
+    /// Cancels a running FDTD recompute. Called when the dialog is closed so the
+    /// solve (and its Docker container) doesn't keep running in the background.
+    /// </summary>
+    public void CancelRecalculate() => _recalcCts?.Cancel();
+
+    /// <summary>
     /// Recomputes this component's S-matrix from its geometry via FDTD and applies
     /// it like an import. Surfaces the raw solver error on failure — no silent fallback.
     /// </summary>

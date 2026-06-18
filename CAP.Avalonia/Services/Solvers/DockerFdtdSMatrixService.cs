@@ -260,12 +260,19 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         || line.Contains("Meep progress", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Strips the tqdm bar art (Unicode block-element glyphs and the surrounding
-    /// pipes) so the status shows just the useful "50% 3/4 [00:03&lt;00:01]" parts.
+    /// Strips the tqdm bar art (Unicode block-element glyphs and surrounding pipes)
+    /// and the log/warning tail that Meep concatenates onto the same line (the bar is
+    /// written with '\r', so a following warning lands on the same "line"). Returns
+    /// just the useful "50% 3/4 [00:03&lt;00:01, 1.2it/s]" part.
     /// </summary>
     internal static string CleanProgressLine(string line)
     {
         var noBlocks = System.Text.RegularExpressions.Regex.Replace(line, @"[▀-▟|]+", " ");
+        // The tqdm progress ends at the first ']'; anything after it (e.g. a
+        // "/opt/conda/.../meep/__init__.py:…: ComplexWarning") is concatenated noise.
+        var bracket = noBlocks.IndexOf(']');
+        if (bracket >= 0)
+            noBlocks = noBlocks[..(bracket + 1)];
         return System.Text.RegularExpressions.Regex.Replace(noBlocks, @"\s{2,}", " ").Trim();
     }
 
