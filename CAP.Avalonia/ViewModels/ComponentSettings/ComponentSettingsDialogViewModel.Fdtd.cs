@@ -76,6 +76,15 @@ public partial class ComponentSettingsDialogViewModel
 
             if (!result.Success)
             {
+                // A user cancel (typically closing the dialog mid-run) comes back as a
+                // failed result, not an OperationCanceledException. Closing a window is
+                // intentional, not an error, so stay quiet — don't open the error console.
+                if (_recalcCts?.IsCancellationRequested == true)
+                {
+                    SolverStatus = "FDTD recompute cancelled.";
+                    return;
+                }
+
                 SolverStatus = result.MissingDependency != null
                     ? $"FDTD unavailable — '{result.MissingDependency}' is required. {result.Error}"
                     : $"FDTD failed: {result.Error}";
