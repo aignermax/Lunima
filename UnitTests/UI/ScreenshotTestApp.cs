@@ -18,11 +18,6 @@ internal class ScreenshotTestApp : Application
         RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
         Styles.Add(new FluentTheme());
     }
-
-    public override void OnFrameworkInitializationCompleted()
-    {
-        base.OnFrameworkInitializationCompleted();
-    }
 }
 
 /// <summary>
