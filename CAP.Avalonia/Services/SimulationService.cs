@@ -115,6 +115,24 @@ public class SimulationService
 
         foreach (var component in allComponents)
         {
+            // ONA Analyzer: its "source" pin emits in the regular simulation too,
+            // so light flows visibly source → DUT → measurement (consistent with the
+            // ONA sweep). Only the source pin emits; measurement stays a detector.
+            var analyzerSource = GetAnalyzerLightSourcePin(component);
+            if (analyzerSource != null)
+            {
+                int analyzerWavelengthNm = StandardWaveLengths.RedNM;
+                portManager.AddLightSource(
+                    new ExternalInput(
+                        $"ona_{component.Identifier}_source",
+                        GetLaserTypeForWavelength(analyzerWavelengthNm),
+                        0,
+                        new Complex(1.0, 0)),
+                    analyzerSource.LogicalPin!.IDInFlow);
+                configs.Add(new SourceConfigInfo(component.Identifier, analyzerWavelengthNm, 1.0));
+                continue;
+            }
+
             if (!IsLightSource(component))
                 continue;
 
@@ -147,7 +165,7 @@ public class SimulationService
     /// Recursively collects all Component instances, including those inside ComponentGroups.
     /// Returns the raw Component objects, not ViewModels, to avoid TemplateName issues.
     /// </summary>
-    private static List<Component> GetAllComponentsRecursively(IEnumerable<ComponentViewModel> components)
+    public static List<Component> GetAllComponentsRecursively(IEnumerable<ComponentViewModel> components)
     {
         var result = new List<Component>();
 
@@ -222,7 +240,24 @@ public class SimulationService
         return false;
     }
 
-    private static bool IsLightSource(Component component)
+    /// <summary>
+    /// Returns the ONA Analyzer's "source" pin when <paramref name="component"/> is an
+    /// analysis tool with a usable light source pin; otherwise null. The regular
+    /// simulation injects light here so the analyzer behaves like its sweep mode:
+    /// light flows source → DUT → measurement. The measurement pin stays a detector.
+    /// </summary>
+    public static PhysicalPin? GetAnalyzerLightSourcePin(Component component)
+    {
+        if (!component.IsAnalysisTool)
+            return null;
+
+        var sourcePin = component.PhysicalPins.FirstOrDefault(
+            p => string.Equals(p.Name, "source", StringComparison.OrdinalIgnoreCase));
+
+        return sourcePin?.LogicalPin?.MatterType == MatterType.Light ? sourcePin : null;
+    }
+
+    public static bool IsLightSource(Component component)
     {
         var id = component.Identifier?.ToLowerInvariant() ?? "";
         if (id.Contains("grating") || id.Contains("edge coupler"))

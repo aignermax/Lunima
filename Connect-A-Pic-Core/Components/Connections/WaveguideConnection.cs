@@ -121,31 +121,6 @@ namespace CAP_Core.Components.Connections
         /// </summary>
         public double TotalLossDb { get; private set; }
 
-        // Nazca-Export
-        public string ExportToNazca()
-        {
-            var startComp = StartPin.ParentComponent;
-            var endComp = EndPin.ParentComponent;
-            var startCellName = $"cell_{startComp.PhysicalX}_{startComp.PhysicalY}";
-            var endCellName = $"cell_{endComp.PhysicalX}_{endComp.PhysicalY}";
-
-            return Type switch
-            {
-                WaveguideType.Straight =>
-                    $"        ic.strt_p2p(pin1={startCellName}.pin['{StartPin.Name}'], " +
-                    $"pin2={endCellName}.pin['{EndPin.Name}']).put()\n",
-
-                WaveguideType.SBend =>
-                    $"        ic.sbend_p2p(pin1={startCellName}.pin['{StartPin.Name}'], " +
-                    $"pin2={endCellName}.pin['{EndPin.Name}'], " +
-                    $"radius={BendRadiusMicrometers}).put()\n",
-
-                _ => // Auto: Nazca wählt automatisch
-                    $"        ic.cobra_p2p(pin1={startCellName}.pin['{StartPin.Name}'], " +
-                    $"pin2={endCellName}.pin['{EndPin.Name}']).put()\n"
-            };
-        }
-
         /// <summary>
         /// Recalculates the transmission coefficient based on current pin positions and loss parameters.
         /// Should be called whenever connected components are moved.

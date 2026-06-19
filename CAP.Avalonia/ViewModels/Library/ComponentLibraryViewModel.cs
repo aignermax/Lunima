@@ -187,18 +187,10 @@ public partial class ComponentLibraryViewModel : ObservableObject
     /// </summary>
     private void UpdateStatus()
     {
-        int userCount = UserGroups.Count;
-        int pdkCount = PdkGroups.Count;
-        int total = userCount + pdkCount;
-
-        if (total == 0)
-        {
-            StatusText = "No saved groups";
-        }
-        else
-        {
-            StatusText = $"{userCount} user group(s), {pdkCount} PDK macro(s)";
-        }
+        // Only the empty-state hint is worth a line: when groups exist, the
+        // "User Groups" / "PDK Macros" sections below already show the counts,
+        // so a separate summary line is just redundant vertical space.
+        StatusText = UserGroups.Count + PdkGroups.Count == 0 ? "No saved groups" : "";
     }
 
     /// <summary>

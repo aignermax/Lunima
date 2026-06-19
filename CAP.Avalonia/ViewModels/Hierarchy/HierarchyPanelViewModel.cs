@@ -52,12 +52,37 @@ public partial class HierarchyPanelViewModel : ObservableObject
     /// </summary>
     public Func<string, bool>? CheckHasSMatrixOverride { get; set; }
 
+    /// <summary>
+    /// Returns <c>true</c> when a per-instance Nazca parameter override exists for the
+    /// given component identifier. Wired to <c>FileOperationsViewModel.StoredNazcaOverrides</c>
+    /// by <see cref="CAP.Avalonia.Views.MainWindow"/>.
+    /// </summary>
+    public Func<string, bool>? CheckHasNazcaOverride { get; set; }
+
+    /// <summary>
+    /// Guards against re-entrant selection sync when hierarchy triggers a canvas update.
+    /// </summary>
+    private bool _suppressSync;
+
     public HierarchyPanelViewModel(DesignCanvasViewModel canvas)
     {
         _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
 
         // Subscribe to canvas changes
         _canvas.Components.CollectionChanged += (s, e) => RebuildTree();
+
+        // Canvas → Hierarchy: mirror SelectedComponent changes into the hierarchy tree.
+        _canvas.PropertyChanged += OnCanvasPropertyChanged;
+    }
+
+    /// <summary>
+    /// Responds to <see cref="DesignCanvasViewModel.SelectedComponent"/> changes
+    /// so that clicking a component on the canvas automatically highlights its node.
+    /// </summary>
+    private void OnCanvasPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesignCanvasViewModel.SelectedComponent) && !_suppressSync)
+            SyncSelectionFromCanvas(_canvas.SelectedComponent);
     }
 
     /// <summary>
@@ -95,6 +120,7 @@ public partial class HierarchyPanelViewModel : ObservableObject
     private void RefreshOverrideMarkersRecursive(HierarchyNodeViewModel node)
     {
         node.HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(node.Component.Identifier) ?? false;
+        node.HasNazcaOverride = CheckHasNazcaOverride?.Invoke(node.Component.Identifier) ?? false;
         foreach (var child in node.Children)
             RefreshOverrideMarkersRecursive(child);
     }
@@ -111,7 +137,8 @@ public partial class HierarchyPanelViewModel : ObservableObject
             SelectionRequested = SelectComponent,
             RenameConfirmed = (n, newName) => ApplyRename(n.Component, newName),
             OpenSettingsRequested = n => OpenComponentSettings?.Invoke(n),
-            HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(component.Identifier) ?? false
+            HasSMatrixOverride = CheckHasSMatrixOverride?.Invoke(component.Identifier) ?? false,
+            HasNazcaOverride = CheckHasNazcaOverride?.Invoke(component.Identifier) ?? false
         };
 
         // If this is a group, recursively add its children
@@ -285,26 +312,39 @@ public partial class HierarchyPanelViewModel : ObservableObject
 
     /// <summary>
     /// Handles selection request from a hierarchy node (select on canvas).
+    /// Sets <see cref="_suppressSync"/> to avoid the canvas PropertyChanged listener
+    /// re-entering this path and causing an infinite loop.
     /// </summary>
     private void SelectComponent(HierarchyNodeViewModel node)
     {
         if (node.ComponentViewModel == null) return;
+        // Already the canvas selection — nothing to push. This value-equality guard is
+        // what stops the node.IsSelected → SelectionRequested → canvas → node.IsSelected
+        // cycle from recursing.
+        if (_canvas.SelectedComponent == node.ComponentViewModel) return;
 
-        // Clear all canvas selections
-        _canvas.Selection.ClearSelection();
-        foreach (var comp in _canvas.Components)
+        _suppressSync = true;
+        try
         {
-            comp.IsSelected = false;
+            // Clear all canvas selections
+            _canvas.Selection.ClearSelection();
+            foreach (var comp in _canvas.Components)
+                comp.IsSelected = false;
+
+            // Select the component on canvas
+            node.ComponentViewModel.IsSelected = true;
+            _canvas.Selection.SelectedComponents.Add(node.ComponentViewModel);
+            _canvas.SelectedComponent = node.ComponentViewModel;
+
+            // Update hierarchy selection and expand parents so the node is visible
+            ClearAllSelections();
+            node.IsSelected = true;
+            ExpandParentsToNode(node);
         }
-
-        // Select the component
-        node.ComponentViewModel.IsSelected = true;
-        _canvas.Selection.SelectedComponents.Add(node.ComponentViewModel);
-        _canvas.SelectedComponent = node.ComponentViewModel;
-
-        // Update hierarchy selection
-        ClearAllSelections();
-        node.IsSelected = true;
+        finally
+        {
+            _suppressSync = false;
+        }
     }
 
     /// <summary>

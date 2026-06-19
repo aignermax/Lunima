@@ -40,6 +40,12 @@ namespace UnitTests.Integration;
 ///     Mismatch               = 9.5 µm
 ///
 /// These tests FAIL when the bug is present, providing exact deviation data.
+///
+/// Scope: this is a STRUCTURAL check that the exporter routes its coordinates through
+/// <see cref="NazcaCoordinateMapper"/> (it asserts against the same mapper the exporter
+/// uses, so it cannot catch a wrong mapper FORMULA). Formula correctness is proven by
+/// NazcaCoordinateMapperTests (hand-computed expectations) and by GdsExportAlignmentTests
+/// (verified against the real nazca engine that writes the GDS).
 /// </summary>
 public class GdsCoordinateVerificationTests
 {
@@ -499,9 +505,11 @@ public class GdsCoordinateVerificationTests
             return;
         }
 
-        // Use the pin's GetAbsoluteNazcaPosition() method which correctly handles
-        // rotation and NazcaOriginOffset transformations
-        var (expectedX, expectedY) = pin1.GetAbsoluteNazcaPosition();
+        // Expected via NazcaCoordinateMapper (#565): pin positions convert by plain
+        // Y negation for every rotation — the segment is routed from the app pin
+        // position, so the exported start must be its Y-negated image. A rotated
+        // origin-offset pin formula would diverge here (the #565 misalignment).
+        var (expectedX, expectedY) = NazcaCoordinateMapper.GetPinNazcaPosition(pin1);
 
         var wg = parsed.WaveguideStubs.First();
         double xDev = Math.Abs(expectedX - wg.StartX);

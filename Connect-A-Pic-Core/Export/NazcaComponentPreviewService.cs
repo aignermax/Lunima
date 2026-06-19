@@ -99,7 +99,7 @@ public class NazcaComponentPreviewService
     /// Renders the component preview, using a cached result when available.
     /// Never throws — returns a failure result instead.
     /// </summary>
-    public async Task<NazcaPreviewResult> RenderAsync(
+    public virtual async Task<NazcaPreviewResult> RenderAsync(
         string? moduleName, string nazcaFunction, string? nazcaParameters,
         CancellationToken ct = default)
     {
@@ -113,6 +113,58 @@ public class NazcaComponentPreviewService
         return result;
     }
 
+    /// <summary>
+    /// Renders a preview by executing raw, user-supplied Nazca cell code (issue #556).
+    /// The code is written to a temporary <c>.py</c> file and passed to the preview
+    /// script in <c>--code-file</c> mode, where its <c>component()</c> callable (or a
+    /// module-level <c>cell</c> variable) builds the geometry. Results are cached by a
+    /// hash of the code. Never throws — returns a failure result instead. The subprocess
+    /// timeout/kill guards against syntax errors hanging or infinite loops.
+    /// </summary>
+    /// <param name="code">Complete Nazca cell code to execute.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public virtual async Task<NazcaPreviewResult> RenderRawCodeAsync(string code, CancellationToken ct = default)
+    {
+        var key = "rawcode|" + ComputeCodeHash(code);
+        if (_cache.TryGetValue(key, out var cached))
+            return cached;
+
+        var result = await RunRawCodeScriptAsync(code, ct);
+        if (result.Success)
+            _cache[key] = result;
+        return result;
+    }
+
+    private static string ComputeCodeHash(string code)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(code ?? string.Empty));
+        return Convert.ToHexString(bytes);
+    }
+
+    private async Task<NazcaPreviewResult> RunRawCodeScriptAsync(string code, CancellationToken ct)
+    {
+        if (!File.Exists(_scriptPath))
+            return NazcaPreviewResult.Fail($"Preview script not found: {_scriptPath}");
+
+        var tempFile = Path.Combine(Path.GetTempPath(), $"lunima_rawcode_{Guid.NewGuid():N}.py");
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, code ?? string.Empty, ct);
+            return await RunProcessAsync(
+                si => si.ArgumentList.Add($"--code-file"), tempFile, ct);
+        }
+        catch (Exception ex)
+        {
+            return NazcaPreviewResult.Fail($"Unexpected error: {ex.Message}");
+        }
+        finally
+        {
+            try { if (File.Exists(tempFile)) File.Delete(tempFile); }
+            catch { /* best-effort temp cleanup */ }
+        }
+    }
+
     private async Task<NazcaPreviewResult> RunScriptAsync(
         string? moduleName, string nazcaFunction, string? nazcaParameters, CancellationToken ct)
     {
@@ -120,6 +172,24 @@ public class NazcaComponentPreviewService
             return NazcaPreviewResult.Fail($"Preview script not found: {_scriptPath}");
 
         var module = string.IsNullOrWhiteSpace(moduleName) ? "demo" : moduleName;
+        return await RunProcessAsync(si =>
+        {
+            si.ArgumentList.Add(module);
+            si.ArgumentList.Add(nazcaFunction);
+            if (!string.IsNullOrWhiteSpace(nazcaParameters))
+                si.ArgumentList.Add(nazcaParameters);
+        }, codeFilePath: null, ct);
+    }
+
+    /// <summary>
+    /// Shared subprocess plumbing: starts Python on the script, applies the
+    /// caller-specific arguments, enforces the timeout/kill, and parses stdout.
+    /// When <paramref name="codeFilePath"/> is non-null it is appended after the
+    /// caller's arguments (the <c>--code-file &lt;path&gt;</c> value).
+    /// </summary>
+    private async Task<NazcaPreviewResult> RunProcessAsync(
+        Action<ProcessStartInfo> addArguments, string? codeFilePath, CancellationToken ct)
+    {
         try
         {
             using var process = new Process();
@@ -132,10 +202,9 @@ public class NazcaComponentPreviewService
                 CreateNoWindow = true,
             };
             si.ArgumentList.Add(_scriptPath);
-            si.ArgumentList.Add(module);
-            si.ArgumentList.Add(nazcaFunction);
-            if (!string.IsNullOrWhiteSpace(nazcaParameters))
-                si.ArgumentList.Add(nazcaParameters);
+            addArguments(si);
+            if (codeFilePath != null)
+                si.ArgumentList.Add(codeFilePath);
             process.StartInfo = si;
             process.Start();
 

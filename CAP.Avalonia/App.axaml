@@ -4,5 +4,12 @@
              RequestedThemeVariant="Dark">
     <Application.Styles>
         <FluentTheme />
+        <!-- OxyPlot.Avalonia ships its control templates here. Without this include
+             the <oxy:PlotView> control has no template and renders blank. -->
+        <StyleInclude Source="avares://OxyPlot.Avalonia/Themes/Default.axaml" />
+        <!-- AvaloniaEdit's TextEditor control template/styles. Without this include the
+             <AvaloniaEdit:TextEditor> renders with no template — invisible/empty text
+             even though its Document is populated (issue #556 Nazca code editor). -->
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
     </Application.Styles>
 </Application>

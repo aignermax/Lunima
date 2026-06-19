@@ -120,6 +120,14 @@ public partial class HierarchyNodeViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasSMatrixOverride;
 
+    /// <summary>
+    /// True when a per-instance Nazca parameter override is stored for this component.
+    /// Used to display the 🔧 badge in the hierarchy panel, distinct from the S-matrix badge.
+    /// Refreshed by <see cref="HierarchyPanelViewModel.RefreshOverrideMarkers"/>.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasNazcaOverride;
+
     public HierarchyNodeViewModel(Component component)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
@@ -225,6 +233,18 @@ public partial class HierarchyNodeViewModel : ObservableObject
     private void Select()
     {
         SelectionRequested?.Invoke(this);
+    }
+
+    /// <summary>
+    /// When the node becomes selected — whether by clicking its row (native tree
+    /// selection, bound two-way) or by code — request the matching canvas selection.
+    /// The handler is idempotent (it no-ops when the canvas already matches), so this
+    /// does not loop with the canvas → hierarchy sync.
+    /// </summary>
+    partial void OnIsSelectedChanged(bool value)
+    {
+        if (value)
+            SelectionRequested?.Invoke(this);
     }
 
     /// <summary>

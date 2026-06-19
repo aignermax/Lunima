@@ -1,7 +1,11 @@
 name: 🔍 xUnit Tests
 
+# Run on PRs (the required check for branch protection) and on pushes to main
+# only. Previously `push:` had no branch filter, so a push to a branch that also
+# had an open PR triggered BOTH events → the suite ran twice.
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:

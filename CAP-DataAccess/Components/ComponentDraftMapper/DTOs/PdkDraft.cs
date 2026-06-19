@@ -60,6 +60,15 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public MaterialDispersionDraft? MaterialDispersion { get; set; }
 
         /// <summary>
+        /// Fabrication process this PDK targets (layer stack, cross-sections,
+        /// materials, design rules). Optional so older PDK files still parse;
+        /// when present it is the process a design's components must agree on
+        /// (one process per chip — issue #570).
+        /// </summary>
+        [JsonPropertyName("process")]
+        public ProcessDefinition? Process { get; set; }
+
+        /// <summary>
         /// List of component definitions in this PDK.
         /// </summary>
         [JsonPropertyName("components")]

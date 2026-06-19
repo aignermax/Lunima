@@ -1,15 +1,26 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels.ComponentSettings"
+        xmlns:io="using:CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride"
+        xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+        xmlns:services="using:CAP.Avalonia.Services"
+        xmlns:edit="using:AvaloniaEdit"
         x:Class="CAP.Avalonia.Views.ComponentSettingsDialog"
         x:Name="DialogRoot"
         x:DataType="vm:ComponentSettingsDialogViewModel"
         Title="{Binding Title}"
-        Width="560" Height="500"
-        MinWidth="400" MinHeight="300"
+        Width="620" Height="760"
+        MinWidth="400" MinHeight="350"
+        CanResize="True"
         Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
+    <!-- The dialog can be resized quite short; without an outer scroll the
+         lower DockPanel sections (effective S-matrix + wavelength list) get
+         clipped instead of becoming reachable. Wrapping the whole content in a
+         ScrollViewer keeps every section accessible at any window height. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
     <DockPanel Margin="16">
 
         <!-- Title -->
@@ -33,6 +44,203 @@
                        TextWrapping="Wrap"/>
         </Border>
 
+        <!-- Per-instance editable Nazca code editor (issue #556) -->
+        <!-- NOTE (issue #556): The legacy "Nazca Parameters Override" section (#541,
+             bound to ComponentSettingsDialogViewModel.NazcaOverride) was removed from
+             this dialog because the full code editor below supersedes it. The
+             InstanceNazcaOverrideViewModel class and NazcaCodeOverride parameter
+             persistence are intentionally kept so older .lun files that stored
+             function-name/parameter overrides still load and apply. -->
+
+        <Border DockPanel.Dock="Bottom"
+                Background="#1a1a2a"
+                CornerRadius="4"
+                Padding="10,8"
+                Margin="0,10,0,0"
+                BorderBrush="#2a2a4a"
+                BorderThickness="1"
+                IsVisible="{Binding NazcaCodeEditor, Converter={x:Static ObjectConverters.IsNotNull}}"
+                DataContext="{Binding NazcaCodeEditor}"
+                x:DataType="io:InstanceNazcaCodeEditorViewModel">
+            <StackPanel Spacing="6">
+                <!-- Section header -->
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Nazca Code (geometry only)"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Foreground="#8888cc"/>
+                    <TextBlock Text="🔧 Override active"
+                               FontSize="10"
+                               Foreground="#FFA500"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasOverride}"/>
+                    <TextBlock Text="⚠ Overlaps neighbours"
+                               FontSize="10"
+                               Foreground="#FF8888"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasOverlap}"/>
+                    <!-- Nazca docs + cheat-sheet (issue #556) -->
+                    <Button Content="Nazca docs ↗"
+                            Click="OnOpenNazcaDocs"
+                            Padding="6,1"
+                            Background="Transparent"
+                            Foreground="#7faaff"
+                            BorderThickness="0"
+                            FontSize="10"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Open the Nazca Design manual in your browser"/>
+                    <Button Content="?"
+                            Padding="8,1"
+                            Background="#33335a"
+                            Foreground="#ccccff"
+                            BorderThickness="0"
+                            CornerRadius="8"
+                            FontSize="11"
+                            FontWeight="Bold"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Quick help — most-used Nazca commands">
+                        <Button.Flyout>
+                            <Flyout>
+                                <StackPanel Spacing="4" MaxWidth="460">
+                                    <TextBlock Text="Nazca elements — showcase circuit (Insert, or select &amp; Ctrl+C)"
+                                               FontWeight="SemiBold" FontSize="11" Foreground="#aaaacc"
+                                               TextWrapping="Wrap"/>
+                                    <!-- Verified-runnable showcase (NazcaCodeExamples.Complex). Selectable for copy. -->
+                                    <Border Background="#101018" BorderBrush="#333355" BorderThickness="1"
+                                            CornerRadius="3" Padding="6">
+                                        <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
+                                            <SelectableTextBlock FontFamily="Consolas, Courier New, monospace"
+                                                                 FontSize="10" Foreground="#dddddd"
+                                                                 Text="{x:Static services:NazcaCodeExamples.Complex}"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                    <Button Content="Insert into editor"
+                                            Command="{Binding InsertStarterCommand}"
+                                            Padding="8,3" FontSize="10"
+                                            Background="#2a4a2a" Foreground="#cceecc" BorderThickness="0"
+                                            HorizontalAlignment="Left"
+                                            ToolTip.Tip="Replace the editor content with this showcase circuit"/>
+                                    <TextBlock Text="Common elements (chain with .put(), or .put(x, y, angle)):"
+                                               FontSize="10" Foreground="#aaaacc" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <SelectableTextBlock FontFamily="Consolas, Courier New, monospace"
+                                                         FontSize="9" Foreground="#9aa0b0" TextWrapping="Wrap"
+                                                         Text="strt(length, width) · bend(radius, angle, width) · taper(length, width1, width2) · ptaper(...) · euler(width, radius, angle) · sinebend(width, distance, offset) · cobra(xya=(x,y,a), width1, width2) · ring(radius, width) · text(text, height, layer) · Pin(name).put(x, y, angle)"/>
+                                    <TextBlock Text="Tip: ring()/text() return polygon lists — add them with nd.Polygon(...)/loops, not .put(). Full reference: nazca-design.org/manual."
+                                               FontSize="9" Foreground="#777799" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+
+                <!-- No-editable-source note: shown for fixed-cell GDS / KLayout PCells
+                     whose Python source can't be introspected. The geometry preview
+                     still renders; the user may paste their own Nazca code to override. -->
+                <TextBlock Text="No editable Nazca source for this component; you can still paste your own Nazca code to override its geometry."
+                           Foreground="#ddaa66"
+                           FontSize="10"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasEditableSource, Converter={x:Static BoolConverters.Not}}"/>
+
+                <!-- Original source (READ-ONLY reference). Editing the PDK's real code in
+                     place isn't supported — it's a decorated closure with non-standalone
+                     references — so it's shown for understanding only; use the override
+                     editor below to replace the geometry with your own self-contained code. -->
+                <Expander Header="Original source (read-only reference)"
+                          IsExpanded="False"
+                          Margin="0,2,0,0"
+                          IsVisible="{Binding HasEditableSource}">
+                    <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
+                        <SelectableTextBlock Text="{Binding OriginalSource}"
+                                             FontFamily="Consolas, Courier New, monospace"
+                                             FontSize="10"
+                                             Foreground="#9aa0b0"
+                                             TextWrapping="NoWrap"/>
+                    </ScrollViewer>
+                </Expander>
+
+                <TextBlock Text="Override — your own self-contained Nazca code. Run shows the real component until you define a component()."
+                           Foreground="#8888aa" FontSize="10" Margin="0,4,0,2" TextWrapping="Wrap"/>
+
+                <!-- Override editor (left) + live preview (right) -->
+                <Grid ColumnDefinitions="*,160" Height="340">
+                    <edit:TextEditor Grid.Column="0"
+                                     behaviors:TextEditorBindingBehavior.BoundText="{Binding Code, Mode=TwoWay}"
+                                     ShowLineNumbers="True"
+                                     WordWrap="False"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="11"
+                                     Background="#101018"
+                                     Foreground="#dddddd"
+                                     BorderBrush="#333355"
+                                     BorderThickness="1"
+                                     Margin="0,0,8,0"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalScrollBarVisibility="Auto"
+                                     ToolTip.Tip="Write self-contained Nazca code that defines component() returning a Cell. Imports/helpers allowed."/>
+                    <Border Grid.Column="1"
+                            Background="#0a0a10"
+                            BorderBrush="#333355"
+                            BorderThickness="1"
+                            CornerRadius="3">
+                        <Image Source="{Binding PreviewBitmap}"
+                               Stretch="Uniform"
+                               Margin="4"/>
+                    </Border>
+                </Grid>
+
+                <!-- Error text — selectable + copyable so it can be pasted into a bug report -->
+                <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0"
+                      IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <ScrollViewer Grid.Column="0" MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                        <SelectableTextBlock Text="{Binding PreviewError}"
+                                             Foreground="#FF6B6B"
+                                             FontSize="10"
+                                             FontFamily="Consolas, Courier New, monospace"
+                                             TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                    <Button Grid.Column="1"
+                            Content="Copy"
+                            Click="OnCopyError"
+                            Padding="6,1" FontSize="10" Margin="6,0,0,0"
+                            VerticalAlignment="Top"
+                            Background="#33335a" Foreground="#ccccff" BorderThickness="0"
+                            ToolTip.Tip="Copy the error message to the clipboard"/>
+                </Grid>
+
+                <!-- Buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Run Preview"
+                            Command="{Binding RunPreviewCommand}"
+                            Padding="10,5"
+                            Background="#2a2a6a"
+                            Foreground="White"
+                            FontSize="11"
+                            IsEnabled="{Binding IsRunning, Converter={x:Static BoolConverters.Not}}"/>
+                    <Button Content="Apply"
+                            Command="{Binding ApplyOverrideCommand}"
+                            Padding="10,5"
+                            Background="#2a5a2a"
+                            Foreground="White"
+                            FontSize="11"
+                            ToolTip.Tip="Persist this code and recompute the component size (enabled after a successful run)"/>
+                    <Button Content="Reset to Template"
+                            Command="{Binding ResetToTemplateCommand}"
+                            Padding="10,5"
+                            Background="#3a2a20"
+                            Foreground="#ddaa88"
+                            FontSize="11"/>
+                </StackPanel>
+
+                <!-- Status / hint text -->
+                <TextBlock Text="{Binding StatusText}"
+                           Foreground="#aaaacc"
+                           FontSize="10"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+        </Border>
+
         <!-- Load button -->
         <Button DockPanel.Dock="Bottom"
                 Content="Load S-matrix from file…"
@@ -42,6 +250,34 @@
                 Padding="12,6"
                 Background="#3d5d3d"
                 IsEnabled="{Binding IsImporting, Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Recalculate via FDTD: like Load, but the S-matrix is computed from the
+             component geometry with the open-source Meep solver instead of imported. -->
+        <Button DockPanel.Dock="Bottom"
+                Content="Recalculate S-matrix (FDTD)…"
+                Command="{Binding RecalculateSMatrixCommand}"
+                HorizontalAlignment="Left"
+                Margin="0,6,0,0"
+                Padding="12,6"
+                Background="#3d4d6d"
+                IsVisible="{Binding CanRecalculate}"/>
+
+        <!-- Solver / simulation status -->
+        <Border DockPanel.Dock="Bottom"
+                Background="#161616"
+                CornerRadius="4"
+                Padding="8,6"
+                Margin="0,8,0,0"
+                IsVisible="{Binding SolverStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="⏳" FontSize="12" VerticalAlignment="Center"
+                           IsVisible="{Binding IsComputing}"/>
+                <TextBlock Text="{Binding SolverStatus}"
+                           Foreground="#aaccaa"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
 
         <!-- Empty state -->
         <TextBlock DockPanel.Dock="Top"
@@ -206,4 +442,5 @@
         </ScrollViewer>
 
     </DockPanel>
+    </ScrollViewer>
 </Window>

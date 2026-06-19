@@ -1,6 +1,7 @@
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
+using CAP_Core.Export;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Shouldly;
 using Xunit;
@@ -17,7 +18,12 @@ public class NazcaExportAllComponentsTests
     public void Export_AllBuiltInTemplates_EachComponentAppearsInOutput()
     {
         var canvas = new DesignCanvasViewModel();
-        var templates = TestPdkLoader.LoadAllTemplates();
+        // Analysis tools (e.g. ONA Analyzer) are intentionally skipped during
+        // GDS / Nazca export — they have no physical counterpart. Filter them
+        // out before placing so the per-index assertion below stays in sync.
+        var templates = TestPdkLoader.LoadAllTemplates()
+            .Where(t => t.NazcaFunctionName != "__analyzer__")
+            .ToList();
 
         double xOffset = 0;
         foreach (var template in templates)
@@ -270,13 +276,16 @@ public class NazcaExportAllComponentsTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas);
 
-        // 180° rotation: rotated offset = (-originX, -originY).
-        // Physical + rotated offset, Y-flipped:
+        // Rotated placement comes from the bbox re-anchoring formula in
+        // NazcaCoordinateMapper (hand-verified per rotation in its unit tests, #565);
+        // rotating the origin offset instead would misplace the cell — exactly the
+        // misalignment bug #565 covers. Here we pin down that the exporter routes
+        // through the mapper and emits the org-anchored put with the negated rotation.
         var ci = System.Globalization.CultureInfo.InvariantCulture;
-        var nx = (100 - template.NazcaOriginOffsetX).ToString("F2", ci);
-        var ny = -(100 - template.NazcaOriginOffsetY);
+        var placement = NazcaCoordinateMapper.GetCellPlacement(component, null);
         result.ShouldContain("ebeam_gc_te1550()");
-        result.ShouldContain($".put('org', {nx}, {ny.ToString("F2", ci)}, -180)");
+        result.ShouldContain(
+            $".put('org', {placement.X.ToString("F2", ci)}, {placement.Y.ToString("F2", ci)}, -180)");
     }
 
     private static string? FindPdkFile(string fileName)

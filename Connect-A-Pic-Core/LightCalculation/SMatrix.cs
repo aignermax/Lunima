@@ -8,6 +8,21 @@ namespace CAP_Core.LightCalculation
 {
     public class SMatrix
     {
+        /// <summary>
+        /// Safety cap for the Neumann-series iteration loop.  Residual-based convergence
+        /// (<see cref="DefaultConvergenceEpsilon"/>) will terminate the loop early for
+        /// well-converged circuits; this constant only fires for near-lossless resonators
+        /// where the series does not contract.
+        /// </summary>
+        public const int DefaultMaxIterations = 10_000;
+
+        /// <summary>
+        /// Field-vector L2-norm delta threshold for declaring convergence.
+        /// When ‖field_n − field_{n-1}‖₂ falls below this value the Neumann series
+        /// has converged and the iteration stops regardless of <c>maxIterations</c>.
+        /// </summary>
+        public const double DefaultConvergenceEpsilon = 1e-9;
+
         public Matrix<Complex> SMat { get; private set; } // the SMat works like SMat[PinNROutflow, PinNRInflow] --> so opposite from what one might expect
         public readonly Dictionary<Guid, int> PinReference; // all PinIDs inside of the matrix. the int is the index of the row/column in the SMat.. and also of the inputVector.
         public Dictionary<Guid, double> SliderReference { get; internal set; }
@@ -119,29 +134,54 @@ namespace CAP_Core.LightCalculation
             return sysMat;
         }
 
-        // n is the number of time steps to move forward "steps=3" would return the light propagation after 3 steps.
-        public async Task<Dictionary<Guid, Complex>> CalcFieldAtPinsAfterStepsAsync(MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector, int maxSteps, CancellationTokenSource cancellation)
+        /// <summary>
+        /// Iterates the Neumann series  field = Σ Sⁿ · input  until the field-vector
+        /// L2-norm delta falls below <paramref name="convergenceEpsilon"/> or
+        /// <paramref name="maxIterations"/> steps are reached (safety cap).
+        ///
+        /// The residual-based stop criterion replaces the old fixed-step heuristic
+        /// (pinCount×2) and correctly handles high-reflectivity / deep-cavity circuits
+        /// where the geometric series converges slowly (round-trip factor → 1).
+        /// </summary>
+        /// <param name="inputVector">Steady-state input amplitude at each pin.</param>
+        /// <param name="maxIterations">
+        ///   Hard upper bound on iterations.  Use <see cref="DefaultMaxIterations"/> unless
+        ///   a tighter bound is known to be sufficient (e.g. unit tests for non-resonant circuits).
+        /// </param>
+        /// <param name="cancellation">Cancellation support for user-triggered stop.</param>
+        /// <param name="convergenceEpsilon">
+        ///   L2-norm threshold; iteration stops when ‖field_n − field_{n-1}‖₂ &lt; epsilon.
+        ///   Defaults to <see cref="DefaultConvergenceEpsilon"/> (1e-9).
+        /// </param>
+        public async Task<Dictionary<Guid, Complex>> CalcFieldAtPinsAfterStepsAsync(
+            MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector,
+            int maxIterations,
+            CancellationTokenSource cancellation,
+            double convergenceEpsilon = DefaultConvergenceEpsilon)
         {
-            if (maxSteps < 1) return new Dictionary<Guid, Complex>();
+            if (maxIterations < 1) return new Dictionary<Guid, Complex>();
 
-            // update the SMat using the non linear connections - including those who are not depending on the input vector (the PIN1 etc)
+            // Update SMat using non-linear connections that don't depend on the current field.
             await RecomputeSMatNonLinearPartsAsync(inputVector, SkipOuterLoopFunctions: false);
             try
             {
-
                 var inputAfterSteps = SMat * inputVector + inputVector;
-                for (int i = 1; i < maxSteps; i++)
+                var converged = false;
+
+                for (int i = 1; i < maxIterations && !converged; i++)
                 {
                     cancellation.Token.ThrowIfCancellationRequested();
                     await Task.Run(async () =>
                     {
-                        var oldInputAfterSteps = inputAfterSteps;
-                        // recalculating non linear values because the inputVector has changed and could now change the connections like activate a logic gate for example.
+                        var previousField = inputAfterSteps;
+                        // Recalculate non-linear entries because the field vector has changed
+                        // (e.g. logic gates that switch based on optical power).
                         await RecomputeSMatNonLinearPartsAsync(inputAfterSteps, SkipOuterLoopFunctions: true);
-                        // multiplying the adjusted matrix and also adding the initial inputVector again because there is more light incoming
                         inputAfterSteps = SMat * inputAfterSteps + inputVector;
-                        if (oldInputAfterSteps.Equals(inputAfterSteps))
-                            maxSteps = 0;
+
+                        // Residual-based convergence: stop when the field change is negligible.
+                        double delta = (inputAfterSteps - previousField).L2Norm();
+                        converged = delta < convergenceEpsilon;
                     }, cancellation.Token);
                 }
 

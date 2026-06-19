@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Export;
@@ -13,9 +14,13 @@ using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Update;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP.Avalonia.ViewModels.Settings;
+using CAP.Avalonia.ViewModels.Solvers;
+using CAP.Avalonia.Services.Solvers;
+using CAP_Core.Solvers.ModeSolver;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.Views;
 using CAP.Avalonia.Services.AiTools;
@@ -141,6 +146,7 @@ public partial class App : Application
         // Singleton so the Settings-window page and the RightPanel reference share state.
         services.AddSingleton<ChipSizeViewModel>();
         services.AddTransient<ParameterSweepViewModel>();
+        services.AddTransient<OnaSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
         services.AddTransient<DesignValidationViewModel>();
         services.AddTransient<ComponentDimensionDiagnosticsViewModel>();
@@ -151,6 +157,21 @@ public partial class App : Application
         services.AddTransient<GroupSMatrixViewModel>();
         services.AddTransient<ArchitectureReportViewModel>();
         services.AddTransient<PdkConsistencyViewModel>();
+
+        // Selection-driven component property editors (right panel).
+        // Order matters: most specific first, generic fallback last. The
+        // factory walks them and returns the first non-null editor for the
+        // currently selected component on the canvas.
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider>(
+            sp => sp.GetRequiredService<CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider>());
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider,
+            CAP.Avalonia.ViewModels.Properties.Editors.LightSourceEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider,
+            CAP.Avalonia.ViewModels.Properties.Editors.SliderEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.IComponentEditorProvider,
+            CAP.Avalonia.ViewModels.Properties.Editors.GenericComponentEditorProvider>();
+        services.AddSingleton<CAP.Avalonia.ViewModels.Properties.ComponentEditorFactory>();
 
         // VerilogAExportViewModel: singleton so the dialog and FileOperations
         // share the same state.
@@ -185,7 +206,27 @@ public partial class App : Application
         services.AddSingleton(sp =>
         {
             var prefs = sp.GetRequiredService<UserPreferencesService>();
-            var python = prefs.GetCustomPythonPath() ?? ResolvePythonExecutable();
+            // Resolution order:
+            //  1. User's saved CustomPythonPath — but only if it can actually import
+            //     nazca. A stale value (e.g. the bare "python" Store-alias stub saved
+            //     by an older version) is rejected so it can't silently break the
+            //     preview; we fall through to discovery instead.
+            //  2. PythonDiscoveryService — checks VIRTUAL_ENV, installed interpreters,
+            //     system python, and ~/.venvs/*; only returns a path whose `import
+            //     nazca` succeeds. Avoids reinventing venv discovery for the preview.
+            //  3. ResolvePythonExecutable — naive PATH search; final fallback so
+            //     the service stays constructable on a machine without nazca.
+            var saved = prefs.GetCustomPythonPath();
+            var python = ValidatedNazcaPython(saved);
+            if (python == null)
+            {
+                var discovered = DiscoverNazcaPython();
+                // Self-correct a stale/invalid saved path (e.g. the "python" stub) so the
+                // probe doesn't run on every launch. Only overwrites a non-empty bad value.
+                if (discovered != null && !string.IsNullOrEmpty(saved) && discovered != saved)
+                    prefs.SetCustomPythonPath(discovered);
+                python = discovered ?? ResolvePythonExecutable();
+            }
             var script = FindPreviewScript();
             return new NazcaComponentPreviewService(python, script);
         });
@@ -194,6 +235,30 @@ public partial class App : Application
             sp.GetRequiredService<PdkJsonSaver>(),
             sp.GetRequiredService<PdkManagerViewModel>(),
             sp.GetRequiredService<NazcaComponentPreviewService>()));
+        services.AddSingleton(sp =>
+            new GdsPreviewRenderService(sp.GetRequiredService<NazcaComponentPreviewService>()));
+
+        // Register FDTD S-matrix service (open-source Meep via Docker, self-provisioning)
+        services.AddSingleton<CAP_Core.Solvers.Fdtd.IFdtdSMatrixService>(_ =>
+        {
+            var dockerfile = FindFdtdDockerfile();
+            // Build context = the scripts/ dir (parent of scripts/fdtd) so the small
+            // bridge script is COPYable without shipping the whole repo to the daemon.
+            var buildContext = Directory.GetParent(Path.GetDirectoryName(dockerfile)!)?.FullName
+                               ?? AppDomain.CurrentDomain.BaseDirectory;
+            return new CAP.Avalonia.Services.Solvers.DockerFdtdSMatrixService("lunima-meep:1", dockerfile, buildContext);
+        });
+
+        // Register mode-solver service and ViewModel
+        services.AddSingleton<IModeSolverService>(sp =>
+        {
+            var prefs  = sp.GetRequiredService<UserPreferencesService>();
+            var python = prefs.GetCustomPythonPath() ?? ResolvePythonExecutable();
+            var script = FindModeSolveScript();
+            return new PythonModeSolverService(python, script);
+        });
+        services.AddTransient(sp => new ModeSolverViewModel(
+            sp.GetRequiredService<IModeSolverService>()));
 
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();
@@ -218,6 +283,67 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Runs <see cref="PythonDiscoveryService"/> synchronously and returns the first
+    /// Python installation that has nazca importable, or <c>null</c> if none is found.
+    /// Used as a fallback for <see cref="NazcaComponentPreviewService"/> before the naive
+    /// PATH-based <see cref="ResolvePythonExecutable"/> kicks in, so users with
+    /// <c>~/.venvs/nazca</c>-style virtualenvs get a working preview out of the box
+    /// without having to set CustomPythonPath manually.
+    /// Failures (subprocess errors, IO) are swallowed so this never breaks DI.
+    /// </summary>
+    private static string? DiscoverNazcaPython()
+    {
+        try
+        {
+            var discovery = new PythonDiscoveryService();
+            // Task.Run offloads the async work to the thread pool. Calling .Result directly
+            // on the UI thread would deadlock: the awaits inside capture the UI
+            // SynchronizationContext, but that thread is blocked here waiting for the result.
+            // FindFirst… short-circuits at the first nazca-capable interpreter so startup
+            // doesn't probe every candidate.
+            return Task.Run(() => discovery.FindFirstNazcaPythonPathAsync()).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Returns <paramref name="customPath"/> only if it points to a Python that can
+    /// import nazca; otherwise <c>null</c>. Guards against a stale saved path (e.g. the
+    /// bare "python" Store-alias stub) silently disabling the GDS preview — an unusable
+    /// value falls through to <see cref="DiscoverNazcaPython"/> instead.
+    /// </summary>
+    private static string? ValidatedNazcaPython(string? customPath)
+    {
+        if (string.IsNullOrWhiteSpace(customPath))
+            return null;
+
+        // A real interpreter file path is trusted as-is — no launch at startup.
+        if (File.Exists(customPath))
+            return customPath;
+
+        // On Windows, never probe a bare command (e.g. "python"): it may be a Microsoft
+        // Store execution-alias stub whose Process.Start blocks indefinitely (Store/App-
+        // Installer activation). Fall through to discovery, which only touches "py" and
+        // real interpreter file paths.
+        if (OperatingSystem.IsWindows())
+            return null;
+        try
+        {
+            var discovery = new PythonDiscoveryService();
+            // Task.Run avoids a UI-thread deadlock — see DiscoverNazcaPython for why.
+            var info = Task.Run(() => discovery.CheckPythonInstallation(customPath, "Custom")).GetAwaiter().GetResult();
+            return info?.HasNazca == true ? customPath : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -247,6 +373,49 @@ public partial class App : Application
 
         // Best-effort fallback — NazcaComponentPreviewService returns a graceful
         // failure with a clear message when the path doesn't resolve.
+        return local;
+    }
+
+    /// <summary>
+    /// Searches for mode_solve.py relative to the application base directory.
+    /// Uses the same walk-up-the-tree strategy as <see cref="FindPreviewScript"/>.
+    /// </summary>
+    private static string FindModeSolveScript()
+    {
+        const string scriptName = "mode_solve.py";
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var local   = Path.Combine(baseDir, "scripts", scriptName);
+        if (File.Exists(local)) return local;
+
+        var current = new DirectoryInfo(baseDir);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, "scripts", scriptName);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
+        }
+        return local;
+    }
+
+    /// <summary>
+    /// Searches for scripts/fdtd/Dockerfile (the FDTD solver image recipe) relative
+    /// to the application base directory, using the same walk-up-the-tree strategy
+    /// as <see cref="FindPreviewScript"/>.
+    /// </summary>
+    private static string FindFdtdDockerfile()
+    {
+        var relative = Path.Combine("scripts", "fdtd", "Dockerfile");
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var local = Path.Combine(baseDir, relative);
+        if (File.Exists(local)) return local;
+
+        var current = new DirectoryInfo(baseDir);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, relative);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
+        }
         return local;
     }
 
