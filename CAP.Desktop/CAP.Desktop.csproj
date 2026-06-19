@@ -31,4 +31,21 @@
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- FDTD S-matrix solver bridge (issue #569). DockerFdtdSMatrixService /
+       FindFdtdDockerfile() look for `<baseDir>/scripts/fdtd/Dockerfile`, and that
+       Dockerfile COPYs `fdtd_sparams.py` relative to its build context (the
+       scripts/ folder). Both must ship next to the binary in that exact layout,
+       or "Recalculate S-matrix (FDTD)" can't build its Docker image on a fresh
+       install. (Docker itself is a user prerequisite — not bundled.) -->
+  <ItemGroup>
+    <Content Include="..\scripts\fdtd_sparams.py"
+             Link="scripts\fdtd_sparams.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\scripts\fdtd\Dockerfile"
+             Link="scripts\fdtd\Dockerfile"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

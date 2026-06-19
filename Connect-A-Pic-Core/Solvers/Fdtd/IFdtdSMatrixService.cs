@@ -18,4 +18,10 @@ public interface IFdtdSMatrixService
     /// <param name="ct">Cancellation token.</param>
     Task<FdtdSMatrixResult> SolveAsync(
         FdtdSMatrixRequest request, IProgress<string>? progress = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Quickly probes whether the solver backend is ready (e.g. the Docker engine is
+    /// installed and running), so the UI can warn before starting a long solve.
+    /// </summary>
+    Task<FdtdAvailability> CheckAvailabilityAsync(CancellationToken ct = default);
 }

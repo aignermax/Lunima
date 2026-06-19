@@ -50,6 +50,8 @@ public class ComponentSettingsDialogFdtdTests
     public async Task RecalculateSMatrix_OnSuccess_StoresDataAndReportsStatus()
     {
         var service = new Mock<IFdtdSMatrixService>();
+        service.Setup(s => s.CheckAvailabilityAsync(It.IsAny<CancellationToken>()))
+               .ReturnsAsync(FdtdAvailability.Available("ready"));
         service.Setup(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
                .ReturnsAsync(SuccessResult());
         var store = new Dictionary<string, ComponentSMatrixData>();
@@ -74,6 +76,8 @@ public class ComponentSettingsDialogFdtdTests
     public async Task RecalculateSMatrix_OnFailure_SurfacesHintAndStoresNothing()
     {
         var service = new Mock<IFdtdSMatrixService>();
+        service.Setup(s => s.CheckAvailabilityAsync(It.IsAny<CancellationToken>()))
+               .ReturnsAsync(FdtdAvailability.Available("ready"));
         service.Setup(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
                .ReturnsAsync(FdtdSMatrixResult.Fail("image build failed", missingDependency: "docker"));
         var store = new Dictionary<string, ComponentSMatrixData>();
@@ -89,5 +93,29 @@ public class ComponentSettingsDialogFdtdTests
 
         store.ShouldNotContainKey("comp");
         vm.SolverStatus.ShouldContain("docker");
+    }
+
+    [Fact]
+    public async Task RecalculateSMatrix_WhenDockerUnavailable_ShowsHintAndDoesNotSolve()
+    {
+        var service = new Mock<IFdtdSMatrixService>();
+        service.Setup(s => s.CheckAvailabilityAsync(It.IsAny<CancellationToken>()))
+               .ReturnsAsync(FdtdAvailability.Unavailable("Docker is not installed. Install Docker Desktop."));
+        var store = new Dictionary<string, ComponentSMatrixData>();
+
+        var vm = new ComponentSettingsDialogViewModel(
+            Mock.Of<IFileDialogService>(),
+            fdtdService: service.Object,
+            fdtdRequestFactory: FakeFactory());
+        vm.Configure("comp", "Comp", store,
+            liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
+
+        await vm.RecalculateSMatrixCommand.ExecuteAsync(null);
+
+        vm.SolverStatus.ShouldContain("Docker Desktop");
+        store.ShouldNotContainKey("comp");
+        vm.IsComputing.ShouldBeFalse();
+        // The solver must not be invoked when the backend isn't available.
+        service.Verify(s => s.SolveAsync(It.IsAny<FdtdSMatrixRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

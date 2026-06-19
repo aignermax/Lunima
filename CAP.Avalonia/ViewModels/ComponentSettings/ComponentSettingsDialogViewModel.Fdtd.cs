@@ -60,11 +60,21 @@ public partial class ComponentSettingsDialogViewModel
             return;
 
         IsComputing = true;
-        SolverStatus = "Preparing component geometry…";
         _recalcCts = new CancellationTokenSource();
 
         try
         {
+            // Fail fast with an actionable message if Docker isn't ready, before
+            // exporting geometry / building images.
+            SolverStatus = "Checking the FDTD solver (Docker)…";
+            var availability = await _fdtdService.CheckAvailabilityAsync(_recalcCts.Token);
+            if (!availability.IsAvailable)
+            {
+                SolverStatus = availability.Message;
+                return;
+            }
+
+            SolverStatus = "Preparing component geometry…";
             var request = await _fdtdRequestFactory(_liveComponent, _recalcCts.Token);
             if (request == null)
             {
