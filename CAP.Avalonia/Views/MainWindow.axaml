@@ -480,7 +480,8 @@
                                  Classes="compactList"
                                  SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
                                  Background="Transparent" Foreground="White"
-                                 Margin="5,0">
+                                 Margin="5,0"
+                                 controls:ComponentPreview.RenderService="{Binding GdsPreviewRenderService}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vmLib:ComponentTemplate">
                                     <StackPanel Orientation="Horizontal" Margin="0,1">
@@ -494,6 +495,8 @@
                                             WidthMicrometers="{Binding WidthMicrometers}"
                                             HeightMicrometers="{Binding HeightMicrometers}"
                                             PinDefinitions="{Binding PinDefinitions}"
+                                            NazcaModuleName="{Binding NazcaModuleName}"
+                                            NazcaFunctionName="{Binding NazcaFunctionName}"
                                             Margin="0,0,6,0"/>
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
