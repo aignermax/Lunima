@@ -1,4 +1,5 @@
 using System.Numerics;
+using CAP_Core.LightCalculation.MaterialDispersion;
 using CAP_Core.Routing;
 using CAP_Core.Components.Core;
 
@@ -44,9 +45,18 @@ namespace CAP_Core.Components.Connections
         /// - High-quality strip waveguides: 0.3-0.5 dB/cm
         /// - Standard strip waveguides: 1-2 dB/cm
         /// - Rib waveguides: 0.5-1 dB/cm
-        /// Default: 0.5 dB/cm (high-quality strip waveguide)
+        /// Default: 0.5 dB/cm (high-quality strip waveguide).
+        /// When <see cref="DispersionModel"/> is set, its <c>LossDbPerCmAt</c> overrides this value.
         /// </summary>
         public double PropagationLossDbPerCm { get; set; } = 0.5;
+
+        /// <summary>
+        /// Optional wavelength-dependent dispersion model.
+        /// When set, <see cref="RecalculateTransmission"/> and <see cref="RestoreCachedPath"/>
+        /// query <see cref="IDispersionModel.LossDbPerCmAt"/> at the specified wavelength
+        /// instead of using the scalar <see cref="PropagationLossDbPerCm"/>.
+        /// </summary>
+        public IDispersionModel? DispersionModel { get; set; }
 
         /// <summary>
         /// Loss per 90-degree bend in dB. Typical values: 0.01-0.1 dB per bend.
@@ -111,38 +121,18 @@ namespace CAP_Core.Components.Connections
         /// </summary>
         public double TotalLossDb { get; private set; }
 
-        // Nazca-Export
-        public string ExportToNazca()
-        {
-            var startComp = StartPin.ParentComponent;
-            var endComp = EndPin.ParentComponent;
-            var startCellName = $"cell_{startComp.PhysicalX}_{startComp.PhysicalY}";
-            var endCellName = $"cell_{endComp.PhysicalX}_{endComp.PhysicalY}";
-
-            return Type switch
-            {
-                WaveguideType.Straight =>
-                    $"        ic.strt_p2p(pin1={startCellName}.pin['{StartPin.Name}'], " +
-                    $"pin2={endCellName}.pin['{EndPin.Name}']).put()\n",
-
-                WaveguideType.SBend =>
-                    $"        ic.sbend_p2p(pin1={startCellName}.pin['{StartPin.Name}'], " +
-                    $"pin2={endCellName}.pin['{EndPin.Name}'], " +
-                    $"radius={BendRadiusMicrometers}).put()\n",
-
-                _ => // Auto: Nazca wählt automatisch
-                    $"        ic.cobra_p2p(pin1={startCellName}.pin['{StartPin.Name}'], " +
-                    $"pin2={endCellName}.pin['{EndPin.Name}']).put()\n"
-            };
-        }
-
         /// <summary>
         /// Recalculates the transmission coefficient based on current pin positions and loss parameters.
         /// Should be called whenever connected components are moved.
         /// </summary>
         /// <param name="router">The waveguide router to use for path calculation.</param>
+        /// <param name="wavelengthNm">
+        /// Wavelength in nm used when a <see cref="DispersionModel"/> is set.
+        /// Defaults to 1550 nm when not provided.
+        /// </param>
         /// <param name="cancellationToken">Token to cancel Phase 2 routing (e.g. when grid changes).</param>
         public void RecalculateTransmission(WaveguideRouter router,
+                                             double wavelengthNm = 1550.0,
                                              CancellationToken cancellationToken = default)
         {
             if (StartPin == null || EndPin == null)
@@ -160,7 +150,8 @@ namespace CAP_Core.Components.Connections
             RoutedPath = router.Route(StartPin, EndPin, cancellationToken);
 
             // Calculate total loss from actual path
-            double propagationLoss = (PathLengthMicrometers / 10000.0) * PropagationLossDbPerCm; // µm to cm
+            double lossDbPerCm = DispersionModel?.LossDbPerCmAt(wavelengthNm) ?? PropagationLossDbPerCm;
+            double propagationLoss = (PathLengthMicrometers / 10000.0) * lossDbPerCm; // µm to cm
             double bendLoss = BendCount * BendLossDbPer90Deg;
             TotalLossDb = propagationLoss + bendLoss;
 
@@ -176,11 +167,17 @@ namespace CAP_Core.Components.Connections
         /// Recalculates transmission loss from the provided path geometry.
         /// Used when loading designs with cached route data.
         /// </summary>
-        public void RestoreCachedPath(RoutedPath cachedPath)
+        /// <param name="cachedPath">The cached routed path to restore.</param>
+        /// <param name="wavelengthNm">
+        /// Wavelength in nm used when a <see cref="DispersionModel"/> is set.
+        /// Defaults to 1550 nm when not provided.
+        /// </param>
+        public void RestoreCachedPath(RoutedPath cachedPath, double wavelengthNm = 1550.0)
         {
             RoutedPath = cachedPath;
 
-            double propagationLoss = (PathLengthMicrometers / 10000.0) * PropagationLossDbPerCm;
+            double lossDbPerCm = DispersionModel?.LossDbPerCmAt(wavelengthNm) ?? PropagationLossDbPerCm;
+            double propagationLoss = (PathLengthMicrometers / 10000.0) * lossDbPerCm;
             double bendLoss = BendCount * BendLossDbPer90Deg;
             TotalLossDb = propagationLoss + bendLoss;
 

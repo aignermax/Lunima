@@ -1,10 +1,13 @@
 using CAP.Avalonia.ViewModels.Panels;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.AI;
+using CAP.Avalonia.ViewModels.Properties;
+using CAP.Avalonia.ViewModels.Properties.Editors;
 using CAP.Avalonia.ViewModels.Export;
 using CAP_Core.Export;
 using Moq;
@@ -70,6 +73,11 @@ public class PanelWidthPersistenceTests : IDisposable
             new ArchitectureReportViewModel(),
             new PdkConsistencyViewModel(),
             new AiAssistantViewModel(Mock.Of<IAiService>(), _preferencesService),
+            new OnaSweepViewModel(),
+            new ComponentEditorFactory(new IComponentEditorProvider[]
+            {
+                new GenericComponentEditorProvider()
+            }),
             new TimeDomainViewModel());
 
     [Fact]

@@ -278,7 +278,7 @@ public class WaveguideConnectionManager
             foreach (var connection in Connections)
             {
                 if (cancellationToken.IsCancellationRequested) return;
-                connection.RecalculateTransmission(_router, cancellationToken);
+                connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
                 progressCallback?.Invoke();
             }
         }
@@ -342,7 +342,7 @@ public class WaveguideConnectionManager
             if (cancellationToken.IsCancellationRequested)
                 return (false, failedCount);
 
-            connection.RecalculateTransmission(_router, cancellationToken);
+            connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             progressCallback?.Invoke();
 
             // Register ALL paths with valid geometry as obstacles, including blocked fallbacks.
@@ -425,7 +425,7 @@ public class WaveguideConnectionManager
             if (cancellationToken.IsCancellationRequested)
                 return (false, failedCount);
 
-            connection.RecalculateTransmission(_router, cancellationToken);
+            connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             progressCallback?.Invoke();
 
             // Register ANY path with valid geometry as an obstacle, including blocked fallbacks.

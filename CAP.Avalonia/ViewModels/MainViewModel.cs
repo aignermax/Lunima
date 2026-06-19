@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CAP_Core.Components.Core;
 using CAP_Core;
 using CAP.Avalonia.Commands;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.Services;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -94,11 +95,6 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Verilog-A format — exposes <c>ShowOptionsDialogAsync</c> for code-behind wiring.</summary>
     public VerilogAExportFormat VerilogAExportFormat { get; private set; } = null!;
 
-    /// <summary>
-    /// Available wavelength options for the laser configuration dropdown.
-    /// </summary>
-    public IReadOnlyList<WavelengthOption> WavelengthOptions { get; } = WavelengthOption.All;
-
     public IFileDialogService? FileDialogService
     {
         get => FileOperations.FileDialogService;
@@ -118,6 +114,13 @@ public partial class MainViewModel : ObservableObject
     /// Exposed so the code-behind can pass the FileDialogService.
     /// </summary>
     public PdkOffsetEditorViewModel PdkOffsetEditor { get; }
+
+    /// <summary>
+    /// Service that fetches and caches GDS polygon previews for canvas components.
+    /// Exposed so <see cref="CAP.Avalonia.Controls.DesignCanvas"/> can wire up a
+    /// repaint callback and pass the service into the render context.
+    /// </summary>
+    public GdsPreviewRenderService GdsPreviewRenderService { get; }
 
     /// <summary>
     /// Bottom-panel error console service. Exposed so view-layer wiring helpers
@@ -152,12 +155,14 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Export.PhotonTorchExportViewModel photonTorchExport,
         ViewModels.Export.VerilogAExportViewModel verilogAExport,
         ViewModels.Canvas.ChipSizeViewModel chipSize,
-        Services.UserSMatrixOverrideStore userSMatrixOverrideStore)
+        Services.UserSMatrixOverrideStore userSMatrixOverrideStore,
+        GdsPreviewRenderService gdsPreviewRenderService)
     {
         Simulation = simulationService;
         CommandManager = commandManager;
         _canvas = canvas;
         PdkOffsetEditor = pdkOffsetEditor;
+        GdsPreviewRenderService = gdsPreviewRenderService;
         ErrorConsole = errorConsoleService;
         ChipSize = chipSize;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
@@ -209,6 +214,12 @@ public partial class MainViewModel : ObservableObject
             RightPanel.Sweep.ConfigureForComponent(comp, Canvas);
             LeftPanel.HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
+
+        // Carry per-instance Nazca overrides onto pasted copies so their raw-code
+        // preview and export geometry follow the duplicated component.
+        CanvasInteraction.OnComponentsPasted = identifierMap =>
+            Selection.NazcaOverridePropagator.Propagate(
+                identifierMap, FileOperations.StoredNazcaOverrides);
 
         // Wire rename from hierarchy panel through undo-aware command manager
         LeftPanel.HierarchyPanel.RenameComponent = (component, newName) =>
@@ -364,6 +375,10 @@ public partial class MainViewModel : ObservableObject
     {
         FileOperations.PhotonTorchExport.UpdateStatus = UpdateStatusText;
         FileOperations.RebuildHierarchy = LeftPanel.HierarchyPanel.RebuildTree;
+
+        // Export validation must run against the SAME per-instance Nazca overrides the
+        // production export uses; FileOperations owns the live store (issue #565 F1).
+        RightPanel.ExportValidation.OverridesProvider = () => FileOperations.StoredNazcaOverrides;
         FileOperations.ZoomToFitAfterLoad = (w, h) =>
         {
             var (vpWidth, vpHeight) = ViewportControl.GetViewportSize?.Invoke() ?? (w, h);
@@ -471,6 +486,18 @@ public partial class MainViewModel : ObservableObject
     private void OpenPdkOffsetEditor()
     {
         ShowPdkOffsetEditorRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Raised when the user requests to open the Fabrication Process window
+    /// (process model — issue #570). The View layer subscribes and shows it.
+    /// </summary>
+    public Action? ShowProcessManagerRequested { get; set; }
+
+    [RelayCommand]
+    private void OpenProcessManager()
+    {
+        ShowProcessManagerRequested?.Invoke();
     }
 
     [RelayCommand]
@@ -658,6 +685,14 @@ public class DesignFileData
     /// Null or empty for designs without stored S-matrix overrides.
     /// </summary>
     public Dictionary<string, ComponentSMatrixData>? SMatrices { get; set; }
+
+    /// <summary>
+    /// Per-instance Nazca function parameter overrides, keyed by component Identifier.
+    /// Null or empty for designs without Nazca overrides.
+    /// Each entry stores the overridden function name and parameters plus the original
+    /// template values to allow "Reset to template" after a project reload.
+    /// </summary>
+    public Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride>? NazcaOverrides { get; set; }
 
     /// <summary>
     /// Most recent simulation results and any stored parameter sweep results.

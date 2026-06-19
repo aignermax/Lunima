@@ -10,6 +10,7 @@ using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Export;
@@ -51,6 +52,13 @@ public partial class FileOperationsViewModel : ObservableObject
     /// Keyed by component identifier string; values are the stored S-matrices.
     /// </summary>
     public Dictionary<string, ComponentSMatrixData> StoredSMatrices { get; } = new();
+
+    /// <summary>
+    /// Per-instance Nazca function parameter overrides. Keyed by component Identifier;
+    /// values hold the override and the original template values for reset.
+    /// Serialised to/from the .lun file's <c>NazcaOverrides</c> section.
+    /// </summary>
+    public Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride> StoredNazcaOverrides { get; } = new();
 
     [ObservableProperty]
     private bool _hasUnsavedChanges;
@@ -161,10 +169,12 @@ public partial class FileOperationsViewModel : ObservableObject
                 addedComponents,
                 StoredSMatrices,
                 templateKeyResolver: ResolveTemplateKey,
-                errorConsole: _errorConsole);
+                errorConsole: _errorConsole,
+                keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
         }
 
         ApplyUserGlobalOverrides(addedComponents);
+        ApplyAllNazcaOverrides(addedComponents);
     }
 
     /// <summary>
@@ -183,7 +193,8 @@ public partial class FileOperationsViewModel : ObservableObject
             components,
             _userSMatrixOverrideStore.Overrides,
             templateKeyResolver: ResolveTemplateKey,
-            errorConsole: _errorConsole);
+            errorConsole: _errorConsole,
+            keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
     }
 
     /// <summary>
@@ -298,6 +309,8 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.Metadata = BuildMetadataForSave();
             if (StoredSMatrices.Count > 0)
                 designData.SMatrices = new Dictionary<string, ComponentSMatrixData>(StoredSMatrices);
+            if (StoredNazcaOverrides.Count > 0)
+                designData.NazcaOverrides = new Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride>(StoredNazcaOverrides);
             designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
             designData.ChipHeightMicrometers = _canvas.ChipMaxY;
 
@@ -361,6 +374,26 @@ public partial class FileOperationsViewModel : ObservableObject
         if (pdkSource == null) return null;
         var templateName = FindTemplateName(component);
         return $"{pdkSource}::{templateName}";
+    }
+
+    /// <summary>
+    /// Returns true when the given override-store key (shape
+    /// <c>"{pdkSource}::{templateName}"</c>) corresponds to a template that
+    /// is currently loaded in the component library — even if no instance of
+    /// it is on the canvas right now. Used by
+    /// <see cref="Services.SMatrixOverrideApplicator.ApplyAll"/> to
+    /// distinguish "deferred override, will apply on placement" from
+    /// "truly orphan, the template was renamed or removed". Only the
+    /// latter warrants a user-visible warning.
+    /// </summary>
+    private bool KeyMatchesKnownLibraryTemplate(string key)
+    {
+        var separatorIdx = key.IndexOf("::", StringComparison.Ordinal);
+        if (separatorIdx < 0) return false;
+        var pdkSource = key.Substring(0, separatorIdx);
+        var templateName = key.Substring(separatorIdx + 2);
+        return _componentLibrary.Any(t =>
+            t.PdkSource == pdkSource && t.Name == templateName);
     }
 
     /// <summary>
@@ -729,11 +762,16 @@ public partial class FileOperationsViewModel : ObservableObject
                     // Falls back to "{pdkSource}::{templateName}" so PDK-template-scoped
                     // overrides reach every instance of the template, not just renamed instances.
                     var allComponents = _canvas.Components.Select(vm => vm.Component).ToList();
+                    // Project load is the one place we hold the COMPLETE component set,
+                    // so it is also the only place an orphan check is meaningful — let
+                    // it surface genuinely unmatched overrides (renamed/removed).
                     Services.SMatrixOverrideApplicator.ApplyAll(
                         allComponents,
                         StoredSMatrices,
                         templateKeyResolver: ResolveTemplateKey,
-                        errorConsole: _errorConsole);
+                        errorConsole: _errorConsole,
+                        keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate,
+                        reportOrphans: true);
                     ApplyUserGlobalOverrides(allComponents);
                 }
                 else
@@ -742,6 +780,16 @@ public partial class FileOperationsViewModel : ObservableObject
                     // user's PDK template edits show up in projects that never
                     // had any project-scoped overrides of their own.
                     ApplyUserGlobalOverrides(_canvas.Components.Select(vm => vm.Component));
+                }
+
+                // Restore per-instance Nazca overrides and apply them to live components
+                StoredNazcaOverrides.Clear();
+                if (designData.NazcaOverrides != null)
+                {
+                    foreach (var kv in designData.NazcaOverrides)
+                        StoredNazcaOverrides[kv.Key] = kv.Value;
+
+                    ApplyAllNazcaOverrides(_canvas.Components.Select(vm => vm.Component));
                 }
 
                 _currentFilePath = filePath;
@@ -831,6 +879,57 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas.ConnectionManager.Clear();
         _commandManager.ClearHistory();
         StoredSMatrices.Clear();
+        StoredNazcaOverrides.Clear();
+    }
+
+    /// <summary>
+    /// Applies any stored per-instance Nazca overrides to the given components.
+    /// Called on project load and when a new component is added to the canvas.
+    /// </summary>
+    private void ApplyAllNazcaOverrides(IEnumerable<Component> components)
+    {
+        if (StoredNazcaOverrides.Count == 0)
+            return;
+
+        var pinChangedComponents = new List<Component>();
+        foreach (var component in components)
+        {
+            if (StoredNazcaOverrides.TryGetValue(component.Identifier, out var nazcaOverride))
+            {
+                component.NazcaFunctionName = nazcaOverride.FunctionName ?? component.NazcaFunctionName;
+                component.NazcaFunctionParameters = nazcaOverride.FunctionParameters ?? component.NazcaFunctionParameters;
+                if (nazcaOverride.ModuleName != null)
+                    component.NazcaModuleName = nazcaOverride.ModuleName;
+
+                // Issue #556: a raw-code override recomputes the component's size.
+                // Restore the persisted bbox-derived dimensions so the canvas thumbnail
+                // and layout reflect the edited geometry on load.
+                if (nazcaOverride.OverrideWidthMicrometers is { } w)
+                    component.WidthMicrometers = w;
+                if (nazcaOverride.OverrideHeightMicrometers is { } h)
+                    component.HeightMicrometers = h;
+
+                // Issue #561: a raw-code override may also redefine the component's ports.
+                // Restore the persisted override pins so in-app connections and export use
+                // the correct port layout after project load.
+                if (nazcaOverride.OverridePins?.Count > 0)
+                {
+                    OverridePinMapper.ApplyPinsToComponent(component, nazcaOverride.OverridePins);
+                    pinChangedComponents.Add(component);
+                }
+            }
+        }
+
+        // Connections (and the canvas pin view-models) were created against the
+        // template pins BEFORE the override replaced them, so they hold stale pin
+        // objects — the GDS export would then reference pins the override cell does
+        // not define. Re-anchor them onto the same-named new pins, drop the rest.
+        foreach (var component in pinChangedComponents)
+        {
+            var warnings = _canvas.OnComponentPinsChanged(component);
+            foreach (var warning in warnings)
+                _errorConsole?.LogWarning(warning);
+        }
     }
 
     /// <summary>
@@ -1149,7 +1248,7 @@ public partial class FileOperationsViewModel : ObservableObject
             try
             {
                 // Export Python script
-                var nazcaCode = _nazcaExporter.Export(_canvas);
+                var nazcaCode = _nazcaExporter.Export(_canvas, overrides: StoredNazcaOverrides);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
 
                 // Attempt GDS generation if enabled

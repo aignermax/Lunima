@@ -180,8 +180,7 @@ public class GdsGroundTruthTests
     }
 
     /// <summary>
-    /// Verifies that NazcaReferenceGenerator Nazca coordinates use the Y-flip convention
-    /// and account for NazcaOriginOffset.
+    /// Verifies that NazcaReferenceGenerator Nazca coordinates use the Y-flip convention.
     /// </summary>
     [Fact]
     public void NazcaReferenceGenerator_GetExpectedNazcaCoordinates_YFlipped()
@@ -193,7 +192,10 @@ public class GdsGroundTruthTests
         coords["comp2_nazca"].X.ShouldBe(300.0,  PositionTolerance);
         coords["comp2_nazca"].Y.ShouldBe(-50.0,  PositionTolerance);
         coords["wg_start_nazca"].X.ShouldBe(100.0,  PositionTolerance);
-        coords["wg_start_nazca"].Y.ShouldBe(-75.0,  PositionTolerance); // -(0 + 50 + 25) with NazcaOriginOffset
+        // Plain Y negation of the app pin (NazcaCoordinateMapper convention, #565);
+        // matches scripts/generate_reference_nazca.py and lands ON the stub pin
+        // (placement -50 + stub pin local +25 = -25).
+        coords["wg_start_nazca"].Y.ShouldBe(-25.0,  PositionTolerance);
     }
 
     /// <summary>
@@ -208,8 +210,9 @@ public class GdsGroundTruthTests
         script.ShouldContain("0.00, -50.00, 0");   // comp1
         script.ShouldContain("300.00, -50.00, 0"); // comp2
 
-        // Waveguide start (with NazcaOriginOffset accounted for)
-        script.ShouldContain("100.00, -75.00, 0"); // wg start
+        // Waveguide start: plain Y negation of the app pin (#565) — coincides with
+        // the reference stub pin world position (-50 + 25 = -25).
+        script.ShouldContain("100.00, -25.00, 0"); // wg start
 
         // Waveguide length
         script.ShouldContain("200.00"); // wg length

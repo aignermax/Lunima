@@ -5,8 +5,12 @@ using CAP_Core.LightCalculation;
 using CAP_DataAccess.Import;
 using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
+using CAP_Core.Export;
+using CAP_Core.Solvers.Fdtd;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NazcaCodeOverride = CAP_DataAccess.Persistence.PIR.NazcaCodeOverride;
 
 namespace CAP.Avalonia.ViewModels.ComponentSettings;
 
@@ -31,6 +35,19 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     private Dictionary<int, SMatrix>? _effectiveSMatrices;
     private IReadOnlyList<Pin>? _effectivePins;
     private IReadOnlyList<string>? _availablePinNames;
+
+    /// <summary>
+    /// ViewModel for the per-instance Nazca parameter override section.
+    /// Null when the dialog is opened in per-template (PDK library) mode, or when
+    /// <see cref="Configure"/> was called without a <c>storedNazcaOverrides</c> dictionary.
+    /// </summary>
+    public InstanceNazcaOverrideViewModel? NazcaOverride { get; private set; }
+
+    /// <summary>
+    /// ViewModel for the per-instance editable Nazca code editor section (issue #556).
+    /// Null in per-template mode or when no preview service / template code was supplied.
+    /// </summary>
+    public InstanceNazcaCodeEditorViewModel? NazcaCodeEditor { get; private set; }
 
     /// <summary>Dialog window title including the component name.</summary>
     [ObservableProperty]
@@ -75,15 +92,28 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// to skip the interactive step (which causes the import to abort with a
     /// status-text explanation when names mismatch).
     /// </param>
+    /// <param name="fdtdService">
+    /// Optional FDTD solver used by the "Recalculate S-matrix" command. When null
+    /// (e.g. in tests, or when no solver is configured) the command is disabled.
+    /// </param>
+    /// <param name="fdtdRequestFactory">
+    /// Optional factory that turns the live component into an FDTD request
+    /// (renders its geometry and ports). Required alongside <paramref name="fdtdService"/>
+    /// for recompute to be available.
+    /// </param>
     public ComponentSettingsDialogViewModel(
         IFileDialogService fileDialogService,
         ErrorConsoleService? errorConsole = null,
         IReadOnlyList<ISParameterImporter>? importers = null,
-        IPortMappingDialogService? portMappingDialog = null)
+        IPortMappingDialogService? portMappingDialog = null,
+        IFdtdSMatrixService? fdtdService = null,
+        Func<Component, CancellationToken, Task<FdtdSMatrixRequest?>>? fdtdRequestFactory = null)
     {
         _fileDialogService = fileDialogService;
         _errorConsole = errorConsole;
         _portMappingDialog = portMappingDialog;
+        _fdtdService = fdtdService;
+        _fdtdRequestFactory = fdtdRequestFactory;
         _importers = importers ?? new ISParameterImporter[]
         {
             new LumericalSParameterImporter(),
@@ -129,6 +159,24 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// indexing. Required to read diagonal magnitudes from the SMatrix
     /// (which is keyed by <see cref="Pin.IDInFlow"/> / <see cref="Pin.IDOutFlow"/>).
     /// </param>
+    /// <param name="storedNazcaOverrides">
+    /// Optional per-instance Nazca override dictionary. When non-null and
+    /// <paramref name="liveComponent"/> is also non-null, the dialog adds a
+    /// Nazca parameter override section backed by an
+    /// <see cref="InstanceNazcaOverrideViewModel"/>. Null in per-template mode
+    /// (PDK library) where Nazca overrides are not supported.
+    /// </param>
+    /// <param name="templateFunctionName">
+    /// Original PDK template function name. Used to seed the editable field
+    /// before the user has saved any override, and as the target for "Reset to
+    /// template". Pass null to skip the Nazca override section.
+    /// </param>
+    /// <param name="templateFunctionParameters">
+    /// Original PDK template function parameters string. See <paramref name="templateFunctionName"/>.
+    /// </param>
+    /// <param name="templateModuleName">
+    /// Original PDK template module name, or null if not set.
+    /// </param>
     public void Configure(
         string entityKey,
         string displayName,
@@ -138,7 +186,16 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         bool isUserGlobalScope = false,
         Dictionary<int, SMatrix>? effectiveSMatrices = null,
         IReadOnlyList<Pin>? effectivePins = null,
-        IReadOnlyList<string>? availablePinNames = null)
+        IReadOnlyList<string>? availablePinNames = null,
+        Dictionary<string, NazcaCodeOverride>? storedNazcaOverrides = null,
+        string? templateFunctionName = null,
+        string? templateFunctionParameters = null,
+        string? templateModuleName = null,
+        NazcaComponentPreviewService? nazcaPreviewService = null,
+        string? nazcaTemplateCode = null,
+        Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null,
+        Action? nazcaDimensionsChanged = null,
+        Action<IReadOnlyList<PhysicalPin>>? nazcaPinsChanged = null)
     {
         _entityKey = entityKey;
         _displayName = displayName;
@@ -153,8 +210,54 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             ? $"Component Settings: {displayName} (applies to all projects)"
             : $"Component Settings: {displayName}";
         StatusText = string.Empty;
+
+        // Only create the Nazca override VM for per-instance mode
+        if (liveComponent != null && storedNazcaOverrides != null && templateFunctionName != null)
+        {
+            NazcaOverride = new InstanceNazcaOverrideViewModel(
+                entityKey,
+                storedNazcaOverrides,
+                liveComponent,
+                templateFunctionName,
+                templateFunctionParameters ?? string.Empty,
+                templateModuleName,
+                onChanged);
+        }
+        else
+        {
+            NazcaOverride = null;
+        }
+        OnPropertyChanged(nameof(NazcaOverride));
+
+        // Per-instance raw Nazca code editor (issue #556). Only in per-instance mode
+        // with a live component, an override store and a runnable seed template.
+        if (liveComponent != null && storedNazcaOverrides != null && nazcaTemplateCode != null)
+        {
+            NazcaCodeEditor = new InstanceNazcaCodeEditorViewModel(
+                entityKey,
+                storedNazcaOverrides,
+                liveComponent,
+                templateModuleName,
+                templateFunctionName ?? string.Empty,
+                templateFunctionParameters,
+                nazcaTemplateCode,
+                nazcaPreviewService,
+                nazcaOverlapCheck,
+                nazcaDimensionsChanged,
+                onChanged,
+                nazcaPinsChanged);
+        }
+        else
+        {
+            NazcaCodeEditor = null;
+        }
+        OnPropertyChanged(nameof(NazcaCodeEditor));
+
+        SolverStatus = string.Empty;
         RefreshEntries(notifyChanged: false);
         RefreshEffectiveEntries();
+        OnPropertyChanged(nameof(CanRecalculate));
+        RecalculateSMatrixCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>

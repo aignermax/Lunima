@@ -1,5 +1,6 @@
 using System.Numerics;
 using CAP.Avalonia.Services;
+using CAP_Core;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using UnitTests;
@@ -292,6 +293,53 @@ public class SMatrixOverrideApplicatorTests
     }
 
     [Fact]
+    public void ApplyAll_TemplateOverrideExistsButNotPlaced_NotReportedAsOrphan()
+    {
+        // Regression guard: a "Demo PDK::2x2 MMI Coupler" override in the user
+        // store is NOT orphan just because that template isn't placed on the
+        // current canvas — the override will still apply on the next placement.
+        // Without keyMatchesKnownTemplate, the applicator logged a misleading
+        // warning every time the project was loaded or simulated.
+        var someInstance = TestComponentFactory.CreateSimpleTwoPortComponent();
+        someInstance.Identifier = "instance_only";
+
+        var store = new Dictionary<string, ComponentSMatrixData>
+        {
+            ["Demo PDK::2x2 MMI Coupler"] = MakeData("1550", 2),  // matches a library template
+            ["genuinely_gone"] = MakeData("1550", 2)               // matches nothing
+        };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { someInstance },
+            store,
+            keyMatchesKnownTemplate: key => key == "Demo PDK::2x2 MMI Coupler");
+
+        // The library-template-keyed override is "deferred", not orphan.
+        result.OrphanKeys.ShouldNotContain("Demo PDK::2x2 MMI Coupler");
+        // The truly-gone one is still reported.
+        result.OrphanKeys.ShouldContain("genuinely_gone");
+        result.OrphanKeys.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ApplyAll_WithoutTemplatePredicate_PreservesOriginalOrphanBehavior()
+    {
+        // Backwards-compat: callers that don't supply keyMatchesKnownTemplate
+        // get the old behaviour — every unmatched key is reported.
+        var someInstance = TestComponentFactory.CreateSimpleTwoPortComponent();
+        someInstance.Identifier = "instance_only";
+
+        var store = new Dictionary<string, ComponentSMatrixData>
+        {
+            ["unmatched_key"] = MakeData("1550", 2)
+        };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(new[] { someInstance }, store);
+
+        result.OrphanKeys.ShouldContain("unmatched_key");
+    }
+
+    [Fact]
     public void ApplyAll_TemplateKeyResolver_AppliesPdkTemplateOverride()
     {
         // PDK template overrides are stored under "{pdkSource}::{templateName}" but
@@ -362,5 +410,46 @@ public class SMatrixOverrideApplicatorTests
 
         result.Applied.ShouldBe(1);
         component.WaveLengthToSMatrixMap.ShouldContainKey(1550);
+    }
+
+    [Fact]
+    public void ApplyAll_DefaultReportOrphansFalse_DoesNotWarnConsole()
+    {
+        // Subset calls (e.g. the incremental "components added" handler) must not
+        // emit the orphan warning: an unmatched key may match a component outside
+        // the subset, and re-warning on every add was the duplicate-warning spam.
+        var someInstance = TestComponentFactory.CreateSimpleTwoPortComponent();
+        someInstance.Identifier = "instance_only";
+        var store = new Dictionary<string, ComponentSMatrixData>
+        {
+            ["renamed_or_removed"] = MakeData("1550", 2)
+        };
+        var console = new ErrorConsoleService();
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { someInstance }, store, errorConsole: console);
+
+        console.Entries.ShouldBeEmpty();          // no user-visible warning
+        result.OrphanKeys.ShouldContain("renamed_or_removed"); // still computed for callers
+    }
+
+    [Fact]
+    public void ApplyAll_ReportOrphansTrue_WarnsConsoleOnce()
+    {
+        // The authoritative full-canvas call (project load) opts in and surfaces
+        // genuinely unmatched overrides exactly once.
+        var someInstance = TestComponentFactory.CreateSimpleTwoPortComponent();
+        someInstance.Identifier = "instance_only";
+        var store = new Dictionary<string, ComponentSMatrixData>
+        {
+            ["renamed_or_removed"] = MakeData("1550", 2)
+        };
+        var console = new ErrorConsoleService();
+
+        SMatrixOverrideApplicator.ApplyAll(
+            new[] { someInstance }, store, errorConsole: console, reportOrphans: true);
+
+        console.Entries.Count.ShouldBe(1);
+        console.Entries[0].Message.ShouldContain("renamed_or_removed");
     }
 }

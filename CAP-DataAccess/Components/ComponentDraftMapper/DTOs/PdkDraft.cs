@@ -52,6 +52,23 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         public string? NazcaModuleName { get; set; }
 
         /// <summary>
+        /// Optional PDK-wide default material dispersion model.
+        /// When a component has no own <c>materialDispersion</c> block, this is used as fallback.
+        /// Old PDKs without this field load without dispersion (constant-loss behaviour).
+        /// </summary>
+        [JsonPropertyName("materialDispersion")]
+        public MaterialDispersionDraft? MaterialDispersion { get; set; }
+
+        /// <summary>
+        /// Fabrication process this PDK targets (layer stack, cross-sections,
+        /// materials, design rules). Optional so older PDK files still parse;
+        /// when present it is the process a design's components must agree on
+        /// (one process per chip — issue #570).
+        /// </summary>
+        [JsonPropertyName("process")]
+        public ProcessDefinition? Process { get; set; }
+
+        /// <summary>
         /// List of component definitions in this PDK.
         /// </summary>
         [JsonPropertyName("components")]
@@ -127,6 +144,14 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         /// </summary>
         [JsonPropertyName("sMatrix")]
         public PdkSMatrixDraft? SMatrix { get; set; }
+
+        /// <summary>
+        /// Optional per-component material dispersion model.
+        /// When set, overrides the PDK-wide default. Old components without this field
+        /// inherit the PDK-wide default (or constant-loss behaviour if neither is set).
+        /// </summary>
+        [JsonPropertyName("materialDispersion")]
+        public MaterialDispersionDraft? MaterialDispersion { get; set; }
 
         /// <summary>
         /// Optional slider parameters (e.g., for phase shifters).

@@ -116,13 +116,18 @@ public class ComponentLibraryViewModelTests : IDisposable
         var template2 = _libraryManager.SaveTemplate(group2, "Group 2", null, "User");
         _viewModel.LoadGroupsCommand.Execute(null);
 
-        _viewModel.StatusText.ShouldBe("2 user group(s), 0 PDK macro(s)");
+        // Counts are no longer surfaced in StatusText (the section labels + lists show
+        // them); StatusText is empty while groups exist and only carries the empty hint.
+        _viewModel.StatusText.ShouldBeEmpty();
 
         // Act
         _viewModel.RemoveTemplateCommand.Execute(template1);
+        _viewModel.StatusText.ShouldBeEmpty();   // one group still present
+
+        _viewModel.RemoveTemplateCommand.Execute(template2);
 
         // Assert
-        _viewModel.StatusText.ShouldBe("1 user group(s), 0 PDK macro(s)");
+        _viewModel.StatusText.ShouldBe("No saved groups");   // empty → hint
     }
 
     [Fact]
@@ -140,7 +145,7 @@ public class ComponentLibraryViewModelTests : IDisposable
         // Assert
         _viewModel.UserGroups.Count.ShouldBe(1);
         _viewModel.UserGroups[0].Template.ShouldBe(template);
-        _viewModel.StatusText.ShouldBe("1 user group(s), 0 PDK macro(s)");
+        _viewModel.StatusText.ShouldBeEmpty();   // counts not surfaced once a group exists
     }
 
     [Fact]
@@ -158,7 +163,7 @@ public class ComponentLibraryViewModelTests : IDisposable
         // Assert
         _viewModel.PdkGroups.Count.ShouldBe(1);
         _viewModel.PdkGroups[0].Template.ShouldBe(template);
-        _viewModel.StatusText.ShouldBe("0 user group(s), 1 PDK macro(s)");
+        _viewModel.StatusText.ShouldBeEmpty();   // counts not surfaced once a group exists
     }
 
     [Fact]
@@ -233,7 +238,7 @@ public class ComponentLibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public void StatusText_ReflectsMixedUserAndPdkGroups()
+    public void StatusText_IsEmptyWhenGroupsPresent()
     {
         // Arrange
         var userGroup = CreateTestGroup("UserGroup", 1);
@@ -244,8 +249,8 @@ public class ComponentLibraryViewModelTests : IDisposable
         // Act
         _viewModel.LoadGroupsCommand.Execute(null);
 
-        // Assert
-        _viewModel.StatusText.ShouldBe("1 user group(s), 1 PDK macro(s)");
+        // Assert — counts live in the section labels + lists now, not in StatusText
+        _viewModel.StatusText.ShouldBeEmpty();
     }
 
     [Fact]

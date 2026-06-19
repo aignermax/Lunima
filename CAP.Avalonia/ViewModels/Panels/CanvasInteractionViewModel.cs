@@ -77,6 +77,19 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public Action? ClearComponentTemplateSelection { get; set; }
 
+    /// <summary>
+    /// Callback invoked when the user requests "Component Settings…" from the canvas context menu.
+    /// Wired by <c>MainWindow.axaml.cs</c> to open the component settings dialog.
+    /// </summary>
+    public Action<ComponentViewModel>? OpenComponentSettings { get; set; }
+
+    /// <summary>
+    /// Callback invoked after a paste with the source→copy identifier map, so the host can
+    /// carry identifier-keyed per-instance state (e.g. Nazca raw-code overrides) onto the copies.
+    /// Wired by <c>MainViewModel</c> to propagate <c>StoredNazcaOverrides</c>.
+    /// </summary>
+    public Action<IReadOnlyDictionary<string, string>>? OnComponentsPasted { get; set; }
+
     public CanvasInteractionViewModel(
         DesignCanvasViewModel canvas,
         CommandManager commandManager,
@@ -89,6 +102,23 @@ public partial class CanvasInteractionViewModel : ObservableObject
         _libraryViewModel = libraryViewModel;
         _previewGenerator = previewGenerator;
         _inputDialogService = inputDialogService;
+
+        // Hierarchy → right panel: when canvas.SelectedComponent changes externally
+        // (e.g. from the hierarchy panel), mirror it so the right-panel property editor updates.
+        _canvas.PropertyChanged += OnCanvasPropertyChanged;
+    }
+
+    /// <summary>
+    /// Keeps <see cref="SelectedComponent"/> in sync when
+    /// <see cref="DesignCanvasViewModel.SelectedComponent"/> is changed externally
+    /// (e.g. by the hierarchy panel).
+    /// CommunityToolkit's equality check prevents the setter from firing again when
+    /// the value is already up-to-date, so there is no feedback loop.
+    /// </summary>
+    private void OnCanvasPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesignCanvasViewModel.SelectedComponent))
+            SelectedComponent = _canvas.SelectedComponent;
     }
 
     partial void OnSelectedTemplateChanged(ComponentTemplate? value)
@@ -151,6 +181,10 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
     partial void OnSelectedComponentChanged(ComponentViewModel? value)
     {
+        // Keep canvas in sync when this property is set from outside (e.g. tests or mirroring).
+        if (_canvas.SelectedComponent != value)
+            _canvas.SelectedComponent = value;
+
         if (value?.IsLightSource == true)
         {
             var cfg = value.LaserConfig!;
@@ -158,6 +192,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         OnSelectionChanged?.Invoke(value);
+        OpenSelectedComponentSettingsCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -308,6 +343,43 @@ public partial class CanvasInteractionViewModel : ObservableObject
         UpdateStatus?.Invoke($"Placed group '{SelectedGroupTemplate.Name}' at ({x:F0}, {y:F0})µm");
     }
 
+    /// <summary>
+    /// Selects the component or connection at the given canvas position, keeping the
+    /// <see cref="DesignCanvasViewModel.Selection"/> set and <see cref="SelectedComponent"/> in sync.
+    /// Invoked by the canvas right-click handler so the context menu acts on the element under the
+    /// cursor rather than the previously selected one.
+    /// </summary>
+    public void SelectComponentAt(double canvasX, double canvasY)
+    {
+        var hit = ComponentAt(canvasX, canvasY);
+
+        // Right-clicking one of several already-selected components keeps the whole
+        // multi-selection (so "Create Group" stays available) and just makes the
+        // clicked one the primary for the context menu / component settings.
+        // Right-clicking outside the selection (or with only one selected) selects
+        // just that component, exactly like a left-click would.
+        if (hit != null && _canvas.Selection.HasMultipleSelected && _canvas.Selection.SelectedComponents.Contains(hit))
+        {
+            SelectedComponent = hit;
+            _canvas.SelectedComponent = hit;
+            SelectedWaveguideConnection = null;
+            UpdateStatus?.Invoke($"Selected: {hit.Name} ({_canvas.Selection.SelectedComponents.Count} selected)");
+            return;
+        }
+
+        SelectAt(canvasX, canvasY);
+        if (SelectedComponent != null)
+            _canvas.Selection.SelectSingle(SelectedComponent);
+        else
+            _canvas.Selection.ClearSelection();
+    }
+
+    /// <summary>Returns the topmost component whose bounds contain the point, or null.</summary>
+    private ComponentViewModel? ComponentAt(double x, double y) =>
+        _canvas.Components
+            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
+            .LastOrDefault();
+
     private void SelectAt(double x, double y)
     {
         // Deselect all
@@ -321,9 +393,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         // Find component at position
-        var component = _canvas.Components
-            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
-            .LastOrDefault();
+        var component = ComponentAt(x, y);
 
         if (component != null)
         {
@@ -575,6 +645,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
         if (cmd.Result != null)
         {
+            // Carry identifier-keyed state (Nazca overrides) onto the copies before they render.
+            OnComponentsPasted?.Invoke(cmd.Result.IdentifierMap);
+
             _canvas.Selection.ClearSelection();
             foreach (var comp in cmd.Result.Components)
             {
@@ -762,4 +835,19 @@ public partial class CanvasInteractionViewModel : ObservableObject
                _libraryViewModel != null &&
                _inputDialogService != null;
     }
+
+    /// <summary>
+    /// Opens the Component Settings dialog for the currently selected canvas component.
+    /// Only enabled when exactly one component is selected.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedComponentSettings))]
+    private void OpenSelectedComponentSettings()
+    {
+        var selected = SelectedComponent;
+        if (selected != null)
+            OpenComponentSettings?.Invoke(selected);
+    }
+
+    private bool CanOpenSelectedComponentSettings()
+        => SelectedComponent != null;
 }

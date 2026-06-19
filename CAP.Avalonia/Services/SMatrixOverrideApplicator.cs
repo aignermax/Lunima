@@ -142,7 +142,9 @@ public static class SMatrixOverrideApplicator
         IEnumerable<Component> components,
         IReadOnlyDictionary<string, ComponentSMatrixData> storedSMatrices,
         Func<Component, string?>? templateKeyResolver = null,
-        ErrorConsoleService? errorConsole = null)
+        ErrorConsoleService? errorConsole = null,
+        Func<string, bool>? keyMatchesKnownTemplate = null,
+        bool reportOrphans = false)
     {
         var componentList = components.ToList();
         var perComponent = new Dictionary<string, ApplyResult>();
@@ -167,8 +169,26 @@ public static class SMatrixOverrideApplicator
             }
         }
 
-        var orphans = storedSMatrices.Keys.Where(k => !matchedKeys.Contains(k)).ToList();
-        if (errorConsole != null && orphans.Count > 0)
+        var unmatched = storedSMatrices.Keys.Where(k => !matchedKeys.Contains(k)).ToList();
+
+        // Split into "truly orphan" (no matching template anywhere — the
+        // component was renamed or removed) and "deferred" (matches a known
+        // library template but no instance is currently on the canvas). Only
+        // the truly-orphan set deserves a user-visible warning; deferred
+        // overrides will just get applied the next time the user places
+        // that template.
+        List<string> orphans;
+        if (keyMatchesKnownTemplate != null)
+            orphans = unmatched.Where(k => !keyMatchesKnownTemplate(k)).ToList();
+        else
+            orphans = unmatched;
+
+        // Only warn when asked to (i.e. the caller passed the COMPLETE component
+        // set — typically on project load). Called with a subset (e.g. the
+        // incremental "components added to canvas" handler), an unmatched key is
+        // not necessarily orphan: it may match a component outside this subset.
+        // Warning on every subset call produced duplicate, misleading warnings.
+        if (reportOrphans && errorConsole != null && orphans.Count > 0)
         {
             errorConsole.LogWarning(
                 $"S-matrix overrides could not be applied: {orphans.Count} stored entry/entries " +

@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Controls;
 using CAP.Avalonia.ViewModels.Canvas;
 using Shouldly;
@@ -11,7 +12,7 @@ namespace UnitTests.Controls;
 /// </summary>
 public class DesignCanvasRefreshTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void DesignCanvas_SetsRepaintCallback_WhenViewModelAssigned()
     {
         // Arrange
@@ -25,7 +26,7 @@ public class DesignCanvasRefreshTests
         viewModel.RepaintRequested.ShouldNotBeNull("RepaintRequested callback should be set when ViewModel is assigned");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DesignCanvas_ClearsRepaintCallback_WhenViewModelRemoved()
     {
         // Arrange
@@ -43,7 +44,7 @@ public class DesignCanvasRefreshTests
         viewModel.RepaintRequested.ShouldBeNull("RepaintRequested callback should be cleared when ViewModel is removed");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DesignCanvas_CanHandleMultipleViewModelChanges()
     {
         // Arrange
@@ -63,7 +64,7 @@ public class DesignCanvasRefreshTests
         viewModel2.RepaintRequested.ShouldNotBeNull("New ViewModel's callback should be set");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DesignCanvasViewModel_ComponentsClear_DoesNotThrow()
     {
         // Arrange
@@ -84,7 +85,7 @@ public class DesignCanvasRefreshTests
         viewModel.Components.Count.ShouldBe(0);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DesignCanvasViewModel_ConnectionsClear_DoesNotThrow()
     {
         // Arrange

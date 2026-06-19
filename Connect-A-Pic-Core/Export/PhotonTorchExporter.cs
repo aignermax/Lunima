@@ -61,6 +61,15 @@ public class PhotonTorchExporter
     {
         options ??= new ExportOptions();
 
+        // Virtual analysis tools (e.g. ONA Analyzer) have no physical counterpart
+        // and no PhotonTorch mapping — strip them and any connections that touch
+        // them before processing so callers don't have to think about it.
+        components = components.Where(c => !c.IsAnalysisTool).ToList();
+        connections = connections
+            .Where(c => c.StartPin?.ParentComponent?.IsAnalysisTool != true
+                     && c.EndPin?.ParentComponent?.IsAnalysisTool != true)
+            .ToList();
+
         ValidateComponentPins(components);
 
         var nameMap = ComponentNameMap.Build(components);

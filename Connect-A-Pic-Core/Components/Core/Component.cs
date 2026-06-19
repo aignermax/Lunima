@@ -75,6 +75,20 @@ public class Component : ICloneable
     public string NazcaFunctionName { get; set; }
     public string NazcaFunctionParameters { get; set; }
     public string? NazcaModuleName { get; set; }
+
+    /// <summary>
+    /// Sentinel value used in <see cref="NazcaFunctionName"/> for virtual analysis
+    /// components (e.g. ONA Analyzer). Such components are skipped during GDS /
+    /// PhotonTorch export and have a dedicated UI flow.
+    /// </summary>
+    public const string AnalysisToolNazcaSentinel = "__analyzer__";
+
+    /// <summary>
+    /// True when this component is a virtual analysis tool rather than a physical
+    /// PDK element. Drives export-skip, custom UI, and special simulation handling.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsAnalysisTool => NazcaFunctionName == AnalysisToolNazcaSentinel;
     private DiscreteRotation _discreteRotation;
     public DiscreteRotation Rotation90CounterClock
     {
