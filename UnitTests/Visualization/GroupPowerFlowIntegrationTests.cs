@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Visualization;
 using CAP_Core.Components;
 using CAP_Core.Components.Connections;
@@ -180,7 +181,7 @@ public class GroupPowerFlowIntegrationTests
     /// the same signal that was visible in ungrouped connections should remain
     /// visible (non-zero) in frozen paths after grouping.
     /// </summary>
-    [Fact]
+    [AvaloniaFact]
     public void UpdateFromSimulation_AfterGrouping_PreservesPowerVisualization()
     {
         // Arrange
