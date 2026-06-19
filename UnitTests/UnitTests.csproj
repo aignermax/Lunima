@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -14,6 +14,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Avalonia 11.3.13 packages pinned to resolve the version conflict:
+         CAP.Avalonia references Avalonia.Skia 11.2.1, but Avalonia.Headless.XUnit 11.3.13
+         requires 11.3.x Skia APIs. Explicitly upgrading here forces NuGet to place
+         11.3.x DLLs in the test output so UseSkia() + UseHeadlessDrawing=false work. -->
+    <PackageReference Include="Avalonia" Version="11.3.13" />
+    <PackageReference Include="Avalonia.Skia" Version="11.3.13" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.13" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="11.3.13" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="Moq" Version="4.20.70" />

@@ -3,7 +3,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels;
+using CAP.Avalonia.ViewModels.Analysis.OnaAnalysis;
 using CAP.Avalonia.ViewModels.ComponentSettings;
+using CAP_Core.Components.Core;
 using CAP.Avalonia.ViewModels.Hierarchy;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.PdkImport;
@@ -33,6 +35,15 @@ public partial class MainWindow : Window
                 vm.FileDialogService = new FileDialogService(this);
                 vm.FileOperations.MessageBoxService = new MessageBoxService();
                 vm.RightPanel.Sweep.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.OnaAnalysis.FileDialogService = vm.FileDialogService;
+                vm.RightPanel.OnaAnalysis.OpenWindowAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
+                // Wire the per-component editor for analyzers so the right-panel
+                // properties section can also open the ONA tool window.
+                var onaEditorProvider = App.Services.GetService(
+                    typeof(CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider))
+                    as CAP.Avalonia.ViewModels.Properties.Editors.OnaAnalyzerEditorProvider;
+                if (onaEditorProvider != null)
+                    onaEditorProvider.OpenSweepAsync = analyzer => OpenOnaAnalyzerWindow(analyzer, vm);
                 vm.RightPanel.RoutingDiagnostics.FileDialogService = vm.FileDialogService;
                 ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
@@ -66,6 +77,17 @@ public partial class MainWindow : Window
                         DataContext = editorVm
                     };
                     editorWindow.Show(this);
+                };
+
+                // Wire up Fabrication Process window (process model — #570)
+                vm.ShowProcessManagerRequested = () =>
+                {
+                    var processVm = new ProcessManagementViewModel(new FileDialogService(this));
+                    var processWindow = new ProcessManagementWindow
+                    {
+                        DataContext = processVm
+                    };
+                    processWindow.Show(this);
                 };
 
                 // Wire up clipboard for RoutingDiagnostics
@@ -121,9 +143,23 @@ public partial class MainWindow : Window
                         vm);
                 };
 
+                // Wire up Component Settings dialog for canvas context menu
+                vm.CanvasInteraction.OpenComponentSettings = compVm =>
+                {
+                    ShowComponentSettingsDialog(
+                        compVm.Component.Identifier,
+                        compVm.Component.HumanReadableName ?? compVm.Component.Identifier,
+                        compVm.Component,
+                        vm);
+                };
+
                 // Wire up per-instance S-matrix override marker in hierarchy
                 vm.LeftPanel.HierarchyPanel.CheckHasSMatrixOverride =
                     id => vm.FileOperations.StoredSMatrices.ContainsKey(id);
+
+                // Wire up per-instance Nazca override marker in hierarchy
+                vm.LeftPanel.HierarchyPanel.CheckHasNazcaOverride =
+                    id => vm.FileOperations.StoredNazcaOverrides.ContainsKey(id);
 
                 // Initial badge population for PDK templates (covers user-global
                 // overrides loaded from disk on app start). Updated again every
@@ -522,11 +558,28 @@ public partial class MainWindow : Window
             as UserSMatrixOverrideStore;
         var portMappingDialog = App.Services.GetService(typeof(IPortMappingDialogService))
             as IPortMappingDialogService;
+
+        // FDTD "Recalculate S-matrix": wire the solver service and a factory that
+        // renders the component's geometry/pins into an FDTD request. Both are
+        // optional — the dialog hides the recompute button when they're absent.
+        var fdtdService = App.Services.GetService(typeof(CAP_Core.Solvers.Fdtd.IFdtdSMatrixService))
+            as CAP_Core.Solvers.Fdtd.IFdtdSMatrixService;
+        var previewService = App.Services.GetService(typeof(CAP_Core.Export.NazcaComponentPreviewService))
+            as CAP_Core.Export.NazcaComponentPreviewService;
+        Func<CAP_Core.Components.Core.Component, CancellationToken, Task<CAP_Core.Solvers.Fdtd.FdtdSMatrixRequest?>>? fdtdRequestFactory = null;
+        if (fdtdService != null && previewService != null)
+        {
+            var requestFactory = new CAP.Avalonia.Services.Solvers.ComponentFdtdRequestFactory(previewService);
+            fdtdRequestFactory = (component, ct) => requestFactory.BuildAsync(component, ct);
+        }
+
         var dialogVm = new ComponentSettingsDialogViewModel(
             new FileDialogService(this),
             errorConsole,
             importers: null,
-            portMappingDialog: portMappingDialog);
+            portMappingDialog: portMappingDialog,
+            fdtdService: fdtdService,
+            fdtdRequestFactory: fdtdRequestFactory);
 
         bool isTemplateMode = liveComponent == null && userStore != null;
         var store = isTemplateMode
@@ -579,6 +632,60 @@ public partial class MainWindow : Window
                 .ToList();
         }
 
+        // Resolve Nazca template values for per-instance mode.
+        // When no override is stored yet, the live component's current values ARE the template values.
+        // When an override was applied from a previous session, use the saved template reference
+        // from within the stored override record so "Reset to template" always targets the
+        // correct PDK defaults rather than the already-overridden live values.
+        string? templateFunctionName = null;
+        string? templateFunctionParameters = null;
+        string? templateModuleName = null;
+        if (liveComponent != null)
+        {
+            if (vm.FileOperations.StoredNazcaOverrides.TryGetValue(entityKey, out var existingNazca))
+            {
+                templateFunctionName = existingNazca.TemplateFunctionName ?? liveComponent.NazcaFunctionName;
+                templateFunctionParameters = existingNazca.TemplateFunctionParameters ?? liveComponent.NazcaFunctionParameters;
+                templateModuleName = existingNazca.TemplateModuleName ?? liveComponent.NazcaModuleName;
+            }
+            else
+            {
+                templateFunctionName = liveComponent.NazcaFunctionName;
+                templateFunctionParameters = liveComponent.NazcaFunctionParameters;
+                templateModuleName = liveComponent.NazcaModuleName;
+            }
+        }
+
+        // Per-instance raw Nazca code editor (issue #556) — only in per-instance mode.
+        var nazcaPreviewService = App.Services.GetService(typeof(CAP_Core.Export.NazcaComponentPreviewService))
+            as CAP_Core.Export.NazcaComponentPreviewService;
+        string? nazcaTemplateCode = null;
+        Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null;
+        Action? nazcaDimensionsChanged = null;
+        Action<IReadOnlyList<CAP_Core.Components.Core.PhysicalPin>>? nazcaPinsChanged = null;
+        if (liveComponent != null && !isTemplateMode)
+        {
+            nazcaTemplateCode = NazcaCodeTemplateBuilder.Build(
+                templateModuleName, templateFunctionName, templateFunctionParameters);
+            nazcaOverlapCheck = (w, h) => FindOverlappingComponentNames(vm, liveComponent, w, h);
+            nazcaDimensionsChanged = () =>
+            {
+                var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
+                compVm?.NotifyDimensionsChanged();
+                // Repaint the canvas immediately so the resized footprint shows on Apply.
+                DesignCanvasControl.InvalidateVisual();
+            };
+            nazcaPinsChanged = _ =>
+            {
+                // Issue #561: Connections auf die neuen Override-Pins umhaengen bzw.
+                // mit Warnung trennen, Pin-VMs auffrischen, Routen + Simulation neu.
+                var warnings = vm.Canvas.OnComponentPinsChanged(liveComponent);
+                foreach (var warning in warnings)
+                    errorConsole?.LogWarning(warning);
+                DesignCanvasControl.InvalidateVisual();
+            };
+        }
+
         dialogVm.Configure(
             entityKey,
             displayName,
@@ -588,10 +695,50 @@ public partial class MainWindow : Window
             isUserGlobalScope: isTemplateMode,
             effectiveSMatrices: effectiveSMatrices,
             effectivePins: effectivePins,
-            availablePinNames: availablePinNames);
+            availablePinNames: availablePinNames,
+            storedNazcaOverrides: isTemplateMode ? null : vm.FileOperations.StoredNazcaOverrides,
+            templateFunctionName: templateFunctionName,
+            templateFunctionParameters: templateFunctionParameters,
+            templateModuleName: templateModuleName,
+            nazcaPreviewService: nazcaPreviewService,
+            nazcaTemplateCode: nazcaTemplateCode,
+            nazcaOverlapCheck: nazcaOverlapCheck,
+            nazcaDimensionsChanged: nazcaDimensionsChanged,
+            nazcaPinsChanged: nazcaPinsChanged);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);
+    }
+
+    /// <summary>
+    /// Returns the display names of canvas components the given instance would overlap
+    /// if resized to <paramref name="width"/> × <paramref name="height"/> at its current
+    /// position. Non-blocking advisory used by the Nazca code editor's overlap warning.
+    /// </summary>
+    private static IReadOnlyList<string> FindOverlappingComponentNames(
+        MainViewModel vm, CAP_Core.Components.Core.Component liveComponent, double width, double height)
+    {
+        var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
+        if (compVm == null)
+            return System.Array.Empty<string>();
+
+        // CanPlaceComponent returns false on ANY overlap or chip-boundary violation;
+        // when it reports a clash, enumerate the specific neighbours for the message.
+        if (vm.Canvas.CanPlaceComponent(compVm.X, compVm.Y, width, height, excludeComponent: compVm))
+            return System.Array.Empty<string>();
+
+        var names = new List<string>();
+        foreach (var other in vm.Canvas.Components)
+        {
+            if (other == compVm) continue;
+            bool overlaps = compVm.X < other.X + other.Width &&
+                            compVm.X + width > other.X &&
+                            compVm.Y < other.Y + other.Height &&
+                            compVm.Y + height > other.Y;
+            if (overlaps)
+                names.Add(other.Component.HumanReadableName ?? other.Component.Identifier);
+        }
+        return names;
     }
 
     private void ClearUserGroupsSelection()
@@ -657,5 +804,20 @@ public partial class MainWindow : Window
                 ClearUserGroupsSelection();
             }
         }
+    }
+
+    /// <summary>
+    /// Opens a new ONA Analyzer tool window bound to the given analyzer component.
+    /// Each call creates a fresh <see cref="OnaSweepViewModel"/> so several
+    /// analyzers can be inspected side-by-side; the window is non-modal.
+    /// </summary>
+    private System.Threading.Tasks.Task OpenOnaAnalyzerWindow(CAP_Core.Components.Core.Component analyzer, MainViewModel vm)
+    {
+        var sweepVm = new OnaSweepViewModel(vm.ErrorConsole) { Analyzer = analyzer };
+        sweepVm.Configure(vm.Canvas);
+        sweepVm.FileDialogService = vm.FileDialogService;
+        var window = new OnaAnalyzerWindow { DataContext = sweepVm };
+        window.Show(this);
+        return System.Threading.Tasks.Task.CompletedTask;
     }
 }

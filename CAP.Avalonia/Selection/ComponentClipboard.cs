@@ -83,6 +83,10 @@ public class ComponentClipboard
         var newComponents = new List<ComponentViewModel>();
         var clonedComps = new List<Component>();
 
+        // Maps each source component's original Identifier to its clone's new Identifier
+        // (incl. group children), so identifier-keyed state like Nazca overrides can follow the copy.
+        var pastedIdentifierMap = new Dictionary<string, string>();
+
         // Get existing component names for unique name generation.
         // Include child identifiers from all groups so copy names don't collide.
         var existingNames = canvas.Components
@@ -133,6 +137,12 @@ public class ComponentClipboard
 
                 // Update ExternalPin references to use the renamed child components
                 UpdateExternalPinReferences(group, identifierMap);
+
+                // Record old->new identifiers for the group itself and every child.
+                // Pair original<->clone children by traversal order (robust even though
+                // Clone() regenerates child identifiers), so identifier-keyed state maps correctly.
+                pastedIdentifierMap[entry.OriginalComponent.Identifier] = group.Identifier;
+                MapGroupChildIdentifiers((ComponentGroup)entry.OriginalComponent, group, pastedIdentifierMap);
             }
             else
             {
@@ -141,6 +151,7 @@ public class ComponentClipboard
                     entry.OriginalComponent.Identifier,
                     existingNames);
                 cloned.Identifier = newIdentifier;
+                pastedIdentifierMap[entry.OriginalComponent.Identifier] = newIdentifier;
 
                 // Also update HumanReadableName to match the new copy
                 if (entry.OriginalComponent.HumanReadableName != null)
@@ -199,7 +210,27 @@ public class ComponentClipboard
             }
         }
 
-        return new PasteResult(newComponents, newConnections);
+        return new PasteResult(newComponents, newConnections, pastedIdentifierMap);
+    }
+
+    /// <summary>
+    /// Recursively maps each original group child's identifier to its pasted clone's
+    /// identifier by pairing children in traversal order. Used to carry identifier-keyed
+    /// per-instance state (Nazca overrides) onto pasted group children.
+    /// </summary>
+    private static void MapGroupChildIdentifiers(
+        ComponentGroup original, ComponentGroup clone, Dictionary<string, string> map)
+    {
+        int count = Math.Min(original.ChildComponents.Count, clone.ChildComponents.Count);
+        for (int i = 0; i < count; i++)
+        {
+            var originalChild = original.ChildComponents[i];
+            var clonedChild = clone.ChildComponents[i];
+            map[originalChild.Identifier] = clonedChild.Identifier;
+
+            if (originalChild is ComponentGroup originalSub && clonedChild is ComponentGroup clonedSub)
+                MapGroupChildIdentifiers(originalSub, clonedSub, map);
+        }
     }
 
     /// <summary>
@@ -320,6 +351,14 @@ public class ComponentClipboard
 /// <summary>
 /// Result of a paste operation containing newly created components and connections.
 /// </summary>
+/// <param name="Components">The newly created component ViewModels.</param>
+/// <param name="Connections">The newly created internal connections.</param>
+/// <param name="IdentifierMap">
+/// Maps each pasted source component's original <c>Identifier</c> to its clone's new
+/// <c>Identifier</c> (groups include an entry per renamed child). Used to carry
+/// per-instance state keyed by identifier — e.g. Nazca raw-code overrides — onto the copies.
+/// </param>
 public sealed record PasteResult(
     List<ComponentViewModel> Components,
-    List<WaveguideConnectionViewModel> Connections);
+    List<WaveguideConnectionViewModel> Connections,
+    IReadOnlyDictionary<string, string> IdentifierMap);

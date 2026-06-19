@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
 using CAP.Avalonia.Behaviors;
 using Shouldly;
 using Xunit;
@@ -13,7 +14,7 @@ namespace UnitTests.Behaviors;
 /// </summary>
 public class ScrollPositionBehaviorTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void VerticalOffset_DefaultsToZero()
     {
         var scrollViewer = new ScrollViewer();
@@ -23,7 +24,7 @@ public class ScrollPositionBehaviorTests
         offset.ShouldBe(0.0);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetVerticalOffset_UpdatesProperty()
     {
         var scrollViewer = new ScrollViewer();
@@ -34,7 +35,7 @@ public class ScrollPositionBehaviorTests
         offset.ShouldBe(100.5);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void GetVerticalOffset_ReturnsCorrectValue()
     {
         var scrollViewer = new ScrollViewer();
@@ -45,7 +46,7 @@ public class ScrollPositionBehaviorTests
         result.ShouldBe(250.75);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void VerticalOffset_SupportsMultipleUpdates()
     {
         var scrollViewer = new ScrollViewer();

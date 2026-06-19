@@ -26,5 +26,18 @@
       "Bash(/home/max/.dotnet/dotnet build:*)",
       "Bash(dotnet test ./UnitTests/UnitTests.csproj --filter \"IncrementalRouting_PreservesValidRoutes\")"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/max/.cap-tools/post-build-test-hook.sh"
+          }
+        ]
+      }
+    ]
   }
 }

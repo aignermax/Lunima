@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using CAP.Avalonia.Controls.Handlers;
 using CAP.Avalonia.Controls.Rendering;
@@ -101,6 +102,10 @@ public class DesignCanvas : Control
         _keyboardHandler = new KeyboardHandler(() => ViewModel, () => MainViewModel, () => Bounds);
 
         InitGestures();
+
+        // Select the component under the cursor when the context menu opens, so the menu acts on the
+        // right-clicked element. Tunnel phase runs before the menu evaluates its command CanExecute.
+        AddHandler(ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
     }
 
     // ── Rendering ──────────────────────────────────────────────────────────
@@ -118,7 +123,8 @@ public class DesignCanvas : Control
             MainViewModel = MainViewModel,
             InteractionState = _interactionState,
             Zoom = Zoom,
-            Bounds = Bounds
+            Bounds = Bounds,
+            GdsPreviewRenderService = MainViewModel?.GdsPreviewRenderService
         };
 
         context.FillRectangle(Brushes.Black, Bounds);
@@ -194,6 +200,21 @@ public class DesignCanvas : Control
         _activeGesture = null;
     }
 
+    /// <summary>
+    /// Selects the component under the cursor before the context menu opens so its actions
+    /// (Component Settings, Copy, Delete, …) operate on the right-clicked element. A keyboard-invoked
+    /// menu provides no position; in that case the current selection is kept.
+    /// </summary>
+    private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        var mainVm = MainViewModel;
+        if (mainVm == null) return;
+        if (!e.TryGetPosition(this, out var screenPoint)) return;
+        var canvasPoint = ScreenToCanvas(screenPoint);
+        mainVm.CanvasInteraction.SelectComponentAt(canvasPoint.X, canvasPoint.Y);
+        InvalidateVisual();
+    }
+
     /// <inheritdoc/>
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
@@ -252,9 +273,18 @@ public class DesignCanvas : Control
     private void OnMainViewModelChanged(AvaloniaPropertyChangedEventArgs e)
     {
         if (e.OldValue is MainViewModel oldVm)
+        {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
+            oldVm.GdsPreviewRenderService.OnPreviewLoaded -= InvalidateVisual;
+            oldVm.GdsPreviewRenderService.RawCodeLookup = null;
+        }
         if (e.NewValue is MainViewModel newVm)
+        {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
+            newVm.GdsPreviewRenderService.OnPreviewLoaded += InvalidateVisual;
+            newVm.GdsPreviewRenderService.RawCodeLookup = id =>
+                newVm.FileOperations.StoredNazcaOverrides.TryGetValue(id, out var o) ? o.RawCode : null;
+        }
     }
 
     private void OnViewModelChanged(AvaloniaPropertyChangedEventArgs e)
@@ -286,8 +316,11 @@ public class DesignCanvas : Control
         if (e.PropertyName is nameof(DesignCanvasViewModel.ShowPowerFlow)
             or nameof(DesignCanvasViewModel.IsRouting)
             or nameof(DesignCanvasViewModel.PanX)
-            or nameof(DesignCanvasViewModel.PanY))
+            or nameof(DesignCanvasViewModel.PanY)
+            or nameof(DesignCanvasViewModel.SelectedComponent))
         {
+            // SelectedComponent: redraw so the highlight follows a selection made
+            // outside the canvas (e.g. clicking a node in the hierarchy panel).
             InvalidateVisual();
         }
     }

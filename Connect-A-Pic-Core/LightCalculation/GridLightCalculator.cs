@@ -41,7 +41,7 @@ namespace CAP_Core.LightCalculation
                 LastValidationResult = _validator.Validate(SystemSMatrix);
             }
 
-            var stepCount = SystemSMatrix.PinReference.Count() * 2;
+            var stepCount = SMatrix.DefaultMaxIterations;
             ConcurrentBag<UsedInput> usedInputs = Grid.ExternalPortManager.GetUsedExternalInputs()
                                  .Where(i => i.Input.LaserType.WaveLengthInNm == LaserWaveLengthInNm)
                                  .ToConcurrentBag();
