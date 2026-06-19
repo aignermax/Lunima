@@ -5,21 +5,24 @@ using CAP_Core.Export;
 using CAP_DataAccess.Persistence.PIR;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Linq;
 
 namespace CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
 
 /// <summary>
-/// ViewModel for the per-instance editable Nazca code editor (issue #556).
+/// ViewModel for the per-instance editable Nazca code editor (issue #556/#561).
 /// Lets a power user see, edit and run a complete Nazca cell function for one
 /// placed instance, preview the resulting geometry live, and — on Apply —
-/// recompute the component's bounding-box size from the rendered geometry.
+/// recompute the component's bounding-box size AND update its physical pins from
+/// the rendered geometry.
 /// </summary>
 /// <remarks>
-/// Geometry-only by design: optical pins and the S-matrix stay as the PDK
-/// template. Only <see cref="Component.WidthMicrometers"/> /
-/// <see cref="Component.HeightMicrometers"/> change. A mismatch between the
-/// rendered port count and the component's pin count surfaces as a hint in
-/// <see cref="StatusText"/> and nothing more.
+/// On Apply: both <see cref="Component.WidthMicrometers"/> /
+/// <see cref="Component.HeightMicrometers"/> and
+/// <see cref="Component.PhysicalPins"/> are replaced from the preview result.
+/// When the new pin names differ from the PDK template's,
+/// <see cref="HasNoSimulationModel"/> is set to warn the user that the
+/// template S-matrix is no longer valid for simulation.
 /// </remarks>
 public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
 {
@@ -30,6 +33,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     private readonly Func<double, double, IReadOnlyList<string>>? _overlapCheck;
     private readonly Action? _onDimensionsChanged;
     private readonly Action? _onChanged;
+    private readonly Action<IReadOnlyList<PhysicalPin>>? _onPinsChanged;
     private readonly string _templateCode;
     private readonly string? _moduleName;
     private readonly string _nazcaFunction;
@@ -121,6 +125,14 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     private bool _hasOverlap;
 
     /// <summary>
+    /// True when the most recently applied override changed the pin names relative
+    /// to the PDK template, meaning the template S-matrix no longer maps to the
+    /// new ports. Surfaced in the status text as a prominent warning.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasNoSimulationModel;
+
+    /// <summary>
     /// True when this component exposes editable Nazca source (demo PDK cell body
     /// via <c>inspect.getsource</c>, or a SiEPIC PCell Python file). False when the
     /// component is a fixed-cell GDS / KLayout PCell whose source can't be retrieved,
@@ -149,25 +161,15 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// <param name="componentKey">The component's Identifier, used as the override-store key.</param>
     /// <param name="storedOverrides">Shared per-instance Nazca override dictionary.</param>
     /// <param name="liveComponent">The live canvas component whose size is recomputed on Apply.</param>
-    /// <param name="moduleName">
-    /// The component's PDK module name (e.g. "demo", a SiEPIC module). Passed to
-    /// <see cref="NazcaComponentPreviewService.RenderAsync"/> in module mode so the
-    /// editor can fetch the component's REAL source and render its geometry.
-    /// </param>
+    /// <param name="moduleName">PDK module name passed to <see cref="NazcaComponentPreviewService.RenderAsync"/> in module mode.</param>
     /// <param name="nazcaFunction">The component's Nazca function / cell name.</param>
     /// <param name="nazcaParameters">Optional keyword-argument string for the function, or null.</param>
-    /// <param name="templateCode">
-    /// A runnable code fallback that reproduces the current component's Nazca call.
-    /// Used only when module-mode <c>RenderAsync</c> yields no real source AND no
-    /// usable note — i.e. as a last-resort seed so the editor is never blank.
-    /// </param>
+    /// <param name="templateCode">Runnable code fallback; used as last-resort seed when no real source is available.</param>
     /// <param name="previewService">Preview back-end. Null disables Run (e.g. headless tests).</param>
-    /// <param name="overlapCheck">
-    /// Optional callback that, given a candidate width/height, returns the display
-    /// names of components the resized instance would overlap. Empty list = no overlap.
-    /// </param>
+    /// <param name="overlapCheck">Optional callback returning names of components the resized instance would overlap.</param>
     /// <param name="onDimensionsChanged">Invoked after the live component's size changes so the canvas can repaint.</param>
     /// <param name="onChanged">Invoked after every successful Apply or Reset so observers refresh badges.</param>
+    /// <param name="onPinsChanged">Invoked after the live component's physical pins are replaced (on Apply or Reset).</param>
     public InstanceNazcaCodeEditorViewModel(
         string componentKey,
         Dictionary<string, NazcaCodeOverride> storedOverrides,
@@ -179,7 +181,8 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         NazcaComponentPreviewService? previewService = null,
         Func<double, double, IReadOnlyList<string>>? overlapCheck = null,
         Action? onDimensionsChanged = null,
-        Action? onChanged = null)
+        Action? onChanged = null,
+        Action<IReadOnlyList<PhysicalPin>>? onPinsChanged = null)
     {
         _componentKey = componentKey;
         _storedOverrides = storedOverrides;
@@ -192,6 +195,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         _overlapCheck = overlapCheck;
         _onDimensionsChanged = onDimensionsChanged;
         _onChanged = onChanged;
+        _onPinsChanged = onPinsChanged;
 
         RefreshFromStore();
     }
@@ -199,20 +203,8 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// <summary>
     /// Loads the component's REAL Nazca source and an initial geometry preview via
     /// module-mode <see cref="NazcaComponentPreviewService.RenderAsync"/>, UNLESS a
-    /// raw-code override is already stored (in which case the editor keeps the stored
-    /// code seeded by the constructor). Crash-proof: never throws — any failure leaves
-    /// the editor usable with an explanatory note.
+    /// raw-code override is already stored. Crash-proof: never throws.
     /// </summary>
-    /// <remarks>
-    /// Behaviour when no override is stored:
-    /// <list type="bullet">
-    /// <item>Real source available → <see cref="Code"/> = source, <see cref="HasEditableSource"/> = true, preview shown.</item>
-    /// <item>Only a "# ..." note available (fixed-cell GDS / PCell without Python) →
-    ///       <see cref="Code"/> = the note, <see cref="HasEditableSource"/> = false, preview still shown.</item>
-    /// <item>Render failed (no python/nazca) → <see cref="Code"/> = a comment, <see cref="HasEditableSource"/> = false,
-    ///       <see cref="PreviewError"/> set.</item>
-    /// </list>
-    /// </remarks>
     public async Task InitializeAsync()
     {
         // A stored raw-code override wins — the constructor already seeded Code from it.
@@ -225,11 +217,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         ApplyOverrideCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>
-    /// Shared init/Reset logic: fetch the component's original source + geometry via
-    /// module-mode render and populate <see cref="Code"/> / <see cref="HasEditableSource"/>
-    /// / preview accordingly. Never throws.
-    /// </summary>
+    /// <summary>Fetches the component's original source + geometry via module-mode render. Never throws.</summary>
     private async Task LoadOriginalSourceAsync()
     {
         // The editable box is always the override starter; the original source (if any)
@@ -297,10 +285,8 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         => !string.IsNullOrWhiteSpace(source) && !source.TrimStart().StartsWith('#');
 
     /// <summary>
-    /// Runs the editor's code through the preview service. Async, non-blocking and
-    /// crash-proof: any failure (syntax error, infinite loop → timeout, missing
-    /// Python) sets <see cref="PreviewError"/> and leaves <see cref="IsValid"/> false.
-    /// Never throws.
+    /// Runs the editor's code through the preview service. Any failure sets
+    /// <see cref="PreviewError"/> and leaves <see cref="IsValid"/> false. Never throws.
     /// </summary>
     [RelayCommand]
     private async Task RunPreviewAsync()
@@ -362,13 +348,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     {
         double w = result.XMax - result.XMin;
         double h = result.YMax - result.YMin;
-        var status = $"Preview OK — size {w:F2} × {h:F2} µm.";
-
-        // Geometry-only contract: a port-count mismatch is a hint, not a change.
-        int templatePinCount = _liveComponent?.PhysicalPins.Count ?? 0;
-        if (templatePinCount > 0 && result.Pins.Count != templatePinCount)
-            status += $" Note: rendered geometry has {result.Pins.Count} port(s) but this " +
-                      $"component keeps its {templatePinCount} pin(s) — connections/sim unchanged.";
+        var status = $"Preview OK — size {w:F2} × {h:F2} µm, {result.Pins.Count} port(s).";
 
         if (!string.IsNullOrEmpty(result.PolygonWarning))
             status += " " + result.PolygonWarning;
@@ -378,9 +358,12 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
 
     /// <summary>
     /// Persists the edited code as a raw-code override, recomputes the live
-    /// component's size from the last successful preview's bounding box, runs a
-    /// (non-blocking) overlap check, and fires the change callback. Enabled only
-    /// after a successful <see cref="RunPreviewAsync"/>.
+    /// component's size and physical pins from the last successful preview's
+    /// bounding box and pin list, runs a (non-blocking) overlap check, and
+    /// fires the change callbacks. Enabled only after a successful
+    /// <see cref="RunPreviewAsync"/>.
+    /// When the new pin names differ from the PDK template's,
+    /// <see cref="HasNoSimulationModel"/> is set.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanApplyOverride))]
     private void ApplyOverride()
@@ -394,25 +377,44 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         var overrideData = _storedOverrides.TryGetValue(_componentKey, out var existing)
             ? existing
             : new NazcaCodeOverride();
+
+        // Capture template pins on first Apply (before any override pin has been written).
+        if (overrideData.TemplatePins == null && _liveComponent != null)
+            overrideData.TemplatePins = OverridePinMapper.CaptureAsPinData(_liveComponent.PhysicalPins);
+
+        // Derive override pins from the preview pin stubs.
+        var overridePins = OverridePinMapper.BuildOverridePins(_lastSuccessfulPreview);
         overrideData.RawCode = Code;
-        overrideData.OverrideWidthMicrometers = width;
-        overrideData.OverrideHeightMicrometers = height;
+        overrideData.SetOverrideGeometry(
+            width, height, _lastSuccessfulPreview.XMin, _lastSuccessfulPreview.YMax);
+        overrideData.OverridePins = overridePins;
+        overrideData.HasNoSimulationModel = !OverridePinMapper.PinNamesMatch(overrideData.TemplatePins, overridePins);
         _storedOverrides[_componentKey] = overrideData;
 
         if (_liveComponent != null)
         {
             _liveComponent.WidthMicrometers = width;
             _liveComponent.HeightMicrometers = height;
+            OverridePinMapper.ApplyPinsToComponent(_liveComponent, overridePins);
         }
         _onDimensionsChanged?.Invoke();
+        if (_liveComponent != null)
+            _onPinsChanged?.Invoke(_liveComponent.PhysicalPins);
 
         var overlapping = _overlapCheck?.Invoke(width, height) ?? Array.Empty<string>();
         HasOverlap = overlapping.Count > 0;
+        HasNoSimulationModel = overrideData.HasNoSimulationModel;
         HasOverride = true;
-        StatusText = HasOverlap
-            ? $"Applied — geometry resized to {width:F2} × {height:F2} µm. " +
+
+        var baseStatus = HasOverlap
+            ? $"Applied — geometry {width:F2} × {height:F2} µm, {overridePins.Count} pin(s). " +
               $"Warning: overlaps {string.Join(", ", overlapping)}."
-            : $"Applied — geometry resized to {width:F2} × {height:F2} µm.";
+            : $"Applied — geometry {width:F2} × {height:F2} µm, {overridePins.Count} pin(s).";
+
+        StatusText = HasNoSimulationModel
+            ? baseStatus + " \u26a0 No simulation model: pin names differ from template — " +
+              "import an S-matrix via the S-matrix tab to restore simulation."
+            : baseStatus;
 
         _onChanged?.Invoke();
     }
@@ -428,24 +430,29 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
     /// <summary>
     /// Clears the raw-code override for this instance and restores the editor to the
     /// component's ORIGINAL Nazca source (re-fetched via module-mode render), not a
-    /// synthesized template. The live component's size is left as-is (the user can
-    /// re-run + re-apply, or reload the design to restore the PDK default size).
-    /// Crash-proof — never throws.
+    /// synthesized template. The live component's physical pins are restored to the
+    /// PDK template snapshot captured on the first Apply (if available). Size is left
+    /// as-is. Crash-proof — never throws.
     /// </summary>
     [RelayCommand]
     private async Task ResetToTemplate()
     {
+        List<OverridePinData>? templatePinsToRestore = null;
         if (_storedOverrides.TryGetValue(_componentKey, out var existing))
         {
-            existing.RawCode = null;
-            existing.OverrideWidthMicrometers = null;
-            existing.OverrideHeightMicrometers = null;
+            templatePinsToRestore = existing.TemplatePins;
+            existing.ClearRawCodeOverride();
             // Drop the whole record only if no parameter-override fields remain.
             if (existing.FunctionName == null && existing.FunctionParameters == null
                 && existing.ModuleName == null)
                 _storedOverrides.Remove(_componentKey);
         }
 
+        if (_liveComponent != null && templatePinsToRestore?.Count > 0)
+        {
+            OverridePinMapper.ApplyPinsToComponent(_liveComponent, templatePinsToRestore);
+            _onPinsChanged?.Invoke(_liveComponent.PhysicalPins);
+        }
         _lastSuccessfulPreview = null;
         OnPropertyChanged(nameof(PreviewData));
         PreviewBitmap = null;
@@ -453,11 +460,17 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
         IsValid = false;
         HasOverlap = false;
         HasOverride = false;
-
-        // Restore the original source + initial preview rather than a stub template.
+        HasNoSimulationModel = false;
         await LoadOriginalSourceAsync();
         _originalSourceCode = Code;
-        StatusText = "Reset to original source. Run a preview before applying.";
+        bool hasPins = templatePinsToRestore?.Count > 0;
+        bool linkLost = hasPins && _liveComponent != null
+            && _liveComponent.PhysicalPins.Any(p => p.LogicalPin == null);
+        StatusText = !hasPins
+            ? "Reset to original source. Run a preview before applying."
+            : linkLost
+                ? "Reset to original source — template pins restored. Reload the project to restore the simulation link."
+                : "Reset to original source — template pins restored. Run a preview before applying.";
         _onChanged?.Invoke();
     }
 
@@ -469,6 +482,7 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
             Code = stored.RawCode;
             HasOverride = true;
             HasEditableSource = true;
+            HasNoSimulationModel = stored.HasNoSimulationModel;
         }
         else
         {
@@ -477,4 +491,5 @@ public partial class InstanceNazcaCodeEditorViewModel : ObservableObject
             HasOverride = false;
         }
     }
+
 }

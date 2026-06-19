@@ -10,6 +10,7 @@ using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Export;
@@ -761,12 +762,16 @@ public partial class FileOperationsViewModel : ObservableObject
                     // Falls back to "{pdkSource}::{templateName}" so PDK-template-scoped
                     // overrides reach every instance of the template, not just renamed instances.
                     var allComponents = _canvas.Components.Select(vm => vm.Component).ToList();
+                    // Project load is the one place we hold the COMPLETE component set,
+                    // so it is also the only place an orphan check is meaningful — let
+                    // it surface genuinely unmatched overrides (renamed/removed).
                     Services.SMatrixOverrideApplicator.ApplyAll(
                         allComponents,
                         StoredSMatrices,
                         templateKeyResolver: ResolveTemplateKey,
                         errorConsole: _errorConsole,
-                        keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
+                        keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate,
+                        reportOrphans: true);
                     ApplyUserGlobalOverrides(allComponents);
                 }
                 else
@@ -886,6 +891,7 @@ public partial class FileOperationsViewModel : ObservableObject
         if (StoredNazcaOverrides.Count == 0)
             return;
 
+        var pinChangedComponents = new List<Component>();
         foreach (var component in components)
         {
             if (StoredNazcaOverrides.TryGetValue(component.Identifier, out var nazcaOverride))
@@ -897,13 +903,32 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Issue #556: a raw-code override recomputes the component's size.
                 // Restore the persisted bbox-derived dimensions so the canvas thumbnail
-                // and layout reflect the edited geometry on load. Pins/S-matrix are
-                // unchanged (geometry-only override).
+                // and layout reflect the edited geometry on load.
                 if (nazcaOverride.OverrideWidthMicrometers is { } w)
                     component.WidthMicrometers = w;
                 if (nazcaOverride.OverrideHeightMicrometers is { } h)
                     component.HeightMicrometers = h;
+
+                // Issue #561: a raw-code override may also redefine the component's ports.
+                // Restore the persisted override pins so in-app connections and export use
+                // the correct port layout after project load.
+                if (nazcaOverride.OverridePins?.Count > 0)
+                {
+                    OverridePinMapper.ApplyPinsToComponent(component, nazcaOverride.OverridePins);
+                    pinChangedComponents.Add(component);
+                }
             }
+        }
+
+        // Connections (and the canvas pin view-models) were created against the
+        // template pins BEFORE the override replaced them, so they hold stale pin
+        // objects — the GDS export would then reference pins the override cell does
+        // not define. Re-anchor them onto the same-named new pins, drop the rest.
+        foreach (var component in pinChangedComponents)
+        {
+            var warnings = _canvas.OnComponentPinsChanged(component);
+            foreach (var warning in warnings)
+                _errorConsole?.LogWarning(warning);
         }
     }
 

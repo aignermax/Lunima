@@ -78,6 +78,17 @@ public partial class MainWindow : Window
                     editorWindow.Show(this);
                 };
 
+                // Wire up Fabrication Process window (process model — #570)
+                vm.ShowProcessManagerRequested = () =>
+                {
+                    var processVm = new ProcessManagementViewModel(new FileDialogService(this));
+                    var processWindow = new ProcessManagementWindow
+                    {
+                        DataContext = processVm
+                    };
+                    processWindow.Show(this);
+                };
+
                 // Wire up clipboard for RoutingDiagnostics
                 vm.RightPanel.RoutingDiagnostics.CopyToClipboard = async (text) =>
                 {
@@ -535,11 +546,28 @@ public partial class MainWindow : Window
             as UserSMatrixOverrideStore;
         var portMappingDialog = App.Services.GetService(typeof(IPortMappingDialogService))
             as IPortMappingDialogService;
+
+        // FDTD "Recalculate S-matrix": wire the solver service and a factory that
+        // renders the component's geometry/pins into an FDTD request. Both are
+        // optional — the dialog hides the recompute button when they're absent.
+        var fdtdService = App.Services.GetService(typeof(CAP_Core.Solvers.Fdtd.IFdtdSMatrixService))
+            as CAP_Core.Solvers.Fdtd.IFdtdSMatrixService;
+        var previewService = App.Services.GetService(typeof(CAP_Core.Export.NazcaComponentPreviewService))
+            as CAP_Core.Export.NazcaComponentPreviewService;
+        Func<CAP_Core.Components.Core.Component, CancellationToken, Task<CAP_Core.Solvers.Fdtd.FdtdSMatrixRequest?>>? fdtdRequestFactory = null;
+        if (fdtdService != null && previewService != null)
+        {
+            var requestFactory = new CAP.Avalonia.Services.Solvers.ComponentFdtdRequestFactory(previewService);
+            fdtdRequestFactory = (component, ct) => requestFactory.BuildAsync(component, ct);
+        }
+
         var dialogVm = new ComponentSettingsDialogViewModel(
             new FileDialogService(this),
             errorConsole,
             importers: null,
-            portMappingDialog: portMappingDialog);
+            portMappingDialog: portMappingDialog,
+            fdtdService: fdtdService,
+            fdtdRequestFactory: fdtdRequestFactory);
 
         bool isTemplateMode = liveComponent == null && userStore != null;
         var store = isTemplateMode
@@ -622,6 +650,7 @@ public partial class MainWindow : Window
         string? nazcaTemplateCode = null;
         Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null;
         Action? nazcaDimensionsChanged = null;
+        Action<IReadOnlyList<CAP_Core.Components.Core.PhysicalPin>>? nazcaPinsChanged = null;
         if (liveComponent != null && !isTemplateMode)
         {
             nazcaTemplateCode = NazcaCodeTemplateBuilder.Build(
@@ -632,6 +661,15 @@ public partial class MainWindow : Window
                 var compVm = vm.Canvas.Components.FirstOrDefault(c => c.Component == liveComponent);
                 compVm?.NotifyDimensionsChanged();
                 // Repaint the canvas immediately so the resized footprint shows on Apply.
+                DesignCanvasControl.InvalidateVisual();
+            };
+            nazcaPinsChanged = _ =>
+            {
+                // Issue #561: Connections auf die neuen Override-Pins umhaengen bzw.
+                // mit Warnung trennen, Pin-VMs auffrischen, Routen + Simulation neu.
+                var warnings = vm.Canvas.OnComponentPinsChanged(liveComponent);
+                foreach (var warning in warnings)
+                    errorConsole?.LogWarning(warning);
                 DesignCanvasControl.InvalidateVisual();
             };
         }
@@ -653,7 +691,8 @@ public partial class MainWindow : Window
             nazcaPreviewService: nazcaPreviewService,
             nazcaTemplateCode: nazcaTemplateCode,
             nazcaOverlapCheck: nazcaOverlapCheck,
-            nazcaDimensionsChanged: nazcaDimensionsChanged);
+            nazcaDimensionsChanged: nazcaDimensionsChanged,
+            nazcaPinsChanged: nazcaPinsChanged);
 
         var dialog = new ComponentSettingsDialog { DataContext = dialogVm };
         dialog.Show(this);

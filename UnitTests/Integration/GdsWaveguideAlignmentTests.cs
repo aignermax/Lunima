@@ -16,13 +16,15 @@ namespace UnitTests.Integration;
 /// <summary>
 /// Validates that waveguide segments are exported with correct Nazca coordinates.
 ///
-/// Root cause (Issue #366): multi-segment paths used Nazca chaining (.put()) for all
-/// segments after the first. The first segment starts at nazcaPin1 (correct via
-/// GetAbsoluteNazcaPosition), but the chain's NazcaOriginOffset correction is not
-/// propagated to subsequent segments.
+/// Motivation (Issue #366): multi-segment paths once used Nazca chaining (.put() without
+/// coordinates) for every segment after the first, which let coordinate errors accumulate
+/// along the chain. Every segment is now emitted with an absolute .put(x, y, angle).
 ///
-/// Fix: use absolute .put(x, y, angle) for every segment. All segments (including last)
-/// use simple Y-flip transformation from editor coordinates. No special pin-snapping.
+/// Current contract (issue #565): all app→Nazca coordinates flow through
+/// <see cref="NazcaCoordinateMapper"/>. Path geometry converts to Nazca by the universal
+/// Y negation (ToNazca); pins convert the same way (GetPinNazcaPosition). There is no
+/// separate NazcaOriginOffset correction on segments — cells are placed so their rendered
+/// pins coincide with the app pins, so segments simply meet those pins.
 ///
 /// Test categories:
 ///   A - Single straight segments (covered by #355; regression guard)

@@ -275,12 +275,12 @@ public class DesignCanvas : Control
         if (e.OldValue is MainViewModel oldVm)
         {
             oldVm.CommandManager.StateChanged -= OnCommandStateChanged;
-            oldVm.GdsPreviewRenderService.OnPreviewLoaded = null;
+            oldVm.GdsPreviewRenderService.OnPreviewLoaded -= InvalidateVisual;
         }
         if (e.NewValue is MainViewModel newVm)
         {
             newVm.CommandManager.StateChanged += OnCommandStateChanged;
-            newVm.GdsPreviewRenderService.OnPreviewLoaded = InvalidateVisual;
+            newVm.GdsPreviewRenderService.OnPreviewLoaded += InvalidateVisual;
         }
     }
 

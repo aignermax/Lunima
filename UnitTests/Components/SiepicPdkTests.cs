@@ -2,6 +2,7 @@ using CAP.Avalonia.Services;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
+using CAP_Core.Export;
 using CAP_Core.LightCalculation;
 using CAP_Core.Tiles;
 using CAP_DataAccess.Components.ComponentDraftMapper;
@@ -211,24 +212,24 @@ public class SiepicPdkTests
     [Fact]
     public void IsPdkFunction_EbeamPrefix_ReturnsTrue()
     {
-        SimpleNazcaExporter.IsPdkFunction("ebeam_y_1550").ShouldBeTrue();
-        SimpleNazcaExporter.IsPdkFunction("ebeam_dc_te1550").ShouldBeTrue();
-        SimpleNazcaExporter.IsPdkFunction("ebeam_gc_te1550").ShouldBeTrue();
+        NazcaCoordinateMapper.IsPdkFunction("ebeam_y_1550").ShouldBeTrue();
+        NazcaCoordinateMapper.IsPdkFunction("ebeam_dc_te1550").ShouldBeTrue();
+        NazcaCoordinateMapper.IsPdkFunction("ebeam_gc_te1550").ShouldBeTrue();
     }
 
     [Fact]
     public void IsPdkFunction_DottedName_ReturnsTrue()
     {
-        SimpleNazcaExporter.IsPdkFunction("siepic_ebeam_pdk.ebeam_y_1550").ShouldBeTrue();
-        SimpleNazcaExporter.IsPdkFunction("amf.mmi2x2").ShouldBeTrue();
+        NazcaCoordinateMapper.IsPdkFunction("siepic_ebeam_pdk.ebeam_y_1550").ShouldBeTrue();
+        NazcaCoordinateMapper.IsPdkFunction("amf.mmi2x2").ShouldBeTrue();
     }
 
     [Fact]
     public void IsPdkFunction_HeuristicName_ReturnsFalse()
     {
-        SimpleNazcaExporter.IsPdkFunction("grating_coupler").ShouldBeFalse();
-        SimpleNazcaExporter.IsPdkFunction("phase_shifter").ShouldBeFalse();
-        SimpleNazcaExporter.IsPdkFunction("splitter_1x2").ShouldBeFalse();
+        NazcaCoordinateMapper.IsPdkFunction("grating_coupler").ShouldBeFalse();
+        NazcaCoordinateMapper.IsPdkFunction("phase_shifter").ShouldBeFalse();
+        NazcaCoordinateMapper.IsPdkFunction("splitter_1x2").ShouldBeFalse();
     }
 
     [Fact]

@@ -30,22 +30,46 @@ public sealed class GdsPreviewRenderService
     private readonly NazcaComponentPreviewService _previewService;
     private readonly GdsPreviewCache _cache = new();
 
+    /// <summary>Persistent on-disk cache for resolution-independent geometry.</summary>
+    private readonly GdsPreviewDiskCache _diskCache;
+
+    /// <summary>Throttles concurrent Python renders so the library can't spawn a flood.</summary>
+    private readonly SemaphoreSlim _renderGate = new(3, 3);
+
+    /// <summary>In-memory LRU of geometry keyed by <see cref="GdsPreviewKey.Hash"/>.</summary>
+    private readonly GdsGeometryCache _memGeometry = new();
+
+    /// <summary>Tracks in-flight geometry fetches keyed by render-identity hash.</summary>
+    private readonly ConcurrentDictionary<string, Task> _pending = new();
+
     /// <summary>Tracks keys for which a fetch is currently in flight.</summary>
     private readonly ConcurrentDictionary<string, byte> _pendingFetches = new();
 
     /// <summary>
-    /// Invoked on the UI thread whenever a previously-pending preview finishes
-    /// loading.  Assign <c>() => canvas.InvalidateVisual()</c> from
-    /// <see cref="CAP.Avalonia.Controls.DesignCanvas"/> to trigger a repaint.
+    /// Raised on the UI thread whenever a previously-pending preview finishes
+    /// loading.  Subscribe with <c>+= canvas.InvalidateVisual</c> from
+    /// <see cref="CAP.Avalonia.Controls.DesignCanvas"/> (and from thumbnails) to
+    /// trigger a repaint.
     /// </summary>
-    public Action? OnPreviewLoaded { get; set; }
+    public event Action? OnPreviewLoaded;
 
     /// <summary>
-    /// Initializes the service with the shared Nazca preview back-end.
+    /// Initializes the service with the shared Nazca preview back-end and a
+    /// default disk cache.
     /// </summary>
     public GdsPreviewRenderService(NazcaComponentPreviewService previewService)
+        : this(previewService, new GdsPreviewDiskCache())
+    {
+    }
+
+    /// <summary>
+    /// Initializes the service with the shared Nazca preview back-end and an
+    /// explicit disk cache (used by tests to redirect cache files).
+    /// </summary>
+    public GdsPreviewRenderService(NazcaComponentPreviewService previewService, GdsPreviewDiskCache diskCache)
     {
         _previewService = previewService ?? throw new ArgumentNullException(nameof(previewService));
+        _diskCache = diskCache ?? throw new ArgumentNullException(nameof(diskCache));
     }
 
     /// <summary>
@@ -119,5 +143,79 @@ public sealed class GdsPreviewRenderService
                 OnPreviewLoaded?.Invoke();
             });
         }
+    }
+
+    /// <summary>
+    /// Returns the cached preview geometry for a render identity, or null while a
+    /// background fetch is pending / when no geometry is available. Lookup chain:
+    /// in-memory LRU -> disk cache -> Python render (throttled).
+    /// </summary>
+    public NazcaPreviewResult? TryGetGeometry(GdsPreviewKey key)
+    {
+        if (!key.IsRenderable) return null;
+        var cacheKey = key.Hash();
+        if (_memGeometry.TryGet(cacheKey, out var cached)) return cached;
+        // Reserve the slot BEFORE starting the fetch (mirrors the canvas TryGetPreview
+        // path) so a duplicate fetch is never launched for the same key. Passing the
+        // started task straight into TryAdd would run the task before TryAdd decides
+        // to keep it, defeating the _pending dedup under concurrent callers.
+        if (_pending.TryAdd(cacheKey, Task.CompletedTask))
+            _pending[cacheKey] = FetchGeometryAsync(key, cacheKey);
+        return null;
+    }
+
+    /// <summary>Test hook: awaits all in-flight geometry fetches.</summary>
+    public Task WaitForPendingAsync() => Task.WhenAll(_pending.Values.ToArray());
+
+    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey)
+    {
+        try
+        {
+            if (_diskCache.TryRead(key, out var disk))
+            {
+                _memGeometry.Set(cacheKey, disk);
+                RaisePreviewLoaded();
+                return;
+            }
+            await _renderGate.WaitAsync();
+            NazcaPreviewResult result;
+            try { result = await _previewService.RenderAsync(key.Module, key.Function!, key.Parameters); }
+            finally { _renderGate.Release(); }
+
+            if (result.Success && result.Polygons.Count > 0)
+            {
+                _diskCache.Write(key, result);
+                _memGeometry.Set(cacheKey, result);
+            }
+            else
+            {
+                _diskCache.WriteEmpty(key);
+                _memGeometry.Set(cacheKey, null);
+            }
+            RaisePreviewLoaded();
+        }
+        catch
+        {
+            // Transient failure (e.g. Python hiccup): remember "empty" for this session
+            // only — deliberately NOT WriteEmpty, so a restart can retry. A genuinely
+            // empty render (above) persists the empty marker; a crash does not.
+            _memGeometry.Set(cacheKey, null);
+        }
+        finally
+        {
+            _pending.TryRemove(cacheKey, out _);
+        }
+    }
+
+    /// <summary>
+    /// Raises <see cref="OnPreviewLoaded"/> on the UI thread. Safe in headless tests:
+    /// when there are no subscribers the dispatcher is never touched.
+    /// </summary>
+    private void RaisePreviewLoaded()
+    {
+        var handler = OnPreviewLoaded;
+        if (handler == null) return;
+        try { Dispatcher.UIThread.Post(() => handler()); }
+        catch { /* no dispatcher in headless tests */ }
     }
 }

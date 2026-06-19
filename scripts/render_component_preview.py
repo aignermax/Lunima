@@ -157,15 +157,27 @@ def _extract_pins(cell, stub_length):
     nine bbox-corner/edge anchors (lb, lc, lt, tl, tc, tr, rt, rc, rb, br,
     bc, bl) and the center 'cc'. These are not optical ports and would
     clutter the offset editor with phantom pin dots. Filter them out.
+
+    Nazca also auto-adds DEFAULT pins 'a0'/'b0' on cell close when the cell
+    defines its own named pins (e.g. a user override cell with 'in'/'out').
+    Those phantoms both sit on the cell origin. Real PDK ports named a0/b0
+    are never colocated with each other, so drop the pair only when a0 and
+    b0 share the same position.
     """
     INTERNAL = {"org", "cc",
                 "lb", "lc", "lt",
                 "tl", "tc", "tr",
                 "rt", "rc", "rb",
                 "br", "bc", "bl"}
+    skip = set()
+    if "a0" in cell.pin and "b0" in cell.pin:
+        ax, ay, _ = cell.pin["a0"].xya()
+        bx, by, _ = cell.pin["b0"].xya()
+        if abs(ax - bx) < 1e-9 and abs(ay - by) < 1e-9:
+            skip = {"a0", "b0"}
     pins = []
     for name, pin in cell.pin.items():
-        if name in INTERNAL:
+        if name in INTERNAL or name in skip:
             continue
         x, y, angle = pin.xya()
         rad = math.radians(angle)

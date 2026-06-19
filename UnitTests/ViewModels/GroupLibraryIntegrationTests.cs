@@ -95,8 +95,7 @@ public class GroupLibraryIntegrationTests : IDisposable
         // Assert
         _libraryViewModel.UserGroups.Count.ShouldBe(1);
         _libraryViewModel.PdkGroups.Count.ShouldBe(1);
-        _libraryViewModel.StatusText.ShouldContain("1 user group");
-        _libraryViewModel.StatusText.ShouldContain("1 PDK macro");
+        _libraryViewModel.StatusText.ShouldBeEmpty();   // counts shown by labels/lists, not StatusText
     }
 
     [Fact]
@@ -162,28 +161,27 @@ public class GroupLibraryIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void StatusText_UpdatesWithGroupCounts()
+    public void StatusText_EmptyWhenGroupsPresent_HintWhenEmpty()
     {
         // Arrange - empty library
         _libraryViewModel.LoadGroupsCommand.Execute(null);
         _libraryViewModel.StatusText.ShouldBe("No saved groups");
 
-        // Act - add user groups
+        // Act - add a user group
         var group1 = CreateTestGroup("Group1", 1);
         _libraryManager.SaveTemplate(group1, "User Group 1");
         _libraryViewModel.LoadGroupsCommand.Execute(null);
 
-        // Assert
-        _libraryViewModel.StatusText.ShouldContain("1 user group");
+        // Assert - once groups exist StatusText is empty (counts shown by labels/lists)
+        _libraryViewModel.StatusText.ShouldBeEmpty();
 
-        // Act - add PDK group
+        // Act - add a PDK group
         var group2 = CreateTestGroup("Group2", 1);
         _libraryManager.SaveTemplate(group2, "PDK Macro 1", null, "PDK");
         _libraryViewModel.LoadGroupsCommand.Execute(null);
 
-        // Assert
-        _libraryViewModel.StatusText.ShouldContain("1 user group");
-        _libraryViewModel.StatusText.ShouldContain("1 PDK macro");
+        // Assert - still empty
+        _libraryViewModel.StatusText.ShouldBeEmpty();
     }
 
     [Fact]

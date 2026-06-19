@@ -344,12 +344,34 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// </summary>
     public void SelectComponentAt(double canvasX, double canvasY)
     {
+        var hit = ComponentAt(canvasX, canvasY);
+
+        // Right-clicking one of several already-selected components keeps the whole
+        // multi-selection (so "Create Group" stays available) and just makes the
+        // clicked one the primary for the context menu / component settings.
+        // Right-clicking outside the selection (or with only one selected) selects
+        // just that component, exactly like a left-click would.
+        if (hit != null && _canvas.Selection.HasMultipleSelected && _canvas.Selection.SelectedComponents.Contains(hit))
+        {
+            SelectedComponent = hit;
+            _canvas.SelectedComponent = hit;
+            SelectedWaveguideConnection = null;
+            UpdateStatus?.Invoke($"Selected: {hit.Name} ({_canvas.Selection.SelectedComponents.Count} selected)");
+            return;
+        }
+
         SelectAt(canvasX, canvasY);
         if (SelectedComponent != null)
             _canvas.Selection.SelectSingle(SelectedComponent);
         else
             _canvas.Selection.ClearSelection();
     }
+
+    /// <summary>Returns the topmost component whose bounds contain the point, or null.</summary>
+    private ComponentViewModel? ComponentAt(double x, double y) =>
+        _canvas.Components
+            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
+            .LastOrDefault();
 
     private void SelectAt(double x, double y)
     {
@@ -364,9 +386,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         // Find component at position
-        var component = _canvas.Components
-            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
-            .LastOrDefault();
+        var component = ComponentAt(x, y);
 
         if (component != null)
         {

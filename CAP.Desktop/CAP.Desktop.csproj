@@ -7,7 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-    <Version>0.6.4</Version>
+    <Version>0.8.0</Version>
     <!-- Lunima application icon (embedded in the .exe) -->
     <ApplicationIcon>LunimaIcon.ico</ApplicationIcon>
   </PropertyGroup>
@@ -28,6 +28,23 @@
   <ItemGroup>
     <Content Include="..\scripts\render_component_preview.py"
              Link="scripts\render_component_preview.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- FDTD S-matrix solver bridge (issue #569). DockerFdtdSMatrixService /
+       FindFdtdDockerfile() look for `<baseDir>/scripts/fdtd/Dockerfile`, and that
+       Dockerfile COPYs `fdtd_sparams.py` relative to its build context (the
+       scripts/ folder). Both must ship next to the binary in that exact layout,
+       or "Recalculate S-matrix (FDTD)" can't build its Docker image on a fresh
+       install. (Docker itself is a user prerequisite — not bundled.) -->
+  <ItemGroup>
+    <Content Include="..\scripts\fdtd_sparams.py"
+             Link="scripts\fdtd_sparams.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\scripts\fdtd\Dockerfile"
+             Link="scripts\fdtd\Dockerfile"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

@@ -19,6 +19,20 @@
         <KeyBinding Gesture="F12" Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}" />
     </Window.KeyBindings>
 
+    <Window.Styles>
+        <!-- Compact left-panel group lists: the Fluent ListBoxItem default padding/min-height
+             adds a lot of dead space between rows. Scoped via the compactList class so other
+             list boxes keep the default chrome. -->
+        <Style Selector="ListBox.compactList">
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.compactList ListBoxItem">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+    </Window.Styles>
+
     <DockPanel>
         <!-- Toolbar -->
         <ScrollViewer DockPanel.Dock="Top"
@@ -251,51 +265,53 @@
                     Name="LeftPanelBorder"
                     MinWidth="200" MaxWidth="800"
                     Background="#252526">
-                <Grid RowDefinitions="Auto,5,*">
+                <Grid>
+                    <!-- All content rows are star-sized so the splitters only redistribute a
+                         FIXED total (the panel height): dragging one grows a neighbour's share
+                         and shrinks the other, but nothing can ever be pushed past the window
+                         edge. (Mixing px + star let the px Hierarchy row grow unbounded once its
+                         px neighbour hit its minimum.) The star weights set the initial split. -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="240*" MinHeight="60"/>  <!-- Hierarchy -->
+                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="160*" MinHeight="34"/>  <!-- Saved Groups -->
+                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="320*" MinHeight="80"/>  <!-- Component Library -->
+                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="150*" MinHeight="34"/>  <!-- PDK Management -->
+                    </Grid.RowDefinitions>
                 <!-- Hierarchy Panel -->
                 <views:HierarchyPanel Grid.Row="0"
-                                      DataContext="{Binding LeftPanel.HierarchyPanel}"
-                                      Height="250"/>
+                                      DataContext="{Binding LeftPanel.HierarchyPanel}"/>
 
-                <!-- Splitter -->
+                <!-- Splitter: Hierarchy / Saved Groups -->
                 <GridSplitter Grid.Row="1"
                               Background="#3d3d3d"
                               ResizeDirection="Rows"
                               HorizontalAlignment="Stretch"/>
 
-                <!-- Component Library -->
+                <!-- Saved Groups rubric (own resizable section, like Hierarchy) -->
                 <DockPanel Grid.Row="2">
-                    <TextBlock DockPanel.Dock="Top" Text="Component Library"
-                               FontWeight="Bold" Margin="10,10,10,4" Foreground="White"/>
-                    <TextBox DockPanel.Dock="Top" Watermark="Search components..."
-                             Text="{Binding LeftPanel.SearchText}"
-                             Margin="10,0,10,6" FontSize="11"
-                             Background="#1e1e1e" Foreground="White"
-                             BorderBrush="#3e3e3e"/>
-                    <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
-                               FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
-
-                    <!-- Saved Groups Section -->
-                    <Expander DockPanel.Dock="Top" Header="Saved Groups" IsExpanded="True"
-                              Margin="5,0,5,5" Background="#2d2d2d">
-                        <StackPanel Margin="5">
+                    <TextBlock DockPanel.Dock="Top" Text="Saved Groups"
+                               FontWeight="Bold" Margin="10,6,10,4" Foreground="White"
+                               ToolTip.Tip="Click a group to select it, then click the canvas to place it"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="5,1">
+                            <!-- Only shown when empty; the list (and the PDK Macros label) carry the rest -->
                             <TextBlock Text="{Binding LeftPanel.ComponentLibrary.StatusText}"
-                                       FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
-                            <TextBlock Text="Click to select, then click canvas to place"
-                                       FontSize="10" Margin="0,0,0,5" Foreground="Gray" TextWrapping="Wrap"/>
+                                       FontSize="10" Foreground="Gray" Margin="0,0,0,2"
+                                       IsVisible="{Binding LeftPanel.ComponentLibrary.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                            <!-- User Groups -->
-                            <TextBlock Text="User Groups:" Foreground="LightBlue" FontWeight="SemiBold"
-                                       FontSize="10" Margin="0,5,0,3"
-                                       IsVisible="{Binding LeftPanel.ComponentLibrary.UserGroups.Count}"/>
+                            <!-- User Groups (no label: this is the default/first list) -->
                             <ListBox x:Name="UserGroupsListBox"
+                                     Classes="compactList"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
                                      SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
-                                        <Border Margin="3" Cursor="Hand"
+                                        <Border Margin="0,1" Cursor="Hand"
                                                 ToolTip.Tip="{Binding Template.Description}"
                                                 PointerEntered="OnGroupItemPointerEntered"
                                                 PointerExited="OnGroupItemPointerExited"
@@ -310,15 +326,15 @@
                                             <Grid>
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Preview box with component count and size info -->
-                                                <Border Width="56" Height="36"
+                                                <Border Width="40" Height="26"
                                                         Background="#1e1e1e"
                                                         BorderBrush="#3e3e3e"
                                                         BorderThickness="1"
                                                         CornerRadius="3"
-                                                        Margin="0,0,6,0">
+                                                        Margin="0,0,5,0">
                                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding Template.ComponentCount}"
-                                                                   FontSize="16" FontWeight="Bold"
+                                                                   FontSize="12" FontWeight="Bold"
                                                                    Foreground="#4CAF50"
                                                                    HorizontalAlignment="Center"/>
                                                         <TextBlock Text="comp" FontSize="7"
@@ -361,16 +377,17 @@
 
                             <!-- PDK Groups -->
                             <TextBlock Text="PDK Macros:" Foreground="Orange" FontWeight="SemiBold"
-                                       FontSize="10" Margin="0,10,0,3"
+                                       FontSize="10" Margin="0,5,0,2"
                                        IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
                             <ListBox x:Name="PdkGroupsListBox"
+                                     Classes="compactList"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
                                      SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
                                      MaxHeight="150">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
-                                        <Border Margin="3" Cursor="Hand"
+                                        <Border Margin="0,1" Cursor="Hand"
                                                 ToolTip.Tip="{Binding Template.Description}"
                                                 PointerEntered="OnGroupItemPointerEntered"
                                                 PointerExited="OnGroupItemPointerExited"
@@ -385,15 +402,15 @@
                                             <Grid>
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Preview box with component count and size info -->
-                                                <Border Width="56" Height="36"
+                                                <Border Width="40" Height="26"
                                                         Background="#1e1e1e"
                                                         BorderBrush="#3e3e3e"
                                                         BorderThickness="1"
                                                         CornerRadius="3"
-                                                        Margin="0,0,6,0">
+                                                        Margin="0,0,5,0">
                                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding Template.ComponentCount}"
-                                                                   FontSize="16" FontWeight="Bold"
+                                                                   FontSize="12" FontWeight="Bold"
                                                                    Foreground="#4CAF50"
                                                                    HorizontalAlignment="Center"/>
                                                         <TextBlock Text="comp" FontSize="7"
@@ -434,63 +451,40 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                         </StackPanel>
-                    </Expander>
+                    </ScrollViewer>
+                </DockPanel>
 
-                    <!-- PDK Management Panel -->
-                    <Expander DockPanel.Dock="Top" Header="PDK Management" IsExpanded="False"
-                              Margin="5,0,5,5" Background="#2d2d2d">
-                        <StackPanel Margin="5">
-                            <TextBlock Text="{Binding LeftPanel.PdkManager.StatusText}"
-                                       FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+                <!-- Splitter: Saved Groups / Component Library -->
+                <GridSplitter Grid.Row="3"
+                              Background="#3d3d3d"
+                              ResizeDirection="Rows"
+                              HorizontalAlignment="Stretch"/>
 
-                            <!-- PDK Filter List -->
-                            <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
-                                            <StackPanel Margin="0,3">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <CheckBox IsChecked="{Binding IsEnabled}"
-                                                              Content="{Binding Name}"
-                                                              FontSize="10"
-                                                              Margin="0,0,5,0"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-                                                    <TextBlock Text="{Binding SourceBadge}"
-                                                               FontSize="9" Foreground="Gray" Margin="0,0,5,0"/>
-                                                    <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
-                                                               FontSize="9" Foreground="Gray"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-
-                            <!-- PDK Action Buttons -->
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
-                                <Button Content="Enable All" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
-                                        Width="75" Height="24" Margin="2" FontSize="10"
-                                        Background="#3d3d3d"/>
-                                <Button Content="Disable All" Command="{Binding LeftPanel.PdkManager.DisableAllCommand}"
-                                        Width="75" Height="24" Margin="2" FontSize="10"
-                                        Background="#3d3d3d"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Expander>
+                <!-- Component Library -->
+                <DockPanel Grid.Row="4">
+                    <TextBlock DockPanel.Dock="Top" Text="Component Library"
+                               FontWeight="Bold" Margin="10,6,10,4" Foreground="White"/>
+                    <TextBox DockPanel.Dock="Top" Watermark="Search components..."
+                             Text="{Binding LeftPanel.SearchText}"
+                             Margin="10,0,10,6" FontSize="11"
+                             Background="#1e1e1e" Foreground="White"
+                             BorderBrush="#3e3e3e"/>
+                    <TextBlock DockPanel.Dock="Top" Text="Click to select, then click canvas to place"
+                               FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
 
                     <ScrollViewer x:Name="ComponentLibraryScroll"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
                         <ListBox ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                                 Classes="compactList"
                                  SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
                                  Background="Transparent" Foreground="White"
-                                 Margin="5">
+                                 Margin="5,0"
+                                 controls:ComponentPreview.RenderService="{Binding GdsPreviewRenderService}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vmLib:ComponentTemplate">
-                                    <StackPanel Orientation="Horizontal" Margin="3">
+                                    <StackPanel Orientation="Horizontal" Margin="0,1">
                                         <StackPanel.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Component Settings…" Click="TemplateComponentSettings_Click"/>
@@ -501,6 +495,8 @@
                                             WidthMicrometers="{Binding WidthMicrometers}"
                                             HeightMicrometers="{Binding HeightMicrometers}"
                                             PinDefinitions="{Binding PinDefinitions}"
+                                            NazcaModuleName="{Binding NazcaModuleName}"
+                                            NazcaFunctionName="{Binding NazcaFunctionName}"
                                             Margin="0,0,6,0"/>
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
@@ -521,6 +517,62 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                    </ScrollViewer>
+                </DockPanel>
+
+                <!-- Splitter: Component Library / PDK Management -->
+                <GridSplitter Grid.Row="5"
+                              Background="#3d3d3d"
+                              ResizeDirection="Rows"
+                              HorizontalAlignment="Stretch"/>
+
+                <!-- PDK Management rubric (own resizable section, like Hierarchy) -->
+                <DockPanel Grid.Row="6">
+                    <TextBlock DockPanel.Dock="Top" Text="PDK Management"
+                               FontWeight="Bold" Margin="10,6,10,4" Foreground="White"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="{Binding LeftPanel.PdkManager.StatusText}"
+                                       FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
+
+                            <!-- PDK Filter List -->
+                            <ItemsControl ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
+                                        <StackPanel Margin="0,3">
+                                            <StackPanel Orientation="Horizontal">
+                                                <CheckBox IsChecked="{Binding IsEnabled}"
+                                                          Content="{Binding Name}"
+                                                          FontSize="10"
+                                                          Margin="0,0,5,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                                                <TextBlock Text="{Binding SourceBadge}"
+                                                           FontSize="9" Foreground="Gray" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding ComponentCount, StringFormat={}{0} components}"
+                                                           FontSize="9" Foreground="Gray"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- PDK Action Buttons -->
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
+                                <Button Content="Enable All" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
+                                        Width="75" Height="24" Margin="2" FontSize="10"
+                                        Background="#3d3d3d"/>
+                                <Button Content="Disable All" Command="{Binding LeftPanel.PdkManager.DisableAllCommand}"
+                                        Width="75" Height="24" Margin="2" FontSize="10"
+                                        Background="#3d3d3d"/>
+                            </StackPanel>
+
+                            <!-- Fabrication process (layer stack, cross-sections, materials) — #570 -->
+                            <Button Content="Fabrication Process…" Command="{Binding OpenProcessManagerCommand}"
+                                    HorizontalAlignment="Stretch" Height="24" Margin="2,6,2,0" FontSize="10"
+                                    Background="#3d4d6d"
+                                    ToolTip.Tip="View and adjust the fabrication process; import it from a foundry PDK"/>
+                        </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
                 </Grid>

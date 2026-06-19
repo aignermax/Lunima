@@ -7,6 +7,7 @@ using CAP_DataAccess.Persistence.PIR;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.ComponentSettings.InstanceOverride;
 using CAP_Core.Export;
+using CAP_Core.Solvers.Fdtd;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NazcaCodeOverride = CAP_DataAccess.Persistence.PIR.NazcaCodeOverride;
@@ -91,15 +92,28 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// to skip the interactive step (which causes the import to abort with a
     /// status-text explanation when names mismatch).
     /// </param>
+    /// <param name="fdtdService">
+    /// Optional FDTD solver used by the "Recalculate S-matrix" command. When null
+    /// (e.g. in tests, or when no solver is configured) the command is disabled.
+    /// </param>
+    /// <param name="fdtdRequestFactory">
+    /// Optional factory that turns the live component into an FDTD request
+    /// (renders its geometry and ports). Required alongside <paramref name="fdtdService"/>
+    /// for recompute to be available.
+    /// </param>
     public ComponentSettingsDialogViewModel(
         IFileDialogService fileDialogService,
         ErrorConsoleService? errorConsole = null,
         IReadOnlyList<ISParameterImporter>? importers = null,
-        IPortMappingDialogService? portMappingDialog = null)
+        IPortMappingDialogService? portMappingDialog = null,
+        IFdtdSMatrixService? fdtdService = null,
+        Func<Component, CancellationToken, Task<FdtdSMatrixRequest?>>? fdtdRequestFactory = null)
     {
         _fileDialogService = fileDialogService;
         _errorConsole = errorConsole;
         _portMappingDialog = portMappingDialog;
+        _fdtdService = fdtdService;
+        _fdtdRequestFactory = fdtdRequestFactory;
         _importers = importers ?? new ISParameterImporter[]
         {
             new LumericalSParameterImporter(),
@@ -180,7 +194,8 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         NazcaComponentPreviewService? nazcaPreviewService = null,
         string? nazcaTemplateCode = null,
         Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null,
-        Action? nazcaDimensionsChanged = null)
+        Action? nazcaDimensionsChanged = null,
+        Action<IReadOnlyList<PhysicalPin>>? nazcaPinsChanged = null)
     {
         _entityKey = entityKey;
         _displayName = displayName;
@@ -229,7 +244,8 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
                 nazcaPreviewService,
                 nazcaOverlapCheck,
                 nazcaDimensionsChanged,
-                onChanged);
+                onChanged,
+                nazcaPinsChanged);
         }
         else
         {
@@ -237,8 +253,11 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(NazcaCodeEditor));
 
+        SolverStatus = string.Empty;
         RefreshEntries(notifyChanged: false);
         RefreshEffectiveEntries();
+        OnPropertyChanged(nameof(CanRecalculate));
+        RecalculateSMatrixCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
