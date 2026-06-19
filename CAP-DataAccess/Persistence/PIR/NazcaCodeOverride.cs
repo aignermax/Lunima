@@ -52,7 +52,8 @@ public class NazcaCodeOverride
     /// the geometry preview / size recompute is driven by executing this code rather
     /// than by calling the PDK template's <see cref="FunctionName"/>.
     /// Null means no raw-code override is active (parameter-only or PDK template).
-    /// Optical pins and the S-matrix are unaffected — this is geometry-only.
+    /// When applied, the override's ports replace the template pins
+    /// (see <see cref="OverridePins"/> and <see cref="HasNoSimulationModel"/>).
     /// </summary>
     public string? RawCode { get; set; }
 
@@ -67,4 +68,75 @@ public class NazcaCodeOverride
     /// Null when no raw-code override has recomputed the size.
     /// </summary>
     public double? OverrideHeightMicrometers { get; set; }
+
+    /// <summary>
+    /// Physical pins derived from the override's rendered geometry (issue #561).
+    /// When non-null and non-empty, the component's <c>PhysicalPins</c> list is replaced
+    /// with these values on Apply and on project load.
+    /// Null means no pin override is active (template pins remain).
+    /// </summary>
+    public List<OverridePinData>? OverridePins { get; set; }
+
+    /// <summary>
+    /// Snapshot of the PDK-template physical pins captured on the first Apply,
+    /// before the override pins replaced them. Used by "Reset to template" to
+    /// restore the original port layout without a PDK re-query.
+    /// Null when no Apply has been performed yet.
+    /// </summary>
+    public List<OverridePinData>? TemplatePins { get; set; }
+
+    /// <summary>
+    /// True when the override's pin layout differs from the PDK template's, meaning
+    /// the template S-matrix no longer maps to the new ports.
+    /// When true the component has no valid simulation model — the S-matrix shown
+    /// is the old template's and must not be trusted.
+    /// The user should supply a matching S-matrix via the per-instance import (#541)
+    /// or accept geometry/export-only mode.
+    /// </summary>
+    public bool HasNoSimulationModel { get; set; }
+
+    /// <summary>
+    /// Left edge of the rendered raw-code geometry's bounding box in CELL-INTERNAL
+    /// Nazca coordinates (µm). The in-app pins/size are bbox-relative, so the GDS
+    /// export must anchor the cell's origin at <c>PhysicalX − XMin</c> for the
+    /// geometry to land on the component's grid rectangle. Null for overrides saved
+    /// before this field existed — the export then falls back to default anchoring.
+    /// </summary>
+    public double? OverrideBboxXMinMicrometers { get; set; }
+
+    /// <summary>
+    /// Top edge (Nazca Y-up maximum) of the rendered raw-code geometry's bounding
+    /// box in cell-internal Nazca coordinates (µm). Counterpart of
+    /// <see cref="OverrideBboxXMinMicrometers"/> for the Y axis.
+    /// </summary>
+    public double? OverrideBboxYMaxMicrometers { get; set; }
+
+    /// <summary>
+    /// Records the bbox-derived geometry of an applied raw-code override in one step:
+    /// component size plus the cell-internal bbox anchor the GDS export needs.
+    /// </summary>
+    public void SetOverrideGeometry(double width, double height, double bboxXMin, double bboxYMax)
+    {
+        OverrideWidthMicrometers = width;
+        OverrideHeightMicrometers = height;
+        OverrideBboxXMinMicrometers = bboxXMin;
+        OverrideBboxYMaxMicrometers = bboxYMax;
+    }
+
+    /// <summary>
+    /// Clears every raw-code-override field ("Reset to template"): code, derived
+    /// geometry, pin override and the no-simulation-model flag. Parameter-override
+    /// fields (<see cref="FunctionName"/> etc.) are left untouched.
+    /// </summary>
+    public void ClearRawCodeOverride()
+    {
+        RawCode = null;
+        OverrideWidthMicrometers = null;
+        OverrideHeightMicrometers = null;
+        OverrideBboxXMinMicrometers = null;
+        OverrideBboxYMaxMicrometers = null;
+        OverridePins = null;
+        TemplatePins = null;
+        HasNoSimulationModel = false;
+    }
 }

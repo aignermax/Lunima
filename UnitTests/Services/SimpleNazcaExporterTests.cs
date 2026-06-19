@@ -4,6 +4,7 @@ using CAP_Core.Components;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
+using CAP_Core.Export;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
@@ -361,24 +362,26 @@ public class SimpleNazcaExporterTests
         return count;
     }
 
+    // IsPdkFunction lives in NazcaCoordinateMapper (single source of truth, #565);
+    // the exporter consumes it from there.
     [Fact]
     public void IsPdkFunction_RealPdkFunction_ReturnsTrue()
     {
-        var result = SimpleNazcaExporter.IsPdkFunction("ebeam_y_1550");
+        var result = NazcaCoordinateMapper.IsPdkFunction("ebeam_y_1550");
         result.ShouldBeTrue();
     }
 
     [Fact]
     public void IsPdkFunction_DemoPdkFunction_ReturnsFalse()
     {
-        var result = SimpleNazcaExporter.IsPdkFunction("demo_pdk.mmi1x2");
+        var result = NazcaCoordinateMapper.IsPdkFunction("demo_pdk.mmi1x2");
         result.ShouldBeFalse();
     }
 
     [Fact]
     public void IsPdkFunction_ExternalPdkWithDot_ReturnsTrue()
     {
-        var result = SimpleNazcaExporter.IsPdkFunction("siepic.gc_te1550");
+        var result = NazcaCoordinateMapper.IsPdkFunction("siepic.gc_te1550");
         result.ShouldBeTrue();
     }
 
@@ -546,7 +549,7 @@ public class SimpleNazcaExporterTests
     }
 
     [Fact]
-    public void Export_ConnectionTouchingOverriddenInstance_IsSkippedWithNote()
+    public void Export_ConnectionTouchingOverriddenInstance_IsExportedViaPinReference()
     {
         // Arrange: two waveguides connected; override one of them.
         var canvas = new DesignCanvasViewModel();
@@ -575,9 +578,243 @@ public class SimpleNazcaExporterTests
         var exporter = new SimpleNazcaExporter();
         var result = exporter.Export(canvas, overrides: overrides);
 
-        // Assert: connection skipped with the documented NOTE comment.
-        result.ShouldContain($"# NOTE: connection to overridden instance {compB.Identifier} skipped");
-        result.ShouldContain("issue #559 follow-up");
+        // Assert (issue #561): connection is NO LONGER skipped. The overridden endpoint
+        // is wired via Nazca pin reference (its cell defines the in-app pin names); the
+        // regular PDK endpoint is anchored by an absolute (x, y, angle) tuple, because a
+        // PDK cell's own pin names don't match the in-app names (KeyError at run time).
+        result.ShouldNotContain("# NOTE: connection to overridden instance");
+        result.ShouldNotContain("skipped");
+        result.ShouldContain("sbend_p2p");
+        result.ShouldContain(".pin['a0']");
+        result.ShouldNotContain(".pin['b0']");
+        result.ShouldContain("ic.sbend_p2p((");
+    }
+
+    [Fact]
+    public void Export_ConnectionBetweenTwoNonOverriddenComponents_StillUsesSegmentOrFallback()
+    {
+        // Non-overridden connections should not be affected by the fix.
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG A";
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG B";
+        compB.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        // No overrides
+        var exporter = new SimpleNazcaExporter();
+        var result = exporter.Export(canvas);
+
+        // Assert: connection exported normally (no NOTE comment, some connection output)
+        result.ShouldNotContain("# NOTE:");
+        result.ShouldContain("# Waveguide Connections");
+    }
+
+    // ── Override placement anchoring + segment export (issue #561) ────────────
+
+    [Fact]
+    public void Export_OverrideWithBboxAnchor_PlacesCellOrgAnchoredOnGridRectangle()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateDemoPdkStraightWaveguide(100);
+        comp.Identifier = "Anchored Override";
+        comp.PhysicalX = 100;
+        comp.PhysicalY = 50;
+        canvas.Components.Add(new ComponentViewModel(comp));
+
+        var record = new NazcaCodeOverride { RawCode = OverrideRawCode };
+        // Cell-internal bbox: left edge at -3, top edge at +10 (Nazca Y-up).
+        record.SetOverrideGeometry(width: 45, height: 11, bboxXMin: -3, bboxYMax: 10);
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [comp.Identifier] = record
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // org must land at (PhysicalX − XMin, −(PhysicalY + YMax)) = (103, −60) so the
+        // geometry bbox sits exactly on the component's grid rectangle.
+        result.ShouldContain(".put('org', 103.00, -60.00, 0)");
+    }
+
+    [Fact]
+    public void Export_OverrideWithoutBboxAnchor_KeepsLegacyDefaultAnchorPlacement()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var comp = CreateDemoPdkStraightWaveguide(100);
+        comp.Identifier = "Legacy Override";
+        canvas.Components.Add(new ComponentViewModel(comp));
+
+        // Pre-#561 record: RawCode only, no bbox anchor fields.
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [comp.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        result.ShouldContain("(raw-code override)");
+        result.ShouldNotContain("(raw-code override, bbox-anchored)");
+    }
+
+    [Fact]
+    public void Export_OverriddenConnectionWithRoutedSegments_ExportsSegmentsNotP2p()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG A";
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG B";
+        compB.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        var cachedPath = new RoutedPath();
+        cachedPath.Segments.Add(new StraightSegment(100, 5, 200, 5, 0));
+        conn.RestoreCachedPath(cachedPath);
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compB.Identifier] = new NazcaCodeOverride { RawCode = OverrideRawCode }
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // The UI-routed geometry must be exported 1:1 — no free-form p2p interconnect
+        // with Nazca's own (much larger) default bend radii. (Exact endpoint maths is
+        // covered by the two coordinate tests below; this fixture's plain component is
+        // uncalibrated, so its legacy pin position is not meaningful to assert on.)
+        result.ShouldNotContain("sbend_p2p");
+        result.ShouldContain("nd.strt(length=");
+    }
+
+    [Fact]
+    public void Export_SegmentStartingAtOverriddenPin_UsesPlainNazcaConversion()
+    {
+        // A bbox-anchored override cell puts its pins exactly at the plain app→Nazca
+        // conversion (x, −y). The legacy GetAbsoluteNazcaPosition calibration math is
+        // only valid for PDK cells — applied to an override pin it shifts the whole
+        // waveguide in Y (manual finding: 109.505 µm offset in KLayout).
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);   // overridden, at (200, 0)
+        compA.Identifier = "WG Override";
+        compA.PhysicalX = 200;
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG Plain";
+        compB.PhysicalX = 400;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        // Connection STARTS at the overridden component's 'b0' (app world (300, 5)).
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        var singleStraight = new RoutedPath();
+        singleStraight.Segments.Add(new StraightSegment(300, 5, 400, 5, 0));
+        conn.RestoreCachedPath(singleStraight);
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var record = new NazcaCodeOverride { RawCode = OverrideRawCode };
+        record.SetOverrideGeometry(width: 100, height: 10, bboxXMin: 0, bboxYMax: 10);
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compA.Identifier] = record
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // App pin (300, 5) → Nazca (300, −5). The legacy math would emit +5.00 here.
+        result.ShouldContain(".put(300.00, -5.00");
+    }
+
+    [Fact]
+    public void Export_MultiSegmentFromOverriddenPin_AppliesNoLegacyOffset()
+    {
+        var canvas = new DesignCanvasViewModel();
+        var compA = CreateDemoPdkStraightWaveguide(100);
+        compA.Identifier = "WG Override Multi";
+        compA.PhysicalX = 200;
+        canvas.Components.Add(new ComponentViewModel(compA));
+        var compB = CreateDemoPdkStraightWaveguide(100);
+        compB.Identifier = "WG Plain Multi";
+        compB.PhysicalX = 500;
+        canvas.Components.Add(new ComponentViewModel(compB));
+
+        var conn = new WaveguideConnection
+        {
+            StartPin = compA.PhysicalPins.First(p => p.Name == "b0"),
+            EndPin = compB.PhysicalPins.First(p => p.Name == "a0")
+        };
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(300, 5, 400, 5, 0));
+        path.Segments.Add(new StraightSegment(400, 5, 500, 5, 0));
+        conn.RestoreCachedPath(path);
+        canvas.Connections.Add(new WaveguideConnectionViewModel(conn));
+
+        var record = new NazcaCodeOverride { RawCode = OverrideRawCode };
+        record.SetOverrideGeometry(width: 100, height: 10, bboxXMin: 0, bboxYMax: 10);
+        var overrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            [compA.Identifier] = record
+        };
+
+        var result = new SimpleNazcaExporter().Export(canvas, overrides: overrides);
+
+        // First segment must start at the plain conversion of the app start point
+        // (300, 5) → (300, −5); a legacy start-pin offset would shift every segment.
+        result.ShouldContain("300.00, -5.00");
+        result.ShouldNotContain("300.00, 5.00");
+    }
+
+    [Fact]
+    public void Export_DefaultFlags_OmitsVerificationEpilog()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(CreateDemoPdkStraightWaveguide(100)));
+
+        var result = new SimpleNazcaExporter().Export(canvas);
+
+        // The verification epilog is opt-in (issue #565): a regular export must stay
+        // a plain fab script without introspection side effects.
+        result.ShouldNotContain("Alignment verification");
+        result.ShouldNotContain("_verify_instances");
+        result.ShouldNotContain(".pins.json");
+    }
+
+    [Fact]
+    public void Export_WithEmitVerification_AppendsPinEpilogAfterGdsExport()
+    {
+        var canvas = new DesignCanvasViewModel();
+        canvas.Components.Add(new ComponentViewModel(CreateDemoPdkStraightWaveguide(100)));
+
+        var result = new SimpleNazcaExporter().Export(canvas, emitVerification: true);
+
+        // The registry bridges the function-local comp_N variables to the module-level
+        // epilog, which dumps every instance's TRUE nazca pin positions to .pins.json.
+        result.ShouldContain("_verify_instances = [('comp_0', comp_0)]");
+        result.ShouldContain("# --- Alignment verification (machine-readable) ---");
+        result.ShouldContain("_pin.xya()");
+        result.ShouldContain(".pins.json");
+        result.IndexOf("nd.export_gds", StringComparison.Ordinal).ShouldBeLessThan(
+            result.IndexOf("# --- Alignment verification", StringComparison.Ordinal),
+            "the epilog must run after the GDS was written");
     }
 
     private static Component CreateDemoPdkStraightWaveguide(double lengthMicrometers)

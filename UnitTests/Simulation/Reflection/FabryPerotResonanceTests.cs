@@ -128,10 +128,9 @@ public class FabryPerotResonanceTests
         var inputVec = MathNet.Numerics.LinearAlgebra.Vector<Complex>.Build.Dense(systemMatrix.PinReference.Count);
         inputVec[systemMatrix.PinReference[r1Left.IDInFlow]] = Complex.One;
 
-        int stepCount = systemMatrix.PinReference.Count * 2;
         using var cts = new CancellationTokenSource();
 
-        var result = await systemMatrix.CalcFieldAtPinsAfterStepsAsync(inputVec, stepCount, cts);
+        var result = await systemMatrix.CalcFieldAtPinsAfterStepsAsync(inputVec, SMatrix.DefaultMaxIterations, cts);
         return result[r2Right.IDOutFlow].Magnitude;
     }
 
@@ -185,17 +184,19 @@ public class FabryPerotResonanceTests
     }
 
     /// <summary>
-    /// Confirms pinCount×2 heuristic convergence for r=0.3 (round-trip factor 0.09).
-    /// KNOWN GAP: for r > 0.8 the heuristic under-converges; a residual-based loop
-    /// would be needed — filed as a follow-up to issue #536.
+    /// Confirms residual-based convergence for r=0.3 (round-trip factor 0.09) yields the same
+    /// result as a brute-force deep run (pinCount×8 steps with the same epsilon).
+    /// With r=0.3 the series converges within a handful of iterations; this test verifies
+    /// that the early-exit logic does not produce a wrong answer for easy circuits.
+    /// (Issue #555 extended this to handle r &gt; 0.8 — see DeepCavityConvergenceTests.)
     /// </summary>
     [Fact]
-    public async Task StepCountHeuristic_IsSufficientForModerateReflectivity()
+    public async Task ResidualConvergence_IsSufficientForModerateReflectivity()
     {
-        // Run with exactly pinCount×2 steps (the heuristic)
-        double transmissionHeuristic = await RunFabryPerotAsync(phiRadians: 0.0, r: ReflectorR);
+        // Run with the residual-based solver (DefaultMaxIterations safety cap).
+        double transmissionResidual = await RunFabryPerotAsync(phiRadians: 0.0, r: ReflectorR);
 
-        // Run with 4× as many steps (should be fully converged)
+        // Run a brute-force deep reference with a large hard cap.
         double transmissionDeep;
         {
             var (r1Matrix, r1Left, r1Right) = CreateReflector(ReflectorR);
@@ -216,18 +217,16 @@ public class FabryPerotResonanceTests
             inputVec[sys.PinReference[r1Left.IDInFlow]] = Complex.One;
 
             using var cts = new CancellationTokenSource();
-            // 4× heuristic = fully converged reference
             var result = await sys.CalcFieldAtPinsAfterStepsAsync(inputVec, sys.PinReference.Count * 8, cts);
             transmissionDeep = result[r2Right.IDOutFlow].Magnitude;
         }
 
-        double relativeError = Math.Abs(transmissionHeuristic - transmissionDeep) / transmissionDeep;
+        double relativeError = Math.Abs(transmissionResidual - transmissionDeep) / transmissionDeep;
 
         relativeError.ShouldBeLessThan(0.01,
-            $"For r = {ReflectorR} (moderate reflectivity) the pinCount×2 heuristic must agree " +
-            $"with the fully converged result within 1 %. " +
-            $"Heuristic: {transmissionHeuristic:F4}, Deep: {transmissionDeep:F4}, " +
-            $"RelError: {relativeError:P1}. " +
-            $"KNOWN GAP: for r > 0.8 this test would fail — see issue #536 follow-up.");
+            $"For r = {ReflectorR} (moderate reflectivity) the residual-based solver must agree " +
+            $"with the brute-force deep run within 1 %. " +
+            $"Residual: {transmissionResidual:F4}, Deep: {transmissionDeep:F4}, " +
+            $"RelError: {relativeError:P1}.");
     }
 }

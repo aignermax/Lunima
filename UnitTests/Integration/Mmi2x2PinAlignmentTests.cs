@@ -1,3 +1,4 @@
+using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
@@ -9,14 +10,16 @@ using Xunit;
 namespace UnitTests.Integration;
 
 /// <summary>
-/// Tests for Issue #347: MMI 2x2 waveguide endpoints don't align with component pins.
+/// MMI 2x2 pin/waveguide alignment (issues #347, #565).
 ///
-/// Root cause: rotation sign error in GetAbsoluteNazcaPosition() and CalculateOriginOffset().
-/// Nazca places cells with .put(x, y, -RotationDegrees), so pin world positions must use
-/// R(-RotationDegrees) — not R(+RotationDegrees) as was previously done.
+/// Pin Nazca positions are the plain Y negation of the app world position
+/// (<see cref="CAP_Core.Export.NazcaCoordinateMapper.GetPinNazcaPosition"/>): the app
+/// pre-rotates pin offsets via RotateComponentCommand, so no rotation term may appear
+/// in the pin formula. These tests drive the REAL rotate command and compare against
+/// hand-derived offsets, so a sign error in the command or a reintroduced rotation
+/// term in the pin math both surface as tens-of-µm deviations.
 ///
-/// These tests use the demo_pdk.mmi2x2 component (120×50 µm, NazcaOriginOffset=(0,0))
-/// at all 4 rotation states to catch the specific bug reported by the user.
+/// Fixture: demo_pdk.mmi2x2 (120×50 µm, NazcaOriginOffset=(0,0), 4 pins).
 /// </summary>
 public class Mmi2x2PinAlignmentTests
 {
@@ -51,54 +54,54 @@ public class Mmi2x2PinAlignmentTests
     };
 
     /// <summary>
-    /// Verifies MMI 2x2 pin world positions match the Nazca math for all 4 rotations.
+    /// Verifies pin Nazca world positions for all 4 app rotation states, rotating via the
+    /// real <see cref="RotateComponentCommand"/>.
     ///
-    /// For a component at (physX, physY) with NazcaOriginOffset=(0,0):
-    ///   cellX = physX, cellY = -physY
-    ///   pinLocalX = pinOffsetX, pinLocalY = height - pinOffsetY
-    ///   worldPinX = cellX + R(-rot) * (localX, localY).x
-    ///   worldPinY = cellY + R(-rot) * (localX, localY).y
+    /// One CCW app rotation step maps an offset (ox, oy) in a w×h box to (h − oy, ox)
+    /// and swaps the dimensions; Nazca position = (physX + ox, −(physY + oy)).
+    /// Hand-derived offsets for the 120×50 box:
+    ///   a0 (0, 12.5):  k=1 → (37.5, 0);   k=2 → (120, 37.5); k=3 → (12.5, 120)
+    ///   b1 (120, 37.5): k=1 → (12.5, 120); k=2 → (0, 12.5);   k=3 → (37.5, 0)
     /// </summary>
     [Theory]
-    [InlineData(0,   100, 200)]
-    [InlineData(90,  100, 200)]
-    [InlineData(180, 100, 200)]
-    [InlineData(270, 100, 200)]
-    [InlineData(0,   0,   0)]
-    [InlineData(90,  0,   0)]
-    public void Mmi2x2_AllRotations_PinPositionsMatchNazcaMath(
-        int rotationDegrees, double physX, double physY)
+    [InlineData(0, 0,    12.5,  120,  37.5)]
+    [InlineData(1, 37.5, 0,     12.5, 120)]
+    [InlineData(2, 120,  37.5,  0,    12.5)]
+    [InlineData(3, 12.5, 120,   37.5, 0)]
+    public void Mmi2x2_AllRotations_PinPositionsAreYNegatedAppPositions(
+        int rotationSteps, double a0OffX, double a0OffY, double b1OffX, double b1OffY)
     {
+        const double physX = 100;
+        const double physY = 200;
+        var canvas = new DesignCanvasViewModel();
         var template = CreateMmi2x2Template();
         var mmi = ComponentTemplates.CreateFromTemplate(template, physX, physY);
-        mmi.RotationDegrees = rotationDegrees;
+        var vm = canvas.AddComponent(mmi, template.Name);
 
-        // NazcaOriginOffset=(0,0) so cell origin is just physX, -physY
-        double cellX = physX;
-        double cellY = -physY;
-
-        double rotRad = -rotationDegrees * Math.PI / 180.0; // Nazca sign
-
-        foreach (var pin in mmi.PhysicalPins)
+        for (int i = 0; i < rotationSteps; i++)
         {
-            double localX = pin.OffsetXMicrometers;
-            double localY = mmi.HeightMicrometers - pin.OffsetYMicrometers;
-
-            double expectedX = cellX + localX * Math.Cos(rotRad) - localY * Math.Sin(rotRad);
-            double expectedY = cellY + localX * Math.Sin(rotRad) + localY * Math.Cos(rotRad);
-
-            var (actualX, actualY) = pin.GetAbsoluteNazcaPosition();
-
-            double xDev = Math.Abs(expectedX - actualX);
-            double yDev = Math.Abs(expectedY - actualY);
-
-            xDev.ShouldBeLessThan(PinAlignmentTolerance,
-                $"MMI 2x2 pin '{pin.Name}' at rot={rotationDegrees}°: X deviation {xDev:F4} µm " +
-                $"(expected {expectedX:F3}, got {actualX:F3})");
-            yDev.ShouldBeLessThan(PinAlignmentTolerance,
-                $"MMI 2x2 pin '{pin.Name}' at rot={rotationDegrees}°: Y deviation {yDev:F4} µm " +
-                $"(expected {expectedY:F3}, got {actualY:F3})");
+            var command = new RotateComponentCommand(canvas, vm);
+            command.Execute();
+            command.WasApplied.ShouldBeTrue($"rotation step {i + 1} must not be blocked");
         }
+
+        AssertPinNazcaPosition(mmi, "a0", physX + a0OffX, -(physY + a0OffY), rotationSteps);
+        AssertPinNazcaPosition(mmi, "b1", physX + b1OffX, -(physY + b1OffY), rotationSteps);
+    }
+
+    private static void AssertPinNazcaPosition(
+        CAP_Core.Components.Core.Component comp, string pinName,
+        double expectedX, double expectedY, int rotationSteps)
+    {
+        var pin = comp.PhysicalPins.First(p => p.Name == pinName);
+        var (actualX, actualY) = pin.GetAbsoluteNazcaPosition();
+
+        Math.Abs(expectedX - actualX).ShouldBeLessThan(PinAlignmentTolerance,
+            $"MMI 2x2 pin '{pinName}' after {rotationSteps}×90°: " +
+            $"X expected {expectedX:F3}, got {actualX:F3}");
+        Math.Abs(expectedY - actualY).ShouldBeLessThan(PinAlignmentTolerance,
+            $"MMI 2x2 pin '{pinName}' after {rotationSteps}×90°: " +
+            $"Y expected {expectedY:F3}, got {actualY:F3}");
     }
 
     /// <summary>
@@ -165,36 +168,24 @@ public class Mmi2x2PinAlignmentTests
     }
 
     /// <summary>
-    /// Specific regression test for Issue #347:
-    /// MMI 2x2 at rotation 90° — pin a0 was 75 µm off in X with the wrong rotation sign.
-    ///
-    /// Pin a0 local Nazca: (0, 37.5).
-    /// At rotation=90° with correct formula R(-90°):
-    ///   worldPinX = physX + 37.5
-    ///   worldPinY = -physY + 0
-    /// With the bug (R(+90°)):
-    ///   worldPinX = physX - 37.5  ← 75 µm error!
+    /// Regression guard for Issue #347 (pin a0 ended up 75 µm off in X after one rotation):
+    /// a 90° CCW rotation of the 120×50 box maps a0's offset (0, 12.5) to (37.5, 0),
+    /// so its Nazca position must be (physX + 37.5, −physY). A wrong rotation sign in
+    /// the command (or a rotation term sneaking back into the pin formula) shifts X
+    /// by tens of µm and fails the 10 nm tolerance.
     /// </summary>
     [Fact]
     public void Mmi2x2_Rotation90_PinA0_NotShiftedNegatively()
     {
+        var canvas = new DesignCanvasViewModel();
         var template = CreateMmi2x2Template();
         var mmi = ComponentTemplates.CreateFromTemplate(template, 100, 100);
-        mmi.RotationDegrees = 90;
+        var vm = canvas.AddComponent(mmi, template.Name);
 
-        var pinA0 = mmi.PhysicalPins.First(p => p.Name == "a0");
-        var (actualX, actualY) = pinA0.GetAbsoluteNazcaPosition();
+        var command = new RotateComponentCommand(canvas, vm);
+        command.Execute();
+        command.WasApplied.ShouldBeTrue("rotation must not be blocked");
 
-        // localX=0, localY=37.5; R(-90°): rotatedX=+37.5, rotatedY=0
-        double expectedX = 100.0 + 37.5;  // = 137.5
-        double expectedY = -100.0 + 0.0;  // = -100.0
-
-        double xDev = Math.Abs(expectedX - actualX);
-        double yDev = Math.Abs(expectedY - actualY);
-
-        xDev.ShouldBeLessThan(PinAlignmentTolerance,
-            $"MMI 2x2 rot90 a0 X: expected {expectedX:F1}, got {actualX:F1}, Δ={xDev:F4} µm (was -75 µm off with bug)");
-        yDev.ShouldBeLessThan(PinAlignmentTolerance,
-            $"MMI 2x2 rot90 a0 Y: expected {expectedY:F1}, got {actualY:F1}, Δ={yDev:F4} µm");
+        AssertPinNazcaPosition(mmi, "a0", 100.0 + 37.5, -100.0, rotationSteps: 1);
     }
 }

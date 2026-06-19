@@ -1,5 +1,6 @@
 using System.Numerics;
 using CAP.Avalonia.Services;
+using CAP_Core;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using UnitTests;
@@ -409,5 +410,46 @@ public class SMatrixOverrideApplicatorTests
 
         result.Applied.ShouldBe(1);
         component.WaveLengthToSMatrixMap.ShouldContainKey(1550);
+    }
+
+    [Fact]
+    public void ApplyAll_DefaultReportOrphansFalse_DoesNotWarnConsole()
+    {
+        // Subset calls (e.g. the incremental "components added" handler) must not
+        // emit the orphan warning: an unmatched key may match a component outside
+        // the subset, and re-warning on every add was the duplicate-warning spam.
+        var someInstance = TestComponentFactory.CreateSimpleTwoPortComponent();
+        someInstance.Identifier = "instance_only";
+        var store = new Dictionary<string, ComponentSMatrixData>
+        {
+            ["renamed_or_removed"] = MakeData("1550", 2)
+        };
+        var console = new ErrorConsoleService();
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { someInstance }, store, errorConsole: console);
+
+        console.Entries.ShouldBeEmpty();          // no user-visible warning
+        result.OrphanKeys.ShouldContain("renamed_or_removed"); // still computed for callers
+    }
+
+    [Fact]
+    public void ApplyAll_ReportOrphansTrue_WarnsConsoleOnce()
+    {
+        // The authoritative full-canvas call (project load) opts in and surfaces
+        // genuinely unmatched overrides exactly once.
+        var someInstance = TestComponentFactory.CreateSimpleTwoPortComponent();
+        someInstance.Identifier = "instance_only";
+        var store = new Dictionary<string, ComponentSMatrixData>
+        {
+            ["renamed_or_removed"] = MakeData("1550", 2)
+        };
+        var console = new ErrorConsoleService();
+
+        SMatrixOverrideApplicator.ApplyAll(
+            new[] { someInstance }, store, errorConsole: console, reportOrphans: true);
+
+        console.Entries.Count.ShouldBe(1);
+        console.Entries[0].Message.ShouldContain("renamed_or_removed");
     }
 }
