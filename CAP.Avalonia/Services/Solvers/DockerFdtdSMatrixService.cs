@@ -30,6 +30,13 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     private static int _exitHookInstalled;
     private static int _orphansReaped;
 
+    /// <summary>
+    /// Serialises solves process-wide. FDTD already saturates every core via mpirun,
+    /// so overlapping runs only oversubscribe the CPU (and double the /dev/shm + RAM
+    /// pressure) — they don't finish sooner. One at a time, each gets the full machine.
+    /// </summary>
+    internal static readonly SemaphoreSlim SolveGate = new(1, 1);
+
     /// <summary>Shared-memory budget per MPI rank in MB (UCX inter-rank buffers).</summary>
     private const int ShmMbPerRank = 256;
 
@@ -70,6 +77,25 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         if (!hasGds && request.Polygons.Count == 0)
             return FdtdSMatrixResult.Fail("No geometry supplied: provide either a GDS file or polygons.");
 
+        // Only one solve runs at a time (see SolveGate): a second is queued rather
+        // than left to fight the first for the CPU. WaitAsync throws if the caller
+        // cancels while queued — handled upstream as a normal cancel, not an error.
+        if (SolveGate.CurrentCount == 0)
+            progress?.Report("Waiting for another FDTD run to finish…");
+        await SolveGate.WaitAsync(ct);
+        try
+        {
+            return await SolveOnceAsync(request, hasGds, progress, ct);
+        }
+        finally
+        {
+            SolveGate.Release();
+        }
+    }
+
+    private async Task<FdtdSMatrixResult> SolveOnceAsync(
+        FdtdSMatrixRequest request, bool hasGds, IProgress<string>? progress, CancellationToken ct)
+    {
         InstallExitHook();
         // Reap leftover containers from a previous (hard-killed) session ONCE per
         // process. Doing it before every solve would `docker rm -f` the containers
