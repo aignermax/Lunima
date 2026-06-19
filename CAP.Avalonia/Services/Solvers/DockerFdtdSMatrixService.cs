@@ -28,6 +28,14 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
     /// <summary>Names of containers currently running, killed on process exit.</summary>
     private static readonly ConcurrentDictionary<string, byte> ActiveContainers = new();
     private static int _exitHookInstalled;
+    private static int _orphansReaped;
+
+    /// <summary>
+    /// Serialises solves process-wide. FDTD already saturates every core via mpirun,
+    /// so overlapping runs only oversubscribe the CPU (and double the /dev/shm + RAM
+    /// pressure) — they don't finish sooner. One at a time, each gets the full machine.
+    /// </summary>
+    internal static readonly SemaphoreSlim SolveGate = new(1, 1);
 
     /// <summary>Shared-memory budget per MPI rank in MB (UCX inter-rank buffers).</summary>
     private const int ShmMbPerRank = 256;
@@ -69,8 +77,32 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         if (!hasGds && request.Polygons.Count == 0)
             return FdtdSMatrixResult.Fail("No geometry supplied: provide either a GDS file or polygons.");
 
+        // Only one solve runs at a time (see SolveGate): a second is queued rather
+        // than left to fight the first for the CPU. WaitAsync throws if the caller
+        // cancels while queued — handled upstream as a normal cancel, not an error.
+        if (SolveGate.CurrentCount == 0)
+            progress?.Report("Waiting for another FDTD run to finish…");
+        await SolveGate.WaitAsync(ct);
+        try
+        {
+            return await SolveOnceAsync(request, hasGds, progress, ct);
+        }
+        finally
+        {
+            SolveGate.Release();
+        }
+    }
+
+    private async Task<FdtdSMatrixResult> SolveOnceAsync(
+        FdtdSMatrixRequest request, bool hasGds, IProgress<string>? progress, CancellationToken ct)
+    {
         InstallExitHook();
-        await ReapOrphanContainersAsync(); // clean up leftovers from a hard-killed session
+        // Reap leftover containers from a previous (hard-killed) session ONCE per
+        // process. Doing it before every solve would `docker rm -f` the containers
+        // of concurrently-running solves in THIS session (they share the label) and
+        // kill them mid-run ("No JSON found in FDTD solver output").
+        if (Interlocked.Exchange(ref _orphansReaped, 1) == 0)
+            await ReapOrphanContainersAsync();
 
         var provision = await EnsureImageAsync(ct);
         if (provision != null)
@@ -260,12 +292,19 @@ public class DockerFdtdSMatrixService : IFdtdSMatrixService
         || line.Contains("Meep progress", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Strips the tqdm bar art (Unicode block-element glyphs and the surrounding
-    /// pipes) so the status shows just the useful "50% 3/4 [00:03&lt;00:01]" parts.
+    /// Strips the tqdm bar art (Unicode block-element glyphs and surrounding pipes)
+    /// and the log/warning tail that Meep concatenates onto the same line (the bar is
+    /// written with '\r', so a following warning lands on the same "line"). Returns
+    /// just the useful "50% 3/4 [00:03&lt;00:01, 1.2it/s]" part.
     /// </summary>
     internal static string CleanProgressLine(string line)
     {
         var noBlocks = System.Text.RegularExpressions.Regex.Replace(line, @"[▀-▟|]+", " ");
+        // The tqdm progress ends at the first ']'; anything after it (e.g. a
+        // "/opt/conda/.../meep/__init__.py:…: ComplexWarning") is concatenated noise.
+        var bracket = noBlocks.IndexOf(']');
+        if (bracket >= 0)
+            noBlocks = noBlocks[..(bracket + 1)];
         return System.Text.RegularExpressions.Regex.Replace(noBlocks, @"\s{2,}", " ").Trim();
     }
 

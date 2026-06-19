@@ -762,12 +762,16 @@ public partial class FileOperationsViewModel : ObservableObject
                     // Falls back to "{pdkSource}::{templateName}" so PDK-template-scoped
                     // overrides reach every instance of the template, not just renamed instances.
                     var allComponents = _canvas.Components.Select(vm => vm.Component).ToList();
+                    // Project load is the one place we hold the COMPLETE component set,
+                    // so it is also the only place an orphan check is meaningful — let
+                    // it surface genuinely unmatched overrides (renamed/removed).
                     Services.SMatrixOverrideApplicator.ApplyAll(
                         allComponents,
                         StoredSMatrices,
                         templateKeyResolver: ResolveTemplateKey,
                         errorConsole: _errorConsole,
-                        keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
+                        keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate,
+                        reportOrphans: true);
                     ApplyUserGlobalOverrides(allComponents);
                 }
                 else

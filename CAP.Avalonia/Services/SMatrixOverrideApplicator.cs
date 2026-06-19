@@ -143,7 +143,8 @@ public static class SMatrixOverrideApplicator
         IReadOnlyDictionary<string, ComponentSMatrixData> storedSMatrices,
         Func<Component, string?>? templateKeyResolver = null,
         ErrorConsoleService? errorConsole = null,
-        Func<string, bool>? keyMatchesKnownTemplate = null)
+        Func<string, bool>? keyMatchesKnownTemplate = null,
+        bool reportOrphans = false)
     {
         var componentList = components.ToList();
         var perComponent = new Dictionary<string, ApplyResult>();
@@ -182,7 +183,12 @@ public static class SMatrixOverrideApplicator
         else
             orphans = unmatched;
 
-        if (errorConsole != null && orphans.Count > 0)
+        // Only warn when asked to (i.e. the caller passed the COMPLETE component
+        // set — typically on project load). Called with a subset (e.g. the
+        // incremental "components added to canvas" handler), an unmatched key is
+        // not necessarily orphan: it may match a component outside this subset.
+        // Warning on every subset call produced duplicate, misleading warnings.
+        if (reportOrphans && errorConsole != null && orphans.Count > 0)
         {
             errorConsole.LogWarning(
                 $"S-matrix overrides could not be applied: {orphans.Count} stored entry/entries " +

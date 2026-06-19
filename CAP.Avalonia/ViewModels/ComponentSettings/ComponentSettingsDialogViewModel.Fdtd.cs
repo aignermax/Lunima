@@ -44,6 +44,12 @@ public partial class ComponentSettingsDialogViewModel
     partial void OnIsComputingChanged(bool value) => RecalculateSMatrixCommand.NotifyCanExecuteChanged();
 
     /// <summary>
+    /// Cancels a running FDTD recompute. Called when the dialog is closed so the
+    /// solve (and its Docker container) doesn't keep running in the background.
+    /// </summary>
+    public void CancelRecalculate() => _recalcCts?.Cancel();
+
+    /// <summary>
     /// Recomputes this component's S-matrix from its geometry via FDTD and applies
     /// it like an import. Surfaces the raw solver error on failure — no silent fallback.
     /// </summary>
@@ -70,6 +76,15 @@ public partial class ComponentSettingsDialogViewModel
 
             if (!result.Success)
             {
+                // A user cancel (typically closing the dialog mid-run) comes back as a
+                // failed result, not an OperationCanceledException. Closing a window is
+                // intentional, not an error, so stay quiet — don't open the error console.
+                if (_recalcCts?.IsCancellationRequested == true)
+                {
+                    SolverStatus = "FDTD recompute cancelled.";
+                    return;
+                }
+
                 SolverStatus = result.MissingDependency != null
                     ? $"FDTD unavailable — '{result.MissingDependency}' is required. {result.Error}"
                     : $"FDTD failed: {result.Error}";
