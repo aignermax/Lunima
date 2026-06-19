@@ -134,7 +134,7 @@ public static class GdsPolygonRenderer
 
     // ── Private helpers ─────────────────────────────────────────────────────
 
-    private static void DrawPolygonsAsGeometry(
+    internal static void DrawPolygonsAsGeometry(
         DrawingContext context,
         NazcaPreviewResult result,
         double compX, double compY,
@@ -174,7 +174,7 @@ public static class GdsPolygonRenderer
         return geo;
     }
 
-    private static IBrush GetBrushForLayer(int layer) => layer switch
+    internal static IBrush GetBrushForLayer(int layer) => layer switch
     {
         WaveguideLayer => WaveguideBrush,
         _              => DefaultBrush,

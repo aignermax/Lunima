@@ -1,13 +1,17 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.ViewModels.Library;
 
 namespace CAP.Avalonia.Controls;
 
 /// <summary>
-/// Miniature preview control that draws a component schematic (rectangle + pins)
-/// for the component library panel.
+/// Miniature preview control for the component library panel. Draws the real GDS
+/// geometry + pins when geometry is available via the shared render service,
+/// otherwise falls back to a schematic box (rectangle + pins).
 /// </summary>
 public class ComponentPreview : Control
 {
@@ -19,6 +23,20 @@ public class ComponentPreview : Control
 
     public static readonly StyledProperty<PinDefinition[]?> PinDefinitionsProperty =
         AvaloniaProperty.Register<ComponentPreview, PinDefinition[]?>(nameof(PinDefinitions));
+
+    public static readonly StyledProperty<string?> NazcaModuleNameProperty =
+        AvaloniaProperty.Register<ComponentPreview, string?>(nameof(NazcaModuleName));
+
+    public static readonly StyledProperty<string?> NazcaFunctionNameProperty =
+        AvaloniaProperty.Register<ComponentPreview, string?>(nameof(NazcaFunctionName));
+
+    /// <summary>Attached service, set once on an ancestor so all thumbnails inherit it.</summary>
+    public static readonly AttachedProperty<GdsPreviewRenderService?> RenderServiceProperty =
+        AvaloniaProperty.RegisterAttached<ComponentPreview, Control, GdsPreviewRenderService?>("RenderService", inherits: true);
+
+    public static void SetRenderService(Control c, GdsPreviewRenderService? v) => c.SetValue(RenderServiceProperty, v);
+
+    public static GdsPreviewRenderService? GetRenderService(Control c) => c.GetValue(RenderServiceProperty);
 
     public double WidthMicrometers
     {
@@ -38,14 +56,48 @@ public class ComponentPreview : Control
         set => SetValue(PinDefinitionsProperty, value);
     }
 
+    public string? NazcaModuleName
+    {
+        get => GetValue(NazcaModuleNameProperty);
+        set => SetValue(NazcaModuleNameProperty, value);
+    }
+
+    public string? NazcaFunctionName
+    {
+        get => GetValue(NazcaFunctionNameProperty);
+        set => SetValue(NazcaFunctionNameProperty, value);
+    }
+
+    private GdsPreviewRenderService? _service;
+
     static ComponentPreview()
     {
         AffectsRender<ComponentPreview>(
             WidthMicrometersProperty,
             HeightMicrometersProperty,
-            PinDefinitionsProperty);
+            PinDefinitionsProperty,
+            NazcaModuleNameProperty,
+            NazcaFunctionNameProperty);
     }
 
+    /// <inheritdoc/>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _service = GetRenderService(this);
+        if (_service != null) _service.OnPreviewLoaded += OnPreviewReady;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_service != null) { _service.OnPreviewLoaded -= OnPreviewReady; _service = null; }
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnPreviewReady() => Dispatcher.UIThread.Post(InvalidateVisual);
+
+    /// <inheritdoc/>
     public override void Render(DrawingContext context)
     {
         var bounds = Bounds;
@@ -56,7 +108,7 @@ public class ComponentPreview : Control
         if (compW <= 0 || compH <= 0) return;
 
         // Scale to fit with padding
-        double pad = 4;
+        const double pad = 4;
         double availW = bounds.Width - pad * 2;
         double availH = bounds.Height - pad * 2;
         double scale = Math.Min(availW / compW, availH / compH);
@@ -66,14 +118,27 @@ public class ComponentPreview : Control
         double offsetX = pad + (availW - drawW) / 2;
         double offsetY = pad + (availH - drawH) / 2;
 
-        // Component body
-        var rect = new Rect(offsetX, offsetY, drawW, drawH);
+        var geometry = _service?.TryGetGeometry(new GdsPreviewKey(NazcaModuleName, NazcaFunctionName, null));
+        if (geometry != null && geometry.Polygons.Count > 0)
+            GdsPolygonRenderer.DrawPolygonsAsGeometry(context, geometry, offsetX, offsetY, drawW, drawH);
+        else
+            DrawSchematicBox(context, new Rect(offsetX, offsetY, drawW, drawH));
+
+        DrawPins(context, offsetX, offsetY, scale);
+    }
+
+    /// <summary>Draws the schematic fallback body (filled rectangle + border).</summary>
+    private static void DrawSchematicBox(DrawingContext context, Rect rect)
+    {
         var fillBrush = new SolidColorBrush(Color.FromRgb(40, 50, 70));
         var borderPen = new Pen(new SolidColorBrush(Color.FromRgb(100, 110, 130)), 1);
         context.FillRectangle(fillBrush, rect);
         context.DrawRectangle(borderPen, rect);
+    }
 
-        // Pins
+    /// <summary>Draws the pin dots and direction indicators over the body.</summary>
+    private void DrawPins(DrawingContext context, double offsetX, double offsetY, double scale)
+    {
         var pins = PinDefinitions;
         if (pins == null || pins.Length == 0) return;
 
