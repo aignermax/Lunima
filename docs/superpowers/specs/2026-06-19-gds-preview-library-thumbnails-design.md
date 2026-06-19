@@ -40,8 +40,16 @@ wiederverwenden — **kein** zweites Rendering-System.
 Persistiert `NazcaPreviewResult` (Polygone + bbox) als JSON, damit Previews über
 App-Neustarts hinweg sofort verfügbar sind.
 
-- **Speicherort:** `%LOCALAPPDATA%/Lunima/gds-preview-cache/` (plattformübergreifend via
-  `Environment.SpecialFolder.LocalApplicationData`). Eine JSON-Datei je Cache-Key.
+- **Speicherort:** plattformneutral über
+  `Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)` +
+  `/Lunima/gds-preview-cache/`. Das löst auf jeder Plattform zum passenden Ort auf:
+  - **Windows:** `%LOCALAPPDATA%` (z.B. `C:\Users\<user>\AppData\Local\Lunima\gds-preview-cache\`)
+  - **Linux:** `$XDG_DATA_HOME` bzw. `~/.local/share/Lunima/gds-preview-cache/`
+  - **macOS:** das von .NET gelieferte App-Daten-Äquivalent (`~/.local/share/...`)
+
+  **Kein** hartcodiertes `%LOCALAPPDATA%` — ausschließlich die .NET-API. Das Verzeichnis
+  wird beim ersten Schreiben angelegt (`Directory.CreateDirectory`). Eine JSON-Datei je
+  Cache-Key.
 - **Key:** stabiler Hash (SHA-256, gekürzt) aus `module|function|parameters|formatVersion`.
   **Auflösungsunabhängig** — bewusst *ohne* Breite/Höhe (die Geometrie hängt nur von der
   Nazca-Funktion + Parametern ab; Breite/Höhe sind reine Anzeige-Transforms). Das ist eine
