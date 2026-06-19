@@ -15,6 +15,12 @@
         Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
+    <!-- The dialog can be resized quite short; without an outer scroll the
+         lower DockPanel sections (effective S-matrix + wavelength list) get
+         clipped instead of becoming reachable. Wrapping the whole content in a
+         ScrollViewer keeps every section accessible at any window height. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
     <DockPanel Margin="16">
 
         <!-- Title -->
@@ -436,4 +442,5 @@
         </ScrollViewer>
 
     </DockPanel>
+    </ScrollViewer>
 </Window>
