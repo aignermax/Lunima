@@ -155,7 +155,12 @@ public sealed class GdsPreviewRenderService
         if (!key.IsRenderable) return null;
         var cacheKey = key.Hash();
         if (_memGeometry.TryGet(cacheKey, out var cached)) return cached;
-        _pending.TryAdd(cacheKey, FetchGeometryAsync(key, cacheKey));
+        // Reserve the slot BEFORE starting the fetch (mirrors the canvas TryGetPreview
+        // path) so a duplicate fetch is never launched for the same key. Passing the
+        // started task straight into TryAdd would run the task before TryAdd decides
+        // to keep it, defeating the _pending dedup under concurrent callers.
+        if (_pending.TryAdd(cacheKey, Task.CompletedTask))
+            _pending[cacheKey] = FetchGeometryAsync(key, cacheKey);
         return null;
     }
 
@@ -191,6 +196,9 @@ public sealed class GdsPreviewRenderService
         }
         catch
         {
+            // Transient failure (e.g. Python hiccup): remember "empty" for this session
+            // only — deliberately NOT WriteEmpty, so a restart can retry. A genuinely
+            // empty render (above) persists the empty marker; a crash does not.
             _memGeometry.Set(cacheKey, null);
         }
         finally
