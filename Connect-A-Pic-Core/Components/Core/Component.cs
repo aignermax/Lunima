@@ -354,8 +354,14 @@ public class Component : ICloneable
             // now recreate the nonLinearConnections and assign them to the Matrix
             foreach (var nonLin in oldMatrix.NonLinearConnections)
             {
+                // Skip non-linear connections on pins absent from the cloned set (see the
+                // linear-connection note above): an override may have replaced the ports.
+                if (!oldToNewPinIds.TryGetValue(nonLin.Key.PinIdStart, out var nlStart) ||
+                    !oldToNewPinIds.TryGetValue(nonLin.Key.PinIdEnd, out var nlEnd))
+                    continue;
+
                 // convert the old Key to the new one.
-                var newKey = (oldToNewPinIds[nonLin.Key.PinIdStart], oldToNewPinIds[nonLin.Key.PinIdEnd]);
+                var newKey = (nlStart, nlEnd);
                 // recreate the non linear function with the new Pins.
                 var newFunction = MathExpressionReader.ConvertToDelegate(nonLin.Value.ConnectionsFunctionRaw, clonedPins, clonedSliderMap.Values.ToList());
                 // assign the new Pin and new function to our dictionary
@@ -437,8 +443,15 @@ public class Component : ICloneable
         var newConnections = new Dictionary<(Guid, Guid), Complex>();
         foreach (var oldConnection in oldMatrix.GetNonNullValues())
         {
-            var newKey = (oldToNewPinIds[oldConnection.Key.PinIdStart], oldToNewPinIds[oldConnection.Key.PinIdEnd]);
-            newConnections.Add(newKey, oldConnection.Value);
+            // Skip connections whose pins are no longer part of the component. A raw-code
+            // override (#561) can replace the ports while leaving stale S-matrix entries on
+            // the old pin IDs; those have no counterpart in the cloned pin set, so dropping
+            // them is the only sound option (cloning must not throw — issue: copy/paste crash).
+            if (!oldToNewPinIds.TryGetValue(oldConnection.Key.PinIdStart, out var newStart) ||
+                !oldToNewPinIds.TryGetValue(oldConnection.Key.PinIdEnd, out var newEnd))
+                continue;
+
+            newConnections.Add((newStart, newEnd), oldConnection.Value);
         }
         return newConnections;
     }
