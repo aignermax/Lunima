@@ -18,6 +18,9 @@ using CAP.Avalonia.Controls.Canvas.ComponentPreview;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP.Avalonia.ViewModels.Settings;
+using CAP.Avalonia.ViewModels.Solvers;
+using CAP.Avalonia.Services.Solvers;
+using CAP_Core.Solvers.ModeSolver;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP.Avalonia.Views;
 using CAP.Avalonia.Services.AiTools;
@@ -246,6 +249,17 @@ public partial class App : Application
             return new CAP.Avalonia.Services.Solvers.DockerFdtdSMatrixService("lunima-meep:1", dockerfile, buildContext);
         });
 
+        // Register mode-solver service and ViewModel
+        services.AddSingleton<IModeSolverService>(sp =>
+        {
+            var prefs  = sp.GetRequiredService<UserPreferencesService>();
+            var python = prefs.GetCustomPythonPath() ?? ResolvePythonExecutable();
+            var script = FindModeSolveScript();
+            return new PythonModeSolverService(python, script);
+        });
+        services.AddTransient(sp => new ModeSolverViewModel(
+            sp.GetRequiredService<IModeSolverService>()));
+
         // Register main ViewModel
         services.AddSingleton<MainViewModel>();
 
@@ -359,6 +373,27 @@ public partial class App : Application
 
         // Best-effort fallback — NazcaComponentPreviewService returns a graceful
         // failure with a clear message when the path doesn't resolve.
+        return local;
+    }
+
+    /// <summary>
+    /// Searches for mode_solve.py relative to the application base directory.
+    /// Uses the same walk-up-the-tree strategy as <see cref="FindPreviewScript"/>.
+    /// </summary>
+    private static string FindModeSolveScript()
+    {
+        const string scriptName = "mode_solve.py";
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var local   = Path.Combine(baseDir, "scripts", scriptName);
+        if (File.Exists(local)) return local;
+
+        var current = new DirectoryInfo(baseDir);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, "scripts", scriptName);
+            if (File.Exists(candidate)) return candidate;
+            current = current.Parent;
+        }
         return local;
     }
 
