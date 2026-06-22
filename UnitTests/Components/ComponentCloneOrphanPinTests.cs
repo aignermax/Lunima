@@ -72,4 +72,39 @@ public class ComponentCloneOrphanPinTests
         clonedMatrix.GetNonNullValues().Count.ShouldBe(validConnectionCount,
             "The in-Parts connection must survive cloning; the orphan connection is dropped.");
     }
+
+    [Fact]
+    public void Clone_PreservesOverriddenSMatrixValue_NotJustStructure()
+    {
+        // Reproduces the copy/paste concern for an FDTD-recomputed S-matrix on NORMAL
+        // ports: the recompute writes non-default values onto the component's existing
+        // pins (all present in Parts). Cloning must carry the *values* over, not reset
+        // to a PDK default. This confirms Clone is NOT where an FDTD override is lost.
+        var parts = new Part[1, 1];
+        parts[0, 0] = new Part(new List<Pin>
+        {
+            new("west0", 0, MatterType.Light, RectSide.Left),
+            new("east0", 1, MatterType.Light, RectSide.Right),
+        });
+        var leftIn = parts[0, 0].GetPinAt(RectSide.Left).IDInFlow;
+        var rightOut = parts[0, 0].GetPinAt(RectSide.Right).IDOutFlow;
+        var allPinIds = Component.GetAllPins(parts)
+            .SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList();
+
+        var overridden = new Complex(0.1234, -0.5678);   // a distinctly non-default value
+        var matrix = new SMatrix(allPinIds, new());
+        matrix.SetValues(new() { { (leftIn, rightOut), overridden } });
+        var component = new Component(
+            new Dictionary<int, SMatrix> { { StandardWaveLengths.RedNM, matrix } },
+            new(), "placeCell_StraightWG", "", parts, 0, "Straight", DiscreteRotation.R0);
+
+        var clone = (Component)component.Clone();
+
+        var clonedPins = Component.GetAllPins(clone.Parts).ToList();
+        var clonedLeftIn = clonedPins.Single(p => p.Name == "west0").IDInFlow;
+        var clonedRightOut = clonedPins.Single(p => p.Name == "east0").IDOutFlow;
+        var clonedValues = clone.WaveLengthToSMatrixMap[StandardWaveLengths.RedNM].GetNonNullValues();
+        clonedValues[(clonedLeftIn, clonedRightOut)].ShouldBe(overridden,
+            "Clone must preserve the overridden S-matrix value on the (re-keyed) pins.");
+    }
 }
