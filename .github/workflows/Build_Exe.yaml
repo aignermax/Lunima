@@ -183,9 +183,72 @@ jobs:
           name: Lunima-MSI-Installer
           path: Lunima-Setup-*.msi
 
+  build-macos:
+    name: Build macOS .dmg (${{ matrix.rid }})
+    needs: test
+    strategy:
+      matrix:
+        include:
+          # Apple Silicon runner builds the arm64 slice; the macos-13 Intel runner builds x64.
+          - os: macos-latest
+            rid: osx-arm64
+          - os: macos-13
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.sha || github.ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Extract version from csproj
+        id: version
+        run: |
+          version=$(grep '<Version>' CAP.Desktop/CAP.Desktop.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | xargs)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Extracted version: $version"
+
+      - name: Setup Python (for .icns generation)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Best-effort icon: build_macos_bundle.sh also falls back to generating one,
+      # and ships without a custom icon if Pillow/iconutil are unavailable.
+      - name: Generate macOS app icon (.icns)
+        run: |
+          python3 -m pip install --upgrade Pillow
+          python3 scripts/generate_icon.py --icns Installer/LunimaIcon.icns
+        continue-on-error: true
+
+      - name: Build Lunima.app bundle (self-contained, unsigned)
+        run: bash scripts/build_macos_bundle.sh ${{ matrix.rid }}
+
+      # Unsigned .dmg with an /Applications drop-target. Signing/notarization is a
+      # follow-up gated on an Apple Developer ID + CI secrets (none configured yet);
+      # users clear quarantine with `xattr -dr com.apple.quarantine` on first launch.
+      - name: Package unsigned .dmg
+        run: |
+          DMG="Lunima-${{ steps.version.outputs.version }}-${{ matrix.rid }}.dmg"
+          STAGING="$(mktemp -d)"
+          cp -R dist/Lunima.app "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+          hdiutil create -volname "Lunima" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
+          echo "Created $DMG"
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lunima-${{ matrix.rid }}-dmg
+          path: Lunima-*-${{ matrix.rid }}.dmg
+
   release:
     name: Create Release
-    needs: [build, build-msi]
+    needs: [build, build-msi, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -235,6 +298,13 @@ jobs:
         with:
           name: Lunima-MSI-Installer
           path: msi
+
+      - name: Download macOS .dmg builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Lunima-*-dmg
+          path: dmg
+          merge-multiple: true
 
       - name: Create archives
         run: |
@@ -330,6 +400,15 @@ jobs:
             2. Extract: `tar xzf Lunima-*.tar.gz`
             3. Run: `./Lunima`
 
+            ### macOS (Apple Silicon & Intel)
+            1. Download `Lunima-${{ steps.info.outputs.version }}-osx-arm64.dmg` (Apple Silicon) or `Lunima-${{ steps.info.outputs.version }}-osx-x64.dmg` (Intel)
+            2. Open the `.dmg` and drag **Lunima** into Applications
+            3. These builds are **unsigned**. On first launch, clear the quarantine flag:
+               ```bash
+               xattr -dr com.apple.quarantine /Applications/Lunima.app
+               ```
+               (or right-click the app → **Open** → **Open** to bypass Gatekeeper once)
+
             No .NET installation required for portable versions — everything is included.
 
             ---
@@ -338,3 +417,5 @@ jobs:
             msi/Lunima-Setup-${{ steps.info.outputs.version }}.msi
             Lunima-${{ steps.info.outputs.version }}-win-x64.zip
             Lunima-${{ steps.info.outputs.version }}-linux-x64.tar.gz
+            dmg/Lunima-${{ steps.info.outputs.version }}-osx-arm64.dmg
+            dmg/Lunima-${{ steps.info.outputs.version }}-osx-x64.dmg
