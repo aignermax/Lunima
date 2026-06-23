@@ -44,7 +44,7 @@ public class ComponentSettingsDialogViewModelTests
         var store = MakeStore("comp_1", "1550", "1310");
         var vm = NewVm();
 
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         vm.SMatrixEntries.Count.ShouldBe(2);
         vm.HasSMatrices.ShouldBeTrue();
@@ -57,7 +57,7 @@ public class ComponentSettingsDialogViewModelTests
         var store = MakeStore("comp_1", "1550");
         var vm = NewVm();
 
-        vm.Configure("comp_99", "Unknown", store);
+        vm.Configure("comp_99", "comp_99", "Unknown", store);
 
         vm.SMatrixEntries.Count.ShouldBe(0);
         vm.HasSMatrices.ShouldBeFalse();
@@ -73,7 +73,7 @@ public class ComponentSettingsDialogViewModelTests
         var vm = NewVm();
         int callCount = 0;
 
-        vm.Configure("comp_1", "My Component", store, onChanged: () => callCount++);
+        vm.Configure("comp_1", "comp_1", "My Component", store, onChanged: () => callCount++);
 
         callCount.ShouldBe(0);
     }
@@ -83,7 +83,7 @@ public class ComponentSettingsDialogViewModelTests
     {
         var store = MakeStore("comp_1", "1550", "1310");
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         var entryToDelete = vm.SMatrixEntries.First();
         var deletedKey = entryToDelete.WavelengthKey;
@@ -102,7 +102,7 @@ public class ComponentSettingsDialogViewModelTests
     {
         var store = MakeStore("comp_1", "1550");
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         vm.DeleteEntryCommand.Execute(vm.SMatrixEntries[0]);
 
@@ -124,7 +124,7 @@ public class ComponentSettingsDialogViewModelTests
         liveComponent.WaveLengthToSMatrixMap.ShouldContainKey(1550);
 
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store, liveComponent);
+        vm.Configure("comp_1", "comp_1", "My Component", store, liveComponent);
 
         vm.DeleteEntryCommand.Execute(vm.SMatrixEntries[0]);
 
@@ -136,7 +136,7 @@ public class ComponentSettingsDialogViewModelTests
     {
         var store = MakeStore("comp_1", "1550");
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         store["comp_1"].Wavelengths["980"] = new SMatrixWavelengthEntry
         {
@@ -145,7 +145,7 @@ public class ComponentSettingsDialogViewModelTests
             Imag = new List<double> { 0, 0, 0, 0 }
         };
 
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         vm.SMatrixEntries.Count.ShouldBe(2);
     }
@@ -208,7 +208,7 @@ public class ComponentSettingsDialogViewModelTests
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((string?)null);
         var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
         var entryCountBefore = vm.SMatrixEntries.Count;
 
         vm.LoadFromFileCommand.Execute(null);
@@ -230,7 +230,7 @@ public class ComponentSettingsDialogViewModelTests
                 .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(tmp);
             var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
-            vm.Configure("comp_1", "My Component", store);
+            vm.Configure("comp_1", "comp_1", "My Component", store);
 
             vm.LoadFromFileCommand.Execute(null);
 

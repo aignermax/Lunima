@@ -28,7 +28,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
 
     private Dictionary<string, ComponentSMatrixData>? _storedSMatrices;
     private Component? _liveComponent;
-    private string _entityKey = string.Empty;
+    private string _smatrixKey = string.Empty;
     private string _displayName = string.Empty;
     private Action? _onChanged;
     private bool _isUserGlobalScope;
@@ -125,9 +125,15 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// Configures the dialog for a specific entity (PDK template or canvas instance).
     /// </summary>
     /// <param name="entityKey">
-    /// Key used to store and retrieve S-matrix data in <paramref name="storedSMatrices"/>.
+    /// Per-instance key used for the Nazca raw-code override side
+    /// (<see cref="InstanceNazcaCodeEditorViewModel"/> / <c>storedNazcaOverrides</c>).
     /// For canvas instances this is <c>component.Identifier</c>;
     /// for PDK templates it is <c>"pdkSource::templateName"</c>.
+    /// </param>
+    /// <param name="smatrixKey">
+    /// Key used to store and retrieve S-matrix data in <paramref name="storedSMatrices"/>.
+    /// For canvas instances this is the geometry identity (so a copy inherits a
+    /// recomputed/imported S-matrix); for PDK templates it is <c>"pdkSource::templateName"</c>.
     /// </param>
     /// <param name="displayName">Human-readable name shown in the title bar.</param>
     /// <param name="storedSMatrices">Shared dictionary from <c>FileOperationsViewModel</c>.</param>
@@ -179,6 +185,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// </param>
     public void Configure(
         string entityKey,
+        string smatrixKey,
         string displayName,
         Dictionary<string, ComponentSMatrixData> storedSMatrices,
         Component? liveComponent = null,
@@ -197,7 +204,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         Action? nazcaDimensionsChanged = null,
         Action<IReadOnlyList<PhysicalPin>>? nazcaPinsChanged = null)
     {
-        _entityKey = entityKey;
+        _smatrixKey = smatrixKey;
         _displayName = displayName;
         _storedSMatrices = storedSMatrices;
         _liveComponent = liveComponent;
@@ -302,7 +309,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
                 return; // user cancelled — StatusText already set
 
             var smatrixData = SParameterConverter.ToComponentSMatrixData(resolved);
-            _storedSMatrices[_entityKey] = smatrixData;
+            _storedSMatrices[_smatrixKey] = smatrixData;
 
             ApplyResult? applyResult = null;
             if (_liveComponent != null)
@@ -393,12 +400,12 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     [RelayCommand]
     private void DeleteEntry(SMatrixEntryViewModel entry)
     {
-        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
+        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_smatrixKey, out var data))
             return;
 
         data.Wavelengths.Remove(entry.WavelengthKey);
         if (data.Wavelengths.Count == 0)
-            _storedSMatrices.Remove(_entityKey);
+            _storedSMatrices.Remove(_smatrixKey);
 
         if (_liveComponent != null && int.TryParse(entry.WavelengthKey, out int wavelengthNm))
             _liveComponent.WaveLengthToSMatrixMap.Remove(wavelengthNm);
@@ -411,7 +418,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     {
         SMatrixEntries.Clear();
 
-        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
+        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_smatrixKey, out var data))
         {
             HasSMatrices = false;
             if (notifyChanged)
@@ -449,7 +456,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             // PDK default but not in the override is still PDK-driven.
             bool isOverridden =
                 _storedSMatrices != null &&
-                _storedSMatrices.TryGetValue(_entityKey, out var data) &&
+                _storedSMatrices.TryGetValue(_smatrixKey, out var data) &&
                 data.Wavelengths.ContainsKey(kvp.Key.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             EffectiveEntries.Add(new EffectiveSMatrixEntryViewModel(

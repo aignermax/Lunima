@@ -104,7 +104,7 @@ public partial class ComponentSettingsDialogViewModel
 
             var note = $"FDTD Meep {(result.Is3D ? "3D" : "2D")}";
             var data = FdtdSMatrixConverter.ToComponentSMatrixData(result, note);
-            _storedSMatrices[_entityKey] = data;
+            _storedSMatrices[_smatrixKey] = data;
 
             var applyResult = SMatrixOverrideApplicator.Apply(_liveComponent, data, _errorConsole);
             SolverStatus = BuildSolverStatus(result, applyResult);

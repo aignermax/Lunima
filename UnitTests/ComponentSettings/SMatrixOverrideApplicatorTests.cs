@@ -1,6 +1,7 @@
 using System.Numerics;
 using CAP.Avalonia.Services;
 using CAP_Core;
+using CAP_Core.Components.Core;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using UnitTests;
@@ -482,5 +483,23 @@ public class SMatrixOverrideApplicatorTests
 
         result.PerComponent.ContainsKey("inst_A").ShouldBeTrue();
         result.PerComponent.ContainsKey("inst_B").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void CopyScenario_OverrideStoredByGeometry_AppliesToClone()
+    {
+        var a = TestComponentFactory.CreateSimpleTwoPortComponent(); a.Identifier = "A";
+        a.NazcaFunctionName = "ebeam_edge_coupler";
+        var b = TestComponentFactory.CreateSimpleTwoPortComponent(); b.Identifier = "B";
+        b.NazcaFunctionName = "ebeam_edge_coupler";
+
+        string GeoKey(Component c) => CAP.Avalonia.Services.ComponentGeometryKey.For(c, _ => null);
+        var store = new Dictionary<string, ComponentSMatrixData> { [GeoKey(a)] = MakeData("1550", 2) };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { a, b }, store, geometryKeyResolver: GeoKey);
+
+        result.PerComponent["A"].Applied.ShouldBe(1);
+        result.PerComponent["B"].Applied.ShouldBe(1);
     }
 }

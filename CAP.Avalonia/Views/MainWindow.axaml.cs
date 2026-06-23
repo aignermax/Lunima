@@ -687,8 +687,21 @@ public partial class MainWindow : Window
             };
         }
 
+        // S-matrix overrides (FDTD recompute / file import) are stored under the
+        // component's geometry identity so a copy inherits them; the per-instance
+        // Nazca raw-code override keeps using entityKey (component.Identifier).
+        // The library/template path has no live component and keeps the {PdkSource}::{Name} key.
+        string smatrixKey;
+        if (liveComponent != null)
+            smatrixKey = CAP.Avalonia.Services.ComponentGeometryKey.For(
+                liveComponent,
+                c => vm.FileOperations.StoredNazcaOverrides.TryGetValue(c.Identifier, out var o) ? o.RawCode : null);
+        else
+            smatrixKey = entityKey;
+
         dialogVm.Configure(
             entityKey,
+            smatrixKey,
             displayName,
             store,
             liveComponent,
