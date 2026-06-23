@@ -414,58 +414,6 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         RefreshEntries(notifyChanged: true);
     }
 
-    private void RefreshEntries(bool notifyChanged)
-    {
-        SMatrixEntries.Clear();
-
-        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_smatrixKey, out var data))
-        {
-            HasSMatrices = false;
-            if (notifyChanged)
-            {
-                RefreshEffectiveEntries();
-                _onChanged?.Invoke();
-            }
-            return;
-        }
-
-        foreach (var kvp in data.Wavelengths.OrderBy(k => k.Key))
-            SMatrixEntries.Add(new SMatrixEntryViewModel(kvp.Key, kvp.Value, data.SourceNote));
-
-        HasSMatrices = SMatrixEntries.Count > 0;
-        if (notifyChanged)
-        {
-            RefreshEffectiveEntries();
-            _onChanged?.Invoke();
-        }
-    }
-
-    private void RefreshEffectiveEntries()
-    {
-        EffectiveEntries.Clear();
-        if (_effectiveSMatrices == null || _effectivePins == null)
-        {
-            HasEffectiveEntries = false;
-            return;
-        }
-
-        foreach (var kvp in _effectiveSMatrices.OrderBy(k => k.Key))
-        {
-            // A wavelength is "overridden" iff the active store has an entry
-            // with the same wavelength key — a wavelength present in the
-            // PDK default but not in the override is still PDK-driven.
-            bool isOverridden =
-                _storedSMatrices != null &&
-                _storedSMatrices.TryGetValue(_smatrixKey, out var data) &&
-                data.Wavelengths.ContainsKey(kvp.Key.ToString(System.Globalization.CultureInfo.InvariantCulture));
-
-            EffectiveEntries.Add(new EffectiveSMatrixEntryViewModel(
-                kvp.Key, kvp.Value, _effectivePins, isOverridden));
-        }
-
-        HasEffectiveEntries = EffectiveEntries.Count > 0;
-    }
-
     private ISParameterImporter? FindImporter(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
