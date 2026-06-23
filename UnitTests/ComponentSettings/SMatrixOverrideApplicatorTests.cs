@@ -452,4 +452,35 @@ public class SMatrixOverrideApplicatorTests
         console.Entries.Count.ShouldBe(1);
         console.Entries[0].Message.ShouldContain("renamed_or_removed");
     }
+
+    [Fact]
+    public void ApplyAll_GeometryKeyResolver_AppliesToAllMatchingInstances()
+    {
+        var a = TestComponentFactory.CreateSimpleTwoPortComponent(); a.Identifier = "inst_A";
+        var b = TestComponentFactory.CreateSimpleTwoPortComponent(); b.Identifier = "inst_B";
+        var store = new Dictionary<string, ComponentSMatrixData> { ["geo:v1-shared"] = MakeData("1550", 2) };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { a, b }, store,
+            geometryKeyResolver: _ => "geo:v1-shared");
+
+        result.PerComponent["inst_A"].Applied.ShouldBe(1);
+        result.PerComponent["inst_B"].Applied.ShouldBe(1);
+        result.OrphanKeys.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ApplyAll_GeometryKeyResolver_DifferentGeometryDoesNotInherit()
+    {
+        var a = TestComponentFactory.CreateSimpleTwoPortComponent(); a.Identifier = "inst_A";
+        var b = TestComponentFactory.CreateSimpleTwoPortComponent(); b.Identifier = "inst_B";
+        var store = new Dictionary<string, ComponentSMatrixData> { ["geo:v1-A"] = MakeData("1550", 2) };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { a, b }, store,
+            geometryKeyResolver: c => c.Identifier == "inst_A" ? "geo:v1-A" : "geo:v1-B");
+
+        result.PerComponent.ContainsKey("inst_A").ShouldBeTrue();
+        result.PerComponent.ContainsKey("inst_B").ShouldBeFalse();
+    }
 }

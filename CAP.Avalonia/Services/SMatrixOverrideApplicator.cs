@@ -132,16 +132,19 @@ public static class SMatrixOverrideApplicator
 
     /// <summary>
     /// Applies all S-matrix overrides in <paramref name="storedSMatrices"/> to matching
-    /// components. A component matches by <see cref="Component.Identifier"/>, with an
-    /// optional <paramref name="templateKeyResolver"/> consulted as a fallback so PDK-
-    /// template-scoped overrides (key shape <c>"{pdkSource}::{templateName}"</c>) reach
-    /// every instance of that template.
+    /// components. A component matches by <see cref="Component.Identifier"/> first;
+    /// if no direct match is found, the optional <paramref name="geometryKeyResolver"/>
+    /// is consulted so identical-geometry instances and copies can share one override;
+    /// finally the optional <paramref name="templateKeyResolver"/> is used as a last
+    /// fallback for PDK-template-scoped overrides
+    /// (key shape <c>"{pdkSource}::{templateName}"</c>).
     /// Keys with no matching component are reported as orphans rather than silently kept.
     /// </summary>
     public static ApplyAllResult ApplyAll(
         IEnumerable<Component> components,
         IReadOnlyDictionary<string, ComponentSMatrixData> storedSMatrices,
         Func<Component, string?>? templateKeyResolver = null,
+        Func<Component, string?>? geometryKeyResolver = null,
         ErrorConsoleService? errorConsole = null,
         Func<string, bool>? keyMatchesKnownTemplate = null,
         bool reportOrphans = false)
@@ -157,9 +160,15 @@ public static class SMatrixOverrideApplicator
                 resolvedKey = comp.Identifier;
             else
             {
-                var templateKey = templateKeyResolver?.Invoke(comp);
-                if (templateKey != null && storedSMatrices.TryGetValue(templateKey, out data))
-                    resolvedKey = templateKey;
+                var geomKey = geometryKeyResolver?.Invoke(comp);
+                if (geomKey != null && storedSMatrices.TryGetValue(geomKey, out data))
+                    resolvedKey = geomKey;
+                else
+                {
+                    var templateKey = templateKeyResolver?.Invoke(comp);
+                    if (templateKey != null && storedSMatrices.TryGetValue(templateKey, out data))
+                        resolvedKey = templateKey;
+                }
             }
 
             if (resolvedKey != null && data != null)
