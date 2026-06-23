@@ -17,6 +17,9 @@ public static class ComponentGeometryKey
     /// <summary>Bump to invalidate all geometry-scoped override keys.</summary>
     public const int FormatVersion = 1;
 
+    /// <summary>ASCII unit separator — never appears in module/function/parameter strings.</summary>
+    private const char FieldSeparator = (char)31;
+
     /// <summary>
     /// Builds the geometry key. <paramref name="rawCodeLookup"/> returns the active raw-code
     /// override for the component (e.g. from StoredNazcaOverrides), or null if none.
@@ -27,7 +30,8 @@ public static class ComponentGeometryKey
         if (!string.IsNullOrWhiteSpace(raw))
             return $"raw:v{FormatVersion}-{Hash(raw)}";
 
-        var material = $"{component.NazcaModuleName}{component.NazcaFunctionName}{component.NazcaFunctionParameters}";
+        // Separate fields so distinct tuples can't collide via boundary shifts.
+        var material = $"{component.NazcaModuleName}{FieldSeparator}{component.NazcaFunctionName}{FieldSeparator}{component.NazcaFunctionParameters}";
         return $"geo:v{FormatVersion}-{Hash(material)}";
     }
 
