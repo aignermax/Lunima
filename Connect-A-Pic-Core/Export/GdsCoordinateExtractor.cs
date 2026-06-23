@@ -91,14 +91,21 @@ public class GdsCoordinateExtractor
             using var process = Process.Start(psi)
                 ?? throw new InvalidOperationException("Process.Start returned null.");
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            // Linked CTS + CancelAfter (same idiom as PdkNazcaParserService): the timeout timer
+            // is disposed with the CTS the moment the method returns, so the common fast-success
+            // path doesn't leave a 30s timer armed (one leaked timer per call).
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(ExtractionTimeoutMs);
+            var linkedToken = timeoutCts.Token;
 
-            var completed = await Task.WhenAny(
-                process.WaitForExitAsync(cancellationToken),
-                Task.Delay(ExtractionTimeoutMs, cancellationToken));
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(linkedToken);
+            var stderrTask = process.StandardError.ReadToEndAsync(linkedToken);
 
-            if (!process.HasExited)
+            try
+            {
+                await process.WaitForExitAsync(linkedToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 process.Kill(entireProcessTree: true);
                 return Failure($"Timeout after {ExtractionTimeoutMs / 1000}s");

@@ -200,6 +200,8 @@ public class NazcaComponentPreviewService
             psi.RedirectStandardError = true;
 
             using var process = Process.Start(psi);
+            if (process == null)
+                return NazcaPreviewResult.Fail($"Could not start Python '{_pythonExecutable}'.");
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();

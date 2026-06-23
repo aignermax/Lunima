@@ -74,6 +74,14 @@ public sealed class ProcessLaunchFactory
         {
             var found = _prober.FirstExisting(_prober.WellKnownPythonPaths());
             if (found != null) return found;
+
+            // On Windows the conventional interpreter command is `python`: installers register
+            // python.exe on PATH, whereas a bare `python3` is usually the Microsoft Store
+            // execution-alias stub (or absent). Returning `python` restores the pre-macOS-port
+            // Windows behavior. On Linux the original command falls through to PATH below;
+            // on macOS the well-known probing above already applied.
+            if (OperatingSystem.IsWindows())
+                return PythonBasename;
         }
 
         if (string.Equals(command, DockerBasename, StringComparison.OrdinalIgnoreCase))

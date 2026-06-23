@@ -248,6 +248,19 @@ public class ProcessLaunchFactoryTests : IDisposable
             "ResolveExecutable must not throw for an empty command");
     }
 
+    [Fact]
+    public void ResolveExecutable_BarePython3_OnWindows_FallsBackToPython()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        // On Windows a bare `python3` is typically the Microsoft Store execution-alias stub
+        // (or absent); the conventional command is `python`. When no well-known interpreter is
+        // found, ResolveExecutable must return `python`, not the unchanged `python3`. Regression
+        // guard for the macOS-port change that made well-known probing macOS-only.
+        _factory.ResolveExecutable("python3").ShouldBe("python",
+            "On Windows a bare python3 must resolve to the conventional 'python' command");
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // ProcessLaunchFactory.TryBuild
     // ═══════════════════════════════════════════════════════════════════════════

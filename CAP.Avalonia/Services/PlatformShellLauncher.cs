@@ -79,9 +79,16 @@ public sealed class PlatformShellLauncher : IUrlLauncher
 
         if (OperatingSystem.IsWindows())
         {
-            if (!_launchFactory.TryBuild(ExplorerExe, new[] { SelectFlag + path }, null, null, out var psi, out _))
-                return;
-            Process.Start(psi);
+            // explorer.exe is finicky about /select, tokenization: passed via ArgumentList,
+            // .NET quotes the whole "/select,<path>" token, which explorer mis-parses when the
+            // path contains spaces. The historically-reliable form is a single raw argument
+            // string with only the path quoted: /select,"C:\full path\file".
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = ExplorerExe,
+                Arguments = $"{SelectFlag}\"{path}\"",
+                UseShellExecute = false,
+            });
             return;
         }
 
