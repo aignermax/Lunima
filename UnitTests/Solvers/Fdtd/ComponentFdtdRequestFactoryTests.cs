@@ -1,6 +1,12 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using CAP.Avalonia.Services.Solvers;
+using CAP_Core.Components.Core;
 using CAP_Core.Export;
+using Moq;
 using Shouldly;
+using UnitTests;
 using Xunit;
 
 namespace UnitTests.Solvers.Fdtd;
@@ -74,5 +80,38 @@ public class ComponentFdtdRequestFactoryTests
 
         ports[0].Name.ShouldBe("a0");
         ports[1].Name.ShouldBe("b0");
+    }
+
+    [Fact]
+    public async Task BuildAsync_OnClonedComponent_RendersAgainstOriginalModule_NotDemoFallback()
+    {
+        // Regression for the copy/paste FDTD failure: a pasted (cloned) component used to lose
+        // its NazcaModuleName, so BuildAsync rendered against the "demo" fallback (nazca.demofab)
+        // and failed with "module 'nazca.demofab' has no attribute '<cell>'". The clone must
+        // carry the module so the recompute renders against the real PDK cell.
+        var original = TestComponentFactory.CreateStraightWaveGuide();
+        original.NazcaModuleName = "siepic_ebeam_pdk";
+        original.NazcaFunctionName = "ebeam_crossing4";
+        var clone = (Component)original.Clone();
+
+        string? renderedModule = "<never called>";
+        var preview = new Mock<NazcaComponentPreviewService>(
+            MockBehavior.Loose, "python3", "preview.py", (TimeSpan?)null) { CallBase = false };
+        preview.Setup(s => s.RenderAsync(
+                It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string?, string, string?, CancellationToken>((module, _, _, _) => renderedModule = module)
+            .ReturnsAsync(new NazcaPreviewResult
+            {
+                Success = true,
+                Polygons = new[] { Poly(1) },
+                Pins = new[] { new NazcaPreviewPin { Name = "a0", X = 0, Y = 0, Angle = 0 } },
+            });
+
+        var factory = new ComponentFdtdRequestFactory(preview.Object);
+        var request = await factory.BuildAsync(clone);
+
+        renderedModule.ShouldBe("siepic_ebeam_pdk",
+            "The clone must render against the original PDK module, not the nazca.demofab fallback.");
+        request.ShouldNotBeNull();
     }
 }

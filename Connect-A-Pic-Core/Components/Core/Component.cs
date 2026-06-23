@@ -385,6 +385,10 @@ public class Component : ICloneable
         clonedComponent.RotationDegrees = RotationDegrees;
         clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
         clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
+        // The module is part of the component's geometry identity (it picks the Nazca cell):
+        // without it a copy renders against the wrong module and its geometry-scoped S-matrix
+        // override no longer matches the original.
+        clonedComponent.NazcaModuleName = NazcaModuleName;
         clonedComponent.IsLocked = false;  // Cloned components should always be unlocked
         clonedComponent.HumanReadableName = HumanReadableName;
 

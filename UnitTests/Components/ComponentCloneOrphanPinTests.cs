@@ -107,4 +107,35 @@ public class ComponentCloneOrphanPinTests
         clonedValues[(clonedLeftIn, clonedRightOut)].ShouldBe(overridden,
             "Clone must preserve the overridden S-matrix value on the (re-keyed) pins.");
     }
+
+    [Fact]
+    public void Clone_PreservesNazcaModuleName()
+    {
+        // Root cause of the copy/paste override loss: Clone() copied NazcaFunctionName and
+        // NazcaFunctionParameters but dropped NazcaModuleName. A pasted component then had a
+        // null module, so (1) its geometry key diverged from the original's — the geometry-
+        // scoped S-matrix override no longer matched, and the dialog showed "PDK Default" —
+        // and (2) the FDTD preview render fell back to nazca.demofab and failed with
+        // "module 'nazca.demofab' has no attribute '<cell>'".
+        var parts = new Part[1, 1];
+        parts[0, 0] = new Part(new List<Pin>
+        {
+            new("west0", 0, MatterType.Light, RectSide.Left),
+            new("east0", 1, MatterType.Light, RectSide.Right),
+        });
+        var matrix = new SMatrix(
+            Component.GetAllPins(parts).SelectMany(p => new[] { p.IDInFlow, p.IDOutFlow }).ToList(),
+            new());
+        var component = new Component(
+            new Dictionary<int, SMatrix> { { StandardWaveLengths.RedNM, matrix } },
+            new(), "ebeam_crossing4", "", parts, 0, "Crossing", DiscreteRotation.R0)
+        {
+            NazcaModuleName = "siepic_ebeam_pdk",
+        };
+
+        var clone = (Component)component.Clone();
+
+        clone.NazcaModuleName.ShouldBe("siepic_ebeam_pdk",
+            "Clone must carry the Nazca module so the copy keeps the same geometry identity.");
+    }
 }

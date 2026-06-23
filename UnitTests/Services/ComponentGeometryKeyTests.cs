@@ -52,4 +52,17 @@ public class ComponentGeometryKeyTests
         ComponentGeometryKey.For(Wg("m", "f", "p"), _ => null).ShouldStartWith("geo:");
         ComponentGeometryKey.For(Wg("m", "f", "p"), _ => "x").ShouldStartWith("raw:");
     }
+
+    [Fact]
+    public void ClonedComponent_SharesGeometryKeyWithOriginal()
+    {
+        // The user-facing guarantee behind geometry-scoped overrides: a copy/paste
+        // (Component.Clone) is geometrically identical, so it must map to the SAME key —
+        // otherwise the copy can't inherit the original's recomputed S-matrix override.
+        var original = Wg("siepic_ebeam_pdk", "ebeam_crossing4", "");
+        var clone = (Component)original.Clone();
+
+        ComponentGeometryKey.For(clone, _ => null)
+            .ShouldBe(ComponentGeometryKey.For(original, _ => null));
+    }
 }
