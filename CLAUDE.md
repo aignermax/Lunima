@@ -89,6 +89,8 @@ Lunima ships for **macOS (arm64 + x64), Linux (x64), and Windows (x64) together*
 
 **Before opening a PR that touches launching, paths, formatting, build, or packaging:** would this behave identically on macOS, Linux, and Windows? If you can't run all three, reason about each and note it in the PR.
 
+*Enforced:* `UnitTests/Architecture/CrossPlatformProcessLaunchTests.cs` fails the `🔍 xUnit Tests` check if a `new ProcessStartInfo` or `Process.Start("…")` appears in production code outside the sanctioned launchers. New launching code must use the abstractions, not extend that allowlist.
+
 ---
 
 ## 1. Architecture Rules
