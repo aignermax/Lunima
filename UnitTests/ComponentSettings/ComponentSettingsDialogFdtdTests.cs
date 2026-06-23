@@ -40,7 +40,7 @@ public class ComponentSettingsDialogFdtdTests
     public void CanRecalculate_IsFalse_WithoutFdtdWiring()
     {
         var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
-        vm.Configure("c", "C", new Dictionary<string, ComponentSMatrixData>(),
+        vm.Configure("c", "c", "C", new Dictionary<string, ComponentSMatrixData>(),
             liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
 
         vm.CanRecalculate.ShouldBeFalse();
@@ -60,7 +60,7 @@ public class ComponentSettingsDialogFdtdTests
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
-        vm.Configure("comp", "Comp", store,
+        vm.Configure("comp", "comp", "Comp", store,
             liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
 
         vm.CanRecalculate.ShouldBeTrue();
@@ -86,7 +86,7 @@ public class ComponentSettingsDialogFdtdTests
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
-        vm.Configure("comp", "Comp", store,
+        vm.Configure("comp", "comp", "Comp", store,
             liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
 
         await vm.RecalculateSMatrixCommand.ExecuteAsync(null);
@@ -107,7 +107,7 @@ public class ComponentSettingsDialogFdtdTests
             Mock.Of<IFileDialogService>(),
             fdtdService: service.Object,
             fdtdRequestFactory: FakeFactory());
-        vm.Configure("comp", "Comp", store,
+        vm.Configure("comp", "comp", "Comp", store,
             liveComponent: TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins());
 
         await vm.RecalculateSMatrixCommand.ExecuteAsync(null);

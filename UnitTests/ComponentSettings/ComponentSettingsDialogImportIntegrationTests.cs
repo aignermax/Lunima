@@ -40,7 +40,7 @@ public class ComponentSettingsDialogImportIntegrationTests
             .ReturnsAsync(path);
 
         var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
-        vm.Configure("comp_bdc", "BDC TE 1550", store);
+        vm.Configure("comp_bdc", "comp_bdc", "BDC TE 1550", store);
 
         await vm.LoadFromFileCommand.ExecuteAsync(null);
 
@@ -100,7 +100,7 @@ public class ComponentSettingsDialogImportIntegrationTests
             .ReturnsAsync(path);
 
         var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
-        vm.Configure("comp_bdc", "BDC TE 1550", store);
+        vm.Configure("comp_bdc", "comp_bdc", "BDC TE 1550", store);
         await vm.LoadFromFileCommand.ExecuteAsync(null);
 
         var totalBefore = vm.SMatrixEntries.Count;

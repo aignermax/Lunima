@@ -28,7 +28,8 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
 
     private Dictionary<string, ComponentSMatrixData>? _storedSMatrices;
     private Component? _liveComponent;
-    private string _entityKey = string.Empty;
+    private string _smatrixKey = string.Empty;
+    private Func<string>? _smatrixKeyResolver;
     private string _displayName = string.Empty;
     private Action? _onChanged;
     private bool _isUserGlobalScope;
@@ -125,9 +126,15 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// Configures the dialog for a specific entity (PDK template or canvas instance).
     /// </summary>
     /// <param name="entityKey">
-    /// Key used to store and retrieve S-matrix data in <paramref name="storedSMatrices"/>.
+    /// Per-instance key used for the Nazca raw-code override side
+    /// (<see cref="InstanceNazcaCodeEditorViewModel"/> / <c>storedNazcaOverrides</c>).
     /// For canvas instances this is <c>component.Identifier</c>;
     /// for PDK templates it is <c>"pdkSource::templateName"</c>.
+    /// </param>
+    /// <param name="smatrixKey">
+    /// Key used to store and retrieve S-matrix data in <paramref name="storedSMatrices"/>.
+    /// For canvas instances this is the geometry identity (so a copy inherits a
+    /// recomputed/imported S-matrix); for PDK templates it is <c>"pdkSource::templateName"</c>.
     /// </param>
     /// <param name="displayName">Human-readable name shown in the title bar.</param>
     /// <param name="storedSMatrices">Shared dictionary from <c>FileOperationsViewModel</c>.</param>
@@ -177,8 +184,16 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     /// <param name="templateModuleName">
     /// Original PDK template module name, or null if not set.
     /// </param>
+    /// <param name="smatrixKeyResolver">
+    /// Optional resolver that recomputes <paramref name="smatrixKey"/> from the live
+    /// component's current geometry identity. Invoked when a Nazca geometry override is
+    /// applied or reset (which changes the identity), so the S-matrix entry list stays in
+    /// sync without reopening the dialog. Pass the same expression that produced
+    /// <paramref name="smatrixKey"/>; null disables re-resolution (per-template mode).
+    /// </param>
     public void Configure(
         string entityKey,
+        string smatrixKey,
         string displayName,
         Dictionary<string, ComponentSMatrixData> storedSMatrices,
         Component? liveComponent = null,
@@ -195,9 +210,11 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         string? nazcaTemplateCode = null,
         Func<double, double, IReadOnlyList<string>>? nazcaOverlapCheck = null,
         Action? nazcaDimensionsChanged = null,
-        Action<IReadOnlyList<PhysicalPin>>? nazcaPinsChanged = null)
+        Action<IReadOnlyList<PhysicalPin>>? nazcaPinsChanged = null,
+        Func<string>? smatrixKeyResolver = null)
     {
-        _entityKey = entityKey;
+        _smatrixKey = smatrixKey;
+        _smatrixKeyResolver = smatrixKeyResolver;
         _displayName = displayName;
         _storedSMatrices = storedSMatrices;
         _liveComponent = liveComponent;
@@ -211,7 +228,10 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
             : $"Component Settings: {displayName}";
         StatusText = string.Empty;
 
-        // Only create the Nazca override VM for per-instance mode
+        // Only create the Nazca override VM for per-instance mode.
+        // The Nazca VMs report through OnNazcaGeometryChanged (not the raw onChanged) so the
+        // dialog re-resolves the S-matrix key first: a geometry override changes the component's
+        // geometry identity, hence the key its S-matrix override is stored under.
         if (liveComponent != null && storedNazcaOverrides != null && templateFunctionName != null)
         {
             NazcaOverride = new InstanceNazcaOverrideViewModel(
@@ -221,7 +241,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
                 templateFunctionName,
                 templateFunctionParameters ?? string.Empty,
                 templateModuleName,
-                onChanged);
+                OnNazcaGeometryChanged);
         }
         else
         {
@@ -244,7 +264,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
                 nazcaPreviewService,
                 nazcaOverlapCheck,
                 nazcaDimensionsChanged,
-                onChanged,
+                OnNazcaGeometryChanged,
                 nazcaPinsChanged);
         }
         else
@@ -258,6 +278,19 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
         RefreshEffectiveEntries();
         OnPropertyChanged(nameof(CanRecalculate));
         RecalculateSMatrixCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Invoked when a Nazca geometry override is applied or reset. The override changes the
+    /// component's geometry identity, so its S-matrix override is now keyed differently —
+    /// re-resolve the key and rebuild the entry lists so the dialog reflects the new geometry
+    /// without needing to be closed and reopened. Then notify external observers.
+    /// </summary>
+    private void OnNazcaGeometryChanged()
+    {
+        if (_smatrixKeyResolver != null)
+            _smatrixKey = _smatrixKeyResolver();
+        RefreshEntries(notifyChanged: true);
     }
 
     /// <summary>
@@ -302,7 +335,7 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
                 return; // user cancelled — StatusText already set
 
             var smatrixData = SParameterConverter.ToComponentSMatrixData(resolved);
-            _storedSMatrices[_entityKey] = smatrixData;
+            _storedSMatrices[_smatrixKey] = smatrixData;
 
             ApplyResult? applyResult = null;
             if (_liveComponent != null)
@@ -393,70 +426,18 @@ public partial class ComponentSettingsDialogViewModel : ObservableObject
     [RelayCommand]
     private void DeleteEntry(SMatrixEntryViewModel entry)
     {
-        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
+        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_smatrixKey, out var data))
             return;
 
         data.Wavelengths.Remove(entry.WavelengthKey);
         if (data.Wavelengths.Count == 0)
-            _storedSMatrices.Remove(_entityKey);
+            _storedSMatrices.Remove(_smatrixKey);
 
         if (_liveComponent != null && int.TryParse(entry.WavelengthKey, out int wavelengthNm))
             _liveComponent.WaveLengthToSMatrixMap.Remove(wavelengthNm);
 
         StatusText = $"Removed wavelength {entry.WavelengthKey} nm. Reload design to restore PDK default.";
         RefreshEntries(notifyChanged: true);
-    }
-
-    private void RefreshEntries(bool notifyChanged)
-    {
-        SMatrixEntries.Clear();
-
-        if (_storedSMatrices == null || !_storedSMatrices.TryGetValue(_entityKey, out var data))
-        {
-            HasSMatrices = false;
-            if (notifyChanged)
-            {
-                RefreshEffectiveEntries();
-                _onChanged?.Invoke();
-            }
-            return;
-        }
-
-        foreach (var kvp in data.Wavelengths.OrderBy(k => k.Key))
-            SMatrixEntries.Add(new SMatrixEntryViewModel(kvp.Key, kvp.Value, data.SourceNote));
-
-        HasSMatrices = SMatrixEntries.Count > 0;
-        if (notifyChanged)
-        {
-            RefreshEffectiveEntries();
-            _onChanged?.Invoke();
-        }
-    }
-
-    private void RefreshEffectiveEntries()
-    {
-        EffectiveEntries.Clear();
-        if (_effectiveSMatrices == null || _effectivePins == null)
-        {
-            HasEffectiveEntries = false;
-            return;
-        }
-
-        foreach (var kvp in _effectiveSMatrices.OrderBy(k => k.Key))
-        {
-            // A wavelength is "overridden" iff the active store has an entry
-            // with the same wavelength key — a wavelength present in the
-            // PDK default but not in the override is still PDK-driven.
-            bool isOverridden =
-                _storedSMatrices != null &&
-                _storedSMatrices.TryGetValue(_entityKey, out var data) &&
-                data.Wavelengths.ContainsKey(kvp.Key.ToString(System.Globalization.CultureInfo.InvariantCulture));
-
-            EffectiveEntries.Add(new EffectiveSMatrixEntryViewModel(
-                kvp.Key, kvp.Value, _effectivePins, isOverridden));
-        }
-
-        HasEffectiveEntries = EffectiveEntries.Count > 0;
     }
 
     private ISParameterImporter? FindImporter(string path)

@@ -1,6 +1,7 @@
 using System.Numerics;
 using CAP.Avalonia.Services;
 using CAP_Core;
+using CAP_Core.Components.Core;
 using CAP_DataAccess.Persistence.PIR;
 using Shouldly;
 using UnitTests;
@@ -451,5 +452,54 @@ public class SMatrixOverrideApplicatorTests
 
         console.Entries.Count.ShouldBe(1);
         console.Entries[0].Message.ShouldContain("renamed_or_removed");
+    }
+
+    [Fact]
+    public void ApplyAll_GeometryKeyResolver_AppliesToAllMatchingInstances()
+    {
+        var a = TestComponentFactory.CreateSimpleTwoPortComponent(); a.Identifier = "inst_A";
+        var b = TestComponentFactory.CreateSimpleTwoPortComponent(); b.Identifier = "inst_B";
+        var store = new Dictionary<string, ComponentSMatrixData> { ["geo:v1-shared"] = MakeData("1550", 2) };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { a, b }, store,
+            geometryKeyResolver: _ => "geo:v1-shared");
+
+        result.PerComponent["inst_A"].Applied.ShouldBe(1);
+        result.PerComponent["inst_B"].Applied.ShouldBe(1);
+        result.OrphanKeys.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ApplyAll_GeometryKeyResolver_DifferentGeometryDoesNotInherit()
+    {
+        var a = TestComponentFactory.CreateSimpleTwoPortComponent(); a.Identifier = "inst_A";
+        var b = TestComponentFactory.CreateSimpleTwoPortComponent(); b.Identifier = "inst_B";
+        var store = new Dictionary<string, ComponentSMatrixData> { ["geo:v1-A"] = MakeData("1550", 2) };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { a, b }, store,
+            geometryKeyResolver: c => c.Identifier == "inst_A" ? "geo:v1-A" : "geo:v1-B");
+
+        result.PerComponent.ContainsKey("inst_A").ShouldBeTrue();
+        result.PerComponent.ContainsKey("inst_B").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void CopyScenario_OverrideStoredByGeometry_AppliesToClone()
+    {
+        var a = TestComponentFactory.CreateSimpleTwoPortComponent(); a.Identifier = "A";
+        a.NazcaFunctionName = "ebeam_edge_coupler";
+        var b = TestComponentFactory.CreateSimpleTwoPortComponent(); b.Identifier = "B";
+        b.NazcaFunctionName = "ebeam_edge_coupler";
+
+        string GeoKey(Component c) => CAP.Avalonia.Services.ComponentGeometryKey.For(c, _ => null);
+        var store = new Dictionary<string, ComponentSMatrixData> { [GeoKey(a)] = MakeData("1550", 2) };
+
+        var result = SMatrixOverrideApplicator.ApplyAll(
+            new[] { a, b }, store, geometryKeyResolver: GeoKey);
+
+        result.PerComponent["A"].Applied.ShouldBe(1);
+        result.PerComponent["B"].Applied.ShouldBe(1);
     }
 }
