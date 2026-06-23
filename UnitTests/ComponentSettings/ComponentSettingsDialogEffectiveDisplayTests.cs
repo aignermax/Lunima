@@ -54,7 +54,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
     public void Configure_NoEffectiveData_HidesSection()
     {
         var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
-        vm.Configure("comp_1", "MyComp", new Dictionary<string, ComponentSMatrixData>());
+        vm.Configure("comp_1", "comp_1", "MyComp", new Dictionary<string, ComponentSMatrixData>());
 
         vm.HasEffectiveEntries.ShouldBeFalse();
         vm.EffectiveEntries.Count.ShouldBe(0);
@@ -70,6 +70,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
 
         var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
         vm.Configure(
+            "comp_1",
             "comp_1",
             "MyComp",
             new Dictionary<string, ComponentSMatrixData>(),
@@ -115,6 +116,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
         var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
         vm.Configure(
             "comp_1",
+            "comp_1",
             "MyComp",
             store,
             effectiveSMatrices: effective,
@@ -154,6 +156,7 @@ public class ComponentSettingsDialogEffectiveDisplayTests
 
         var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
         vm.Configure(
+            "comp_1",
             "comp_1",
             "MyComp",
             store,

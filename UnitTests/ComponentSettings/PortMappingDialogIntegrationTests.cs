@@ -68,7 +68,7 @@ public class PortMappingDialogIntegrationTests : IDisposable
         var store = new Dictionary<string, ComponentSMatrixData>();
         // Pin list intentionally matches the imported names — no dialog needed.
         vm.Configure(
-            "comp_1", "MyComp", store,
+            "comp_1", "comp_1", "MyComp", store,
             availablePinNames: new[] { "port 1", "port 2", "port 3" });
 
         await vm.LoadFromFileCommand.ExecuteAsync(null);
@@ -110,7 +110,7 @@ public class PortMappingDialogIntegrationTests : IDisposable
 
         var store = new Dictionary<string, ComponentSMatrixData>();
         vm.Configure(
-            "comp_1", "1×2 Splitter", store,
+            "comp_1", "comp_1", "1×2 Splitter", store,
             availablePinNames: new[] { "in", "out1", "out2" });
 
         await vm.LoadFromFileCommand.ExecuteAsync(null);
@@ -154,7 +154,7 @@ public class PortMappingDialogIntegrationTests : IDisposable
 
         var store = new Dictionary<string, ComponentSMatrixData>();
         vm.Configure(
-            "comp_1", "1×2 Splitter", store,
+            "comp_1", "comp_1", "1×2 Splitter", store,
             availablePinNames: new[] { "in", "out1", "out2" });
 
         await vm.LoadFromFileCommand.ExecuteAsync(null);
@@ -185,7 +185,7 @@ public class PortMappingDialogIntegrationTests : IDisposable
         var store = new Dictionary<string, ComponentSMatrixData>();
         // 2-port pin list against a 3-port file: structurally unmappable.
         vm.Configure(
-            "comp_1", "MyComp", store,
+            "comp_1", "comp_1", "MyComp", store,
             availablePinNames: new[] { "in", "out" });
 
         await vm.LoadFromFileCommand.ExecuteAsync(null);

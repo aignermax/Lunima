@@ -59,6 +59,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
         bool onChangedFired = false;
         vm.Configure(
             entityKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
+            smatrixKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
             displayName: "2x2 MMI Coupler",
             storedSMatrices: userStore.Overrides,
             liveComponent: null,
@@ -89,6 +90,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
 
         vm.Configure(
             entityKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
+            smatrixKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
             displayName: "2x2 MMI Coupler",
             storedSMatrices: userStore.Overrides,
             isUserGlobalScope: true);
@@ -104,6 +106,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
 
         vm.Configure(
             entityKey: "comp_1",
+            smatrixKey: "comp_1",
             displayName: "MyComponent_1",
             storedSMatrices: store,
             isUserGlobalScope: false);
@@ -135,6 +138,7 @@ public class ComponentSettingsDialogUserGlobalScopeTests : IDisposable
         var vm = new ComponentSettingsDialogViewModel(Mock.Of<IFileDialogService>());
         vm.Configure(
             entityKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
+            smatrixKey: "siepic-ebeam-pdk::2x2 MMI Coupler",
             displayName: "2x2 MMI Coupler",
             storedSMatrices: userStore.Overrides,
             onChanged: userStore.Save,

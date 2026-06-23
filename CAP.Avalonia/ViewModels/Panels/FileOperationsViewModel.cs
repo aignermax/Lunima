@@ -169,6 +169,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 addedComponents,
                 StoredSMatrices,
                 templateKeyResolver: ResolveTemplateKey,
+                geometryKeyResolver: ResolveGeometryKey,
                 errorConsole: _errorConsole,
                 keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate);
         }
@@ -308,7 +309,17 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.FormatVersion = CurrentFormatVersion;
             designData.Metadata = BuildMetadataForSave();
             if (StoredSMatrices.Count > 0)
-                designData.SMatrices = new Dictionary<string, ComponentSMatrixData>(StoredSMatrices);
+            {
+                // Drop overrides orphaned by a parameter/geometry change before persisting:
+                // keep only entries still reachable from a placed component (by geometry key
+                // or legacy Identifier) plus template-scoped ("::") user-global entries.
+                var live = _canvas.Components.Select(vm => vm.Component).ToList();
+                var usedGeometryKeys = live.Select(ResolveGeometryKey).ToHashSet();
+                var liveIdentifiers = live.Select(c => c.Identifier).ToHashSet();
+                var swept = Services.SMatrixOverrideGc.Sweep(StoredSMatrices, usedGeometryKeys, liveIdentifiers);
+                if (swept.Count > 0)
+                    designData.SMatrices = swept;
+            }
             if (StoredNazcaOverrides.Count > 0)
                 designData.NazcaOverrides = new Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride>(StoredNazcaOverrides);
             designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
@@ -375,6 +386,17 @@ public partial class FileOperationsViewModel : ObservableObject
         var templateName = FindTemplateName(component);
         return $"{pdkSource}::{templateName}";
     }
+
+    /// <summary>
+    /// Builds the geometry-scoped override-store key for a component, so that an
+    /// override imported under a geometry key (FDTD / S-parameter import) re-applies
+    /// to every placed instance and copy sharing that geometry. Threads the live
+    /// raw-code override (if any) through <see cref="Services.ComponentGeometryKey.For"/>.
+    /// </summary>
+    private string ResolveGeometryKey(Component component) =>
+        CAP.Avalonia.Services.ComponentGeometryKey.For(
+            component,
+            c => StoredNazcaOverrides.TryGetValue(c.Identifier, out var o) ? o.RawCode : null);
 
     /// <summary>
     /// Returns true when the given override-store key (shape
@@ -769,6 +791,7 @@ public partial class FileOperationsViewModel : ObservableObject
                         allComponents,
                         StoredSMatrices,
                         templateKeyResolver: ResolveTemplateKey,
+                        geometryKeyResolver: ResolveGeometryKey,
                         errorConsole: _errorConsole,
                         keyMatchesKnownTemplate: KeyMatchesKnownLibraryTemplate,
                         reportOrphans: true);

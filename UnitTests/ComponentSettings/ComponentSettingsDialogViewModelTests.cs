@@ -44,7 +44,7 @@ public class ComponentSettingsDialogViewModelTests
         var store = MakeStore("comp_1", "1550", "1310");
         var vm = NewVm();
 
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         vm.SMatrixEntries.Count.ShouldBe(2);
         vm.HasSMatrices.ShouldBeTrue();
@@ -57,7 +57,7 @@ public class ComponentSettingsDialogViewModelTests
         var store = MakeStore("comp_1", "1550");
         var vm = NewVm();
 
-        vm.Configure("comp_99", "Unknown", store);
+        vm.Configure("comp_99", "comp_99", "Unknown", store);
 
         vm.SMatrixEntries.Count.ShouldBe(0);
         vm.HasSMatrices.ShouldBeFalse();
@@ -73,7 +73,7 @@ public class ComponentSettingsDialogViewModelTests
         var vm = NewVm();
         int callCount = 0;
 
-        vm.Configure("comp_1", "My Component", store, onChanged: () => callCount++);
+        vm.Configure("comp_1", "comp_1", "My Component", store, onChanged: () => callCount++);
 
         callCount.ShouldBe(0);
     }
@@ -83,7 +83,7 @@ public class ComponentSettingsDialogViewModelTests
     {
         var store = MakeStore("comp_1", "1550", "1310");
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         var entryToDelete = vm.SMatrixEntries.First();
         var deletedKey = entryToDelete.WavelengthKey;
@@ -102,7 +102,7 @@ public class ComponentSettingsDialogViewModelTests
     {
         var store = MakeStore("comp_1", "1550");
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         vm.DeleteEntryCommand.Execute(vm.SMatrixEntries[0]);
 
@@ -124,7 +124,7 @@ public class ComponentSettingsDialogViewModelTests
         liveComponent.WaveLengthToSMatrixMap.ShouldContainKey(1550);
 
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store, liveComponent);
+        vm.Configure("comp_1", "comp_1", "My Component", store, liveComponent);
 
         vm.DeleteEntryCommand.Execute(vm.SMatrixEntries[0]);
 
@@ -136,7 +136,7 @@ public class ComponentSettingsDialogViewModelTests
     {
         var store = MakeStore("comp_1", "1550");
         var vm = NewVm();
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         store["comp_1"].Wavelengths["980"] = new SMatrixWavelengthEntry
         {
@@ -145,7 +145,7 @@ public class ComponentSettingsDialogViewModelTests
             Imag = new List<double> { 0, 0, 0, 0 }
         };
 
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
 
         vm.SMatrixEntries.Count.ShouldBe(2);
     }
@@ -198,6 +198,57 @@ public class ComponentSettingsDialogViewModelTests
     }
 
     [Fact]
+    public async Task NazcaGeometryChange_ReResolvesSmatrixKey_RefreshesEntries()
+    {
+        // The bug: the dialog cached the S-matrix key computed when it opened. Overriding
+        // (or resetting) the Nazca geometry changes the component's geometry identity — and
+        // thus the key the S-matrix override is stored under — but the entry list kept showing
+        // the OLD geometry's entries until the window was closed and reopened. The dialog must
+        // re-resolve the key and rebuild the list when the geometry changes.
+        var liveComponent = TestComponentFactory.CreateSimpleTwoPortComponent();
+        liveComponent.Identifier = "comp_1";
+
+        // The underlying geometry has a stored S-matrix override; the raw-code geometry has none.
+        const string geoKey = "geo-key";
+        const string rawKey = "raw-key";
+        var store = MakeStore(geoKey, "1550");
+
+        // Start with an active raw-code override (so the dialog opens on the raw geometry key).
+        var nazcaOverrides = new Dictionary<string, NazcaCodeOverride>
+        {
+            ["comp_1"] = new NazcaCodeOverride { RawCode = "import nazca as nd\ndef component(): ..." },
+        };
+        // Resolver mirrors ComponentGeometryKey: raw override present ⇒ raw key, else geometry key.
+        string Resolver() =>
+            nazcaOverrides.TryGetValue("comp_1", out var o) && o.RawCode != null ? rawKey : geoKey;
+
+        var vm = NewVm();
+        vm.Configure(
+            entityKey: "comp_1",
+            smatrixKey: Resolver(),
+            displayName: "My Component",
+            storedSMatrices: store,
+            liveComponent: liveComponent,
+            storedNazcaOverrides: nazcaOverrides,
+            templateFunctionName: "ebeam_crossing4",
+            templateFunctionParameters: "",
+            templateModuleName: "siepic_ebeam_pdk",
+            nazcaTemplateCode: "def component(): pass",
+            smatrixKeyResolver: Resolver);
+
+        // On open the raw geometry has no stored S-matrix, so nothing is shown.
+        vm.HasSMatrices.ShouldBeFalse();
+        vm.NazcaCodeEditor.ShouldNotBeNull();
+
+        // Reset to template clears the raw override → geometry identity reverts to the geo key.
+        await vm.NazcaCodeEditor!.ResetToTemplateCommand.ExecuteAsync(null);
+
+        // The dialog must now reflect the geo geometry's stored override without a reopen.
+        vm.HasSMatrices.ShouldBeTrue();
+        vm.SMatrixEntries.Count.ShouldBe(1);
+    }
+
+    [Fact]
     public void LoadFromFile_UserCancels_NoMutationNoCrash()
     {
         // FileDialogService returns null when the user cancels — the command must exit
@@ -208,7 +259,7 @@ public class ComponentSettingsDialogViewModelTests
             .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((string?)null);
         var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
-        vm.Configure("comp_1", "My Component", store);
+        vm.Configure("comp_1", "comp_1", "My Component", store);
         var entryCountBefore = vm.SMatrixEntries.Count;
 
         vm.LoadFromFileCommand.Execute(null);
@@ -230,7 +281,7 @@ public class ComponentSettingsDialogViewModelTests
                 .Setup(s => s.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(tmp);
             var vm = new ComponentSettingsDialogViewModel(fileDialog.Object);
-            vm.Configure("comp_1", "My Component", store);
+            vm.Configure("comp_1", "comp_1", "My Component", store);
 
             vm.LoadFromFileCommand.Execute(null);
 
