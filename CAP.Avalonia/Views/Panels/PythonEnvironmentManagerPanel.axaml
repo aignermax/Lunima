@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             x:Class="CAP.Avalonia.Views.Panels.PythonEnvironmentManagerPanel"
+             x:DataType="vm:MainViewModel">
+
+    <StackPanel>
+        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <TextBlock Text="Python Environment Manager:" Foreground="LightSkyBlue"
+                   Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap">
+            Create isolated Python environments with Nazca pre-installed.
+            The active environment is used for GDS export and preview.
+        </TextBlock>
+
+        <!-- Environments list -->
+        <ListBox ItemsSource="{Binding RightPanel.PythonEnvManager.Environments}"
+                 SelectedItem="{Binding RightPanel.PythonEnvManager.SelectedEnvironment}"
+                 MaxHeight="160" Margin="0,0,0,6" Background="#1e1e1e" BorderBrush="#3d3d3d"
+                 BorderThickness="1">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="4,2">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding Name}" Foreground="LightGray" FontWeight="SemiBold"/>
+                            <Border CornerRadius="3" Padding="4,1" Background="#333333">
+                                <TextBlock Text="{Binding StatusBadge}"
+                                           Foreground="{Binding StatusColor}"
+                                           FontSize="10"/>
+                            </Border>
+                            <TextBlock Text="[Active]" Foreground="Gold" FontSize="10"
+                                       FontWeight="SemiBold"
+                                       IsVisible="{Binding IsActive}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Details}" Foreground="Gray"
+                                   FontSize="10" TextWrapping="Wrap"
+                                   IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Action buttons for selected environment -->
+        <StackPanel IsVisible="{Binding RightPanel.PythonEnvManager.SelectedEnvironment,
+                                        Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+                <Button Content="Set Active"
+                        Command="{Binding RightPanel.PythonEnvManager.SetActiveCommand}"
+                        Width="80" Background="#3d5d3d" FontSize="11"
+                        IsEnabled="{Binding RightPanel.PythonEnvManager.IsBusy,
+                                            Converter={x:Static BoolConverters.Not}}"/>
+                <Button Content="Check Health"
+                        Command="{Binding RightPanel.PythonEnvManager.CheckHealthCommand}"
+                        Width="90" Background="#3d4d5d" FontSize="11"
+                        IsEnabled="{Binding RightPanel.PythonEnvManager.IsBusy,
+                                            Converter={x:Static BoolConverters.Not}}"/>
+                <Button Content="Repair"
+                        Command="{Binding RightPanel.PythonEnvManager.RepairCommand}"
+                        Width="70" Background="#5d4d3d" FontSize="11"
+                        IsEnabled="{Binding RightPanel.PythonEnvManager.IsBusy,
+                                            Converter={x:Static BoolConverters.Not}}"/>
+                <Button Content="Remove"
+                        Command="{Binding RightPanel.PythonEnvManager.RemoveCommand}"
+                        Width="70" Background="#5d3d3d" FontSize="11"
+                        IsEnabled="{Binding RightPanel.PythonEnvManager.IsBusy,
+                                            Converter={x:Static BoolConverters.Not}}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Create new environment -->
+        <Separator Margin="0,6,0,6" Background="#2d2d2d"/>
+        <TextBlock Text="Create New Environment:" Foreground="Gray" FontSize="10"
+                   Margin="0,0,0,4"/>
+        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+            <TextBlock Text="Name:" Foreground="Gray" FontSize="11"
+                       VerticalAlignment="Center" Width="50"/>
+            <TextBox Text="{Binding RightPanel.PythonEnvManager.NewEnvironmentName}"
+                     Width="150" FontSize="11" Watermark="e.g. nazca-env"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+            <TextBlock Text="Python:" Foreground="Gray" FontSize="11"
+                       VerticalAlignment="Center" Width="50"/>
+            <TextBox Text="{Binding RightPanel.PythonEnvManager.PythonVersion}"
+                     Width="80" FontSize="11" Watermark="3.11"/>
+        </StackPanel>
+        <Button Content="Create + Install Nazca"
+                Command="{Binding RightPanel.PythonEnvManager.CreateAndInstallCommand}"
+                Width="160" Background="#3d5d7d" FontSize="11" Margin="0,0,0,6"
+                IsEnabled="{Binding RightPanel.PythonEnvManager.IsBusy,
+                                    Converter={x:Static BoolConverters.Not}}"/>
+
+        <!-- Progress and cancel -->
+        <StackPanel IsVisible="{Binding RightPanel.PythonEnvManager.IsBusy}"
+                    Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding RightPanel.PythonEnvManager.ProgressText}"
+                           Foreground="LightSkyBlue" FontSize="10" TextWrapping="Wrap"/>
+                <Button Content="Cancel"
+                        Command="{Binding RightPanel.PythonEnvManager.CancelCommand}"
+                        FontSize="10" Padding="6,2" Background="#5d3d3d"
+                        IsEnabled="{Binding RightPanel.PythonEnvManager.CanCancel}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Status (idle) -->
+        <TextBlock Text="{Binding RightPanel.PythonEnvManager.ProgressText}"
+                   Foreground="Gray" FontSize="10" TextWrapping="Wrap"
+                   IsVisible="{Binding RightPanel.PythonEnvManager.IsBusy,
+                                       Converter={x:Static BoolConverters.Not}}"
+                   Margin="0,0,0,4"/>
+    </StackPanel>
+
+</UserControl>
