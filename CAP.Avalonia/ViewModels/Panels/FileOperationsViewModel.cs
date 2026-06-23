@@ -15,6 +15,7 @@ using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Export;
 using CAP_Core.Export;
+using CAP_Core.Components.Process;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -45,6 +46,13 @@ public partial class FileOperationsViewModel : ObservableObject
     /// and other user-set fields survive a save-over-reload cycle.
     /// </summary>
     private DesignMetadata? _loadedMetadata;
+
+    /// <summary>
+    /// The PDK this design is locked to (issue #570 — one process per chip).
+    /// Null until the first user-PDK component is placed, or after a new design is started.
+    /// Persisted in the .lun file and migrated from legacy files on load.
+    /// </summary>
+    public string? ActivePdkName { get; private set; }
 
     /// <summary>
     /// Per-component S-matrix overrides loaded from the PIR section of the .lun file,
@@ -324,6 +332,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 designData.NazcaOverrides = new Dictionary<string, CAP_DataAccess.Persistence.PIR.NazcaCodeOverride>(StoredNazcaOverrides);
             designData.ChipWidthMicrometers  = _canvas.ChipMaxX;
             designData.ChipHeightMicrometers = _canvas.ChipMaxY;
+            designData.ActivePdkName = ResolveActivePdkForSave();
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -572,6 +581,62 @@ public partial class FileOperationsViewModel : ObservableObject
         };
     }
 
+    /// <summary>
+    /// Called by <see cref="CAP.Avalonia.ViewModels.Panels.CanvasInteractionViewModel"/> after
+    /// successfully placing a user-PDK component. Locks the design to that PDK on the
+    /// first placement.
+    /// </summary>
+    public void NotifyComponentPlaced(string? pdkSource)
+    {
+        if (!string.IsNullOrWhiteSpace(pdkSource) && string.IsNullOrWhiteSpace(ActivePdkName))
+            ActivePdkName = pdkSource;
+    }
+
+    /// <summary>
+    /// Returns the active PDK name to persist on save.
+    /// Re-computes from placed components so that placing the first user-PDK component
+    /// automatically locks the design on the next save.
+    /// </summary>
+    private string? ResolveActivePdkForSave()
+    {
+        var pdkSources = _canvas.Components
+            .Select(vm => vm.TemplatePdkSource ?? FindTemplatePdkSource(vm.Component));
+        var computed = SinglePdkPolicy.DetermineActivePdk(pdkSources);
+        // Keep the previously stored name if the canvas is empty (e.g., new design).
+        return computed ?? ActivePdkName;
+    }
+
+    /// <summary>
+    /// Restores <see cref="ActivePdkName"/> after loading a file.
+    /// Prefers the value stored in the file; falls back to the dominant PDK
+    /// inferred from loaded components (migration path for legacy files).
+    /// Logs a warning when the file is silent but multiple PDKs are present.
+    /// </summary>
+    private string? RestoreActivePdk(DesignFileData designData)
+    {
+        if (!string.IsNullOrWhiteSpace(designData.ActivePdkName))
+            return designData.ActivePdkName;
+
+        // Legacy file: infer from loaded components.
+        var pdkSources = designData.Components
+            .Select(c => c.PdkSource)
+            .Concat(designData.Groups?.SelectMany(g =>
+                g.ChildComponents.Select(ch => ch.PdkSource)) ?? Enumerable.Empty<string?>());
+
+        var dominant = SinglePdkPolicy.DetermineActivePdk(pdkSources);
+        if (dominant == null) return null;
+
+        var conflicts = SinglePdkPolicy.FindConflictingPdks(pdkSources, dominant);
+        if (conflicts.Count > 0)
+            _errorConsole?.LogWarning(
+                $"Legacy design contains components from multiple PDKs. " +
+                $"Locked to dominant PDK '{dominant}'. " +
+                $"Other PDKs present: {string.Join(", ", conflicts)}. " +
+                "Remove conflicting components or start a new design.");
+
+        return dominant;
+    }
+
     private string FindTemplateName(Component component)
     {
         // Check if the component has a VM on the canvas with a template name
@@ -748,6 +813,10 @@ public partial class FileOperationsViewModel : ObservableObject
                 // Preserve PIR metadata so Created date survives subsequent saves
                 _loadedMetadata = designData.Metadata;
 
+                // Restore or migrate the active chip PDK (issue #570).
+                // Legacy files have no ActivePdkName → infer it from the dominant PDK.
+                ActivePdkName = RestoreActivePdk(designData);
+
                 // Restore imported S-matrices from PIR section
                 StoredSMatrices.Clear();
                 if (designData.SMatrices != null)
@@ -878,6 +947,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
         _currentFilePath = null;
         _loadedMetadata = null;
+        ActivePdkName = null;
         HasUnsavedChanges = false;
         UpdateStatus?.Invoke("New project created");
 

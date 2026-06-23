@@ -221,6 +221,11 @@ public partial class MainViewModel : ObservableObject
             Selection.NazcaOverridePropagator.Propagate(
                 identifierMap, FileOperations.StoredNazcaOverrides);
 
+        // Single-PDK enforcement (issue #570): let the canvas interaction read and update
+        // the active chip PDK from the file-operations layer.
+        CanvasInteraction.GetActivePdkName = () => FileOperations.ActivePdkName;
+        CanvasInteraction.OnComponentPlaced = pdkSource => FileOperations.NotifyComponentPlaced(pdkSource);
+
         // Wire rename from hierarchy panel through undo-aware command manager
         LeftPanel.HierarchyPanel.RenameComponent = (component, newName) =>
         {
@@ -723,6 +728,14 @@ public class DesignFileData
     /// Null for files saved before chip-size support was added (defaults to 5000 μm on load).
     /// </summary>
     public double? ChipHeightMicrometers { get; set; }
+
+    /// <summary>
+    /// The PDK this design is locked to (issue #570 — one process per chip).
+    /// Set on first save after a user-PDK component is placed, or inferred from the
+    /// dominant PDK on load of legacy files that lack this field.
+    /// Null means no user-PDK component has been placed yet; the design is open to any PDK.
+    /// </summary>
+    public string? ActivePdkName { get; set; }
 }
 
 /// <summary>

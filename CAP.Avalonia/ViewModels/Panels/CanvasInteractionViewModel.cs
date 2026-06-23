@@ -8,6 +8,7 @@ using CAP.Avalonia.Commands;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Services;
+using CAP_Core.Components.Process;
 
 namespace CAP.Avalonia.ViewModels.Panels;
 
@@ -89,6 +90,20 @@ public partial class CanvasInteractionViewModel : ObservableObject
     /// Wired by <c>MainViewModel</c> to propagate <c>StoredNazcaOverrides</c>.
     /// </summary>
     public Action<IReadOnlyDictionary<string, string>>? OnComponentsPasted { get; set; }
+
+    /// <summary>
+    /// Returns the active chip PDK name (null = no user-PDK component placed yet).
+    /// Wired by <c>MainViewModel</c> to <c>FileOperationsViewModel.ActivePdkName</c>.
+    /// Used to enforce the single-PDK-per-design rule (issue #570).
+    /// </summary>
+    public Func<string?>? GetActivePdkName { get; set; }
+
+    /// <summary>
+    /// Invoked after a component is successfully placed to allow the host to update
+    /// the active chip PDK. Wired by <c>MainViewModel</c> to
+    /// <c>FileOperationsViewModel.NotifyComponentPlaced</c>.
+    /// </summary>
+    public Action<string?>? OnComponentPlaced { get; set; }
 
     public CanvasInteractionViewModel(
         DesignCanvasViewModel canvas,
@@ -305,6 +320,17 @@ public partial class CanvasInteractionViewModel : ObservableObject
     {
         if (SelectedTemplate == null) return;
 
+        // Single-PDK enforcement (issue #570): block if the template's PDK differs from the
+        // design's active PDK. Built-in components (null PdkSource) are always allowed.
+        var (isAllowed, blockReason) = SinglePdkPolicy.CheckPlacement(
+            GetActivePdkName?.Invoke(),
+            SelectedTemplate.PdkSource);
+        if (!isAllowed)
+        {
+            UpdateStatus?.Invoke(blockReason ?? "PDK mismatch — cannot place component.");
+            return;
+        }
+
         double centeredX = x - SelectedTemplate.WidthMicrometers / 2;
         double centeredY = y - SelectedTemplate.HeightMicrometers / 2;
 
@@ -316,6 +342,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         _commandManager.ExecuteCommand(cmd);
+        OnComponentPlaced?.Invoke(SelectedTemplate.PdkSource);
         UpdateStatus?.Invoke($"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm");
     }
 
