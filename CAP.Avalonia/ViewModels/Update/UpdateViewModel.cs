@@ -37,6 +37,11 @@ public partial class UpdateViewModel : ObservableObject
     [ObservableProperty]
     private bool _updateAvailable;
 
+    /// <summary>
+    /// Headline shown in the update banner, contrasting both versions once each —
+    /// "Update available: v{current} → v{latest}". Avoids the previous redundancy
+    /// where the new version was restated in a second status line.
+    /// </summary>
     [ObservableProperty]
     private string _latestVersionText = "";
 
@@ -93,10 +98,12 @@ public partial class UpdateViewModel : ObservableObject
             // Manual check: always show updates, even if previously skipped
             // (User explicitly wants to check, so honor that intent)
             _availableRelease = release;
-            LatestVersionText = $"New version: v{releaseVersion}";
+            LatestVersionText = $"Update available: v{_currentVersion} → v{releaseVersion}";
             ReleaseNotes = TruncateReleaseNotes(release.Body);
             UpdateAvailable = true;
-            StatusText = $"Update available: v{releaseVersion}";
+            // The headline already states the version transition; keep the live status line
+            // empty here so it isn't a redundant echo (it carries download progress later).
+            StatusText = string.Empty;
         }
         catch (Exception ex)
         {
@@ -221,10 +228,10 @@ public partial class UpdateViewModel : ObservableObject
             if (skipped != null && release.ParsedVersion != null && skipped >= release.ParsedVersion) return;
 
             _availableRelease = release;
-            LatestVersionText = $"New version: v{release.ParsedVersion}";
+            LatestVersionText = $"Update available: v{_currentVersion} → v{release.ParsedVersion}";
             ReleaseNotes = TruncateReleaseNotes(release.Body);
             UpdateAvailable = true;
-            StatusText = $"Update available: v{release.ParsedVersion}";
+            StatusText = string.Empty;
         }
         catch
         {

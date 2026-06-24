@@ -77,6 +77,22 @@ public class UpdateViewModelTests
     }
 
     [Fact]
+    public async Task CheckForUpdates_Available_HeadlineShowsBothVersions_NoRedundantStatusEcho()
+    {
+        // Banner clarity fix: a single headline contrasts current → latest (each version once),
+        // and the live status line is not a redundant restatement of the same version.
+        var vm = CreateViewModel(NewerReleaseJson);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        vm.UpdateAvailable.ShouldBeTrue();
+        vm.LatestVersionText.ShouldStartWith("Update available: v");
+        vm.LatestVersionText.ShouldContain("→");      // both versions, contrasted
+        vm.LatestVersionText.ShouldContain("99.0.0"); // the latest (online) version
+        vm.StatusText.ShouldBeNullOrEmpty();          // no redundant version echo
+    }
+
+    [Fact]
     public async Task CheckForUpdates_CurrentIsLatest_UpdateAvailableIsFalse()
     {
         var vm = CreateViewModel(OlderReleaseJson);
