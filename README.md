@@ -79,7 +79,9 @@ Lunima acts as a **design and integration layer**, allowing information to flow 
 
 Download the latest release from [GitHub Releases](https://github.com/aignermax/Lunima/releases).
 
-Supported platforms: Windows, macOS, Linux
+Supported platforms: Windows, macOS (Apple Silicon & Intel), Linux.
+
+macOS release builds ship as an **unsigned** `.dmg`; on first launch, remove the quarantine flag with `xattr -dr com.apple.quarantine /Applications/Lunima.app`. In-app auto-update is available on Windows; macOS and Linux open the releases page.
 
 ### Building from Source
 

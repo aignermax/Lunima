@@ -19,17 +19,20 @@ public class UpdateDownloader
     }
 
     /// <summary>
-    /// Downloads the MSI from <paramref name="downloadUrl"/> to a temporary file,
+    /// Downloads the installer from <paramref name="downloadUrl"/> to a temporary file,
     /// reporting fractional progress (0.0–1.0) via <paramref name="progress"/>.
+    /// The temporary file extension is derived from the asset filename in <paramref name="downloadUrl"/>.
     /// </summary>
-    /// <returns>Local file path to the downloaded MSI.</returns>
+    /// <returns>Local file path to the downloaded installer.</returns>
     public async Task<string> DownloadMsiAsync(
         string downloadUrl,
         long expectedSize,
         IProgress<double> progress,
         CancellationToken cancellationToken = default)
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), $"Lunima_Update_{Guid.NewGuid():N}.msi");
+        var assetFileName = Path.GetFileName(new Uri(downloadUrl).LocalPath);
+        var extension = DeriveInstallerExtension(assetFileName);
+        var tempPath = Path.Combine(Path.GetTempPath(), $"Lunima_Update_{Guid.NewGuid():N}{extension}");
 
         using var response = await _httpClient.GetAsync(
             downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -57,20 +60,60 @@ public class UpdateDownloader
     }
 
     /// <summary>
-    /// Launches the MSI installer via msiexec (Windows only).
-    /// Does nothing on non-Windows platforms.
+    /// Launches the downloaded installer.
+    /// <list type="bullet">
+    ///   <item><description>Windows — invokes <c>msiexec /i &lt;path&gt;</c> via <see cref="ProcessStartInfo.ArgumentList"/>.</description></item>
+    ///   <item><description>macOS — opens the <c>.dmg</c> or <c>.pkg</c> with <c>open</c> for manual installation.</description></item>
+    ///   <item><description>Other platforms — no-op (caller should redirect to the releases page).</description></item>
+    /// </list>
     /// </summary>
-    /// <param name="msiPath">Full path to the downloaded MSI file.</param>
-    public static void LaunchInstaller(string msiPath)
+    /// <param name="installerPath">Full path to the downloaded installer file.</param>
+    public static void LaunchInstaller(string installerPath)
     {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        Process.Start(new ProcessStartInfo
+        if (OperatingSystem.IsWindows())
         {
-            FileName = "msiexec.exe",
-            Arguments = $"/i \"{msiPath}\"",
-            UseShellExecute = true,
-        });
+            var psi = new ProcessStartInfo
+            {
+                FileName = "msiexec.exe",
+                UseShellExecute = true,
+            };
+            psi.ArgumentList.Add("/i");
+            psi.ArgumentList.Add(installerPath);
+            Process.Start(psi);
+            return;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            // Open the .dmg / .pkg for the user — they complete the install manually.
+            var psi = new ProcessStartInfo
+            {
+                FileName = "open",
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add(installerPath);
+            Process.Start(psi);
+            return;
+        }
+
+        // Linux and other platforms: no automated installer launch — caller should open browser.
+    }
+
+    /// <summary>
+    /// Returns the file extension to use for a downloaded installer asset,
+    /// preserving compound extensions such as <c>.tar.gz</c>.
+    /// Falls back to <c>.msi</c> when the filename cannot be parsed.
+    /// </summary>
+    internal static string DeriveInstallerExtension(string assetFileName)
+    {
+        if (string.IsNullOrEmpty(assetFileName))
+            return ".msi";
+
+        // Preserve compound extension .tar.gz
+        if (assetFileName.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+            return ".tar.gz";
+
+        var ext = Path.GetExtension(assetFileName);
+        return string.IsNullOrEmpty(ext) ? ".msi" : ext;
     }
 }

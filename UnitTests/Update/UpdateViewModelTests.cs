@@ -226,10 +226,22 @@ public class UpdateViewModelTests
     private sealed class FakeUrlLauncher : IUrlLauncher
     {
         public string? LastOpenedUrl { get; private set; }
+        public string? LastOpenedPath { get; private set; }
+        public string? LastRevealedPath { get; private set; }
 
         public void Open(string url)
         {
             LastOpenedUrl = url;
+        }
+
+        public void OpenFileOrDirectory(string path)
+        {
+            LastOpenedPath = path;
+        }
+
+        public void RevealInFileManager(string path)
+        {
+            LastRevealedPath = path;
         }
     }
 
