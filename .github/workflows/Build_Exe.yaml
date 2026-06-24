@@ -329,10 +329,8 @@ jobs:
           # Get commits since last release tag
           if [ -n "$PREV_TAG" ]; then
             COMMITS=$(git log $PREV_TAG..$CURR_TAG --pretty=format:"- %s" --no-merges)
-            COMMIT_COUNT=$(git rev-list --count $PREV_TAG..$CURR_TAG --no-merges)
           else
             COMMITS=$(git log --pretty=format:"- %s" --no-merges | head -20)
-            COMMIT_COUNT=$(git rev-list --count HEAD --no-merges)
           fi
 
           # Categorize commits. This repo uses symbol prefixes — (+) new, (!) breaking,
@@ -372,13 +370,6 @@ jobs:
             CHANGELOG+="### 📝 Other Changes"$'\n'"$OTHER"$'\n\n'
           fi
 
-          # Add commit summary
-          if [ -n "$PREV_TAG" ]; then
-            CHANGELOG+="---"$'\n'"**$COMMIT_COUNT commits** since $PREV_TAG"
-          else
-            CHANGELOG+="---"$'\n'"**$COMMIT_COUNT commits** in this release"
-          fi
-
           # Save to output (use delimiter for multiline)
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
@@ -390,8 +381,6 @@ jobs:
           tag_name: ${{ steps.info.outputs.tag }}
           name: Lunima v${{ steps.info.outputs.version }}
           body: |
-            ## Lunima v${{ steps.info.outputs.version }}
-
             ${{ steps.changelog.outputs.changelog }}
 
             ## 📦 Installation
@@ -401,7 +390,7 @@ jobs:
             2. Run the installer
             3. Desktop shortcut and Start Menu entry will be created automatically
 
-            **Requirements:** .NET 8 Desktop Runtime (x64) - installer will check and prompt if missing
+            **Requirements:** .NET 10 Desktop Runtime (x64) - installer will check and prompt if missing
 
             ### Windows (Portable)
             1. Download `Lunima-${{ steps.info.outputs.version }}-win-x64.zip`
