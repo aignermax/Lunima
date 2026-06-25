@@ -189,10 +189,14 @@ jobs:
     strategy:
       matrix:
         include:
-          # Apple Silicon runner builds the arm64 slice; the macos-13 Intel runner builds x64.
+          # Both slices build on the Apple-Silicon runner. The x64 slice is cross-compiled
+          # via `dotnet publish -r osx-x64` (the bundle script never runs the produced binary,
+          # and hdiutil/.dmg packaging is arch-agnostic). This avoids the macos-13 Intel
+          # runners, which are scarce/deprecated — the x64 job previously queued 24h with no
+          # runner and was auto-cancelled, skipping the release.
           - os: macos-latest
             rid: osx-arm64
-          - os: macos-13
+          - os: macos-latest
             rid: osx-x64
     runs-on: ${{ matrix.os }}
     steps:
