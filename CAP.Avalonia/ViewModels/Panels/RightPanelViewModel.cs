@@ -7,6 +7,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Converters;
 using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
 using CAP.Avalonia.ViewModels.Properties;
 using CAP.Avalonia.Services;
 using System.ComponentModel;
@@ -113,6 +114,11 @@ public partial class RightPanelViewModel : ObservableObject
     /// </summary>
     public TimeDomainViewModel TimeDomain { get; }
 
+    /// <summary>
+    /// ViewModel for the Python Environment Manager panel (create/install/manage Python venvs).
+    /// </summary>
+    public PythonEnvironmentManagerViewModel PythonEnvManager { get; }
+
     private readonly ComponentEditorFactory _editorFactory;
     private readonly DesignCanvasViewModel _canvas;
 
@@ -149,7 +155,8 @@ public partial class RightPanelViewModel : ObservableObject
         AiAssistantViewModel aiAssistant,
         OnaSweepViewModel onaAnalysis,
         ComponentEditorFactory editorFactory,
-        TimeDomainViewModel timeDomain)
+        TimeDomainViewModel timeDomain,
+        PythonEnvironmentManagerViewModel pythonEnvManager)
     {
         _preferencesService = preferencesService;
         _editorFactory = editorFactory;
@@ -168,6 +175,7 @@ public partial class RightPanelViewModel : ObservableObject
         AiAssistant = aiAssistant;
         TimeDomain = timeDomain;
         OnaAnalysis = onaAnalysis;
+        PythonEnvManager = pythonEnvManager;
 
         // Configure ViewModels that need canvas reference
         RoutingDiagnostics.Configure(canvas);

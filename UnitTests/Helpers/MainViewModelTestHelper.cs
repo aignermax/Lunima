@@ -16,6 +16,8 @@ using CAP.Avalonia.ViewModels.Properties.Editors;
 using CAP.Avalonia.ViewModels.Update;
 using CAP.Avalonia.ViewModels.AI;
 using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager;
+using CAP_Core.Export.PythonEnvironmentManager;
 using CAP.Avalonia.ViewModels.PdkOffset;
 using CAP_Core.Components.Creation;
 using CAP_Core.Export;
@@ -147,7 +149,12 @@ public static class MainViewModelTestHelper
             {
                 new GenericComponentEditorProvider()
             }),
-            new TimeDomainViewModel());
+            new TimeDomainViewModel(),
+            new PythonEnvironmentManagerViewModel(
+                new PythonEnvironmentRegistry(),
+                new UvBootstrapper(),
+                new NazcaPackageInstaller(),
+                new EnvironmentHealthChecker(new PythonDiscoveryService())));
     }
 
     /// <summary>
