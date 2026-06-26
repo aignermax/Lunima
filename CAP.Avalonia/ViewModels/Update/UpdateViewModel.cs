@@ -116,8 +116,9 @@ public partial class UpdateViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Downloads the MSI from the available release and launches the installer,
-    /// then shuts down the application.
+    /// Downloads the platform installer from the available release. On Windows it runs the MSI
+    /// and shuts the app down so the installer can replace it; on macOS/Linux it opens the
+    /// downloaded installer for the user to complete the install and leaves the app running.
     /// </summary>
     [RelayCommand]
     private async Task InstallUpdate()
@@ -158,10 +159,23 @@ public partial class UpdateViewModel : ObservableObject
             var installerPath = await _downloader.DownloadMsiAsync(
                 installerAsset.BrowserDownloadUrl, installerAsset.Size, progress);
 
-            StatusText = "Download complete. Launching installer...";
-            UpdateDownloader.LaunchInstaller(installerPath);
-
-            ShutdownApplication();
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows: run the MSI, which needs the running app to close so it can replace it.
+                StatusText = "Download complete. Launching installer...";
+                UpdateDownloader.LaunchInstaller(installerPath);
+                ShutdownApplication();
+            }
+            else
+            {
+                // macOS/Linux: open the .dmg/.tar.gz via the PATH-safe launcher and leave the app
+                // running — the user completes the install manually. Auto-quitting here (and the
+                // bare `open` that has no shell PATH under a Finder/Dock launch) is what made the
+                // previous flow read as a crash (#610).
+                _urlLauncher.OpenFileOrDirectory(installerPath);
+                StatusText = "Update downloaded — opening the installer. "
+                    + "Quit Lunima, then drag the new version into your Applications folder.";
+            }
         }
         catch (Exception ex)
         {
