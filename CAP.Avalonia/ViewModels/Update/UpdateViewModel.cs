@@ -124,10 +124,12 @@ public partial class UpdateViewModel : ObservableObject
     {
         if (_availableRelease == null || IsDownloading) return;
 
-        var msiAsset = UpdateChecker.FindMsiAsset(_availableRelease);
-        if (msiAsset == null)
+        // Platform-aware: .dmg on macOS, .msi on Windows, .tar.gz on Linux.
+        // (FindMsiAsset is platform-blind and would hand macOS the Windows .msi — see #610.)
+        var installerAsset = UpdateChecker.FindPlatformAsset(_availableRelease);
+        if (installerAsset == null)
         {
-            // No MSI found - open GitHub releases page in browser
+            // No installer for this platform - open GitHub releases page in browser
             StatusText = "Opening GitHub releases page in browser...";
             try
             {
@@ -153,11 +155,11 @@ public partial class UpdateViewModel : ObservableObject
                 StatusText = $"Downloading... {p:P0}";
             });
 
-            var msiPath = await _downloader.DownloadMsiAsync(
-                msiAsset.BrowserDownloadUrl, msiAsset.Size, progress);
+            var installerPath = await _downloader.DownloadMsiAsync(
+                installerAsset.BrowserDownloadUrl, installerAsset.Size, progress);
 
             StatusText = "Download complete. Launching installer...";
-            UpdateDownloader.LaunchInstaller(msiPath);
+            UpdateDownloader.LaunchInstaller(installerPath);
 
             ShutdownApplication();
         }
