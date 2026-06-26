@@ -173,8 +173,11 @@ public partial class UpdateViewModel : ObservableObject
                 // bare `open` that has no shell PATH under a Finder/Dock launch) is what made the
                 // previous flow read as a crash (#610).
                 _urlLauncher.OpenFileOrDirectory(installerPath);
-                StatusText = "Update downloaded — opening the installer. "
-                    + "Quit Lunima, then drag the new version into your Applications folder.";
+                // Builds are unsigned (no Apple Developer ID yet), so first launch trips Gatekeeper.
+                // Guide the user through the right-click → Open bypass rather than leaving them at the wall.
+                StatusText = "Update downloaded — the installer is opening. Quit Lunima and drag the new "
+                    + "version into Applications. It's unsigned, so on first launch right-click it and "
+                    + "choose Open to get past macOS's \"developer cannot be verified\" warning.";
             }
         }
         catch (Exception ex)
