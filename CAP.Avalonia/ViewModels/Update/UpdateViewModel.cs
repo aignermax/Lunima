@@ -116,18 +116,21 @@ public partial class UpdateViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Downloads the MSI from the available release and launches the installer,
-    /// then shuts down the application.
+    /// Downloads the platform installer from the available release. On Windows it runs the MSI
+    /// and shuts the app down so the installer can replace it; on macOS/Linux it opens the
+    /// downloaded installer for the user to complete the install and leaves the app running.
     /// </summary>
     [RelayCommand]
     private async Task InstallUpdate()
     {
         if (_availableRelease == null || IsDownloading) return;
 
-        var msiAsset = UpdateChecker.FindMsiAsset(_availableRelease);
-        if (msiAsset == null)
+        // Platform-aware: .dmg on macOS, .msi on Windows, .tar.gz on Linux.
+        // (FindMsiAsset is platform-blind and would hand macOS the Windows .msi — see #610.)
+        var installerAsset = UpdateChecker.FindPlatformAsset(_availableRelease);
+        if (installerAsset == null)
         {
-            // No MSI found - open GitHub releases page in browser
+            // No installer for this platform - open GitHub releases page in browser
             StatusText = "Opening GitHub releases page in browser...";
             try
             {
@@ -153,13 +156,29 @@ public partial class UpdateViewModel : ObservableObject
                 StatusText = $"Downloading... {p:P0}";
             });
 
-            var msiPath = await _downloader.DownloadMsiAsync(
-                msiAsset.BrowserDownloadUrl, msiAsset.Size, progress);
+            var installerPath = await _downloader.DownloadMsiAsync(
+                installerAsset.BrowserDownloadUrl, installerAsset.Size, progress);
 
-            StatusText = "Download complete. Launching installer...";
-            UpdateDownloader.LaunchInstaller(msiPath);
-
-            ShutdownApplication();
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows: run the MSI, which needs the running app to close so it can replace it.
+                StatusText = "Download complete. Launching installer...";
+                UpdateDownloader.LaunchInstaller(installerPath);
+                ShutdownApplication();
+            }
+            else
+            {
+                // macOS/Linux: open the .dmg/.tar.gz via the PATH-safe launcher and leave the app
+                // running — the user completes the install manually. Auto-quitting here (and the
+                // bare `open` that has no shell PATH under a Finder/Dock launch) is what made the
+                // previous flow read as a crash (#610).
+                _urlLauncher.OpenFileOrDirectory(installerPath);
+                // Builds are unsigned (no Apple Developer ID yet), so first launch trips Gatekeeper.
+                // Guide the user through the right-click → Open bypass rather than leaving them at the wall.
+                StatusText = "Update downloaded — the installer is opening. Quit Lunima and drag the new "
+                    + "version into Applications. It's unsigned, so on first launch right-click it and "
+                    + "choose Open to get past macOS's \"developer cannot be verified\" warning.";
+            }
         }
         catch (Exception ex)
         {

@@ -239,6 +239,78 @@ public class UpdateViewModelTests
         urlLauncher.LastOpenedUrl.ShouldBe("https://github.com/aignermax/Lunima/releases/tag/v99.0.0");
     }
 
+    [Fact]
+    public async Task InstallUpdate_OnMacOrLinux_OpensDownloadedInstallerViaLauncher()
+    {
+        // #610: on macOS/Linux the update downloads the platform installer (.dmg/.tar.gz) and
+        // opens it through the PATH-safe launcher — it must not fall back to the browser, and
+        // (unlike Windows) it must not auto-quit the app.
+        if (OperatingSystem.IsWindows()) return; // the Windows branch runs msiexec; not exercised on the Linux CI runner
+
+        var urlLauncher = new FakeUrlLauncher();
+        var vm = CreateViewModelForDownload(MultiPlatformReleaseJson, urlLauncher);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        vm.UpdateAvailable.ShouldBeTrue();
+
+        await vm.InstallUpdateCommand.ExecuteAsync(null);
+
+        urlLauncher.LastOpenedPath.ShouldNotBeNull();   // installer opened via the launcher
+        urlLauncher.LastOpenedUrl.ShouldBeNull();       // not the browser fallback
+        var expectedExtension = OperatingSystem.IsMacOS() ? ".dmg" : ".tar.gz";
+        urlLauncher.LastOpenedPath!.EndsWith(expectedExtension).ShouldBeTrue();
+
+        if (File.Exists(urlLauncher.LastOpenedPath!))
+            File.Delete(urlLauncher.LastOpenedPath!);
+    }
+
+    private const string MultiPlatformReleaseJson = """
+        {
+          "tag_name": "v99.0.0",
+          "name": "Version 99.0.0",
+          "body": "Major update.",
+          "prerelease": false,
+          "published_at": "2099-01-01T00:00:00Z",
+          "assets": [
+            { "name": "Lunima-99.0.0-osx-arm64.dmg", "browser_download_url": "https://example.com/Lunima-99.0.0-osx-arm64.dmg", "size": 4, "content_type": "application/octet-stream" },
+            { "name": "Lunima-99.0.0-linux-x64.tar.gz", "browser_download_url": "https://example.com/Lunima-99.0.0-linux-x64.tar.gz", "size": 4, "content_type": "application/gzip" },
+            { "name": "Lunima-Setup-99.0.0.msi", "browser_download_url": "https://example.com/Lunima-Setup-99.0.0.msi", "size": 4, "content_type": "application/x-msi" }
+          ]
+        }
+        """;
+
+    private static UpdateViewModel CreateViewModelForDownload(string releaseJson, IUrlLauncher urlLauncher)
+    {
+        var httpClient = new HttpClient(new ReleaseThenBinaryHandler(releaseJson));
+        return new UpdateViewModel(
+            new UpdateChecker(httpClient, "owner", "repo"),
+            new UpdateDownloader(httpClient),
+            new UserPreferencesService(Path.GetTempFileName()),
+            urlLauncher);
+    }
+
+    /// <summary>Returns the release JSON for the GitHub API call and a few bytes for any other
+    /// (asset download) URL, with a fresh response each call so the download stream is readable.</summary>
+    private sealed class ReleaseThenBinaryHandler : HttpMessageHandler
+    {
+        private readonly string _releaseJson;
+
+        public ReleaseThenBinaryHandler(string releaseJson) => _releaseJson = releaseJson;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var isApi = request.RequestUri!.Host.Contains("api.github.com");
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = isApi
+                    ? new StringContent(_releaseJson)
+                    : new ByteArrayContent(new byte[] { 1, 2, 3, 4 }),
+            };
+            return Task.FromResult(response);
+        }
+    }
+
     private sealed class FakeUrlLauncher : IUrlLauncher
     {
         public string? LastOpenedUrl { get; private set; }

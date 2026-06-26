@@ -97,6 +97,51 @@ public class UpdateCheckerTests
         UpdateChecker.FindMsiAsset(release).ShouldBeNull();
     }
 
+    [Fact]
+    public void FindPlatformAsset_MultiPlatformRelease_PicksCurrentOsInstaller()
+    {
+        var release = ReleaseWithAllPlatformAssets();
+
+        var asset = UpdateChecker.FindPlatformAsset(release);
+
+        asset.ShouldNotBeNull();
+        if (OperatingSystem.IsWindows())
+            asset!.Name.EndsWith(".msi").ShouldBeTrue();
+        else if (OperatingSystem.IsMacOS())
+            asset!.Name.EndsWith(".dmg").ShouldBeTrue();
+        else
+            asset!.Name.EndsWith(".tar.gz").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void FindPlatformAsset_OnNonWindows_NeverReturnsTheWindowsMsi()
+    {
+        // Regression for #610: on macOS/Linux the updater used the platform-blind
+        // FindMsiAsset, which matched the Windows .msi shipped alongside the .dmg/.tar.gz.
+        // It downloaded that .msi, handed it to the OS (which cannot install it), and quit
+        // the app — presenting as a crash with the update never applied.
+        if (OperatingSystem.IsWindows()) return;
+
+        var asset = UpdateChecker.FindPlatformAsset(ReleaseWithAllPlatformAssets());
+
+        asset.ShouldNotBeNull();
+        asset!.Name.EndsWith(".msi").ShouldBeFalse();
+    }
+
+    /// <summary>Mirrors a real Lunima release: a Windows .msi, a Windows portable .zip,
+    /// a macOS .dmg, and a Linux .tar.gz, all present at once.</summary>
+    private static GitHubReleaseInfo ReleaseWithAllPlatformAssets() => new()
+    {
+        TagName = "v0.9.0",
+        Assets = new List<GitHubReleaseAsset>
+        {
+            new() { Name = "Lunima-0.9.0-linux-x64.tar.gz", BrowserDownloadUrl = "https://example.com/Lunima-0.9.0-linux-x64.tar.gz" },
+            new() { Name = "Lunima-0.9.0-osx-arm64.dmg",    BrowserDownloadUrl = "https://example.com/Lunima-0.9.0-osx-arm64.dmg" },
+            new() { Name = "Lunima-0.9.0-win-x64.zip",      BrowserDownloadUrl = "https://example.com/Lunima-0.9.0-win-x64.zip" },
+            new() { Name = "Lunima-Setup-0.9.0.msi",        BrowserDownloadUrl = "https://example.com/Lunima-Setup-0.9.0.msi" },
+        }
+    };
+
     [Theory]
     [InlineData("v1.5.0", "1.4.0", true)]   // release newer
     [InlineData("v1.5.0", "1.5.0", false)]  // same version

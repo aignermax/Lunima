@@ -60,43 +60,26 @@ public class UpdateDownloader
     }
 
     /// <summary>
-    /// Launches the downloaded installer.
-    /// <list type="bullet">
-    ///   <item><description>Windows — invokes <c>msiexec /i &lt;path&gt;</c> via <see cref="ProcessStartInfo.ArgumentList"/>.</description></item>
-    ///   <item><description>macOS — opens the <c>.dmg</c> or <c>.pkg</c> with <c>open</c> for manual installation.</description></item>
-    ///   <item><description>Other platforms — no-op (caller should redirect to the releases page).</description></item>
-    /// </list>
+    /// Runs the downloaded Windows MSI via <c>msiexec /i &lt;path&gt;</c>. The caller shuts the
+    /// application down afterwards so the installer can replace the running files.
+    /// No-op on non-Windows platforms — macOS/Linux open the downloaded installer through
+    /// <see cref="IUrlLauncher"/>, which resolves the launch command even on a PATH-less
+    /// Finder/Dock launch.
     /// </summary>
-    /// <param name="installerPath">Full path to the downloaded installer file.</param>
+    /// <param name="installerPath">Full path to the downloaded MSI.</param>
     public static void LaunchInstaller(string installerPath)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "msiexec.exe",
-                UseShellExecute = true,
-            };
-            psi.ArgumentList.Add("/i");
-            psi.ArgumentList.Add(installerPath);
-            Process.Start(psi);
+        if (!OperatingSystem.IsWindows())
             return;
-        }
 
-        if (OperatingSystem.IsMacOS())
+        var psi = new ProcessStartInfo
         {
-            // Open the .dmg / .pkg for the user — they complete the install manually.
-            var psi = new ProcessStartInfo
-            {
-                FileName = "open",
-                UseShellExecute = false,
-            };
-            psi.ArgumentList.Add(installerPath);
-            Process.Start(psi);
-            return;
-        }
-
-        // Linux and other platforms: no automated installer launch — caller should open browser.
+            FileName = "msiexec.exe",
+            UseShellExecute = true,
+        };
+        psi.ArgumentList.Add("/i");
+        psi.ArgumentList.Add(installerPath);
+        Process.Start(psi);
     }
 
     /// <summary>
