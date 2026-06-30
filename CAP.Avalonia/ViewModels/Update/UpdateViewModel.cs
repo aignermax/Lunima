@@ -116,18 +116,19 @@ public partial class UpdateViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Downloads the MSI from the available release and launches the installer,
-    /// then shuts down the application.
+    /// Downloads the platform-appropriate installer from the available release and opens it,
+    /// then shuts down the application on Windows (where msiexec replaces the running binary).
+    /// On macOS and Linux the app stays open so the user can complete the manual install step.
     /// </summary>
     [RelayCommand]
     private async Task InstallUpdate()
     {
         if (_availableRelease == null || IsDownloading) return;
 
-        var msiAsset = UpdateChecker.FindMsiAsset(_availableRelease);
-        if (msiAsset == null)
+        var platformAsset = UpdateChecker.FindPlatformAsset(_availableRelease);
+        if (platformAsset == null)
         {
-            // No MSI found - open GitHub releases page in browser
+            // No platform installer found — open GitHub releases page in browser
             StatusText = "Opening GitHub releases page in browser...";
             try
             {
@@ -153,13 +154,17 @@ public partial class UpdateViewModel : ObservableObject
                 StatusText = $"Downloading... {p:P0}";
             });
 
-            var msiPath = await _downloader.DownloadMsiAsync(
-                msiAsset.BrowserDownloadUrl, msiAsset.Size, progress);
+            var installerPath = await _downloader.DownloadInstallerAsync(
+                platformAsset.BrowserDownloadUrl, platformAsset.Size, progress);
 
-            StatusText = "Download complete. Launching installer...";
-            UpdateDownloader.LaunchInstaller(msiPath);
+            StatusText = "Download complete. Opening installer...";
+            _urlLauncher.OpenFileOrDirectory(installerPath);
 
-            ShutdownApplication();
+            // On Windows the MSI installer replaces the running app; quit cleanly first.
+            // On macOS the user mounts the .dmg and drags to Applications — keep the app running.
+            // On Linux the user extracts the archive manually — keep the app running.
+            if (OperatingSystem.IsWindows())
+                ShutdownApplication();
         }
         catch (Exception ex)
         {

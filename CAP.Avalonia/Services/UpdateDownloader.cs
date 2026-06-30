@@ -1,11 +1,10 @@
-using System.Diagnostics;
 using System.Net.Http;
 using CAP_Core.Update;
 
 namespace CAP.Avalonia.Services;
 
 /// <summary>
-/// Downloads an MSI installer from a GitHub release asset URL with progress reporting.
+/// Downloads a platform-appropriate installer from a GitHub release asset URL with progress reporting.
 /// </summary>
 public class UpdateDownloader
 {
@@ -24,7 +23,7 @@ public class UpdateDownloader
     /// The temporary file extension is derived from the asset filename in <paramref name="downloadUrl"/>.
     /// </summary>
     /// <returns>Local file path to the downloaded installer.</returns>
-    public async Task<string> DownloadMsiAsync(
+    public async Task<string> DownloadInstallerAsync(
         string downloadUrl,
         long expectedSize,
         IProgress<double> progress,
@@ -57,46 +56,6 @@ public class UpdateDownloader
         }
 
         return tempPath;
-    }
-
-    /// <summary>
-    /// Launches the downloaded installer.
-    /// <list type="bullet">
-    ///   <item><description>Windows — invokes <c>msiexec /i &lt;path&gt;</c> via <see cref="ProcessStartInfo.ArgumentList"/>.</description></item>
-    ///   <item><description>macOS — opens the <c>.dmg</c> or <c>.pkg</c> with <c>open</c> for manual installation.</description></item>
-    ///   <item><description>Other platforms — no-op (caller should redirect to the releases page).</description></item>
-    /// </list>
-    /// </summary>
-    /// <param name="installerPath">Full path to the downloaded installer file.</param>
-    public static void LaunchInstaller(string installerPath)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "msiexec.exe",
-                UseShellExecute = true,
-            };
-            psi.ArgumentList.Add("/i");
-            psi.ArgumentList.Add(installerPath);
-            Process.Start(psi);
-            return;
-        }
-
-        if (OperatingSystem.IsMacOS())
-        {
-            // Open the .dmg / .pkg for the user — they complete the install manually.
-            var psi = new ProcessStartInfo
-            {
-                FileName = "open",
-                UseShellExecute = false,
-            };
-            psi.ArgumentList.Add(installerPath);
-            Process.Start(psi);
-            return;
-        }
-
-        // Linux and other platforms: no automated installer launch — caller should open browser.
     }
 
     /// <summary>
