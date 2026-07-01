@@ -2,10 +2,9 @@
 
 **AI-collaborative photonic design system**
 
-<img width="1860" height="1012" alt="grafik" src="https://github.com/user-attachments/assets/f34e4299-afa4-4da0-bf9f-52a0d1912f2e" />
+<img width="1983" height="886" alt="grafik" src="https://github.com/user-attachments/assets/1ea25db5-7d03-44fc-aac2-8cf3c876efb2" />
 
 <img width="1861" height="835" alt="grafik" src="https://github.com/user-attachments/assets/855e2fea-7b1a-4f57-a8b7-f6e55e81fb06" />
-
 
 > Lunima is a photonic design environment for fast, physically grounded circuit exploration and system-level thinking.
 
@@ -71,6 +70,9 @@ Lunima acts as a **design and integration layer**, allowing information to flow 
 - **Nazca Export** — Export designs to Python/Nazca for fabrication pipelines
 - **AI Assistant** — Natural language circuit design with Claude integration
 - **Cross-Platform UI** — Avalonia-based (Desktop, WebAssembly planned)
+
+You can now even recalculate the S-matrices using the integrated MEEP FDTD Solver (install docker first)
+<img width="574" height="800" alt="grafik" src="https://github.com/user-attachments/assets/9b276b4d-acc7-4fc5-887d-97542504bf12" />
 
 ---
 
