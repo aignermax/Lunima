@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CAP_Core.Export;
 
 namespace CAP.Avalonia.Services.Update;
 
@@ -9,6 +10,17 @@ namespace CAP.Avalonia.Services.Update;
 /// </summary>
 public class WindowsMsiInstaller : IInstaller
 {
+    private readonly ProcessLaunchFactory _launchFactory;
+
+    /// <summary>Initializes the installer with the shared process-launch factory.</summary>
+    /// <param name="launchFactory">Factory used to build cross-platform <see cref="ProcessStartInfo"/> instances.</param>
+    public WindowsMsiInstaller(ProcessLaunchFactory launchFactory)
+    {
+        _launchFactory = launchFactory ?? throw new ArgumentNullException(nameof(launchFactory));
+    }
+
+    /// <summary>Initializes the installer using a default <see cref="ProcessLaunchFactory"/>.</summary>
+    public WindowsMsiInstaller() : this(ProcessLaunchFactory.CreateDefault()) { }
     /// <summary>
     /// Returns the directory that contains the currently running <c>Lunima.exe</c>.
     /// </summary>
@@ -47,13 +59,10 @@ public class WindowsMsiInstaller : IInstaller
         await File.WriteAllTextAsync(scriptPath, script, cancellationToken);
 
         // Launch PowerShell detached so it survives this process exiting
-        Process.Start(new ProcessStartInfo
-        {
-            FileName         = "powershell.exe",
-            ArgumentList     = { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath },
-            UseShellExecute  = false,
-            CreateNoWindow   = true,
-        });
+        if (_launchFactory.TryBuild("powershell.exe",
+                new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath },
+                null, null, out var psInfo, out _))
+            Process.Start(psInfo);
     }
 
     /// <summary>

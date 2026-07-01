@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CAP_Core.Export;
 
 namespace CAP.Avalonia.Services.Update;
 
@@ -8,6 +9,17 @@ namespace CAP.Avalonia.Services.Update;
 /// </summary>
 public class LinuxTarballInstaller : IInstaller
 {
+    private readonly ProcessLaunchFactory _launchFactory;
+
+    /// <summary>Initializes the installer with the shared process-launch factory.</summary>
+    /// <param name="launchFactory">Factory used to build cross-platform <see cref="ProcessStartInfo"/> instances.</param>
+    public LinuxTarballInstaller(ProcessLaunchFactory launchFactory)
+    {
+        _launchFactory = launchFactory ?? throw new ArgumentNullException(nameof(launchFactory));
+    }
+
+    /// <summary>Initializes the installer using a default <see cref="ProcessLaunchFactory"/>.</summary>
+    public LinuxTarballInstaller() : this(ProcessLaunchFactory.CreateDefault()) { }
     /// <summary>
     /// Returns the directory that contains the currently running <c>Lunima</c> executable.
     /// </summary>
@@ -55,21 +67,11 @@ public class LinuxTarballInstaller : IInstaller
         var script = BuildHelperScript(installDir, backupDir, downloadedPath, relaunchExe);
         await File.WriteAllTextAsync(scriptPath, script, cancellationToken);
 
-        Process.Start(new ProcessStartInfo
-        {
-            FileName         = "chmod",
-            ArgumentList     = { "+x", scriptPath },
-            UseShellExecute  = false,
-            CreateNoWindow   = true,
-        })?.WaitForExit();
+        if (_launchFactory.TryBuild("chmod", new[] { "+x", scriptPath }, null, null, out var chmodInfo, out _))
+            Process.Start(chmodInfo)?.WaitForExit();
 
-        Process.Start(new ProcessStartInfo
-        {
-            FileName         = "/bin/bash",
-            ArgumentList     = { scriptPath },
-            UseShellExecute  = false,
-            CreateNoWindow   = true,
-        });
+        if (_launchFactory.TryBuild("/bin/bash", new[] { scriptPath }, null, null, out var bashInfo, out _))
+            Process.Start(bashInfo);
     }
 
     /// <summary>

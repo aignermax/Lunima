@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CAP_Core.Export;
 
 namespace CAP.Avalonia.Services.Update;
 
@@ -14,6 +15,17 @@ namespace CAP.Avalonia.Services.Update;
 /// </remarks>
 public class MacOsBundleInstaller : IInstaller
 {
+    private readonly ProcessLaunchFactory _launchFactory;
+
+    /// <summary>Initializes the installer with the shared process-launch factory.</summary>
+    /// <param name="launchFactory">Factory used to build cross-platform <see cref="ProcessStartInfo"/> instances.</param>
+    public MacOsBundleInstaller(ProcessLaunchFactory launchFactory)
+    {
+        _launchFactory = launchFactory ?? throw new ArgumentNullException(nameof(launchFactory));
+    }
+
+    /// <summary>Initializes the installer using a default <see cref="ProcessLaunchFactory"/>.</summary>
+    public MacOsBundleInstaller() : this(ProcessLaunchFactory.CreateDefault()) { }
     /// <summary>
     /// Returns the <c>.app</c> bundle directory that contains the currently running process.
     /// Walks up from <c>Contents/MacOS/</c> to find the three-level parent ending in <c>.app</c>.
@@ -69,21 +81,11 @@ public class MacOsBundleInstaller : IInstaller
         await File.WriteAllTextAsync(scriptPath, script, cancellationToken);
 
         // Make the script executable and detach it from this process
-        Process.Start(new ProcessStartInfo
-        {
-            FileName         = "chmod",
-            ArgumentList     = { "+x", scriptPath },
-            UseShellExecute  = false,
-            CreateNoWindow   = true,
-        })?.WaitForExit();
+        if (_launchFactory.TryBuild("chmod", new[] { "+x", scriptPath }, null, null, out var chmodInfo, out _))
+            Process.Start(chmodInfo)?.WaitForExit();
 
-        Process.Start(new ProcessStartInfo
-        {
-            FileName         = "/bin/bash",
-            ArgumentList     = { scriptPath },
-            UseShellExecute  = false,
-            CreateNoWindow   = true,
-        });
+        if (_launchFactory.TryBuild("/bin/bash", new[] { scriptPath }, null, null, out var bashInfo, out _))
+            Process.Start(bashInfo);
     }
 
     /// <summary>

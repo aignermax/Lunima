@@ -1,3 +1,5 @@
+using CAP_Core.Export;
+
 namespace CAP.Avalonia.Services.Update;
 
 /// <summary>
@@ -13,14 +15,20 @@ public static class InstallerFactory
     ///   <item><description>Linux → <see cref="LinuxTarballInstaller"/></description></item>
     /// </list>
     /// </summary>
-    public static IInstaller Create()
+    /// <param name="launchFactory">
+    /// Process-launch factory for cross-platform executable resolution; pass <c>null</c> to use
+    /// <see cref="ProcessLaunchFactory.CreateDefault"/>.
+    /// </param>
+    public static IInstaller Create(ProcessLaunchFactory? launchFactory = null)
     {
+        var factory = launchFactory ?? ProcessLaunchFactory.CreateDefault();
+
         if (OperatingSystem.IsMacOS())
-            return new MacOsBundleInstaller();
+            return new MacOsBundleInstaller(factory);
 
         if (OperatingSystem.IsWindows())
-            return new WindowsMsiInstaller();
+            return new WindowsMsiInstaller(factory);
 
-        return new LinuxTarballInstaller();
+        return new LinuxTarballInstaller(factory);
     }
 }
