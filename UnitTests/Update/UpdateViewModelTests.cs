@@ -42,6 +42,22 @@ public class UpdateViewModelTests
         }
         """;
 
+    /// <summary>Release carrying an installer for every OS, so FindPlatformAsset resolves on any runner.</summary>
+    private const string AllPlatformsReleaseJson = """
+        {
+          "tag_name": "v99.0.0",
+          "name": "Version 99.0.0",
+          "body": "Cross-platform release.",
+          "prerelease": false,
+          "published_at": "2099-01-01T00:00:00Z",
+          "assets": [
+            { "name": "Lunima-99.0.0.msi",    "browser_download_url": "https://example.com/Lunima-99.0.0.msi",    "size": 8, "content_type": "application/x-msi" },
+            { "name": "Lunima-99.0.0.dmg",    "browser_download_url": "https://example.com/Lunima-99.0.0.dmg",    "size": 8, "content_type": "application/octet-stream" },
+            { "name": "Lunima-99.0.0.tar.gz", "browser_download_url": "https://example.com/Lunima-99.0.0.tar.gz", "size": 8, "content_type": "application/gzip" }
+          ]
+        }
+        """;
+
     private static UpdateViewModel CreateViewModel(
         string responseJson,
         HttpStatusCode statusCode = HttpStatusCode.OK,
@@ -239,6 +255,43 @@ public class UpdateViewModelTests
         urlLauncher.LastOpenedUrl.ShouldBe("https://github.com/aignermax/Lunima/releases/tag/v99.0.0");
     }
 
+    [Fact]
+    public async Task InstallUpdate_PlatformAssetPresent_OpensInstallerWithGuidanceAndKeepsAppAliveOnNonWindows()
+    {
+        // #613: after downloading, the installer is opened via the launcher and the user gets
+        // actionable guidance. On macOS that guidance is the Gatekeeper right-click → Open hint
+        // (the build is not code-signed), so the update banner never dead-ends.
+        // A repeating handler is required: this exercises TWO requests (metadata + download),
+        // and a single shared response can only be read once.
+        var launcher = new FakeUrlLauncher();
+        var httpClient = new HttpClient(new RepeatingHttpMessageHandler(AllPlatformsReleaseJson));
+        var vm = new UpdateViewModel(
+            new UpdateChecker(httpClient, "owner", "repo"),
+            new UpdateDownloader(httpClient),
+            new UserPreferencesService(Path.GetTempFileName()),
+            launcher);
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        vm.UpdateAvailable.ShouldBeTrue();
+
+        await vm.InstallUpdateCommand.ExecuteAsync(null);
+
+        try
+        {
+            launcher.LastOpenedPath.ShouldNotBeNull();   // installer opened through the abstraction
+            vm.StatusText.ShouldNotBeNullOrEmpty();       // user is never left without direction
+
+            if (OperatingSystem.IsMacOS())
+                vm.StatusText.ShouldContain("right-click");
+            else if (!OperatingSystem.IsWindows())
+                vm.StatusText.ShouldContain("Extract the archive");
+        }
+        finally
+        {
+            if (launcher.LastOpenedPath != null && File.Exists(launcher.LastOpenedPath))
+                File.Delete(launcher.LastOpenedPath);
+        }
+    }
+
     private sealed class FakeUrlLauncher : IUrlLauncher
     {
         public string? LastOpenedUrl { get; private set; }
@@ -426,6 +479,27 @@ public class UpdateViewModelTests
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(_response);
+        }
+    }
+
+    /// <summary>Returns a fresh response with the same body on every request, so the same body
+    /// can be consumed by more than one call (metadata fetch followed by installer download).</summary>
+    private sealed class RepeatingHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly string _body;
+
+        public RepeatingHttpMessageHandler(string body)
+        {
+            _body = body;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(_body)
+            });
         }
     }
 }
