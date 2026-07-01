@@ -9,7 +9,7 @@ namespace CAP.Avalonia.ViewModels.Update;
 
 /// <summary>
 /// ViewModel for the software update panel.
-/// Handles checking GitHub releases for newer versions, downloading the MSI,
+/// Handles checking GitHub releases for newer versions, downloading the platform installer,
 /// and installing it with graceful application shutdown.
 /// </summary>
 public partial class UpdateViewModel : ObservableObject
@@ -132,8 +132,7 @@ public partial class UpdateViewModel : ObservableObject
             StatusText = "Opening GitHub releases page in browser...";
             try
             {
-                var releaseUrl = $"https://github.com/aignermax/Lunima/releases/tag/{_availableRelease.TagName}";
-                _urlLauncher.Open(releaseUrl);
+                _urlLauncher.Open(BuildReleaseUrl(_availableRelease.TagName));
             }
             catch (Exception ex)
             {
@@ -159,16 +158,21 @@ public partial class UpdateViewModel : ObservableObject
 
             StatusText = "Download complete. Opening installer...";
             _urlLauncher.OpenFileOrDirectory(installerPath);
-
-            // On Windows the MSI installer replaces the running app; quit cleanly first.
-            // On macOS the user mounts the .dmg and drags to Applications — keep the app running.
-            // On Linux the user extracts the archive manually — keep the app running.
-            if (OperatingSystem.IsWindows())
-                ShutdownApplication();
+            ShowPostDownloadGuidance();
         }
         catch (Exception ex)
         {
-            StatusText = $"Download failed: {ex.Message}";
+            // Never leave the update banner as a dead button: fall back to the releases page
+            // so the user always has a way to finish updating manually.
+            StatusText = $"Download failed: {ex.Message}. Opening the releases page instead...";
+            try
+            {
+                _urlLauncher.Open(BuildReleaseUrl(_availableRelease.TagName));
+            }
+            catch
+            {
+                StatusText = $"Download failed: {ex.Message}";
+            }
         }
         finally
         {
@@ -247,6 +251,29 @@ public partial class UpdateViewModel : ObservableObject
             IsChecking = false;
         }
     }
+
+    /// <summary>
+    /// After the installer is opened, either quits (Windows, where msiexec replaces the running
+    /// binary) or leaves the app running with platform-specific guidance. The macOS build is not
+    /// yet Apple-notarized, so Gatekeeper blocks a normal double-click launch; the user must
+    /// right-click the app and choose Open once to bypass it.
+    /// </summary>
+    private void ShowPostDownloadGuidance()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            ShutdownApplication();
+            return;
+        }
+
+        StatusText = OperatingSystem.IsMacOS()
+            ? "Update downloaded. In the disk image, right-click Lunima and choose Open "
+              + "(first launch only — the app is not code-signed yet), then drag it to Applications."
+            : "Update downloaded. Extract the archive and replace your installation to finish updating.";
+    }
+
+    private static string BuildReleaseUrl(string tagName) =>
+        $"https://github.com/aignermax/Lunima/releases/tag/{tagName}";
 
     private static SemanticVersion ResolveCurrentVersion()
     {
