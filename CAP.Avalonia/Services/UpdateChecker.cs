@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using CAP_Core.Update;
 
@@ -99,6 +100,42 @@ public class UpdateChecker
             a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
             ?? release.Assets.FirstOrDefault(a =>
             a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Finds the best auto-update asset for the current operating system and CPU architecture.
+    /// Auto-update assets are distinct from manual-installer assets:
+    /// <list type="bullet">
+    ///   <item><description>macOS arm64 — <c>*osx-arm64*.zip</c></description></item>
+    ///   <item><description>macOS x64   — <c>*osx-x64*.zip</c></description></item>
+    ///   <item><description>Windows     — <c>.msi</c></description></item>
+    ///   <item><description>Linux       — <c>.tar.gz</c></description></item>
+    /// </list>
+    /// Returns null if no matching asset exists.
+    /// </summary>
+    public static GitHubReleaseAsset? FindAutoUpdateAsset(GitHubReleaseInfo release)
+    {
+        if (OperatingSystem.IsWindows())
+            return release.Assets.FirstOrDefault(a =>
+                a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var archSuffix = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                ? "osx-arm64"
+                : "osx-x64";
+
+            return release.Assets.FirstOrDefault(a =>
+                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                && a.Name.Contains(archSuffix, StringComparison.OrdinalIgnoreCase))
+                // Fall back to any .zip if no arch-specific one is present
+                ?? release.Assets.FirstOrDefault(a =>
+                    a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Linux
+        return release.Assets.FirstOrDefault(a =>
+            a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

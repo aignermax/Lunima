@@ -1,5 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.Services.Update;
 using CAP_Core.Update;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,8 +10,8 @@ namespace CAP.Avalonia.ViewModels.Update;
 
 /// <summary>
 /// ViewModel for the software update panel.
-/// Handles checking GitHub releases for newer versions, downloading the MSI,
-/// and installing it with graceful application shutdown.
+/// Handles checking GitHub releases for newer versions, downloading the update artifact,
+/// and performing an in-place self-update on all platforms.
 /// </summary>
 public partial class UpdateViewModel : ObservableObject
 {
@@ -18,6 +19,7 @@ public partial class UpdateViewModel : ObservableObject
     private readonly UpdateDownloader _downloader;
     private readonly UserPreferencesService _preferences;
     private readonly IUrlLauncher _urlLauncher;
+    private readonly IInstaller _installer;
     private readonly SemanticVersion _currentVersion;
 
     private GitHubReleaseInfo? _availableRelease;
@@ -52,16 +54,23 @@ public partial class UpdateViewModel : ObservableObject
     public string CurrentVersionText => $"Current: v{_currentVersion}";
 
     /// <summary>Initializes a new instance of <see cref="UpdateViewModel"/>.</summary>
+    /// <param name="updateChecker">GitHub release checker.</param>
+    /// <param name="downloader">Installer/artifact downloader.</param>
+    /// <param name="preferences">User preferences (skip version, skip today).</param>
+    /// <param name="urlLauncher">Fallback URL/file launcher used when in-place install is unavailable.</param>
+    /// <param name="installer">In-place installer. Defaults to the platform-appropriate implementation.</param>
     public UpdateViewModel(
         UpdateChecker updateChecker,
         UpdateDownloader downloader,
         UserPreferencesService preferences,
-        IUrlLauncher urlLauncher)
+        IUrlLauncher urlLauncher,
+        IInstaller? installer = null)
     {
         _updateChecker = updateChecker;
         _downloader = downloader;
         _preferences = preferences;
         _urlLauncher = urlLauncher;
+        _installer = installer ?? InstallerFactory.Create();
         _currentVersion = ResolveCurrentVersion();
     }
 
@@ -116,19 +125,22 @@ public partial class UpdateViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Downloads the platform-appropriate installer from the available release and opens it,
-    /// then shuts down the application on Windows (where msiexec replaces the running binary).
-    /// On macOS and Linux the app stays open so the user can complete the manual install step.
+    /// Downloads the platform-appropriate auto-update artifact and performs an in-place
+    /// self-update: the new version is installed over the current one and the application
+    /// relaunches automatically. Falls back to opening the releases page when in-place
+    /// installation is not possible (e.g. install location not writable).
     /// </summary>
     [RelayCommand]
     private async Task InstallUpdate()
     {
         if (_availableRelease == null || IsDownloading) return;
 
-        var platformAsset = UpdateChecker.FindPlatformAsset(_availableRelease);
-        if (platformAsset == null)
+        // Prefer the auto-update artifact (zip/msi/tar.gz); fall back to manual-installer asset.
+        var autoUpdateAsset = UpdateChecker.FindAutoUpdateAsset(_availableRelease)
+                              ?? UpdateChecker.FindPlatformAsset(_availableRelease);
+
+        if (autoUpdateAsset == null)
         {
-            // No platform installer found — open GitHub releases page in browser
             StatusText = "Opening GitHub releases page in browser...";
             try
             {
@@ -154,21 +166,30 @@ public partial class UpdateViewModel : ObservableObject
                 StatusText = $"Downloading... {p:P0}";
             });
 
-            var installerPath = await _downloader.DownloadInstallerAsync(
-                platformAsset.BrowserDownloadUrl, platformAsset.Size, progress);
+            var downloadedPath = await _downloader.DownloadInstallerAsync(
+                autoUpdateAsset.BrowserDownloadUrl, autoUpdateAsset.Size, progress);
 
-            StatusText = "Download complete. Opening installer...";
-            _urlLauncher.OpenFileOrDirectory(installerPath);
+            StatusText = "Download complete. Preparing in-place update...";
 
-            // On Windows the MSI installer replaces the running app; quit cleanly first.
-            // On macOS the user mounts the .dmg and drags to Applications — keep the app running.
-            // On Linux the user extracts the archive manually — keep the app running.
-            if (OperatingSystem.IsWindows())
+            if (_installer.CanInstall(downloadedPath, out var reason))
+            {
+                StatusText = "Installing update — relaunching shortly...";
+                await _installer.InstallAndRelaunchAsync(downloadedPath);
                 ShutdownApplication();
+            }
+            else
+            {
+                // Pre-flight failed — fall back to opening the file manually
+                StatusText = $"Cannot auto-install ({reason}). Opening installer...";
+                _urlLauncher.OpenFileOrDirectory(downloadedPath);
+
+                if (OperatingSystem.IsWindows())
+                    ShutdownApplication();
+            }
         }
         catch (Exception ex)
         {
-            StatusText = $"Download failed: {ex.Message}";
+            StatusText = $"Update failed: {ex.Message}";
         }
         finally
         {
