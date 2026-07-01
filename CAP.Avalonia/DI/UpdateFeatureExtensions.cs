@@ -25,7 +25,9 @@ internal static class UpdateFeatureExtensions
         services.AddSingleton(sp => new UpdateChecker(
             sp.GetRequiredService<HttpClient>(),
             owner: "aignermax",
-            repo: "Connect-A-PIC-Pro"));
+            // Repo was renamed Connect-A-PIC-Pro -> Lunima; query the current name directly rather
+            // than relying on GitHub's rename redirect (which breaks if the old name is reclaimed).
+            repo: "Lunima"));
         services.AddSingleton(sp => new UpdateDownloader(
             sp.GetRequiredService<HttpClient>()));
         services.AddSingleton<IUrlLauncher, PlatformShellLauncher>();

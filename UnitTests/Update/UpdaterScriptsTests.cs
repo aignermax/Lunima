@@ -19,16 +19,17 @@ public class UpdaterScriptsTests
     {
         var script = UpdaterScripts.BuildMacOs(MacTarget(), "/tmp/Lunima_Update_abc.zip");
 
-        script.ShouldStartWith("#!/bin/bash");
+        script.ShouldStartWith("#!/usr/bin/env bash");
         script.ShouldContain("OLD_PID=4242");
         script.ShouldContain("TARGET='/Applications/Lunima.app'");
         script.ShouldContain("ARCHIVE='/tmp/Lunima_Update_abc.zip'");
         script.ShouldContain("ditto -x -k");                    // extract preserving the bundle seal
         script.ShouldContain("xattr -dr com.apple.quarantine"); // no Gatekeeper prompt / translocation
-        script.ShouldContain("codesign --force --sign -");      // ad-hoc sign on the target machine
+        script.ShouldContain("codesign --force --deep --sign -");   // recursive ad-hoc sign (covers nested .NET code)
+        script.ShouldContain("codesign --verify --deep --strict");  // verify the seal BEFORE swapping
         script.ShouldContain("open -n");                        // relaunch a fresh instance
         script.ShouldContain("rollback");                       // has a rollback path
-        script.ShouldNotContain("--deep");                      // signing must not use deprecated --deep
+        script.ShouldContain("SWAPPED=1");                      // rollback distinguishes pre/post-swap
         script.ShouldNotContain("cp -R");                       // never cp -R a bundle (corrupts signature)
     }
 
@@ -51,7 +52,7 @@ public class UpdaterScriptsTests
 
         var script = UpdaterScripts.BuildLinux(target, "/tmp/lunima.tar.gz");
 
-        script.ShouldStartWith("#!/bin/bash");
+        script.ShouldStartWith("#!/usr/bin/env bash");
         script.ShouldContain("OLD_PID=55");
         script.ShouldContain("TARGET='/opt/lunima'");
         script.ShouldContain("EXE_NAME='Lunima'");

@@ -308,10 +308,17 @@ public partial class UpdateViewModel : ObservableObject
 
     private static void ShutdownApplication()
     {
-        if (global::Avalonia.Application.Current?.ApplicationLifetime
-            is IClassicDesktopStyleApplicationLifetime desktop)
+        var app = global::Avalonia.Application.Current;
+        if (app?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.Shutdown();
+            return;
         }
+
+        // A running app with no desktop lifetime (e.g. a single-view host): the detached updater is
+        // already waiting for this process to exit, so exit hard rather than leaving it to time out.
+        // When Application.Current is null (unit tests / headless) do nothing — never kill the host.
+        if (app is not null)
+            Environment.Exit(0);
     }
 }

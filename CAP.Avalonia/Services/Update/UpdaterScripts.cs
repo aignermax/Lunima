@@ -9,7 +9,7 @@ namespace CAP.Avalonia.Services.Update;
 /// </summary>
 public static class UpdaterScripts
 {
-    /// <summary>Builds the macOS updater (bash): ditto-extract → de-quarantine → ad-hoc sign → near-atomic swap → relaunch.</summary>
+    /// <summary>Builds the macOS updater (bash): ditto-extract → de-quarantine → deep ad-hoc sign → near-atomic swap → relaunch.</summary>
     public static string BuildMacOs(InstallLocation target, string archivePath) =>
         MacTemplate
             .Replace("__OLD_PID__", target.ProcessId.ToString(CultureInfo.InvariantCulture))
@@ -40,7 +40,7 @@ public static class UpdaterScripts
 
     private const string MacTemplate =
         """
-        #!/bin/bash
+        #!/usr/bin/env bash
         # Lunima in-place updater (macOS) — generated. Replaces the running .app and relaunches.
         set -uo pipefail
         OLD_PID=__OLD_PID__
@@ -53,40 +53,50 @@ public static class UpdaterScripts
         PARENT="$(dirname "$TARGET")"
         BACKUP="$TARGET.bak.$$"
         STAGEDIR="$PARENT/.lunima-update.$$"
+        SWAPPED=0
 
         rollback() {
+          # Only reached after the app has exited (the wait timeout below aborts without calling this).
           echo "ROLLBACK: $1"
           [ -d "$STAGEDIR" ] && rm -rf "$STAGEDIR"
-          if [ ! -e "$TARGET" ] && [ -d "$BACKUP" ]; then mv "$BACKUP" "$TARGET"; fi
-          [ -d "$BACKUP" ] && [ -e "$TARGET" ] && rm -rf "$BACKUP"
+          if [ "$SWAPPED" = "1" ]; then
+            # Swap already happened: move the failed new bundle aside and restore the known-good backup.
+            [ -e "$TARGET" ] && mv "$TARGET" "$TARGET.failed.$$" 2>/dev/null
+            [ -d "$BACKUP" ] && mv "$BACKUP" "$TARGET"
+          fi
+          # Pre-swap failures leave TARGET as the original bundle; relaunch it so a working app survives.
           open -n "$TARGET" 2>/dev/null || true
           exit 1
         }
 
-        # 1. wait for the running app to exit (up to ~30s)
+        # 1. Wait for the running app to exit (~30s). If it never exits, abort WITHOUT relaunching —
+        #    the original is still running, so there is nothing to recover and a 2nd instance would clash.
         for _ in $(seq 1 60); do kill -0 "$OLD_PID" 2>/dev/null || break; sleep 0.5; done
-        kill -0 "$OLD_PID" 2>/dev/null && rollback "app did not exit"
+        if kill -0 "$OLD_PID" 2>/dev/null; then echo "app did not exit; aborting"; exit 1; fi
 
-        # 2. extract the new bundle beside the target (same volume -> final mv is atomic)
+        # 2. Extract the new bundle beside the target (same volume -> the final mv is atomic).
         mkdir -p "$STAGEDIR" || rollback "mkdir stage failed"
         ditto -x -k "$ARCHIVE" "$STAGEDIR" || rollback "extract failed"
         NEW="$(find "$STAGEDIR" -maxdepth 2 -name '*.app' -type d | head -1)"
         [ -n "$NEW" ] || rollback "no .app found in archive"
 
-        # 3. de-quarantine (prevents the Gatekeeper prompt AND App Translocation)
+        # 3. De-quarantine (prevents the Gatekeeper prompt AND App Translocation); verify it cleared.
         xattr -dr com.apple.quarantine "$NEW" 2>/dev/null || true
+        xattr -pr com.apple.quarantine "$NEW" 2>/dev/null | grep -q . && rollback "quarantine not cleared"
 
-        # 4. ad-hoc sign on THIS machine (Apple Silicon needs >= ad-hoc); inside-out, not recursively
-        find "$NEW/Contents" \( -name '*.dylib' -o -name '*.so' \) -print0 2>/dev/null \
-          | xargs -0 -I{} codesign --force --sign - "{}" 2>/dev/null || true
-        [ -f "$NEW/Contents/MacOS/$EXE_NAME" ] && codesign --force --sign - "$NEW/Contents/MacOS/$EXE_NAME" 2>/dev/null || true
-        codesign --force --sign - "$NEW" 2>/dev/null || rollback "codesign failed"
+        # 4. Ad-hoc sign the WHOLE bundle recursively (Apple Silicon requires >= ad-hoc). --deep is
+        #    required: a .NET self-contained bundle carries managed .dll + bare Mach-O helpers
+        #    (e.g. createdump) that a top-level-only seal refuses to cover. Verify BEFORE swapping so
+        #    a bad seal is caught while the old bundle is still in place.
+        codesign --force --deep --sign - "$NEW" || rollback "codesign failed"
+        codesign --verify --deep --strict "$NEW" || rollback "signature verify failed"
 
-        # 5. near-atomic swap: move old aside, new into place
+        # 5. Near-atomic swap: move old aside, new into place.
         mv "$TARGET" "$BACKUP" || rollback "could not move old bundle aside"
         mv "$NEW" "$TARGET" || rollback "could not move new bundle into place"
+        SWAPPED=1
 
-        # 6. relaunch the new version, then clean up
+        # 6. Relaunch the new version, then clean up.
         open -n "$TARGET" || rollback "relaunch failed"
         [ -d "$STAGEDIR" ] && rm -rf "$STAGEDIR"
         rm -rf "$BACKUP"
@@ -96,7 +106,7 @@ public static class UpdaterScripts
 
     private const string LinuxTemplate =
         """
-        #!/bin/bash
+        #!/usr/bin/env bash
         # Lunima in-place updater (Linux) — generated. Replaces the install directory and relaunches.
         set -uo pipefail
         OLD_PID=__OLD_PID__
@@ -108,34 +118,42 @@ public static class UpdaterScripts
         echo "=== lunima update $(date) pid=$OLD_PID target=$TARGET ==="
         PARENT="$(dirname "$TARGET")"
         BACKUP="$TARGET.bak.$$"
-        STAGEDIR="$PARENT/.lunima-update.$$"
+        STAGEROOT="$PARENT/.lunima-update.$$"
+        SWAPPED=0
 
         rollback() {
           echo "ROLLBACK: $1"
-          [ -d "$STAGEDIR" ] && rm -rf "$STAGEDIR"
-          if [ ! -e "$TARGET" ] && [ -d "$BACKUP" ]; then mv "$BACKUP" "$TARGET"; fi
-          [ -d "$BACKUP" ] && [ -e "$TARGET" ] && rm -rf "$BACKUP"
+          [ -d "$STAGEROOT" ] && rm -rf "$STAGEROOT"
+          if [ "$SWAPPED" = "1" ]; then
+            [ -e "$TARGET" ] && mv "$TARGET" "$TARGET.failed.$$" 2>/dev/null
+            [ -d "$BACKUP" ] && mv "$BACKUP" "$TARGET"
+          fi
           [ -x "$TARGET/$EXE_NAME" ] && ( "$TARGET/$EXE_NAME" >/dev/null 2>&1 & )
           exit 1
         }
 
+        # Wait for exit; if the app never exits, abort without relaunching (avoids a 2nd instance).
         for _ in $(seq 1 60); do kill -0 "$OLD_PID" 2>/dev/null || break; sleep 0.5; done
-        kill -0 "$OLD_PID" 2>/dev/null && rollback "app did not exit"
+        if kill -0 "$OLD_PID" 2>/dev/null; then echo "app did not exit; aborting"; exit 1; fi
 
-        mkdir -p "$STAGEDIR" || rollback "mkdir stage failed"
-        tar -xzf "$ARCHIVE" -C "$STAGEDIR" || rollback "extract failed"
-        # the tarball may hold the files at its root or inside one folder; locate the executable
-        if [ ! -f "$STAGEDIR/$EXE_NAME" ]; then
-          SUB="$(find "$STAGEDIR" -maxdepth 2 -type f -name "$EXE_NAME" | head -1)"
-          [ -n "$SUB" ] && STAGEDIR="$(dirname "$SUB")"
+        mkdir -p "$STAGEROOT" || rollback "mkdir stage failed"
+        tar -xzf "$ARCHIVE" -C "$STAGEROOT" || rollback "extract failed"
+        # The tarball may hold files at its root or inside one folder; locate the executable.
+        # Keep STAGEROOT for cleanup and track the located dir separately so cleanup never orphans it.
+        NEWDIR="$STAGEROOT"
+        if [ ! -f "$STAGEROOT/$EXE_NAME" ]; then
+          SUB="$(find "$STAGEROOT" -maxdepth 2 -type f -name "$EXE_NAME" | head -1)"
+          [ -n "$SUB" ] && NEWDIR="$(dirname "$SUB")"
         fi
-        [ -f "$STAGEDIR/$EXE_NAME" ] || rollback "executable not found in archive"
-        chmod +x "$STAGEDIR/$EXE_NAME" 2>/dev/null || true
+        [ -f "$NEWDIR/$EXE_NAME" ] || rollback "executable not found in archive"
+        chmod +x "$NEWDIR/$EXE_NAME" 2>/dev/null || true
 
         mv "$TARGET" "$BACKUP" || rollback "could not move old install aside"
-        mv "$STAGEDIR" "$TARGET" || rollback "could not move new install into place"
+        mv "$NEWDIR" "$TARGET" || rollback "could not move new install into place"
+        SWAPPED=1
 
         ( "$TARGET/$EXE_NAME" >/dev/null 2>&1 & ) || rollback "relaunch failed"
+        [ -d "$STAGEROOT" ] && rm -rf "$STAGEROOT"
         rm -rf "$BACKUP"
         rm -f "$ARCHIVE" 2>/dev/null || true
         echo "=== update OK ==="

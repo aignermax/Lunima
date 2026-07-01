@@ -147,13 +147,21 @@ public class UpdateCheckerTests
     {
         var asset = UpdateChecker.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
 
-        asset.ShouldNotBeNull();
         if (OperatingSystem.IsWindows())
-            asset!.Name.EndsWith(".msi").ShouldBeTrue();
+        {
+            // Windows in-place self-update is deferred; the ViewModel falls back to the manual MSI.
+            asset.ShouldBeNull();
+        }
         else if (OperatingSystem.IsMacOS())
+        {
+            asset.ShouldNotBeNull();
             asset!.Name.EndsWith(".zip").ShouldBeTrue();
+        }
         else
+        {
+            asset.ShouldNotBeNull();
             asset!.Name.EndsWith(".tar.gz").ShouldBeTrue();
+        }
     }
 
     [Fact]

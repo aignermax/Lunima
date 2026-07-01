@@ -35,14 +35,16 @@ public class DetachedUpdaterLauncher
             return;
         }
 
-        // macOS/Linux: nohup + background so the helper is not killed when the app exits.
+        // macOS/Linux: nohup + background so the helper is not killed when the app exits. Resolve
+        // bash via env (portable across /bin/bash vs /usr/bin/bash) instead of hardcoding a path.
         var shell = new ProcessStartInfo
         {
-            FileName = "/bin/bash",
+            FileName = "/usr/bin/env",
             UseShellExecute = false,
         };
+        shell.ArgumentList.Add("bash");
         shell.ArgumentList.Add("-c");
-        shell.ArgumentList.Add($"nohup /bin/bash {Quote(scriptPath)} >/dev/null 2>&1 &");
+        shell.ArgumentList.Add($"nohup bash {Quote(scriptPath)} >/dev/null 2>&1 &");
         Process.Start(shell);
     }
 

@@ -271,6 +271,7 @@ public class UpdateViewModelTests
     {
         // With an installed, writable location AND an auto-update archive for this OS, Download must
         // perform an in-place update: hand the downloaded archive to the installer, not the browser.
+        if (OperatingSystem.IsWindows()) return; // Windows in-place self-update is deferred (manual MSI)
         var installer = new FakeInstaller { CanUpdate = true };
         var urlLauncher = new FakeUrlLauncher();
         var vm = CreateViewModelForDownload(AutoUpdateReleaseJson, urlLauncher, installer);
