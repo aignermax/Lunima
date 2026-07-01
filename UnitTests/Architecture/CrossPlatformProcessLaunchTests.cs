@@ -51,7 +51,6 @@ public class CrossPlatformProcessLaunchTests
         "Connect-A-Pic-Core/Export/ProcessLaunchFactory.cs",
         "CAP.Avalonia/Services/PlatformShellLauncher.cs",
         // 2. Grandfathered platform-aware launchers (pre-existing — do NOT add new entries here)
-        "CAP.Avalonia/Services/UpdateDownloader.cs",
         "CAP.Avalonia/Services/PythonResolution.cs",
         "CAP.Avalonia/Services/Solvers/PythonModeSolverService.cs",
     };
