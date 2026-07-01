@@ -1,11 +1,11 @@
-using System.Diagnostics;
 using System.Net.Http;
 using CAP_Core.Update;
 
 namespace CAP.Avalonia.Services;
 
 /// <summary>
-/// Downloads an MSI installer from a GitHub release asset URL with progress reporting.
+/// Downloads a release artifact (installer or app archive) from a GitHub release asset URL,
+/// with progress reporting. The temp file's extension is derived from the asset filename.
 /// </summary>
 public class UpdateDownloader
 {
@@ -23,8 +23,8 @@ public class UpdateDownloader
     /// reporting fractional progress (0.0–1.0) via <paramref name="progress"/>.
     /// The temporary file extension is derived from the asset filename in <paramref name="downloadUrl"/>.
     /// </summary>
-    /// <returns>Local file path to the downloaded installer.</returns>
-    public async Task<string> DownloadMsiAsync(
+    /// <returns>Local file path to the downloaded artifact.</returns>
+    public async Task<string> DownloadInstallerAsync(
         string downloadUrl,
         long expectedSize,
         IProgress<double> progress,
@@ -57,29 +57,6 @@ public class UpdateDownloader
         }
 
         return tempPath;
-    }
-
-    /// <summary>
-    /// Runs the downloaded Windows MSI via <c>msiexec /i &lt;path&gt;</c>. The caller shuts the
-    /// application down afterwards so the installer can replace the running files.
-    /// No-op on non-Windows platforms — macOS/Linux open the downloaded installer through
-    /// <see cref="IUrlLauncher"/>, which resolves the launch command even on a PATH-less
-    /// Finder/Dock launch.
-    /// </summary>
-    /// <param name="installerPath">Full path to the downloaded MSI.</param>
-    public static void LaunchInstaller(string installerPath)
-    {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "msiexec.exe",
-            UseShellExecute = true,
-        };
-        psi.ArgumentList.Add("/i");
-        psi.ArgumentList.Add(installerPath);
-        Process.Start(psi);
     }
 
     /// <summary>

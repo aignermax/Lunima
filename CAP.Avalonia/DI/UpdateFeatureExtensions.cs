@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.Services.Update;
 using CAP.Avalonia.ViewModels.Update;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,6 +29,8 @@ internal static class UpdateFeatureExtensions
         services.AddSingleton(sp => new UpdateDownloader(
             sp.GetRequiredService<HttpClient>()));
         services.AddSingleton<IUrlLauncher, PlatformShellLauncher>();
+        services.AddSingleton<DetachedUpdaterLauncher>();
+        services.AddSingleton<IInstaller, SelfUpdateInstaller>();
         services.AddSingleton<UpdateViewModel>();
 
         return services;

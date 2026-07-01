@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using CAP_Core.Update;
 
@@ -99,6 +100,34 @@ public class UpdateChecker
             a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
             ?? release.Assets.FirstOrDefault(a =>
             a.Name.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Finds the release asset used for an <b>in-place auto-update</b> on the current OS/arch:
+    /// the arch-specific zipped <c>.app</c> on macOS, the <c>.msi</c> on Windows, the
+    /// <c>.tar.gz</c> on Linux. Distinct from <see cref="FindPlatformAsset"/>, which selects the
+    /// artifact for a first-time manual install (the macOS <c>.dmg</c>). Returns null when the
+    /// release carries no suitable auto-update archive (e.g. an older release without the zip),
+    /// so the caller can fall back to the manual installer.
+    /// </summary>
+    public static GitHubReleaseAsset? FindAutoUpdateAsset(GitHubReleaseInfo release)
+    {
+        if (OperatingSystem.IsWindows())
+            return release.Assets.FirstOrDefault(a =>
+                a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var rid = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "osx-arm64" : "osx-x64";
+            return release.Assets.FirstOrDefault(a =>
+                a.Name.Contains(rid, StringComparison.OrdinalIgnoreCase) &&
+                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Linux
+        return release.Assets.FirstOrDefault(a =>
+            a.Name.Contains("linux", StringComparison.OrdinalIgnoreCase) &&
+            a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.Services.Update;
 using CAP_Core.Update;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -18,6 +19,7 @@ public partial class UpdateViewModel : ObservableObject
     private readonly UpdateDownloader _downloader;
     private readonly UserPreferencesService _preferences;
     private readonly IUrlLauncher _urlLauncher;
+    private readonly IInstaller _installer;
     private readonly SemanticVersion _currentVersion;
 
     private GitHubReleaseInfo? _availableRelease;
@@ -56,12 +58,14 @@ public partial class UpdateViewModel : ObservableObject
         UpdateChecker updateChecker,
         UpdateDownloader downloader,
         UserPreferencesService preferences,
-        IUrlLauncher urlLauncher)
+        IUrlLauncher urlLauncher,
+        IInstaller installer)
     {
         _updateChecker = updateChecker;
         _downloader = downloader;
         _preferences = preferences;
         _urlLauncher = urlLauncher;
+        _installer = installer;
         _currentVersion = ResolveCurrentVersion();
     }
 
@@ -116,37 +120,34 @@ public partial class UpdateViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Downloads the platform installer from the available release. On Windows it runs the MSI
-    /// and shuts the app down so the installer can replace it; on macOS/Linux it opens the
-    /// downloaded installer for the user to complete the install and leaves the app running.
+    /// Downloads the update and applies it. When the app can update in place (installed from a
+    /// writable location and the release ships an auto-update archive) it downloads that archive,
+    /// launches a detached updater that swaps the installation and relaunches the new version, then
+    /// quits. Otherwise it falls back to the manual installer / releases page so the user is never
+    /// left without a path forward.
     /// </summary>
     [RelayCommand]
     private async Task InstallUpdate()
     {
         if (_availableRelease == null || IsDownloading) return;
 
-        // Platform-aware: .dmg on macOS, .msi on Windows, .tar.gz on Linux.
-        // (FindMsiAsset is platform-blind and would hand macOS the Windows .msi — see #610.)
-        var installerAsset = UpdateChecker.FindPlatformAsset(_availableRelease);
-        if (installerAsset == null)
+        var canSelfUpdate = _installer.CanInstallInPlace(out _);
+        var autoUpdateAsset = canSelfUpdate ? UpdateChecker.FindAutoUpdateAsset(_availableRelease) : null;
+
+        // Fall back to the manual installer (macOS .dmg, Windows .msi, …) when in-place update
+        // isn't possible or the release carries no auto-update archive.
+        var asset = autoUpdateAsset ?? UpdateChecker.FindPlatformAsset(_availableRelease);
+        var selfUpdate = autoUpdateAsset != null;
+
+        if (asset == null)
         {
-            // No installer for this platform - open GitHub releases page in browser
-            StatusText = "Opening GitHub releases page in browser...";
-            try
-            {
-                var releaseUrl = $"https://github.com/aignermax/Lunima/releases/tag/{_availableRelease.TagName}";
-                _urlLauncher.Open(releaseUrl);
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"Could not open browser: {ex.Message}";
-            }
+            OpenReleasesPageInBrowser();
             return;
         }
 
         IsDownloading = true;
         DownloadProgress = 0;
-        StatusText = "Downloading update...";
+        StatusText = selfUpdate ? "Downloading update..." : "Downloading installer...";
 
         try
         {
@@ -156,37 +157,64 @@ public partial class UpdateViewModel : ObservableObject
                 StatusText = $"Downloading... {p:P0}";
             });
 
-            var installerPath = await _downloader.DownloadMsiAsync(
-                installerAsset.BrowserDownloadUrl, installerAsset.Size, progress);
+            var downloadedPath = await _downloader.DownloadInstallerAsync(
+                asset.BrowserDownloadUrl, asset.Size, progress);
 
-            if (OperatingSystem.IsWindows())
+            if (selfUpdate)
             {
-                // Windows: run the MSI, which needs the running app to close so it can replace it.
-                StatusText = "Download complete. Launching installer...";
-                UpdateDownloader.LaunchInstaller(installerPath);
+                // Swap the installation in place and relaunch. The detached updater waits for this
+                // process to exit before replacing files, so we shut down immediately after.
+                StatusText = "Installing update and restarting...";
+                _installer.LaunchUpdater(downloadedPath);
                 ShutdownApplication();
+                return;
             }
-            else
-            {
-                // macOS/Linux: open the .dmg/.tar.gz via the PATH-safe launcher and leave the app
-                // running — the user completes the install manually. Auto-quitting here (and the
-                // bare `open` that has no shell PATH under a Finder/Dock launch) is what made the
-                // previous flow read as a crash (#610).
-                _urlLauncher.OpenFileOrDirectory(installerPath);
-                // Builds are unsigned (no Apple Developer ID yet), so first launch trips Gatekeeper.
-                // Guide the user through the right-click → Open bypass rather than leaving them at the wall.
-                StatusText = "Update downloaded — the installer is opening. Quit Lunima and drag the new "
-                    + "version into Applications. It's unsigned, so on first launch right-click it and "
-                    + "choose Open to get past macOS's \"developer cannot be verified\" warning.";
-            }
+
+            ApplyManualInstaller(downloadedPath);
         }
         catch (Exception ex)
         {
-            StatusText = $"Download failed: {ex.Message}";
+            StatusText = $"Update failed: {ex.Message}";
         }
         finally
         {
             IsDownloading = false;
+        }
+    }
+
+    /// <summary>
+    /// Manual fallback when an in-place update isn't possible: on Windows launch the MSI (which
+    /// needs the app to close), otherwise open the downloaded installer and guide the user through
+    /// the unsigned-build Gatekeeper bypass.
+    /// </summary>
+    private void ApplyManualInstaller(string installerPath)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            StatusText = "Download complete. Launching installer...";
+            _urlLauncher.OpenFileOrDirectory(installerPath);
+            ShutdownApplication();
+            return;
+        }
+
+        _urlLauncher.OpenFileOrDirectory(installerPath);
+        StatusText = "Update downloaded — the installer is opening. Quit Lunima and drag the new "
+            + "version into Applications. It's unsigned, so on first launch right-click it and "
+            + "choose Open to get past macOS's \"developer cannot be verified\" warning.";
+    }
+
+    /// <summary>Opens the GitHub releases page for the available release in the default browser.</summary>
+    private void OpenReleasesPageInBrowser()
+    {
+        StatusText = "Opening GitHub releases page in browser...";
+        try
+        {
+            var releaseUrl = $"https://github.com/aignermax/Lunima/releases/tag/{_availableRelease!.TagName}";
+            _urlLauncher.Open(releaseUrl);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not open browser: {ex.Message}";
         }
     }
 

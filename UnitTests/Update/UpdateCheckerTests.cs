@@ -142,6 +142,46 @@ public class UpdateCheckerTests
         }
     };
 
+    [Fact]
+    public void FindAutoUpdateAsset_PicksCurrentOsAutoUpdateArtifact()
+    {
+        var asset = UpdateChecker.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
+
+        asset.ShouldNotBeNull();
+        if (OperatingSystem.IsWindows())
+            asset!.Name.EndsWith(".msi").ShouldBeTrue();
+        else if (OperatingSystem.IsMacOS())
+            asset!.Name.EndsWith(".zip").ShouldBeTrue();
+        else
+            asset!.Name.EndsWith(".tar.gz").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void FindAutoUpdateAsset_OnMac_ChoosesTheArchAppZip_NotTheWindowsZip()
+    {
+        if (!OperatingSystem.IsMacOS()) return;
+
+        var asset = UpdateChecker.FindAutoUpdateAsset(ReleaseWithAutoUpdateAssets());
+
+        asset.ShouldNotBeNull();
+        asset!.Name.ShouldContain("osx");   // the macOS .app zip, never the Windows portable .zip
+    }
+
+    /// <summary>A release carrying every auto-update artifact: the macOS arch zips, the Linux
+    /// tarball, the Windows portable zip, and the Windows MSI, all at once.</summary>
+    private static GitHubReleaseInfo ReleaseWithAutoUpdateAssets() => new()
+    {
+        TagName = "v0.9.0",
+        Assets = new List<GitHubReleaseAsset>
+        {
+            new() { Name = "Lunima-0.9.0-osx-arm64.zip", BrowserDownloadUrl = "https://example.com/a.zip" },
+            new() { Name = "Lunima-0.9.0-osx-x64.zip", BrowserDownloadUrl = "https://example.com/b.zip" },
+            new() { Name = "Lunima-0.9.0-linux-x64.tar.gz", BrowserDownloadUrl = "https://example.com/c.tar.gz" },
+            new() { Name = "Lunima-0.9.0-win-x64.zip", BrowserDownloadUrl = "https://example.com/d.zip" },
+            new() { Name = "Lunima-Setup-0.9.0.msi", BrowserDownloadUrl = "https://example.com/e.msi" },
+        }
+    };
+
     [Theory]
     [InlineData("v1.5.0", "1.4.0", true)]   // release newer
     [InlineData("v1.5.0", "1.5.0", false)]  // same version

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using CAP.Avalonia.Services;
+using CAP.Avalonia.Services.Update;
 using CAP.Avalonia.ViewModels.Update;
 using CAP_Core.Update;
 using Shouldly;
@@ -46,7 +47,8 @@ public class UpdateViewModelTests
         string responseJson,
         HttpStatusCode statusCode = HttpStatusCode.OK,
         string? tempPrefsPath = null,
-        IUrlLauncher? urlLauncher = null)
+        IUrlLauncher? urlLauncher = null,
+        IInstaller? installer = null)
     {
         var handler = new FakeHttpMessageHandler(
             new HttpResponseMessage(statusCode)
@@ -61,7 +63,7 @@ public class UpdateViewModelTests
         var prefs = tempPrefsPath != null
             ? new UserPreferencesService(tempPrefsPath)
             : new UserPreferencesService(Path.GetTempFileName());
-        return new UpdateViewModel(checker, downloader, prefs, urlLauncher ?? new FakeUrlLauncher());
+        return new UpdateViewModel(checker, downloader, prefs, urlLauncher ?? new FakeUrlLauncher(), installer ?? new FakeInstaller());
     }
 
     [Fact]
@@ -133,7 +135,7 @@ public class UpdateViewModelTests
             var httpClient = new HttpClient(handler);
             var checker = new UpdateChecker(httpClient, "owner", "repo");
             var downloader = new UpdateDownloader(httpClient);
-            var vm = new UpdateViewModel(checker, downloader, prefs, new FakeUrlLauncher());
+            var vm = new UpdateViewModel(checker, downloader, prefs, new FakeUrlLauncher(), new FakeInstaller());
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
 
@@ -159,7 +161,7 @@ public class UpdateViewModelTests
                 });
             var httpClient = new HttpClient(handler);
             var vm = new UpdateViewModel(
-                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs, new FakeUrlLauncher());
+                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs, new FakeUrlLauncher(), new FakeInstaller());
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
             vm.UpdateAvailable.ShouldBeTrue();
@@ -191,7 +193,7 @@ public class UpdateViewModelTests
                 });
             var httpClient = new HttpClient(handler);
             var vm = new UpdateViewModel(
-                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs, new FakeUrlLauncher());
+                new UpdateChecker(httpClient, "o", "r"), new UpdateDownloader(httpClient), prefs, new FakeUrlLauncher(), new FakeInstaller());
 
             await vm.CheckForUpdatesCommand.ExecuteAsync(null);
             vm.UpdateAvailable.ShouldBeTrue();
@@ -264,6 +266,44 @@ public class UpdateViewModelTests
             File.Delete(urlLauncher.LastOpenedPath!);
     }
 
+    [Fact]
+    public async Task InstallUpdate_WhenSelfUpdatePossible_LaunchesUpdaterWithDownloadedArchive()
+    {
+        // With an installed, writable location AND an auto-update archive for this OS, Download must
+        // perform an in-place update: hand the downloaded archive to the installer, not the browser.
+        var installer = new FakeInstaller { CanUpdate = true };
+        var urlLauncher = new FakeUrlLauncher();
+        var vm = CreateViewModelForDownload(AutoUpdateReleaseJson, urlLauncher, installer);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        vm.UpdateAvailable.ShouldBeTrue();
+
+        await vm.InstallUpdateCommand.ExecuteAsync(null);
+
+        installer.LaunchedArchivePath.ShouldNotBeNull();   // the in-place updater was launched
+        urlLauncher.LastOpenedUrl.ShouldBeNull();          // not the browser fallback
+        urlLauncher.LastOpenedPath.ShouldBeNull();         // not the manual open-installer path
+
+        if (installer.LaunchedArchivePath is not null && File.Exists(installer.LaunchedArchivePath))
+            File.Delete(installer.LaunchedArchivePath);
+    }
+
+    private const string AutoUpdateReleaseJson = """
+        {
+          "tag_name": "v99.0.0",
+          "name": "Version 99.0.0",
+          "body": "Auto-update release.",
+          "prerelease": false,
+          "published_at": "2099-01-01T00:00:00Z",
+          "assets": [
+            { "name": "Lunima-99.0.0-osx-arm64.zip", "browser_download_url": "https://example.com/Lunima-99.0.0-osx-arm64.zip", "size": 4, "content_type": "application/zip" },
+            { "name": "Lunima-99.0.0-osx-x64.zip", "browser_download_url": "https://example.com/Lunima-99.0.0-osx-x64.zip", "size": 4, "content_type": "application/zip" },
+            { "name": "Lunima-99.0.0-linux-x64.tar.gz", "browser_download_url": "https://example.com/Lunima-99.0.0-linux-x64.tar.gz", "size": 4, "content_type": "application/gzip" },
+            { "name": "Lunima-Setup-99.0.0.msi", "browser_download_url": "https://example.com/Lunima-Setup-99.0.0.msi", "size": 4, "content_type": "application/x-msi" }
+          ]
+        }
+        """;
+
     private const string MultiPlatformReleaseJson = """
         {
           "tag_name": "v99.0.0",
@@ -279,14 +319,16 @@ public class UpdateViewModelTests
         }
         """;
 
-    private static UpdateViewModel CreateViewModelForDownload(string releaseJson, IUrlLauncher urlLauncher)
+    private static UpdateViewModel CreateViewModelForDownload(
+        string releaseJson, IUrlLauncher urlLauncher, IInstaller? installer = null)
     {
         var httpClient = new HttpClient(new ReleaseThenBinaryHandler(releaseJson));
         return new UpdateViewModel(
             new UpdateChecker(httpClient, "owner", "repo"),
             new UpdateDownloader(httpClient),
             new UserPreferencesService(Path.GetTempFileName()),
-            urlLauncher);
+            urlLauncher,
+            installer ?? new FakeInstaller());
     }
 
     /// <summary>Returns the release JSON for the GitHub API call and a few bytes for any other
@@ -331,6 +373,22 @@ public class UpdateViewModelTests
         {
             LastRevealedPath = path;
         }
+    }
+
+    /// <summary>Test double for <see cref="IInstaller"/>: records the launch and lets a test
+    /// toggle whether in-place update is available.</summary>
+    private sealed class FakeInstaller : IInstaller
+    {
+        public bool CanUpdate { get; set; }
+        public string? LaunchedArchivePath { get; private set; }
+
+        public bool CanInstallInPlace(out string reason)
+        {
+            reason = CanUpdate ? string.Empty : "test: in-place update disabled";
+            return CanUpdate;
+        }
+
+        public void LaunchUpdater(string downloadedArchivePath) => LaunchedArchivePath = downloadedArchivePath;
     }
 
     // --- Skip for Today tests ---
@@ -482,7 +540,8 @@ public class UpdateViewModelTests
             new UpdateChecker(httpClient, "owner", "repo"),
             new UpdateDownloader(httpClient),
             prefs,
-            new FakeUrlLauncher());
+            new FakeUrlLauncher(),
+            new FakeInstaller());
     }
 
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
