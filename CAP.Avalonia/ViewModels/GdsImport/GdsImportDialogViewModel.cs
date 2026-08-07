@@ -281,18 +281,23 @@ public partial class GdsImportDialogViewModel : ObservableObject
         ErrorText = "";
         Warnings.Clear();
         Infos.Clear();
-        var cts = ResetCancellationSource();
+        // Capture the token BEFORE the first await: a window close mid-run
+        // cancels AND disposes the source, and reading cts.Token from an await
+        // continuation afterwards throws ObjectDisposedException instead of
+        // unwinding as a handled cancellation.
+        var token = ResetCancellationSource().Token;
 
         try
         {
             var progress = new Progress<string>(msg => StatusText = msg);
             var outcome = await _importService.ImportAsync(
-                GdsFilePath, SelectedTopCell.CellName, options, progress, cts.Token,
+                GdsFilePath, SelectedTopCell.CellName, options, progress, token,
                 preParsedLibrary: _analyzedLibrary);
+            ImportServiceCompletedTestHook?.Invoke();
 
             var plan = GdsPlacementPlan.FromOutcome(outcome);
             var report = await _placementExecutor.ExecuteAsync(
-                plan, progress, cts.Token, RerouteConnectionsRequested);
+                plan, progress, token, RerouteConnectionsRequested);
 
             foreach (var warning in outcome.Warnings)
                 Warnings.Add(warning);
@@ -428,6 +433,13 @@ public partial class GdsImportDialogViewModel : ObservableObject
 
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the current per-run cancellation source.</summary>
     internal CancellationTokenSource? CurrentCts => _cts;
+
+    /// <summary>
+    /// Test seam (InternalsVisibleTo UnitTests): invoked between the import
+    /// service completing and canvas placement starting, so tests can land a
+    /// window close deterministically inside that otherwise load-dependent gap.
+    /// </summary>
+    internal Action? ImportServiceCompletedTestHook { get; set; }
 
     private static string BuildSummary(GdsPlacementReport report)
     {
