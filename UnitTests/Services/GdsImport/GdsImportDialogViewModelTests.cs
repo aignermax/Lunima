@@ -170,11 +170,13 @@ public class GdsImportDialogViewModelTests : IDisposable
         Path.Combine(_root, "user-pdks"), new PdkJsonSaver(), new PdkLoader());
 
     private (GdsImportDialogViewModel vm, DesignCanvasViewModel canvas, LibrarySink sink) CreateDialog(
-        string gdsPath, ErrorConsoleService? errorConsole = null)
+        string gdsPath, ErrorConsoleService? errorConsole = null,
+        Func<Action<PdkComponentDraft, string, string>, Action<PdkComponentDraft, string, string>>? wrapRegister = null)
     {
         var sink = new LibrarySink(_prefsPath);
         var canvas = new DesignCanvasViewModel();
-        var service = new GdsImportService(Store(), () => sink.Templates.ToList(), sink.Register);
+        var register = wrapRegister?.Invoke(sink.Register) ?? sink.Register;
+        var service = new GdsImportService(Store(), () => sink.Templates.ToList(), register);
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => sink.Templates.ToList());
         return (new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole), canvas, sink);
     }
@@ -582,14 +584,14 @@ public class GdsImportDialogViewModelTests : IDisposable
     public async Task ImportAsync_Cancelled_LogsThePlacedNoteToTheErrorConsole()
     {
         var console = new ErrorConsoleService();
-        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console);
+        var hook = new RegistrationHook();
+        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console, hook.Wrap);
+        hook.OnFirstRegistration = () => vm.CurrentCts?.Cancel();
         await vm.StartAnalysisAsync();
 
-        var import = vm.ImportCommand.ExecuteAsync(null);
-        // Same determinism argument as ImportAsync_Cancelled_StatusNamesPlacedCountAndRemedy:
-        // the cancel lands before any placement, so the logged count is 0.
-        vm.CurrentCts.ShouldNotBeNull().Cancel();
-        await import;
+        // The hook cancels mid-run, before any placement — the logged count is 0.
+        await vm.ImportCommand.ExecuteAsync(null);
+        hook.Fired.ShouldBeTrue();
 
         var expectedNote = string.Format(
             LocalizationService.Instance.Translate("GdsImport.StatusCancelledAfterPlacement"), 0);
@@ -665,17 +667,17 @@ public class GdsImportDialogViewModelTests : IDisposable
     [Fact]
     public async Task ImportAsync_Cancelled_DoesNotFireZoomToFit()
     {
-        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()));
+        var hook = new RegistrationHook();
+        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), wrapRegister: hook.Wrap);
+        hook.OnFirstRegistration = () => vm.CurrentCts?.Cancel();
         var calls = 0;
         vm.ZoomToFitAfterImport = (_, _) => calls++;
         await vm.StartAnalysisAsync();
 
-        var import = vm.ImportCommand.ExecuteAsync(null);
-        // Same determinism argument as ImportAsync_Cancelled_StatusNamesPlacedCountAndRemedy:
-        // the cancel lands before any placement.
-        vm.CurrentCts.ShouldNotBeNull().Cancel();
-        await import;
+        // The hook cancels mid-run, so the cancel lands before any placement.
+        await vm.ImportCommand.ExecuteAsync(null);
 
+        hook.Fired.ShouldBeTrue();
         vm.ImportCompleted.ShouldBeFalse();
         calls.ShouldBe(0, "a cancelled import must not move the viewport");
     }
@@ -685,16 +687,16 @@ public class GdsImportDialogViewModelTests : IDisposable
     [Fact]
     public async Task ImportAsync_Cancelled_StatusNamesPlacedCountAndRemedy()
     {
-        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()));
+        var hook = new RegistrationHook();
+        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), wrapRegister: hook.Wrap);
+        hook.OnFirstRegistration = () => vm.CurrentCts?.Cancel();
         await vm.StartAnalysisAsync();
 
-        var import = vm.ImportCommand.ExecuteAsync(null);
-        // The cancellation source is assigned synchronously before ImportAsync's
-        // first await, so this cancel deterministically lands before any
-        // placement (the placed count in the message is 0 here; the executor
-        // tests cover the mid-placement count).
-        vm.CurrentCts.ShouldNotBeNull().Cancel();
-        await import;
+        // The hook cancels mid-run, so the cancel deterministically lands
+        // before any placement (the placed count in the message is 0 here;
+        // the executor tests cover the mid-placement count).
+        await vm.ImportCommand.ExecuteAsync(null);
+        hook.Fired.ShouldBeTrue();
 
         vm.HasError.ShouldBeFalse();
         vm.ImportCompleted.ShouldBeFalse();

@@ -78,13 +78,15 @@ public class GdsImportCancellationLifecycleTests : IDisposable
     }
 
     private (GdsImportDialogViewModel vm, DesignCanvasViewModel canvas, LibrarySink sink) CreateDialog(
-        string gdsPath, ErrorConsoleService console)
+        string gdsPath, ErrorConsoleService console,
+        Func<Action<PdkComponentDraft, string, string>, Action<PdkComponentDraft, string, string>>? wrapRegister = null)
     {
         var sink = new LibrarySink(_prefsPath);
         var canvas = new DesignCanvasViewModel();
+        var register = wrapRegister?.Invoke(sink.Register) ?? sink.Register;
         var service = new GdsImportService(
             new UserPdkStore(Path.Combine(_root, "user-pdks"), new PdkJsonSaver(), new PdkLoader()),
-            () => sink.Templates.ToList(), sink.Register);
+            () => sink.Templates.ToList(), register);
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => sink.Templates.ToList());
         return (new GdsImportDialogViewModel(gdsPath, service, executor, console), canvas, sink);
     }
@@ -118,14 +120,16 @@ public class GdsImportCancellationLifecycleTests : IDisposable
     public async Task CancelMidImport_ThenSecondImportRun_CompletesWithoutDisposedException()
     {
         var console = new ErrorConsoleService();
-        var (vm, canvas, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console);
+        var hook = new RegistrationHook();
+        var (vm, canvas, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console, hook.Wrap);
+        hook.OnFirstRegistration = () => vm.CurrentCts?.Cancel();
         await vm.StartAnalysisAsync();
 
-        var first = vm.ImportCommand.ExecuteAsync(null);
-        // The cancellation source is assigned synchronously before ImportAsync's
-        // first await, so this cancel deterministically lands mid-run.
-        vm.CurrentCts.ShouldNotBeNull().Cancel();
-        await first;
+        // The hook cancels mid-flight (post-parse, pre-placement), so the cancel
+        // deterministically lands before the run can complete.
+        await vm.ImportCommand.ExecuteAsync(null);
+        hook.Fired.ShouldBeTrue();
+        vm.ImportCompleted.ShouldBeFalse("the first run was cancelled mid-flight");
 
         // The second run's reset disposes the first run's source: the exact
         // moment a surviving token reference would hit the disposed source.
@@ -140,20 +144,28 @@ public class GdsImportCancellationLifecycleTests : IDisposable
     [Fact]
     public async Task CloseMidImport_RunUnwindsWithoutDisposedException()
     {
+        // The hook closes the dialog AFTER the off-thread parse finished but
+        // BEFORE any placement: the close cancels + disposes the source while
+        // the run is still in flight — the resumed run must use its
+        // pre-captured token, never re-read the disposed source (the
+        // "The CancellationTokenSource has been disposed" import failure).
         var console = new ErrorConsoleService();
-        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console);
+        var hook = new RegistrationHook();
+        var (vm, canvas, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console, hook.Wrap);
+        hook.OnFirstRegistration = vm.OnWindowClosed;
         await vm.StartAnalysisAsync();
 
         var run = vm.ImportCommand.ExecuteAsync(null);
         var cts = vm.CurrentCts.ShouldNotBeNull();
+        await run; // must unwind as a handled cancellation, never a disposed-source fault
 
-        vm.OnWindowClosed(); // close mid-import: cancel + dispose + detach
-
+        hook.Fired.ShouldBeTrue();
         cts.IsCancellationRequested.ShouldBeTrue();
         vm.CurrentCts.ShouldBeNull();
-        await run; // must unwind as a handled cancellation, never a disposed-source fault
         vm.IsBusy.ShouldBeFalse();
         vm.HasError.ShouldBeFalse(vm.ErrorText);
+        vm.ImportCompleted.ShouldBeFalse("a close mid-run must not report a completed import");
+        canvas.Components.ShouldBeEmpty("a closed dialog must not mutate the canvas");
         AssertNoDisposedSourceError(console, vm);
     }
 
