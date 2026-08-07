@@ -283,18 +283,26 @@ public partial class GdsImportDialogViewModel : ObservableObject
         ErrorText = "";
         Warnings.Clear();
         Infos.Clear();
-        var cts = ResetCancellationSource();
+        // Capture the token BEFORE the first await: a window close mid-run
+        // cancels and disposes the source, and reading cts.Token afterwards
+        // throws ObjectDisposedException — the token itself stays valid.
+        var token = ResetCancellationSource().Token;
 
         try
         {
             var progress = new Progress<string>(msg => StatusText = msg);
             var outcome = await _importService.ImportAsync(
-                GdsFilePath, SelectedTopCell.CellName, options, progress, cts.Token,
+                GdsFilePath, SelectedTopCell.CellName, options, progress, token,
                 preParsedLibrary: _analyzedLibrary);
+
+            // A close that lands between the parse finishing and this
+            // continuation must unwind here — never mutate the canvas of a
+            // dialog the user already dismissed.
+            token.ThrowIfCancellationRequested();
 
             var plan = GdsPlacementPlan.FromOutcome(outcome);
             var report = await _placementExecutor.ExecuteAsync(
-                plan, progress, cts.Token, RerouteConnectionsRequested);
+                plan, progress, token, RerouteConnectionsRequested);
 
             foreach (var warning in outcome.Warnings)
                 Warnings.Add(warning);
