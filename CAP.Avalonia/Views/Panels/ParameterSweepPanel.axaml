@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.ParameterSweepPanel"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Parameter Sweep tab of the analysis dock: sweeps the selected component's
+         slider parameter over a range and lists the resulting output powers. -->
+    <StackPanel Margin="10,8">
+        <TextBlock Text="{loc:Localize Sweep.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
+
+        <!-- Empty state: the sweep needs a component with a tunable slider parameter. -->
+        <TextBlock Text="{loc:Localize Sweep.NoSliderHint}"
+                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" MaxWidth="420"
+                   HorizontalAlignment="Left"
+                   IsVisible="{Binding !CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=True}"/>
+
+        <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                <TextBlock Text="{loc:Localize Sweep.Start}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+                <NumericUpDown Value="{Binding RightPanel.Sweep.StartValue}"
+                               Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
+                               Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
+                               Increment="10" Width="130" FormatString="F0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                <TextBlock Text="{loc:Localize Sweep.End}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+                <NumericUpDown Value="{Binding RightPanel.Sweep.EndValue}"
+                               Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
+                               Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
+                               Increment="10" Width="130" FormatString="F0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                <TextBlock Text="{loc:Localize Sweep.Steps}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
+                <NumericUpDown Value="{Binding RightPanel.Sweep.StepCount}"
+                               Minimum="2" Maximum="100"
+                               Increment="1" Width="130" FormatString="F0"/>
+            </StackPanel>
+            <Button Content="{loc:Localize Sweep.Run}" Command="{Binding RightPanel.Sweep.RunSweepCommand}"
+                    Width="120" Margin="0,5,0,5" Background="#3d5d3d"
+                    IsEnabled="{Binding RightPanel.Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
+            <TextBlock Text="{Binding RightPanel.Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                       IsVisible="{Binding RightPanel.Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
+                          IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding RightPanel.Sweep.ResultText}" Foreground="LightGreen"
+                           FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
+            </ScrollViewer>
+            <Button Content="{loc:Localize Sweep.ExportCsv}" Command="{Binding RightPanel.Sweep.ExportCsvCommand}"
+                    Width="100" Margin="0,5,0,0" Background="#3d3d5d"
+                    IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

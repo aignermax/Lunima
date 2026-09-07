@@ -62,6 +62,13 @@ public partial class MainWindow : Window
     /// </summary>
     private RegistryBrowserWindow? _registryBrowserWindow;
 
+    /// <summary>
+    /// The open AI Design Assistant tool window. Single instance: a second open
+    /// activates the existing window instead of spawning a duplicate — same
+    /// pattern as <see cref="_registryBrowserWindow"/>. Cleared when it closes.
+    /// </summary>
+    private AiAssistantWindow? _aiAssistantWindow;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -652,6 +659,32 @@ public partial class MainWindow : Window
         {
             if (ReferenceEquals(_registryBrowserWindow, window))
                 _registryBrowserWindow = null;
+        };
+        window.Show(this);
+    }
+
+    /// <summary>
+    /// Opens the non-modal AI Design Assistant tool window from the toolbar.
+    /// A second click activates the already-open window.
+    /// </summary>
+    private void OpenAiAssistant_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_aiAssistantWindow is { IsVisible: true } existing)
+        {
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        var window = new AiAssistantWindow { DataContext = vm };
+        _aiAssistantWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_aiAssistantWindow, window))
+                _aiAssistantWindow = null;
         };
         window.Show(this);
     }

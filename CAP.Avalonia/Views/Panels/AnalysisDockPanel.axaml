@@ -98,6 +98,23 @@
                             <panels:CircuitOptimizationPanel/>
                         </ScrollViewer>
                     </TabItem>
+                    <!-- Sweep / Checks / Netlist: whole-design tools re-homed from the
+                         right properties sidebar — the sidebar is selection-only now. -->
+                    <TabItem Header="{loc:Localize AnalysisDock.TabSweep}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <panels:ParameterSweepPanel/>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{loc:Localize AnalysisDock.TabChecks}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <panels:DesignChecksPanel/>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{loc:Localize AnalysisDock.TabNetlist}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <panels:NetlistPanel/>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
             </Border>
         </StackPanel>
