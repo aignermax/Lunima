@@ -1,0 +1,7 @@
+[
+  {"file": "01-main-window.png", "caption": "Main window after the de-clutter: the right sidebar shows only selection properties (empty-state hint when nothing is selected)."},
+  {"file": "02-dock-sweep-tab.png", "caption": "Parameter Sweep re-homed as an analysis-dock tab, with a hint to select a slider component when none is selected."},
+  {"file": "03-dock-checks-tab.png", "caption": "Design Checks re-homed as an analysis-dock tab — run checks and step through issues like an IDE problems panel."},
+  {"file": "04-dock-netlist-tab.png", "caption": "Netlist (gdsfactory YAML) re-homed as an analysis-dock tab with generate/save/copy actions."},
+  {"file": "05-ai-assistant-window.png", "caption": "AI Design Assistant in its own non-modal tool window, opened from the new 🤖 toolbar button."}
+]
