@@ -9,7 +9,7 @@
     <!-- Compact centered card over the dimmed editor.
          Disabled while the startup project (CLI arg / reopen preference) loads
          so a click can't interleave with the in-flight load. -->
-    <Border Width="560"
+    <Border x:Name="HomeCard" Width="560"
             HorizontalAlignment="Center" VerticalAlignment="Center"
             IsEnabled="{Binding !IsStartupLoadInProgress}"
             Background="#252526" BorderBrush="#3d3d3d" BorderThickness="1"
@@ -25,41 +25,45 @@
                        FontSize="12" Foreground="Gray"
                        HorizontalAlignment="Center" Margin="0,2,0,18"/>
 
-            <!-- Primary actions -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                        Spacing="10" Margin="0,0,0,18">
-                <Button Command="{Binding NewProjectCommand}"
-                        Background="#0d6efd" Foreground="White" Padding="14,7"
-                        ToolTip.Tip="{loc:Localize Home.NewProjectTip}">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <TextBlock Text="📄" FontSize="13"/>
-                        <TextBlock Text="{loc:Localize Home.NewProject}" FontWeight="SemiBold" FontSize="13"/>
-                    </StackPanel>
-                </Button>
-                <Button Command="{Binding OpenProjectCommand}"
-                        Background="#3d3d3d" Foreground="White" Padding="14,7"
-                        ToolTip.Tip="{loc:Localize Home.OpenProjectTip}">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <TextBlock Text="📂" FontSize="13"/>
-                        <TextBlock Text="{loc:Localize Home.OpenProject}" FontWeight="SemiBold" FontSize="13"/>
-                    </StackPanel>
-                </Button>
-                <Button Command="{Binding LearnTutorialCommand}"
-                        Background="#3d5d3d" Foreground="White" Padding="14,7"
-                        ToolTip.Tip="{loc:Localize Home.LearnTutorialTip}">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <TextBlock Text="🎓" FontSize="13"/>
-                        <TextBlock Text="{loc:Localize Home.LearnTutorial}" FontWeight="SemiBold" FontSize="13"/>
-                    </StackPanel>
-                </Button>
-                <Button Command="{Binding WatchComputeTourCommand}"
-                        Background="#3d5d3d" Foreground="White" Padding="14,7"
-                        ToolTip.Tip="{loc:Localize Home.WatchComputeTourTip}">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <TextBlock Text="⏱" FontSize="13"/>
-                        <TextBlock Text="{loc:Localize Home.WatchComputeTour}" FontWeight="SemiBold" FontSize="13"/>
-                    </StackPanel>
-                </Button>
+            <!-- Primary actions: file actions on the first row, the guided tours on the
+                 second — four buttons never fit the fixed-width card in every language. -->
+            <StackPanel Spacing="10" Margin="0,0,0,18">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button Command="{Binding NewProjectCommand}"
+                            Background="#0d6efd" Foreground="White" Padding="14,7"
+                            ToolTip.Tip="{loc:Localize Home.NewProjectTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="📄" FontSize="13"/>
+                            <TextBlock Text="{loc:Localize Home.NewProject}" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding OpenProjectCommand}"
+                            Background="#3d3d3d" Foreground="White" Padding="14,7"
+                            ToolTip.Tip="{loc:Localize Home.OpenProjectTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="📂" FontSize="13"/>
+                            <TextBlock Text="{loc:Localize Home.OpenProject}" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button Command="{Binding LearnTutorialCommand}"
+                            Background="#3d5d3d" Foreground="White" Padding="14,7"
+                            ToolTip.Tip="{loc:Localize Home.LearnTutorialTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="🎓" FontSize="13"/>
+                            <TextBlock Text="{loc:Localize Home.LearnTutorial}" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding WatchComputeTourCommand}"
+                            Background="#3d5d3d" Foreground="White" Padding="14,7"
+                            ToolTip.Tip="{loc:Localize Home.WatchComputeTourTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="⏱" FontSize="13"/>
+                            <TextBlock Text="{loc:Localize Home.WatchComputeTour}" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </StackPanel>
 
             <!-- Shipped example designs in learning-path order (curated manifest
