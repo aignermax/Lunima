@@ -126,6 +126,39 @@ public class LogicGateNotNandExampleTests
     }
 
     /// <summary>
+    /// The persisted pin roles and signal names make the example build in the Logic
+    /// panel without any manual role assignment: toggles A and B drive the single
+    /// gate and its output tap reads the NAND table.
+    /// </summary>
+    [Fact]
+    public async Task LogicPanel_Toggles_ReproduceNandTable()
+    {
+        var canvas = await LoadGateOnCanvas();
+        var panel = new LogicPanelViewModel();
+        panel.Configure(canvas);
+        await panel.BuildNetworkCommand.ExecuteAsync(null);
+
+        panel.HasNetwork.ShouldBeTrue(
+            $"the persisted pin roles must assemble in the Logic panel: {panel.StatusText}");
+        panel.Inputs.Select(i => i.PinName).ShouldBe(InputsAb, ignoreOrder: true,
+            customMessage: "the persisted signal names A and B become the panel toggles");
+        panel.Outputs.Count.ShouldBe(1, "the single gate exposes exactly one output tap");
+
+        EvaluatePanel(panel, a: false, b: false).ShouldBeTrue("NAND: A=0 B=0 must read 1");
+        EvaluatePanel(panel, a: true, b: false).ShouldBeTrue("NAND: A=1 B=0 must read 1");
+        EvaluatePanel(panel, a: false, b: true).ShouldBeTrue("NAND: A=0 B=1 must read 1");
+        EvaluatePanel(panel, a: true, b: true).ShouldBeFalse("NAND: A=1 B=1 must read 0");
+    }
+
+    /// <summary>Sets the A/B toggles and returns the single output tap's evaluated bit.</summary>
+    private static bool EvaluatePanel(LogicPanelViewModel panel, bool a, bool b)
+    {
+        panel.Inputs.Single(i => i.PinName == "A").IsOn = a;
+        panel.Inputs.Single(i => i.PinName == "B").IsOn = b;
+        return panel.Outputs.Single().IsOne;
+    }
+
+    /// <summary>
     /// Drives the shipped example through the Truth Table panel's ViewModel exactly as
     /// the interactive flow does: select the group, tick the pins, set the threshold,
     /// run the Extract command.
@@ -139,8 +172,10 @@ public class LogicGateNotNandExampleTests
         var vm = new TruthTableViewModel();
         vm.ConfigureForSelection(groupVm, canvas);
         vm.IsGroupSelected.ShouldBeTrue("the loaded gate group must activate the panel");
-        foreach (var name in inputs)
-            vm.InputPins.Single(p => p.PinName == name).IsChecked = true;
+        // The persisted roles prefill the checks: uncheck every input the reading
+        // does not enumerate (the NOT reading drops B), then tick the wanted ones.
+        foreach (var pin in vm.InputPins)
+            pin.IsChecked = inputs.Contains(pin.PinName);
         vm.OutputPins.Single(p => p.PinName == "Y").IsChecked = true;
         vm.BiasPins.Single(p => p.PinName == "BIAS").IsChecked = true;
         vm.Threshold = threshold;
