@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels"
         xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.ProcessManagementWindow"
         x:CompileBindings="False"
@@ -22,128 +23,8 @@
                      its own metal cross-section. -->
                 <controls:HelpFlyoutButton Title="{loc:Localize ProcessManagement.HelpTitle}" VerticalAlignment="Center">
                     <controls:HelpFlyoutButton.HelpContent>
-                        <StackPanel Spacing="8">
-                            <StackPanel.Styles>
-                                <!-- Looping fabrication animation: the chip is built by stacking
-                                     patterned material layers one after another (substrate → core →
-                                     cladding → metal). Each layer fades + rises into place in
-                                     sequence, giving a real-world sense of how fabrication works. -->
-                                <Style Selector="Rectangle.fabLayer">
-                                    <Setter Property="Opacity" Value="0"/>
-                                </Style>
-                                <Style Selector="Rectangle.fab0">
-                                    <Style.Animations>
-                                        <Animation Duration="0:0:5" IterationCount="INFINITE">
-                                            <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="96"/></KeyFrame>
-                                            <KeyFrame Cue="12%"><Setter Property="Opacity" Value="1"/><Setter Property="Canvas.Top" Value="88"/></KeyFrame>
-                                            <KeyFrame Cue="94%"><Setter Property="Opacity" Value="1"/><Setter Property="Canvas.Top" Value="88"/></KeyFrame>
-                                            <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="88"/></KeyFrame>
-                                        </Animation>
-                                    </Style.Animations>
-                                </Style>
-                                <Style Selector="Rectangle.fab1">
-                                    <Style.Animations>
-                                        <Animation Duration="0:0:5" IterationCount="INFINITE">
-                                            <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="82"/></KeyFrame>
-                                            <KeyFrame Cue="22%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="82"/></KeyFrame>
-                                            <KeyFrame Cue="34%"><Setter Property="Opacity" Value="1"/><Setter Property="Canvas.Top" Value="74"/></KeyFrame>
-                                            <KeyFrame Cue="94%"><Setter Property="Opacity" Value="1"/><Setter Property="Canvas.Top" Value="74"/></KeyFrame>
-                                            <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="74"/></KeyFrame>
-                                        </Animation>
-                                    </Style.Animations>
-                                </Style>
-                                <Style Selector="Rectangle.fab2">
-                                    <Style.Animations>
-                                        <Animation Duration="0:0:5" IterationCount="INFINITE">
-                                            <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="68"/></KeyFrame>
-                                            <KeyFrame Cue="44%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="68"/></KeyFrame>
-                                            <KeyFrame Cue="56%"><Setter Property="Opacity" Value="0.55"/><Setter Property="Canvas.Top" Value="60"/></KeyFrame>
-                                            <KeyFrame Cue="94%"><Setter Property="Opacity" Value="0.55"/><Setter Property="Canvas.Top" Value="60"/></KeyFrame>
-                                            <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="60"/></KeyFrame>
-                                        </Animation>
-                                    </Style.Animations>
-                                </Style>
-                                <Style Selector="Rectangle.fab3">
-                                    <Style.Animations>
-                                        <Animation Duration="0:0:5" IterationCount="INFINITE">
-                                            <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="54"/></KeyFrame>
-                                            <KeyFrame Cue="66%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="54"/></KeyFrame>
-                                            <KeyFrame Cue="78%"><Setter Property="Opacity" Value="1"/><Setter Property="Canvas.Top" Value="46"/></KeyFrame>
-                                            <KeyFrame Cue="94%"><Setter Property="Opacity" Value="1"/><Setter Property="Canvas.Top" Value="46"/></KeyFrame>
-                                            <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0"/><Setter Property="Canvas.Top" Value="46"/></KeyFrame>
-                                        </Animation>
-                                    </Style.Animations>
-                                </Style>
-                            </StackPanel.Styles>
-
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff">
-                                Here you review this PDK's layer stack and add a metal cross-section
-                                for electrical routing. Below is what each of those settings means and
-                                why it matters.
-                            </TextBlock>
-
-                            <!-- Fabrication layer-stack animation (cross-section, builds bottom→top). -->
-                            <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                    CornerRadius="4" Padding="4">
-                                <Canvas Width="360" Height="112">
-                                    <TextBlock Canvas.Left="2" Canvas.Top="2" Text="{loc:Localize ProcessManagement.ChipBuiltLayers}"
-                                               FontSize="9" Foreground="Gray"/>
-                                    <Rectangle Classes="fabLayer fab0" Canvas.Left="30" Width="270" Height="14" Fill="#666666"/>
-                                    <Rectangle Classes="fabLayer fab1" Canvas.Left="30" Width="270" Height="12" Fill="#4CAF50"/>
-                                    <Rectangle Classes="fabLayer fab2" Canvas.Left="30" Width="270" Height="14" Fill="#3F51B5"/>
-                                    <Rectangle Classes="fabLayer fab3" Canvas.Left="110" Width="110" Height="12" Fill="#DAA520"/>
-                                    <TextBlock Canvas.Left="306" Canvas.Top="84" Text="{loc:Localize ProcessManagement.LayerSubstrate}" FontSize="8" Foreground="#888"/>
-                                    <TextBlock Canvas.Left="306" Canvas.Top="70" Text="{loc:Localize ProcessManagement.LayerCore}" FontSize="8" Foreground="#7CCB7C"/>
-                                    <TextBlock Canvas.Left="306" Canvas.Top="56" Text="{loc:Localize ProcessManagement.LayerCladding}" FontSize="8" Foreground="#8890D0"/>
-                                    <TextBlock Canvas.Left="306" Canvas.Top="42" Text="{loc:Localize ProcessManagement.LayerMetal}" FontSize="8" Foreground="#DAA520"/>
-                                </Canvas>
-                            </Border>
-
-                            <TextBlock Text="{loc:Localize ProcessManagement.WhatIsProcess}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                                It is the foundry's recipe: which material layers get deposited or
-                                etched, in what order, and with what shapes. Your whole chip -
-                                every waveguide and every wire - is built in ONE process. That is
-                                why picking a process up front matters: a design only makes sense,
-                                and can only be manufactured, within the process it was built for.
-                            </TextBlock>
-
-                            <TextBlock Text="{loc:Localize ProcessManagement.LayersHeading}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                                A layer is one physical sheet of material in the chip, for example
-                                the waveguide core that guides light, or a metal layer used for
-                                electrical wiring. The "Layer stack" table lists every sheet the
-                                foundry can pattern, each with its own GDS layer/datatype number.
-                            </TextBlock>
-
-                            <TextBlock Text="{loc:Localize ProcessManagement.CrossSectionsHeading}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                                A cross-section is the width and shape a routed connection gets on
-                                a given layer. An optical waveguide is typically very narrow
-                                (around 0.5 µm) so it only carries one mode of light cleanly; a
-                                metal trace is usually much wider (around 10 µm) so it can carry
-                                current without excessive resistance. The same "wire" behaves very
-                                differently depending on which cross-section routes it.
-                            </TextBlock>
-
-                            <TextBlock Text="{loc:Localize ProcessManagement.Materials}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                                Materials describe what each layer is actually made of: silicon or
-                                silicon nitride for waveguides, metal for electrical wiring, and so
-                                on. The material sets how light bends and travels (its refractive
-                                index) or how easily current flows, so getting it right is what
-                                makes the simulation physically meaningful.
-                            </TextBlock>
-
-                            <TextBlock Text="{loc:Localize ProcessManagement.ElectricalRoutingHeading}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                                Electrical connections (for example to a heater or a modulator)
-                                cannot travel on an optical waveguide - they need a conductive metal
-                                layer instead, routed at a much wider metal cross-section. Use
-                                "+ Metal (electrical)" below to add one; it also adds the METAL
-                                layer that carries it in the GDS export.
-                            </TextBlock>
-                        </StackPanel>
+                        <!-- Short localized sections + looping layer-stack animation (#1152). -->
+                        <panels:ProcessHelpFlyout/>
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
             </StackPanel>
