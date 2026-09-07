@@ -51,12 +51,6 @@ public partial class WaveguideRouter
         var candidate = InterconnectRouting.DirectRouteFirstPolicy.TryBuildWithStyle(
             startPin, endPin, bendRadius, out var directStyle,
             isElectrical ? null : AllowedBendRadii);
-        // The diagonal-routing setting governs the direct styles too: sine S-bends and cobra
-        // curves are polylines of angled straights, and even the arc style tilts its middle
-        // straight when two arcs do not fit. With diagonals off, only a candidate whose
-        // straights are all axis-aligned may bypass the grid router.
-        if (!UseDiagonalRouting && candidate != null && HasDiagonalStraight(candidate))
-            return null;
         if (candidate == null
             || !candidate.IsValid
             || PathIntersectionDetector.HasSelfIntersection(candidate)
@@ -70,22 +64,6 @@ public partial class WaveguideRouter
         candidate.DirectStyle = directStyle;
         return candidate;
     }
-
-    /// <summary>True when any straight of the path runs at an angle other than a multiple of 90°.</summary>
-    private static bool HasDiagonalStraight(RoutedPath path)
-    {
-        foreach (var straight in path.Segments.OfType<StraightSegment>())
-        {
-            double dx = straight.EndPoint.X - straight.StartPoint.X;
-            double dy = straight.EndPoint.Y - straight.StartPoint.Y;
-            if (Math.Abs(dx) > AxisAlignmentToleranceMicrometers && Math.Abs(dy) > AxisAlignmentToleranceMicrometers)
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>Below this, a straight's cross-axis drift counts as numerical noise, not a diagonal.</summary>
-    private const double AxisAlignmentToleranceMicrometers = 1e-6;
 
     /// <summary>
     /// Component blocked-cell test for the direct styled candidate, on the SAME grid state
