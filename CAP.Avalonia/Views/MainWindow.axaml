@@ -808,13 +808,13 @@
                                 HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                                 Background="#3d3d3d" Foreground="#c9c9c9"
                                 ToolTip.Tip="{loc:Localize LeftPanel.EnableAllPdksTip}"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{loc:Localize LeftPanel.PdkMgmt}" VerticalAlignment="Center"
-                                       FontWeight="Bold" Foreground="White"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="{loc:Localize LeftPanel.PdkMgmt}" VerticalAlignment="Center"
+                                       FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis"/>
                             <!-- Plain-language help (#907): what a PDK is, what its process
                                  defines (layers, bend radius, spacing), and why components from
                                  different processes can't mix in one design. -->
-                            <controls:HelpFlyoutButton Title="{loc:Localize PdkHelp.Title}"
+                            <controls:HelpFlyoutButton Grid.Column="1" Margin="6,0,0,0" Title="{loc:Localize PdkHelp.Title}"
                                                        VerticalAlignment="Center">
                                 <controls:HelpFlyoutButton.HelpContent>
                                     <StackPanel Spacing="8" MaxWidth="400">
@@ -860,7 +860,7 @@
                                     </StackPanel>
                                 </controls:HelpFlyoutButton.HelpContent>
                             </controls:HelpFlyoutButton>
-                        </StackPanel>
+                        </Grid>
                     </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel Margin="5">
