@@ -10,16 +10,14 @@ using Xunit;
 namespace UnitTests.Integration;
 
 /// <summary>
-/// Rung-4 honesty test for the inter-gate wire delays (issue #1037, feature #1020/#1027):
-/// the shipped <c>examples/Logic Gate Full Adder.lun</c> wires every gate pin-to-pin over
-/// zero-length routes, so the E2E journey (#1022/#1030) exercises
-/// <see cref="LogicNetworkEvaluator.WireDelaysPicoseconds"/> only with zeros. Here the
-/// example loads through the real load path, the critical path's first gate moves a
-/// substantial distance away through the real canvas move API, the stretched wire re-routes
-/// through the real router, and the re-assembled network must carry a non-zero wire delay
-/// for the moved edge — equal to the connection's routed length × n_g / c, recomputed
-/// independently from the canvas connection — and the critical path must grow by exactly
-/// that delay, the moved edge being the path's only changed edge. A save → load round trip
+/// Rung-4 honesty test for the inter-gate wire delays (feature #1020/#1027): the shipped
+/// <c>examples/Logic Gate Full Adder.lun</c> loads through the real load path with its cached
+/// routes, so every wire already carries the delay of its routed length. The critical path's
+/// first gate then moves a substantial distance away through the real canvas move API, the
+/// stretched wire re-routes through the real router, and the re-assembled network must carry
+/// the longer wire's delay for the moved edge — equal to the connection's routed length ×
+/// n_g / c, recomputed independently from the canvas connection — and the critical path must
+/// grow by exactly the delay difference, the moved edge being the path's only changed edge. A save → load round trip
 /// through the real persistence path must keep the non-zero delay, ruling out a regression
 /// where <see cref="WaveguideConnection.PathLengthMicrometers"/> comes back zero on loaded
 /// designs while every suite stays green.
@@ -56,12 +54,18 @@ public class FullAdderWireDelayHonestyTests : IClassFixture<FullAdderWireDelayHo
             _fixture.BaselineNetwork.CriticalPathGateIds,
             "moving one gate must not change which gates form the critical path");
         var baselineEdgeDelay = _fixture.BaselineNetwork.WireDelaysPicoseconds[_fixture.MovedEdge.Key];
-        baselineEdgeDelay.ShouldBe(0,
-            "the shipped example's pin-to-pin wires are all zero-length — the premise this test pins");
-        _fixture.MovedNetwork.CriticalPathDelayPicoseconds.ShouldBe(
-            _fixture.BaselineNetwork.CriticalPathDelayPicoseconds + movedEdge.Value,
+        baselineEdgeDelay.ShouldBe(
+            _fixture.BaselineConnectionLengthMicrometers
+                * GateDelayCalculator.DefaultGroupIndex
+                / GateDelayCalculator.SpeedOfLightMicrometersPerPicosecond,
             Tolerance,
-            "the critical path grows by exactly the moved edge's wire delay — it is the only " +
+            "the shipped example's wire carries the delay of its cached route — the premise this test pins");
+        movedEdge.Value.ShouldBeGreaterThan(baselineEdgeDelay,
+            "moving the gate away must lengthen its output wire");
+        _fixture.MovedNetwork.CriticalPathDelayPicoseconds.ShouldBe(
+            _fixture.BaselineNetwork.CriticalPathDelayPicoseconds + movedEdge.Value - baselineEdgeDelay,
+            Tolerance,
+            "the critical path grows by exactly the moved edge's added wire delay — it is the only " +
             "edge on the path whose wire changed");
     }
 
@@ -120,8 +124,10 @@ public class FullAdderWireDelayHonestyTests : IClassFixture<FullAdderWireDelayHo
         /// <summary>The loaded canvas after the move and re-route.</summary>
         public DesignCanvasViewModel Canvas { get; private set; } = null!;
 
-        /// <summary>The network assembled before the move (zero wire delays).</summary>
+        /// <summary>The network assembled before the move (cached-route wire delays).</summary>
         public LogicNetworkEvaluator BaselineNetwork { get; private set; } = null!;
+        /// <summary>Routed length of the moved gate's output wire before the move.</summary>
+        public double BaselineConnectionLengthMicrometers { get; private set; }
 
         /// <summary>The network assembled after the move and re-route.</summary>
         public LogicNetworkEvaluator MovedNetwork { get; private set; } = null!;
@@ -139,7 +145,9 @@ public class FullAdderWireDelayHonestyTests : IClassFixture<FullAdderWireDelayHo
             Canvas = await LogicGateHalfAdderExampleTests.LoadCanvas(path);
             BaselineNetwork = await LogicGateFullAdderExampleTests.AssembleNetwork(Canvas);
 
-            var gateName = MoveFirstCriticalPathGate();
+            var gateName = BaselineNetwork.CriticalPathGateIds[0];
+            BaselineConnectionLengthMicrometers = FindGateConnection(gateName).PathLengthMicrometers;
+            MoveGate(gateName);
             MovedConnection = FindGateConnection(gateName);
             MovedConnection.RecalculateTransmission(Canvas.Router);
             MovedNetwork = await LogicGateFullAdderExampleTests.AssembleNetwork(Canvas);
@@ -150,11 +158,9 @@ public class FullAdderWireDelayHonestyTests : IClassFixture<FullAdderWireDelayHo
         /// <summary>
         /// Moves the critical path's first gate far away from its successor through the real
         /// move API, so exactly one on-path edge — its output wire — gets a stretched route.
-        /// Returns the moved gate's name.
         /// </summary>
-        private string MoveFirstCriticalPathGate()
+        private void MoveGate(string gateName)
         {
-            var gateName = BaselineNetwork.CriticalPathGateIds[0];
             var gateVm = Canvas.Components.Single(c => c.Component is ComponentGroup group
                 && group.GroupName == gateName);
             var beforeX = gateVm.X;
@@ -164,8 +170,7 @@ public class FullAdderWireDelayHonestyTests : IClassFixture<FullAdderWireDelayHo
             (Math.Abs(gateVm.X - beforeX - MoveDeltaX) < 0.001
                 && Math.Abs(gateVm.Y - beforeY - MoveDeltaY) < 0.001).ShouldBeTrue(
                 $"the move of gate '{gateName}' must reach the requested position — a rejected " +
-                "move would silently leave the wire delay at zero");
-            return gateName;
+                "move would silently leave the wire delay unchanged");
         }
 
         /// <summary>

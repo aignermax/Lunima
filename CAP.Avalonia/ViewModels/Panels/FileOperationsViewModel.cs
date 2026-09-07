@@ -76,6 +76,12 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly List<string> _displacedConnectionsDuringLoad = new();
 
     /// <summary>
+    /// Background routing pass the last load started for connections that arrived without
+    /// geometry; already completed when every connection came with a usable route.
+    /// </summary>
+    public Task PostLoadRouting { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
     /// Per-component S-matrix overrides loaded from the PIR section of the .lun file,
     /// or added via the S-parameter import feature. Survives save-over-reload cycles.
     /// Keyed by component identifier string; values are the stored S-matrices.
@@ -1082,8 +1088,8 @@ public partial class FileOperationsViewModel : ObservableObject
                     }
                 }
 
-                // Pin-calibration migration: report discarded stale routes and re-route them.
                 ReportPinCalibrationMigrations();
+                StartPostLoadRouting();
 
                 // Rebuild dissolution records for loaded auto-inserted crossings (#705)
                 // so they dissolve/re-evaluate exactly like ones inserted this session.
@@ -1768,8 +1774,42 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Upper bound of path-less connections the loader routes on its own. Larger designs keep
+    /// their fallback lines and get a console hint instead, like the GDS import's guard for
+    /// very large re-routes: one unroutable wire makes a routing pass retry every ordering
+    /// and run for minutes, which must not happen silently on open.
+    /// </summary>
+    internal const int MaxConnectionsRoutedOnLoad = 300;
+
+    /// <summary>
+    /// Routes every connection the file carried without geometry: hand-written or generated
+    /// designs, and routes the pin-calibration migration discarded. The pass runs in the
+    /// background like every routing pass, so the design shows at once and the routes fill
+    /// in; the incremental router leaves cached routes untouched.
+    /// </summary>
+    private void StartPostLoadRouting()
+    {
+        int unrouted = _canvas.Connections.Count(c => c.Connection.RoutedPath == null);
+        if (unrouted == 0)
+        {
+            PostLoadRouting = Task.CompletedTask;
+            return;
+        }
+        if (unrouted > MaxConnectionsRoutedOnLoad)
+        {
+            _errorConsole?.LogInfo(string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                Services.Localization.LocalizationService.Instance.Translate("Load.RoutingSkippedLargeDesign"),
+                unrouted));
+            PostLoadRouting = Task.CompletedTask;
+            return;
+        }
+        PostLoadRouting = _canvas.RecalculateRoutesAsync();
+    }
+
+    /// <summary>
     /// Logs one localized hint per component whose pin calibration changed since the
-    /// design was saved and re-routes the affected — now path-less — connections.
+    /// design was saved; the post-load routing pass re-routes the now path-less connections.
     /// </summary>
     private void ReportPinCalibrationMigrations()
     {
@@ -1784,7 +1824,6 @@ public partial class FileOperationsViewModel : ObservableObject
                 name));
         }
         _pinCalibrationMigratedComponents.Clear();
-        _ = _canvas.RecalculateRoutesAsync();
     }
 
     /// <summary>

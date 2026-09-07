@@ -19,7 +19,7 @@ namespace UnitTests.Integration;
 ///           is the optically re-simulated truth table at the persisted roles.
 ///   Step 3: all 8 input combinations yield the full-adder Sum/Cout.
 ///   Step 4: every gate delay &gt; 0; the critical path equals an independent
-///           recomputation from the exposed per-gate delays over the design's DAG.
+///           recomputation from the exposed per-gate and per-wire delays over the design's DAG.
 ///   Step 5: both addend signal fan-out sites carry quantitative level reports whose
 ///           verdicts match the #1018-documented expectation (both fail physically).
 ///   Step 6: save → load → repeat — the round-tripped design reproduces steps 2–5
@@ -102,12 +102,14 @@ public class FullAdderLogicJourneyTests
 
         network.CriticalPathDelayPicoseconds.ShouldBe(RecomputeCriticalPath(network), DelayTolerance,
             "Step 4: the critical path equals the max cumulative delay recomputed from the " +
-            "exposed per-gate delays over the design's DAG");
+            "exposed per-gate and per-wire delays over the design's DAG");
         network.CriticalPathGateIds.Count.ShouldBeGreaterThan(1,
             "Step 4: the critical path is a chain of gates, not a single gate");
-        network.CriticalPathGateIds.Sum(id => network.GateDelaysPicoseconds[id])
-            .ShouldBe(network.CriticalPathDelayPicoseconds, DelayTolerance,
-                "Step 4: the critical path is the sum of the delays along its gate chain");
+        var chain = network.CriticalPathGateIds;
+        var chainDelay = chain.Sum(id => network.GateDelaysPicoseconds[id])
+            + chain.Zip(chain.Skip(1), (driver, load) => WireDelayBetween(network, driver, load)).Sum();
+        chainDelay.ShouldBe(network.CriticalPathDelayPicoseconds, DelayTolerance,
+            "Step 4: the critical path is the sum of the gate delays along its chain plus the wires between them");
     }
 
     [Theory]
@@ -188,10 +190,10 @@ public class FullAdderLogicJourneyTests
 
     /// <summary>
     /// Independently recomputes the critical-path delay from the network's exposed
-    /// per-gate delays over the design's own gate DAG — derived from the canvas
-    /// connections and the persisted pin roles, never from the network's private
-    /// wiring: cumulative delay per gate in topological order, then the maximum over
-    /// the tapped gates.
+    /// per-gate and per-wire delays over the design's own gate DAG — derived from the
+    /// canvas connections and the persisted pin roles, never from the network's private
+    /// wiring: cumulative delay per gate in topological order (each driver's cumulative
+    /// delay plus the wire into this gate), then the maximum over the tapped gates.
     /// </summary>
     private double RecomputeCriticalPath(LogicNetworkEvaluator network)
     {
@@ -205,12 +207,23 @@ public class FullAdderLogicJourneyTests
             foreach (var id in ready)
             {
                 cumulative[id] = network.GateDelaysPicoseconds[id]
-                    + drivers[id].Select(d => cumulative[d]).DefaultIfEmpty(0).Max();
+                    + drivers[id].Select(d => cumulative[d] + WireDelayBetween(network, d, id)).DefaultIfEmpty(0).Max();
                 remaining.Remove(id);
             }
         }
         return network.OutputTaps.Values.Select(pin => cumulative[pin.GateId]).Max();
     }
+
+    /// <summary>
+    /// The exposed delay of the wire from one gate to the next; with several wires between the
+    /// same two gates the slowest one bounds the critical path.
+    /// </summary>
+    private static double WireDelayBetween(LogicNetworkEvaluator network, string driverGateId, string loadGateId) =>
+        network.WireDelaysPicoseconds
+            .Where(pair => pair.Key.Source.GateId == driverGateId && pair.Key.Load.GateId == loadGateId)
+            .Select(pair => pair.Value)
+            .DefaultIfEmpty(0)
+            .Max();
 
     /// <summary>The driver gates of every gate, derived from the canvas wiring and the persisted roles.</summary>
     private IReadOnlyDictionary<string, List<string>> GateDriversByLoad()

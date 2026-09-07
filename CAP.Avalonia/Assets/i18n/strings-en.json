@@ -581,6 +581,7 @@
   "Library.NoGroupsLoaded": "No groups loaded",
   "Library.NoSavedGroups": "No saved groups",
   "Load.PinCalibrationChanged": "Pin calibration of '{0}' changed since this design was saved — its routes were recalculated.",
+  "Load.RoutingSkippedLargeDesign": "{0} connections have no route geometry. Routing was skipped for this large design — use \"Re-route All\" when you need the waveguides drawn (this can take a while).",
   "Load.DuplicatePinConnectionsDropped": "Warning: {0} connection(s) were dropped because a pin already had a wire — this file may have been produced by a newer version or edited externally.",
   "MainView.ResetZoom": "Reset",
   "MainView.Simulate": "Simulate (L)",

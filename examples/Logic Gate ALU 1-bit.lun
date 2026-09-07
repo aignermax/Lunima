@@ -9,6 +9,18 @@
       "EndPinName": "A",
       "StartComponentId": "group_4a961c145ed84360931534a4052caf9c",
       "EndComponentId": "group_f03f35e874f54eda9b93702d46b8aa45",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1865,
+          "StartY": 123.5,
+          "EndX": 2100,
+          "EndY": 123.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -19,6 +31,62 @@
       "EndPinName": "A",
       "StartComponentId": "group_5a8a74360e1547e6ab32c4628bae8350",
       "EndComponentId": "group_0cef1b5c6d354f9c9dafbb8f6b2c4061",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1865,
+          "StartY": 723.5,
+          "EndX": 1912,
+          "EndY": 723.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1912,
+          "StartY": 723.5,
+          "EndX": 1961.0707481750767,
+          "EndY": 763.905122536571,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 78.93645624217467,
+          "CenterX": 1912,
+          "CenterY": 773.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 78.93645624217467
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1961.0707481750767,
+          "StartY": 763.905122536571,
+          "EndX": 2003.9292518249235,
+          "EndY": 983.0948774634292,
+          "StartAngleDegrees": 78.93645624217467,
+          "EndAngleDegrees": 78.93645624217467
+        },
+        {
+          "Type": "Bend",
+          "StartX": 2003.9292518249233,
+          "StartY": 983.0948774634292,
+          "EndX": 2053,
+          "EndY": 1023.5000000000001,
+          "StartAngleDegrees": 78.93645624217467,
+          "EndAngleDegrees": 0,
+          "CenterX": 2053,
+          "CenterY": 973.5000000000001,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -78.93645624217467
+        },
+        {
+          "Type": "Straight",
+          "StartX": 2053,
+          "StartY": 1023.5000000000001,
+          "EndX": 2100,
+          "EndY": 1023.5000000000001,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -29,6 +97,62 @@
       "EndPinName": "B",
       "StartComponentId": "group_1f980e9bdacd4a808a3a55a2348b44b4",
       "EndComponentId": "group_0cef1b5c6d354f9c9dafbb8f6b2c4061",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1865,
+          "StartY": 1323.5,
+          "EndX": 1912,
+          "EndY": 1323.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1912,
+          "StartY": 1323.5,
+          "EndX": 1961.0012659350523,
+          "EndY": 1283.4436380043874,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -78.52895114493691,
+          "CenterX": 1912,
+          "CenterY": 1273.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -78.52895114493691
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1961.0012659350523,
+          "StartY": 1283.4436380043874,
+          "EndX": 2003.998734064948,
+          "EndY": 1071.5563619956129,
+          "StartAngleDegrees": -78.52895114493691,
+          "EndAngleDegrees": -78.52895114493691
+        },
+        {
+          "Type": "Bend",
+          "StartX": 2003.9987340649477,
+          "StartY": 1071.5563619956129,
+          "EndX": 2053,
+          "EndY": 1031.5000000000002,
+          "StartAngleDegrees": -78.52895114493691,
+          "EndAngleDegrees": 0,
+          "CenterX": 2053,
+          "CenterY": 1081.5000000000002,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 78.52895114493691
+        },
+        {
+          "Type": "Straight",
+          "StartX": 2053,
+          "StartY": 1031.5000000000002,
+          "EndX": 2100,
+          "EndY": 1031.5000000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -39,6 +163,18 @@
       "EndPinName": "A",
       "StartComponentId": "group_f03f35e874f54eda9b93702d46b8aa45",
       "EndComponentId": "group_a6455d08762e4559a5afbba04a935b1c",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 3865,
+          "StartY": 123.5,
+          "EndX": 4100,
+          "EndY": 123.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -49,6 +185,71 @@
       "EndPinName": "B",
       "StartComponentId": "group_f8b3c69b530c4c4b87ad8cd761008b66",
       "EndComponentId": "group_a6455d08762e4559a5afbba04a935b1c",
+      "CachedSegments": [
+        {
+          "Type": "Bend",
+          "StartX": 5865,
+          "StartY": 1623.5,
+          "EndX": 5875,
+          "EndY": 1613.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -90,
+          "CenterX": 5865,
+          "CenterY": 1613.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -90
+        },
+        {
+          "Type": "Bend",
+          "StartX": 5875,
+          "StartY": 1613.5,
+          "EndX": 5871.337766206703,
+          "EndY": 1605.7648387535116,
+          "StartAngleDegrees": 270,
+          "EndAngleDegrees": 219.32930765409594,
+          "CenterX": 5865,
+          "CenterY": 1613.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -50.67069234590406
+        },
+        {
+          "Type": "Straight",
+          "StartX": 5871.337766206703,
+          "StartY": 1605.7648387535116,
+          "EndX": 4093.662233793297,
+          "EndY": 149.23516124648827,
+          "StartAngleDegrees": 219.32930765409594,
+          "EndAngleDegrees": 219.32930765409594
+        },
+        {
+          "Type": "Bend",
+          "StartX": 4093.662233793297,
+          "StartY": 149.23516124648827,
+          "EndX": 4092.264838753512,
+          "EndY": 135.16223379329705,
+          "StartAngleDegrees": 219.32930765409594,
+          "EndAngleDegrees": 309.32930765409594,
+          "CenterX": 4100,
+          "CenterY": 141.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 90
+        },
+        {
+          "Type": "Bend",
+          "StartX": 4092.264838753512,
+          "StartY": 135.16223379329705,
+          "EndX": 4100,
+          "EndY": 131.5,
+          "StartAngleDegrees": 309.32930765409594,
+          "EndAngleDegrees": 360,
+          "CenterX": 4100,
+          "CenterY": 141.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 50.67069234590406
+        }
+      ],
+      "IsBlockedFallback": true,
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -59,6 +260,62 @@
       "EndPinName": "B",
       "StartComponentId": "group_0cef1b5c6d354f9c9dafbb8f6b2c4061",
       "EndComponentId": "group_0df96833f68e482eb8001890fbb6f096",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 3865,
+          "StartY": 1023.5,
+          "EndX": 3912,
+          "EndY": 1023.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 3912,
+          "StartY": 1023.5,
+          "EndX": 3914.8914767988103,
+          "EndY": 1023.5836763981767,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 3.315237930178902,
+          "CenterX": 3912,
+          "CenterY": 1073.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 3.315237930178902
+        },
+        {
+          "Type": "Straight",
+          "StartX": 3914.8914767988103,
+          "StartY": 1023.5836763981767,
+          "EndX": 4050.1085232011897,
+          "EndY": 1031.4163236018233,
+          "StartAngleDegrees": 3.315237930178902,
+          "EndAngleDegrees": 3.315237930178902
+        },
+        {
+          "Type": "Bend",
+          "StartX": 4050.1085232011897,
+          "StartY": 1031.4163236018233,
+          "EndX": 4053,
+          "EndY": 1031.5,
+          "StartAngleDegrees": 3.315237930178902,
+          "EndAngleDegrees": 0,
+          "CenterX": 4053,
+          "CenterY": 981.5,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -3.315237930178902
+        },
+        {
+          "Type": "Straight",
+          "StartX": 4053,
+          "StartY": 1031.5,
+          "EndX": 4100,
+          "EndY": 1031.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -69,6 +326,45 @@
       "EndPinName": "A",
       "StartComponentId": "group_a6455d08762e4559a5afbba04a935b1c",
       "EndComponentId": "group_35862336eb0e4f7f87c4b0a3f368c102",
+      "CachedSegments": [
+        {
+          "Type": "Bend",
+          "StartX": 5865,
+          "StartY": 123.5,
+          "EndX": 5873,
+          "EndY": 127.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 53.13010235415598,
+          "CenterX": 5865,
+          "CenterY": 133.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 53.13010235415598
+        },
+        {
+          "Type": "Straight",
+          "StartX": 5873,
+          "StartY": 127.5,
+          "EndX": 6092,
+          "EndY": 419.5,
+          "StartAngleDegrees": 53.13010235415598,
+          "EndAngleDegrees": 53.13010235415598
+        },
+        {
+          "Type": "Bend",
+          "StartX": 6092,
+          "StartY": 419.5,
+          "EndX": 6100,
+          "EndY": 423.5,
+          "StartAngleDegrees": 53.13010235415598,
+          "EndAngleDegrees": 0,
+          "CenterX": 6100,
+          "CenterY": 413.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -53.13010235415598
+        }
+      ],
+      "IsBlockedFallback": true,
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     },
@@ -79,6 +375,45 @@
       "EndPinName": "B",
       "StartComponentId": "group_0df96833f68e482eb8001890fbb6f096",
       "EndComponentId": "group_35862336eb0e4f7f87c4b0a3f368c102",
+      "CachedSegments": [
+        {
+          "Type": "Bend",
+          "StartX": 5865,
+          "StartY": 1023.5,
+          "EndX": 5874.367858350121,
+          "EndY": 1016.9990327137737,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -69.51860112409645,
+          "CenterX": 5865,
+          "CenterY": 1013.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -69.51860112409645
+        },
+        {
+          "Type": "Straight",
+          "StartX": 5874.367858350121,
+          "StartY": 1016.9990327137737,
+          "EndX": 6090.632141649879,
+          "EndY": 438.0009672862263,
+          "StartAngleDegrees": 290.48139887590355,
+          "EndAngleDegrees": 290.48139887590355
+        },
+        {
+          "Type": "Bend",
+          "StartX": 6090.632141649879,
+          "StartY": 438.0009672862263,
+          "EndX": 6100,
+          "EndY": 431.5,
+          "StartAngleDegrees": 290.48139887590355,
+          "EndAngleDegrees": 360,
+          "CenterX": 6100,
+          "CenterY": 441.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 69.51860112409645
+        }
+      ],
+      "IsBlockedFallback": true,
+      "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
     }
@@ -87,16 +422,16 @@
     {
       "GroupDto": {
         "GroupName": "AND1",
-        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: first stage of the AND datapath, Y = NAND(A, B), feeding AND2.A, which inverts it into A AND B. Both pins read the operand toggles through the signal names A and B at the logic layer. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: first stage of the AND datapath, Y = NAND(A, B), feeding AND2.A, which inverts it into A AND B. Both pins read the operand toggles through the signal names A and B at the logic layer. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_4a961c145ed84360931534a4052caf9c",
-        "IdGuid": "5a78c438-0ea8-4d47-9129-88002ff0da4b",
+        "IdGuid": "9fad0851-406c-45ab-a11a-dfc604de6160",
         "ChildComponentGuids": [
-          "1773cfad-8493-4a4c-a55f-764a8f7e7d38",
-          "c654bc45-14ee-4c7d-9148-15c2c0b8667f",
-          "0f2c523c-a1d0-4baf-bfa7-359d053d6bbd",
-          "c804d78c-6a58-41af-86d0-952cd73ddd20",
-          "ace95145-97f9-4677-a34c-83dc9ef49489",
-          "7a2337ad-c77c-4334-b047-657c2350362e"
+          "8a53188f-6282-47aa-aa29-458c6c4a118a",
+          "b63f1f07-207d-430b-968f-ad38f0821a0c",
+          "0b670e54-1dac-4bd9-bfc3-d3617a38581e",
+          "b63c29ac-2faf-4b60-a37d-8137b4c6b7aa",
+          "e575f574-237c-44d6-bc6e-dac0b108faaa",
+          "6f432f93-05aa-43ac-a16a-1a3145fb182a"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -115,10 +450,10 @@
           {
             "PathId": "241a0174-d5ad-41c5-b703-a6b184bf6db6",
             "StartComponentId": "input_06af8f052a9f41a994980a8e6a76c731",
-            "StartComponentGuid": "1773cfad-8493-4a4c-a55f-764a8f7e7d38",
+            "StartComponentGuid": "8a53188f-6282-47aa-aa29-458c6c4a118a",
             "StartPinName": "b0",
             "EndComponentId": "combine_64989d3f563e463e81644a6b8d80c879",
-            "EndComponentGuid": "0f2c523c-a1d0-4baf-bfa7-359d053d6bbd",
+            "EndComponentGuid": "0b670e54-1dac-4bd9-bfc3-d3617a38581e",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -145,10 +480,10 @@
           {
             "PathId": "4d5cc39a-7f91-4ce9-ace7-130d08c66556",
             "StartComponentId": "input_14bbed7681844dc9b164bec0fe12267b",
-            "StartComponentGuid": "c654bc45-14ee-4c7d-9148-15c2c0b8667f",
+            "StartComponentGuid": "b63f1f07-207d-430b-968f-ad38f0821a0c",
             "StartPinName": "b0",
             "EndComponentId": "combine_64989d3f563e463e81644a6b8d80c879",
-            "EndComponentGuid": "0f2c523c-a1d0-4baf-bfa7-359d053d6bbd",
+            "EndComponentGuid": "0b670e54-1dac-4bd9-bfc3-d3617a38581e",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -175,10 +510,10 @@
           {
             "PathId": "d2748dc6-b3e5-4e0c-ba42-9402d5d9541d",
             "StartComponentId": "combine_64989d3f563e463e81644a6b8d80c879",
-            "StartComponentGuid": "0f2c523c-a1d0-4baf-bfa7-359d053d6bbd",
+            "StartComponentGuid": "0b670e54-1dac-4bd9-bfc3-d3617a38581e",
             "StartPinName": "out1",
             "EndComponentId": "recombine_0569d9cf87204c40ae6a8b06b07e2d88",
-            "EndComponentGuid": "ace95145-97f9-4677-a34c-83dc9ef49489",
+            "EndComponentGuid": "e575f574-237c-44d6-bc6e-dac0b108faaa",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -205,10 +540,10 @@
           {
             "PathId": "84c1ff00-7899-4644-8568-95ff7cd5ba7e",
             "StartComponentId": "phase_ac36ddfa8cb341b7b4ca589cad157e30",
-            "StartComponentGuid": "c804d78c-6a58-41af-86d0-952cd73ddd20",
+            "StartComponentGuid": "b63c29ac-2faf-4b60-a37d-8137b4c6b7aa",
             "StartPinName": "out",
             "EndComponentId": "recombine_0569d9cf87204c40ae6a8b06b07e2d88",
-            "EndComponentGuid": "ace95145-97f9-4677-a34c-83dc9ef49489",
+            "EndComponentGuid": "e575f574-237c-44d6-bc6e-dac0b108faaa",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -235,10 +570,10 @@
           {
             "PathId": "d9791b76-5ff9-4e17-add4-e919ad478812",
             "StartComponentId": "recombine_0569d9cf87204c40ae6a8b06b07e2d88",
-            "StartComponentGuid": "ace95145-97f9-4677-a34c-83dc9ef49489",
+            "StartComponentGuid": "e575f574-237c-44d6-bc6e-dac0b108faaa",
             "StartPinName": "out1",
             "EndComponentId": "output_481b5edcdbfa429992fa3626ed55e24e",
-            "EndComponentGuid": "7a2337ad-c77c-4334-b047-657c2350362e",
+            "EndComponentGuid": "6f432f93-05aa-43ac-a16a-1a3145fb182a",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -268,7 +603,7 @@
             "PinId": "8cc12d3a-a833-4048-81ad-aeee012064bf",
             "Name": "A",
             "InternalComponentId": "input_06af8f052a9f41a994980a8e6a76c731",
-            "InternalComponentGuid": "1773cfad-8493-4a4c-a55f-764a8f7e7d38",
+            "InternalComponentGuid": "8a53188f-6282-47aa-aa29-458c6c4a118a",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -278,7 +613,7 @@
             "PinId": "8d1671a2-5c8b-4ad0-8d68-a7bad8e03c36",
             "Name": "B",
             "InternalComponentId": "input_14bbed7681844dc9b164bec0fe12267b",
-            "InternalComponentGuid": "c654bc45-14ee-4c7d-9148-15c2c0b8667f",
+            "InternalComponentGuid": "b63f1f07-207d-430b-968f-ad38f0821a0c",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -288,7 +623,7 @@
             "PinId": "fd817a4c-cd7c-47b8-b7b3-16be606ccd56",
             "Name": "BIAS",
             "InternalComponentId": "phase_ac36ddfa8cb341b7b4ca589cad157e30",
-            "InternalComponentGuid": "c804d78c-6a58-41af-86d0-952cd73ddd20",
+            "InternalComponentGuid": "b63c29ac-2faf-4b60-a37d-8137b4c6b7aa",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -298,7 +633,7 @@
             "PinId": "cd1218e1-29bf-436d-ab04-c2f3135f14a6",
             "Name": "Y",
             "InternalComponentId": "output_481b5edcdbfa429992fa3626ed55e24e",
-            "InternalComponentGuid": "7a2337ad-c77c-4334-b047-657c2350362e",
+            "InternalComponentGuid": "6f432f93-05aa-43ac-a16a-1a3145fb182a",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -309,8 +644,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_06af8f052a9f41a994980a8e6a76c731",
-          "ComponentGuid": "1773cfad-8493-4a4c-a55f-764a8f7e7d38",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "8a53188f-6282-47aa-aa29-458c6c4a118a",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 100,
           "Y": 118.5,
@@ -319,12 +654,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_14bbed7681844dc9b164bec0fe12267b",
-          "ComponentGuid": "c654bc45-14ee-4c7d-9148-15c2c0b8667f",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "b63f1f07-207d-430b-968f-ad38f0821a0c",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 100,
           "Y": 126.5,
@@ -333,11 +668,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_64989d3f563e463e81644a6b8d80c879",
-          "ComponentGuid": "0f2c523c-a1d0-4baf-bfa7-359d053d6bbd",
+          "ComponentGuid": "0b670e54-1dac-4bd9-bfc3-d3617a38581e",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 960,
@@ -352,7 +687,7 @@
         },
         {
           "Identifier": "phase_ac36ddfa8cb341b7b4ca589cad157e30",
-          "ComponentGuid": "c804d78c-6a58-41af-86d0-952cd73ddd20",
+          "ComponentGuid": "b63c29ac-2faf-4b60-a37d-8137b4c6b7aa",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 1005,
@@ -366,7 +701,7 @@
         },
         {
           "Identifier": "recombine_0569d9cf87204c40ae6a8b06b07e2d88",
-          "ComponentGuid": "ace95145-97f9-4677-a34c-83dc9ef49489",
+          "ComponentGuid": "e575f574-237c-44d6-bc6e-dac0b108faaa",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 1510,
@@ -381,8 +716,8 @@
         },
         {
           "Identifier": "output_481b5edcdbfa429992fa3626ed55e24e",
-          "ComponentGuid": "7a2337ad-c77c-4334-b047-657c2350362e",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "6f432f93-05aa-43ac-a16a-1a3145fb182a",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 1765,
           "Y": 118.5,
@@ -391,7 +726,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 100,
@@ -417,16 +752,16 @@
     {
       "GroupDto": {
         "GroupName": "AND2",
-        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: second stage of the AND datapath, Y = NOT(AND1.Y) = A AND B \u2014 the result the MUX selects when Op = 0, feeding NANDA.A. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: second stage of the AND datapath, Y = NOT(AND1.Y) = A AND B \u2014 the result the MUX selects when Op = 0, feeding NANDA.A. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_f03f35e874f54eda9b93702d46b8aa45",
-        "IdGuid": "c7dc888a-0199-432a-a621-019caae74d92",
+        "IdGuid": "a2e8fd00-14c5-47e4-941b-ba7e71cfcfa0",
         "ChildComponentGuids": [
-          "f6b0b840-9b6f-4390-8f8b-6d1e53d37fe3",
-          "1347dfac-fc7d-4b3a-a8fa-ec0f83e4d402",
-          "8b67fb9d-0391-4bb1-87f9-e1b357763c05",
-          "283c8d80-e627-45f5-84dd-e7a75755bc08",
-          "b37c403c-b6c1-4c81-a5cb-9a977cbd4b85",
-          "18a6b4af-82d4-4622-a126-7f26b3284b2c"
+          "d6358bbe-7380-47ad-bffb-38b783f8e6e9",
+          "604ae761-dfe2-4906-ab64-a20deba0c548",
+          "f412ac25-727a-42bc-a23a-d6235f04cd2e",
+          "8f86fbb3-1d3c-4a0a-96c9-5859a9eebfed",
+          "a7aa6317-53a6-4ffe-b4fc-b667c810a4dc",
+          "1b279d48-6757-4d07-8ae4-3bd3d488f726"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -445,10 +780,10 @@
           {
             "PathId": "5f06c158-0fc4-4160-9659-e5ab7b301ce0",
             "StartComponentId": "input_dbcca7aa2b1d449cab463b67a0751541",
-            "StartComponentGuid": "f6b0b840-9b6f-4390-8f8b-6d1e53d37fe3",
+            "StartComponentGuid": "d6358bbe-7380-47ad-bffb-38b783f8e6e9",
             "StartPinName": "b0",
             "EndComponentId": "combine_1e90399e8aeb4fb4875ba39fd5b72f8b",
-            "EndComponentGuid": "8b67fb9d-0391-4bb1-87f9-e1b357763c05",
+            "EndComponentGuid": "f412ac25-727a-42bc-a23a-d6235f04cd2e",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -475,10 +810,10 @@
           {
             "PathId": "390e5d13-4a57-4df8-9ddd-061b69456b32",
             "StartComponentId": "input_e4ad934183f74124aa243879ceec2c81",
-            "StartComponentGuid": "1347dfac-fc7d-4b3a-a8fa-ec0f83e4d402",
+            "StartComponentGuid": "604ae761-dfe2-4906-ab64-a20deba0c548",
             "StartPinName": "b0",
             "EndComponentId": "combine_1e90399e8aeb4fb4875ba39fd5b72f8b",
-            "EndComponentGuid": "8b67fb9d-0391-4bb1-87f9-e1b357763c05",
+            "EndComponentGuid": "f412ac25-727a-42bc-a23a-d6235f04cd2e",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -505,10 +840,10 @@
           {
             "PathId": "ff1ec965-2068-444a-a538-22f4a8980720",
             "StartComponentId": "combine_1e90399e8aeb4fb4875ba39fd5b72f8b",
-            "StartComponentGuid": "8b67fb9d-0391-4bb1-87f9-e1b357763c05",
+            "StartComponentGuid": "f412ac25-727a-42bc-a23a-d6235f04cd2e",
             "StartPinName": "out1",
             "EndComponentId": "recombine_54aa428afbfd4f5e86c2a54a14292a37",
-            "EndComponentGuid": "b37c403c-b6c1-4c81-a5cb-9a977cbd4b85",
+            "EndComponentGuid": "a7aa6317-53a6-4ffe-b4fc-b667c810a4dc",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -535,10 +870,10 @@
           {
             "PathId": "7b794bba-5fa6-4d03-b0fb-345c0d71231b",
             "StartComponentId": "phase_246a706019944b249867feaab7930379",
-            "StartComponentGuid": "283c8d80-e627-45f5-84dd-e7a75755bc08",
+            "StartComponentGuid": "8f86fbb3-1d3c-4a0a-96c9-5859a9eebfed",
             "StartPinName": "out",
             "EndComponentId": "recombine_54aa428afbfd4f5e86c2a54a14292a37",
-            "EndComponentGuid": "b37c403c-b6c1-4c81-a5cb-9a977cbd4b85",
+            "EndComponentGuid": "a7aa6317-53a6-4ffe-b4fc-b667c810a4dc",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -565,10 +900,10 @@
           {
             "PathId": "28b6e928-8fac-4192-9014-8cb2a3d18b1d",
             "StartComponentId": "recombine_54aa428afbfd4f5e86c2a54a14292a37",
-            "StartComponentGuid": "b37c403c-b6c1-4c81-a5cb-9a977cbd4b85",
+            "StartComponentGuid": "a7aa6317-53a6-4ffe-b4fc-b667c810a4dc",
             "StartPinName": "out1",
             "EndComponentId": "output_7aad9fd0ca874ef29ce1063b24b2a0a1",
-            "EndComponentGuid": "18a6b4af-82d4-4622-a126-7f26b3284b2c",
+            "EndComponentGuid": "1b279d48-6757-4d07-8ae4-3bd3d488f726",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -598,7 +933,7 @@
             "PinId": "de9c5af6-5da0-4871-a279-8648f10d6741",
             "Name": "A",
             "InternalComponentId": "input_dbcca7aa2b1d449cab463b67a0751541",
-            "InternalComponentGuid": "f6b0b840-9b6f-4390-8f8b-6d1e53d37fe3",
+            "InternalComponentGuid": "d6358bbe-7380-47ad-bffb-38b783f8e6e9",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -608,7 +943,7 @@
             "PinId": "e30ba032-e7c4-4403-87e6-51b6c19b16d3",
             "Name": "B",
             "InternalComponentId": "input_e4ad934183f74124aa243879ceec2c81",
-            "InternalComponentGuid": "1347dfac-fc7d-4b3a-a8fa-ec0f83e4d402",
+            "InternalComponentGuid": "604ae761-dfe2-4906-ab64-a20deba0c548",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -618,7 +953,7 @@
             "PinId": "c676e8ec-172e-4a1f-b66d-3bfbed6efd3e",
             "Name": "BIAS",
             "InternalComponentId": "phase_246a706019944b249867feaab7930379",
-            "InternalComponentGuid": "283c8d80-e627-45f5-84dd-e7a75755bc08",
+            "InternalComponentGuid": "8f86fbb3-1d3c-4a0a-96c9-5859a9eebfed",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -628,7 +963,7 @@
             "PinId": "2ca3f493-f207-416f-9dd2-2a3c19a156b6",
             "Name": "Y",
             "InternalComponentId": "output_7aad9fd0ca874ef29ce1063b24b2a0a1",
-            "InternalComponentGuid": "18a6b4af-82d4-4622-a126-7f26b3284b2c",
+            "InternalComponentGuid": "1b279d48-6757-4d07-8ae4-3bd3d488f726",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -639,8 +974,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_dbcca7aa2b1d449cab463b67a0751541",
-          "ComponentGuid": "f6b0b840-9b6f-4390-8f8b-6d1e53d37fe3",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "d6358bbe-7380-47ad-bffb-38b783f8e6e9",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 2100,
           "Y": 118.5,
@@ -649,12 +984,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_e4ad934183f74124aa243879ceec2c81",
-          "ComponentGuid": "1347dfac-fc7d-4b3a-a8fa-ec0f83e4d402",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "604ae761-dfe2-4906-ab64-a20deba0c548",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 2100,
           "Y": 126.5,
@@ -663,11 +998,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_1e90399e8aeb4fb4875ba39fd5b72f8b",
-          "ComponentGuid": "8b67fb9d-0391-4bb1-87f9-e1b357763c05",
+          "ComponentGuid": "f412ac25-727a-42bc-a23a-d6235f04cd2e",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 2960,
@@ -682,7 +1017,7 @@
         },
         {
           "Identifier": "phase_246a706019944b249867feaab7930379",
-          "ComponentGuid": "283c8d80-e627-45f5-84dd-e7a75755bc08",
+          "ComponentGuid": "8f86fbb3-1d3c-4a0a-96c9-5859a9eebfed",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 3005,
@@ -696,7 +1031,7 @@
         },
         {
           "Identifier": "recombine_54aa428afbfd4f5e86c2a54a14292a37",
-          "ComponentGuid": "b37c403c-b6c1-4c81-a5cb-9a977cbd4b85",
+          "ComponentGuid": "a7aa6317-53a6-4ffe-b4fc-b667c810a4dc",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 3510,
@@ -711,8 +1046,8 @@
         },
         {
           "Identifier": "output_7aad9fd0ca874ef29ce1063b24b2a0a1",
-          "ComponentGuid": "18a6b4af-82d4-4622-a126-7f26b3284b2c",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "1b279d48-6757-4d07-8ae4-3bd3d488f726",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 3765,
           "Y": 118.5,
@@ -721,7 +1056,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 2100,
@@ -742,16 +1077,16 @@
     {
       "GroupDto": {
         "GroupName": "ORN1",
-        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: first inverter of the OR datapath, Y = NOT(A), feeding OR1.A. Its A pin reads the operand toggle through the signal name A at the logic layer. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: first inverter of the OR datapath, Y = NOT(A), feeding OR1.A. Its A pin reads the operand toggle through the signal name A at the logic layer. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_5a8a74360e1547e6ab32c4628bae8350",
-        "IdGuid": "a147c9c8-cb2e-4bdb-b1ae-1466e07315b2",
+        "IdGuid": "8548afcf-94eb-4036-883a-232db3c1d364",
         "ChildComponentGuids": [
-          "1d184210-17e2-4e1e-bf87-e9d1de3b973b",
-          "3dfc828a-4d1d-40fd-92cb-a1c1d4c04986",
-          "a25356fd-9e27-4a26-9353-94f4cfbe20c2",
-          "6e7c6d71-e6b1-499e-b804-7529233c7289",
-          "855ebae8-a793-4279-94ad-1330c20f9741",
-          "4dd7bfe3-e2fe-4140-819e-350a11d8e385"
+          "028cf61d-bbf1-4d40-b11e-180734771976",
+          "9275d627-93c0-4b67-a479-73fc892ff3e7",
+          "85bade68-4b90-4c18-9e59-1cc3cfa6d10a",
+          "0120f3d4-1fbd-46ea-bf85-641bf09124de",
+          "55601d3d-e979-4a85-850f-0d911e629c58",
+          "e2285087-5791-49f6-b0a9-37b9804a1957"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -770,10 +1105,10 @@
           {
             "PathId": "2d837fa7-ecec-41fd-8598-fdda6db9e74e",
             "StartComponentId": "input_7b4e7ad73221432586aedc1d271a37e3",
-            "StartComponentGuid": "1d184210-17e2-4e1e-bf87-e9d1de3b973b",
+            "StartComponentGuid": "028cf61d-bbf1-4d40-b11e-180734771976",
             "StartPinName": "b0",
             "EndComponentId": "combine_e15ad3f5c4ce4eb1b62e495c3764ac5c",
-            "EndComponentGuid": "a25356fd-9e27-4a26-9353-94f4cfbe20c2",
+            "EndComponentGuid": "85bade68-4b90-4c18-9e59-1cc3cfa6d10a",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -800,10 +1135,10 @@
           {
             "PathId": "597defd6-751a-4421-8e20-751ba5427633",
             "StartComponentId": "input_ccdd33728dd44cc99956a2c29c523e36",
-            "StartComponentGuid": "3dfc828a-4d1d-40fd-92cb-a1c1d4c04986",
+            "StartComponentGuid": "9275d627-93c0-4b67-a479-73fc892ff3e7",
             "StartPinName": "b0",
             "EndComponentId": "combine_e15ad3f5c4ce4eb1b62e495c3764ac5c",
-            "EndComponentGuid": "a25356fd-9e27-4a26-9353-94f4cfbe20c2",
+            "EndComponentGuid": "85bade68-4b90-4c18-9e59-1cc3cfa6d10a",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -830,10 +1165,10 @@
           {
             "PathId": "686d3d9a-fc92-42cc-94fd-14a81ae7f79a",
             "StartComponentId": "combine_e15ad3f5c4ce4eb1b62e495c3764ac5c",
-            "StartComponentGuid": "a25356fd-9e27-4a26-9353-94f4cfbe20c2",
+            "StartComponentGuid": "85bade68-4b90-4c18-9e59-1cc3cfa6d10a",
             "StartPinName": "out1",
             "EndComponentId": "recombine_f909b88d1ba04e3faaf2745962889b63",
-            "EndComponentGuid": "855ebae8-a793-4279-94ad-1330c20f9741",
+            "EndComponentGuid": "55601d3d-e979-4a85-850f-0d911e629c58",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -860,10 +1195,10 @@
           {
             "PathId": "73af8896-3247-45a0-8ff5-0c7fcf6c638a",
             "StartComponentId": "phase_94d887bc24034b598e6dc69d84185c7b",
-            "StartComponentGuid": "6e7c6d71-e6b1-499e-b804-7529233c7289",
+            "StartComponentGuid": "0120f3d4-1fbd-46ea-bf85-641bf09124de",
             "StartPinName": "out",
             "EndComponentId": "recombine_f909b88d1ba04e3faaf2745962889b63",
-            "EndComponentGuid": "855ebae8-a793-4279-94ad-1330c20f9741",
+            "EndComponentGuid": "55601d3d-e979-4a85-850f-0d911e629c58",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -890,10 +1225,10 @@
           {
             "PathId": "8aa58933-8aeb-4639-8d78-c58ebb989d65",
             "StartComponentId": "recombine_f909b88d1ba04e3faaf2745962889b63",
-            "StartComponentGuid": "855ebae8-a793-4279-94ad-1330c20f9741",
+            "StartComponentGuid": "55601d3d-e979-4a85-850f-0d911e629c58",
             "StartPinName": "out1",
             "EndComponentId": "output_eb6a7556d9694e059af0a2110717d6b9",
-            "EndComponentGuid": "4dd7bfe3-e2fe-4140-819e-350a11d8e385",
+            "EndComponentGuid": "e2285087-5791-49f6-b0a9-37b9804a1957",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -923,7 +1258,7 @@
             "PinId": "3ff0ec54-cc5e-4f26-bac6-dcafc68ae997",
             "Name": "A",
             "InternalComponentId": "input_7b4e7ad73221432586aedc1d271a37e3",
-            "InternalComponentGuid": "1d184210-17e2-4e1e-bf87-e9d1de3b973b",
+            "InternalComponentGuid": "028cf61d-bbf1-4d40-b11e-180734771976",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -933,7 +1268,7 @@
             "PinId": "ebd98267-0bd4-4c23-a68f-989671799963",
             "Name": "B",
             "InternalComponentId": "input_ccdd33728dd44cc99956a2c29c523e36",
-            "InternalComponentGuid": "3dfc828a-4d1d-40fd-92cb-a1c1d4c04986",
+            "InternalComponentGuid": "9275d627-93c0-4b67-a479-73fc892ff3e7",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -943,7 +1278,7 @@
             "PinId": "c1a4f4f2-8c7a-4f15-8808-bd2d18c392d9",
             "Name": "BIAS",
             "InternalComponentId": "phase_94d887bc24034b598e6dc69d84185c7b",
-            "InternalComponentGuid": "6e7c6d71-e6b1-499e-b804-7529233c7289",
+            "InternalComponentGuid": "0120f3d4-1fbd-46ea-bf85-641bf09124de",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -953,7 +1288,7 @@
             "PinId": "cdade616-f7ba-4d3b-87c4-d04e3db9ea76",
             "Name": "Y",
             "InternalComponentId": "output_eb6a7556d9694e059af0a2110717d6b9",
-            "InternalComponentGuid": "4dd7bfe3-e2fe-4140-819e-350a11d8e385",
+            "InternalComponentGuid": "e2285087-5791-49f6-b0a9-37b9804a1957",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -964,8 +1299,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_7b4e7ad73221432586aedc1d271a37e3",
-          "ComponentGuid": "1d184210-17e2-4e1e-bf87-e9d1de3b973b",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "028cf61d-bbf1-4d40-b11e-180734771976",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 100,
           "Y": 718.5,
@@ -974,12 +1309,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_ccdd33728dd44cc99956a2c29c523e36",
-          "ComponentGuid": "3dfc828a-4d1d-40fd-92cb-a1c1d4c04986",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "9275d627-93c0-4b67-a479-73fc892ff3e7",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 100,
           "Y": 726.5,
@@ -988,11 +1323,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_e15ad3f5c4ce4eb1b62e495c3764ac5c",
-          "ComponentGuid": "a25356fd-9e27-4a26-9353-94f4cfbe20c2",
+          "ComponentGuid": "85bade68-4b90-4c18-9e59-1cc3cfa6d10a",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 960,
@@ -1007,7 +1342,7 @@
         },
         {
           "Identifier": "phase_94d887bc24034b598e6dc69d84185c7b",
-          "ComponentGuid": "6e7c6d71-e6b1-499e-b804-7529233c7289",
+          "ComponentGuid": "0120f3d4-1fbd-46ea-bf85-641bf09124de",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 1005,
@@ -1021,7 +1356,7 @@
         },
         {
           "Identifier": "recombine_f909b88d1ba04e3faaf2745962889b63",
-          "ComponentGuid": "855ebae8-a793-4279-94ad-1330c20f9741",
+          "ComponentGuid": "55601d3d-e979-4a85-850f-0d911e629c58",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 1510,
@@ -1036,8 +1371,8 @@
         },
         {
           "Identifier": "output_eb6a7556d9694e059af0a2110717d6b9",
-          "ComponentGuid": "4dd7bfe3-e2fe-4140-819e-350a11d8e385",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "e2285087-5791-49f6-b0a9-37b9804a1957",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 1765,
           "Y": 718.5,
@@ -1046,7 +1381,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 100,
@@ -1070,16 +1405,16 @@
     {
       "GroupDto": {
         "GroupName": "ORN2",
-        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: second inverter of the OR datapath, Y = NOT(B), feeding OR1.B. Its A pin reads the operand toggle through the signal name B at the logic layer. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: second inverter of the OR datapath, Y = NOT(B), feeding OR1.B. Its A pin reads the operand toggle through the signal name B at the logic layer. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_1f980e9bdacd4a808a3a55a2348b44b4",
-        "IdGuid": "22271649-8a1d-4456-b263-2cd21fe1b508",
+        "IdGuid": "8e52ab8f-57dd-4c89-af02-51ccaac38f79",
         "ChildComponentGuids": [
-          "fcdbaa40-36d7-4c59-ad92-bbe284160eed",
-          "8f41c3dc-e01a-4fec-ab18-693a5dcc74f4",
-          "b1583d7b-c22f-46d1-af65-d397a206087a",
-          "f0689f7f-42f7-4d86-867a-dae910e93a35",
-          "c50f047f-b6f0-448d-9cfa-db2e0d16d63d",
-          "e39c2624-fb43-4dc5-970c-4e4fc278286c"
+          "3a69a0df-bf52-46ea-b7aa-df9e6ff31fec",
+          "676c2d92-11f6-4f48-9142-dced430d1b1d",
+          "15ae4663-9255-4d10-b9d5-598f1d05bd26",
+          "5ffc722b-17d6-4fa1-9db9-c1f8b1ba6895",
+          "03c9a4c3-6252-4a1b-9e48-5925dccc2f08",
+          "2b0064fa-3b25-4ce8-9d2e-ef6016dc5109"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -1098,10 +1433,10 @@
           {
             "PathId": "84e81a50-7734-472d-be4a-12895f478604",
             "StartComponentId": "input_1fec5f4ce37b437994ca1dcb84c84b1b",
-            "StartComponentGuid": "fcdbaa40-36d7-4c59-ad92-bbe284160eed",
+            "StartComponentGuid": "3a69a0df-bf52-46ea-b7aa-df9e6ff31fec",
             "StartPinName": "b0",
             "EndComponentId": "combine_ee258399ff9b415fab8639b694beea3d",
-            "EndComponentGuid": "b1583d7b-c22f-46d1-af65-d397a206087a",
+            "EndComponentGuid": "15ae4663-9255-4d10-b9d5-598f1d05bd26",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -1128,10 +1463,10 @@
           {
             "PathId": "6edf357b-24a0-4a31-aec0-25c432a28137",
             "StartComponentId": "input_23fe8c460fba46958df2d59cb64ad705",
-            "StartComponentGuid": "8f41c3dc-e01a-4fec-ab18-693a5dcc74f4",
+            "StartComponentGuid": "676c2d92-11f6-4f48-9142-dced430d1b1d",
             "StartPinName": "b0",
             "EndComponentId": "combine_ee258399ff9b415fab8639b694beea3d",
-            "EndComponentGuid": "b1583d7b-c22f-46d1-af65-d397a206087a",
+            "EndComponentGuid": "15ae4663-9255-4d10-b9d5-598f1d05bd26",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -1158,10 +1493,10 @@
           {
             "PathId": "c7400588-4036-4a18-a173-6c0578d98f75",
             "StartComponentId": "combine_ee258399ff9b415fab8639b694beea3d",
-            "StartComponentGuid": "b1583d7b-c22f-46d1-af65-d397a206087a",
+            "StartComponentGuid": "15ae4663-9255-4d10-b9d5-598f1d05bd26",
             "StartPinName": "out1",
             "EndComponentId": "recombine_41b674b76a244d059b46a99e2672acc3",
-            "EndComponentGuid": "c50f047f-b6f0-448d-9cfa-db2e0d16d63d",
+            "EndComponentGuid": "03c9a4c3-6252-4a1b-9e48-5925dccc2f08",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -1188,10 +1523,10 @@
           {
             "PathId": "5fa074e3-368e-48c9-9cca-44db3f024ad3",
             "StartComponentId": "phase_12de6d44879243e1bd3d6baf45d79ba9",
-            "StartComponentGuid": "f0689f7f-42f7-4d86-867a-dae910e93a35",
+            "StartComponentGuid": "5ffc722b-17d6-4fa1-9db9-c1f8b1ba6895",
             "StartPinName": "out",
             "EndComponentId": "recombine_41b674b76a244d059b46a99e2672acc3",
-            "EndComponentGuid": "c50f047f-b6f0-448d-9cfa-db2e0d16d63d",
+            "EndComponentGuid": "03c9a4c3-6252-4a1b-9e48-5925dccc2f08",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -1218,10 +1553,10 @@
           {
             "PathId": "aa92fc6a-2d39-4e52-b3df-43227f413057",
             "StartComponentId": "recombine_41b674b76a244d059b46a99e2672acc3",
-            "StartComponentGuid": "c50f047f-b6f0-448d-9cfa-db2e0d16d63d",
+            "StartComponentGuid": "03c9a4c3-6252-4a1b-9e48-5925dccc2f08",
             "StartPinName": "out1",
             "EndComponentId": "output_e48536c79476432aaf1555368afc3d70",
-            "EndComponentGuid": "e39c2624-fb43-4dc5-970c-4e4fc278286c",
+            "EndComponentGuid": "2b0064fa-3b25-4ce8-9d2e-ef6016dc5109",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -1251,7 +1586,7 @@
             "PinId": "9720c14e-1d2e-4435-892d-5bdc67b20100",
             "Name": "A",
             "InternalComponentId": "input_1fec5f4ce37b437994ca1dcb84c84b1b",
-            "InternalComponentGuid": "fcdbaa40-36d7-4c59-ad92-bbe284160eed",
+            "InternalComponentGuid": "3a69a0df-bf52-46ea-b7aa-df9e6ff31fec",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -1261,7 +1596,7 @@
             "PinId": "c8c237e1-bad4-431c-be9c-35faed86b659",
             "Name": "B",
             "InternalComponentId": "input_23fe8c460fba46958df2d59cb64ad705",
-            "InternalComponentGuid": "8f41c3dc-e01a-4fec-ab18-693a5dcc74f4",
+            "InternalComponentGuid": "676c2d92-11f6-4f48-9142-dced430d1b1d",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -1271,7 +1606,7 @@
             "PinId": "80190569-7e4b-4dcd-b207-8e10ae03abd2",
             "Name": "BIAS",
             "InternalComponentId": "phase_12de6d44879243e1bd3d6baf45d79ba9",
-            "InternalComponentGuid": "f0689f7f-42f7-4d86-867a-dae910e93a35",
+            "InternalComponentGuid": "5ffc722b-17d6-4fa1-9db9-c1f8b1ba6895",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -1281,7 +1616,7 @@
             "PinId": "2d23470c-9b21-4839-b06b-78724ec80156",
             "Name": "Y",
             "InternalComponentId": "output_e48536c79476432aaf1555368afc3d70",
-            "InternalComponentGuid": "e39c2624-fb43-4dc5-970c-4e4fc278286c",
+            "InternalComponentGuid": "2b0064fa-3b25-4ce8-9d2e-ef6016dc5109",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -1292,8 +1627,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_1fec5f4ce37b437994ca1dcb84c84b1b",
-          "ComponentGuid": "fcdbaa40-36d7-4c59-ad92-bbe284160eed",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "3a69a0df-bf52-46ea-b7aa-df9e6ff31fec",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 100,
           "Y": 1318.5,
@@ -1302,12 +1637,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_23fe8c460fba46958df2d59cb64ad705",
-          "ComponentGuid": "8f41c3dc-e01a-4fec-ab18-693a5dcc74f4",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "676c2d92-11f6-4f48-9142-dced430d1b1d",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 100,
           "Y": 1326.5,
@@ -1316,11 +1651,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_ee258399ff9b415fab8639b694beea3d",
-          "ComponentGuid": "b1583d7b-c22f-46d1-af65-d397a206087a",
+          "ComponentGuid": "15ae4663-9255-4d10-b9d5-598f1d05bd26",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 960,
@@ -1335,7 +1670,7 @@
         },
         {
           "Identifier": "phase_12de6d44879243e1bd3d6baf45d79ba9",
-          "ComponentGuid": "f0689f7f-42f7-4d86-867a-dae910e93a35",
+          "ComponentGuid": "5ffc722b-17d6-4fa1-9db9-c1f8b1ba6895",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 1005,
@@ -1349,7 +1684,7 @@
         },
         {
           "Identifier": "recombine_41b674b76a244d059b46a99e2672acc3",
-          "ComponentGuid": "c50f047f-b6f0-448d-9cfa-db2e0d16d63d",
+          "ComponentGuid": "03c9a4c3-6252-4a1b-9e48-5925dccc2f08",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 1510,
@@ -1364,8 +1699,8 @@
         },
         {
           "Identifier": "output_e48536c79476432aaf1555368afc3d70",
-          "ComponentGuid": "e39c2624-fb43-4dc5-970c-4e4fc278286c",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "2b0064fa-3b25-4ce8-9d2e-ef6016dc5109",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 1765,
           "Y": 1318.5,
@@ -1374,7 +1709,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 100,
@@ -1398,16 +1733,16 @@
     {
       "GroupDto": {
         "GroupName": "OR1",
-        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: output stage of the OR datapath, Y = NAND(NOT(A), NOT(B)) = A OR B by De Morgan \u2014 the result the MUX selects when Op = 1, feeding NANDB.B. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: output stage of the OR datapath, Y = NAND(NOT(A), NOT(B)) = A OR B by De Morgan \u2014 the result the MUX selects when Op = 1, feeding NANDB.B. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_0cef1b5c6d354f9c9dafbb8f6b2c4061",
-        "IdGuid": "ca1c6b22-0f20-400c-a9ba-e89a64c89fba",
+        "IdGuid": "c7ddf17c-7dd4-4684-a9aa-1b15b907523f",
         "ChildComponentGuids": [
-          "50934bb6-c70e-439f-82d3-4958ca283601",
-          "6ae37b2d-608a-4fdb-bc65-29a7b89891c8",
-          "8b97088a-3298-42c0-bc7f-5330fe4d5543",
-          "59a1898a-3570-4fd7-942d-3ee7b2ae8bcb",
-          "72de3c1c-0351-4a7e-88b6-ab01885d0d2d",
-          "47719a31-04c5-4d3b-aca6-890a9791dad7"
+          "ad696cd2-d4b2-4ed3-9a86-259124cbd5f0",
+          "68aaaa7c-978b-4855-9d98-68792447a3d8",
+          "a2ed7c97-2fe5-4f5a-95ee-d8ce264538e2",
+          "99c34e5b-eb91-4d29-ad7d-78ef326793b1",
+          "3692cdb4-78fc-4f59-84b7-3181084b9cb9",
+          "2b2ac34a-afba-491f-b3dc-289983d2d752"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -1426,10 +1761,10 @@
           {
             "PathId": "bea983ad-850f-4af1-aed6-5467045b5a6a",
             "StartComponentId": "input_8d55a46bb81745eda84f323f4e5c3870",
-            "StartComponentGuid": "50934bb6-c70e-439f-82d3-4958ca283601",
+            "StartComponentGuid": "ad696cd2-d4b2-4ed3-9a86-259124cbd5f0",
             "StartPinName": "b0",
             "EndComponentId": "combine_b0ee4c1b103b401f957a0d218d02de67",
-            "EndComponentGuid": "8b97088a-3298-42c0-bc7f-5330fe4d5543",
+            "EndComponentGuid": "a2ed7c97-2fe5-4f5a-95ee-d8ce264538e2",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -1456,10 +1791,10 @@
           {
             "PathId": "43b673d3-b6a8-4692-938b-ad9c3d575ee5",
             "StartComponentId": "input_0f194da586a740559113661473cec599",
-            "StartComponentGuid": "6ae37b2d-608a-4fdb-bc65-29a7b89891c8",
+            "StartComponentGuid": "68aaaa7c-978b-4855-9d98-68792447a3d8",
             "StartPinName": "b0",
             "EndComponentId": "combine_b0ee4c1b103b401f957a0d218d02de67",
-            "EndComponentGuid": "8b97088a-3298-42c0-bc7f-5330fe4d5543",
+            "EndComponentGuid": "a2ed7c97-2fe5-4f5a-95ee-d8ce264538e2",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -1486,10 +1821,10 @@
           {
             "PathId": "b7d89288-b96a-4f4e-a6c6-79edbeedeaa9",
             "StartComponentId": "combine_b0ee4c1b103b401f957a0d218d02de67",
-            "StartComponentGuid": "8b97088a-3298-42c0-bc7f-5330fe4d5543",
+            "StartComponentGuid": "a2ed7c97-2fe5-4f5a-95ee-d8ce264538e2",
             "StartPinName": "out1",
             "EndComponentId": "recombine_8404185ebd1548ec8e73dbd3c303f2bc",
-            "EndComponentGuid": "72de3c1c-0351-4a7e-88b6-ab01885d0d2d",
+            "EndComponentGuid": "3692cdb4-78fc-4f59-84b7-3181084b9cb9",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -1516,10 +1851,10 @@
           {
             "PathId": "4bdc0f42-983a-4190-9c79-ff1ea059fa1f",
             "StartComponentId": "phase_274e06d2763247f6a10ff333510f25d4",
-            "StartComponentGuid": "59a1898a-3570-4fd7-942d-3ee7b2ae8bcb",
+            "StartComponentGuid": "99c34e5b-eb91-4d29-ad7d-78ef326793b1",
             "StartPinName": "out",
             "EndComponentId": "recombine_8404185ebd1548ec8e73dbd3c303f2bc",
-            "EndComponentGuid": "72de3c1c-0351-4a7e-88b6-ab01885d0d2d",
+            "EndComponentGuid": "3692cdb4-78fc-4f59-84b7-3181084b9cb9",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -1546,10 +1881,10 @@
           {
             "PathId": "4348f487-1c80-446c-b770-cf752ab56620",
             "StartComponentId": "recombine_8404185ebd1548ec8e73dbd3c303f2bc",
-            "StartComponentGuid": "72de3c1c-0351-4a7e-88b6-ab01885d0d2d",
+            "StartComponentGuid": "3692cdb4-78fc-4f59-84b7-3181084b9cb9",
             "StartPinName": "out1",
             "EndComponentId": "output_6b6dbdc1955049c2932546b8ca716f8e",
-            "EndComponentGuid": "47719a31-04c5-4d3b-aca6-890a9791dad7",
+            "EndComponentGuid": "2b2ac34a-afba-491f-b3dc-289983d2d752",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -1579,7 +1914,7 @@
             "PinId": "7f6e8fa7-cc16-4eb3-b783-22927a7278e8",
             "Name": "A",
             "InternalComponentId": "input_8d55a46bb81745eda84f323f4e5c3870",
-            "InternalComponentGuid": "50934bb6-c70e-439f-82d3-4958ca283601",
+            "InternalComponentGuid": "ad696cd2-d4b2-4ed3-9a86-259124cbd5f0",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -1589,7 +1924,7 @@
             "PinId": "80673b3c-cd94-4f39-804b-586ed773d888",
             "Name": "B",
             "InternalComponentId": "input_0f194da586a740559113661473cec599",
-            "InternalComponentGuid": "6ae37b2d-608a-4fdb-bc65-29a7b89891c8",
+            "InternalComponentGuid": "68aaaa7c-978b-4855-9d98-68792447a3d8",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -1599,7 +1934,7 @@
             "PinId": "19f8107b-1933-4ad8-bd6e-794959313cae",
             "Name": "BIAS",
             "InternalComponentId": "phase_274e06d2763247f6a10ff333510f25d4",
-            "InternalComponentGuid": "59a1898a-3570-4fd7-942d-3ee7b2ae8bcb",
+            "InternalComponentGuid": "99c34e5b-eb91-4d29-ad7d-78ef326793b1",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -1609,7 +1944,7 @@
             "PinId": "8e19e769-6bb1-4e5b-be84-db1f47b777ea",
             "Name": "Y",
             "InternalComponentId": "output_6b6dbdc1955049c2932546b8ca716f8e",
-            "InternalComponentGuid": "47719a31-04c5-4d3b-aca6-890a9791dad7",
+            "InternalComponentGuid": "2b2ac34a-afba-491f-b3dc-289983d2d752",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -1620,8 +1955,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_8d55a46bb81745eda84f323f4e5c3870",
-          "ComponentGuid": "50934bb6-c70e-439f-82d3-4958ca283601",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "ad696cd2-d4b2-4ed3-9a86-259124cbd5f0",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 2100,
           "Y": 1018.5,
@@ -1630,12 +1965,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_0f194da586a740559113661473cec599",
-          "ComponentGuid": "6ae37b2d-608a-4fdb-bc65-29a7b89891c8",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "68aaaa7c-978b-4855-9d98-68792447a3d8",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 2100,
           "Y": 1026.5,
@@ -1644,11 +1979,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_b0ee4c1b103b401f957a0d218d02de67",
-          "ComponentGuid": "8b97088a-3298-42c0-bc7f-5330fe4d5543",
+          "ComponentGuid": "a2ed7c97-2fe5-4f5a-95ee-d8ce264538e2",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 2960,
@@ -1663,7 +1998,7 @@
         },
         {
           "Identifier": "phase_274e06d2763247f6a10ff333510f25d4",
-          "ComponentGuid": "59a1898a-3570-4fd7-942d-3ee7b2ae8bcb",
+          "ComponentGuid": "99c34e5b-eb91-4d29-ad7d-78ef326793b1",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 3005,
@@ -1677,7 +2012,7 @@
         },
         {
           "Identifier": "recombine_8404185ebd1548ec8e73dbd3c303f2bc",
-          "ComponentGuid": "72de3c1c-0351-4a7e-88b6-ab01885d0d2d",
+          "ComponentGuid": "3692cdb4-78fc-4f59-84b7-3181084b9cb9",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 3510,
@@ -1692,8 +2027,8 @@
         },
         {
           "Identifier": "output_6b6dbdc1955049c2932546b8ca716f8e",
-          "ComponentGuid": "47719a31-04c5-4d3b-aca6-890a9791dad7",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "2b2ac34a-afba-491f-b3dc-289983d2d752",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 3765,
           "Y": 1018.5,
@@ -1702,7 +2037,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 2100,
@@ -1724,16 +2059,16 @@
     {
       "GroupDto": {
         "GroupName": "NOT1",
-        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: select inversion of the shipped 2-to-1 MUX composition, Y = NOT(Op), feeding NANDA.B. Its A pin reads the select toggle through the signal name Op at the logic layer. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: select inversion of the shipped 2-to-1 MUX composition, Y = NOT(Op), feeding NANDA.B. Its A pin reads the select toggle through the signal name Op at the logic layer. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_f8b3c69b530c4c4b87ad8cd761008b66",
-        "IdGuid": "a392c740-7039-42f8-ad04-4defd260083b",
+        "IdGuid": "aca2926b-3def-4890-9a3f-721626702f64",
         "ChildComponentGuids": [
-          "10d59d9a-7e9e-4862-8702-e5fcef537be9",
-          "12085b6c-6024-4e5a-aa5f-ff342f448fae",
-          "22ab90d5-5518-4f15-a528-26c7761e554d",
-          "5b567140-c0d1-46b9-9d56-8808bf7f6cf0",
-          "ea04933f-0a3b-4a3d-88c9-914bf8c69160",
-          "ad186678-bfd9-4226-9440-0ee8b5bb3e3c"
+          "3846f7b9-8bd5-45a6-a183-8b8e18b0a36c",
+          "3fcd0a27-aa9a-48c2-a723-ea8eb15f8a63",
+          "18caef1f-5450-474c-8f09-0897e04a78fc",
+          "e6d80677-b340-4a57-a04e-95db79b2a946",
+          "fd4ffa4d-d4d8-456a-a72c-611e73fb965b",
+          "8bc1b617-4e7c-4f4f-af61-3f074ff4b85b"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -1752,10 +2087,10 @@
           {
             "PathId": "051c30a5-1392-4536-ab5b-705346243470",
             "StartComponentId": "input_1eaab3ca283446f2be937939ae1dba56",
-            "StartComponentGuid": "10d59d9a-7e9e-4862-8702-e5fcef537be9",
+            "StartComponentGuid": "3846f7b9-8bd5-45a6-a183-8b8e18b0a36c",
             "StartPinName": "b0",
             "EndComponentId": "combine_d281c7cca65a4a4783afe7882717e7ff",
-            "EndComponentGuid": "22ab90d5-5518-4f15-a528-26c7761e554d",
+            "EndComponentGuid": "18caef1f-5450-474c-8f09-0897e04a78fc",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -1782,10 +2117,10 @@
           {
             "PathId": "dcc7b499-409c-4ef2-8947-b880a2cb43f1",
             "StartComponentId": "input_5e2888e8c1044ca68231543f03f49178",
-            "StartComponentGuid": "12085b6c-6024-4e5a-aa5f-ff342f448fae",
+            "StartComponentGuid": "3fcd0a27-aa9a-48c2-a723-ea8eb15f8a63",
             "StartPinName": "b0",
             "EndComponentId": "combine_d281c7cca65a4a4783afe7882717e7ff",
-            "EndComponentGuid": "22ab90d5-5518-4f15-a528-26c7761e554d",
+            "EndComponentGuid": "18caef1f-5450-474c-8f09-0897e04a78fc",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -1812,10 +2147,10 @@
           {
             "PathId": "62a18059-501e-4201-881e-2a0a48979d26",
             "StartComponentId": "combine_d281c7cca65a4a4783afe7882717e7ff",
-            "StartComponentGuid": "22ab90d5-5518-4f15-a528-26c7761e554d",
+            "StartComponentGuid": "18caef1f-5450-474c-8f09-0897e04a78fc",
             "StartPinName": "out1",
             "EndComponentId": "recombine_07ec5db582054cd69a1e1176c7699ec8",
-            "EndComponentGuid": "ea04933f-0a3b-4a3d-88c9-914bf8c69160",
+            "EndComponentGuid": "fd4ffa4d-d4d8-456a-a72c-611e73fb965b",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -1842,10 +2177,10 @@
           {
             "PathId": "a168ee9c-4358-4d74-8e7a-8c3759b723e8",
             "StartComponentId": "phase_acd22dc84d1346ce9b1f25778b7c5ecc",
-            "StartComponentGuid": "5b567140-c0d1-46b9-9d56-8808bf7f6cf0",
+            "StartComponentGuid": "e6d80677-b340-4a57-a04e-95db79b2a946",
             "StartPinName": "out",
             "EndComponentId": "recombine_07ec5db582054cd69a1e1176c7699ec8",
-            "EndComponentGuid": "ea04933f-0a3b-4a3d-88c9-914bf8c69160",
+            "EndComponentGuid": "fd4ffa4d-d4d8-456a-a72c-611e73fb965b",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -1872,10 +2207,10 @@
           {
             "PathId": "f1843a3a-ed65-4a1c-8a94-1ef30c921eda",
             "StartComponentId": "recombine_07ec5db582054cd69a1e1176c7699ec8",
-            "StartComponentGuid": "ea04933f-0a3b-4a3d-88c9-914bf8c69160",
+            "StartComponentGuid": "fd4ffa4d-d4d8-456a-a72c-611e73fb965b",
             "StartPinName": "out1",
             "EndComponentId": "output_0712f73aea4346c6a969f148def05654",
-            "EndComponentGuid": "ad186678-bfd9-4226-9440-0ee8b5bb3e3c",
+            "EndComponentGuid": "8bc1b617-4e7c-4f4f-af61-3f074ff4b85b",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -1905,7 +2240,7 @@
             "PinId": "e08342b2-2398-4e4c-ad29-498515d36887",
             "Name": "A",
             "InternalComponentId": "input_1eaab3ca283446f2be937939ae1dba56",
-            "InternalComponentGuid": "10d59d9a-7e9e-4862-8702-e5fcef537be9",
+            "InternalComponentGuid": "3846f7b9-8bd5-45a6-a183-8b8e18b0a36c",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -1915,7 +2250,7 @@
             "PinId": "1c98489d-c63c-43e7-9b5c-3febaf3e2b54",
             "Name": "B",
             "InternalComponentId": "input_5e2888e8c1044ca68231543f03f49178",
-            "InternalComponentGuid": "12085b6c-6024-4e5a-aa5f-ff342f448fae",
+            "InternalComponentGuid": "3fcd0a27-aa9a-48c2-a723-ea8eb15f8a63",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -1925,7 +2260,7 @@
             "PinId": "cb39309b-c0dc-476c-ab5f-6e88e3747843",
             "Name": "BIAS",
             "InternalComponentId": "phase_acd22dc84d1346ce9b1f25778b7c5ecc",
-            "InternalComponentGuid": "5b567140-c0d1-46b9-9d56-8808bf7f6cf0",
+            "InternalComponentGuid": "e6d80677-b340-4a57-a04e-95db79b2a946",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -1935,7 +2270,7 @@
             "PinId": "6aa73381-f013-42f4-b2c7-f30d4f3d2ffd",
             "Name": "Y",
             "InternalComponentId": "output_0712f73aea4346c6a969f148def05654",
-            "InternalComponentGuid": "ad186678-bfd9-4226-9440-0ee8b5bb3e3c",
+            "InternalComponentGuid": "8bc1b617-4e7c-4f4f-af61-3f074ff4b85b",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -1946,8 +2281,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_1eaab3ca283446f2be937939ae1dba56",
-          "ComponentGuid": "10d59d9a-7e9e-4862-8702-e5fcef537be9",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "3846f7b9-8bd5-45a6-a183-8b8e18b0a36c",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 4100,
           "Y": 1618.5,
@@ -1956,12 +2291,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_5e2888e8c1044ca68231543f03f49178",
-          "ComponentGuid": "12085b6c-6024-4e5a-aa5f-ff342f448fae",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "3fcd0a27-aa9a-48c2-a723-ea8eb15f8a63",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 4100,
           "Y": 1626.5,
@@ -1970,11 +2305,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_d281c7cca65a4a4783afe7882717e7ff",
-          "ComponentGuid": "22ab90d5-5518-4f15-a528-26c7761e554d",
+          "ComponentGuid": "18caef1f-5450-474c-8f09-0897e04a78fc",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 4960,
@@ -1989,7 +2324,7 @@
         },
         {
           "Identifier": "phase_acd22dc84d1346ce9b1f25778b7c5ecc",
-          "ComponentGuid": "5b567140-c0d1-46b9-9d56-8808bf7f6cf0",
+          "ComponentGuid": "e6d80677-b340-4a57-a04e-95db79b2a946",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 5005,
@@ -2003,7 +2338,7 @@
         },
         {
           "Identifier": "recombine_07ec5db582054cd69a1e1176c7699ec8",
-          "ComponentGuid": "ea04933f-0a3b-4a3d-88c9-914bf8c69160",
+          "ComponentGuid": "fd4ffa4d-d4d8-456a-a72c-611e73fb965b",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 5510,
@@ -2018,8 +2353,8 @@
         },
         {
           "Identifier": "output_0712f73aea4346c6a969f148def05654",
-          "ComponentGuid": "ad186678-bfd9-4226-9440-0ee8b5bb3e3c",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "8bc1b617-4e7c-4f4f-af61-3f074ff4b85b",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 5765,
           "Y": 1618.5,
@@ -2028,7 +2363,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 4100,
@@ -2052,16 +2387,16 @@
     {
       "GroupDto": {
         "GroupName": "NANDA",
-        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: AND-side select term of the MUX, Y = NAND(A AND B, NOT(Op)) \u2014 passes the AND result through when Op = 0 \u2014 feeding Out.A. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: AND-side select term of the MUX, Y = NAND(A AND B, NOT(Op)) \u2014 passes the AND result through when Op = 0 \u2014 feeding Out.A. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_a6455d08762e4559a5afbba04a935b1c",
-        "IdGuid": "52cd158c-cb38-4236-b68e-17d4c57eec7e",
+        "IdGuid": "7c5485b2-5d3a-47d9-bca6-3f22c8f26bb4",
         "ChildComponentGuids": [
-          "c9ccb53e-2f5d-420a-ac1f-bc2ed53ff86e",
-          "5f0b6c9a-b9ec-4021-85ef-c527f1be7391",
-          "0a5c511d-dc1b-4834-a0f5-3fba81632d0f",
-          "82563772-e979-463d-a615-1bb0ed56fc4a",
-          "78251682-377a-426f-a204-e33448ef3266",
-          "fa380df4-7071-4eb0-8357-14754ccc7ac9"
+          "3b6c8bce-219d-4791-8623-2e037de51762",
+          "21d0324c-0b88-4771-997e-d31bdbf6b316",
+          "e6bec7e8-2932-43c2-a28a-e6b0f9e85e7f",
+          "496e8ce1-aff3-45f1-a1a6-7b41fd685397",
+          "88c941fa-af98-49be-a68c-d3891538d4fd",
+          "429aa200-5725-412c-8d4a-03cdcce31e33"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -2080,10 +2415,10 @@
           {
             "PathId": "ddf41e3a-9071-4ccd-a596-0cec5d4cd1b6",
             "StartComponentId": "input_d1a88e2ee8e9469183409cd72390d86b",
-            "StartComponentGuid": "c9ccb53e-2f5d-420a-ac1f-bc2ed53ff86e",
+            "StartComponentGuid": "3b6c8bce-219d-4791-8623-2e037de51762",
             "StartPinName": "b0",
             "EndComponentId": "combine_d3be15e9a11849fe99c22f68aadf3cfc",
-            "EndComponentGuid": "0a5c511d-dc1b-4834-a0f5-3fba81632d0f",
+            "EndComponentGuid": "e6bec7e8-2932-43c2-a28a-e6b0f9e85e7f",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -2110,10 +2445,10 @@
           {
             "PathId": "81c9a261-bb31-40e3-938f-6b4232e9f1fb",
             "StartComponentId": "input_c03f202e56434182a035cd18350dc2a9",
-            "StartComponentGuid": "5f0b6c9a-b9ec-4021-85ef-c527f1be7391",
+            "StartComponentGuid": "21d0324c-0b88-4771-997e-d31bdbf6b316",
             "StartPinName": "b0",
             "EndComponentId": "combine_d3be15e9a11849fe99c22f68aadf3cfc",
-            "EndComponentGuid": "0a5c511d-dc1b-4834-a0f5-3fba81632d0f",
+            "EndComponentGuid": "e6bec7e8-2932-43c2-a28a-e6b0f9e85e7f",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -2140,10 +2475,10 @@
           {
             "PathId": "ca85b107-cec3-4fa0-b55b-55268774ef5e",
             "StartComponentId": "combine_d3be15e9a11849fe99c22f68aadf3cfc",
-            "StartComponentGuid": "0a5c511d-dc1b-4834-a0f5-3fba81632d0f",
+            "StartComponentGuid": "e6bec7e8-2932-43c2-a28a-e6b0f9e85e7f",
             "StartPinName": "out1",
             "EndComponentId": "recombine_55678c9f708845d98e891b4b31d77c02",
-            "EndComponentGuid": "78251682-377a-426f-a204-e33448ef3266",
+            "EndComponentGuid": "88c941fa-af98-49be-a68c-d3891538d4fd",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -2170,10 +2505,10 @@
           {
             "PathId": "b9cc5f51-c6b4-411c-8c67-67663b879ece",
             "StartComponentId": "phase_1da6efc61adf41b0b43cee6620449c34",
-            "StartComponentGuid": "82563772-e979-463d-a615-1bb0ed56fc4a",
+            "StartComponentGuid": "496e8ce1-aff3-45f1-a1a6-7b41fd685397",
             "StartPinName": "out",
             "EndComponentId": "recombine_55678c9f708845d98e891b4b31d77c02",
-            "EndComponentGuid": "78251682-377a-426f-a204-e33448ef3266",
+            "EndComponentGuid": "88c941fa-af98-49be-a68c-d3891538d4fd",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -2200,10 +2535,10 @@
           {
             "PathId": "843e5a0e-d4e1-400e-b1c5-3fb0c12b18a6",
             "StartComponentId": "recombine_55678c9f708845d98e891b4b31d77c02",
-            "StartComponentGuid": "78251682-377a-426f-a204-e33448ef3266",
+            "StartComponentGuid": "88c941fa-af98-49be-a68c-d3891538d4fd",
             "StartPinName": "out1",
             "EndComponentId": "output_ac718a7178d641a3b65e7fcac8652409",
-            "EndComponentGuid": "fa380df4-7071-4eb0-8357-14754ccc7ac9",
+            "EndComponentGuid": "429aa200-5725-412c-8d4a-03cdcce31e33",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -2233,7 +2568,7 @@
             "PinId": "1edaca87-11e8-4d6b-8234-b3191c695248",
             "Name": "A",
             "InternalComponentId": "input_d1a88e2ee8e9469183409cd72390d86b",
-            "InternalComponentGuid": "c9ccb53e-2f5d-420a-ac1f-bc2ed53ff86e",
+            "InternalComponentGuid": "3b6c8bce-219d-4791-8623-2e037de51762",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -2243,7 +2578,7 @@
             "PinId": "7302ee2a-5be5-4889-babd-d1fb0957583b",
             "Name": "B",
             "InternalComponentId": "input_c03f202e56434182a035cd18350dc2a9",
-            "InternalComponentGuid": "5f0b6c9a-b9ec-4021-85ef-c527f1be7391",
+            "InternalComponentGuid": "21d0324c-0b88-4771-997e-d31bdbf6b316",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -2253,7 +2588,7 @@
             "PinId": "aac0329a-d6e5-4f71-b6a9-0e1a3b720b44",
             "Name": "BIAS",
             "InternalComponentId": "phase_1da6efc61adf41b0b43cee6620449c34",
-            "InternalComponentGuid": "82563772-e979-463d-a615-1bb0ed56fc4a",
+            "InternalComponentGuid": "496e8ce1-aff3-45f1-a1a6-7b41fd685397",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -2263,7 +2598,7 @@
             "PinId": "bf96acd3-4a58-4737-a9e1-c6cd9afb237a",
             "Name": "Y",
             "InternalComponentId": "output_ac718a7178d641a3b65e7fcac8652409",
-            "InternalComponentGuid": "fa380df4-7071-4eb0-8357-14754ccc7ac9",
+            "InternalComponentGuid": "429aa200-5725-412c-8d4a-03cdcce31e33",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -2274,8 +2609,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_d1a88e2ee8e9469183409cd72390d86b",
-          "ComponentGuid": "c9ccb53e-2f5d-420a-ac1f-bc2ed53ff86e",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "3b6c8bce-219d-4791-8623-2e037de51762",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 4100,
           "Y": 118.5,
@@ -2284,12 +2619,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_c03f202e56434182a035cd18350dc2a9",
-          "ComponentGuid": "5f0b6c9a-b9ec-4021-85ef-c527f1be7391",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "21d0324c-0b88-4771-997e-d31bdbf6b316",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 4100,
           "Y": 126.5,
@@ -2298,11 +2633,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_d3be15e9a11849fe99c22f68aadf3cfc",
-          "ComponentGuid": "0a5c511d-dc1b-4834-a0f5-3fba81632d0f",
+          "ComponentGuid": "e6bec7e8-2932-43c2-a28a-e6b0f9e85e7f",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 4960,
@@ -2317,7 +2652,7 @@
         },
         {
           "Identifier": "phase_1da6efc61adf41b0b43cee6620449c34",
-          "ComponentGuid": "82563772-e979-463d-a615-1bb0ed56fc4a",
+          "ComponentGuid": "496e8ce1-aff3-45f1-a1a6-7b41fd685397",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 5005,
@@ -2331,7 +2666,7 @@
         },
         {
           "Identifier": "recombine_55678c9f708845d98e891b4b31d77c02",
-          "ComponentGuid": "78251682-377a-426f-a204-e33448ef3266",
+          "ComponentGuid": "88c941fa-af98-49be-a68c-d3891538d4fd",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 5510,
@@ -2346,8 +2681,8 @@
         },
         {
           "Identifier": "output_ac718a7178d641a3b65e7fcac8652409",
-          "ComponentGuid": "fa380df4-7071-4eb0-8357-14754ccc7ac9",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "429aa200-5725-412c-8d4a-03cdcce31e33",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 5765,
           "Y": 118.5,
@@ -2356,7 +2691,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 4100,
@@ -2378,16 +2713,16 @@
     {
       "GroupDto": {
         "GroupName": "NANDB",
-        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: OR-side select term of the MUX, Y = NAND(A OR B, Op) \u2014 passes the OR result through when Op = 1 \u2014 feeding Out.B. Its A pin reads the select toggle through the signal name Op at the logic layer, so Op fans out onto NOT1.A and NANDB.A without a waveguide. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: OR-side select term of the MUX, Y = NAND(A OR B, Op) \u2014 passes the OR result through when Op = 1 \u2014 feeding Out.B. Its A pin reads the select toggle through the signal name Op at the logic layer, so Op fans out onto NOT1.A and NANDB.A without a waveguide. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_0df96833f68e482eb8001890fbb6f096",
-        "IdGuid": "411252d0-6fc6-4b69-a20d-7714de03f32c",
+        "IdGuid": "f9c12cc8-ac62-4b21-b9cf-26d872fa341b",
         "ChildComponentGuids": [
-          "60d02b86-4752-4192-8a99-528668471450",
-          "12a75ccf-344a-49db-b201-69c85749a429",
-          "e45334f5-92bc-4f77-b474-768d493832b6",
-          "0be00368-38b8-4ca1-8a75-d8eb6791b986",
-          "5fe44159-ab6a-47da-99c4-30f9b9477b01",
-          "fbb04b77-7ec3-4f43-819f-795fc0026a7e"
+          "baf56b2b-2a6e-448e-8af5-7bef848db76d",
+          "cc1e6122-52aa-4815-b180-ae692779f6be",
+          "1302827f-b874-4984-8293-95f1000aafee",
+          "66301912-119e-4213-9ca8-6648286ae6cb",
+          "eeab8843-9418-4a78-bf49-4151af6d9250",
+          "6c9c0783-0ce6-4a17-8bd0-9b03cd48a3ee"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -2406,10 +2741,10 @@
           {
             "PathId": "e3ee7fbc-b2a0-4532-b762-b9978988a471",
             "StartComponentId": "input_d7b01f29672b45288aa755ff17c854ba",
-            "StartComponentGuid": "60d02b86-4752-4192-8a99-528668471450",
+            "StartComponentGuid": "baf56b2b-2a6e-448e-8af5-7bef848db76d",
             "StartPinName": "b0",
             "EndComponentId": "combine_07fab037fc52431ca3fe1ac4dce74b96",
-            "EndComponentGuid": "e45334f5-92bc-4f77-b474-768d493832b6",
+            "EndComponentGuid": "1302827f-b874-4984-8293-95f1000aafee",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -2436,10 +2771,10 @@
           {
             "PathId": "28f159fa-9e00-4cb0-ad5d-707d729391a3",
             "StartComponentId": "input_5ec0497e529640ec9c90877572ff5423",
-            "StartComponentGuid": "12a75ccf-344a-49db-b201-69c85749a429",
+            "StartComponentGuid": "cc1e6122-52aa-4815-b180-ae692779f6be",
             "StartPinName": "b0",
             "EndComponentId": "combine_07fab037fc52431ca3fe1ac4dce74b96",
-            "EndComponentGuid": "e45334f5-92bc-4f77-b474-768d493832b6",
+            "EndComponentGuid": "1302827f-b874-4984-8293-95f1000aafee",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -2466,10 +2801,10 @@
           {
             "PathId": "e6aef5f5-66ab-4139-a91f-10589a0474f0",
             "StartComponentId": "combine_07fab037fc52431ca3fe1ac4dce74b96",
-            "StartComponentGuid": "e45334f5-92bc-4f77-b474-768d493832b6",
+            "StartComponentGuid": "1302827f-b874-4984-8293-95f1000aafee",
             "StartPinName": "out1",
             "EndComponentId": "recombine_204a858f3ab54cdbbf4b59116b214a14",
-            "EndComponentGuid": "5fe44159-ab6a-47da-99c4-30f9b9477b01",
+            "EndComponentGuid": "eeab8843-9418-4a78-bf49-4151af6d9250",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -2496,10 +2831,10 @@
           {
             "PathId": "221d558d-a0ae-4f85-aa75-d39d02deea06",
             "StartComponentId": "phase_0ddbc971d101418caa3006aee32518b8",
-            "StartComponentGuid": "0be00368-38b8-4ca1-8a75-d8eb6791b986",
+            "StartComponentGuid": "66301912-119e-4213-9ca8-6648286ae6cb",
             "StartPinName": "out",
             "EndComponentId": "recombine_204a858f3ab54cdbbf4b59116b214a14",
-            "EndComponentGuid": "5fe44159-ab6a-47da-99c4-30f9b9477b01",
+            "EndComponentGuid": "eeab8843-9418-4a78-bf49-4151af6d9250",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -2526,10 +2861,10 @@
           {
             "PathId": "d6345c0f-d9c8-46e7-9e93-7670d0c22e66",
             "StartComponentId": "recombine_204a858f3ab54cdbbf4b59116b214a14",
-            "StartComponentGuid": "5fe44159-ab6a-47da-99c4-30f9b9477b01",
+            "StartComponentGuid": "eeab8843-9418-4a78-bf49-4151af6d9250",
             "StartPinName": "out1",
             "EndComponentId": "output_7fe88c646c7642898ddcac8672867ad2",
-            "EndComponentGuid": "fbb04b77-7ec3-4f43-819f-795fc0026a7e",
+            "EndComponentGuid": "6c9c0783-0ce6-4a17-8bd0-9b03cd48a3ee",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -2559,7 +2894,7 @@
             "PinId": "fcd34f21-d488-4adc-b1b2-539c177c5c31",
             "Name": "A",
             "InternalComponentId": "input_d7b01f29672b45288aa755ff17c854ba",
-            "InternalComponentGuid": "60d02b86-4752-4192-8a99-528668471450",
+            "InternalComponentGuid": "baf56b2b-2a6e-448e-8af5-7bef848db76d",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -2569,7 +2904,7 @@
             "PinId": "4a369da7-2e74-4e2a-89f3-1e6ee660f296",
             "Name": "B",
             "InternalComponentId": "input_5ec0497e529640ec9c90877572ff5423",
-            "InternalComponentGuid": "12a75ccf-344a-49db-b201-69c85749a429",
+            "InternalComponentGuid": "cc1e6122-52aa-4815-b180-ae692779f6be",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -2579,7 +2914,7 @@
             "PinId": "72a7b58e-a65c-4bf7-baa0-affd4c6893d2",
             "Name": "BIAS",
             "InternalComponentId": "phase_0ddbc971d101418caa3006aee32518b8",
-            "InternalComponentGuid": "0be00368-38b8-4ca1-8a75-d8eb6791b986",
+            "InternalComponentGuid": "66301912-119e-4213-9ca8-6648286ae6cb",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -2589,7 +2924,7 @@
             "PinId": "84b760f7-e4e4-4371-a86c-744abff20d12",
             "Name": "Y",
             "InternalComponentId": "output_7fe88c646c7642898ddcac8672867ad2",
-            "InternalComponentGuid": "fbb04b77-7ec3-4f43-819f-795fc0026a7e",
+            "InternalComponentGuid": "6c9c0783-0ce6-4a17-8bd0-9b03cd48a3ee",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -2600,8 +2935,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_d7b01f29672b45288aa755ff17c854ba",
-          "ComponentGuid": "60d02b86-4752-4192-8a99-528668471450",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "baf56b2b-2a6e-448e-8af5-7bef848db76d",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 4100,
           "Y": 1018.5,
@@ -2610,12 +2945,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_5ec0497e529640ec9c90877572ff5423",
-          "ComponentGuid": "12a75ccf-344a-49db-b201-69c85749a429",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "cc1e6122-52aa-4815-b180-ae692779f6be",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 4100,
           "Y": 1026.5,
@@ -2624,11 +2959,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_07fab037fc52431ca3fe1ac4dce74b96",
-          "ComponentGuid": "e45334f5-92bc-4f77-b474-768d493832b6",
+          "ComponentGuid": "1302827f-b874-4984-8293-95f1000aafee",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 4960,
@@ -2643,7 +2978,7 @@
         },
         {
           "Identifier": "phase_0ddbc971d101418caa3006aee32518b8",
-          "ComponentGuid": "0be00368-38b8-4ca1-8a75-d8eb6791b986",
+          "ComponentGuid": "66301912-119e-4213-9ca8-6648286ae6cb",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 5005,
@@ -2657,7 +2992,7 @@
         },
         {
           "Identifier": "recombine_204a858f3ab54cdbbf4b59116b214a14",
-          "ComponentGuid": "5fe44159-ab6a-47da-99c4-30f9b9477b01",
+          "ComponentGuid": "eeab8843-9418-4a78-bf49-4151af6d9250",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 5510,
@@ -2672,8 +3007,8 @@
         },
         {
           "Identifier": "output_7fe88c646c7642898ddcac8672867ad2",
-          "ComponentGuid": "fbb04b77-7ec3-4f43-819f-795fc0026a7e",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "6c9c0783-0ce6-4a17-8bd0-9b03cd48a3ee",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 5765,
           "Y": 1018.5,
@@ -2682,7 +3017,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 4100,
@@ -2707,16 +3042,16 @@
     {
       "GroupDto": {
         "GroupName": "Out",
-        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped 'Logic Gate NOT-NAND' gate. Role in the ALU: output stage of the MUX, Y = NAND(NANDA.Y, NANDB.Y) = A AND B when Op = 0 and A OR B when Op = 1 \u2014 the ALU output, named Result through its output signal name so the Logic panel shows one readable bit. The whole ALU composes at the logic layer, not optically: every gate's truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in 'Logic Gate Half Adder').",
+        "Description": "NAND reading (inputs A and B, BIAS constantly on, threshold 0.125) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the ALU: output stage of the MUX, Y = NAND(NANDA.Y, NANDB.Y) = A AND B when Op = 0 and A OR B when Op = 1 \u2014 the ALU output, named Result through its output signal name so the Logic panel shows one readable bit. The whole ALU composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction \u2014 there is deliberately no multi-stage passive optical cascade here. The fan-out of A, B and Op onto several gates happens at the logic layer (each gate input is driven by the same network bit through its persisted signal name); the canvas wires one waveguide per pin (like NAND1A/NAND1B in \u0027Logic Gate Half Adder\u0027).",
         "Identifier": "group_35862336eb0e4f7f87c4b0a3f368c102",
-        "IdGuid": "dd00f06c-3ced-44ea-87da-235063e53437",
+        "IdGuid": "fa971a45-abc3-4c51-920a-7e51f82a9bcb",
         "ChildComponentGuids": [
-          "b7194307-a8f7-488f-9369-e969e42c78d9",
-          "4bdecff7-ed3f-42db-b5db-eed1bbbb02f5",
-          "9fcde098-914c-4055-89b6-02bd526f7c41",
-          "82f3643d-d008-48ca-8513-4a94e71abdb5",
-          "879ff24d-5d71-442c-8240-902dced659a3",
-          "dad2925b-838e-4814-80fb-5db4c9e65473"
+          "817292e5-7939-4306-b331-a148be519f8b",
+          "95366701-5a3d-41f8-84c7-eae050dda98f",
+          "f096c381-c492-4fee-99a6-372a3676cc00",
+          "91e4a567-2b9a-4617-a8a7-7b42ce6c4f9b",
+          "4cf1baa4-8684-424c-b6a3-3886dbaf09b2",
+          "d32f6b09-31c1-467b-8bd5-1a618f8d02a5"
         ],
         "GridX": 0,
         "GridY": 0,
@@ -2735,10 +3070,10 @@
           {
             "PathId": "a042a26f-0c5f-42d7-8d7b-07df95810d26",
             "StartComponentId": "input_666b695c8d0540f496c418d0e745c6a9",
-            "StartComponentGuid": "b7194307-a8f7-488f-9369-e969e42c78d9",
+            "StartComponentGuid": "817292e5-7939-4306-b331-a148be519f8b",
             "StartPinName": "b0",
             "EndComponentId": "combine_60c90c4f22334e93809bace9231f3f85",
-            "EndComponentGuid": "9fcde098-914c-4055-89b6-02bd526f7c41",
+            "EndComponentGuid": "f096c381-c492-4fee-99a6-372a3676cc00",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -2765,10 +3100,10 @@
           {
             "PathId": "abe9da35-de51-443b-a09d-369d580ea1d5",
             "StartComponentId": "input_ab87e15ea28e4a11afb2e8827ed7e2b3",
-            "StartComponentGuid": "4bdecff7-ed3f-42db-b5db-eed1bbbb02f5",
+            "StartComponentGuid": "95366701-5a3d-41f8-84c7-eae050dda98f",
             "StartPinName": "b0",
             "EndComponentId": "combine_60c90c4f22334e93809bace9231f3f85",
-            "EndComponentGuid": "9fcde098-914c-4055-89b6-02bd526f7c41",
+            "EndComponentGuid": "f096c381-c492-4fee-99a6-372a3676cc00",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -2795,10 +3130,10 @@
           {
             "PathId": "b40c138a-99a9-443e-b0b2-8be53cac17a9",
             "StartComponentId": "combine_60c90c4f22334e93809bace9231f3f85",
-            "StartComponentGuid": "9fcde098-914c-4055-89b6-02bd526f7c41",
+            "StartComponentGuid": "f096c381-c492-4fee-99a6-372a3676cc00",
             "StartPinName": "out1",
             "EndComponentId": "recombine_5a3bdf1b641e4621bba02ffcb42801c6",
-            "EndComponentGuid": "879ff24d-5d71-442c-8240-902dced659a3",
+            "EndComponentGuid": "4cf1baa4-8684-424c-b6a3-3886dbaf09b2",
             "EndPinName": "in1",
             "Segments": [
               {
@@ -2825,10 +3160,10 @@
           {
             "PathId": "941326f9-d17d-4fd0-9ee0-ba52ff9be04a",
             "StartComponentId": "phase_91e864ddf71e44b59d34c8d29500c216",
-            "StartComponentGuid": "82f3643d-d008-48ca-8513-4a94e71abdb5",
+            "StartComponentGuid": "91e4a567-2b9a-4617-a8a7-7b42ce6c4f9b",
             "StartPinName": "out",
             "EndComponentId": "recombine_5a3bdf1b641e4621bba02ffcb42801c6",
-            "EndComponentGuid": "879ff24d-5d71-442c-8240-902dced659a3",
+            "EndComponentGuid": "4cf1baa4-8684-424c-b6a3-3886dbaf09b2",
             "EndPinName": "in2",
             "Segments": [
               {
@@ -2855,10 +3190,10 @@
           {
             "PathId": "20bc5d75-501f-4827-9083-fdb463d99335",
             "StartComponentId": "recombine_5a3bdf1b641e4621bba02ffcb42801c6",
-            "StartComponentGuid": "879ff24d-5d71-442c-8240-902dced659a3",
+            "StartComponentGuid": "4cf1baa4-8684-424c-b6a3-3886dbaf09b2",
             "StartPinName": "out1",
             "EndComponentId": "output_2f6611d8f440444fac667fa4030f7c97",
-            "EndComponentGuid": "dad2925b-838e-4814-80fb-5db4c9e65473",
+            "EndComponentGuid": "d32f6b09-31c1-467b-8bd5-1a618f8d02a5",
             "EndPinName": "a0",
             "Segments": [
               {
@@ -2888,7 +3223,7 @@
             "PinId": "7c9d062c-f5b2-4b2a-8a8b-b3f8d0c8e4a3",
             "Name": "A",
             "InternalComponentId": "input_666b695c8d0540f496c418d0e745c6a9",
-            "InternalComponentGuid": "b7194307-a8f7-488f-9369-e969e42c78d9",
+            "InternalComponentGuid": "817292e5-7939-4306-b331-a148be519f8b",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 23.5,
@@ -2898,7 +3233,7 @@
             "PinId": "f734317b-b21e-4b9e-aa64-0e7f04702dba",
             "Name": "B",
             "InternalComponentId": "input_ab87e15ea28e4a11afb2e8827ed7e2b3",
-            "InternalComponentGuid": "4bdecff7-ed3f-42db-b5db-eed1bbbb02f5",
+            "InternalComponentGuid": "95366701-5a3d-41f8-84c7-eae050dda98f",
             "InternalPinName": "a0",
             "RelativeX": 0,
             "RelativeY": 31.5,
@@ -2908,7 +3243,7 @@
             "PinId": "9e89db50-0287-4c0e-8ab9-929d19b6f544",
             "Name": "BIAS",
             "InternalComponentId": "phase_91e864ddf71e44b59d34c8d29500c216",
-            "InternalComponentGuid": "82f3643d-d008-48ca-8513-4a94e71abdb5",
+            "InternalComponentGuid": "91e4a567-2b9a-4617-a8a7-7b42ce6c4f9b",
             "InternalPinName": "in",
             "RelativeX": 905,
             "RelativeY": 31.5,
@@ -2918,7 +3253,7 @@
             "PinId": "59404ec8-2cf3-463d-936d-c382ddd4109a",
             "Name": "Y",
             "InternalComponentId": "output_2f6611d8f440444fac667fa4030f7c97",
-            "InternalComponentGuid": "dad2925b-838e-4814-80fb-5db4c9e65473",
+            "InternalComponentGuid": "d32f6b09-31c1-467b-8bd5-1a618f8d02a5",
             "InternalPinName": "b0",
             "RelativeX": 1765,
             "RelativeY": 23.5,
@@ -2929,8 +3264,8 @@
       "ChildComponents": [
         {
           "Identifier": "input_666b695c8d0540f496c418d0e745c6a9",
-          "ComponentGuid": "b7194307-a8f7-488f-9369-e969e42c78d9",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "817292e5-7939-4306-b331-a148be519f8b",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 6100,
           "Y": 418.5,
@@ -2939,12 +3274,12 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "input_ab87e15ea28e4a11afb2e8827ed7e2b3",
-          "ComponentGuid": "4bdecff7-ed3f-42db-b5db-eed1bbbb02f5",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "95366701-5a3d-41f8-84c7-eae050dda98f",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 6100,
           "Y": 426.5,
@@ -2953,11 +3288,11 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         },
         {
           "Identifier": "combine_60c90c4f22334e93809bace9231f3f85",
-          "ComponentGuid": "9fcde098-914c-4055-89b6-02bd526f7c41",
+          "ComponentGuid": "f096c381-c492-4fee-99a6-372a3676cc00",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 6960,
@@ -2972,7 +3307,7 @@
         },
         {
           "Identifier": "phase_91e864ddf71e44b59d34c8d29500c216",
-          "ComponentGuid": "82f3643d-d008-48ca-8513-4a94e71abdb5",
+          "ComponentGuid": "91e4a567-2b9a-4617-a8a7-7b42ce6c4f9b",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
           "X": 7005,
@@ -2986,7 +3321,7 @@
         },
         {
           "Identifier": "recombine_5a3bdf1b641e4621bba02ffcb42801c6",
-          "ComponentGuid": "879ff24d-5d71-442c-8240-902dced659a3",
+          "ComponentGuid": "4cf1baa4-8684-424c-b6a3-3886dbaf09b2",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
           "X": 7510,
@@ -3001,8 +3336,8 @@
         },
         {
           "Identifier": "output_2f6611d8f440444fac667fa4030f7c97",
-          "ComponentGuid": "dad2925b-838e-4814-80fb-5db4c9e65473",
-          "TemplateName": "Straight Waveguide 100\u00b5m",
+          "ComponentGuid": "d32f6b09-31c1-467b-8bd5-1a618f8d02a5",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
           "X": 7765,
           "Y": 418.5,
@@ -3011,7 +3346,7 @@
           "SliderValues": {
             "0": 0
           },
-          "HumanReadableName": "Straight Waveguide 100\u00b5m"
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
         }
       ],
       "CanvasX": 6100,
@@ -3038,7 +3373,7 @@
     "PdkVersions": {},
     "Authorship": {
       "Created": "2026-08-19",
-      "Modified": "2026-08-19T08:40:00.0000000Z"
+      "Modified": "2026-09-07T08:43:34.5540895Z"
     }
   },
   "ChipWidthMicrometers": 9000,

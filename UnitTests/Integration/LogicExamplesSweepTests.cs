@@ -7,6 +7,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP_Contracts.Logger;
 using CAP_Core;
 using CAP_Core.Export;
 using Shouldly;
@@ -67,8 +68,9 @@ public class LogicExamplesSweepTests
 
         (await fileOps.LoadDesignFromPathAsync(path)).ShouldBeTrue(
             $"'{exampleFileName}' must load through the real load path");
-        errorConsole.Entries.ShouldBeEmpty(
-            $"'{exampleFileName}' must load with zero dropped connections and zero error-console entries");
+        errorConsole.Entries.Where(entry => entry.Level != LogLevel.Info).ShouldBeEmpty(
+            $"'{exampleFileName}' must load with zero dropped connections and no console warnings or errors " +
+            "(the loader's informational routing hint for very large designs is allowed)");
 
         var panel = new LogicPanelViewModel();
         panel.Configure(canvas);

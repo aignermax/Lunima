@@ -581,6 +581,7 @@
   "Library.NoGroupsLoaded": "未加载任何分组",
   "Library.NoSavedGroups": "没有已保存的分组",
   "Load.PinCalibrationChanged": "自保存此设计以来，“{0}”的引脚校准已更改——其布线已重新计算。",
+  "Load.RoutingSkippedLargeDesign": "{0} 条连接没有路径几何。此大型设计已跳过布线——需要绘制波导时请使用“全部重新布线”（可能需要一些时间）。",
   "Load.DuplicatePinConnectionsDropped": "警告：{0} 条连接被丢弃，因为引脚已有连线——此文件可能由更新版本生成或被外部编辑过。",
   "MainView.ResetZoom": "重置",
   "MainView.Simulate": "仿真 (L)",

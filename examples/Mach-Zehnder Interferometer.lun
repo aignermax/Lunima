@@ -4,45 +4,62 @@
     {
       "TemplateName": "1x2 MMI Splitter",
       "PdkSource": "Demo PDK",
-      "X": 200,
-      "Y": 500,
+      "X": 260,
+      "Y": 472.5,
       "Identifier": "mzi_splitter",
       "Rotation": 0,
+      "SliderValue": 0.3,
+      "SliderValues": {
+        "0": 0.3,
+        "1": 50
+      },
       "HumanReadableName": "1x2 MMI Splitter"
     },
     {
       "TemplateName": "Phase Shifter",
       "PdkSource": "Demo PDK",
-      "X": 1200,
-      "Y": 300,
+      "X": 420,
+      "Y": 420,
       "Identifier": "mzi_phase_shifter",
       "Rotation": 0,
       "SliderValue": 180,
+      "SliderValues": {
+        "0": 180
+      },
       "HumanReadableName": "Phase Shifter"
     },
     {
       "TemplateName": "Straight Waveguide 100\u00B5m",
       "PdkSource": "Demo PDK",
-      "X": 1200,
-      "Y": 750,
+      "X": 620,
+      "Y": 545,
       "Identifier": "mzi_reference_arm",
       "Rotation": 0,
+      "SliderValue": 0.087,
+      "SliderValues": {
+        "0": 0.087
+      },
       "HumanReadableName": "Straight Waveguide 100\u00B5m"
     },
     {
       "TemplateName": "2x2 MMI Coupler",
       "PdkSource": "Demo PDK",
-      "X": 2200,
-      "Y": 500,
+      "X": 1000,
+      "Y": 470,
       "Identifier": "mzi_combiner",
       "Rotation": 0,
+      "SliderValue": 0,
+      "SliderValues": {
+        "0": 0,
+        "1": 50
+      },
       "HumanReadableName": "2x2 MMI Coupler"
     },
     {
       "TemplateName": "Photodetector",
       "PdkSource": "Demo PDK",
-      "X": 3200,
-      "Y": 400,
+      "X": 1330,
+      "Y": 422.5,
       "Identifier": "mzi_detector_bar",
       "Rotation": 0,
       "HumanReadableName": "Photodetector"
@@ -50,21 +67,114 @@
     {
       "TemplateName": "Photodetector",
       "PdkSource": "Demo PDK",
-      "X": 3200,
-      "Y": 750,
+      "X": 1330,
+      "Y": 522.5,
       "Identifier": "mzi_detector_cross",
       "Rotation": 0,
       "HumanReadableName": "Photodetector"
+    },
+    {
+      "TemplateName": "Grating Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 100,
+      "Y": 490.5,
+      "Identifier": "mzi_input_coupler",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler"
     }
   ],
   "Connections": [
+    {
+      "StartComponentIndex": 6,
+      "StartPinName": "waveguide",
+      "EndComponentIndex": 0,
+      "EndPinName": "in",
+      "StartComponentId": "mzi_input_coupler",
+      "EndComponentId": "mzi_splitter",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 200,
+          "StartY": 500,
+          "EndX": 260,
+          "EndY": 500,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
     {
       "StartComponentIndex": 0,
       "StartPinName": "out1",
       "EndComponentIndex": 1,
       "EndPinName": "in",
       "StartComponentId": "mzi_splitter",
-      "EndComponentId": "mzi_phase_shifter"
+      "EndComponentId": "mzi_phase_shifter",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 340,
+          "StartY": 498,
+          "EndX": 356,
+          "EndY": 498,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 356,
+          "StartY": 498,
+          "EndX": 374.0887035757501,
+          "EndY": 486.5322214545008,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -64.74731825407741,
+          "CenterX": 356,
+          "CenterY": 478,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": -64.74731825407741
+        },
+        {
+          "Type": "Straight",
+          "StartX": 374.0887035757501,
+          "StartY": 486.5322214545008,
+          "EndX": 385.9112964242498,
+          "EndY": 461.4677785454992,
+          "StartAngleDegrees": -64.74731825407741,
+          "EndAngleDegrees": -64.74731825407741
+        },
+        {
+          "Type": "Bend",
+          "StartX": 385.9112964242498,
+          "StartY": 461.4677785454992,
+          "EndX": 403.99999999999994,
+          "EndY": 450,
+          "StartAngleDegrees": -64.74731825407741,
+          "EndAngleDegrees": 0,
+          "CenterX": 403.99999999999994,
+          "CenterY": 470,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": 64.74731825407741
+        },
+        {
+          "Type": "Straight",
+          "StartX": 403.99999999999994,
+          "StartY": 450,
+          "EndX": 419.99999999999994,
+          "EndY": 450,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     },
     {
       "StartComponentIndex": 0,
@@ -72,7 +182,65 @@
       "EndComponentIndex": 2,
       "EndPinName": "a0",
       "StartComponentId": "mzi_splitter",
-      "EndComponentId": "mzi_reference_arm"
+      "EndComponentId": "mzi_reference_arm",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 340,
+          "StartY": 502,
+          "EndX": 396,
+          "EndY": 502,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 396,
+          "StartY": 502,
+          "EndX": 410.99840469941404,
+          "EndY": 504.30253825964536,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 17.455686785452283,
+          "CenterX": 396,
+          "CenterY": 552,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 17.455686785452283
+        },
+        {
+          "Type": "Straight",
+          "StartX": 410.99840469941404,
+          "StartY": 504.30253825964536,
+          "EndX": 549.0015953005859,
+          "EndY": 547.6974617403547,
+          "StartAngleDegrees": 17.455686785452283,
+          "EndAngleDegrees": 17.455686785452283
+        },
+        {
+          "Type": "Bend",
+          "StartX": 549.001595300586,
+          "StartY": 547.6974617403547,
+          "EndX": 564,
+          "EndY": 550,
+          "StartAngleDegrees": 17.455686785452283,
+          "EndAngleDegrees": 0,
+          "CenterX": 564,
+          "CenterY": 500.00000000000006,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -17.455686785452283
+        },
+        {
+          "Type": "Straight",
+          "StartX": 564,
+          "StartY": 550,
+          "EndX": 620,
+          "EndY": 550,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     },
     {
       "StartComponentIndex": 1,
@@ -80,7 +248,65 @@
       "EndComponentIndex": 3,
       "EndPinName": "in1",
       "StartComponentId": "mzi_phase_shifter",
-      "EndComponentId": "mzi_combiner"
+      "EndComponentId": "mzi_combiner",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 920,
+          "StartY": 450,
+          "EndX": 936,
+          "EndY": 450,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 936,
+          "StartY": 450,
+          "EndX": 953.8052790265369,
+          "EndY": 460.8911011210376,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 62.906433641252846,
+          "CenterX": 936,
+          "CenterY": 470,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": 62.906433641252846
+        },
+        {
+          "Type": "Straight",
+          "StartX": 953.8052790265369,
+          "StartY": 460.8911011210376,
+          "EndX": 966.194720973463,
+          "EndY": 485.1088988789624,
+          "StartAngleDegrees": 62.906433641252846,
+          "EndAngleDegrees": 62.906433641252846
+        },
+        {
+          "Type": "Bend",
+          "StartX": 966.194720973463,
+          "StartY": 485.1088988789624,
+          "EndX": 983.9999999999999,
+          "EndY": 496,
+          "StartAngleDegrees": 62.906433641252846,
+          "EndAngleDegrees": 0,
+          "CenterX": 983.9999999999999,
+          "CenterY": 476,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": -62.906433641252846
+        },
+        {
+          "Type": "Straight",
+          "StartX": 983.9999999999999,
+          "StartY": 496,
+          "EndX": 999.9999999999999,
+          "EndY": 496,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     },
     {
       "StartComponentIndex": 2,
@@ -88,7 +314,65 @@
       "EndComponentIndex": 3,
       "EndPinName": "in2",
       "StartComponentId": "mzi_reference_arm",
-      "EndComponentId": "mzi_combiner"
+      "EndComponentId": "mzi_combiner",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 720,
+          "StartY": 550,
+          "EndX": 776,
+          "EndY": 550,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 776,
+          "StartY": 550,
+          "EndX": 790.3683612856969,
+          "EndY": 547.8910241482022,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -16.700401137083063,
+          "CenterX": 776,
+          "CenterY": 500,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -16.700401137083063
+        },
+        {
+          "Type": "Straight",
+          "StartX": 790.3683612856969,
+          "StartY": 547.8910241482022,
+          "EndX": 929.6316387143031,
+          "EndY": 506.10897585179777,
+          "StartAngleDegrees": -16.700401137083063,
+          "EndAngleDegrees": -16.700401137083063
+        },
+        {
+          "Type": "Bend",
+          "StartX": 929.6316387143031,
+          "StartY": 506.1089758517978,
+          "EndX": 944,
+          "EndY": 504,
+          "StartAngleDegrees": -16.700401137083063,
+          "EndAngleDegrees": 0,
+          "CenterX": 944,
+          "CenterY": 554,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 16.700401137083063
+        },
+        {
+          "Type": "Straight",
+          "StartX": 944,
+          "StartY": 504,
+          "EndX": 1000,
+          "EndY": 504,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     },
     {
       "StartComponentIndex": 3,
@@ -96,7 +380,65 @@
       "EndComponentIndex": 4,
       "EndPinName": "in",
       "StartComponentId": "mzi_combiner",
-      "EndComponentId": "mzi_detector_bar"
+      "EndComponentId": "mzi_detector_bar",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1250,
+          "StartY": 496,
+          "EndX": 1266,
+          "EndY": 496,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1266,
+          "StartY": 496,
+          "EndX": 1283.805279026537,
+          "EndY": 485.1088988789624,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -62.906433641252846,
+          "CenterX": 1266,
+          "CenterY": 476,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": -62.906433641252846
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1283.805279026537,
+          "StartY": 485.1088988789624,
+          "EndX": 1296.194720973463,
+          "EndY": 460.8911011210376,
+          "StartAngleDegrees": -62.906433641252846,
+          "EndAngleDegrees": -62.906433641252846
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1296.194720973463,
+          "StartY": 460.8911011210376,
+          "EndX": 1314,
+          "EndY": 450,
+          "StartAngleDegrees": -62.906433641252846,
+          "EndAngleDegrees": 0,
+          "CenterX": 1314,
+          "CenterY": 470,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": 62.906433641252846
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1314,
+          "StartY": 450,
+          "EndX": 1330,
+          "EndY": 450,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     },
     {
       "StartComponentIndex": 3,
@@ -104,14 +446,72 @@
       "EndComponentIndex": 5,
       "EndPinName": "in",
       "StartComponentId": "mzi_combiner",
-      "EndComponentId": "mzi_detector_cross"
+      "EndComponentId": "mzi_detector_cross",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1250,
+          "StartY": 504,
+          "EndX": 1266,
+          "EndY": 504,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1266,
+          "StartY": 504,
+          "EndX": 1283.805279026537,
+          "EndY": 514.8911011210375,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 62.906433641252846,
+          "CenterX": 1266,
+          "CenterY": 524,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": 62.906433641252846
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1283.805279026537,
+          "StartY": 514.8911011210375,
+          "EndX": 1296.194720973463,
+          "EndY": 539.1088988789623,
+          "StartAngleDegrees": 62.906433641252846,
+          "EndAngleDegrees": 62.906433641252846
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1296.194720973463,
+          "StartY": 539.1088988789623,
+          "EndX": 1314,
+          "EndY": 549.9999999999999,
+          "StartAngleDegrees": 62.906433641252846,
+          "EndAngleDegrees": 0,
+          "CenterX": 1314,
+          "CenterY": 529.9999999999999,
+          "RadiusMicrometers": 20,
+          "SweepAngleDegrees": -62.906433641252846
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1314,
+          "StartY": 549.9999999999999,
+          "EndX": 1330,
+          "EndY": 549.9999999999999,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     }
   ],
   "Metadata": {
     "PdkVersions": {},
     "Authorship": {
       "Created": "2026-07-08",
-      "Modified": "2026-07-08T17:01:37.1767270Z"
+      "Modified": "2026-09-07T08:42:55.3679266Z"
     }
   },
   "ChipWidthMicrometers": 5000,

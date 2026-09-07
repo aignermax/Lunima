@@ -581,6 +581,7 @@
   "Library.NoGroupsLoaded": "No hay grupos cargados",
   "Library.NoSavedGroups": "No hay grupos guardados",
   "Load.PinCalibrationChanged": "La calibración de pines de '{0}' cambió desde que se guardó este diseño; sus rutas se recalcularon.",
+  "Load.RoutingSkippedLargeDesign": "{0} conexiones no tienen geometría de ruta. El enrutado se omitió para este diseño grande: usa «Reenrutar todo» cuando necesites las guías de onda dibujadas (puede tardar).",
   "Load.DuplicatePinConnectionsDropped": "Advertencia: se descartaron {0} conexión(es) porque un pin ya tenía un cable; es posible que este archivo se haya generado con una versión más reciente o se haya editado externamente.",
   "MainView.ResetZoom": "Restablecer",
   "MainView.Simulate": "Simular (L)",
