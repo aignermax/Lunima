@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.RinHelpFlyout">
+
+    <!-- RIN explainer (#1152): two short sentences plus an animated power-over-time
+         trace — the marker sweeps the jittery curve to show the power wobble that
+         RIN measures. Opened from the "?" button next to the RIN slider in the
+         light-source properties. -->
+
+    <StackPanel MaxWidth="300" Spacing="6">
+        <TextBlock Text="{loc:Localize SelectedProps.RinHint}"
+                   TextWrapping="Wrap" Foreground="#DDDDDD" FontSize="11"/>
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4" HorizontalAlignment="Center">
+            <StackPanel Spacing="2">
+                <ha:ParameterSweepMiniPlot Width="240" Height="44" IsHitTestVisible="False"
+                                           CurveBrush="#81C784"
+                                           CurvePoints="0.0,22.6 5.0,24.4 10.0,28.6 15.0,25.0 20.0,27.6 25.0,29.2 30.0,25.0 35.0,27.9 40.0,22.6 45.0,21.3 50.0,21.5 55.0,22.5 60.0,22.6 65.0,18.2 70.0,17.0 75.0,20.5 80.0,15.8 85.0,16.5 90.0,25.6 95.0,25.2 100.0,21.0 105.0,26.4 110.0,22.7 115.0,27.3 120.0,27.1 125.0,28.9 130.0,22.6 135.0,20.2 140.0,22.7 145.0,24.4 150.0,17.0 155.0,19.7 160.0,16.8 165.0,19.8 170.0,24.0 175.0,25.8 180.0,27.0 185.0,21.6 190.0,21.7 195.0,30.1 200.0,23.2 205.0,29.1 210.0,20.4 215.0,21.7 220.0,26.3 225.0,22.1 230.0,18.0 235.0,16.9 240.0,21.7"
+                                           MarkerBrush="#FFD54F"/>
+                <TextBlock Text="{loc:Localize SelectedProps.RinDiagramCaption}"
+                           Foreground="Gray" FontSize="9" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+</UserControl>

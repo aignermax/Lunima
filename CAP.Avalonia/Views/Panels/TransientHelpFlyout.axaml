@@ -1,98 +1,14 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
              x:Class="CAP.Avalonia.Views.Panels.TransientHelpFlyout"
              MaxWidth="420">
 
-    <!-- Plain-language explainer for Transient mode (#600 user feedback):
-         a looping animation (light travels through the chip and splits to the
-         outputs) plus non-physicist descriptions of the mode, the three
-         sources, and how to read the plot. Shown from the panel's "?" button. -->
-
-    <UserControl.Styles>
-        <!-- Pulse entering from the laser to the chip centre, fading out there. -->
-        <Style Selector="Ellipse.pulseIn">
-            <Style.Animations>
-                <Animation Duration="0:0:3" IterationCount="INFINITE">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="Canvas.Left" Value="34"/>
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="50%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="52%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
-        <!-- Split pulses: appear at the chip centre and travel to one output each. -->
-        <Style Selector="Ellipse.pulseTop">
-            <Style.Animations>
-                <Animation Duration="0:0:3" IterationCount="INFINITE">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Canvas.Top" Value="34"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="50%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Canvas.Top" Value="34"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="52%">
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="96%">
-                        <Setter Property="Canvas.Left" Value="330"/>
-                        <Setter Property="Canvas.Top" Value="16"/>
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="Canvas.Left" Value="330"/>
-                        <Setter Property="Canvas.Top" Value="16"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
-        <Style Selector="Ellipse.pulseBottom">
-            <Style.Animations>
-                <Animation Duration="0:0:3" IterationCount="INFINITE">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Canvas.Top" Value="34"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="50%">
-                        <Setter Property="Canvas.Left" Value="188"/>
-                        <Setter Property="Canvas.Top" Value="34"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="52%">
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="96%">
-                        <Setter Property="Canvas.Left" Value="330"/>
-                        <Setter Property="Canvas.Top" Value="52"/>
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="Canvas.Left" Value="330"/>
-                        <Setter Property="Canvas.Top" Value="52"/>
-                        <Setter Property="Opacity" Value="0"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
-    </UserControl.Styles>
+    <!-- Plain-language explainer for Transient mode: short sections (#1152 text
+         budget) plus a looping light-pulse animation (laser → your circuit →
+         split to the outputs) composed from the LightPulseAlongPath primitive.
+         Shown from the panel's "?" button. -->
 
     <ScrollViewer MaxHeight="440">
         <StackPanel Margin="12" Spacing="8">
@@ -104,14 +20,22 @@
             <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
                     CornerRadius="4" Padding="4">
                 <Canvas Width="380" Height="80">
+                    <!-- Animated light pulses (in, then split top/bottom). Declared first so
+                         tracks and pulses slide *under* the chip box: the pulse visibly
+                         enters the circuit and the two split pulses emerge from it. -->
+                    <ha:LightPulseAlongPath Width="380" Height="80" IsHitTestVisible="False"
+                                            PathPoints="36,40 195,40" PulseBrush="#FFF176" PulseDiameter="12"
+                                            WindowStart="0" WindowEnd="0.5"/>
+                    <ha:LightPulseAlongPath Width="380" Height="80" IsHitTestVisible="False"
+                                            PathPoints="195,40 339,22" PulseBrush="#4FC3F7" PulseDiameter="10"
+                                            WindowStart="0.5" WindowEnd="1"/>
+                    <ha:LightPulseAlongPath Width="380" Height="80" IsHitTestVisible="False"
+                                            PathPoints="195,40 339,58" PulseBrush="#FF8A65" PulseDiameter="10"
+                                            WindowStart="0.5" WindowEnd="1"/>
                     <!-- Laser source -->
                     <Ellipse Canvas.Left="10" Canvas.Top="30" Width="20" Height="20" Fill="#FFD54F"/>
                     <TextBlock Canvas.Left="2" Canvas.Top="54" Text="{loc:Localize TransientHelp.DiagramLightSource}"
                                FontSize="9" Foreground="Gray"/>
-                    <!-- Waveguides -->
-                    <Line StartPoint="34,40" EndPoint="150,40" Stroke="#4d4d4d" StrokeThickness="2"/>
-                    <Line StartPoint="240,30" EndPoint="336,22" Stroke="#4d4d4d" StrokeThickness="2"/>
-                    <Line StartPoint="240,50" EndPoint="336,58" Stroke="#4d4d4d" StrokeThickness="2"/>
                     <!-- The user's circuit -->
                     <Border Canvas.Left="150" Canvas.Top="18" Width="90" Height="44"
                             Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
@@ -125,22 +49,11 @@
                              Fill="Transparent" Stroke="#FF8A65" StrokeThickness="2"/>
                     <TextBlock Canvas.Left="330" Canvas.Top="0" Text="{loc:Localize TransientHelp.DiagramOutputs}"
                                FontSize="9" Foreground="Gray"/>
-                    <!-- Animated light pulses -->
-                    <Ellipse Classes="pulseIn" Canvas.Top="34" Width="12" Height="12" Fill="#FFF176"/>
-                    <Ellipse Classes="pulseTop" Width="10" Height="10" Fill="#4FC3F7"/>
-                    <Ellipse Classes="pulseBottom" Width="10" Height="10" Fill="#FF8A65"/>
                 </Canvas>
             </Border>
 
             <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
                        Text="{loc:Localize TransientHelp.Intro1}"/>
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                       Text="{loc:Localize TransientHelp.Intro2}"/>
-
-            <TextBlock Text="{loc:Localize TransientHelp.WhyTitle}" FontWeight="Bold" FontSize="12"
-                       Foreground="White" Margin="0,4,0,0"/>
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                       Text="{loc:Localize TransientHelp.WhyBody}"/>
 
             <TextBlock Text="{loc:Localize TransientHelp.SourcesTitle}" FontWeight="Bold" FontSize="12"
                        Foreground="White" Margin="0,4,0,0"/>
@@ -163,8 +76,6 @@
                        Foreground="White" Margin="0,4,0,0"/>
             <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
                        Text="{loc:Localize TransientHelp.ReadingBody}"/>
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                       Text="{loc:Localize TransientHelp.ZoomNote}"/>
 
         </StackPanel>
     </ScrollViewer>

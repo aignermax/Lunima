@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.LineShapeHelpFlyout">
+
+    <!-- Laser line-shape explainer (#1152): two short sentences plus an animated
+         mini spectrum — the marker sweeps the Lorentzian peak to show the power
+         spreading around the center wavelength. Opened from the "?" button next
+         to the line-shape combo in the light-source properties. -->
+
+    <StackPanel MaxWidth="300" Spacing="6">
+        <TextBlock Text="{loc:Localize SelectedProps.LineShapeHint}"
+                   TextWrapping="Wrap" Foreground="#DDDDDD" FontSize="11"/>
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4" HorizontalAlignment="Center">
+            <StackPanel Spacing="2">
+                <ha:ParameterSweepMiniPlot Width="240" Height="44" IsHitTestVisible="False"
+                                           CurvePoints="0.0,37.1 5.0,37.1 10.0,37.0 15.0,36.9 20.0,36.8 25.0,36.6 30.0,36.5 35.0,36.3 40.0,36.1 45.0,35.9 50.0,35.6 55.0,35.2 60.0,34.8 65.0,34.3 70.0,33.6 75.0,32.7 80.0,31.6 85.0,30.1 90.0,28.2 95.0,25.5 100.0,22.0 105.0,17.5 110.0,12.4 115.0,7.9 120.0,6.0 125.0,7.9 130.0,12.4 135.0,17.5 140.0,22.0 145.0,25.5 150.0,28.2 155.0,30.1 160.0,31.6 165.0,32.7 170.0,33.6 175.0,34.3 180.0,34.8 185.0,35.2 190.0,35.6 195.0,35.9 200.0,36.1 205.0,36.3 210.0,36.5 215.0,36.6 220.0,36.8 225.0,36.9 230.0,37.0 235.0,37.1 240.0,37.1"
+                                           MarkerBrush="#FFD54F"/>
+                <TextBlock Text="{loc:Localize SelectedProps.LineShapeDiagramCaption}"
+                           Foreground="Gray" FontSize="9" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+</UserControl>
