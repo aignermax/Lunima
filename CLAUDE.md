@@ -187,9 +187,20 @@ Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
 
 - Use `x:DataType="vm:YourViewModel"` for compiled bindings
 - Follow existing MainWindow layout pattern
-- New feature panels go in the Right panel (properties area) as collapsible sections
-- Use clear visual separators between sections
-- Follow Parameter Sweep panel pattern in `MainWindow.axaml` (lines 193-229)
+- **The right panel is for properties of the current selection ONLY.** Do NOT add
+  feature sections there. Pick the surface a UX designer would choose:
+
+| Feature kind | Surface | Existing example |
+|---|---|---|
+| Properties/editors of the selected element | Right panel | `SelectedComponentPropertiesPanel` |
+| Whole-design analysis, sweeps, checks, generated views | Analysis dock tab (bottom) | `AnalysisDockPanel` (Transient, Sweep, Checks, Netlist…) |
+| Self-contained workflows (browse, configure, chat) | Own non-modal window + toolbar/menu entry | `RegistryBrowserWindow`, `AiAssistantWindow` |
+| One-shot decisions with few inputs | Modal dialog | `ProcessSelectionDialog` |
+| Small contextual info/actions | Flyout anchored to its trigger | PDK trash flyout, Export flyout |
+| Spatial feedback tied to canvas positions | Canvas overlay | `ModeProbePanel` |
+
+- Every feature needs a **visible entry point** (toolbar button, menu item or context
+  menu) reachable in ≤ 2 clicks, and keeps its keyboard shortcut if it had one.
 
 ---
 

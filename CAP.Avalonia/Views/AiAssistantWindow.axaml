@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
+        xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        x:Class="CAP.Avalonia.Views.AiAssistantWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{loc:Localize AiAssistant.WindowTitle}"
+        Width="440" Height="640"
+        MinWidth="340" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="#252526"
+        Foreground="White">
+
+    <!-- Non-modal tool window hosting the AI Design Assistant chat
+         (formerly a right-sidebar section): the user can keep it open
+         next to the canvas while the assistant places components. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <panels:AiAssistantPanel Margin="14,10"/>
+    </ScrollViewer>
+</Window>

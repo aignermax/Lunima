@@ -306,6 +306,13 @@
                     </Button.Flyout>
                 </Button>
 
+                <!-- AI Design Assistant — own tool window (formerly a right-sidebar section) -->
+                <Button Click="OpenAiAssistant_Click"
+                        Width="36" Margin="2" Background="#3d3d5d"
+                        ToolTip.Tip="{loc:Localize Toolbar.AiAssistantTip}">
+                    <TextBlock Text="🤖" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Button>
+
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Settings -->
@@ -854,62 +861,13 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="10">
-                    <!-- Selection-driven properties: name, position, size and the
-                         per-component editors (ONA Analyzer sweep button, sliders,
-                         light-source config…) all live in this single panel. -->
+                    <!-- Selection properties ONLY: the sidebar shows what the current
+                         selection is and how to edit it. Whole-design tools live on
+                         their own surfaces (analysis dock tabs, AI Assistant window). -->
                     <panels:SelectedComponentPropertiesPanel/>
 
-                    <!-- Parameter Sweep (visible when component has slider) -->
-                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
-                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                        <TextBlock Text="{loc:Localize Sweep.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                            <TextBlock Text="{loc:Localize Sweep.Start}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding RightPanel.Sweep.StartValue}"
-                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                           Increment="10" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="{loc:Localize Sweep.End}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding RightPanel.Sweep.EndValue}"
-                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                           Increment="10" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="{loc:Localize Sweep.Steps}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding RightPanel.Sweep.StepCount}"
-                                           Minimum="2" Maximum="100"
-                                           Increment="1" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <Button Content="{loc:Localize Sweep.Run}" Command="{Binding RightPanel.Sweep.RunSweepCommand}"
-                                Width="120" Margin="0,5,0,5" Background="#3d5d3d"
-                                IsEnabled="{Binding RightPanel.Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
-                        <TextBlock Text="{Binding RightPanel.Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                                   IsVisible="{Binding RightPanel.Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                        <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                      IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding RightPanel.Sweep.ResultText}" Foreground="LightGreen"
-                                       FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
-                        </ScrollViewer>
-                        <Button Content="{loc:Localize Sweep.ExportCsv}" Command="{Binding RightPanel.Sweep.ExportCsvCommand}"
-                                Width="100" Margin="0,5,0,0" Background="#3d3d5d"
-                                IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    </StackPanel>
-
-                    <!-- Connection Routing (style, width/radius, freeze, per-bend radius — issue #574) -->
+                    <!-- Connection Routing (selected connection's routing style) -->
                     <panels:ConnectionRoutingPanel/>
-
-                    <!-- AI Design Assistant Panel -->
-                    <panels:AiAssistantPanel/>
-
-                    <!-- Design Checks Panel -->
-                    <panels:DesignChecksPanel/>
-
-                    <!-- Netlist Panel (gdsfactory YAML view/export, #687) -->
-                    <panels:NetlistPanel/>
-
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>
