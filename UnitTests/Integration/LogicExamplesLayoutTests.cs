@@ -16,6 +16,9 @@ public class LogicExamplesLayoutTests
     /// <summary>Allowed distance between a group pin and the component pin it stands for.</summary>
     private const double PinOnBodyToleranceMicrometers = 0.01;
 
+    /// <summary>Drawn straight waveguides (10 µm) overlap by 2 µm at the MMI pin pitch (8 µm).</summary>
+    private const double PinPitchOverlapToleranceMicrometers = 2.5;
+
     [Theory]
     [MemberData(nameof(LogicExamplesSweepTests.LogicExampleFiles), MemberType = typeof(LogicExamplesSweepTests))]
     public async Task LogicExample_GateBodiesDoNotOverlap_AndPinsSitOnTheirGate(string exampleFileName)
@@ -32,9 +35,37 @@ public class LogicExamplesLayoutTests
         {
             AssertPinsSitOnBody(group, body, exampleFileName);
             AssertInsideChip(group, body, chip, exampleFileName);
+            AssertPartsInsideGateDoNotOverlap(group, exampleFileName);
         }
         AssertNoOverlaps(gates, exampleFileName);
     }
+
+    /// <summary>
+    /// The components inside one gate must not sit on top of each other. Straight waveguide
+    /// stubs are drawn 10 µm tall while MMI and splitter pins sit 4 to 8 µm apart, so two
+    /// stubs feeding neighbouring pins overlap by construction — pairs of stubs are skipped;
+    /// everything else may touch by at most the small tolerance.
+    /// </summary>
+    private static void AssertPartsInsideGateDoNotOverlap(ComponentGroup group, string exampleFileName)
+    {
+        var parts = group.GetAllComponentsRecursive()
+            .Select(c => (Part: c, Box: new Box(c.PhysicalX, c.PhysicalY, c.PhysicalX + c.WidthMicrometers, c.PhysicalY + c.HeightMicrometers)))
+            .ToList();
+        for (var i = 0; i < parts.Count; i++)
+        {
+            for (var j = i + 1; j < parts.Count; j++)
+            {
+                if (IsStraightStub(parts[i].Part) && IsStraightStub(parts[j].Part))
+                    continue;
+                parts[i].Box.Shrunk(PinPitchOverlapToleranceMicrometers).Intersects(parts[j].Box).ShouldBeFalse(
+                    $"'{exampleFileName}': inside gate '{group.GroupName}' part '{parts[i].Part.Identifier}' {parts[i].Box} " +
+                    $"overlaps part '{parts[j].Part.Identifier}' {parts[j].Box}");
+            }
+        }
+    }
+
+    private static bool IsStraightStub(Component part) =>
+        (part.HumanReadableName ?? part.Name).Contains("Straight Waveguide", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The chip size the file declares. The headless load path leaves applying it to the
@@ -99,6 +130,8 @@ public class LogicExamplesLayoutTests
         public bool Contains(double x, double y, double tolerance) =>
             x >= Left - tolerance && x <= Right + tolerance &&
             y >= Top - tolerance && y <= Bottom + tolerance;
+
+        public Box Shrunk(double by) => new(Left + by, Top + by, Right - by, Bottom - by);
 
         public bool Intersects(Box other) =>
             Left < other.Right && other.Left < Right &&

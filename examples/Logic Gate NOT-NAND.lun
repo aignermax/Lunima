@@ -44,7 +44,7 @@
                 "Type": "straight",
                 "StartX": 195,
                 "StartY": 123.5,
-                "EndX": 955,
+                "EndX": 215,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -52,7 +52,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -74,7 +73,7 @@
                 "Type": "straight",
                 "StartX": 195,
                 "StartY": 131.5,
-                "EndX": 955,
+                "EndX": 215,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -82,7 +81,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -102,9 +100,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1205,
+                "StartX": 465,
                 "StartY": 123.5,
-                "EndX": 1505,
+                "EndX": 645,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -112,7 +110,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -132,9 +129,53 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1500,
+                "StartX": 595,
+                "StartY": 237.5,
+                "EndX": 610,
+                "EndY": 237.5,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              },
+              {
+                "Type": "arc",
+                "StartX": 610,
+                "StartY": 237.5,
+                "EndX": 620,
+                "EndY": 227.5,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": -90,
+                "CenterX": 610,
+                "CenterY": 227.5,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": -90
+              },
+              {
+                "Type": "straight",
+                "StartX": 620,
+                "StartY": 227.5,
+                "EndX": 620,
+                "EndY": 141.5,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": -90
+              },
+              {
+                "Type": "arc",
+                "StartX": 620,
+                "StartY": 141.5,
+                "EndX": 630,
+                "EndY": 131.5,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": 0,
+                "CenterX": 630,
+                "CenterY": 141.5,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": 90
+              },
+              {
+                "Type": "straight",
+                "StartX": 630,
                 "StartY": 131.5,
-                "EndX": 1505,
+                "EndX": 645,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -142,7 +183,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -162,9 +202,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1755,
+                "StartX": 895,
                 "StartY": 123.5,
-                "EndX": 1760,
+                "EndX": 915,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -172,7 +212,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -209,8 +248,8 @@
             "InternalComponentId": "phase",
             "InternalComponentGuid": "9d224da5-ee30-4f84-8023-dfaae5e37a31",
             "InternalPinName": "in",
-            "RelativeX": 905,
-            "RelativeY": 31.5,
+            "RelativeX": 0,
+            "RelativeY": 137.5,
             "AngleDegrees": 180
           },
           {
@@ -219,7 +258,7 @@
             "InternalComponentId": "output",
             "InternalComponentGuid": "8a41fd80-5fa5-445e-a037-e8aff7c9b62f",
             "InternalPinName": "b0",
-            "RelativeX": 1765,
+            "RelativeX": 920,
             "RelativeY": 23.5,
             "AngleDegrees": 0
           }
@@ -259,7 +298,7 @@
           "ComponentGuid": "34005875-4565-4ee1-babd-0d4ef474c26e",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 955,
+          "X": 215,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -274,8 +313,8 @@
           "ComponentGuid": "9d224da5-ee30-4f84-8023-dfaae5e37a31",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 1000,
-          "Y": 101.5,
+          "X": 95,
+          "Y": 207.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -288,7 +327,7 @@
           "ComponentGuid": "6403f3cd-ce1c-4a55-962d-585a1591338c",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 1505,
+          "X": 645,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -303,7 +342,7 @@
           "ComponentGuid": "8a41fd80-5fa5-445e-a037-e8aff7c9b62f",
           "TemplateName": "Straight Waveguide 100µm",
           "PdkSource": "Demo PDK",
-          "X": 1760,
+          "X": 915,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -341,6 +380,6 @@
       "Modified": "2026-08-16T12:00:00.0000000Z"
     }
   },
-  "ChipWidthMicrometers": 5000,
-  "ChipHeightMicrometers": 5000
+  "ChipWidthMicrometers": 2000,
+  "ChipHeightMicrometers": 1000
 }

@@ -28,14 +28,12 @@ public class ExampleLoadRoutingTests
     /// <summary>Blocked wires per example the router leaves behind on the shipped layouts.</summary>
     private static readonly Dictionary<string, int> KnownBlockedWires = new()
     {
-        ["Logic Gate Half Adder.lun"] = 1,
-        ["Logic Gate Bit.lun"] = 1,
-        ["Logic Gate ALU 1-bit.lun"] = 3,
-        ["Logic Gate Register 2-bit.lun"] = 3,
-        ["Logic Gate Counter 2-bit.lun"] = 5,
-        ["Logic Gate Full Adder.lun"] = 15,
-        ["Logic Gate PC 2-bit.lun"] = 15,
-        ["Logic Gate RAM 2x2.lun"] = 30,
+        ["Logic Gate ALU 1-bit.lun"] = 1,
+        ["Logic Gate Register 2-bit.lun"] = 1,
+        ["Logic Gate Counter 2-bit.lun"] = 4,
+        ["Logic Gate Full Adder.lun"] = 8,
+        ["Logic Gate PC 2-bit.lun"] = 13,
+        ["Logic Gate RAM 2x2.lun"] = 28,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

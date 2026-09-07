@@ -50,7 +50,7 @@
                 "Type": "straight",
                 "StartX": 195,
                 "StartY": 123.5,
-                "EndX": 955,
+                "EndX": 215,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -58,7 +58,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -80,7 +79,7 @@
                 "Type": "straight",
                 "StartX": 195,
                 "StartY": 131.5,
-                "EndX": 955,
+                "EndX": 215,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -88,7 +87,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -108,9 +106,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1205,
+                "StartX": 465,
                 "StartY": 123.5,
-                "EndX": 1505,
+                "EndX": 645,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -118,7 +116,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -138,9 +135,53 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1500,
+                "StartX": 595,
+                "StartY": 237.5,
+                "EndX": 610,
+                "EndY": 237.5,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              },
+              {
+                "Type": "arc",
+                "StartX": 610,
+                "StartY": 237.5,
+                "EndX": 620,
+                "EndY": 227.5,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": -90,
+                "CenterX": 610,
+                "CenterY": 227.5,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": -90
+              },
+              {
+                "Type": "straight",
+                "StartX": 620,
+                "StartY": 227.5,
+                "EndX": 620,
+                "EndY": 141.5,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": -90
+              },
+              {
+                "Type": "arc",
+                "StartX": 620,
+                "StartY": 141.5,
+                "EndX": 630,
+                "EndY": 131.5,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": 0,
+                "CenterX": 630,
+                "CenterY": 141.5,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": 90
+              },
+              {
+                "Type": "straight",
+                "StartX": 630,
                 "StartY": 131.5,
-                "EndX": 1505,
+                "EndX": 645,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -148,7 +189,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -168,9 +208,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1755,
+                "StartX": 895,
                 "StartY": 123.5,
-                "EndX": 1760,
+                "EndX": 915,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -178,7 +218,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -198,9 +237,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1860,
+                "StartX": 1015,
                 "StartY": 123.5,
-                "EndX": 2965,
+                "EndX": 1165,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -208,7 +247,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -228,9 +266,53 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 2960,
+                "StartX": 1115,
+                "StartY": 237.5,
+                "EndX": 1130,
+                "EndY": 237.5,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              },
+              {
+                "Type": "arc",
+                "StartX": 1130,
+                "StartY": 237.5,
+                "EndX": 1140,
+                "EndY": 227.5,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": -90,
+                "CenterX": 1130,
+                "CenterY": 227.5,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": -90
+              },
+              {
+                "Type": "straight",
+                "StartX": 1140,
+                "StartY": 227.5,
+                "EndX": 1140,
+                "EndY": 141.5,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": -90
+              },
+              {
+                "Type": "arc",
+                "StartX": 1140,
+                "StartY": 141.5,
+                "EndX": 1150,
+                "EndY": 131.5,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": 0,
+                "CenterX": 1150,
+                "CenterY": 141.5,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": 90
+              },
+              {
+                "Type": "straight",
+                "StartX": 1150,
                 "StartY": 131.5,
-                "EndX": 2965,
+                "EndX": 1165,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -238,7 +320,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -258,9 +339,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3215,
+                "StartX": 1415,
                 "StartY": 123.5,
-                "EndX": 3220,
+                "EndX": 1435,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -268,7 +349,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -305,8 +385,8 @@
             "InternalComponentId": "phase_nand",
             "InternalComponentGuid": "9e44a174-10ee-45da-9d3f-ba2224d964fe",
             "InternalPinName": "in",
-            "RelativeX": 905,
-            "RelativeY": 31.5,
+            "RelativeX": 0,
+            "RelativeY": 137.5,
             "AngleDegrees": 180
           },
           {
@@ -315,8 +395,8 @@
             "InternalComponentId": "phase_inv",
             "InternalComponentGuid": "f442c843-a568-4c03-b6f1-9771b8a07d97",
             "InternalPinName": "in",
-            "RelativeX": 2365,
-            "RelativeY": 31.5,
+            "RelativeX": 520,
+            "RelativeY": 137.5,
             "AngleDegrees": 180
           },
           {
@@ -325,7 +405,7 @@
             "InternalComponentId": "output",
             "InternalComponentGuid": "edc2b43f-05be-4f06-b6c5-89f5a4fe7f84",
             "InternalPinName": "b0",
-            "RelativeX": 3225,
+            "RelativeX": 1440,
             "RelativeY": 23.5,
             "AngleDegrees": 0
           }
@@ -365,7 +445,7 @@
           "ComponentGuid": "8fa47b37-d2d7-47ce-a174-b30c443e0a6f",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 955,
+          "X": 215,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -380,8 +460,8 @@
           "ComponentGuid": "9e44a174-10ee-45da-9d3f-ba2224d964fe",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 1000,
-          "Y": 101.5,
+          "X": 95,
+          "Y": 207.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -394,7 +474,7 @@
           "ComponentGuid": "56e46bda-9d4f-43d4-9778-0f31890d87e3",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 1505,
+          "X": 645,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -409,7 +489,7 @@
           "ComponentGuid": "2e54d388-552e-40d5-945d-8c98591762c6",
           "TemplateName": "Straight Waveguide 100µm",
           "PdkSource": "Demo PDK",
-          "X": 1760,
+          "X": 915,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -423,8 +503,8 @@
           "ComponentGuid": "f442c843-a568-4c03-b6f1-9771b8a07d97",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 2460,
-          "Y": 101.5,
+          "X": 615,
+          "Y": 207.5,
           "Rotation": 0,
           "SliderValue": 315,
           "SliderValues": {
@@ -437,7 +517,7 @@
           "ComponentGuid": "b4df13a8-c67e-437e-8f25-52e91b98cc09",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 2965,
+          "X": 1165,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -452,7 +532,7 @@
           "ComponentGuid": "edc2b43f-05be-4f06-b6c5-89f5a4fe7f84",
           "TemplateName": "Straight Waveguide 100µm",
           "PdkSource": "Demo PDK",
-          "X": 3220,
+          "X": 1435,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -491,6 +571,6 @@
       "Modified": "2026-08-16T12:00:00.0000000Z"
     }
   },
-  "ChipWidthMicrometers": 5000,
-  "ChipHeightMicrometers": 5000
+  "ChipWidthMicrometers": 3000,
+  "ChipHeightMicrometers": 1000
 }

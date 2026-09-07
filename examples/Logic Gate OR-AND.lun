@@ -40,7 +40,7 @@
                 "Type": "straight",
                 "StartX": 195,
                 "StartY": 126,
-                "EndX": 200,
+                "EndX": 215,
                 "EndY": 126,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -48,7 +48,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -70,7 +69,7 @@
                 "Type": "straight",
                 "StartX": 195,
                 "StartY": 134,
-                "EndX": 200,
+                "EndX": 215,
                 "EndY": 134,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -78,7 +77,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -98,9 +96,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 450,
+                "StartX": 465,
                 "StartY": 126,
-                "EndX": 455,
+                "EndX": 485,
                 "EndY": 126,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -108,7 +106,6 @@
             ],
             "IsBlockedFallback": false,
             "IsInvalidGeometry": false,
-            "IsPlaceholderGeometry": false,
             "ConnectionType": "Auto",
             "BendRadiusMicrometers": 10,
             "WidthMicrometers": 0.5,
@@ -145,7 +142,7 @@
             "InternalComponentId": "combiner",
             "InternalComponentGuid": "f32d1140-2ef3-47ca-bb9e-1b43cffbf983",
             "InternalPinName": "out2",
-            "RelativeX": 355,
+            "RelativeX": 370,
             "RelativeY": 34,
             "AngleDegrees": 0
           },
@@ -155,7 +152,7 @@
             "InternalComponentId": "output",
             "InternalComponentGuid": "8be927b4-c62d-4023-b479-563caaa77655",
             "InternalPinName": "b0",
-            "RelativeX": 460,
+            "RelativeX": 490,
             "RelativeY": 26,
             "AngleDegrees": 0
           }
@@ -195,7 +192,7 @@
           "ComponentGuid": "f32d1140-2ef3-47ca-bb9e-1b43cffbf983",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 200,
+          "X": 215,
           "Y": 100,
           "Rotation": 0,
           "SliderValue": 0,
@@ -210,7 +207,7 @@
           "ComponentGuid": "8be927b4-c62d-4023-b479-563caaa77655",
           "TemplateName": "Straight Waveguide 100\u00B5m",
           "PdkSource": "Demo PDK",
-          "X": 455,
+          "X": 485,
           "Y": 121,
           "Rotation": 0,
           "SliderValue": 0,
@@ -246,6 +243,6 @@
       "Modified": "2026-08-16T08:27:06.8520159Z"
     }
   },
-  "ChipWidthMicrometers": 5000,
-  "ChipHeightMicrometers": 5000
+  "ChipWidthMicrometers": 2000,
+  "ChipHeightMicrometers": 1000
 }

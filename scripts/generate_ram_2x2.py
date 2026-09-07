@@ -129,10 +129,10 @@ WIRES = []
 
 
 # Logical placement grid used by the emit() calls below (200 um cells) versus the physical
-# pitch a 1765 x 64 um gate needs so that no two gate bodies overlap and routes have room.
+# pitch a 920 x 170 um gate needs so that no two gate bodies overlap and routes have room.
 LOGICAL_CELL = 200
-PITCH_X, PITCH_Y = 2000, 300
-ORIGIN = (100, 100)
+PITCH_X, PITCH_Y = 1200, 400
+ORIGIN = (400, 100)
 GATE_WIDTH = max(p["RelativeX"] for p in _templates["NAND"]["GroupDto"]["ExternalPins"])
 CHIP_MARGIN = 500
 
