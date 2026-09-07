@@ -15,14 +15,16 @@ namespace UnitTests.ViewModels;
 public class DesignValidationMenuCommandTests
 {
     [Fact]
-    public void RunDesignChecksCommand_UnconnectedOpticalPin_PopulatesDiagnosticsCollection()
+    public async Task RunDesignChecksCommand_UnconnectedOpticalPin_PopulatesDiagnosticsCollection()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
         var comp = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
         comp.HumanReadableName = "LonelyWaveguide";
         vm.Canvas.Components.Add(new ComponentViewModel(comp));
 
-        vm.RunDesignChecksCommand.Execute(null);
+        // The command backgrounds the validator passes (issue #1150), so the issues
+        // land only after the returned task completes — ExecuteAsync, not Execute.
+        await vm.RunDesignChecksCommand.ExecuteAsync(null);
 
         var issues = vm.RightPanel.DesignValidation.Issues;
         issues.Count.ShouldBe(2, "both optical pins of the placed waveguide are unconnected");
@@ -33,11 +35,11 @@ public class DesignValidationMenuCommandTests
     }
 
     [Fact]
-    public void RunDesignChecksCommand_EmptyDesign_ReportsNoIssues()
+    public async Task RunDesignChecksCommand_EmptyDesign_ReportsNoIssues()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
 
-        vm.RunDesignChecksCommand.Execute(null);
+        await vm.RunDesignChecksCommand.ExecuteAsync(null);
 
         vm.RightPanel.DesignValidation.HasIssues.ShouldBeFalse();
         vm.RightPanel.DesignValidation.Issues.ShouldBeEmpty();

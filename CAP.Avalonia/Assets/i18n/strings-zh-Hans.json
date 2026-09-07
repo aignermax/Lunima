@@ -1212,6 +1212,7 @@
   "Status.OpeningPdkHelp": "正在浏览器中打开 PDK 帮助文档…",
   "Status.Ready": "就绪",
   "Status.Redone": "已重做：{0}",
+  "Status.RunningDesignChecks": "正在运行设计检查…",
   "Status.RunningSimulation": "正在运行仿真…",
   "Status.SimulationComplete": "仿真完成：{0} 个光源，{1} 个连接 @ {2}",
   "Status.SimulationError": "仿真错误：{0}",

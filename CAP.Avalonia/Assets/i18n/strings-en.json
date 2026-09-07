@@ -1212,6 +1212,7 @@
   "Status.OpeningPdkHelp": "Opening PDK help documentation in browser...",
   "Status.Ready": "Ready",
   "Status.Redone": "Redone: {0}",
+  "Status.RunningDesignChecks": "Running design checks...",
   "Status.RunningSimulation": "Running simulation...",
   "Status.SimulationComplete": "Simulation complete: {0} source(s), {1} connections @ {2}",
   "Status.SimulationError": "Simulation error: {0}",

@@ -235,6 +235,12 @@ public partial class MainViewModel : ObservableObject
 
     private readonly Services.IUrlLauncher _urlLauncher;
 
+    /// <summary>
+    /// True while a simulation run is in flight. Exposed for the toolbar busy
+    /// indicator (issue #1150); the heavy computation runs off-thread via
+    /// <see cref="SimulationService.RunAsync"/>.
+    /// </summary>
+    [ObservableProperty]
     private bool _isSimulating;
 
     /// <summary>
@@ -1144,7 +1150,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task RunSimulation()
     {
-        if (_isSimulating) return;
+        if (IsSimulating) return;
 
         if (SimulationMode == CAP.Avalonia.ViewModels.Analysis.SimulationMode.Transient)
         {
@@ -1178,8 +1184,8 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task ExecuteSimulation()
     {
-        if (_isSimulating) return;
-        _isSimulating = true;
+        if (IsSimulating) return;
+        IsSimulating = true;
 
         try
         {
@@ -1217,96 +1223,123 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            _isSimulating = false;
+            IsSimulating = false;
         }
     }
 
+    /// <summary>
+    /// Runs the design checks off the UI thread (issue #1150, 100 ms budget): the canvas
+    /// snapshots and PDK/DRC inputs are gathered here, the validator passes execute on a
+    /// worker via <see cref="Diagnostics.DesignValidationViewModel.RunValidationAsync"/>,
+    /// and the status-bar commit happens after the await — back on the UI thread. The
+    /// <see cref="IsRunningDesignChecks"/> flag drives the busy indicator while the run
+    /// is in flight.
+    /// </summary>
     [RelayCommand]
-    private void RunDesignChecks()
+    private async Task RunDesignChecks()
     {
-        var connections = Canvas.Connections
-            .Select(c => c.Connection)
-            .ToList();
-
-        var groups = Canvas.Components
-            .Select(c => c.Component)
-            .OfType<CAP_Core.Components.Core.ComponentGroup>()
-            .ToList();
-
-        var allComponents = Canvas.Components
-            .Select(c => c.Component)
-            .ToList();
-
-        // PDK-process compatibility (issue #570 follow-up, LC-T4): resolve each placed
-        // component's PDK source the same way the placement/paste guards do — the snapshot
-        // TemplatePdkSource captured when it was placed, falling back to a live library match
-        // (see ComponentClipboard/FileOperationsViewModel for the same fallback) — so a process
-        // edit that diverges a PDK from the design's active process is flagged for review even
-        // though the already-placed components themselves are never touched or deleted.
-        var pdkSourceByComponent = Canvas.Components.ToDictionary(
-            c => c.Component,
-            c => c.TemplatePdkSource ?? CanvasInteraction.PlacementContext.ResolveComponentPdkSource(c.Component));
-
-        // Under a real process lock the allowed set is the lock-derived membership; without one
-        // (Playground/no selection) nothing is locked, so GetProcessCompatiblePdkNames() equals
-        // all loaded PDK names and only a component whose PDK isn't loaded at all (e.g.
-        // trash-deleted while its placed instances were kept, as PdkDelete_Click promises) gets
-        // flagged — with a "not loaded" wording instead of a process-mismatch message that would
-        // reference a process that doesn't exist (PR #739 review, both directions).
-        var processLockActive = FileOperations.ActiveProcess is { IsPlayground: false };
-        var compatiblePdkNames = LeftPanel.PdkManager.GetProcessCompatiblePdkNames();
-
-        // DRC-lite per connection (issue #936): each connection's width and spacing
-        // limits come from its OWN endpoint components' PDK processes — the stricter
-        // chiplet governs a cross-chiplet route, same rule as the router's bend floor
-        // (#937) — so a two-process canvas (only possible in Playground, #935) is
-        // checked per chiplet instead of silently skipping every PDK-dependent rule,
-        // and a locked multi-member process no longer checks the other members against
-        // the first member PDK's limits. PDKs that declare no minimum stay silent
-        // (#926). Library and drafts are snapshotted here on the UI thread (same
-        // pattern as the #937 floor provider); connections whose endpoints don't
-        // resolve to a PDK (built-ins) yield null and fall back to the lock-derived
-        // canvas-wide values below, exactly like the #937 floor. Frozen group paths
-        // carry no pins to resolve an owning process from, so they also keep the
-        // canvas-wide spacing (0 in Playground = off, as before).
-        var drcTemplates = LeftPanel.AllTemplates.ToList();
-        var drcDrafts = LeftPanel.GetLoadedPdkDrafts().ToList();
-        string? DrcPdkSourceOf(PhysicalPin? pin) =>
-            pin?.ParentComponent is { } component
-                ? ComponentPdkSourceResolver.Resolve(component, drcTemplates)
-                : null;
-        Func<CAP_Core.Components.Connections.WaveguideConnection, CAP_Core.Analysis.ConnectionDrcRules?> connectionDrcRuleProvider =
-            connection => ConnectionDrcRuleResolver.ResolveForEndpointPdkNames(
-                DrcPdkSourceOf(connection.StartPin), DrcPdkSourceOf(connection.EndPin), drcDrafts);
-
-        double minWaveguideSpacingMicrometers = 0;
-        IReadOnlyList<CAP_Core.Analysis.WaveguideMinWidthRule>? minWaveguideWidthRules = null;
-        if (processLockActive)
+        if (IsRunningDesignChecks) return;
+        IsRunningDesignChecks = true;
+        // Status-bar busy indicator for the backgrounded run (issue #1150): the user
+        // sees the validation is in flight instead of a frozen status bar.
+        StatusText = LocalizationService.Instance.Translate("Status.RunningDesignChecks");
+        try
         {
-            var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(FileOperations.ActiveProcess!)
-                .Select(name => drcDrafts.FirstOrDefault(
-                    d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase))?.Process)
-                .FirstOrDefault(p => p is not null);
-            minWaveguideSpacingMicrometers = memberProcess.GetMinWaveguideSpacingMicrometersOrDefault();
-            minWaveguideWidthRules = memberProcess.GetMinWaveguideWidthRules();
+            var connections = Canvas.Connections
+                .Select(c => c.Connection)
+                .ToList();
+
+            var groups = Canvas.Components
+                .Select(c => c.Component)
+                .OfType<CAP_Core.Components.Core.ComponentGroup>()
+                .ToList();
+
+            var allComponents = Canvas.Components
+                .Select(c => c.Component)
+                .ToList();
+
+            // PDK-process compatibility (issue #570 follow-up, LC-T4): resolve each placed
+            // component's PDK source the same way the placement/paste guards do — the snapshot
+            // TemplatePdkSource captured when it was placed, falling back to a live library match
+            // (see ComponentClipboard/FileOperationsViewModel for the same fallback) — so a process
+            // edit that diverges a PDK from the design's active process is flagged for review even
+            // though the already-placed components themselves are never touched or deleted.
+            var pdkSourceByComponent = Canvas.Components.ToDictionary(
+                c => c.Component,
+                c => c.TemplatePdkSource ?? CanvasInteraction.PlacementContext.ResolveComponentPdkSource(c.Component));
+
+            // Under a real process lock the allowed set is the lock-derived membership; without one
+            // (Playground/no selection) nothing is locked, so GetProcessCompatiblePdkNames() equals
+            // all loaded PDK names and only a component whose PDK isn't loaded at all (e.g.
+            // trash-deleted while its placed instances were kept, as PdkDelete_Click promises) gets
+            // flagged — with a "not loaded" wording instead of a process-mismatch message that would
+            // reference a process that doesn't exist (PR #739 review, both directions).
+            var processLockActive = FileOperations.ActiveProcess is { IsPlayground: false };
+            var compatiblePdkNames = LeftPanel.PdkManager.GetProcessCompatiblePdkNames();
+
+            // DRC-lite per connection (issue #936): each connection's width and spacing
+            // limits come from its OWN endpoint components' PDK processes — the stricter
+            // chiplet governs a cross-chiplet route, same rule as the router's bend floor
+            // (#937) — so a two-process canvas (only possible in Playground, #935) is
+            // checked per chiplet instead of silently skipping every PDK-dependent rule,
+            // and a locked multi-member process no longer checks the other members against
+            // the first member PDK's limits. PDKs that declare no minimum stay silent
+            // (#926). Library and drafts are snapshotted here on the UI thread (same
+            // pattern as the #937 floor provider); connections whose endpoints don't
+            // resolve to a PDK (built-ins) yield null and fall back to the lock-derived
+            // canvas-wide values below, exactly like the #937 floor. Frozen group paths
+            // carry no pins to resolve an owning process from, so they also keep the
+            // canvas-wide spacing (0 in Playground = off, as before).
+            var drcTemplates = LeftPanel.AllTemplates.ToList();
+            var drcDrafts = LeftPanel.GetLoadedPdkDrafts().ToList();
+            string? DrcPdkSourceOf(PhysicalPin? pin) =>
+                pin?.ParentComponent is { } component
+                    ? ComponentPdkSourceResolver.Resolve(component, drcTemplates)
+                    : null;
+            Func<CAP_Core.Components.Connections.WaveguideConnection, CAP_Core.Analysis.ConnectionDrcRules?> connectionDrcRuleProvider =
+                connection => ConnectionDrcRuleResolver.ResolveForEndpointPdkNames(
+                    DrcPdkSourceOf(connection.StartPin), DrcPdkSourceOf(connection.EndPin), drcDrafts);
+
+            double minWaveguideSpacingMicrometers = 0;
+            IReadOnlyList<CAP_Core.Analysis.WaveguideMinWidthRule>? minWaveguideWidthRules = null;
+            if (processLockActive)
+            {
+                var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(FileOperations.ActiveProcess!)
+                    .Select(name => drcDrafts.FirstOrDefault(
+                        d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase))?.Process)
+                    .FirstOrDefault(p => p is not null);
+                minWaveguideSpacingMicrometers = memberProcess.GetMinWaveguideSpacingMicrometersOrDefault();
+                minWaveguideWidthRules = memberProcess.GetMinWaveguideWidthRules();
+            }
+
+            await RightPanel.DesignValidation.RunValidationAsync(
+                connections,
+                groups,
+                allComponents,
+                ChipSize.CurrentWidthMicrometers,
+                ChipSize.CurrentHeightMicrometers,
+                pdkSourceByComponent,
+                LeftPanel.GetProcessAgnosticPdkNames(),
+                compatiblePdkNames,
+                processLockActive,
+                minWaveguideSpacingMicrometers: minWaveguideSpacingMicrometers,
+                minWaveguideWidthRules: minWaveguideWidthRules,
+                connectionDrcRuleProvider: connectionDrcRuleProvider);
+
+            StatusText = RightPanel.DesignValidation.StatusText;
         }
-
-        RightPanel.DesignValidation.RunValidation(
-            connections,
-            groups,
-            allComponents,
-            ChipSize.CurrentWidthMicrometers,
-            ChipSize.CurrentHeightMicrometers,
-            pdkSourceByComponent,
-            LeftPanel.GetProcessAgnosticPdkNames(),
-            compatiblePdkNames,
-            processLockActive,
-            minWaveguideSpacingMicrometers: minWaveguideSpacingMicrometers,
-            minWaveguideWidthRules: minWaveguideWidthRules,
-            connectionDrcRuleProvider: connectionDrcRuleProvider);
-
-        StatusText = RightPanel.DesignValidation.StatusText;
+        finally
+        {
+            IsRunningDesignChecks = false;
+        }
     }
+
+    /// <summary>
+    /// True while <see cref="RunDesignChecks"/> has a validation pass in flight. Bound
+    /// by the toolbar button to show a busy state and prevent re-entry (issue #1150).
+    /// </summary>
+    [ObservableProperty]
+    private bool _isRunningDesignChecks;
 }
 
 // Data classes for serialization (used by FileOperationsViewModel)

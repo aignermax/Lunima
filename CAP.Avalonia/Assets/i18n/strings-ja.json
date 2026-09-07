@@ -1212,6 +1212,7 @@
   "Status.OpeningPdkHelp": "PDK ヘルプドキュメントをブラウザーで開いています…",
   "Status.Ready": "準備完了",
   "Status.Redone": "やり直しました: {0}",
+  "Status.RunningDesignChecks": "設計チェックを実行中…",
   "Status.RunningSimulation": "シミュレーションを実行中…",
   "Status.SimulationComplete": "シミュレーション完了: {0} 個の光源、{1} 個の接続 @ {2}",
   "Status.SimulationError": "シミュレーションエラー: {0}",

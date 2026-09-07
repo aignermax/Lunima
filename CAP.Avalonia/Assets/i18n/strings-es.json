@@ -1212,6 +1212,7 @@
   "Status.OpeningPdkHelp": "Abriendo la documentación de ayuda del PDK en el navegador…",
   "Status.Ready": "Listo",
   "Status.Redone": "Rehecho: {0}",
+  "Status.RunningDesignChecks": "Ejecutando comprobaciones de diseño…",
   "Status.RunningSimulation": "Ejecutando simulación…",
   "Status.SimulationComplete": "Simulación completa: {0} fuente(s), {1} conexiones @ {2}",
   "Status.SimulationError": "Error de simulación: {0}",

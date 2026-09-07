@@ -191,6 +191,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 19. Performance & stability
 
+- [ ] No `[RelayCommand]` on `MainViewModel` blocks the UI thread longer than 100 ms against the shipped 4-bit-adder example. `(auto: ResponsivenessBudgetTests)`
 - [ ] Large design (> 500 components) opens without UI hangs. `(manual)`
 - [ ] Memory usage remains stable after repeated open/save cycles. `(manual)`
 - [ ] Crash during simulation shows a readable error in the console rather than a hard exit. `(manual)`

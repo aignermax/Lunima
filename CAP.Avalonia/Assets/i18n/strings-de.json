@@ -1212,6 +1212,7 @@
   "Status.OpeningPdkHelp": "PDK-Hilfedokumentation wird im Browser geöffnet…",
   "Status.Ready": "Bereit",
   "Status.Redone": "Wiederholt: {0}",
+  "Status.RunningDesignChecks": "Design-Prüfungen laufen…",
   "Status.RunningSimulation": "Simulation läuft…",
   "Status.SimulationComplete": "Simulation abgeschlossen: {0} Quelle(n), {1} Verbindungen @ {2}",
   "Status.SimulationError": "Simulationsfehler: {0}",
