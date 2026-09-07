@@ -42,6 +42,9 @@ public sealed partial class GdsImportService
     private readonly Func<IReadOnlyList<ComponentTemplate>>? _templateProvider;
     private readonly Func<double?>? _processDefaultWidthProvider;
 
+    /// <summary>The process default waveguide width applied to pin-less imported cells, or null without a provider.</summary>
+    internal double? ResolveProcessDefaultWidthUm() => _processDefaultWidthProvider?.Invoke();
+
     /// <summary>Initializes a new <see cref="GdsImportService"/>.</summary>
     /// <param name="designScope">
     /// The open design's imported-component store; defaults to a callback-less

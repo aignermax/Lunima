@@ -35,11 +35,12 @@ internal static class GdsImportFeatureExtensions
                 sp.GetRequiredService<DesignScopedGdsComponentService>(),
                 () => leftPanel.AllTemplates.ToList(),
                 // Resolved lazily inside the delegate (like the bend-radius wiring in
-                // MainViewModel): the active process changes per design, and resolving
-                // FileOperationsViewModel here in the factory would risk a DI cycle.
+                // MainViewModel): the active process changes per design. The file-operations
+                // view model is owned by MainViewModel, not registered on its own, so it is
+                // reached through the main view model at call time.
                 () => CAP_DataAccess.Components.ComponentDraftMapper.ProcessOpticalDefaultsResolver
                     .Resolve(
-                        sp.GetRequiredService<FileOperationsViewModel>().ActiveProcess,
+                        sp.GetRequiredService<ViewModels.MainViewModel>().FileOperations.ActiveProcess,
                         leftPanel.GetLoadedPdkDrafts())
                     .WidthUm);
         });

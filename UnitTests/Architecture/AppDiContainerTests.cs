@@ -7,6 +7,7 @@ using CAP_Core.Solvers.ModeSolver;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using UnitTests.Helpers;
+using Avalonia.Headless.XUnit;
 using Xunit;
 
 namespace UnitTests.Architecture;
@@ -38,6 +39,17 @@ public class AppDiContainerTests
         sp.GetRequiredService<GdsPreviewRenderService>().ShouldNotBeNull();
         sp.GetRequiredService<NazcaComponentPreviewService>().ShouldNotBeNull();
         sp.GetRequiredService<ComponentEditorFactory>().ShouldNotBeNull();
+    }
+
+    [AvaloniaFact]
+    public void Container_GdsImportWidthProvider_ResolvesThroughTheMainViewModel()
+    {
+        using var sp = ProductionContainerTestHelper.BuildWithTempPreferences(NewTempPreferencesPath());
+        var import = sp.GetRequiredService<CAP.Avalonia.Services.GdsImport.GdsImportService>();
+
+        // Evaluated lazily at import time: a lookup of a type the container does not hold
+        // (FileOperationsViewModel is owned by MainViewModel) surfaced as "GDS import failed".
+        Should.NotThrow(() => import.ResolveProcessDefaultWidthUm());
     }
 
     [Fact]
