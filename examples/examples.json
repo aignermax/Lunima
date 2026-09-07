@@ -1,0 +1,18 @@
+{
+  "examples": [
+    {
+      "file": "Mach-Zehnder Interferometer.lun",
+      "startNm": 1500,
+      "endNm": 1600,
+      "stepCount": 5,
+      "tolerance": 0.001,
+      "inputs": [
+        { "pin": "mzi_splitter.in", "power": 1.0 }
+      ],
+      "outputs": [
+        "mzi_detector_bar.in",
+        "mzi_detector_cross.in"
+      ]
+    }
+  ]
+}
