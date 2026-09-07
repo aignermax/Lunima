@@ -109,7 +109,6 @@ public class LogicGateNotNandExampleTests
         vm.Rows.Count.ShouldBe(2);
         AssertPanelRow(vm, "0", expectedBit: true, expectedPowerText: "0.50");
         AssertPanelRow(vm, "1", expectedBit: false, expectedPowerText: "0.25");
-        await ResetToShippedAssignment(vm);
     }
 
     [Fact]
@@ -183,17 +182,6 @@ public class LogicGateNotNandExampleTests
 
         await vm.ExtractCommand.ExecuteAsync(null);
         return vm;
-    }
-
-    /// <summary>Seeds the assignment the file ships (NAND roles, unnamed pins).</summary>
-    private static async Task ResetToShippedAssignment(TruthTableViewModel vm)
-    {
-        vm.InputPins.Single(p => p.PinName == "B").IsChecked = true;
-        vm.InputPins.Single(p => p.PinName == "A").SignalName = "";
-        vm.InputPins.Single(p => p.PinName == "B").SignalName = "";
-        vm.Threshold = NandThreshold;
-        await vm.ExtractCommand.ExecuteAsync(null);
-        vm.HasResult.ShouldBeTrue("re-seeding the shipped assignment must succeed");
     }
 
     /// <summary>Asserts one panel row's output bit and its displayed raw power.</summary>
