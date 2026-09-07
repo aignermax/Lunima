@@ -15,7 +15,7 @@ It defines who Lunima is built for — Peter (Figma-precision GDS layout enginee
 ## Implementation Guidelines: When to Include UI
 
 **User-Facing Features (with UI):** Keywords: "add button", "implement dialog", "user can", "add panel"
-- Full stack: Core class → ViewModel (`[ObservableProperty]`, `[RelayCommand]`) → AXAML panel → DI wiring → Tests
+- Full stack: Core class → ViewModel (`[ObservableProperty]`, `[RelayCommand]`) → AXAML view **on the right surface (window / dialog / flyout / canvas overlay — see §5; NOT the right sidebar)** → DI wiring → Tests → **screenshots of the new UI in the PR**
 
 **Core Features / Bug Fixes (NO UI):** Keywords: "investigate", "add test", "fix bug", "verify", "optimize"
 - Core class → Tests → **STOP** (no ViewModel/View unless explicitly requested)
@@ -183,13 +183,39 @@ Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
 
 ---
 
-## 5. Views (Avalonia AXAML)
+## 5. Views (Avalonia AXAML) — UI placement is a design decision
 
-- Use `x:DataType="vm:YourViewModel"` for compiled bindings
-- Follow existing MainWindow layout pattern
-- New feature panels go in the Right panel (properties area) as collapsible sections
-- Use clear visual separators between sections
-- Follow Parameter Sweep panel pattern in `MainWindow.axaml` (lines 193-229)
+- Use `x:DataType="vm:YourViewModel"` for compiled bindings.
+- **Do NOT add new features to the right sidebar.** The right panel is for *properties of the
+  current selection* only. Stacking features there as collapsible sections has produced a
+  cluttered, hard-to-find UI — this rule reverses the old "new panels go in the Right panel"
+  guidance on purpose.
+- **Decide placement like a UX designer, and write the decision into the PR body** ("Placement:
+  … because …"). Pick the surface that fits the interaction:
+
+  | Feature type | Surface |
+  |---|---|
+  | Acts on the selected component/connection | Properties panel (right) — the *only* case for the sidebar |
+  | Acts on the whole design / has its own workflow (analysis, sweep, import, export, run mode) | **Own window or dockable tool window** (`Views/*Window.axaml`, e.g. `ProcessManagementWindow`) |
+  | Short, focused task with a few inputs | **Dialog** (`Views/Dialogs/`, e.g. `GdsImportDialog`) |
+  | Contextual, transient information or a small choice | **Flyout / popup** anchored to the element (e.g. `HelpFlyoutButton`, probe flyout) |
+  | Spatial feedback about the design | **Canvas overlay** (guides, badges, power-flow, DRC markers) |
+  | Frequent action | **Toolbar button / context menu / shortcut** — never a buried panel |
+
+- Features must be **discoverable**: a visible entry point (toolbar, menu, canvas), not only a
+  keyboard shortcut or a nested expander.
+- **Help `(?)` content: animate, don't lecture.** Use the shared `HelpFlyoutButton` control. Text is
+  capped at ~3 short sentences per section; anything physically non-obvious gets an **illustrative
+  animation** (Avalonia `Animation`/`Transitions`, see `TransientHelpFlyout` / `EyeHelpFlyout`) —
+  light moving through the structure, a curve reacting to a parameter — not a wall of text.
+- **Performance budget:** no UI interaction may block the UI thread for more than ~100 ms. Heavy
+  work (routing, simulation, import) runs off-thread with a visible busy state and stays
+  cancellable. Where a feature adds computation, add a test asserting the command completes
+  asynchronously (UI thread free).
+- **Physical plausibility on screen:** components and routes must not overlap unintentionally;
+  run the DRC-lite checks (`DesignValidator`) on any design your feature creates or modifies.
+- Justify placement and UX against `docs/PERSONAS.md` (Jonas: learnability; Peter: no modal
+  interruptions; Ingrid: obvious demo path).
 
 ---
 
@@ -206,7 +232,7 @@ Reference: `UnitTests/Analysis/ParameterSweeperTests.cs`
 
 ## 7. Implementation Recipes
 
-**Recipe A (User-Facing Feature with UI):** Core class → ViewModel (`[ObservableProperty]`, `[RelayCommand]`) → AXAML panel → Tests
+**Recipe A (User-Facing Feature with UI):** Core class → ViewModel (`[ObservableProperty]`, `[RelayCommand]`) → AXAML view on the surface chosen per §5 (window / dialog / flyout / overlay; **not** a sidebar section) → Tests → headless screenshots of the new UI attached to the PR (`UnitTests/UI/*ScreenshotTests` pattern) → update `docs/RELEASE-CHECKLIST.md`
 **Recipe B (Core/Bug Fix - NO UI):** Core class → Tests → **STOP** (no ViewModel/View)
 
 Issue title determines which recipe to use.
