@@ -123,9 +123,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 195,
+                "StartX": 200,
                 "StartY": 123.5,
-                "EndX": 955,
+                "EndX": 960,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -153,9 +153,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 195,
+                "StartX": 200,
                 "StartY": 131.5,
-                "EndX": 955,
+                "EndX": 960,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -183,9 +183,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1205,
+                "StartX": 1210,
                 "StartY": 123.5,
-                "EndX": 1505,
+                "EndX": 1510,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -213,9 +213,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1500,
+                "StartX": 1505,
                 "StartY": 131.5,
-                "EndX": 1505,
+                "EndX": 1510,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -243,9 +243,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1755,
+                "StartX": 1760,
                 "StartY": 123.5,
-                "EndX": 1760,
+                "EndX": 1765,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -312,7 +312,7 @@
           "ComponentGuid": "1773cfad-8493-4a4c-a55f-764a8f7e7d38",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 95,
+          "X": 100,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -326,7 +326,7 @@
           "ComponentGuid": "c654bc45-14ee-4c7d-9148-15c2c0b8667f",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 95,
+          "X": 100,
           "Y": 126.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -340,7 +340,7 @@
           "ComponentGuid": "0f2c523c-a1d0-4baf-bfa7-359d053d6bbd",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 955,
+          "X": 960,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -355,7 +355,7 @@
           "ComponentGuid": "c804d78c-6a58-41af-86d0-952cd73ddd20",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 1000,
+          "X": 1005,
           "Y": 101.5,
           "Rotation": 0,
           "SliderValue": 135,
@@ -369,7 +369,7 @@
           "ComponentGuid": "ace95145-97f9-4677-a34c-83dc9ef49489",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 1505,
+          "X": 1510,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -384,7 +384,7 @@
           "ComponentGuid": "7a2337ad-c77c-4334-b047-657c2350362e",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 1760,
+          "X": 1765,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -453,9 +453,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 2195,
+                "StartX": 2200,
                 "StartY": 123.5,
-                "EndX": 2955,
+                "EndX": 2960,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -483,9 +483,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 2195,
+                "StartX": 2200,
                 "StartY": 131.5,
-                "EndX": 2955,
+                "EndX": 2960,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -513,9 +513,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3205,
+                "StartX": 3210,
                 "StartY": 123.5,
-                "EndX": 3505,
+                "EndX": 3510,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -543,9 +543,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3500,
+                "StartX": 3505,
                 "StartY": 131.5,
-                "EndX": 3505,
+                "EndX": 3510,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -573,9 +573,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3755,
+                "StartX": 3760,
                 "StartY": 123.5,
-                "EndX": 3760,
+                "EndX": 3765,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -642,7 +642,7 @@
           "ComponentGuid": "f6b0b840-9b6f-4390-8f8b-6d1e53d37fe3",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 2095,
+          "X": 2100,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -656,7 +656,7 @@
           "ComponentGuid": "1347dfac-fc7d-4b3a-a8fa-ec0f83e4d402",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 2095,
+          "X": 2100,
           "Y": 126.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -670,7 +670,7 @@
           "ComponentGuid": "8b67fb9d-0391-4bb1-87f9-e1b357763c05",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 2955,
+          "X": 2960,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -685,7 +685,7 @@
           "ComponentGuid": "283c8d80-e627-45f5-84dd-e7a75755bc08",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 3000,
+          "X": 3005,
           "Y": 101.5,
           "Rotation": 0,
           "SliderValue": 135,
@@ -699,7 +699,7 @@
           "ComponentGuid": "b37c403c-b6c1-4c81-a5cb-9a977cbd4b85",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 3505,
+          "X": 3510,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -714,7 +714,7 @@
           "ComponentGuid": "18a6b4af-82d4-4622-a126-7f26b3284b2c",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 3760,
+          "X": 3765,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -756,7 +756,7 @@
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 100,
-        "PhysicalY": 400,
+        "PhysicalY": 700,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "input_7b4e7ad73221432586aedc1d271a37e3",
@@ -778,10 +778,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 195,
-                "StartY": 423.5,
-                "EndX": 955,
-                "EndY": 423.5,
+                "StartX": 200,
+                "StartY": 723.5,
+                "EndX": 960,
+                "EndY": 723.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -808,10 +808,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 195,
-                "StartY": 431.5,
-                "EndX": 955,
-                "EndY": 431.5,
+                "StartX": 200,
+                "StartY": 731.5,
+                "EndX": 960,
+                "EndY": 731.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -838,10 +838,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1205,
-                "StartY": 423.5,
-                "EndX": 1505,
-                "EndY": 423.5,
+                "StartX": 1210,
+                "StartY": 723.5,
+                "EndX": 1510,
+                "EndY": 723.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -868,10 +868,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1500,
-                "StartY": 431.5,
-                "EndX": 1505,
-                "EndY": 431.5,
+                "StartX": 1505,
+                "StartY": 731.5,
+                "EndX": 1510,
+                "EndY": 731.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -898,10 +898,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1755,
-                "StartY": 423.5,
-                "EndX": 1760,
-                "EndY": 423.5,
+                "StartX": 1760,
+                "StartY": 723.5,
+                "EndX": 1765,
+                "EndY": 723.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -967,8 +967,8 @@
           "ComponentGuid": "1d184210-17e2-4e1e-bf87-e9d1de3b973b",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 95,
-          "Y": 418.5,
+          "X": 100,
+          "Y": 718.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -981,8 +981,8 @@
           "ComponentGuid": "3dfc828a-4d1d-40fd-92cb-a1c1d4c04986",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 95,
-          "Y": 426.5,
+          "X": 100,
+          "Y": 726.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -995,8 +995,8 @@
           "ComponentGuid": "a25356fd-9e27-4a26-9353-94f4cfbe20c2",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 955,
-          "Y": 397.5,
+          "X": 960,
+          "Y": 697.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1010,8 +1010,8 @@
           "ComponentGuid": "6e7c6d71-e6b1-499e-b804-7529233c7289",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 1000,
-          "Y": 401.5,
+          "X": 1005,
+          "Y": 701.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -1024,8 +1024,8 @@
           "ComponentGuid": "855ebae8-a793-4279-94ad-1330c20f9741",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 1505,
-          "Y": 397.5,
+          "X": 1510,
+          "Y": 697.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1039,8 +1039,8 @@
           "ComponentGuid": "4dd7bfe3-e2fe-4140-819e-350a11d8e385",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 1760,
-          "Y": 418.5,
+          "X": 1765,
+          "Y": 718.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1050,7 +1050,7 @@
         }
       ],
       "CanvasX": 100,
-      "CanvasY": 400,
+      "CanvasY": 700,
       "TruthTablePinAssignment": {
         "InputPinNames": [
           "A"
@@ -1084,7 +1084,7 @@
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 100,
-        "PhysicalY": 700,
+        "PhysicalY": 1300,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "input_1fec5f4ce37b437994ca1dcb84c84b1b",
@@ -1106,10 +1106,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 195,
-                "StartY": 723.5,
-                "EndX": 955,
-                "EndY": 723.5,
+                "StartX": 200,
+                "StartY": 1323.5,
+                "EndX": 960,
+                "EndY": 1323.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1136,10 +1136,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 195,
-                "StartY": 731.5,
-                "EndX": 955,
-                "EndY": 731.5,
+                "StartX": 200,
+                "StartY": 1331.5,
+                "EndX": 960,
+                "EndY": 1331.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1166,10 +1166,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1205,
-                "StartY": 723.5,
-                "EndX": 1505,
-                "EndY": 723.5,
+                "StartX": 1210,
+                "StartY": 1323.5,
+                "EndX": 1510,
+                "EndY": 1323.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1196,10 +1196,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1500,
-                "StartY": 731.5,
-                "EndX": 1505,
-                "EndY": 731.5,
+                "StartX": 1505,
+                "StartY": 1331.5,
+                "EndX": 1510,
+                "EndY": 1331.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1226,10 +1226,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 1755,
-                "StartY": 723.5,
-                "EndX": 1760,
-                "EndY": 723.5,
+                "StartX": 1760,
+                "StartY": 1323.5,
+                "EndX": 1765,
+                "EndY": 1323.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1295,8 +1295,8 @@
           "ComponentGuid": "fcdbaa40-36d7-4c59-ad92-bbe284160eed",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 95,
-          "Y": 718.5,
+          "X": 100,
+          "Y": 1318.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1309,8 +1309,8 @@
           "ComponentGuid": "8f41c3dc-e01a-4fec-ab18-693a5dcc74f4",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 95,
-          "Y": 726.5,
+          "X": 100,
+          "Y": 1326.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1323,8 +1323,8 @@
           "ComponentGuid": "b1583d7b-c22f-46d1-af65-d397a206087a",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 955,
-          "Y": 697.5,
+          "X": 960,
+          "Y": 1297.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1338,8 +1338,8 @@
           "ComponentGuid": "f0689f7f-42f7-4d86-867a-dae910e93a35",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 1000,
-          "Y": 701.5,
+          "X": 1005,
+          "Y": 1301.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -1352,8 +1352,8 @@
           "ComponentGuid": "c50f047f-b6f0-448d-9cfa-db2e0d16d63d",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 1505,
-          "Y": 697.5,
+          "X": 1510,
+          "Y": 1297.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1367,8 +1367,8 @@
           "ComponentGuid": "e39c2624-fb43-4dc5-970c-4e4fc278286c",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 1760,
-          "Y": 718.5,
+          "X": 1765,
+          "Y": 1318.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1378,7 +1378,7 @@
         }
       ],
       "CanvasX": 100,
-      "CanvasY": 700,
+      "CanvasY": 1300,
       "TruthTablePinAssignment": {
         "InputPinNames": [
           "A"
@@ -1412,7 +1412,7 @@
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 2100,
-        "PhysicalY": 550,
+        "PhysicalY": 1000,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "input_8d55a46bb81745eda84f323f4e5c3870",
@@ -1434,10 +1434,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 2195,
-                "StartY": 573.5,
-                "EndX": 2955,
-                "EndY": 573.5,
+                "StartX": 2200,
+                "StartY": 1023.5,
+                "EndX": 2960,
+                "EndY": 1023.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1464,10 +1464,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 2195,
-                "StartY": 581.5,
-                "EndX": 2955,
-                "EndY": 581.5,
+                "StartX": 2200,
+                "StartY": 1031.5,
+                "EndX": 2960,
+                "EndY": 1031.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1494,10 +1494,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3205,
-                "StartY": 573.5,
-                "EndX": 3505,
-                "EndY": 573.5,
+                "StartX": 3210,
+                "StartY": 1023.5,
+                "EndX": 3510,
+                "EndY": 1023.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1524,10 +1524,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3500,
-                "StartY": 581.5,
-                "EndX": 3505,
-                "EndY": 581.5,
+                "StartX": 3505,
+                "StartY": 1031.5,
+                "EndX": 3510,
+                "EndY": 1031.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1554,10 +1554,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 3755,
-                "StartY": 573.5,
-                "EndX": 3760,
-                "EndY": 573.5,
+                "StartX": 3760,
+                "StartY": 1023.5,
+                "EndX": 3765,
+                "EndY": 1023.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1623,8 +1623,8 @@
           "ComponentGuid": "50934bb6-c70e-439f-82d3-4958ca283601",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 2095,
-          "Y": 568.5,
+          "X": 2100,
+          "Y": 1018.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1637,8 +1637,8 @@
           "ComponentGuid": "6ae37b2d-608a-4fdb-bc65-29a7b89891c8",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 2095,
-          "Y": 576.5,
+          "X": 2100,
+          "Y": 1026.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1651,8 +1651,8 @@
           "ComponentGuid": "8b97088a-3298-42c0-bc7f-5330fe4d5543",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 2955,
-          "Y": 547.5,
+          "X": 2960,
+          "Y": 997.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1666,8 +1666,8 @@
           "ComponentGuid": "59a1898a-3570-4fd7-942d-3ee7b2ae8bcb",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 3000,
-          "Y": 551.5,
+          "X": 3005,
+          "Y": 1001.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -1680,8 +1680,8 @@
           "ComponentGuid": "72de3c1c-0351-4a7e-88b6-ab01885d0d2d",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 3505,
-          "Y": 547.5,
+          "X": 3510,
+          "Y": 997.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1695,8 +1695,8 @@
           "ComponentGuid": "47719a31-04c5-4d3b-aca6-890a9791dad7",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 3760,
-          "Y": 568.5,
+          "X": 3765,
+          "Y": 1018.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1706,7 +1706,7 @@
         }
       ],
       "CanvasX": 2100,
-      "CanvasY": 550,
+      "CanvasY": 1000,
       "TruthTablePinAssignment": {
         "InputPinNames": [
           "A",
@@ -1738,7 +1738,7 @@
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 4100,
-        "PhysicalY": 850,
+        "PhysicalY": 1600,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "input_1eaab3ca283446f2be937939ae1dba56",
@@ -1760,10 +1760,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 4195,
-                "StartY": 873.5,
-                "EndX": 4955,
-                "EndY": 873.5,
+                "StartX": 4200,
+                "StartY": 1623.5,
+                "EndX": 4960,
+                "EndY": 1623.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1790,10 +1790,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 4195,
-                "StartY": 881.5,
-                "EndX": 4955,
-                "EndY": 881.5,
+                "StartX": 4200,
+                "StartY": 1631.5,
+                "EndX": 4960,
+                "EndY": 1631.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1820,10 +1820,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5205,
-                "StartY": 873.5,
-                "EndX": 5505,
-                "EndY": 873.5,
+                "StartX": 5210,
+                "StartY": 1623.5,
+                "EndX": 5510,
+                "EndY": 1623.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1850,10 +1850,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5500,
-                "StartY": 881.5,
-                "EndX": 5505,
-                "EndY": 881.5,
+                "StartX": 5505,
+                "StartY": 1631.5,
+                "EndX": 5510,
+                "EndY": 1631.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1880,10 +1880,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5755,
-                "StartY": 873.5,
-                "EndX": 5760,
-                "EndY": 873.5,
+                "StartX": 5760,
+                "StartY": 1623.5,
+                "EndX": 5765,
+                "EndY": 1623.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -1949,8 +1949,8 @@
           "ComponentGuid": "10d59d9a-7e9e-4862-8702-e5fcef537be9",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 4095,
-          "Y": 868.5,
+          "X": 4100,
+          "Y": 1618.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1963,8 +1963,8 @@
           "ComponentGuid": "12085b6c-6024-4e5a-aa5f-ff342f448fae",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 4095,
-          "Y": 876.5,
+          "X": 4100,
+          "Y": 1626.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1977,8 +1977,8 @@
           "ComponentGuid": "22ab90d5-5518-4f15-a528-26c7761e554d",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 4955,
-          "Y": 847.5,
+          "X": 4960,
+          "Y": 1597.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -1992,8 +1992,8 @@
           "ComponentGuid": "5b567140-c0d1-46b9-9d56-8808bf7f6cf0",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 5000,
-          "Y": 851.5,
+          "X": 5005,
+          "Y": 1601.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -2006,8 +2006,8 @@
           "ComponentGuid": "ea04933f-0a3b-4a3d-88c9-914bf8c69160",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 5505,
-          "Y": 847.5,
+          "X": 5510,
+          "Y": 1597.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2021,8 +2021,8 @@
           "ComponentGuid": "ad186678-bfd9-4226-9440-0ee8b5bb3e3c",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 5760,
-          "Y": 868.5,
+          "X": 5765,
+          "Y": 1618.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2032,7 +2032,7 @@
         }
       ],
       "CanvasX": 4100,
-      "CanvasY": 850,
+      "CanvasY": 1600,
       "TruthTablePinAssignment": {
         "InputPinNames": [
           "A"
@@ -2088,9 +2088,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 4195,
+                "StartX": 4200,
                 "StartY": 123.5,
-                "EndX": 4955,
+                "EndX": 4960,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -2118,9 +2118,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 4195,
+                "StartX": 4200,
                 "StartY": 131.5,
-                "EndX": 4955,
+                "EndX": 4960,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -2148,9 +2148,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5205,
+                "StartX": 5210,
                 "StartY": 123.5,
-                "EndX": 5505,
+                "EndX": 5510,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -2178,9 +2178,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5500,
+                "StartX": 5505,
                 "StartY": 131.5,
-                "EndX": 5505,
+                "EndX": 5510,
                 "EndY": 131.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -2208,9 +2208,9 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5755,
+                "StartX": 5760,
                 "StartY": 123.5,
-                "EndX": 5760,
+                "EndX": 5765,
                 "EndY": 123.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
@@ -2277,7 +2277,7 @@
           "ComponentGuid": "c9ccb53e-2f5d-420a-ac1f-bc2ed53ff86e",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 4095,
+          "X": 4100,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -2291,7 +2291,7 @@
           "ComponentGuid": "5f0b6c9a-b9ec-4021-85ef-c527f1be7391",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 4095,
+          "X": 4100,
           "Y": 126.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -2305,7 +2305,7 @@
           "ComponentGuid": "0a5c511d-dc1b-4834-a0f5-3fba81632d0f",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 4955,
+          "X": 4960,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -2320,7 +2320,7 @@
           "ComponentGuid": "82563772-e979-463d-a615-1bb0ed56fc4a",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 5000,
+          "X": 5005,
           "Y": 101.5,
           "Rotation": 0,
           "SliderValue": 135,
@@ -2334,7 +2334,7 @@
           "ComponentGuid": "78251682-377a-426f-a204-e33448ef3266",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 5505,
+          "X": 5510,
           "Y": 97.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -2349,7 +2349,7 @@
           "ComponentGuid": "fa380df4-7071-4eb0-8357-14754ccc7ac9",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 5760,
+          "X": 5765,
           "Y": 118.5,
           "Rotation": 0,
           "SliderValue": 0,
@@ -2392,7 +2392,7 @@
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 4100,
-        "PhysicalY": 550,
+        "PhysicalY": 1000,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "input_d7b01f29672b45288aa755ff17c854ba",
@@ -2414,10 +2414,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 4195,
-                "StartY": 573.5,
-                "EndX": 4955,
-                "EndY": 573.5,
+                "StartX": 4200,
+                "StartY": 1023.5,
+                "EndX": 4960,
+                "EndY": 1023.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2444,10 +2444,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 4195,
-                "StartY": 581.5,
-                "EndX": 4955,
-                "EndY": 581.5,
+                "StartX": 4200,
+                "StartY": 1031.5,
+                "EndX": 4960,
+                "EndY": 1031.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2474,10 +2474,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5205,
-                "StartY": 573.5,
-                "EndX": 5505,
-                "EndY": 573.5,
+                "StartX": 5210,
+                "StartY": 1023.5,
+                "EndX": 5510,
+                "EndY": 1023.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2504,10 +2504,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5500,
-                "StartY": 581.5,
-                "EndX": 5505,
-                "EndY": 581.5,
+                "StartX": 5505,
+                "StartY": 1031.5,
+                "EndX": 5510,
+                "EndY": 1031.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2534,10 +2534,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 5755,
-                "StartY": 573.5,
-                "EndX": 5760,
-                "EndY": 573.5,
+                "StartX": 5760,
+                "StartY": 1023.5,
+                "EndX": 5765,
+                "EndY": 1023.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2603,8 +2603,8 @@
           "ComponentGuid": "60d02b86-4752-4192-8a99-528668471450",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 4095,
-          "Y": 568.5,
+          "X": 4100,
+          "Y": 1018.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2617,8 +2617,8 @@
           "ComponentGuid": "12a75ccf-344a-49db-b201-69c85749a429",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 4095,
-          "Y": 576.5,
+          "X": 4100,
+          "Y": 1026.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2631,8 +2631,8 @@
           "ComponentGuid": "e45334f5-92bc-4f77-b474-768d493832b6",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 4955,
-          "Y": 547.5,
+          "X": 4960,
+          "Y": 997.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2646,8 +2646,8 @@
           "ComponentGuid": "0be00368-38b8-4ca1-8a75-d8eb6791b986",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 5000,
-          "Y": 551.5,
+          "X": 5005,
+          "Y": 1001.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -2660,8 +2660,8 @@
           "ComponentGuid": "5fe44159-ab6a-47da-99c4-30f9b9477b01",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 5505,
-          "Y": 547.5,
+          "X": 5510,
+          "Y": 997.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2675,8 +2675,8 @@
           "ComponentGuid": "fbb04b77-7ec3-4f43-819f-795fc0026a7e",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 5760,
-          "Y": 568.5,
+          "X": 5765,
+          "Y": 1018.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2686,7 +2686,7 @@
         }
       ],
       "CanvasX": 4100,
-      "CanvasY": 550,
+      "CanvasY": 1000,
       "TruthTablePinAssignment": {
         "InputPinNames": [
           "A",
@@ -2721,7 +2721,7 @@
         "GridX": 0,
         "GridY": 0,
         "PhysicalX": 6100,
-        "PhysicalY": 325,
+        "PhysicalY": 400,
         "Rotation90CounterClock": 0,
         "ChildComponentIds": [
           "input_666b695c8d0540f496c418d0e745c6a9",
@@ -2743,10 +2743,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 6195,
-                "StartY": 348.5,
-                "EndX": 6955,
-                "EndY": 348.5,
+                "StartX": 6200,
+                "StartY": 423.5,
+                "EndX": 6960,
+                "EndY": 423.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2773,10 +2773,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 6195,
-                "StartY": 356.5,
-                "EndX": 6955,
-                "EndY": 356.5,
+                "StartX": 6200,
+                "StartY": 431.5,
+                "EndX": 6960,
+                "EndY": 431.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2803,10 +2803,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 7205,
-                "StartY": 348.5,
-                "EndX": 7505,
-                "EndY": 348.5,
+                "StartX": 7210,
+                "StartY": 423.5,
+                "EndX": 7510,
+                "EndY": 423.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2833,10 +2833,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 7500,
-                "StartY": 356.5,
-                "EndX": 7505,
-                "EndY": 356.5,
+                "StartX": 7505,
+                "StartY": 431.5,
+                "EndX": 7510,
+                "EndY": 431.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2863,10 +2863,10 @@
             "Segments": [
               {
                 "Type": "straight",
-                "StartX": 7755,
-                "StartY": 348.5,
-                "EndX": 7760,
-                "EndY": 348.5,
+                "StartX": 7760,
+                "StartY": 423.5,
+                "EndX": 7765,
+                "EndY": 423.5,
                 "StartAngleDegrees": 0,
                 "EndAngleDegrees": 0
               }
@@ -2932,8 +2932,8 @@
           "ComponentGuid": "b7194307-a8f7-488f-9369-e969e42c78d9",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 6095,
-          "Y": 343.5,
+          "X": 6100,
+          "Y": 418.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2946,8 +2946,8 @@
           "ComponentGuid": "4bdecff7-ed3f-42db-b5db-eed1bbbb02f5",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 6095,
-          "Y": 351.5,
+          "X": 6100,
+          "Y": 426.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2960,8 +2960,8 @@
           "ComponentGuid": "9fcde098-914c-4055-89b6-02bd526f7c41",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 6955,
-          "Y": 322.5,
+          "X": 6960,
+          "Y": 397.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -2975,8 +2975,8 @@
           "ComponentGuid": "82f3643d-d008-48ca-8513-4a94e71abdb5",
           "TemplateName": "Phase Shifter",
           "PdkSource": "Demo PDK",
-          "X": 7000,
-          "Y": 326.5,
+          "X": 7005,
+          "Y": 401.5,
           "Rotation": 0,
           "SliderValue": 135,
           "SliderValues": {
@@ -2989,8 +2989,8 @@
           "ComponentGuid": "879ff24d-5d71-442c-8240-902dced659a3",
           "TemplateName": "2x2 MMI Coupler",
           "PdkSource": "Demo PDK",
-          "X": 7505,
-          "Y": 322.5,
+          "X": 7510,
+          "Y": 397.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -3004,8 +3004,8 @@
           "ComponentGuid": "dad2925b-838e-4814-80fb-5db4c9e65473",
           "TemplateName": "Straight Waveguide 100\u00b5m",
           "PdkSource": "Demo PDK",
-          "X": 7760,
-          "Y": 343.5,
+          "X": 7765,
+          "Y": 418.5,
           "Rotation": 0,
           "SliderValue": 0,
           "SliderValues": {
@@ -3015,7 +3015,7 @@
         }
       ],
       "CanvasX": 6100,
-      "CanvasY": 325,
+      "CanvasY": 400,
       "TruthTablePinAssignment": {
         "InputPinNames": [
           "A",
@@ -3041,6 +3041,6 @@
       "Modified": "2026-08-19T08:40:00.0000000Z"
     }
   },
-  "ChipWidthMicrometers": 8000,
-  "ChipHeightMicrometers": 1200
+  "ChipWidthMicrometers": 9000,
+  "ChipHeightMicrometers": 3000
 }

@@ -90,11 +90,23 @@ def instantiate(shape, new_name, description, canvas, input_signals=None,
         if pin["InternalComponentGuid"] in guid_map:
             pin["InternalComponentGuid"] = guid_map[pin["InternalComponentGuid"]]
 
+    # The template's children and internal paths carry absolute coordinates for the
+    # template's own anchor; move them to this instance's anchor so the gate body,
+    # its external pins (PhysicalX + RelativeX) and its frozen paths stay together.
+    dx, dy = canvas[0] - tmpl["CanvasX"], canvas[1] - tmpl["CanvasY"]
+    gd["PhysicalX"], gd["PhysicalY"] = canvas
+    for path in gd["InternalPaths"]:
+        for seg in path.get("Segments", []):
+            for key, delta in (("StartX", dx), ("EndX", dx), ("StartY", dy), ("EndY", dy)):
+                if key in seg:
+                    seg[key] += delta
     children = []
     for child in tmpl["ChildComponents"]:
         c = json.loads(json.dumps(child))
         c["Identifier"] = id_map[c["Identifier"]]
         c["ComponentGuid"] = guid_map[c["ComponentGuid"]]
+        c["X"] += dx
+        c["Y"] += dy
         children.append(c)
 
     if input_signals is None:
@@ -116,8 +128,23 @@ GROUPS = []
 WIRES = []
 
 
+# Logical placement grid used by the emit() calls below (200 um cells) versus the physical
+# pitch a 1765 x 64 um gate needs so that no two gate bodies overlap and routes have room.
+LOGICAL_CELL = 200
+PITCH_X, PITCH_Y = 2000, 300
+ORIGIN = (100, 100)
+GATE_WIDTH = max(p["RelativeX"] for p in _templates["NAND"]["GroupDto"]["ExternalPins"])
+CHIP_MARGIN = 500
+
+
+def physical(canvas):
+    col = (canvas[0] - ORIGIN[0]) // LOGICAL_CELL
+    row = (canvas[1] - ORIGIN[1]) // LOGICAL_CELL
+    return ORIGIN[0] + col * PITCH_X, ORIGIN[1] + row * PITCH_Y
+
+
 def emit(shape, name, canvas, desc, **kw):
-    GROUPS.append(instantiate(shape, name, desc + " " + LOGIC_NOTE, canvas, **kw))
+    GROUPS.append(instantiate(shape, name, desc + " " + LOGIC_NOTE, physical(canvas), **kw))
     return name
 
 
@@ -251,8 +278,8 @@ if sorted(_id_of) != sorted(expected_names):
 out = {"FormatVersion": SRC["FormatVersion"], "Components": [], "Connections": [],
        "Groups": GROUPS, "Metadata": {"PdkVersions": {}, "Authorship": {
            "Created": "2026-08-21", "Modified": "2026-08-21T00:00:00.0000000Z"}},
-       "ChipWidthMicrometers": SRC["ChipWidthMicrometers"],
-       "ChipHeightMicrometers": SRC["ChipHeightMicrometers"]}
+       "ChipWidthMicrometers": max(g["CanvasX"] for g in GROUPS) + GATE_WIDTH + CHIP_MARGIN,
+       "ChipHeightMicrometers": max(g["CanvasY"] for g in GROUPS) + PITCH_Y + CHIP_MARGIN}
 for start, start_pin, end, end_pin in WIRES:
     out["Connections"].append({
         "StartComponentIndex": 0, "StartPinName": start_pin,
