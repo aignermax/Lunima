@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Notifications;
 using CAP.Avalonia.ViewModels;
@@ -422,6 +423,8 @@ public partial class MainWindow : Window
             var leftSplitter = LeftPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (leftSplitter != null)
             {
+                leftSplitter.DragDelta += (s, e) =>
+                    ResizePanelColumn(LeftPanelGrid.ColumnDefinitions[0], e.Vector.X, LeftPanelBorder);
                 leftSplitter.DragCompleted += (s, e) =>
                 {
                     if (LeftPanelGrid.ColumnDefinitions.Count > 0)
@@ -442,6 +445,8 @@ public partial class MainWindow : Window
             var rightSplitter = RightPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (rightSplitter != null)
             {
+                rightSplitter.DragDelta += (s, e) =>
+                    ResizePanelColumn(RightPanelGrid.ColumnDefinitions[1], -e.Vector.X, RightPanelBorder);
                 rightSplitter.DragCompleted += (s, e) =>
                 {
                     if (RightPanelGrid.ColumnDefinitions.Count > 1)
@@ -455,6 +460,18 @@ public partial class MainWindow : Window
                 };
             }
         }
+    }
+
+    /// <summary>
+    /// Applies a splitter drag to a side panel's pixel column. Each side panel is a grid docked
+    /// into the window's DockPanel with the splitter in its outermost column, so the GridSplitter
+    /// itself finds no neighbouring column to trade space with and leaves the width alone; the
+    /// drag is applied here instead, clamped to the panel's own Min/MaxWidth.
+    /// </summary>
+    private static void ResizePanelColumn(ColumnDefinition column, double delta, Layoutable panel)
+    {
+        double width = Math.Clamp(column.Width.Value + delta, panel.MinWidth, panel.MaxWidth);
+        column.Width = new GridLength(width, GridUnitType.Pixel);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
