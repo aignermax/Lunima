@@ -29,11 +29,16 @@ public static class LightSourceClassifier
     /// components re-added by ungrouping): classifies by the identifier or the
     /// PDK-derived Nazca function name (reliable — not user-editable, and preserved
     /// through prefab serialize/deserialize where Identifier may become GUID-based).
+    /// The template name a component keeps as its human-readable name counts first, so the
+    /// simulation (which only has the component) agrees with the properties panel (which
+    /// classifies the template name): a "Grating Coupler" placed under any identifier with a
+    /// PDK function like <c>demo.io</c> is a source in both.
     /// </summary>
     /// <param name="component">The component instance, may be null.</param>
     public static bool IsLightInjectingCoupler(Core.Component? component)
     {
         if (component == null) return false;
+        if (IsLightInjectingCoupler(component.HumanReadableName)) return true;
 
         var id = component.Identifier?.ToLowerInvariant() ?? "";
         if (id.Contains("grating") || id.Contains("edge coupler"))
