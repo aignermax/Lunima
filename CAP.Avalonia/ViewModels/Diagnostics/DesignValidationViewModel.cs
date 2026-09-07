@@ -57,17 +57,31 @@ public partial class DesignValidationViewModel : ObservableObject
     /// <summary>
     /// Runs design validation on the provided connections.
     /// Detects invalid geometry, blocked paths, overlaps with frozen group paths,
-    /// (when chip bounds are provided) out-of-bounds component placement, and (when PDK
-    /// data is provided) placed components whose PDK no longer matches the active process.
+    /// per-connection pin width/layer mismatches, (when components are provided) dangling
+    /// optical pins, (when a positive minimum spacing is provided) waveguides closer than
+    /// the process minimum, (when min-width rules are provided) waveguides narrower than
+    /// the fabrication minimum of their cross-section, (when chip bounds are provided)
+    /// out-of-bounds component placement, and (when PDK data is provided) placed
+    /// components whose PDK no longer matches the active process.
     /// </summary>
     /// <param name="connections">Waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen paths are checked for overlap. Optional.</param>
-    /// <param name="allComponents">All placed components checked against chip bounds and PDK compatibility. Optional.</param>
+    /// <param name="allComponents">All placed components checked for dangling pins, chip bounds and PDK compatibility. Optional.</param>
     /// <param name="chipWidthMicrometers">Chip boundary width; ignored when ≤0. Optional.</param>
     /// <param name="chipHeightMicrometers">Chip boundary height; ignored when ≤0. Optional.</param>
     /// <param name="pdkSourceByComponent">Each component's resolved PDK source name. Optional — skips the PDK check when absent.</param>
     /// <param name="processAgnosticPdkNames">PDK names exempt from process enforcement (tool libraries). Optional.</param>
     /// <param name="enabledPdkNames">PDK names currently allowed under the active process lock. Optional — skips the PDK check when absent.</param>
+    /// <param name="processLockActive">Whether a real (non-Playground) fabrication process is active.</param>
+    /// <param name="externalPortPins">Pins treated as external ports; exempt from the dangling-pin check. Optional.</param>
+    /// <param name="minWaveguideSpacingMicrometers">Process minimum edge-to-edge waveguide spacing; ≤0 disables the spacing check. Optional.</param>
+    /// <param name="minWaveguideWidthRules">Per-cross-section minimum feature widths of the active process; null/empty disables the min-width check. Optional.</param>
+    /// <param name="connectionDrcRuleProvider">
+    /// Optional per-connection DRC rule-set resolver (issue #936): when wired, each
+    /// connection's width/spacing limits come from its own endpoint PDKs' processes —
+    /// per-chiplet limits on a multi-process canvas and PDK rules even in Playground —
+    /// instead of the design-wide values above. Optional.
+    /// </param>
     public void RunValidation(
         IEnumerable<WaveguideConnection> connections,
         IEnumerable<ComponentGroup>? groups = null,
@@ -77,37 +91,77 @@ public partial class DesignValidationViewModel : ObservableObject
         IReadOnlyDictionary<Component, string?>? pdkSourceByComponent = null,
         IReadOnlyCollection<string>? processAgnosticPdkNames = null,
         IReadOnlyCollection<string>? enabledPdkNames = null,
-        bool processLockActive = true)
+        bool processLockActive = true,
+        IEnumerable<PhysicalPin>? externalPortPins = null,
+        double minWaveguideSpacingMicrometers = 0,
+        IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
+        Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null)
+    {
+        var request = new DesignValidationRequest(
+            connections, groups, allComponents,
+            chipWidthMicrometers, chipHeightMicrometers,
+            pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
+            processLockActive, externalPortPins,
+            minWaveguideSpacingMicrometers, minWaveguideWidthRules,
+            connectionDrcRuleProvider);
+        BeginValidation();
+        CommitIssues(ComputeIssues(request));
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="RunValidation"/> for the 100 ms UI-responsiveness
+    /// budget (issue #1150): the three <see cref="DesignValidator"/> passes run on a
+    /// worker thread while the <see cref="Issues"/> reset and result commit stay on the
+    /// caller's (UI) thread. On a loaded logic-gate example the synchronous prefix of
+    /// the old all-in-one path exceeded the budget by 6×.
+    /// </summary>
+    public async Task RunValidationAsync(
+        IEnumerable<WaveguideConnection> connections,
+        IEnumerable<ComponentGroup>? groups = null,
+        IEnumerable<Component>? allComponents = null,
+        double chipWidthMicrometers = 0,
+        double chipHeightMicrometers = 0,
+        IReadOnlyDictionary<Component, string?>? pdkSourceByComponent = null,
+        IReadOnlyCollection<string>? processAgnosticPdkNames = null,
+        IReadOnlyCollection<string>? enabledPdkNames = null,
+        bool processLockActive = true,
+        IEnumerable<PhysicalPin>? externalPortPins = null,
+        double minWaveguideSpacingMicrometers = 0,
+        IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
+        Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new DesignValidationRequest(
+            connections, groups, allComponents,
+            chipWidthMicrometers, chipHeightMicrometers,
+            pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
+            processLockActive, externalPortPins,
+            minWaveguideSpacingMicrometers, minWaveguideWidthRules,
+            connectionDrcRuleProvider);
+        BeginValidation();
+        var issues = await Task.Run(() => ComputeIssues(request), cancellationToken);
+        CommitIssues(issues);
+    }
+
+    /// <summary>
+    /// Resets the panel for a new validation run. Must run on the UI thread — touches
+    /// <see cref="Issues"/> and fires <see cref="HighlightConnection"/>.
+    /// </summary>
+    private void BeginValidation()
     {
         Issues.Clear();
         CurrentIndex = -1;
         HighlightConnection?.Invoke(null);
+    }
 
-        var results = groups is not null
-            ? _validator.Validate(connections, groups)
-            : _validator.Validate(connections);
-
-        foreach (var issue in results)
+    /// <summary>
+    /// Populates <see cref="Issues"/> with the validator's findings and refreshes the
+    /// status / navigation surface. Must run on the UI thread.
+    /// </summary>
+    private void CommitIssues(IReadOnlyList<DesignIssue> issues)
+    {
+        foreach (var issue in issues)
             Issues.Add(issue);
-
-        if (allComponents is not null && chipWidthMicrometers > 0 && chipHeightMicrometers > 0)
-        {
-            var boundsIssues = _validator.ValidateComponentBounds(
-                allComponents, chipWidthMicrometers, chipHeightMicrometers);
-
-            foreach (var issue in boundsIssues)
-                Issues.Add(issue);
-        }
-
-        if (allComponents is not null && pdkSourceByComponent is not null && enabledPdkNames is not null)
-        {
-            var pdkIssues = _validator.ValidateComponentPdkCompatibility(
-                allComponents, pdkSourceByComponent,
-                processAgnosticPdkNames ?? Array.Empty<string>(), enabledPdkNames, processLockActive);
-
-            foreach (var issue in pdkIssues)
-                Issues.Add(issue);
-        }
 
         HasIssues = Issues.Count > 0;
         StatusText = Issues.Count == 0
@@ -121,6 +175,67 @@ public partial class DesignValidationViewModel : ObservableObject
             NavigateToIssue(0);
         }
     }
+
+    /// <summary>
+    /// Runs every validation pass against <paramref name="request"/> and returns the
+    /// aggregated findings. Pure computation — no <see cref="ObservableCollection{T}"/>
+    /// or property-changed interaction — so it is safe to invoke from a worker thread.
+    /// </summary>
+    private List<DesignIssue> ComputeIssues(DesignValidationRequest request)
+    {
+        var results = new List<DesignIssue>();
+
+        // Single full-aggregation call: per-connection checks + frozen-path overlap +
+        // dangling pins + spacing + min width each contribute their findings exactly once (#915).
+        results.AddRange(_validator.Validate(
+            request.Connections,
+            request.Groups ?? Array.Empty<ComponentGroup>(),
+            request.AllComponents ?? Array.Empty<Component>(),
+            request.ExternalPortPins,
+            request.MinWaveguideSpacingMicrometers,
+            request.MinWaveguideWidthRules,
+            request.ConnectionDrcRuleProvider));
+
+        if (request.AllComponents is not null
+            && request.ChipWidthMicrometers > 0
+            && request.ChipHeightMicrometers > 0)
+        {
+            results.AddRange(_validator.ValidateComponentBounds(
+                request.AllComponents, request.ChipWidthMicrometers, request.ChipHeightMicrometers));
+        }
+
+        if (request.AllComponents is not null
+            && request.PdkSourceByComponent is not null
+            && request.EnabledPdkNames is not null)
+        {
+            results.AddRange(_validator.ValidateComponentPdkCompatibility(
+                request.AllComponents, request.PdkSourceByComponent,
+                request.ProcessAgnosticPdkNames ?? Array.Empty<string>(),
+                request.EnabledPdkNames, request.ProcessLockActive));
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Immutable bundle of every input a validation run needs — lets
+    /// <see cref="ComputeIssues"/> cross a thread boundary without fourteen positional
+    /// parameters on the call site.
+    /// </summary>
+    private sealed record DesignValidationRequest(
+        IEnumerable<WaveguideConnection> Connections,
+        IEnumerable<ComponentGroup>? Groups,
+        IEnumerable<Component>? AllComponents,
+        double ChipWidthMicrometers,
+        double ChipHeightMicrometers,
+        IReadOnlyDictionary<Component, string?>? PdkSourceByComponent,
+        IReadOnlyCollection<string>? ProcessAgnosticPdkNames,
+        IReadOnlyCollection<string>? EnabledPdkNames,
+        bool ProcessLockActive,
+        IEnumerable<PhysicalPin>? ExternalPortPins,
+        double MinWaveguideSpacingMicrometers,
+        IReadOnlyList<WaveguideMinWidthRule>? MinWaveguideWidthRules,
+        Func<WaveguideConnection, ConnectionDrcRules?>? ConnectionDrcRuleProvider);
 
     /// <summary>
     /// Navigates to the next issue in the list (wraps around).

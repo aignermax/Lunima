@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using CAP.Avalonia.Services.ComponentRegistry;
 using CAP.Avalonia.Services.Localization;
 using CAP_Core.ComponentRegistry.RegistryClient;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -75,8 +76,18 @@ public partial class RegistryBrowserViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasNoResults;
 
+    /// <summary>
+    /// True once an index load succeeded (network or local cache). The component-library
+    /// search hint matches only against this in-memory copy — never on the network.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasIndexLoaded;
+
     /// <summary>In-flight index load; awaited by tests and the screenshot harness.</summary>
     public Task IndexLoadTask { get; private set; } = Task.CompletedTask;
+
+    private bool _diskCacheChecked;
+    private IReadOnlyList<RegistryIndexEntry>? _diskCachedEntries;
 
     /// <summary>In-flight detail load; awaited by tests and the screenshot harness.</summary>
     public Task DetailsLoadTask { get; private set; } = Task.CompletedTask;
@@ -88,10 +99,16 @@ public partial class RegistryBrowserViewModel : ObservableObject
     /// </summary>
     public Task PreviewsLoadTask { get; private set; } = Task.CompletedTask;
 
-    /// <summary>Creates the browser on top of a configured registry client.</summary>
-    public RegistryBrowserViewModel(RegistryClient client)
+    /// <summary>
+    /// Creates the browser on top of a configured registry client.
+    /// <paramref name="downloadService"/> enables the "download into the local
+    /// library" feature (issue #773); null keeps the browser read-only.
+    /// </summary>
+    public RegistryBrowserViewModel(RegistryClient client, RegistryDownloadService? downloadService = null)
     {
         _client = client;
+        _downloadService = downloadService;
+        Details.ManifestPopulated += NotifyDownloadStateChanged;
     }
 
     /// <summary>
@@ -103,6 +120,38 @@ public partial class RegistryBrowserViewModel : ObservableObject
     {
         if (Components.Count == 0 && !IsLoading)
             IndexLoadTask = LoadCoreAsync(forceRefresh: false);
+    }
+
+    /// <summary>
+    /// Counts name/description matches (the same free-text match the window applies)
+    /// against the on-disk cached index only — never the network. Lets the
+    /// component-library search hint show a real hit count before the first index
+    /// load of the session (issue #772). Returns null when no usable cached copy
+    /// exists (or the query is empty); the caller then falls back to a neutral prompt.
+    /// </summary>
+    public int? CountDiskCachedSearchHits(string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return null;
+
+        return GetDiskCachedEntries()?.Count(entry =>
+            entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Description.Contains(query, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Lazily reads the disk-cached index once per session and memoizes it: the
+    /// library search re-queries per keystroke, so the file is parsed at most
+    /// once. Shadowed by <see cref="Components"/> the moment the real load ran.
+    /// </summary>
+    private IReadOnlyList<RegistryIndexEntry>? GetDiskCachedEntries()
+    {
+        if (!_diskCacheChecked)
+        {
+            _diskCacheChecked = true;
+            _diskCachedEntries = _client.TryGetCachedIndex()?.Components;
+        }
+        return _diskCachedEntries;
     }
 
     /// <summary>Loads the registry index (cache-first).</summary>
@@ -136,6 +185,9 @@ public partial class RegistryBrowserViewModel : ObservableObject
             return;
         }
 
+        // Set before the Adds: CollectionChanged subscribers recomputing on each
+        // Add (library search hint) must already see the loaded state.
+        HasIndexLoaded = true;
         SelectedComponent = null;
         Components.Clear();
         foreach (var entry in result.Value!.Components.OrderBy(c => c.Name))
@@ -238,13 +290,18 @@ public partial class RegistryBrowserViewModel : ObservableObject
     {
         foreach (var item in Components)
             item.UpdateProcessMismatch(value);
+        NotifyDownloadStateChanged();
     }
 
     partial void OnSelectedComponentChanged(RegistryComponentItemViewModel? value)
     {
+        PendingDisputedConfirm = false;
+        DownloadMessage = null;
+        DownloadIsError = false;
         if (value is null)
             Details.Clear();
         else
             DetailsLoadTask = Details.LoadAsync(_client, value.ManifestPath);
+        NotifyDownloadStateChanged();
     }
 }

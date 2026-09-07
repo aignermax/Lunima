@@ -1,5 +1,6 @@
 using System.Numerics;
 using CAP_Core.Components;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.ExternalPorts;
@@ -42,8 +43,58 @@ public class SimulationService
         if (!hasConnections)
             return SimulationResult.Empty("No connections");
 
+        // Snapshot the observable collections on the caller's (UI) thread so the worker
+        // below never reads an ObservableCollection off-thread (issue #1150).
+        var componentViewModels = canvas.Components.ToList();
+        var connectionManager = canvas.ConnectionManager;
+        var connections = connectionManager.Connections.ToList();
+        var componentCount = canvas.Components.Count;
+        var connectionCount = canvas.Connections.Count;
+
+        // S-matrix computation, light-source setup, grid construction and the per-wavelength
+        // propagation all run off the UI thread — on a loaded logic-gate design the
+        // synchronous prefix of this block alone exceeds the 100 ms budget.
+        var (sourceConfigs, systemMatrix, allFieldResults, wavelengths) = await Task.Run(
+            () => ComputeSimulationAsync(componentViewModels, connectionManager, cancellationToken),
+            cancellationToken);
+
+        if (sourceConfigs.Count == 0)
+            return SimulationResult.Empty(
+                "No light sources found (place a Grating Coupler or Edge Coupler)");
+
+        // UI-touching updates back on the caller's thread (the await above resumes on the
+        // captured synchronization context, so this is the UI thread when invoked from one).
+        var components = componentViewModels.Select(c => c.Component).ToList();
+        canvas.PowerFlowVisualizer.UpdateFromSimulation(connections, components, allFieldResults);
+        canvas.RefreshPowerFlowDisplay();
+
+        return new SimulationResult
+        {
+            Success = true,
+            FieldResults = allFieldResults,
+            WavelengthsUsed = wavelengths,
+            LightSourceCount = sourceConfigs.Count,
+            ComponentCount = componentCount,
+            ConnectionCount = connectionCount,
+            SourceConfigs = sourceConfigs,
+            SystemMatrix = systemMatrix
+        };
+    }
+
+    /// <summary>
+    /// The heavy half of <see cref="RunAsync"/>: computes group S-matrices, configures light
+    /// sources, builds the simulation grid, and propagates each wavelength. Runs on a worker
+    /// thread; the only canvas state it reads is the snapshot taken by the caller, so it is
+    /// safe to invoke inside <see cref="Task.Run"/>.
+    /// </summary>
+    private static async Task<(List<SourceConfigInfo> SourceConfigs, SMatrix? SystemMatrix,
+            Dictionary<Guid, Complex> AllFieldResults, List<int> Wavelengths)> ComputeSimulationAsync(
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
+        WaveguideConnectionManager connectionManager,
+        CancellationToken cancellationToken)
+    {
         var tileManager = new ComponentListTileManager();
-        foreach (var compVm in canvas.Components)
+        foreach (var compVm in componentViewModels)
         {
             // Ensure ComponentGroups have computed S-Matrices before simulation
             if (compVm.Component is ComponentGroup group)
@@ -54,14 +105,12 @@ public class SimulationService
         }
 
         var portManager = new PhysicalExternalPortManager();
-        var sourceConfigs = ConfigureLightSources(canvas, portManager);
+        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager);
 
         if (sourceConfigs.Count == 0)
-            return SimulationResult.Empty(
-                "No light sources found (place a Grating Coupler or Edge Coupler)");
+            return (sourceConfigs, null, new Dictionary<Guid, Complex>(), new List<int>());
 
-        var gridManager = GridManager.CreateForSimulation(
-            tileManager, canvas.ConnectionManager, portManager);
+        var gridManager = GridManager.CreateForSimulation(tileManager, connectionManager, portManager);
 
         // Run simulation for each distinct wavelength sample. Sources with a finite
         // linewidth (#819) contribute several weighted samples around their center.
@@ -94,23 +143,7 @@ public class SimulationService
             ? IncoherentFieldCombiner.Combine(perWavelengthFields)
             : MergeAllFieldResults(perWavelengthFields);
 
-        var components = canvas.Components.Select(c => c.Component).ToList();
-        canvas.PowerFlowVisualizer.UpdateFromSimulation(
-            canvas.ConnectionManager.Connections, components, allFieldResults);
-
-        canvas.RefreshPowerFlowDisplay();
-
-        return new SimulationResult
-        {
-            Success = true,
-            FieldResults = allFieldResults,
-            WavelengthsUsed = wavelengths,
-            LightSourceCount = sourceConfigs.Count,
-            ComponentCount = canvas.Components.Count,
-            ConnectionCount = canvas.Connections.Count,
-            SourceConfigs = sourceConfigs,
-            SystemMatrix = systemMatrix
-        };
+        return (sourceConfigs, systemMatrix, allFieldResults, wavelengths);
     }
 
     /// <summary>
@@ -120,6 +153,15 @@ public class SimulationService
     /// </summary>
     internal List<SourceConfigInfo> ConfigureLightSources(
         DesignCanvasViewModel canvas,
+        PhysicalExternalPortManager portManager) =>
+        ConfigureLightSources(canvas.Components.ToList(), portManager);
+
+    /// <summary>
+    /// Snapshot-based overload used by the off-thread simulation path (issue #1150):
+    /// never touches an <see cref="System.Collections.ObjectModel.ObservableCollection{T}"/>.
+    /// </summary>
+    internal static List<SourceConfigInfo> ConfigureLightSources(
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
         PhysicalExternalPortManager portManager)
     {
         var configs = new List<SourceConfigInfo>();
@@ -127,14 +169,14 @@ public class SimulationService
         // Per-instance LaserConfig only exists on top-level ViewModels; components
         // inside groups fall back to the default (ideal red) source.
         var laserConfigs = new Dictionary<Component, LaserConfig>();
-        foreach (var compVm in canvas.Components)
+        foreach (var compVm in componentViewModels)
         {
             if (compVm.LaserConfig != null)
                 laserConfigs[compVm.Component] = compVm.LaserConfig;
         }
 
         // Collect all components, including those inside groups (recursively)
-        var allComponents = GetAllComponentsRecursively(canvas.Components);
+        var allComponents = GetAllComponentsRecursively(componentViewModels);
 
         foreach (var component in allComponents)
         {
