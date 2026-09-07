@@ -11,11 +11,6 @@ namespace CAP_Core.Analysis;
 public class WaveguideOverlapDetector
 {
     /// <summary>
-    /// Half-width of a standard waveguide in micrometers (used for AABB padding on bends).
-    /// </summary>
-    private const double WaveguideHalfWidthMicrometers = 1.0;
-
-    /// <summary>
     /// Describes any routed path (connection or frozen) for overlap checking.
     /// </summary>
     private record PathDescriptor(
@@ -123,8 +118,8 @@ public class WaveguideOverlapDetector
     /// <summary>
     /// Checks a pair of segments for overlap.
     /// Straight–straight uses exact intersection.
-    /// Bend–straight uses precise arc sampling to avoid false positives from AABB.
-    /// Bend–bend falls back to AABB (acceptable approximation).
+    /// Bend–straight and bend–bend sample the arc into small chords to avoid
+    /// the false positives a coarse bounding-box check produces.
     /// </summary>
     private static (double X, double Y)? CheckSegmentPairOverlap(PathSegment a, PathSegment b)
     {
@@ -137,10 +132,24 @@ public class WaveguideOverlapDetector
         if (a is StraightSegment straightA && b is BendSegment bendB)
             return ArcStraightIntersection(bendB, straightA);
 
-        if (SegmentBoundsOverlap(a, b))
-            return ((a.StartPoint.X + b.StartPoint.X) / 2.0,
-                    (a.StartPoint.Y + b.StartPoint.Y) / 2.0);
+        if (a is BendSegment ba && b is BendSegment bb)
+            return ArcArcIntersection(ba, bb);
 
+        return null;
+    }
+
+    /// <summary>
+    /// Checks two bend arcs for intersection by testing each sampled chord of
+    /// <paramref name="bendA"/> against the full arc of <paramref name="bendB"/>.
+    /// </summary>
+    private static (double X, double Y)? ArcArcIntersection(BendSegment bendA, BendSegment bendB)
+    {
+        foreach (var chord in SampleArcChords(bendA))
+        {
+            var intersection = ArcStraightIntersection(bendB, chord);
+            if (intersection.HasValue)
+                return intersection;
+        }
         return null;
     }
 
@@ -151,12 +160,25 @@ public class WaveguideOverlapDetector
     /// </summary>
     private static (double X, double Y)? ArcStraightIntersection(BendSegment bend, StraightSegment straight)
     {
+        foreach (var chord in SampleArcChords(bend))
+        {
+            var intersection = StraightStraightIntersection(chord, straight);
+            if (intersection.HasValue)
+                return intersection;
+        }
+        return null;
+    }
+
+    /// <summary>Samples a bend arc into small straight chords (at least 20, or one per 3° of sweep).</summary>
+    private static List<StraightSegment> SampleArcChords(BendSegment bend)
+    {
         double startRad = bend.StartAngleDegrees * Math.PI / 180;
         double sweepRad = bend.SweepAngleDegrees * Math.PI / 180;
         double sign = Math.Sign(bend.SweepAngleDegrees);
         if (sign == 0) sign = 1;
 
         int numSamples = Math.Max(20, (int)(Math.Abs(bend.SweepAngleDegrees) / 3));
+        var chords = new List<StraightSegment>(numSamples);
 
         double prevX = 0, prevY = 0;
         for (int i = 0; i <= numSamples; i++)
@@ -167,18 +189,12 @@ public class WaveguideOverlapDetector
             double py = bend.Center.Y + bend.RadiusMicrometers * Math.Sin(angle - Math.PI / 2 * sign);
 
             if (i > 0)
-            {
-                var chord = new StraightSegment(prevX, prevY, px, py, angleDegrees: 0);
-                var intersection = StraightStraightIntersection(chord, straight);
-                if (intersection.HasValue)
-                    return intersection;
-            }
+                chords.Add(new StraightSegment(prevX, prevY, px, py, angleDegrees: 0));
 
             prevX = px;
             prevY = py;
         }
-
-        return null;
+        return chords;
     }
 
     /// <summary>
@@ -207,41 +223,6 @@ public class WaveguideOverlapDetector
             return null; // Intersection outside segment extents
 
         return (a.StartPoint.X + t * ax, a.StartPoint.Y + t * ay);
-    }
-
-    /// <summary>
-    /// Returns true if the axis-aligned bounding boxes of two segments overlap.
-    /// Bend segments use the full circle bounding box with waveguide padding.
-    /// </summary>
-    private static bool SegmentBoundsOverlap(PathSegment a, PathSegment b)
-    {
-        var (ax1, ay1, ax2, ay2) = GetSegmentBounds(a);
-        var (bx1, by1, bx2, by2) = GetSegmentBounds(b);
-
-        return ax1 <= bx2 && ax2 >= bx1 && ay1 <= by2 && ay2 >= by1;
-    }
-
-    /// <summary>
-    /// Returns (minX, minY, maxX, maxY) for a segment, padded by waveguide half-width.
-    /// </summary>
-    private static (double MinX, double MinY, double MaxX, double MaxY) GetSegmentBounds(PathSegment seg)
-    {
-        double pad = WaveguideHalfWidthMicrometers;
-
-        if (seg is BendSegment bend)
-        {
-            return (
-                bend.Center.X - bend.RadiusMicrometers - pad,
-                bend.Center.Y - bend.RadiusMicrometers - pad,
-                bend.Center.X + bend.RadiusMicrometers + pad,
-                bend.Center.Y + bend.RadiusMicrometers + pad);
-        }
-
-        return (
-            Math.Min(seg.StartPoint.X, seg.EndPoint.X) - pad,
-            Math.Min(seg.StartPoint.Y, seg.EndPoint.Y) - pad,
-            Math.Max(seg.StartPoint.X, seg.EndPoint.X) + pad,
-            Math.Max(seg.StartPoint.Y, seg.EndPoint.Y) + pad);
     }
 
     /// <summary>
