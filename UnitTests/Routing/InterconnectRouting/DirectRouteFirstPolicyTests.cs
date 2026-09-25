@@ -104,6 +104,37 @@ public class DirectRouteFirstPolicyTests
             .ShouldBeNull();
     }
 
+    [Fact]
+    public void TryBuildCandidate_AngledPinsWhereArcsCannotHonorFloor_ReturnsNull()
+    {
+        // Auto must never propose a cobra: its sharp corners violate the bend-radius
+        // floor a fab can actually manufacture, and light scatters at them. Angled pins
+        // whose arcs cannot honor the floor therefore defer to A*.
+        // U-turn: both pins face +X, so the arrival heading is -X. The arc-S caps at
+        // ~31µm over this 50µm run with 100µm lateral shift — below the 50µm floor —
+        // and only a cobra could still join the pins smoothly.
+        var start = Pin(x: 0, y: 0, angleDegrees: 0);
+        var end = Pin(x: 50, y: 100, angleDegrees: 0);
+
+        DirectRouteFirstPolicy.TryBuildCandidate(start, end, minBendRadiusMicrometers: 50.0)
+            .ShouldBeNull();
+    }
+
+    [Fact]
+    public void TryBuildCandidate_AngledPinsWithoutRadiusFloor_ReturnsNull()
+    {
+        // Field report: Auto connections could come out as cobra routes with sharp
+        // corners — not fabrication-safe in photonics. The cobra slipped through when
+        // no bend-radius floor applied (floor 0 = "no limit"), e.g. for an end pin the
+        // arcs cannot reach. Auto now defers such layouts to A*; only an explicitly
+        // chosen Cobra style still builds one.
+        var start = Pin(x: 0, y: 0, angleDegrees: 0);     // heading +X
+        var end = Pin(x: -100, y: 50, angleDegrees: 90);  // behind the start, arrival -Y
+
+        DirectRouteFirstPolicy.TryBuildCandidate(start, end, minBendRadiusMicrometers: 0)
+            .ShouldBeNull();
+    }
+
     // ----- Router integration: direct first, A* only on obstruction -----
 
     [Fact]
