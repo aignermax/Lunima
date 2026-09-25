@@ -17,9 +17,9 @@ namespace UnitTests.Integration;
 /// Opening a shipped example must leave every connection with a real route, never the
 /// pin-to-pin fallback line the canvas draws while a route is missing. The files ship with
 /// cached routes; a file without them is routed by the loader's post-load pass, and a design
-/// above the loader's auto-routing limit keeps its fallback lines and says so in the console.
-/// Wires the router cannot place today are pinned per file (issue #1166) — the number may
-/// only shrink as the router improves.
+/// with more path-less wires than the loader's auto-routing limit keeps its fallback lines
+/// and says so in the console. Wires the router cannot place today are pinned per file
+/// (issue #1166) — the number may only shrink as the router improves.
 /// </summary>
 public class ExampleLoadRoutingTests
 {
@@ -31,9 +31,10 @@ public class ExampleLoadRoutingTests
         ["Logic Gate ALU 1-bit.lun"] = 1,
         ["Logic Gate Register 2-bit.lun"] = 1,
         ["Logic Gate Counter 2-bit.lun"] = 4,
-        ["Logic Gate Full Adder.lun"] = 8,
-        ["Logic Gate PC 2-bit.lun"] = 13,
-        ["Logic Gate RAM 2x2.lun"] = 28,
+        ["Logic Gate Full Adder.lun"] = 2,
+        ["Logic Gate PC 2-bit.lun"] = 12,
+        ["Logic Gate RAM 2x2.lun"] = 18,
+        ["Logic Gate 4-Bit Adder.lun"] = 90,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>
@@ -51,13 +52,43 @@ public class ExampleLoadRoutingTests
         (await fileOps.OpenDesignAsCopyAsync(path)).ShouldBeTrue($"'{exampleFileName}' must open from the Home screen");
         await fileOps.PostLoadRouting;
 
-        if (canvas.Connections.Count > FileOperationsViewModel.MaxConnectionsRoutedOnLoad)
+        var unrouted = canvas.Connections.Count(c => c.Connection.RoutedPath == null);
+        if (unrouted > FileOperationsViewModel.MaxConnectionsRoutedOnLoad)
         {
             AssertRoutingWasSkippedHonestly(canvas, errorConsole, exampleFileName);
             return;
         }
         AssertEveryWireRouted(canvas, exampleFileName);
         errorConsole.Entries.ShouldBeEmpty($"'{exampleFileName}' must load and route without console entries");
+    }
+
+    /// <summary>
+    /// Every shipped example carries cached routes, so no manifest entry exercises the
+    /// loader's large-design guard (<see cref="FileOperationsViewModel.MaxConnectionsRoutedOnLoad"/>)
+    /// anymore. Stripping the 4-bit adder's cached geometry into a temp copy recreates the
+    /// situation the guard exists for: hundreds of path-less wires must NOT start a
+    /// minutes-long routing pass on open — the design shows its fallback lines and says why.
+    /// </summary>
+    [Fact]
+    public async Task HugeDesignWithoutCachedRoutes_SkipsRoutingHonestly()
+    {
+        var source = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), "Logic Gate 4-Bit Adder.lun");
+        var tempPath = ExampleRouteBakeTests.StripRouteGeometryToTempFile(source);
+        try
+        {
+            var canvas = new DesignCanvasViewModel();
+            var errorConsole = new ErrorConsoleService();
+            var fileOps = CreateFileOperations(canvas, errorConsole);
+
+            (await fileOps.OpenDesignAsCopyAsync(tempPath)).ShouldBeTrue();
+            await fileOps.PostLoadRouting;
+
+            AssertRoutingWasSkippedHonestly(canvas, errorConsole, "Logic Gate 4-Bit Adder.lun (geometry stripped)");
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+        }
     }
 
     private static void AssertEveryWireRouted(DesignCanvasViewModel canvas, string exampleFileName)
