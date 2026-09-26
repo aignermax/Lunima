@@ -81,6 +81,7 @@ public class LiveStateHttpServer : IDisposable
         if (listener == null) return;
         try { listener.Stop(); listener.Close(); }
         catch (ObjectDisposedException) { /* already torn down */ }
+        catch (HttpListenerException) { /* managed-listener prefix-removal race on close; port is released regardless */ }
         _errorConsole.LogInfo("Agent server stopped");
     }
 
