@@ -25,7 +25,7 @@
 
       <!-- Current step -->
       <TextBlock Text="{Binding CurrentTitle}" FontWeight="SemiBold" FontSize="14"
-                 Foreground="White"/>
+                 TextWrapping="Wrap" Foreground="White"/>
       <TextBlock Text="{Binding CurrentBody}" TextWrapping="Wrap"
                  Foreground="#c9c9c9" FontSize="12"/>
 

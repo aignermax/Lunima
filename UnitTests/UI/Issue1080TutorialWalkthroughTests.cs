@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -128,7 +129,15 @@ public class Issue1080TutorialWalkthroughTests
 
     private static void SaveFrame(Window window, string path)
     {
-        var bitmap = window.CaptureRenderedFrame();
+        // Headless captures can miss a frame (UiScreenshotTests records the same null as a
+        // skipped "render miss"): the window's first render may lag behind the drained
+        // dispatcher queue. Pump at render priority and retry before declaring failure.
+        Bitmap? bitmap = null;
+        for (var attempt = 0; attempt < 5 && bitmap is null; attempt++)
+        {
+            Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
+            bitmap = window.CaptureRenderedFrame();
+        }
         bitmap.ShouldNotBeNull($"render miss for {Path.GetFileName(path)}");
         using (bitmap)
             ScreenshotArtifacts.SavePng(bitmap!, path).Length.ShouldBeGreaterThan(0);
