@@ -41,6 +41,20 @@ public partial class GdsImportDialog : Window
     private void OnMetalLayersGotFocus(object? sender, GotFocusEventArgs e) =>
         SetActiveLayerField(GdsLayerFieldTarget.Metal);
 
+    /// <summary>
+    /// Opens the click-to-assign layer picker over the analyzed top cell
+    /// (issue #1173). No-op while analysis is pending or the cell is empty.
+    /// </summary>
+    private async void OnOpenLayerPicker(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not GdsImportDialogViewModel vm)
+            return;
+        var picker = vm.CreateLayerPicker();
+        if (picker is null)
+            return;
+        await new GdsLayerPickerWindow { DataContext = picker }.ShowDialog(this);
+    }
+
     private void SetActiveLayerField(GdsLayerFieldTarget target)
     {
         if (DataContext is GdsImportDialogViewModel vm)

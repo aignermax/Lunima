@@ -106,6 +106,14 @@
                     </Expander.Header>
                     <StackPanel Spacing="10" Margin="4">
 
+                <!-- Click-to-assign picker (issue #1173): assign layer types by
+                     clicking the geometry instead of guessing layer numbers. -->
+                <Button Content="{loc:Localize GdsImport.LayerPickerButton}"
+                        Click="OnOpenLayerPicker"
+                        Background="#2d3d4d" Foreground="White" FontSize="11"
+                        Padding="10,4" HorizontalAlignment="Left"
+                        ToolTip.Tip="{loc:Localize GdsImport.LayerPickerButtonTip}"/>
+
                 <!-- Pin detection layers -->
                 <Grid ColumnDefinitions="*,12,*">
                     <StackPanel Grid.Column="0" Spacing="4">
