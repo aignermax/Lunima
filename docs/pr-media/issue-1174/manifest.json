@@ -1,0 +1,10 @@
+[
+  {
+    "file": "01-agent-server-stopped.png",
+    "caption": "Agent Server window (Tools menu) stopped: editable port, Start button, and copy-paste MCP config snippet."
+  },
+  {
+    "file": "02-agent-server-running.png",
+    "caption": "Server running: green status dot, listening endpoint shown, port locked, and config snippet updated to the active port."
+  }
+]
