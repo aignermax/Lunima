@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.LiveState"
+        xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        x:Class="CAP.Avalonia.Views.AgentServerWindow"
+        x:DataType="vm:AgentServerViewModel"
+        Title="{loc:Localize AgentServer.Title}"
+        Width="560" Height="470"
+        MinWidth="440" MinHeight="380"
+        Background="#1e1e1e"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel Margin="14">
+
+        <!-- Header -->
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="🤖" FontSize="16" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Localize AgentServer.Header}"
+                           FontWeight="SemiBold" FontSize="16" Foreground="LightBlue"/>
+            </StackPanel>
+            <TextBlock Text="{loc:Localize AgentServer.Explainer}"
+                       TextWrapping="Wrap" Foreground="#b0b0c0" FontSize="12"/>
+        </StackPanel>
+
+        <!-- Start/stop row -->
+        <Border DockPanel.Dock="Top" Background="#2a2a3e" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="14"
+                           Text="●" Foreground="#e05555" IsVisible="{Binding !IsRunning}"/>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="14"
+                           Text="●" Foreground="#55d073" IsVisible="{Binding IsRunning}"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="10,0,0,0"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{loc:Localize AgentServer.PortLabel}"
+                               Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                    <NumericUpDown Value="{Binding Port}" Minimum="1024" Maximum="65535"
+                                   Increment="1" FormatString="0" Width="120" FontSize="12"
+                                   IsEnabled="{Binding !IsRunning}"/>
+                </StackPanel>
+
+                <TextBlock Grid.Column="2" Text="{Binding StatusText}" Margin="12,0"
+                           Foreground="#b0b0c0" FontSize="11" VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+
+                <Button Grid.Column="3" MinWidth="90" Padding="12,6" Background="#3d3d5d"
+                        Command="{Binding ToggleServerCommand}" VerticalAlignment="Center">
+                    <Panel>
+                        <TextBlock Text="{loc:Localize AgentServer.Start}" Foreground="White"
+                                   IsVisible="{Binding !IsRunning}"/>
+                        <TextBlock Text="{loc:Localize AgentServer.Stop}" Foreground="White"
+                                   IsVisible="{Binding IsRunning}"/>
+                    </Panel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Endpoint -->
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Text="{loc:Localize AgentServer.EndpointLabel}"
+                       Foreground="White" FontWeight="SemiBold" FontSize="12"/>
+            <SelectableTextBlock Text="{Binding EndpointUrl}" Foreground="#8fd3ff"
+                                 FontFamily="Consolas,Menlo,monospace" FontSize="12"/>
+        </StackPanel>
+
+        <!-- MCP config snippet -->
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{loc:Localize AgentServer.ConfigLabel}"
+                       Foreground="White" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+            <Border Background="#14141f" CornerRadius="6" Padding="10">
+                <ScrollViewer>
+                    <SelectableTextBlock Text="{Binding McpConfigSnippet}"
+                                         Foreground="#c8e6b0"
+                                         FontFamily="Consolas,Menlo,monospace" FontSize="11"/>
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
+
+    </DockPanel>
+</Window>

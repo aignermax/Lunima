@@ -63,6 +63,12 @@ public partial class MainWindow : Window
     /// </summary>
     private RegistryBrowserWindow? _registryBrowserWindow;
 
+    /// <summary>
+    /// The open Agent Server window; a second Tools-flyout click
+    /// activates the existing window instead of spawning a duplicate.
+    /// </summary>
+    private AgentServerWindow? _agentServerWindow;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -686,6 +692,33 @@ public partial class MainWindow : Window
         {
             if (ReferenceEquals(_registryBrowserWindow, window))
                 _registryBrowserWindow = null;
+        };
+        window.Show(this);
+    }
+
+    /// <summary>
+    /// Opens the non-modal Agent Server window from the Tools flyout:
+    /// start/stop the localhost live-state endpoint external MCP agents connect to.
+    /// </summary>
+    private void OpenAgentServer_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_agentServerWindow is { IsVisible: true } existing)
+        {
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        var vm = App.Services.GetService(typeof(ViewModels.LiveState.AgentServerViewModel))
+            as ViewModels.LiveState.AgentServerViewModel;
+        if (vm == null) return;
+
+        var window = new AgentServerWindow { DataContext = vm };
+        _agentServerWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_agentServerWindow, window))
+                _agentServerWindow = null;
         };
         window.Show(this);
     }

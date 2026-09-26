@@ -52,6 +52,7 @@ public partial class App : Application
         services.AddAddCustomComponentFeature();
         services.AddGdsImportFeature();
         services.AddLocalizationFeature();
+        services.AddLiveStateFeature();
 
         services.AddSingleton<MainViewModel>();
     }
@@ -98,6 +99,10 @@ public partial class App : Application
             // is opened by MainWindow's Loaded handler.
             mainVm.StartupDesignFile = CAP.Avalonia.Services.DesignFileArguments
                 .FindDesignFile(desktop.Args ?? Array.Empty<string>());
+            // LUNIMA_AGENT_SERVER=1 starts the agent live-state server without a click,
+            // so external MCP agents can attach to scripted/debug sessions.
+            Services.GetRequiredService<ViewModels.LiveState.AgentServerViewModel>()
+                .AutoStartFromEnvironment();
             desktop.MainWindow = new MainWindow
             {
                 DataContext = mainVm

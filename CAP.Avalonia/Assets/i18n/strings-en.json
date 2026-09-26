@@ -1447,5 +1447,15 @@
   "LogicPanelHelp.RunResetTitle": "Run and Reset",
   "LogicPanelHelp.RunResetBody": "Press 'Run' and the panel clocks the network on its own at the selected cadence — every tick is exactly one 'Step clock' press: the visible inputs settle, all registers commit their sampled values simultaneously, and the fresh outputs ripple onward. The cadence is a UI convenience, not physics — real optical clocks would be orders of magnitude faster. Input toggles stay live while running; a flipped one simply lands in the next tick. 'Reset' returns every register to the documented power-up convention (all outputs 0) without rebuilding the network — a convention of the behavioral model, not a physical claim — and the clock counter restarts at 0.",
   "LogicPanelTimelineHelp.WaveformTitle": "The same events as waveform lanes",
-  "LogicPanelTimelineHelp.WaveformBody": "Below the list, the same timeline draws as one 0/1 step trace per named signal. The gold vertical lines are the '── clock #k ──' boundaries and the white cursor is the replayed instant. Edges sit at their real arrival times — L·n_g/c, the optical length times the group index divided by c — so horizontal distance on the strip is real optical path length."
+  "LogicPanelTimelineHelp.WaveformBody": "Below the list, the same timeline draws as one 0/1 step trace per named signal. The gold vertical lines are the '── clock #k ──' boundaries and the white cursor is the replayed instant. Edges sit at their real arrival times — L·n_g/c, the optical length times the group index divided by c — so horizontal distance on the strip is real optical path length.",
+  "Toolbar.AgentServer": "Agent Server (MCP)",
+  "Toolbar.AgentServerTip": "Expose the live design, errors and simulation to external coding agents via a local MCP endpoint",
+  "AgentServer.Title": "Agent Server",
+  "AgentServer.Header": "Agent Server (MCP)",
+  "AgentServer.Explainer": "Lets an external coding agent (e.g. Claude Code) read the live design, routing state, error console and simulation results, and run commands like moving components or taking a screenshot. The endpoint listens on localhost only.",
+  "AgentServer.PortLabel": "Port",
+  "AgentServer.EndpointLabel": "Endpoint",
+  "AgentServer.ConfigLabel": "MCP client configuration (paste into your agent's MCP settings)",
+  "AgentServer.Start": "Start",
+  "AgentServer.Stop": "Stop"
 }

@@ -1447,5 +1447,15 @@
   "LogicPanelHelp.RunResetTitle": "Run und Reset",
   "LogicPanelHelp.RunResetBody": "Ein Druck auf „Starten“ lässt das Netzwerk im gewählten Tempo von selbst takten — jeder Tick ist genau ein „Takt weiterschalten“: Die sichtbaren Eingänge pendeln sich ein, alle Register übernehmen ihre abgetasteten Werte gleichzeitig, und die neuen Ausgänge pflanzen sich durchs Netz fort. Das Tempo ist eine Bequemlichkeit der Oberfläche, keine Physik — echte optische Uhren wären um Größenordnungen schneller. Die Eingänge bleiben mitten im Lauf bedienbar; ein umgeschalteter landet einfach im nächsten Tick. „Zurücksetzen“ bringt jedes Register wieder in die dokumentierte Einschaltkonvention (alle Ausgänge 0), ohne das Netzwerk neu aufzubauen — eine Konvention des Verhaltensmodells, kein physikalischer Anspruch — und der Takt-Zähler startet wieder bei 0.",
   "LogicPanelTimelineHelp.WaveformTitle": "Die gleichen Ereignisse als Signalverläufe",
-  "LogicPanelTimelineHelp.WaveformBody": "Unter der Liste zeichnet sich dieselbe Abfolge: ein 0/1-Schrittverlauf pro benanntem Signal. Die goldenen Vertikallinien sind die Trennzeilen „── Takt #k ──“, und der weiße Cursor markiert den wiedergegebenen Zeitpunkt. Kanten sitzen an ihren echten Ankunftszeiten — L·n_g/c, die optische Länge mal dem Gruppenindex durch c — also ist der horizontale Abstand auf der Leiste echte optische Weglänge."
+  "LogicPanelTimelineHelp.WaveformBody": "Unter der Liste zeichnet sich dieselbe Abfolge: ein 0/1-Schrittverlauf pro benanntem Signal. Die goldenen Vertikallinien sind die Trennzeilen „── Takt #k ──“, und der weiße Cursor markiert den wiedergegebenen Zeitpunkt. Kanten sitzen an ihren echten Ankunftszeiten — L·n_g/c, die optische Länge mal dem Gruppenindex durch c — also ist der horizontale Abstand auf der Leiste echte optische Weglänge.",
+  "Toolbar.AgentServer": "Agenten-Server (MCP)",
+  "Toolbar.AgentServerTip": "Live-Design, Fehler und Simulation über einen lokalen MCP-Endpunkt für externe Coding-Agenten freigeben",
+  "AgentServer.Title": "Agenten-Server",
+  "AgentServer.Header": "Agenten-Server (MCP)",
+  "AgentServer.Explainer": "Erlaubt einem externen Coding-Agenten (z. B. Claude Code), das laufende Design, den Routing-Zustand, die Fehlerkonsole und Simulationsergebnisse zu lesen sowie Befehle wie Komponenten verschieben oder Screenshots auszuführen. Der Endpunkt lauscht nur auf localhost.",
+  "AgentServer.PortLabel": "Port",
+  "AgentServer.EndpointLabel": "Endpunkt",
+  "AgentServer.ConfigLabel": "MCP-Client-Konfiguration (in die MCP-Einstellungen des Agenten einfügen)",
+  "AgentServer.Start": "Starten",
+  "AgentServer.Stop": "Stoppen"
 }
