@@ -63,6 +63,13 @@ public partial class MainWindow : Window
     /// </summary>
     private RegistryBrowserWindow? _registryBrowserWindow;
 
+    /// <summary>
+    /// The open AI Design Assistant tool window. Single instance: a second open
+    /// activates the existing window instead of spawning a duplicate — same
+    /// pattern as <see cref="_registryBrowserWindow"/>. Cleared when it closes.
+    /// </summary>
+    private AiAssistantWindow? _aiAssistantWindow;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -691,6 +698,32 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Opens the non-modal AI Design Assistant tool window from the toolbar.
+    /// A second click activates the already-open window.
+    /// </summary>
+    private void OpenAiAssistant_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_aiAssistantWindow is { IsVisible: true } existing)
+        {
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        var window = new AiAssistantWindow { DataContext = vm };
+        _aiAssistantWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_aiAssistantWindow, window))
+                _aiAssistantWindow = null;
+        };
+        window.Show(this);
+    }
+
+    /// <summary>
     /// Opens the "Check PDKs against Python" dialog from the Tools menu (issue #515).
     /// </summary>
     private void OpenPdkResolutionCheckDialog_Click(object? sender, RoutedEventArgs e)
@@ -712,12 +745,13 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Scrolls the Design Checks panel into view after the "Check design" menu entry
+    /// Opens the analysis dock on the Checks tab after the "Check design" menu entry
     /// ran the validation (the bound command does the checking itself).
     /// </summary>
     private void CheckDesignMenuItem_Click(object? sender, RoutedEventArgs e)
     {
-        DesignChecksPanelHost.BringIntoView();
+        if (DataContext is MainViewModel vm)
+            vm.BottomPanel.Analysis.OpenChecks();
     }
 
     /// <summary>
