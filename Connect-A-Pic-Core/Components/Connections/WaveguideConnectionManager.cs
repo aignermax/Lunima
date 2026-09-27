@@ -1,6 +1,7 @@
 using System.Numerics;
 using CAP_Core.Routing;
 using CAP_Core.Routing.CrossingInsertion;
+using CAP_Core.Routing.GroupHierarchyRouting;
 using CAP_Core.Components.Core;
 
 namespace CAP_Core.Components.Connections;
@@ -410,14 +411,36 @@ public partial class WaveguideConnectionManager
             // Phase 2: Incremental routing failed for some connections.
             // Fall back to full re-route with ordering strategies.
             // Snapshots: this runs on the routing thread while UI commands may mutate the list.
-            result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
-            if (cancellationToken.IsCancellationRequested) return;
-            if (result.allValid) return;
+            var snapshot = SnapshotConnections();
+            List<WaveguideConnection> bestOrder;
+            int bestFailedCount;
 
-            var bestOrder = SnapshotConnections();
-            int bestFailedCount = result.failedCount;
+            var plan = GroupHierarchyRoutePlan.Build(snapshot);
+            if (plan.HasHierarchy)
+            {
+                // Phase 2a (issue #1175): hierarchical full re-route — intra-group wires
+                // first, ordering retries stay inside one group scope instead of
+                // permuting the whole design. On dense grouped layouts this replaces
+                // hours of design-wide retry passes with many small local searches.
+                var (hierarchicalFailed, hierarchicalOrder) =
+                    TryRouteHierarchical(plan, router, progressCallback, cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
+                ReorderConnections(hierarchicalOrder);
+                if (hierarchicalFailed == 0 || snapshot.Count > MaxConnectionsForGlobalOrderingSearch)
+                    return;
+                bestOrder = hierarchicalOrder;
+                bestFailedCount = hierarchicalFailed;
+            }
+            else
+            {
+                result = TryRouteInOrder(snapshot, router, progressCallback, cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
+                if (result.allValid) return;
+                bestOrder = snapshot;
+                bestFailedCount = result.failedCount;
+            }
 
-            var orderings = GenerateOrderings(SnapshotConnections(), MaxRoutingAttempts - 1);
+            var orderings = GenerateOrderings(snapshot, MaxRoutingAttempts - 1);
             foreach (var ordering in orderings)
             {
                 if (cancellationToken.IsCancellationRequested) return;
