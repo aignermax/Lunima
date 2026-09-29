@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="CAP.Avalonia.Controls.TourAnchor.TourAnchorOverlay"
+             IsHitTestVisible="False">
+
+  <!-- Guided-tour anchor overlay (#1167): dims everything except the spotlighted
+       target control, pulses an outline around it, points an arrow at it and
+       places the tour card next to it. Everything except the card itself is
+       hit-test transparent so the tour stays non-modal. -->
+  <Canvas x:Name="RootCanvas" Background="{x:Null}">
+
+    <!-- Dim: four rectangles around the spotlight hole -->
+    <Rectangle x:Name="DimTop" Fill="#A0101014" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimBottom" Fill="#A0101014" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimLeft" Fill="#A0101014" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimRight" Fill="#A0101014" IsHitTestVisible="False"/>
+
+    <!-- Pulsing spotlight outline -->
+    <Border x:Name="Spotlight" BorderBrush="#7fd17f" BorderThickness="2"
+            CornerRadius="4" IsHitTestVisible="False">
+      <Border.Styles>
+        <Style Selector="Border#Spotlight">
+          <Style.Animations>
+            <Animation Duration="0:0:1.2" IterationCount="Infinite">
+              <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+              <KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+              <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+            </Animation>
+          </Style.Animations>
+        </Style>
+      </Border.Styles>
+    </Border>
+
+    <!-- Arrow pointing from the card at the target -->
+    <Path x:Name="Arrow" Fill="#7fd17f" Data="M0,0 L16,8 L0,16 Z"
+          RenderTransformOrigin="50%,50%"
+          IsHitTestVisible="False"/>
+
+    <!-- Tour card, positioned by the code-behind -->
+    <ContentControl x:Name="CardHost" IsHitTestVisible="True"/>
+  </Canvas>
+</UserControl>

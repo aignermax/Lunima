@@ -69,7 +69,7 @@
         <TextBlock Text="{loc:Localize LogicPanel.Hint}" Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
 
         <StackPanel Orientation="Horizontal" Margin="0,8,0,5">
-            <Button Content="{loc:Localize LogicPanel.Build}"
+            <Button x:Name="LogicBuildButton" Content="{loc:Localize LogicPanel.Build}"
                     Command="{Binding RightPanel.Logic.BuildNetworkCommand}"
                     Width="150" Padding="8,4" Background="#3d5d3d"
                     IsEnabled="{Binding RightPanel.Logic.IsProcessing, Converter={x:Static BoolConverters.Not}}"/>
@@ -229,10 +229,10 @@
                   IsVisible="{Binding RightPanel.Logic.HasRegisters}">
                 <TextBlock Text="{loc:Localize LogicPanel.Registers}" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                    <Button Content="{loc:Localize LogicPanel.StepClock}"
+                    <Button x:Name="LogicStepClockButton" Content="{loc:Localize LogicPanel.StepClock}"
                             Command="{Binding RightPanel.Logic.StepClockCommand}"
                             Padding="6,2" FontSize="10"/>
-                    <Button Content="{Binding RightPanel.Logic.RunStopText}"
+                    <Button x:Name="LogicRunStopButton" Content="{Binding RightPanel.Logic.RunStopText}"
                             Command="{Binding RightPanel.Logic.ToggleRunCommand}"
                             Padding="6,2" FontSize="10"/>
                     <ComboBox ItemsSource="{Binding RightPanel.Logic.RunIntervalOptions}"
