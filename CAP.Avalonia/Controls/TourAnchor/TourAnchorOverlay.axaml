@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="CAP.Avalonia.Controls.TourAnchor.TourAnchorOverlay"
-             IsHitTestVisible="False">
+             x:Class="CAP.Avalonia.Controls.TourAnchor.TourAnchorOverlay">
 
   <!-- Guided-tour anchor overlay (#1167): dims everything except the spotlighted
        target control, pulses an outline around it, points an arrow at it and
-       places the tour card next to it. Everything except the card itself is
-       hit-test transparent so the tour stays non-modal. -->
+       places the tour card next to it. The root must stay hit-test visible (a
+       disabled parent would kill the card's buttons too); non-modality comes
+       from every decoration below being hit-test transparent and the canvas
+       having a null background, so clicks land on the control underneath. -->
   <Canvas x:Name="RootCanvas" Background="{x:Null}">
 
     <!-- Dim: four rectangles around the spotlight hole -->
