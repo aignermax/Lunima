@@ -27,8 +27,19 @@ namespace CAP.Avalonia.Controls.Rendering.LabelDeclutter;
 /// </summary>
 public sealed class ComponentNameLabelComputer
 {
-    private const double LabelOffsetX = 5.0;
-    private const double LabelOffsetY = 5.0;
+    private const double LabelOffsetX = 2.0;
+
+    /// <summary>World-space gap between a component's bottom edge and its name label —
+    /// the label sits below the footprint so it never covers the geometry (a 7 µm tall
+    /// directional coupler would otherwise be hidden under its own name).</summary>
+    private const double LabelGapBelow = 2.0;
+
+    /// <summary>Top-left anchor of a component's name label in world coordinates: just
+    /// below the footprint's bottom-left corner. Single source of truth shared by the
+    /// overlap-resolution bounds measured here and the draw position in
+    /// <see cref="PinRenderer.DrawComponentName"/> — the two must never diverge.</summary>
+    internal static Point GetLabelAnchor(ComponentViewModel comp) =>
+        new(comp.X + LabelOffsetX, comp.Y + comp.Height + LabelGapBelow);
 
     /// <summary>Zoom is quantized to this step before it factors into the overlap-resolution
     /// signature or the measured font size, so continuous zoom (e.g. a smooth scroll) doesn't
@@ -107,7 +118,8 @@ public sealed class ComponentNameLabelComputer
 
             var id = comp.Component.Id;
             var formatted = GetOrMeasureText(comp.Name, fontSize);
-            var labelBounds = new Rect(comp.X + LabelOffsetX, comp.Y + LabelOffsetY, formatted.Width, formatted.Height);
+            var anchor = GetLabelAnchor(comp);
+            var labelBounds = new Rect(anchor.X, anchor.Y, formatted.Width, formatted.Height);
             bounds[id] = labelBounds;
             text[id] = formatted;
 

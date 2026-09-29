@@ -22,6 +22,20 @@ public class ComponentNameLabelComputerTests
     private static readonly Rect WideViewport = new(-1000, -1000, 4000, 4000);
 
     [AvaloniaFact]
+    public void LabelAnchor_SitsBelowTheFootprint_NeverOverTheGeometry()
+    {
+        // Regression: a flat component (e.g. a 7 µm tall directional coupler) had its name
+        // label drawn straight over its waveguide body — the anchor must be below the
+        // footprint's bottom edge so the geometry stays visible.
+        var comp = MakeComponent("flat", x: 100, y: 200, width: 70, height: 7);
+
+        var anchor = ComponentNameLabelComputer.GetLabelAnchor(comp);
+
+        anchor.Y.ShouldBeGreaterThan(200 + 7, "the label must start below the footprint's bottom edge");
+        anchor.X.ShouldBeGreaterThanOrEqualTo(100);
+    }
+
+    [AvaloniaFact]
     public void NonOverlappingComponents_BothNamesVisible()
     {
         var far = MakeComponent("far", x: 1000, y: 1000);
@@ -85,7 +99,7 @@ public class ComponentNameLabelComputerTests
     public void CullingUsesMeasuredLabelBounds_NotJustComponentFootprint()
     {
         // A small component's own footprint (x:[-20,-10]) sits entirely outside the viewport
-        // (x:[0,50]), but its long name label — anchored just inside the footprint's left edge
+        // (x:[0,50]), but its long name label — anchored just below the footprint's left edge
         // and extending rightward by its measured text width — reaches into the viewport.
         // Culling against the footprint alone would wrongly drop a label that is genuinely
         // drawn on screen.
@@ -104,7 +118,8 @@ public class ComponentNameLabelComputerTests
         var comp = MakeComponent("mover", x: 0, y: 0);
         var computer = new ComponentNameLabelComputer();
         var components = new[] { comp };
-        var farViewport = new Rect(190, -10, 20, 20);
+        // Covers the label's new home below the footprint after the move (label y ≈ 252).
+        var farViewport = new Rect(190, 240, 100, 40);
 
         computer.GetVisibleLabelIds(components, hoveredComponentId: null, WideViewport, zoom: 1.0);
         computer.RebuildCount.ShouldBe(1);

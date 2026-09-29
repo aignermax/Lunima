@@ -32,24 +32,26 @@ namespace UnitTests.Rendering;
 /// </summary>
 public class CanvasLabelZOrderTests
 {
-    // World == pixels at zoom 1 (no pan). B sits above-right of A so B's body covers A's
-    // name-label band (A label origin (5,25)) while the two name labels themselves never
-    // overlap (A's spans y 25..~40, B's y 5..~20) — keeping the declutter tie-break out of
-    // this test. The connection runs (40,25)→(80,25): its midpoint length label at (60,10)
-    // and A's hovered pin name at (55,10) both sit squarely under B's body (8..108, 0..40).
-    private const double ComponentAX = 0, ComponentAY = 20;
-    private const double ComponentBX = 8, ComponentBY = 0, ComponentBWidth = 100, ComponentBHeight = 40;
-    private const double PinAX = 40, PinAY = 25; // A's pin, absolute
-    private const double PinBX = 80, PinBY = 25; // B's pin, absolute
+    // World == pixels at zoom 1 (no pan). Component name labels anchor just BELOW their
+    // footprint, so B sits below-right of A such that B's body covers A's name-label band
+    // (A label origin (2,22), glyphs spanning y 22..~37) while the two name labels themselves
+    // never overlap (B's label spans y 60..~75) — keeping the declutter tie-break out of this
+    // test. The connection runs (40,54)→(80,54): its midpoint length label at (60,39) and A's
+    // hovered pin name at (55,39) both sit squarely under B's body (8..108, 18..58) and clear
+    // of A's name glyphs (which end at y ≈ 37).
+    private const double ComponentAX = 0, ComponentAY = 0, ComponentAHeight = 20;
+    private const double ComponentBX = 8, ComponentBY = 18, ComponentBWidth = 100, ComponentBHeight = 40;
+    private const double PinAX = 40, PinAY = 54; // A's pin, absolute
+    private const double PinBX = 80, PinBY = 54; // B's pin, absolute
 
     /// <summary>Inside B's body AND inside A's name-label glyph band ("lphaLong…").</summary>
-    private static readonly PixelRect NameLabelRegion = new(12, 27, 40, 11);
+    private static readonly PixelRect NameLabelRegion = new(12, 24, 40, 11);
 
     /// <summary>Inside B's body AND inside the hovered connection's length-label glyph band.</summary>
-    private static readonly PixelRect LengthLabelRegion = new(63, 12, 30, 9);
+    private static readonly PixelRect LengthLabelRegion = new(63, 41, 30, 8);
 
-    /// <summary>Inside B's body AND inside A's hovered pin-name glyph band ("outA" at (55,10)).</summary>
-    private static readonly PixelRect PinNameRegion = new(56, 11, 18, 9);
+    /// <summary>Inside B's body AND inside A's hovered pin-name glyph band ("outA" at (55,39)).</summary>
+    private static readonly PixelRect PinNameRegion = new(56, 41, 18, 8);
 
     [AvaloniaFact]
     public void ComponentName_CoveredByLaterComponentBody_RasterizesOnTopOfThatBody()
@@ -107,9 +109,9 @@ public class CanvasLabelZOrderTests
         var pending = scene.Rc.Labels.Pending;
         pending.Count.ShouldBe(4,
             "A's name + B's name + hovered pin name + hovered connection length label");
-        pending.ShouldContain(e => e.Origin == new Point(ComponentAX + 5, ComponentAY + 5)
+        pending.ShouldContain(e => e.Origin == new Point(ComponentAX + 2, ComponentAY + ComponentAHeight + 2)
             && HasBrushColor(e.Foreground, 255, 255, 255),
-            "component names must be enqueued at their top-left anchor, not drawn inline");
+            "component names must be enqueued at their below-footprint anchor, not drawn inline");
         pending.ShouldContain(e => e.Origin == new Point(PinAX + 15, PinAY - 15)
             && HasBrushColor(e.Foreground, 0, 255, 255),
             "the hovered/connect pin name must be enqueued (cyan) for the topmost pass");
@@ -126,7 +128,7 @@ public class CanvasLabelZOrderTests
         var canvas = new DesignCanvasViewModel();
         canvas.InitializeAStarRouting();
 
-        var a = MakeComponent("AlphaLongComponentName", ComponentAX, ComponentAY, 60, 40,
+        var a = MakeComponent("AlphaLongComponentName", ComponentAX, ComponentAY, 60, ComponentAHeight,
             pinName: "outA", pinOffsetX: PinAX - ComponentAX, pinOffsetY: PinAY - ComponentAY, pinAngle: 0);
         var b = MakeComponent("B", ComponentBX, ComponentBY, ComponentBWidth, ComponentBHeight,
             pinName: "inB", pinOffsetX: PinBX - ComponentBX, pinOffsetY: PinBY - ComponentBY, pinAngle: 180);
