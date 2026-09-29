@@ -74,7 +74,7 @@
                                       IsChecked="{Binding GridSnap.IsEnabled}"
                                       Foreground="White"/>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="{loc:Localize Settings.GridSnap.GridSize}" Foreground="Gray" VerticalAlignment="Center" Width="80"/>
+                                <TextBlock Text="{loc:Localize Settings.GridSnap.GridSize}" Foreground="Gray" VerticalAlignment="Center" MinWidth="80" Margin="0,0,8,0"/>
                                 <NumericUpDown Value="{Binding GridSnap.GridSizeMicrometers}"
                                                Minimum="1" Maximum="1000" Increment="10"
                                                Width="130" FormatString="F0"/>
