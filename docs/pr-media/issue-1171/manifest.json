@@ -1,0 +1,14 @@
+[
+  {
+    "file": "newcomponent-1-first.png",
+    "caption": "New-component structure help: a pulse travels code \u2192 component, then component \u2192 canvas. (first frame)"
+  },
+  {
+    "file": "newcomponent-2-mid.png",
+    "caption": "New-component structure help: a pulse travels code \u2192 component, then component \u2192 canvas. (mid loop)"
+  },
+  {
+    "file": "newcomponent-3-last.png",
+    "caption": "New-component structure help: a pulse travels code \u2192 component, then component \u2192 canvas. (last frame \u2014 the loop\u0027s end state stays visible)"
+  }
+]

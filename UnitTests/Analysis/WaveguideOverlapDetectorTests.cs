@@ -215,14 +215,63 @@ public class WaveguideOverlapDetectorTests
         result.Count.ShouldBe(2);
     }
 
+    // ── Bend–bend pairs (must not produce bounding-box false positives) ──
+
+    [Fact]
+    public void DetectOverlaps_ConcentricBendArcs_ReturnsEmpty()
+    {
+        // Same center, different radii — the arcs never touch, but their
+        // full-circle bounding boxes overlap.
+        var conn1 = CreateConnectionWithBend(new BendSegment(0, 0, 50, 0, 360));
+        var conn2 = CreateConnectionWithBend(new BendSegment(0, 0, 100, 0, 360));
+
+        var result = _detector.DetectOverlaps(
+            new[] { conn1, conn2 },
+            Array.Empty<ComponentGroup>());
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void DetectOverlaps_CrossingBendArcs_ReturnsIssue()
+    {
+        // Two equal circles whose centers are one radius apart — they intersect.
+        var conn1 = CreateConnectionWithBend(new BendSegment(0, 0, 50, 0, 360));
+        var conn2 = CreateConnectionWithBend(new BendSegment(50, 0, 50, 0, 360));
+
+        var result = _detector.DetectOverlaps(
+            new[] { conn1, conn2 },
+            Array.Empty<ComponentGroup>());
+
+        result.Count.ShouldBe(1);
+        result[0].Type.ShouldBe(DesignIssueType.OverlappingPaths);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    private static WaveguideConnection CreateConnectionWithBend(BendSegment bend)
+    {
+        var connection = CreateConnectionPair();
+        var path = new RoutedPath();
+        path.Segments.Add(bend);
+        connection.RestoreCachedPath(path);
+        return connection;
+    }
+
 
     private static WaveguideConnection CreateConnectionWithSegment(
         double x1, double y1, double x2, double y2)
     {
+        var connection = CreateConnectionPair();
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(x1, y1, x2, y2, 0));
+        connection.RestoreCachedPath(path);
+        return connection;
+    }
+
+    private static WaveguideConnection CreateConnectionPair()
+    {
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
-        comp1.PhysicalX = x1;
-        comp1.PhysicalY = y1;
         var pin1 = new PhysicalPin
         {
             Name = "out",
@@ -233,8 +282,6 @@ public class WaveguideOverlapDetectorTests
         comp1.PhysicalPins.Add(pin1);
 
         var comp2 = TestComponentFactory.CreateStraightWaveGuide();
-        comp2.PhysicalX = x2;
-        comp2.PhysicalY = y2;
         var pin2 = new PhysicalPin
         {
             Name = "in",
@@ -244,11 +291,7 @@ public class WaveguideOverlapDetectorTests
         };
         comp2.PhysicalPins.Add(pin2);
 
-        var conn = new WaveguideConnection { StartPin = pin1, EndPin = pin2 };
-        var path = new RoutedPath();
-        path.Segments.Add(new StraightSegment(x1, y1, x2, y2, 0));
-        conn.RestoreCachedPath(path);
-        return conn;
+        return new WaveguideConnection { StartPin = pin1, EndPin = pin2 };
     }
 
     private static WaveguideConnection CreateConnectionWithoutPath()

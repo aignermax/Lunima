@@ -117,7 +117,7 @@ public class Issue693WalkthroughScreenshotTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    /// <summary>Step 5: the Transient help flyout with the new zooming/panning paragraph.</summary>
+    /// <summary>Step 5: the Transient help flyout (zooming/panning is documented on the plot border tooltip).</summary>
     private static void CaptureHelpFlyoutStep(string dir, List<ManifestEntry> manifest)
     {
         var window = new Window { Width = 460, Height = 760, Content = new TransientHelpFlyout() };
@@ -126,8 +126,8 @@ public class Issue693WalkthroughScreenshotTests
 
         window.GetVisualDescendants().OfType<ScrollViewer>().First().ScrollToEnd();
         Capture(window, dir, "05-help-flyout-zoom-note.png",
-            "The Transient help flyout (like the Eye one) now documents the behavior: hold Ctrl "
-            + "(Cmd on macOS) to zoom, plain scrolling moves the panel, right-drag pans.", manifest);
+            "The Transient help flyout: the zoom/pan how-to lives on the plot border tooltip; "
+            + "the flyout itself stays a short explainer with the light-pulse animation.", manifest);
 
         window.Close();
         Dispatcher.UIThread.RunJobs();

@@ -46,6 +46,29 @@ public class LightSourceClassifierTests
     }
 
     [Fact]
+    public void Component_NamedGratingCouplerUnderArbitraryIdentifier_IsALightSource()
+    {
+        var component = TestComponentFactory.CreateStraightWaveGuide();
+        component.Identifier = "mzi_input_coupler";
+        component.NazcaFunctionName = "demo.io";
+        component.HumanReadableName = "Grating Coupler";
+
+        LightSourceClassifier.IsLightInjectingCoupler(component).ShouldBeTrue(
+            "the simulation classifies by component; the template name it carries must count like it does in the properties panel");
+    }
+
+    [Fact]
+    public void Component_NamedMmiCouplerUnderArbitraryIdentifier_IsNotALightSource()
+    {
+        var component = TestComponentFactory.CreateStraightWaveGuide();
+        component.Identifier = "mzi_combiner";
+        component.NazcaFunctionName = "demo.mmi2x2_dp";
+        component.HumanReadableName = "2x2 MMI Coupler";
+
+        LightSourceClassifier.IsLightInjectingCoupler(component).ShouldBeFalse();
+    }
+
+    [Fact]
     public void ComponentViewModel_WithSuffixedCouplerName_ExposesLaserConfig()
     {
         var component = TestComponentFactory.CreateStraightWaveGuide();

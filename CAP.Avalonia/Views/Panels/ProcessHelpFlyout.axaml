@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.ProcessHelpFlyout">
+
+    <!-- Plain-language explainer for the process-management window: short sections
+         (#1152 text budget, all five locales) plus the looping LayerStackAnimation
+         (the chip is built layer by layer). Hosted as the HelpContent of the
+         window's HelpFlyoutButton, which supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8">
+
+        <TextBlock Text="{loc:Localize ProcessManagement.WhatIsProcess}" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize ProcessManagement.HelpIntro}"/>
+
+        <!-- Fabrication layer-stack animation (cross-section, builds bottom→top). -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <Canvas Width="360" Height="112">
+                <TextBlock Canvas.Left="2" Canvas.Top="2" Text="{loc:Localize ProcessManagement.ChipBuiltLayers}"
+                           FontSize="9" Foreground="Gray"/>
+                <ha:LayerStackAnimation Width="360" Height="112" IsHitTestVisible="False"
+                                        LoopDuration="0:0:5"/>
+                <TextBlock Canvas.Left="306" Canvas.Top="84" Text="{loc:Localize ProcessManagement.LayerSubstrate}" FontSize="8" Foreground="#888"/>
+                <TextBlock Canvas.Left="306" Canvas.Top="70" Text="{loc:Localize ProcessManagement.LayerCore}" FontSize="8" Foreground="#7CCB7C"/>
+                <TextBlock Canvas.Left="306" Canvas.Top="56" Text="{loc:Localize ProcessManagement.LayerCladding}" FontSize="8" Foreground="#8890D0"/>
+                <TextBlock Canvas.Left="306" Canvas.Top="42" Text="{loc:Localize ProcessManagement.LayerMetal}" FontSize="8" Foreground="#DAA520"/>
+            </Canvas>
+        </Border>
+
+        <TextBlock Text="{loc:Localize ProcessManagement.LayersHeading}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize ProcessManagement.HelpLayersBody}"/>
+
+        <TextBlock Text="{loc:Localize ProcessManagement.CrossSectionsHeading}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize ProcessManagement.HelpCrossSectionsBody}"/>
+
+        <TextBlock Text="{loc:Localize ProcessManagement.Materials}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize ProcessManagement.HelpMaterialsBody}"/>
+
+        <TextBlock Text="{loc:Localize ProcessManagement.ElectricalRoutingHeading}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize ProcessManagement.HelpElectricalBody}"/>
+
+    </StackPanel>
+
+</UserControl>

@@ -107,12 +107,12 @@ public class SkippedRouteConnectionPersistenceTests
     }
 
     [Fact]
-    public async Task Load_LegacyConnectionWithoutCachedRoute_NeverRoutes_ButStillExportsPinToPin()
+    public async Task Load_LegacyConnectionWithoutCachedRoute_IsRoutedOnLoad_AndExportsGeometry()
     {
         // A connection saved before it was ever routed (or a legacy file predating cached
-        // routes) writes no CachedSegments; ConnectPins on load does not trigger routing
-        // either, so the connection stays routeless until something moves. That routeless
-        // state must still export as the direct pin-to-pin fallback, not be skipped.
+        // routes) writes no CachedSegments. The loader's post-load routing pass routes
+        // such connections in the background, so once that pass completes the connection
+        // has a real route and exports its segments — nothing is skipped or dropped.
         var tempFile = Path.Combine(Path.GetTempPath(), $"skip_persist_legacy_{Guid.NewGuid():N}.lun");
         try
         {
@@ -125,15 +125,16 @@ public class SkippedRouteConnectionPersistenceTests
 
             var (loadVm, loadCanvas, _) = CreateSetup();
             await LoadFromFile(loadVm, tempFile);
+            await loadVm.PostLoadRouting;
 
             var loaded = loadCanvas.Connections.ShouldHaveSingleItem().Connection;
-            loaded.RoutedPath.ShouldBeNull(
-                "a legacy/never-routed connection stays routeless after load");
+            loaded.RoutedPath.ShouldNotBeNull(
+                "the post-load routing pass must route a legacy/never-routed connection");
 
             var skipped = new List<string>();
             var script = new SimpleNazcaExporter().Export(loadCanvas, skippedConnections: skipped);
 
-            script.ShouldContain("ic.sbend_p2p");
+            script.ShouldContain("nd.strt(");
             skipped.ShouldBeEmpty();
         }
         finally

@@ -1,0 +1,62 @@
+[
+  {
+    "file": "transient-1-first.png",
+    "caption": "Transient help: the light pulse leaves the laser, enters the circuit and splits to the outputs. (first frame)"
+  },
+  {
+    "file": "transient-2-mid.png",
+    "caption": "Transient help: the light pulse leaves the laser, enters the circuit and splits to the outputs. (mid loop)"
+  },
+  {
+    "file": "transient-3-last.png",
+    "caption": "Transient help: the light pulse leaves the laser, enters the circuit and splits to the outputs. (last frame \u2014 the loop\u0027s end state stays visible)"
+  },
+  {
+    "file": "eye-1-first.png",
+    "caption": "Eye/BER help: the four bit trajectories stack into the eye, then the dashed eye-opening marker appears. (first frame)"
+  },
+  {
+    "file": "eye-2-mid.png",
+    "caption": "Eye/BER help: the four bit trajectories stack into the eye, then the dashed eye-opening marker appears. (mid loop)"
+  },
+  {
+    "file": "eye-3-last.png",
+    "caption": "Eye/BER help: the four bit trajectories stack into the eye, then the dashed eye-opening marker appears. (last frame \u2014 the loop\u0027s end state stays visible)"
+  },
+  {
+    "file": "process-1-first.png",
+    "caption": "Process help: substrate, core, cladding and metal layers rise into the finished chip stack. (first frame)"
+  },
+  {
+    "file": "process-2-mid.png",
+    "caption": "Process help: substrate, core, cladding and metal layers rise into the finished chip stack. (mid loop)"
+  },
+  {
+    "file": "process-3-last.png",
+    "caption": "Process help: substrate, core, cladding and metal layers rise into the finished chip stack. (last frame \u2014 the loop\u0027s end state stays visible)"
+  },
+  {
+    "file": "lineshape-1-first.png",
+    "caption": "Line-shape help: the marker sweeps the Lorentzian peak \u2014 power spreads around the center wavelength. (first frame)"
+  },
+  {
+    "file": "lineshape-2-mid.png",
+    "caption": "Line-shape help: the marker sweeps the Lorentzian peak \u2014 power spreads around the center wavelength. (mid loop)"
+  },
+  {
+    "file": "lineshape-3-last.png",
+    "caption": "Line-shape help: the marker sweeps the Lorentzian peak \u2014 power spreads around the center wavelength. (last frame \u2014 the loop\u0027s end state stays visible)"
+  },
+  {
+    "file": "rin-1-first.png",
+    "caption": "RIN help: the marker runs the noisy power-over-time trace that relative intensity noise describes. (first frame)"
+  },
+  {
+    "file": "rin-2-mid.png",
+    "caption": "RIN help: the marker runs the noisy power-over-time trace that relative intensity noise describes. (mid loop)"
+  },
+  {
+    "file": "rin-3-last.png",
+    "caption": "RIN help: the marker runs the noisy power-over-time trace that relative intensity noise describes. (last frame \u2014 the loop\u0027s end state stays visible)"
+  }
+]
