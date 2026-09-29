@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.NewComponentHelpFlyout">
+
+    <!-- Structure-code explainer for the New component window (#1171, #1152 pattern):
+         short text sections (text budget, all five locales), a looping
+         "code → component → canvas" diagram (two staggered pulses travelling the
+         arrows over a static sketch), then the copyable gdsfactory / Nazca examples.
+         Hosted as the HelpContent of the window's HelpFlyoutButton, which supplies
+         the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" Foreground="#DDDDDD" FontSize="11"
+                   Text="{loc:Localize NewComponent.HelpBody}"/>
+
+        <!-- code → component → canvas: one pulse per arrow per loop half. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="88">
+                    <!-- code editor sketch -->
+                    <Rectangle Canvas.Left="4" Canvas.Top="16" Width="92" Height="56"
+                               Fill="#101018" Stroke="#4a4a6a" RadiusX="3" RadiusY="3"/>
+                    <Rectangle Canvas.Left="12" Canvas.Top="26" Width="60" Height="4" Fill="#5a7ca8" RadiusX="2" RadiusY="2"/>
+                    <Rectangle Canvas.Left="12" Canvas.Top="36" Width="44" Height="4" Fill="#5a7ca8" RadiusX="2" RadiusY="2"/>
+                    <Rectangle Canvas.Left="12" Canvas.Top="46" Width="52" Height="4" Fill="#5a7ca8" RadiusX="2" RadiusY="2"/>
+                    <Rectangle Canvas.Left="12" Canvas.Top="56" Width="36" Height="4" Fill="#5a7ca8" RadiusX="2" RadiusY="2"/>
+                    <!-- arrow: code → component -->
+                    <Polyline Points="100,44 144,44" Stroke="#666666" StrokeThickness="2"/>
+                    <Polygon Points="150,44 141,40 141,48" Fill="#666666"/>
+                    <!-- component sketch (1 in, 2 out — like the mmi1x2 example below) -->
+                    <Rectangle Canvas.Left="154" Canvas.Top="20" Width="58" Height="48"
+                               Fill="#1a2a1a" Stroke="#88ccaa" RadiusX="3" RadiusY="3"/>
+                    <Line StartPoint="148,44" EndPoint="154,44" Stroke="#88ccaa" StrokeThickness="2"/>
+                    <Line StartPoint="212,30" EndPoint="218,30" Stroke="#88ccaa" StrokeThickness="2"/>
+                    <Line StartPoint="212,58" EndPoint="218,58" Stroke="#88ccaa" StrokeThickness="2"/>
+                    <!-- arrow: component → canvas -->
+                    <Polyline Points="220,44 262,44" Stroke="#666666" StrokeThickness="2"/>
+                    <Polygon Points="268,44 259,40 259,48" Fill="#666666"/>
+                    <!-- canvas sketch with the placed component -->
+                    <Rectangle Canvas.Left="272" Canvas.Top="8" Width="92" Height="72"
+                               Fill="#14161c" Stroke="#3d3d3d" RadiusX="3" RadiusY="3"/>
+                    <Line StartPoint="272,32" EndPoint="364,32" Stroke="#23262e" StrokeThickness="1"/>
+                    <Line StartPoint="272,56" EndPoint="364,56" Stroke="#23262e" StrokeThickness="1"/>
+                    <Line StartPoint="303,8" EndPoint="303,80" Stroke="#23262e" StrokeThickness="1"/>
+                    <Line StartPoint="333,8" EndPoint="333,80" Stroke="#23262e" StrokeThickness="1"/>
+                    <Rectangle Canvas.Left="303" Canvas.Top="32" Width="34" Height="24"
+                               Fill="#1a2a1a" Stroke="#88ccaa" RadiusX="2" RadiusY="2"/>
+                    <Line StartPoint="297,44" EndPoint="303,44" Stroke="#88ccaa" StrokeThickness="2"/>
+                    <Line StartPoint="337,38" EndPoint="343,38" Stroke="#88ccaa" StrokeThickness="2"/>
+                    <Line StartPoint="337,50" EndPoint="343,50" Stroke="#88ccaa" StrokeThickness="2"/>
+                    <!-- staggered pulses travelling the two arrows once per loop -->
+                    <ha:LightPulseAlongPath Width="368" Height="88" PathPoints="100,44 144,44"
+                                            PulseBrush="#7FAAFF" PulseDiameter="6"
+                                            WindowStart="0" WindowEnd="0.5" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="88" PathPoints="220,44 262,44"
+                                            PulseBrush="#7FAAFF" PulseDiameter="6"
+                                            WindowStart="0.5" WindowEnd="1" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Text="{loc:Localize NewComponent.HelpAnimationCaption}"
+                           Foreground="Gray" FontSize="9" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize NewComponent.GdsFactoryExample}" Foreground="#aaaacc" FontSize="10" FontWeight="SemiBold"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" x:Name="GdsFactoryExampleBox" IsReadOnly="True"
+                     Text="import gdsfactory as gf&#10;component = gf.components.mmi1x2()"
+                     AcceptsReturn="True" TextWrapping="NoWrap"
+                     FontFamily="Consolas, Cascadia Mono, Courier New, monospace" FontSize="10"
+                     Background="#101018" Foreground="#dddddd"/>
+            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyGdsFactoryExample"
+                    FontSize="10" Padding="6,1" Margin="4,0,0,0" VerticalAlignment="Top"
+                    Background="#33335a" Foreground="#ccccff" BorderThickness="0"/>
+        </Grid>
+        <TextBlock Text="{loc:Localize NewComponent.NazcaExample}" Foreground="#aaaacc" FontSize="10" FontWeight="SemiBold"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" x:Name="NazcaExampleBox" IsReadOnly="True"
+                     Text="import nazca as nd&#10;&#10;def component():&#10;    with nd.Cell(name='my_component') as c:&#10;        nd.strt(length=20, width=0.5).put(0)&#10;        nd.Pin('a0').put(0, 0, 180)&#10;        nd.Pin('b0').put(20, 0, 0)&#10;    return c"
+                     AcceptsReturn="True" TextWrapping="NoWrap"
+                     FontFamily="Consolas, Cascadia Mono, Courier New, monospace" FontSize="10"
+                     Background="#101018" Foreground="#dddddd"/>
+            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyNazcaExample"
+                    FontSize="10" Padding="6,1" Margin="4,0,0,0" VerticalAlignment="Top"
+                    Background="#33335a" Foreground="#ccccff" BorderThickness="0"/>
+        </Grid>
+    </StackPanel>
+
+</UserControl>

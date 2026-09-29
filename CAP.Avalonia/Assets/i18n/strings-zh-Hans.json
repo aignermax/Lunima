@@ -705,6 +705,7 @@
   "NewComponent.EditModeHeader": "正在编辑组件定义 — 影响所有放置实例",
   "NewComponent.FabricationProcess": "制造工艺",
   "NewComponent.GdsFactoryExample": "gdsfactory 示例：",
+  "NewComponent.HelpAnimationCaption": "你的代码会变成可以放置到画布上的组件。",
   "NewComponent.HelpBody": "你的代码必须创建一个名为 component 的变量来保存渲染后的几何图形——一个 gdsfactory Component 或 Nazca Cell，需与下方所选的后端匹配。其余内容（导入、辅助函数、参数）由你决定。",
   "NewComponent.HelpTitle": "这里填什么？",
   "NewComponent.KLayoutOnlyCellNote": "# 此组件仅以 KLayout 单元形式存在 — 没有可编辑的代码。\n# 其几何图形会渲染到画布上；代码编辑器无法执行 KLayout 单元。",
