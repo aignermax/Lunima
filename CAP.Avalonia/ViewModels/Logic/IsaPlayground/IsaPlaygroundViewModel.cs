@@ -12,7 +12,8 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// assembly program (or pick a shipped sample), assemble it into the golden
 /// <see cref="IsaEmulator"/>, and step through it while the machine state and
 /// the current source line stay visible. Editing the text marks the assembled
-/// state stale until <see cref="AssembleCommand"/> runs again.
+/// state stale until <see cref="AssembleCommand"/> runs again. The Run/Stop
+/// auto-step half (issue #1204) lives in IsaPlaygroundViewModel.Run.cs.
 /// </summary>
 public partial class IsaPlaygroundViewModel : ObservableObject
 {
@@ -34,6 +35,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResetCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleRunCommand))]
     private bool _isAssembled;
 
     [ObservableProperty]
@@ -81,7 +83,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     /// <summary>Selecting a sample loads its source into the editor and assembles it.</summary>
     partial void OnSelectedSampleChanged(IsaSampleProgram? value)
     {
-        if (value == null)
+        if (value == null || IsRunning)
         {
             return;
         }
@@ -98,7 +100,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     }
 
     /// <summary>Assembles the editor text; on success resets the machine with the new program.</summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanAssemble))]
     private void Assemble()
     {
         try
@@ -127,7 +129,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     }
 
     /// <summary>Executes the single instruction at the program counter.</summary>
-    [RelayCommand(CanExecute = nameof(IsAssembled))]
+    [RelayCommand(CanExecute = nameof(CanStep))]
     private void Step()
     {
         if (_emulator is null)

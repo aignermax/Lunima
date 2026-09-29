@@ -39,6 +39,9 @@
             <Button Content="{loc:Localize IsaPlayground.StepButton}"
                     Command="{Binding StepCommand}"
                     Background="#3d3d5d" Padding="12,6"/>
+            <Button Content="{Binding RunStopText}"
+                    Command="{Binding ToggleRunCommand}"
+                    Background="#3d3d5d" Padding="12,6"/>
             <Button Content="{loc:Localize IsaPlayground.ResetButton}"
                     Command="{Binding ResetCommand}"
                     Background="#3d3d5d" Padding="12,6"/>
@@ -64,6 +67,7 @@
                 </StackPanel>
                 <TextBox AcceptsReturn="True" TextWrapping="NoWrap" AcceptsTab="True"
                          Text="{Binding ProgramText}"
+                         IsReadOnly="{Binding IsEditorReadOnly}"
                          FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="13"
                          Background="#252525" BorderBrush="#3e3e3e"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"/>
