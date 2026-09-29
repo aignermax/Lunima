@@ -5,6 +5,7 @@
         xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
         xmlns:creation="using:CAP_Core.Components.Creation"
         xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
         xmlns:views="using:CAP.Avalonia.Views"
         xmlns:behaviors="using:CAP.Avalonia.Behaviors"
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
@@ -101,7 +102,7 @@
                 </Button>
 
                 <!-- Simulation — icon-only (play triangle), next to Fit per field feedback -->
-                <Button Command="{Binding RunSimulationCommand}"
+                <Button x:Name="RunSimulationButton" Command="{Binding RunSimulationCommand}"
                         Width="36" Margin="2" Background="#3d5d3d"
                         ToolTip.Tip="{loc:Localize Toolbar.RunSimulationTip}">
                     <PathIcon Data="M4.5,2.5 L13.5,8 L4.5,13.5 Z"
@@ -735,7 +736,8 @@
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
-                        <ListBox ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                        <ListBox x:Name="ComponentLibraryList"
+                                 ItemsSource="{Binding LeftPanel.FilteredTemplates}"
                                  Classes="compactList"
                                  behaviors:LibraryDragBehavior.IsEnabled="True"
                                  SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
@@ -1185,19 +1187,24 @@
         </DockPanel>
     </DockPanel>
 
-    <!-- First-steps tutorial overlay (#1080): bottom-centre card, non-modal so the
-         canvas stays interactive while the tour watches the user's actions -->
-    <Border IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
-            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28">
-        <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
-    </Border>
+    <!-- First-steps tutorial overlay (#1080, anchored #1167): the card docks to the
+         control the current step acts on — spotlight, arrow, card beside it;
+         non-modal so the canvas stays interactive -->
+    <tour:TourAnchorOverlay IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
+                                TargetName="{Binding Tutorial.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
 
-    <!-- "Watch it compute" tour overlay (#1143): same non-modal bottom-centre card,
-         watching the Logic panel while the Counter example runs -->
-    <Border IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
-            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28">
-        <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
-    </Border>
+    <!-- "Watch it compute" tour overlay (#1143, anchored #1167): same anchored
+         spotlight, watching the Logic panel while the Counter example runs -->
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding WatchTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
 
     <!-- Home screen overlay: compact centered card over the dimmed editor,
          shown until a project is opened/created; reopenable via the Home button -->
