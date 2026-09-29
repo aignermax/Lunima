@@ -32,6 +32,7 @@ internal sealed class PinRenderer
         var highlightedPin = rc.ViewModel.HighlightedPin?.Pin;
         var dragStartPin = rc.InteractionState.ConnectionDragStartPin;
         byte baseAlpha = (byte)(isDimmed ? 128 : 255);
+        double pitchScale = PinPitchSizer.ComputeScale(comp.Component.PhysicalPins, isConnectMode ? 8 : 5);
 
         foreach (var pin in comp.Component.PhysicalPins)
         {
@@ -45,18 +46,18 @@ internal sealed class PinRenderer
                 PinConnectionAffordance.IsIncompatibleTarget(dragStartPin, pin);
             byte alpha = isIncompatibleTarget ? (byte)(baseAlpha / 3) : baseAlpha;
 
-            double pinSize = PinScreenSize.CapWorldRadius(isConnectMode ? 8 : 5, rc.Zoom);
+            double pinSize = PinScreenSize.CapWorldRadius((isConnectMode ? 8 : 5) * pitchScale, rc.Zoom);
             IBrush pinBrush = GetPinBrush(isHighlighted, isConnectMode, pin, alpha);
 
             if (isHighlighted)
             {
-                pinSize = PinScreenSize.CapWorldRadius(12, rc.Zoom);
+                pinSize = PinScreenSize.CapWorldRadius(12 * pitchScale, rc.Zoom);
                 var glowBrush = new SolidColorBrush(Color.FromArgb((byte)(100 * alpha / 255), 0, 255, 255));
                 context.DrawEllipse(glowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
             }
 
             DrawPinShape(context, pin, pinBrush, pinX, pinY, pinSize, alpha);
-            DrawPinDirectionIndicator(context, pin, pinX, pinY, isHighlighted, isDimmed, rc.Zoom);
+            DrawPinDirectionIndicator(context, pin, pinX, pinY, isHighlighted, isDimmed, rc.Zoom, pitchScale);
 
             if (isHighlighted)
             {
@@ -76,7 +77,9 @@ internal sealed class PinRenderer
     }
 
     /// <summary>
-    /// Enqueues the component name label (anchored at the top-left of the component) into the
+    /// Enqueues the component name label (anchored below the footprint for flat components,
+    /// inside the top-left corner otherwise — see
+    /// <see cref="LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor"/>) into the
     /// deferred topmost pass, using the <see cref="FormattedText"/>
     /// <see cref="LabelDeclutter.ComponentNameLabelComputer"/> already measured (screen-space
     /// font-size clamped, and shared/cached by (name, font size)) — this method never measures
@@ -88,7 +91,7 @@ internal sealed class PinRenderer
     {
         byte alpha = (byte)(isDimmed ? 128 : 255);
         labels.Enqueue(labelText, new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)),
-            new Point(comp.X + 5, comp.Y + 5));
+            LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor(comp, labelText.Height));
     }
 
     /// <summary>
@@ -163,7 +166,7 @@ internal sealed class PinRenderer
 
     private static void DrawPinDirectionIndicator(
         DrawingContext context, PhysicalPin pin, double pinX, double pinY,
-        bool isHighlighted, bool isDimmed, double zoom)
+        bool isHighlighted, bool isDimmed, double zoom, double pitchScale)
     {
         byte alpha = (byte)(isDimmed ? 128 : 255);
         var dirBrush = isHighlighted
@@ -171,7 +174,7 @@ internal sealed class PinRenderer
             : new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255));
         var dirPen = new Pen(dirBrush, isHighlighted ? 2 : 1);
         double angle = pin.GetAbsoluteAngle() * Math.PI / 180;
-        double dirLength = PinScreenSize.CapWorldRadius(isHighlighted ? 20 : 15, zoom);
+        double dirLength = PinScreenSize.CapWorldRadius((isHighlighted ? 20 : 15) * pitchScale, zoom);
         context.DrawLine(dirPen,
             new Point(pinX, pinY),
             new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength));

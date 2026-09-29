@@ -1,3 +1,4 @@
+using System.Globalization;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 using Shouldly;
@@ -98,5 +99,94 @@ public class IsaPlaygroundViewModelTests
 
         vm.IsAssembled.ShouldBeFalse();
         vm.StepCommand.CanExecute(null).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Run_CountTo5_TicksUntilHalt_EndsHaltedWithAccumulator5()
+    {
+        var vm = new IsaPlaygroundViewModel();
+        vm.ToggleRunCommand.Execute(null);
+        vm.IsRunning.ShouldBeTrue();
+
+        int ticks = 0;
+        while (vm.IsRunning && ticks < StepBudget)
+        {
+            vm.AdvanceRunTick();
+            ticks++;
+        }
+
+        vm.IsRunning.ShouldBeFalse("count-to-5 must halt within the step budget");
+        vm.Accumulator.ShouldBe(5);
+        var expected = string.Format(
+            CultureInfo.InvariantCulture,
+            LocalizationService.Instance.Translate("IsaPlayground.StatusHaltedAfterSteps"),
+            ticks);
+        vm.MachineStatusText.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void RunCommand_ReturnsImmediately_NoStepsWithoutTicks()
+    {
+        var vm = new IsaPlaygroundViewModel();
+
+        vm.ToggleRunCommand.Execute(null);
+
+        vm.IsRunning.ShouldBeTrue();
+        vm.ProgramCounter.ShouldBe(0, "the run loop must not step synchronously on the UI thread");
+        vm.Accumulator.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Stop_MidRun_LeavesPcAndReenablesStep()
+    {
+        var vm = new IsaPlaygroundViewModel();
+        vm.ToggleRunCommand.Execute(null);
+        vm.AdvanceRunTick();
+        vm.AdvanceRunTick();
+        int pc = vm.ProgramCounter;
+        pc.ShouldBeGreaterThan(0);
+
+        vm.ToggleRunCommand.Execute(null); // Stop
+
+        vm.IsRunning.ShouldBeFalse();
+        vm.ProgramCounter.ShouldBe(pc);
+        vm.StepCommand.CanExecute(null).ShouldBeTrue();
+        vm.AdvanceRunTick();
+        vm.ProgramCounter.ShouldBe(pc, "ticks after Stop must be no-ops");
+    }
+
+    [Fact]
+    public void Run_EndlessLoop_StepCapStopsWithMessage()
+    {
+        var vm = new IsaPlaygroundViewModel();
+        vm.ProgramText = "loop: JMP loop";
+        vm.AssembleCommand.Execute(null);
+        vm.ToggleRunCommand.Execute(null);
+
+        int guard = IsaPlaygroundViewModel.MaxRunSteps + 10;
+        while (vm.IsRunning && guard-- > 0)
+        {
+            vm.AdvanceRunTick();
+        }
+
+        vm.IsRunning.ShouldBeFalse("the step cap must stop an endless loop");
+        var expected = string.Format(
+            CultureInfo.InvariantCulture,
+            LocalizationService.Instance.Translate("IsaPlayground.StatusStepCapReached"),
+            IsaPlaygroundViewModel.MaxRunSteps);
+        vm.MachineStatusText.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void WhileRunning_EditorReadOnly_AndAssembleStepDisabled()
+    {
+        var vm = new IsaPlaygroundViewModel();
+
+        vm.ToggleRunCommand.Execute(null);
+
+        vm.IsEditorReadOnly.ShouldBeTrue();
+        vm.RunStopText.ShouldBe(LocalizationService.Instance.Translate("IsaPlayground.StopButton"));
+        vm.StepCommand.CanExecute(null).ShouldBeFalse();
+        vm.AssembleCommand.CanExecute(null).ShouldBeFalse();
     }
 }

@@ -52,10 +52,10 @@ public partial class WatchComputeTourViewModel : ObservableObject
         _dock = dock;
         Steps = new List<TutorialStep>
         {
-            new("WatchTour.Step1Title", "WatchTour.Step1Body", () => _logic.HasNetwork),
-            new("WatchTour.Step2Title", "WatchTour.Step2Body", () => _logic.ClockStepCount > 0),
-            new("WatchTour.Step3Title", "WatchTour.Step3Body", () => _logic.IsRunning),
-            new("WatchTour.Step4Title", "WatchTour.Step4Body", () => _sawRunStarted && !_logic.IsRunning),
+            new("WatchTour.Step1Title", "WatchTour.Step1Body", () => _logic.HasNetwork, "LogicBuildButton"),
+            new("WatchTour.Step2Title", "WatchTour.Step2Body", () => _logic.ClockStepCount > 0, "LogicStepClockButton"),
+            new("WatchTour.Step3Title", "WatchTour.Step3Body", () => _logic.IsRunning, "LogicRunStopButton"),
+            new("WatchTour.Step4Title", "WatchTour.Step4Body", () => _sawRunStarted && !_logic.IsRunning, "LogicRunStopButton"),
             new("WatchTour.Step5Title", "WatchTour.Step5Body", () => false),
         };
     }
@@ -71,6 +71,9 @@ public partial class WatchComputeTourViewModel : ObservableObject
 
     /// <summary>Localized body text of the current step.</summary>
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
+
+    /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
+    public string? CurrentTargetName => CurrentStep.TargetName;
 
     /// <summary>Localized position label, e.g. "Step 2/5".</summary>
     public string ProgressText => string.Format(
@@ -153,6 +156,7 @@ public partial class WatchComputeTourViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentStep));
         OnPropertyChanged(nameof(CurrentTitle));
         OnPropertyChanged(nameof(CurrentBody));
+        OnPropertyChanged(nameof(CurrentTargetName));
         OnPropertyChanged(nameof(ProgressText));
     }
 }
