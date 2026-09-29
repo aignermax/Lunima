@@ -112,6 +112,7 @@ public static class ComponentTemplates
         component.GdsFactoryRoutingCrossSection = template.GdsFactoryRoutingCrossSection;
 
         component.HumanReadableName = template.Name;
+        component.TemplateName = template.Name;
         component.ParameterDefinitions = template.ParameterDefinitions;
         component.OutlinePolygons = template.OutlinePolygons;
 

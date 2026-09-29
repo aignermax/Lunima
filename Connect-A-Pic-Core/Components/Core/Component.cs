@@ -119,6 +119,18 @@ public partial class Component : ICloneable
     public string? NazcaModuleName { get; set; }
 
     /// <summary>
+    /// Name of the library template this instance was created from (e.g. "Edge
+    /// Coupler"). Stamped at placement and on load; the save path prefers it over
+    /// guessing by <see cref="NazcaFunctionName"/>, which is not unique across a
+    /// PDK (the demo PDK's grating and edge couplers share "demo.io" — grouped
+    /// children were saved under the first matching template and reloaded with the
+    /// wrong S-matrix, #1208). Runtime-only: persistence flows through the existing
+    /// TemplateName DTO fields.
+    /// </summary>
+    [JsonIgnore]
+    public string? TemplateName { get; set; }
+
+    /// <summary>
     /// gdsfactory factory name for gdsfactory-backend PDK components (e.g.
     /// "cspdk.sin300.mmi1x2"); null for Nazca components. When set, the gdsfactory export
     /// calls this factory directly (and activates its PDK module) instead of a Nazca-mapped
@@ -414,6 +426,7 @@ public partial class Component : ICloneable
         clonedComponent.IsLocked = false;  // Cloned components should always be unlocked
         clonedComponent.LaserEnabled = LaserEnabled;
         clonedComponent.HumanReadableName = HumanReadableName;
+        clonedComponent.TemplateName = TemplateName;
         clonedComponent.ParameterDefinitions = ParameterDefinitions;
 
         // The constructor sweeps every slider to its range midpoint to prime the
