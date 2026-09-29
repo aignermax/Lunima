@@ -81,8 +81,6 @@ public class ChipletEdgeCouplerJourneyTests
             "Step 3: grating × waveguide × edge coupler × edge coupler × waveguide (plus the wires' "
             + "0.5 dB/cm propagation loss) arrives at chiplet B's output");
         outputBefore.ShouldBeGreaterThan(0, "Step 3: light actually crosses the chiplet boundary");
-        Math.Pow(outputBefore, 2).ShouldBeGreaterThan(0,
-            "Step 3: the output power is non-zero across the boundary");
 
         // ── Step 4: Design Validation — the cross-chiplet link is no DRC violation.
         var panel = RunValidation(design.Canvas, design);

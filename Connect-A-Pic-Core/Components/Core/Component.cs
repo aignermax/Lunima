@@ -124,7 +124,7 @@ public partial class Component : ICloneable
     /// guessing by <see cref="NazcaFunctionName"/>, which is not unique across a
     /// PDK (the demo PDK's grating and edge couplers share "demo.io" — grouped
     /// children were saved under the first matching template and reloaded with the
-    /// wrong S-matrix, #1208). Runtime-only: persistence flows through the existing
+    /// wrong S-matrix). Runtime-only: persistence flows through the existing
     /// TemplateName DTO fields.
     /// </summary>
     [JsonIgnore]

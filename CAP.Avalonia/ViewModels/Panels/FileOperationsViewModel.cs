@@ -808,7 +808,7 @@ public partial class FileOperationsViewModel : ObservableObject
         // Grouped children have no canvas VM: trust the template stamp the instance
         // was created/loaded with — NazcaFunctionName is not unique across a PDK
         // (demo PDK grating and edge couplers both map to "demo.io"), so guessing
-        // by it silently re-parents the component onto the wrong template (#1208).
+        // by it silently re-parents the component onto the wrong template.
         if (!string.IsNullOrEmpty(component.TemplateName)
             && _componentLibrary.Any(t => t.Name == component.TemplateName))
             return component.TemplateName;
