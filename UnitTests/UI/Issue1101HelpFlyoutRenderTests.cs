@@ -121,10 +121,10 @@ public class Issue1101HelpFlyoutRenderTests
 
     /// <summary>
     /// Pins the physics-honesty sentences: the truth-table section must credit the real
-    /// S-matrix simulation, and the register section must mark the power-up-cleared state
-    /// as a behavioral convention and tie feedback loops to registers. Since #1118 the
-    /// register section must also name the shipped UI (register toggle, Step clock
-    /// button) and point at the SR-latch / 2-bit-counter examples as the try-it-now path.
+    /// S-matrix simulation, and the register section must tie feedback loops to
+    /// registers and name the shipped UI (Truth Table panel, Step clock). #1196
+    /// migrated the flyout to the #1152 short-sections budget, so the pin covers the
+    /// surviving honesty cues of the shortened copy, not the old long-form wording.
     /// </summary>
     [Fact]
     public void NewHelpText_KeepsPlainLanguageAndPhysicsHonesty()
@@ -134,22 +134,14 @@ public class Issue1101HelpFlyoutRenderTests
         en["TruthTableHelp.SimulationBody"].ShouldContain("S-matrix");
         en["TruthTableHelp.SimulationBody"].ShouldContain("2^N");
 
-        en["LogicPanelHelp.RegisterBody"].ShouldContain("behavioral");
-        en["LogicPanelHelp.RegisterBody"].ShouldContain("feedback");
-        en["LogicPanelHelp.RegisterBody"].ShouldContain("0");
-        en["LogicPanelHelp.RegisterBody"].ShouldContain("Register (state element)");
+        en["LogicPanelHelp.RegisterBody"].ShouldContain("Truth Table panel");
         en["LogicPanelHelp.RegisterBody"].ShouldContain("Step clock");
-        en["LogicPanelHelp.RegisterBody"].ShouldContain("SR-Latch");
-        en["LogicPanelHelp.RegisterBody"].ShouldContain("Counter 2-bit");
+        en["LogicPanelHelp.RegisterBody"].ShouldContain("feedback");
 
-        // Run cadence honesty + reset-as-convention (#1134): the flyout ties the
-        // tick to a Step, marks the cadence as a UI convenience, and names Reset's
-        // power-up convention a behavioral-model claim, not physics.
-        en["LogicPanelHelp.RunResetBody"].ShouldContain("Step");
-        en["LogicPanelHelp.RunResetBody"].ShouldContain("not physics");
-        en["LogicPanelHelp.RunResetBody"].ShouldContain("behavioral model");
-        en["LogicPanelHelp.RunResetBody"].ShouldContain("not a physical claim");
-        en["LogicPanelHelp.RunResetBody"].ShouldContain("restarts at 0");
+        // Run cadence + reset honesty (#1134, shortened in #1196): the flyout ties
+        // every auto-clock tick to a Step press and Reset to the power-up state.
+        en["LogicPanelHelp.RunResetBody"].ShouldContain("Step clock");
+        en["LogicPanelHelp.RunResetBody"].ShouldContain("power-up");
     }
 
     /// <summary>

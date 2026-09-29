@@ -195,15 +195,17 @@ Reference: `CAP.Avalonia/ViewModels/ParameterSweepViewModel.cs`
 
   | Feature type | Surface |
   |---|---|
-  | Acts on the selected component/connection | Properties panel (right) — the *only* case for the sidebar |
-  | Acts on the whole design / has its own workflow (analysis, sweep, import, export, run mode) | **Own window or dockable tool window** (`Views/*Window.axaml`, e.g. `ProcessManagementWindow`) |
-  | Short, focused task with a few inputs | **Dialog** (`Views/Dialogs/`, e.g. `GdsImportDialog`) |
-  | Contextual, transient information or a small choice | **Flyout / popup** anchored to the element (e.g. `HelpFlyoutButton`, probe flyout) |
-  | Spatial feedback about the design | **Canvas overlay** (guides, badges, power-flow, DRC markers) |
+  | Acts on the selected component/connection | Properties panel (right) — the *only* case for the sidebar (e.g. `SelectedComponentPropertiesPanel`) |
+  | Whole-design analysis, sweeps, checks, generated views | **Analysis dock tab (bottom)** (e.g. `AnalysisDockPanel`: Transient, Sweep, Checks, Netlist…) |
+  | Self-contained workflows (browse, configure, chat, import, export, run mode) | **Own window or dockable tool window** + toolbar/menu entry (`Views/*Window.axaml`, e.g. `ProcessManagementWindow`, `RegistryBrowserWindow`, `AiAssistantWindow`) |
+  | Short, focused task / one-shot decision with a few inputs | **Dialog** (`Views/Dialogs/`, e.g. `GdsImportDialog`, `ProcessSelectionDialog`) |
+  | Contextual, transient information or a small choice | **Flyout / popup** anchored to the element (e.g. `HelpFlyoutButton`, PDK trash flyout, probe flyout) |
+  | Spatial feedback about the design | **Canvas overlay** (guides, badges, power-flow, DRC markers, `ModeProbePanel`) |
   | Frequent action | **Toolbar button / context menu / shortcut** — never a buried panel |
 
-- Features must be **discoverable**: a visible entry point (toolbar, menu, canvas), not only a
-  keyboard shortcut or a nested expander.
+- Features must be **discoverable**: a visible entry point (toolbar, menu, canvas) reachable in
+  ≤ 2 clicks — not only a keyboard shortcut or a nested expander — and the feature keeps its
+  keyboard shortcut if it had one.
 - **Help `(?)` content: animate, don't lecture.** Use the shared `HelpFlyoutButton` control. Text is
   capped at ~3 short sentences per section; anything physically non-obvious gets an **illustrative
   animation** (Avalonia `Animation`/`Transitions`, see `TransientHelpFlyout` / `EyeHelpFlyout`) —

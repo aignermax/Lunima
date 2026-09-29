@@ -8,18 +8,21 @@ namespace CAP.Avalonia.Services.ComponentRegistry;
 /// Outcome of adopting a registry component into the local library
 /// (issue #773). On success <see cref="PdkName"/> is the "Registry &lt;process&gt;"
 /// user PDK the component was added to and <see cref="FilePath"/> its file;
-/// on failure <see cref="ErrorMessage"/> explains why (never throws).
+/// <see cref="ReplacedExisting"/> tells the UI whether a previous download of
+/// the same registry entry was replaced (its state backed up to <c>.trash</c>)
+/// or the component was newly added. On failure <see cref="ErrorMessage"/>
+/// explains why (never throws).
 /// </summary>
 public sealed record RegistryDownloadResult(
-    bool IsSuccess, string? PdkName, string? FilePath, string? ErrorMessage)
+    bool IsSuccess, string? PdkName, string? FilePath, string? ErrorMessage, bool ReplacedExisting)
 {
     /// <summary>Successful adoption into <paramref name="pdkName"/>.</summary>
-    public static RegistryDownloadResult Success(string pdkName, string filePath) =>
-        new(true, pdkName, filePath, null);
+    public static RegistryDownloadResult Success(string pdkName, string filePath, bool replacedExisting) =>
+        new(true, pdkName, filePath, null, replacedExisting);
 
     /// <summary>Failed adoption; nothing was written.</summary>
     public static RegistryDownloadResult Failure(string errorMessage) =>
-        new(false, null, null, errorMessage);
+        new(false, null, null, errorMessage, false);
 }
 
 /// <summary>
@@ -90,9 +93,27 @@ public sealed class RegistryDownloadService
                 : choice.Artifact.Provenance.Fab,
         };
         // Backend like a black-box GDS import: no exportable geometry backend —
-        // the component is a data-only S-matrix block.
-        var filePath = _userPdkStore.SaveToNamedPdk(pdkName, process, draft, backend: "nazca", routingCrossSection: null);
-        _onPdkSaved?.Invoke(filePath);
-        return RegistryDownloadResult.Success(pdkName, filePath);
+        // the component is a data-only S-matrix block. Keyed on the registry id
+        // (carried in the provenance note), never the display name: a re-download
+        // replaces its own earlier copy with a .trash backup, while a same-named
+        // DIFFERENT registry entry is a clash that must not overwrite it.
+        var save = _userPdkStore.SaveComponentKeyed(
+            pdkName, process, draft, IsSameRegistryComponent(manifest.Id), backend: "nazca", routingCrossSection: null);
+        if (save.Outcome == KeyedComponentSaveOutcome.NameClash)
+        {
+            return RegistryDownloadResult.Failure(
+                $"A different component named '{manifest.Name}' already exists in '{pdkName}' — " +
+                "refusing to overwrite it. Rename the existing component first.");
+        }
+
+        _onPdkSaved?.Invoke(save.FilePath);
+        return RegistryDownloadResult.Success(
+            pdkName, save.FilePath, save.Outcome == KeyedComponentSaveOutcome.Replaced);
+    }
+
+    private static Predicate<PdkComponentDraft> IsSameRegistryComponent(string registryId)
+    {
+        var prefix = RegistryComponentDraftMapper.RegistryIdPrefix(registryId);
+        return c => c.SMatrix?.SourceNote?.StartsWith(prefix, StringComparison.Ordinal) == true;
     }
 }

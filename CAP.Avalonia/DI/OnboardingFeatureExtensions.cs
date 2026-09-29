@@ -15,7 +15,8 @@ internal static class OnboardingFeatureExtensions
         services.AddSingleton<TutorialViewModel>();
         // LogicPanelViewModel is transient; the tour must observe the one panel the window shows.
         services.AddSingleton(sp => new WatchComputeTourViewModel(
-            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic));
+            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,
+            sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis));
 
         return services;
     }

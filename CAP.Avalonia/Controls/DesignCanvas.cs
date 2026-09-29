@@ -6,6 +6,7 @@ using Avalonia.Media;
 using CAP.Avalonia.Controls.Canvas.AnalysisOutput;
 using CAP.Avalonia.Controls.Canvas.BendHandles;
 using CAP.Avalonia.Controls.Canvas.CutTool;
+using CAP.Avalonia.Controls.Canvas.LibraryDrop;
 using CAP.Avalonia.Controls.Canvas.SegmentShiftHandles;
 using CAP.Avalonia.Controls.Handlers;
 using CAP.Avalonia.Controls.Rendering;
@@ -120,6 +121,10 @@ public class DesignCanvas : Control
         _keyboardHandler = new KeyboardHandler(() => ViewModel, () => MainViewModel, () => Bounds);
 
         InitGestures();
+
+        // Library drag&drop (#1157): accept templates dragged from the library panel and
+        // place them at the release point instead of silently staying in place mode.
+        LibraryDropTarget.Attach(this, ScreenToCanvas);
 
         // Select the component under the cursor when the context menu opens, so the menu acts on the
         // right-clicked element. Tunnel phase runs before the menu evaluates its command CanExecute.

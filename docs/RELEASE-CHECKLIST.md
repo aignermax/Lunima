@@ -22,10 +22,11 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
+- [ ] Golden-design regression gate — every example in `UnitTests/Regression/golden/manifest.json` loads, re-routes, passes DRC-lite, and matches its pinned simulation reference. `(auto: GoldenDesignTests)`
 - [ ] Create a new project → an empty canvas with the chosen process / playground is shown. `(auto: FileOperationsProjectLifecycleTests)`
 - [ ] Reopen the last project on startup → previous file opens automatically if preference is enabled. `(auto: HomeReopenLastProjectTests)`
 - [ ] Save a design as `.lun`, close, and reopen → layout, components, and settings are restored. `(auto: FileOperationsProjectLifecycleTests)`
-- [ ] **Save As** creates a new file without changing the current open path. `(manual)`
+- [ ] **Save As** writes a new file and makes it the current document (title + later Save target switch to it, standard Save-As semantics); the typed file name arrives complete (first keystroke not lost). `(manual)`
 - [ ] Dirty-state marker (`*`) appears in title bar after an edit and clears on save. `(auto: WindowTitleTests)`
 - [ ] Check for update banner appears when a newer release is available. `(manual)`
 - [ ] Settings window opens from toolbar and shows all settings pages. `(manual)`
@@ -111,6 +112,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Component dimension diagnostics detect out-of-bounds geometry. `(auto: ComponentDimensionValidatorTests)`
 - [ ] Layout compression panel shrinks the design within constraints. `(auto: LayoutCompressorTests)`
 - [ ] Analysis output panel shows designated outputs and persists them. `(auto: AnalysisOutput/AnalysisOutputPanelViewModelTests)`
+- [ ] Logic panel lives in the analysis dock's Logic tab: builds the logic network of the loaded design, toggles inputs, steps/runs the clock, and shows timeline + waveform lanes. `(auto: WatchComputeTourViewModelTests, WatchTourCounterExampleTests)`
 
 ## 10. Component-specific tools & properties
 
@@ -182,6 +184,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] GDS coordinate comparison view loads two coordinate JSON exports side by side. `(manual)`
 - [ ] Help flyouts for transient and eye workflows appear on first use. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
+- [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
 
 ## 18. Cross-platform sanity
 
@@ -191,6 +194,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 ## 19. Performance & stability
 
+- [ ] No `[RelayCommand]` on `MainViewModel` blocks the UI thread longer than 100 ms against the shipped 4-bit-adder example. `(auto: ResponsivenessBudgetTests)`
 - [ ] Large design (> 500 components) opens without UI hangs. `(manual)`
 - [ ] Memory usage remains stable after repeated open/save cycles. `(manual)`
 - [ ] Crash during simulation shows a readable error in the console rather than a hard exit. `(manual)`

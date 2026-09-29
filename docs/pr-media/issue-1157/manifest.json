@@ -1,0 +1,4 @@
+[
+  {"file": "01-drag-ghost-over-canvas.png", "caption": "Mid-drag: the 2x2 MMI Coupler ghost follows the pointer over the canvas and the status bar reads 'Release to place' — before the fix, releasing here did nothing."},
+  {"file": "02-after-drop.png", "caption": "After the release: the instance sits at the release point and the canvas is back in Select mode — no second click needed."}
+]

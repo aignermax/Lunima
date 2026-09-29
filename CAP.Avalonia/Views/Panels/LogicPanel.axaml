@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              xmlns:logic="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis"
              xmlns:bus="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView"
@@ -22,46 +23,17 @@
         </Style>
     </UserControl.Styles>
 
-    <StackPanel>
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+    <!-- Hosted as the Logic tab of the analysis dock (formerly a right-sidebar section, #1183). -->
+    <StackPanel Margin="10,8">
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Localize LogicPanel.Title}" Foreground="MediumPurple" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <!-- Plain-language help: why the logic layer restores clean 0/1 levels
-                 while the passive optical cascade gives up after about two stages. -->
+            <!-- Plain-language help (#1196): short sections + the light → 0/1
+                 threshold animation live in the extracted LogicHelpFlyout. -->
             <controls:HelpFlyoutButton Grid.Column="1"
                                        Title="{loc:Localize LogicPanelHelp.Title}"
                                        VerticalAlignment="Center" Margin="0,-5,0,0">
                 <controls:HelpFlyoutButton.HelpContent>
-                    <StackPanel Spacing="8" MaxWidth="400">
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                   Text="{loc:Localize LogicPanelHelp.Intro}"/>
-
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.RestorationTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize LogicPanelHelp.RestorationBody}"/>
-
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.InputsTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize LogicPanelHelp.InputsBody}"/>
-
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.BusTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize LogicPanelHelp.BusBody}"/>
-
-                        <!-- Registers/clocking (#1101): the register state element landed
-                             in #1086; the register paragraph stays generic until the
-                             toggle UI (#1098) and the Step button (#1099) ship. -->
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.RegisterTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize LogicPanelHelp.RegisterBody}"/>
-
-                        <!-- Run (#1111) and Reset (#1127): the auto-clock cadence is a
-                             UI convenience, and the power-up reset is a convention of
-                             the behavioral model — the flyout keeps that honest. -->
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.RunResetTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize LogicPanelHelp.RunResetBody}"/>
-                    </StackPanel>
+                    <panels:LogicHelpFlyout/>
                 </controls:HelpFlyoutButton.HelpContent>
             </controls:HelpFlyoutButton>
         </Grid>
