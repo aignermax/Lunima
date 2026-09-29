@@ -112,6 +112,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Component dimension diagnostics detect out-of-bounds geometry. `(auto: ComponentDimensionValidatorTests)`
 - [ ] Layout compression panel shrinks the design within constraints. `(auto: LayoutCompressorTests)`
 - [ ] Analysis output panel shows designated outputs and persists them. `(auto: AnalysisOutput/AnalysisOutputPanelViewModelTests)`
+- [ ] Logic panel lives in the analysis dock's Logic tab: builds the logic network of the loaded design, toggles inputs, steps/runs the clock, and shows timeline + waveform lanes. `(auto: WatchComputeTourViewModelTests, WatchTourCounterExampleTests)`
 
 ## 10. Component-specific tools & properties
 

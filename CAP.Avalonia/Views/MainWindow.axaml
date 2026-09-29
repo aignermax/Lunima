@@ -975,9 +975,6 @@
                     <!-- Truth Table Panel (logic-gate behavior of the selected group) -->
                     <panels:TruthTablePanel/>
 
-                    <!-- Logic Panel (toggle network inputs, live gate outputs of the loaded design) -->
-                    <panels:LogicPanel/>
-
                 </StackPanel>
                 </ScrollViewer>
             </DockPanel>

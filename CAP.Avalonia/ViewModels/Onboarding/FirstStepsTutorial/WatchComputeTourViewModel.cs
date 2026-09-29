@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
+using CAP.Avalonia.ViewModels.Panels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -22,6 +23,7 @@ public partial class WatchComputeTourViewModel : ObservableObject
     public const string CounterExampleFileName = "Logic Gate Counter 2-bit.lun";
 
     private readonly LogicPanelViewModel _logic;
+    private readonly AnalysisDockViewModel _dock;
 
     /// <summary>True once Run was pressed — the stop step completes on the falling edge of IsRunning, not its level.</summary>
     private bool _sawRunStarted;
@@ -41,10 +43,13 @@ public partial class WatchComputeTourViewModel : ObservableObject
     /// <summary>
     /// Builds the tour steps against the given Logic panel: build the network,
     /// step the clock once, run the auto-clock, stop it again, closing words.
+    /// The Logic panel lives in the analysis dock (#1183), so starting the tour
+    /// opens the dock on the Logic tab to keep the panel the steps act on visible.
     /// </summary>
-    public WatchComputeTourViewModel(LogicPanelViewModel logic)
+    public WatchComputeTourViewModel(LogicPanelViewModel logic, AnalysisDockViewModel dock)
     {
         _logic = logic;
+        _dock = dock;
         Steps = new List<TutorialStep>
         {
             new("WatchTour.Step1Title", "WatchTour.Step1Body", () => _logic.HasNetwork),
@@ -73,7 +78,7 @@ public partial class WatchComputeTourViewModel : ObservableObject
         LocalizationService.Instance.Translate("Tutorial.Step"),
         CurrentStepIndex + 1, Steps.Count);
 
-    /// <summary>Starts the tour at the first step and begins observing the Logic panel.</summary>
+    /// <summary>Starts the tour at the first step, opens the Logic tab and begins observing the Logic panel.</summary>
     public void Start()
     {
         Detach();
@@ -81,6 +86,7 @@ public partial class WatchComputeTourViewModel : ObservableObject
         IsCompleted = false;
         _sawRunStarted = false;
         IsActive = true;
+        _dock.OpenLogic();
         _logic.PropertyChanged += OnLogicPropertyChanged;
         EvaluateCurrentStep();
     }
