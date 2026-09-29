@@ -10,9 +10,11 @@ namespace CAP.Avalonia.Controls.Rendering.LabelDeclutter;
 /// frame: names stay visible by default for orientation (Peter's dense layouts still need to
 /// tell components apart at a glance — docs/PERSONAS.md), but a label whose measured bounds
 /// overlap a higher-priority one (selected &gt; hovered &gt; rest, see <see cref="LabelPriority"/>)
-/// is dropped rather than drawn as illegible overlapping text.
-/// ComponentGroups render their own boxed, bordered name label via
-/// <see cref="ComponentGroupRenderer.RenderGroupNameLabel"/> and are out of scope here.
+/// is dropped rather than drawn as illegible overlapping text. Group CHILD components go
+/// through the same measurement and overlap resolution as top-level components (keyed by
+/// <see cref="Component.Id"/>), so two tightly stacked flat children inside a group can never
+/// draw both names on top of each other. Only the ComponentGroup's own boxed, bordered name
+/// label (<see cref="ComponentGroupRenderer.RenderGroupNameLabel"/>) is out of scope here.
 ///
 /// Two-stage caching so panning never re-triggers the expensive sweep: the priority/overlap
 /// resolution (<see cref="LabelOverlapResolver"/>) depends only on quantized zoom and content
@@ -49,9 +51,20 @@ public sealed class ComponentNameLabelComputer
     /// <param name="comp">The component owning the label.</param>
     /// <param name="labelHeight">Measured world-space height of the label text.</param>
     internal static Point GetLabelAnchor(ComponentViewModel comp, double labelHeight) =>
-        comp.Height < labelHeight
-            ? new(comp.X + LabelOffsetX, comp.Y + comp.Height + LabelGapBelow)
-            : new(comp.X + LabelInsetInside, comp.Y + LabelInsetInside);
+        GetLabelAnchor(comp.X, comp.Y, comp.Height, labelHeight);
+
+    /// <summary>Primitive overload of <see cref="GetLabelAnchor(ComponentViewModel, double)"/>
+    /// for group CHILD components, which have no ViewModel of their own — the same single
+    /// source of truth, so a child's measured overlap bounds and its drawn position can never
+    /// diverge either.</summary>
+    /// <param name="x">World-space left edge of the component footprint.</param>
+    /// <param name="y">World-space top edge of the component footprint.</param>
+    /// <param name="height">World-space footprint height.</param>
+    /// <param name="labelHeight">Measured world-space height of the label text.</param>
+    internal static Point GetLabelAnchor(double x, double y, double height, double labelHeight) =>
+        height < labelHeight
+            ? new(x + LabelOffsetX, y + height + LabelGapBelow)
+            : new(x + LabelInsetInside, y + LabelInsetInside);
 
     /// <summary>Zoom is quantized to this step before it factors into the overlap-resolution
     /// signature or the measured font size, so continuous zoom (e.g. a smooth scroll) doesn't
@@ -126,7 +139,11 @@ public sealed class ComponentNameLabelComputer
         double fontSize = PinScreenSize.ClampWorldFontSize(PinRenderer.NameLabelFontSizeWorld, quantizedZoom);
         foreach (var comp in components)
         {
-            if (comp.Component is ComponentGroup) continue;
+            if (comp.Component is ComponentGroup group)
+            {
+                AddGroupChildCandidates(group, fontSize, candidates, bounds, text);
+                continue;
+            }
 
             var id = comp.Component.Id;
             var formatted = GetOrMeasureText(comp.Name, fontSize);
@@ -144,6 +161,30 @@ public sealed class ComponentNameLabelComputer
         _labelBounds = bounds;
         _labelText = text;
         _overlapVisibleIds = LabelOverlapResolver.ResolveVisibleLabels(candidates);
+    }
+
+    /// <summary>Adds every (recursively nested) group child's label as a Normal-priority
+    /// candidate, measured and anchored exactly like a top-level component — children can be
+    /// stacked only micrometers apart (e.g. the Full Adder's paired straight waveguides), so
+    /// skipping them from overlap resolution drew both names as illegible overlapping text.</summary>
+    private void AddGroupChildCandidates(ComponentGroup group, double fontSize,
+        List<LabelCandidate> candidates, Dictionary<Guid, Rect> bounds, Dictionary<Guid, FormattedText> text)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nested)
+            {
+                AddGroupChildCandidates(nested, fontSize, candidates, bounds, text);
+                continue;
+            }
+
+            var formatted = GetOrMeasureText(child.HumanReadableName ?? child.Identifier, fontSize);
+            var anchor = GetLabelAnchor(child.PhysicalX, child.PhysicalY, child.HeightMicrometers, formatted.Height);
+            var labelBounds = new Rect(anchor.X, anchor.Y, formatted.Width, formatted.Height);
+            bounds[child.Id] = labelBounds;
+            text[child.Id] = formatted;
+            candidates.Add(new LabelCandidate(child.Id, labelBounds, LabelPriority.Normal));
+        }
     }
 
     /// <summary>
@@ -198,7 +239,32 @@ public sealed class ComponentNameLabelComputer
             hash.Add(comp.Height);
             hash.Add(comp.Component.RotationDegrees);
             hash.Add(comp.IsSelected);
+            if (comp.Component is ComponentGroup group)
+                HashGroupChildren(group, ref hash);
         }
         return hash.ToHashCode();
+    }
+
+    /// <summary>Folds every (recursively nested) group child's label-relevant state into the
+    /// signature, mirroring <see cref="AddGroupChildCandidates"/> — a child moving with its
+    /// group or being renamed must invalidate the cached overlap resolution.</summary>
+    private static void HashGroupChildren(ComponentGroup group, ref HashCode hash)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup nested)
+            {
+                HashGroupChildren(nested, ref hash);
+                continue;
+            }
+
+            hash.Add(child.Id);
+            hash.Add(child.HumanReadableName ?? child.Identifier);
+            hash.Add(child.PhysicalX);
+            hash.Add(child.PhysicalY);
+            hash.Add(child.WidthMicrometers);
+            hash.Add(child.HeightMicrometers);
+            hash.Add(child.RotationDegrees);
+        }
     }
 }

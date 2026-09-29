@@ -153,9 +153,10 @@ public class Issue1158PortPitchLabelScreenshotTests
         manifest.Add(new
         {
             file = "06-full-adder-closeup.png",
-            caption = "Full Adder close-up at working zoom: labels stay inside their own "
-                + "(tall) components instead of dropping below the footprint onto the row of "
-                + "neighbours beneath.",
+            caption = "Full Adder close-up at working zoom: group-child labels now go through "
+                + "the same declutter pass as top-level names, so of the two stacked flat "
+                + "'Straight Waveguide 100µm' children exactly one label is drawn — no label "
+                + "covers another label.",
         });
     }
 

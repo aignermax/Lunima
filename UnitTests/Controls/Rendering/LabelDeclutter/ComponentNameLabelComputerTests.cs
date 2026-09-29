@@ -103,6 +103,54 @@ public class ComponentNameLabelComputerTests
     }
 
     [AvaloniaFact]
+    public void GroupChildren_TwoFlatChildrenStackedSixteenMicrometersApart_ExactlyOneLabelVisible()
+    {
+        // Regression (issue #1158 review): the Full Adder's paired straight waveguides are
+        // flat group CHILDREN stacked micrometers apart. Child labels used to bypass the
+        // overlap resolver entirely, so both names were drawn on top of each other as
+        // illegible text. At zoom 0.25 the screen-space font floor makes each label ~28 µm
+        // tall in world space, so the two bounds 16 µm apart must collide — exactly one wins.
+        var groupVm = MakeGroupWithTwoFlatStackedChildren(verticalSpacing: 16, out var childA, out var childB);
+        var computer = new ComponentNameLabelComputer();
+
+        var visible = computer.GetVisibleLabelIds(new[] { groupVm }, hoveredComponentId: null, WideViewport, zoom: 0.25);
+
+        visible.Count.ShouldBe(1, "two overlapping flat child labels must be thinned to exactly one");
+        visible.ShouldBeSubsetOf(new[] { childA.Id, childB.Id });
+    }
+
+    [AvaloniaFact]
+    public void GroupChildren_FarApart_BothLabelsVisibleAndMeasured()
+    {
+        var groupVm = MakeGroupWithTwoFlatStackedChildren(verticalSpacing: 500, out var childA, out var childB);
+        var computer = new ComponentNameLabelComputer();
+
+        var visible = computer.GetVisibleLabelIds(new[] { groupVm }, hoveredComponentId: null, WideViewport, zoom: 1.0);
+
+        visible.ShouldBe(new[] { childA.Id, childB.Id }, ignoreOrder: true);
+        computer.TryGetLabelText(childA.Id).ShouldNotBeNull(
+            "the renderer must be able to draw the child label from the computer's measured text");
+    }
+
+    [AvaloniaFact]
+    public void GroupChildMoving_InvalidatesTheCache()
+    {
+        // A child's absolute position changes when its group is dragged — the cached overlap
+        // resolution must follow, or a moved group keeps its stale label bounds.
+        var groupVm = MakeGroupWithTwoFlatStackedChildren(verticalSpacing: 500, out var childA, out _);
+        var computer = new ComponentNameLabelComputer();
+        var components = new[] { groupVm };
+
+        computer.GetVisibleLabelIds(components, hoveredComponentId: null, WideViewport, zoom: 1.0);
+        computer.RebuildCount.ShouldBe(1);
+
+        childA.PhysicalX += 100;
+        computer.GetVisibleLabelIds(components, hoveredComponentId: null, WideViewport, zoom: 1.0);
+
+        computer.RebuildCount.ShouldBe(2, "a moved group child changes the content signature and must trigger a rebuild");
+    }
+
+    [AvaloniaFact]
     public void ComponentFarOutsideViewport_IsCulled()
     {
         var offscreen = MakeComponent("offscreen", x: 100_000, y: 100_000);
@@ -304,6 +352,20 @@ public class ComponentNameLabelComputerTests
         first.ShouldNotBeNull();
         ReferenceEquals(first, second).ShouldBeTrue(
             "the renderer must draw the exact FormattedText this computer measured, not a fresh copy");
+    }
+
+    /// <summary>Group with two flat (1 µm tall, label-height-exceeding) children sharing the
+    /// same X, the second <paramref name="verticalSpacing"/> µm below the first — the Full
+    /// Adder's stacked "Straight Waveguide 100µm" pair in miniature.</summary>
+    private static ComponentViewModel MakeGroupWithTwoFlatStackedChildren(
+        double verticalSpacing, out Component childA, out Component childB)
+    {
+        childA = MakeComponent("Straight Waveguide 100µm", x: 0, y: 0, width: 100, height: 1).Component;
+        childB = MakeComponent("Straight Waveguide 100µm", x: 0, y: verticalSpacing, width: 100, height: 1).Component;
+        var group = new ComponentGroup("Gate") { PhysicalX = 0, PhysicalY = 0 };
+        group.AddChild(childA);
+        group.AddChild(childB);
+        return new ComponentViewModel(group);
     }
 
     private static ComponentViewModel MakeComponent(
