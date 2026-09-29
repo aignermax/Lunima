@@ -1,0 +1,14 @@
+[
+  {
+    "file": "newcomponent-1-first.png",
+    "caption": "New component help: the pulse leaves the Python code, passes through the rendered component and lands on the canvas. (first frame)"
+  },
+  {
+    "file": "newcomponent-2-mid.png",
+    "caption": "New component help: the pulse leaves the Python code, passes through the rendered component and lands on the canvas. (mid loop)"
+  },
+  {
+    "file": "newcomponent-3-last.png",
+    "caption": "New component help: the pulse leaves the Python code, passes through the rendered component and lands on the canvas. (last frame \u2014 the loop\u0027s end state stays visible)"
+  }
+]
