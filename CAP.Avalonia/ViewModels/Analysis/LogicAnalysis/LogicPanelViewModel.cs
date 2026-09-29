@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -24,6 +25,7 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 public partial class LogicPanelViewModel : ObservableObject
 {
     private readonly LogicNetworkAssembler _assembler = new();
+    private readonly BuiltLogicNetworkProvider? _builtNetworkProvider;
     private DesignCanvasViewModel? _canvas;
     private CancellationTokenSource? _buildCts;
     private LogicNetworkEvaluator? _network;
@@ -129,6 +131,7 @@ public partial class LogicPanelViewModel : ObservableObject
         ShowRegisterStates(network);
 
         HasNetwork = true;
+        _builtNetworkProvider?.Publish(network);
         ReEvaluate();
     }
 
@@ -137,6 +140,7 @@ public partial class LogicPanelViewModel : ObservableObject
     {
         _network = null;
         HasNetwork = false;
+        _builtNetworkProvider?.Clear();
         _canvas?.LogicGateStates.Clear();
         HasFanOutWarnings = false;
         CriticalPathText = "";

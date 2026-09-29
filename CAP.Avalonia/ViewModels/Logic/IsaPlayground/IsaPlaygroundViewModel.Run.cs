@@ -29,6 +29,7 @@ public partial class IsaPlaygroundViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RunStopText))]
     [NotifyPropertyChangedFor(nameof(IsEditorReadOnly))]
+    [NotifyPropertyChangedFor(nameof(IsPhotonicToggleEnabled))]
     [NotifyCanExecuteChangedFor(nameof(StepCommand))]
     [NotifyCanExecuteChangedFor(nameof(AssembleCommand))]
     private bool _isRunning;
@@ -84,6 +85,7 @@ public partial class IsaPlaygroundViewModel
             return;
         }
 
+        var photonicAdd = NextStepIsPhotonicAdd();
         try
         {
             _emulator.Step();
@@ -98,6 +100,10 @@ public partial class IsaPlaygroundViewModel
 
         _runSteps++;
         UpdateState();
+        if (photonicAdd)
+        {
+            ReportPhotonicAdd();
+        }
 
         if (_emulator.IsHalted)
         {
