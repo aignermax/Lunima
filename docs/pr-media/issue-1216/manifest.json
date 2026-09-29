@@ -1,0 +1,14 @@
+[
+  {
+    "file": "fanouthelp-1-first.png",
+    "caption": "Logic fan-out help: every split halves the power \u2014 the quarter-power branches fall below the gate threshold. (first frame)"
+  },
+  {
+    "file": "fanouthelp-2-mid.png",
+    "caption": "Logic fan-out help: every split halves the power \u2014 the quarter-power branches fall below the gate threshold. (mid loop \u2014 half-power branches arrived)"
+  },
+  {
+    "file": "fanouthelp-3-last.png",
+    "caption": "Logic fan-out help: every split halves the power \u2014 the quarter-power branches fall below the gate threshold. (last frame \u2014 quarter-power branches below threshold)"
+  }
+]
