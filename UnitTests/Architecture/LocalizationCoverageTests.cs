@@ -41,6 +41,9 @@ public class LocalizationCoverageTests
         "Lunima", "S-matrix", "n_eff:", "n_eff", "MFD:", "λ (nm):", "sk-ant-...",
         // Physical unit for relative intensity noise — language-neutral like "nm".
         "dB/Hz",
+        // Pin-role name from the gate examples / Truth Table panel — a technical token
+        // that must match the persisted pin names, so it is deliberately not translated.
+        "BIAS",
     };
 
     /// <summary>Read-only code snippets shown as examples are source, not UI copy — never localized.</summary>

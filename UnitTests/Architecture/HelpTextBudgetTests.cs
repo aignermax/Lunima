@@ -41,7 +41,7 @@ public class HelpTextBudgetTests
     /// <summary>
     /// Keys of flyouts not yet migrated to the short-sections-plus-animation pattern —
     /// currently the help flyouts that only exist on the dev-ki lineage (Logic panel,
-    /// Truth Table, PDK, Registry download, Laser source) — written before this budget
+    /// PDK, Registry download, Laser source) — written before this budget
     /// existed and migrated in follow-ups. Adding an entry is a deliberate, review-visible
     /// act; remove it once the flyout is migrated.
     /// </summary>
@@ -54,19 +54,6 @@ public class HelpTextBudgetTests
         "LogicPanelFanOutHelp.Intro",
         "LogicPanelFanOutHelp.PhysicsBody",
         "LogicPanelFanOutHelp.PhysicsTitle",
-
-        // Truth Table panel flyout (dev-ki lineage, not yet migrated)
-        "TruthTableHelp.BiasBody",
-        "TruthTableHelp.BiasTitle",
-        "TruthTableHelp.InterferenceBody",
-        "TruthTableHelp.InterferenceTitle",
-        "TruthTableHelp.Intro",
-        "TruthTableHelp.SignalsBody",
-        "TruthTableHelp.SignalsTitle",
-        "TruthTableHelp.SimulationBody",
-        "TruthTableHelp.SimulationTitle",
-        "TruthTableHelp.ThresholdBody",
-        "TruthTableHelp.ThresholdTitle",
 
         // PDK help flyout in the toolbar (dev-ki lineage, not yet migrated)
         "PdkHelp.DiagramNote",
