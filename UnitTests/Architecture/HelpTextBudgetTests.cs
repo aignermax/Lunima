@@ -40,20 +40,13 @@ public class HelpTextBudgetTests
 
     /// <summary>
     /// Keys of flyouts not yet migrated to the short-sections-plus-animation pattern —
-    /// currently the NewComponentWindow inline help (prose fits, but it keeps inline code
-    /// examples and has no animation; migration is tracked in a follow-up issue) plus the
-    /// help flyouts that only exist on the dev-ki lineage (Logic panel, Truth Table, PDK,
-    /// Registry download, Laser source) — written before this budget existed and migrated
-    /// in follow-ups. Adding an entry is a deliberate, review-visible act; remove it once
-    /// the flyout is migrated.
+    /// the help flyouts that only exist on the dev-ki lineage (Logic panel, Truth Table,
+    /// PDK, Registry download, Laser source) — written before this budget existed and
+    /// migrated in follow-ups. Adding an entry is a deliberate, review-visible act;
+    /// remove it once the flyout is migrated.
     /// </summary>
     private static readonly HashSet<string> ExemptNotYetMigrated = new(StringComparer.Ordinal)
     {
-        "NewComponent.HelpTitle",
-        "NewComponent.HelpBody",
-        "NewComponent.GdsFactoryExample",
-        "NewComponent.NazcaExample",
-
         // Logic panel flyouts (dev-ki lineage, not yet migrated)
         "LogicPanelHelp.BusBody",
         "LogicPanelHelp.BusTitle",

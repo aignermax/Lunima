@@ -36,6 +36,9 @@ public class LocalizationCoverageTests
     {
         "nm", "CW", "Python", "Nazca", "gdsfactory", "SiEPIC", "PDK", "GDS", "FDTD",
         "Python:", "Nazca:", "Playground",
+        // File-extension badge on the code-file icon in the NewComponent help diagram —
+        // language-neutral like "Python".
+        "py",
         // Proper noun, technical notation, symbol+unit labels, and a key-format placeholder —
         // language-neutral, deliberately not translated.
         "Lunima", "S-matrix", "n_eff:", "n_eff", "MFD:", "λ (nm):", "sk-ant-...",

@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.NewComponentHelpFlyout"
+             MaxWidth="420">
+
+    <!-- Structure-code help for the New component window (#1171, migrated to the #1152
+         pattern): the short intro plus a looping code → component → canvas pulse
+         animation composed from LightPulseAlongPath, then the copyable gdsfactory /
+         Nazca minimal examples. Shown as the HelpContent of the window's
+         HelpFlyoutButton, which renders the title (NewComponent.HelpTitle). -->
+
+    <StackPanel Spacing="8">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize NewComponent.HelpBody}"/>
+
+        <!-- Looping animation: a pulse leaves the code, passes through the rendered
+             component and lands on the canvas. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4" HorizontalAlignment="Left">
+            <Canvas Width="380" Height="92">
+                <!-- Pulses first so they slide *under* the component box: the pulse
+                     visibly enters the component and emerges from it onto the canvas. -->
+                <ha:LightPulseAlongPath Width="380" Height="92" IsHitTestVisible="False"
+                                        PathPoints="66,45 160,45" PulseBrush="#FFF176" PulseDiameter="10"
+                                        WindowStart="0" WindowEnd="0.5"/>
+                <ha:LightPulseAlongPath Width="380" Height="92" IsHitTestVisible="False"
+                                        PathPoints="242,45 336,45" PulseBrush="#4FC3F7" PulseDiameter="10"
+                                        WindowStart="0.5" WindowEnd="1"/>
+                <!-- Your Python code -->
+                <Border Canvas.Left="10" Canvas.Top="25" Width="56" Height="40"
+                        Background="#101018" BorderBrush="#3d3d5d" BorderThickness="1" CornerRadius="4">
+                    <TextBlock Text="py" FontFamily="Consolas, Cascadia Mono, Courier New, monospace"
+                               FontSize="12" Foreground="#9aa0ff"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Canvas.Left="4" Canvas.Top="70" Text="{loc:Localize NewComponent.HelpDiagramCode}"
+                           FontSize="9" Foreground="Gray"/>
+                <!-- The rendered component with its pins -->
+                <Border Canvas.Left="160" Canvas.Top="20" Width="82" Height="50"
+                        Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
+                    <TextBlock Text="{loc:Localize NewComponent.HelpDiagramComponent}" FontSize="9"
+                               Foreground="LightGray"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Ellipse Canvas.Left="154" Canvas.Top="41" Width="8" Height="8" Fill="#4FC3F7"/>
+                <Ellipse Canvas.Left="240" Canvas.Top="41" Width="8" Height="8" Fill="#FF8A65"/>
+                <!-- The design canvas the component lands on -->
+                <Rectangle Canvas.Left="300" Canvas.Top="13" Width="72" Height="62" RadiusX="2" RadiusY="2"
+                           Stroke="#666666" StrokeThickness="1" StrokeDashArray="3,3"/>
+                <TextBlock Canvas.Left="312" Canvas.Top="77" Text="{loc:Localize NewComponent.HelpDiagramCanvas}"
+                           FontSize="9" Foreground="Gray"/>
+            </Canvas>
+        </Border>
+
+        <TextBlock Text="{loc:Localize NewComponent.GdsFactoryExample}" Foreground="#aaaacc"
+                   FontSize="10" FontWeight="SemiBold"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" x:Name="GdsFactoryExampleBox" IsReadOnly="True"
+                     Text="import gdsfactory as gf&#10;component = gf.components.mmi1x2()"
+                     AcceptsReturn="True" TextWrapping="NoWrap"
+                     FontFamily="Consolas, Cascadia Mono, Courier New, monospace" FontSize="10"
+                     Background="#101018" Foreground="#dddddd"/>
+            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyGdsFactoryExample"
+                    FontSize="10" Padding="6,1" Margin="4,0,0,0" VerticalAlignment="Top"
+                    Background="#33335a" Foreground="#ccccff" BorderThickness="0"/>
+        </Grid>
+        <TextBlock Text="{loc:Localize NewComponent.NazcaExample}" Foreground="#aaaacc"
+                   FontSize="10" FontWeight="SemiBold"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" x:Name="NazcaExampleBox" IsReadOnly="True"
+                     Text="import nazca as nd&#10;&#10;def component():&#10;    with nd.Cell(name='my_component') as c:&#10;        nd.strt(length=20, width=0.5).put(0)&#10;        nd.Pin('a0').put(0, 0, 180)&#10;        nd.Pin('b0').put(20, 0, 0)&#10;    return c"
+                     AcceptsReturn="True" TextWrapping="NoWrap"
+                     FontFamily="Consolas, Cascadia Mono, Courier New, monospace" FontSize="10"
+                     Background="#101018" Foreground="#dddddd"/>
+            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyNazcaExample"
+                    FontSize="10" Padding="6,1" Margin="4,0,0,0" VerticalAlignment="Top"
+                    Background="#33335a" Foreground="#ccccff" BorderThickness="0"/>
+        </Grid>
+
+    </StackPanel>
+
+</UserControl>
