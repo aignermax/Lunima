@@ -1032,6 +1032,7 @@
   "Settings.Tidy3d.PackageNote": "Requiere el paquete tidy3d en el entorno Python seleccionado (pip install tidy3d — consulta Configuración → Entornos Python).",
   "Settings.Tidy3d.Title": "Tidy3D Cloud",
   "Settings.Updates.Check": "Buscar actualizaciones",
+  "Settings.Updates.CurrentVersion": "Actual: v{0}",
   "Settings.Updates.DownloadInstall": "Descargar e instalar",
   "Settings.Updates.RemindLater": "Recordar más tarde",
   "Settings.Updates.SkipVersion": "Omitir versión",

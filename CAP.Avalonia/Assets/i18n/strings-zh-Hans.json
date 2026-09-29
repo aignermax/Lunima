@@ -1032,6 +1032,7 @@
   "Settings.Tidy3d.PackageNote": "需要在所选 Python 环境中安装 tidy3d 包（pip install tidy3d — 见 设置 → Python 环境）。",
   "Settings.Tidy3d.Title": "Tidy3D Cloud",
   "Settings.Updates.Check": "检查更新",
+  "Settings.Updates.CurrentVersion": "当前: v{0}",
   "Settings.Updates.DownloadInstall": "下载并安装",
   "Settings.Updates.RemindLater": "稍后提醒",
   "Settings.Updates.SkipVersion": "跳过此版本",
