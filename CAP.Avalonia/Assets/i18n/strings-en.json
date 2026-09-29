@@ -1038,6 +1038,7 @@
   "Registry.DownloadHelpTitle": "What does downloading do?",
   "Registry.DownloadProcessMismatch": "This component belongs to a different process than the loaded design — it cannot be adopted.",
   "Registry.Downloaded": "Added '{0}' to '{1}' — it now appears in the Component Library.",
+  "Registry.DownloadedReplaced": "Replaced '{0}' in '{1}' with the fresh download — the previous version was backed up to .trash.",
   "Registry.DisputedWarning": "This component's data is disputed in the registry — its accuracy is questioned. Download only if you know what you are doing.",
   "Registry.Intro": "Open-source components shared by the community. Components with usable data can be downloaded into your local Component Library.",
   "Registry.LicensePrefix": "License: ",
