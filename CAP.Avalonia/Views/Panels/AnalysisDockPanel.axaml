@@ -184,6 +184,14 @@
                             <panels:NetlistPanel/>
                         </ScrollViewer>
                     </TabItem>
+                    <!-- Logic (#1183, rest of #1156): whole-design build → toggle →
+                         step/run clock → timeline/waveforms, so it belongs with the
+                         other whole-design tools here, not in the selection sidebar. -->
+                    <TabItem Header="{loc:Localize AnalysisDock.TabLogic}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <panels:LogicPanel/>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
             </Border>
         </StackPanel>

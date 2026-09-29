@@ -369,7 +369,7 @@ public partial class MainViewModel : ObservableObject
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
         // The tour must observe the panel instance the user actually clicks.
         WatchTour = watchComputeTourViewModel
-            ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic);
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>

@@ -1,6 +1,14 @@
+using CAP.Avalonia.Commands;
+using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.AnalysisOutput;
+using CAP.Avalonia.ViewModels.Analysis.CircuitOptimization;
+using CAP.Avalonia.ViewModels.Analysis.EyeDiagram;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView;
+using CAP.Avalonia.ViewModels.Analysis.MonteCarloAnalysis;
+using CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum;
 using CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial;
+using CAP.Avalonia.ViewModels.Panels;
 using Shouldly;
 using Xunit;
 
@@ -30,7 +38,7 @@ public class WatchTourCounterExampleTests : IClassFixture<LogicGateCounter2BitEx
         logic.HasNetwork.ShouldBeTrue(logic.StatusText);
         logic.HasRegisters.ShouldBeTrue("the Counter has two register gates");
 
-        var tour = new WatchComputeTourViewModel(logic);
+        var tour = new WatchComputeTourViewModel(logic, MakeDock());
         tour.Start();
         tour.CurrentStepIndex.ShouldBe(1, "the pre-built network satisfies the build step immediately");
 
@@ -51,4 +59,9 @@ public class WatchTourCounterExampleTests : IClassFixture<LogicGateCounter2BitEx
         logic.ToggleRunCommand.Execute(null);
         tour.CurrentStepIndex.ShouldBe(4, "Run stopped");
     }
+
+    private static AnalysisDockViewModel MakeDock() =>
+        new(new TimeDomainViewModel(), new EyeDiagramViewModel(),
+            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new MonteCarloViewModel(), new CircuitOptimizationViewModel(new CommandManager()));
 }

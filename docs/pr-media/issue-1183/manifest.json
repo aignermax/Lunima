@@ -1,0 +1,4 @@
+[
+  {"file": "01-dock-logic-tab-built.png", "caption": "Logic panel re-homed as the Logic tab of the bottom analysis dock — the 2-bit counter example's network is built, inputs/outputs/register state visible before Run."},
+  {"file": "02-dock-logic-tab-after-3-steps.png", "caption": "Same dock Logic tab after three Step-clock presses (scrolled inside the tab): the counter counted 1 → 2 → 3, the timeline grew behind '── clock #k ──' dividers and the waveform lanes show the committed bits."}
+]

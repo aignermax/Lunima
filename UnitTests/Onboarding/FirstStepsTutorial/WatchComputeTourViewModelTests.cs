@@ -1,6 +1,14 @@
+using CAP.Avalonia.Commands;
+using CAP.Avalonia.ViewModels.Analysis;
+using CAP.Avalonia.ViewModels.Analysis.AnalysisOutput;
+using CAP.Avalonia.ViewModels.Analysis.CircuitOptimization;
+using CAP.Avalonia.ViewModels.Analysis.EyeDiagram;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
+using CAP.Avalonia.ViewModels.Analysis.MonteCarloAnalysis;
+using CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial;
+using CAP.Avalonia.ViewModels.Panels;
 using Shouldly;
 using static UnitTests.Helpers.LogicRingTestFixture;
 
@@ -23,14 +31,19 @@ public class WatchComputeTourViewModelTests
         await logic.BuildNetworkCommand.ExecuteAsync(null);
         logic.HasNetwork.ShouldBeTrue(logic.StatusText);
         logic.HasRegisters.ShouldBeTrue("the ring has two registers, so Step/Run are enabled");
-        return (logic, new WatchComputeTourViewModel(logic));
+        return (logic, new WatchComputeTourViewModel(logic, MakeDock()));
     }
 
     private static WatchComputeTourViewModel CreateTour(out LogicPanelViewModel logic)
     {
         logic = new LogicPanelViewModel(new FakeLogicRunClock());
-        return new WatchComputeTourViewModel(logic);
+        return new WatchComputeTourViewModel(logic, MakeDock());
     }
+
+    private static AnalysisDockViewModel MakeDock() =>
+        new(new TimeDomainViewModel(), new EyeDiagramViewModel(),
+            new WavelengthSpectrumViewModel(), new AnalysisOutputPanelViewModel(),
+            new MonteCarloViewModel(), new CircuitOptimizationViewModel(new CommandManager()));
 
     [Fact]
     public void InitialState_IsInactive_AtFirstStep()
@@ -41,6 +54,19 @@ public class WatchComputeTourViewModelTests
         tour.IsCompleted.ShouldBeFalse();
         tour.CurrentStepIndex.ShouldBe(0);
         tour.Steps.Count.ShouldBe(5);
+    }
+
+    [Fact]
+    public void Start_OpensAnalysisDock_OnLogicTab()
+    {
+        var logic = new LogicPanelViewModel(new FakeLogicRunClock());
+        var dock = MakeDock();
+        var tour = new WatchComputeTourViewModel(logic, dock);
+
+        tour.Start();
+
+        dock.IsVisible.ShouldBeTrue("the Logic panel lives in the analysis dock now (#1183)");
+        dock.SelectedTabIndex.ShouldBe(8, "the Logic tab is the last tab of the analysis dock");
     }
 
     [Fact]
