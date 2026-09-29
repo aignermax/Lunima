@@ -516,6 +516,7 @@
                             <!-- User Groups (no label: this is the default/first list) -->
                             <ListBox x:Name="UserGroupsListBox"
                                      Classes="compactList"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
                                      SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
@@ -592,6 +593,7 @@
                                        IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
                             <ListBox x:Name="PdkGroupsListBox"
                                      Classes="compactList"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
                                      SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
@@ -720,6 +722,7 @@
                                   behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
                         <ListBox ItemsSource="{Binding LeftPanel.FilteredTemplates}"
                                  Classes="compactList"
+                                 behaviors:LibraryDragBehavior.IsEnabled="True"
                                  SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
                                  Background="Transparent" Foreground="White"
                                  Margin="5,0"
