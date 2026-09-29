@@ -1,0 +1,7 @@
+[
+  {"file": "01-import-dialog-picker-button.png", "caption": "The import dialog's layer-assignment section gains an 'Assign layer types by clicking the geometry…' button above the number fields."},
+  {"file": "02-picker-initial.png", "caption": "The picker opens with the top cell's geometry color-coded per layer, a legend below, and disabled type buttons until something is clicked."},
+  {"file": "03-picker-layer-selected.png", "caption": "Clicking the long route on the unknown foundry layer selects (37,0): it highlights while the other layers dim, and the type buttons enable."},
+  {"file": "04-picker-assigned.png", "caption": "Pressing 'Waveguide' assigns the selected layer; the legend row flips from '—' to 'waveguide'."},
+  {"file": "05-dialog-fields-updated.png", "caption": "Back in the import dialog the waveguide layer field already carries 37,0 — no layer numbers were typed or guessed."}
+]

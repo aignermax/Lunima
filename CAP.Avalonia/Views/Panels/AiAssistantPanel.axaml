@@ -6,9 +6,8 @@
              x:Class="CAP.Avalonia.Views.Panels.AiAssistantPanel"
              x:DataType="vm:MainViewModel">
 
+    <!-- Hosted in the AI Assistant tool window (formerly a right-sidebar section). -->
     <StackPanel>
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-
         <!-- Header row -->
         <DockPanel Margin="0,0,0,8">
             <TextBlock DockPanel.Dock="Left"

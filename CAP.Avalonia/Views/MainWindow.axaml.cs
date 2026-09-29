@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Notifications;
 using CAP.Avalonia.ViewModels;
@@ -61,6 +62,13 @@ public partial class MainWindow : Window
     /// pattern as <see cref="_openPdkEditWindows"/>. Cleared when it closes.
     /// </summary>
     private RegistryBrowserWindow? _registryBrowserWindow;
+
+    /// <summary>
+    /// The open AI Design Assistant tool window. Single instance: a second open
+    /// activates the existing window instead of spawning a duplicate — same
+    /// pattern as <see cref="_registryBrowserWindow"/>. Cleared when it closes.
+    /// </summary>
+    private AiAssistantWindow? _aiAssistantWindow;
 
     public MainWindow()
     {
@@ -422,6 +430,8 @@ public partial class MainWindow : Window
             var leftSplitter = LeftPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (leftSplitter != null)
             {
+                leftSplitter.DragDelta += (s, e) =>
+                    ResizePanelColumn(LeftPanelGrid.ColumnDefinitions[0], e.Vector.X, LeftPanelBorder);
                 leftSplitter.DragCompleted += (s, e) =>
                 {
                     if (LeftPanelGrid.ColumnDefinitions.Count > 0)
@@ -442,6 +452,8 @@ public partial class MainWindow : Window
             var rightSplitter = RightPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (rightSplitter != null)
             {
+                rightSplitter.DragDelta += (s, e) =>
+                    ResizePanelColumn(RightPanelGrid.ColumnDefinitions[1], -e.Vector.X, RightPanelBorder);
                 rightSplitter.DragCompleted += (s, e) =>
                 {
                     if (RightPanelGrid.ColumnDefinitions.Count > 1)
@@ -455,6 +467,18 @@ public partial class MainWindow : Window
                 };
             }
         }
+    }
+
+    /// <summary>
+    /// Applies a splitter drag to a side panel's pixel column. Each side panel is a grid docked
+    /// into the window's DockPanel with the splitter in its outermost column, so the GridSplitter
+    /// itself finds no neighbouring column to trade space with and leaves the width alone; the
+    /// drag is applied here instead, clamped to the panel's own Min/MaxWidth.
+    /// </summary>
+    private static void ResizePanelColumn(ColumnDefinition column, double delta, Layoutable panel)
+    {
+        double width = Math.Clamp(column.Width.Value + delta, panel.MinWidth, panel.MaxWidth);
+        column.Width = new GridLength(width, GridUnitType.Pixel);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -630,7 +654,24 @@ public partial class MainWindow : Window
     /// click activates the already-open window; the lazy index load happens in
     /// the window's own Opened hook.
     /// </summary>
-    private void OpenRegistryBrowser_Click(object? sender, RoutedEventArgs e)
+    private void OpenRegistryBrowser_Click(object? sender, RoutedEventArgs e) =>
+        OpenRegistryBrowserWindow();
+
+    /// <summary>
+    /// Link row under the local library hits (issue #772): opens the registry window
+    /// with the library search pre-filled — same window-dedup as the other entry
+    /// points, so a second click only activates the window and refreshes its search.
+    /// </summary>
+    private void OpenRegistrySearchHint_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        vm.Registry.SearchText = vm.LeftPanel.SearchText;
+        OpenRegistryBrowserWindow();
+    }
+
+    private void OpenRegistryBrowserWindow()
     {
         if (_registryBrowserWindow is { IsVisible: true } existing)
         {
@@ -657,6 +698,32 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Opens the non-modal AI Design Assistant tool window from the toolbar.
+    /// A second click activates the already-open window.
+    /// </summary>
+    private void OpenAiAssistant_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_aiAssistantWindow is { IsVisible: true } existing)
+        {
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        var window = new AiAssistantWindow { DataContext = vm };
+        _aiAssistantWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_aiAssistantWindow, window))
+                _aiAssistantWindow = null;
+        };
+        window.Show(this);
+    }
+
+    /// <summary>
     /// Opens the "Check PDKs against Python" dialog from the Tools menu (issue #515).
     /// </summary>
     private void OpenPdkResolutionCheckDialog_Click(object? sender, RoutedEventArgs e)
@@ -675,6 +742,16 @@ public partial class MainWindow : Window
             var (width, height) = GetActualViewportSize();
             vm.ZoomToFit(width, height);
         }
+    }
+
+    /// <summary>
+    /// Opens the analysis dock on the Checks tab after the "Check design" menu entry
+    /// ran the validation (the bound command does the checking itself).
+    /// </summary>
+    private void CheckDesignMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.BottomPanel.Analysis.OpenChecks();
     }
 
     /// <summary>
