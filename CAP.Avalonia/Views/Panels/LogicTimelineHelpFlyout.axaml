@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.LogicTimelineHelpFlyout">
+
+    <!-- Event-timeline help of the Logic tab (#1206, #1152 pattern): short sections
+         (text budget, all five locales) plus one looping pulse-arrival diagram — a
+         pulse travels a chain of three gates, each gate's badge flips 0 → 1 when the
+         pulse arrives, and the waveform lane below draws a step at the same moment:
+         switch events have arrival times, and the arrival time is the propagation
+         delay. The pulse is the LightPulseAlongPath primitive; badges and the step
+         trace are the bespoke PulseArrivalAnimation overlay. Hosted as the HelpContent
+         of the panel's HelpFlyoutButton, which supplies the title and ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                   Text="{loc:Localize LogicPanelTimelineHelp.Intro}"/>
+
+        <!-- pulse arrival: badges flip and the lane steps as the pulse reaches each gate. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="110">
+                    <!-- Declared first so track and pulse slide *under* the gate boxes. -->
+                    <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="12,40 356,40"
+                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            WindowStart="0.05" WindowEnd="0.80" IsHitTestVisible="False"/>
+                    <!-- the gate chain (centers x 88 / 188 / 288, matching the overlay) -->
+                    <Border Canvas.Left="66" Canvas.Top="26" Width="44" Height="28"
+                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                    <Border Canvas.Left="166" Canvas.Top="26" Width="44" Height="28"
+                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                    <Border Canvas.Left="266" Canvas.Top="26" Width="44" Height="28"
+                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                    <!-- animated badges + waveform step lane -->
+                    <ha:PulseArrivalAnimation Width="368" Height="110" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimelineHelp.PhysicsBody}"/>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.OrderTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimelineHelp.OrderBody}"/>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ClockTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimelineHelp.ClockBody}"/>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ReplayTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimelineHelp.ReplayBody}"/>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.WaveformTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimelineHelp.WaveformBody}"/>
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimelineHelp.PlaybackBody}"/>
+    </StackPanel>
+
+</UserControl>

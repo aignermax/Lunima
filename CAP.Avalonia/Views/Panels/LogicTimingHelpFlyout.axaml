@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.LogicTimingHelpFlyout">
+
+    <!-- Timing help of the Logic tab (#1206, #1152 pattern): short sections only (text
+         budget, all five locales) — the pulse-arrival animation lives in the sibling
+         LogicTimelineHelpFlyout, whose "arrival time = propagation delay" is
+         exactly this flyout's message. Hosted as the HelpContent of the panel's
+         HelpFlyoutButton, which supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                   Text="{loc:Localize LogicPanelTimingHelp.Intro}"/>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimingHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimingHelp.PhysicsBody}"/>
+
+        <TextBlock Text="{loc:Localize LogicPanelTimingHelp.ClockTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LogicPanelTimingHelp.ClockBody}"/>
+    </StackPanel>
+
+</UserControl>

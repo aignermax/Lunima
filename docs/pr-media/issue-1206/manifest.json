@@ -1,0 +1,14 @@
+[
+  {
+    "file": "pulsetimeline-1-first.png",
+    "caption": "Logic timeline help: a pulse travels a chain of three gates \u2014 each badge flips 0 \u2192 1 on arrival and the waveform lane steps. (first frame)"
+  },
+  {
+    "file": "pulsetimeline-2-mid.png",
+    "caption": "Logic timeline help: a pulse travels a chain of three gates \u2014 each badge flips 0 \u2192 1 on arrival and the waveform lane steps. (mid loop \u2014 two gates reached)"
+  },
+  {
+    "file": "pulsetimeline-3-last.png",
+    "caption": "Logic timeline help: a pulse travels a chain of three gates \u2014 each badge flips 0 \u2192 1 on arrival and the waveform lane steps. (last frame \u2014 all three gates reached)"
+  }
+]
