@@ -123,9 +123,10 @@ public partial class RegistryBrowserViewModel
             if (!ReferenceEquals(Details.Manifest, manifest))
                 return;
             DownloadIsError = !result.IsSuccess;
+            var successKey = result.ReplacedExisting ? "Registry.DownloadedReplaced" : "Registry.Downloaded";
             DownloadMessage = result.IsSuccess
                 ? string.Format(CultureInfo.InvariantCulture,
-                    LocalizationService.Instance.Translate("Registry.Downloaded"), manifest.Name, result.PdkName)
+                    LocalizationService.Instance.Translate(successKey), manifest.Name, result.PdkName)
                 : string.Format(CultureInfo.InvariantCulture,
                     LocalizationService.Instance.Translate("Registry.DownloadFailed"), result.ErrorMessage);
         }
