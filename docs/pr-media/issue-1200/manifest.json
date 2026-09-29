@@ -1,0 +1,9 @@
+[
+  {"file": "01-firststeps-library.png", "caption": "First-steps tour step 1/3: the component library is spotlighted (dim hole + pulsing outline + arrow) and the card docks beside it instead of floating."},
+  {"file": "02-firststeps-canvas.png", "caption": "Step 2/3 anchors to the design canvas: the dim layer frees the whole drawing surface while the card keeps out of its way."},
+  {"file": "03-firststeps-run-simulation.png", "caption": "Step 3/3 points at the Run-Simulation toolbar button, with the card placed below it so the target stays uncovered."},
+  {"file": "04-watchtour-build.png", "caption": "Watch-it-compute tour step 1/5: the Build button inside the analysis dock's Logic tab is spotlighted with the counter example loaded."},
+  {"file": "05-watchtour-step-clock.png", "caption": "Step 2/5 anchors to the Step-clock button after the network was built; the overlay scrolled the register row into view first."},
+  {"file": "06-watchtour-run.png", "caption": "Step 3/5 targets the Run button in the same register row, one manual clock step already on the timeline."},
+  {"file": "07-no-target-fallback.png", "caption": "A step that names no target falls back to the legacy bottom-centre card with no dimming — the whole UI stays visible."}
+]
