@@ -184,6 +184,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] GDS coordinate comparison view loads two coordinate JSON exports side by side. `(manual)`
 - [ ] Help flyouts for transient and eye workflows appear on first use. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
+- [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
 
 ## 18. Cross-platform sanity
 

@@ -20,7 +20,17 @@ namespace CAP_Core.Logic.Isa
         /// <param name="source">Assembly source, one instruction per line.</param>
         /// <returns>The encoded instruction bytes, at most <see cref="IsaMachine.ProgramRomWords"/>.</returns>
         /// <exception cref="IsaAssemblerException">The source is malformed.</exception>
-        public byte[] Assemble(string source)
+        public byte[] Assemble(string source) => AssembleWithSourceMap(source).Words;
+
+        /// <summary>
+        /// Assembles source text into program ROM words and additionally records the
+        /// 1-based source line each emitted word came from, so a UI can map the
+        /// program counter back onto the source text.
+        /// </summary>
+        /// <param name="source">Assembly source, one instruction per line.</param>
+        /// <returns>The encoded words together with their source-line map.</returns>
+        /// <exception cref="IsaAssemblerException">The source is malformed.</exception>
+        public IsaAssemblyResult AssembleWithSourceMap(string source)
         {
             var lines = SplitLines(source);
             var labels = CollectLabels(lines);
@@ -101,19 +111,21 @@ namespace CAP_Core.Logic.Isa
             return name.All(c => char.IsLetterOrDigit(c) || c == '_');
         }
 
-        private static byte[] EmitWords(List<SourceLine> lines, Dictionary<string, int> labels)
+        private static IsaAssemblyResult EmitWords(List<SourceLine> lines, Dictionary<string, int> labels)
         {
             var words = new List<byte>();
+            var lineNumbers = new List<int>();
             foreach (var line in lines)
             {
                 var body = SkipLabel(line.Text);
                 if (body.Length > 0)
                 {
                     words.Add(EmitWord(line, body, labels));
+                    lineNumbers.Add(line.Number);
                 }
             }
 
-            return words.ToArray();
+            return new IsaAssemblyResult(words.ToArray(), lineNumbers);
         }
 
         private static string SkipLabel(string text)

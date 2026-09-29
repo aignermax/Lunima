@@ -8,6 +8,25 @@ using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 
 namespace CAP_DataAccess.Components.AddCustomComponent;
 
+/// <summary>What <see cref="UserPdkStore.SaveComponentKeyed"/> did with the component.</summary>
+public enum KeyedComponentSaveOutcome
+{
+    /// <summary>No entry with the same identity existed — the component was appended.</summary>
+    Added,
+
+    /// <summary>An entry with the same identity was replaced (previous file state backed up to <c>.trash</c>).</summary>
+    Replaced,
+
+    /// <summary>
+    /// A DIFFERENT component already uses the same display name — nothing was
+    /// written, so neither component is silently lost.
+    /// </summary>
+    NameClash,
+}
+
+/// <summary>Outcome and target file of <see cref="UserPdkStore.SaveComponentKeyed"/>.</summary>
+public sealed record KeyedComponentSaveResult(KeyedComponentSaveOutcome Outcome, string FilePath);
+
 public sealed class UserPdkStore
 {
     private readonly string _root;
@@ -55,9 +74,7 @@ public sealed class UserPdkStore
 
         if (File.Exists(target))
         {
-            var trashPath = ResolveTrashDestination(target);
-            Directory.CreateDirectory(Path.GetDirectoryName(trashPath)!);
-            File.Copy(target, trashPath);
+            BackupToTrash(target);
         }
 
         _saver.SaveToFile(draft, target);
@@ -200,6 +217,60 @@ public sealed class UserPdkStore
         return path;
     }
 
+    /// <summary>
+    /// Saves <paramref name="component"/> into the named PDK keyed by
+    /// <paramref name="isSameComponent"/> (a caller-supplied identity, e.g. the
+    /// registry component id embedded in the provenance note) instead of the
+    /// display name, which is not unique. An entry with the same identity is
+    /// replaced — but only after the previous file state was backed up to
+    /// <c>.trash</c>, so a re-download never silently destroys what was there.
+    /// A DIFFERENT component already using the same display name is reported as
+    /// <see cref="KeyedComponentSaveOutcome.NameClash"/> and NOTHING is written:
+    /// neither component is silently dropped.
+    /// </summary>
+    public KeyedComponentSaveResult SaveComponentKeyed(
+        string pdkName,
+        ProcessDefinition process,
+        PdkComponentDraft component,
+        Predicate<PdkComponentDraft> isSameComponent,
+        string backend,
+        string? routingCrossSection)
+    {
+        var path = ResolveNamedPath(pdkName);
+
+        PdkDraft pdk;
+        var replaced = false;
+        if (File.Exists(path))
+        {
+            pdk = _loader.LoadFromFileForEditing(path);
+            var removed = pdk.Components.RemoveAll(c => isSameComponent(c));
+            if (removed == 0
+                && pdk.Components.Exists(c => string.Equals(c.Name, component.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                return new KeyedComponentSaveResult(KeyedComponentSaveOutcome.NameClash, path);
+            }
+
+            replaced = removed > 0;
+            if (replaced)
+            {
+                BackupToTrash(path);
+            }
+        }
+        else
+        {
+            pdk = NewNamedPdk(pdkName, process, backend, routingCrossSection);
+        }
+
+        pdk.Name = pdkName;
+        pdk.Process = process;
+        pdk.Components.Add(component);
+
+        Directory.CreateDirectory(_root);
+        _saver.SaveToFile(pdk, path);
+        return new KeyedComponentSaveResult(
+            replaced ? KeyedComponentSaveOutcome.Replaced : KeyedComponentSaveOutcome.Added, path);
+    }
+
     public string AppendToExistingPdk(string filePath, PdkComponentDraft component)
     {
         var pdk = _loader.LoadFromFileForEditing(filePath);
@@ -266,9 +337,7 @@ public sealed class UserPdkStore
 
         if (backupFirst)
         {
-            var trashPath = ResolveTrashDestination(filePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(trashPath)!);
-            File.Copy(filePath, trashPath);
+            BackupToTrash(filePath);
         }
 
         _saver.SaveToFile(pdk, filePath);
@@ -291,13 +360,19 @@ public sealed class UserPdkStore
 
         if (backupFirst)
         {
-            var trashPath = ResolveTrashDestination(filePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(trashPath)!);
-            File.Copy(filePath, trashPath);
+            BackupToTrash(filePath);
         }
 
         _saver.SaveToFile(pdk, filePath);
         return filePath;
+    }
+
+    private string BackupToTrash(string filePath)
+    {
+        var trashPath = ResolveTrashDestination(filePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(trashPath)!);
+        File.Copy(filePath, trashPath);
+        return trashPath;
     }
 
     private string ResolveTrashDestination(string filePath)

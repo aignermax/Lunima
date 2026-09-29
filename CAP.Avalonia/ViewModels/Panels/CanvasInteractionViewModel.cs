@@ -443,24 +443,26 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
     }
 
-    private void PlaceComponentAt(double x, double y)
+    private void PlaceComponentAt(double x, double y) => PlaceComponentTemplateAt(SelectedTemplate, x, y);
+
+    private void PlaceComponentTemplateAt(ComponentTemplate? template, double x, double y)
     {
-        if (SelectedTemplate == null) return;
+        if (template == null) return;
 
         // Per-chiplet scope (issue #935): dropping onto a process-bound chiplet resolves
         // against that chiplet's process; everywhere else the canvas-level process applies.
         var (isAllowed, blockReason) = PlacementContext.CheckPlacementAt(
-            SelectedTemplate.PdkSource, ChipletAt(x, y));
+            template.PdkSource, ChipletAt(x, y));
         if (!isAllowed)
         {
             UpdateStatus?.Invoke(blockReason ?? "Process mismatch — cannot place component.");
             return;
         }
 
-        double centeredX = x - SelectedTemplate.WidthMicrometers / 2;
-        double centeredY = y - SelectedTemplate.HeightMicrometers / 2;
+        double centeredX = x - template.WidthMicrometers / 2;
+        double centeredY = y - template.HeightMicrometers / 2;
 
-        var cmd = PlaceComponentCommand.TryCreate(_canvas, SelectedTemplate, centeredX, centeredY);
+        var cmd = PlaceComponentCommand.TryCreate(_canvas, template, centeredX, centeredY);
         if (cmd == null)
         {
             UpdateStatus?.Invoke("No space available on chip for this component");
@@ -468,17 +470,20 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         _commandManager.ExecuteCommand(cmd);
-        UpdateStatus?.Invoke($"Placed {SelectedTemplate.Name} at ({x:F0}, {y:F0})µm");
+        UpdateStatus?.Invoke($"Placed {template.Name} at ({x:F0}, {y:F0})µm");
     }
 
-    private void PlaceGroupTemplateAt(double x, double y)
+    private void PlaceGroupTemplateAt(double x, double y) =>
+        PlaceGivenGroupTemplateAt(SelectedGroupTemplate, x, y);
+
+    private void PlaceGivenGroupTemplateAt(GroupTemplate? groupTemplate, double x, double y)
     {
-        if (SelectedGroupTemplate == null || _libraryViewModel == null) return;
+        if (groupTemplate == null || _libraryViewModel == null) return;
 
         // Debug: Check if TemplateGroup is loaded
-        if (SelectedGroupTemplate.TemplateGroup == null)
+        if (groupTemplate.TemplateGroup == null)
         {
-            UpdateStatus?.Invoke($"ERROR: Template '{SelectedGroupTemplate.Name}' not loaded! TemplateGroup is null.");
+            UpdateStatus?.Invoke($"ERROR: Template '{groupTemplate.Name}' not loaded! TemplateGroup is null.");
             return;
         }
 
@@ -488,9 +493,9 @@ public partial class CanvasInteractionViewModel : ObservableObject
         // at canvas level a uniformly foreign-process group is placeable as its own chiplet
         // and gets that process pinned as its binding.
         var (isAllowed, blockReason, derivedBinding) = PlacementContext.CheckGroupPlacementAt(
-            SelectedGroupTemplate.TemplateGroup,
+            groupTemplate.TemplateGroup,
             ChipletAt(x, y),
-            SelectedGroupTemplate.Name);
+            groupTemplate.Name);
         if (!isAllowed)
         {
             UpdateStatus?.Invoke(blockReason ?? "Process mismatch — cannot place group.");
@@ -499,7 +504,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
 
         var libraryManager = _libraryViewModel.GetLibraryManager();
         var cmd = PlaceGroupTemplateCommand.TryCreate(
-            _canvas, libraryManager, SelectedGroupTemplate, x, y, out var physicsRejection);
+            _canvas, libraryManager, groupTemplate, x, y, out var physicsRejection);
 
         if (physicsRejection != null)
         {
@@ -508,7 +513,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
             // the Error Console and the status bar, never an app-killing exception.
             var message = Analysis.NonConvergentCircuitMessageFormatter.Format(physicsRejection);
             _errorConsole?.LogError(
-                $"Group '{SelectedGroupTemplate.Name}' was not placed: {message}");
+                $"Group '{groupTemplate.Name}' was not placed: {message}");
             UpdateStatus?.Invoke(message);
             return;
         }
@@ -526,7 +531,30 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
 
         _commandManager.ExecuteCommand(cmd);
-        UpdateStatus?.Invoke($"Placed group '{SelectedGroupTemplate.Name}' at ({x:F0}, {y:F0})µm");
+        UpdateStatus?.Invoke($"Placed group '{groupTemplate.Name}' at ({x:F0}, {y:F0})µm");
+    }
+
+    /// <summary>
+    /// True drag-and-drop placement from the library (issue #1157): the dragged template is
+    /// placed at the release point and the canvas returns to Select mode — drag&amp;drop is a
+    /// one-shot gesture, unlike click-to-place which stays armed for repeated placement.
+    /// The mode switch happens BEFORE the placement so the outcome ("Placed …" or the
+    /// rejection reason) is the last status the user sees, not the Select-mode prompt.
+    /// </summary>
+    public void DropComponentTemplateAt(ComponentTemplate template, double canvasX, double canvasY)
+    {
+        CurrentMode = InteractionMode.Select;
+        PlaceComponentTemplateAt(template, canvasX, canvasY);
+    }
+
+    /// <summary>
+    /// True drag-and-drop placement for a saved group (issue #1157) — the group-twin of
+    /// <see cref="DropComponentTemplateAt"/>.
+    /// </summary>
+    public void DropGroupTemplateAt(GroupTemplate template, double canvasX, double canvasY)
+    {
+        CurrentMode = InteractionMode.Select;
+        PlaceGivenGroupTemplateAt(template, canvasX, canvasY);
     }
 
     /// <summary>
