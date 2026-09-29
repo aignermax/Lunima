@@ -51,6 +51,7 @@ public partial class App : Application
         services.AddComponentRegistryFeature();
         services.AddAddCustomComponentFeature();
         services.AddGdsImportFeature();
+        services.AddIsaPlaygroundFeature();
         services.AddLocalizationFeature();
 
         services.AddSingleton<MainViewModel>();

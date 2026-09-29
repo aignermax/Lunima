@@ -127,4 +127,31 @@ public class IsaAssemblerTests
 
         words.ShouldBe(new byte[] { 0x05, 0x70 });
     }
+
+    [Fact]
+    public void AssembleWithSourceMap_ProducesSameWords_AsAssemble()
+    {
+        const string source = "; heading\nstart: LOAD 3\nADD 0 ; trailing\nJMP start\nHALT";
+
+        var result = _assembler.AssembleWithSourceMap(source);
+
+        result.Words.ShouldBe(_assembler.Assemble(source));
+    }
+
+    [Fact]
+    public void AssembleWithSourceMap_MapsWordsToOneBasedSourceLines()
+    {
+        var result = _assembler.AssembleWithSourceMap("; c\nLOAD 1\nloop: ADD 0\nHALT");
+
+        result.Words.Length.ShouldBe(3);
+        result.InstructionLineNumbers.ShouldBe(new[] { 2, 3, 4 });
+    }
+
+    [Fact]
+    public void AssembleWithSourceMap_SkipsBlankAndLabelOnlyLines()
+    {
+        var result = _assembler.AssembleWithSourceMap("start:\n\nLOAD 7\n\n; note\ndone: HALT");
+
+        result.InstructionLineNumbers.ShouldBe(new[] { 3, 6 });
+    }
 }

@@ -313,6 +313,21 @@
                                     </StackPanel>
                                 </Button>
 
+                                <!-- ISA playground (#1194): write & step through 4-bit assembly
+                                     programs against the golden-model machine. -->
+                                <Button HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#3d3d5d"
+                                        Click="OpenIsaPlayground_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.IsaPlaygroundTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🧮" FontSize="15" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{loc:Localize Toolbar.IsaPlayground}"
+                                                   Foreground="White" FontSize="12"/>
+                                    </StackPanel>
+                                </Button>
+
                                 <!-- Unlock All (components & connections) — replaces the former
                                      "Lock Elements" properties-panel section (issue: drop that
                                      section, keep the unlock-all function reachable here). -->
