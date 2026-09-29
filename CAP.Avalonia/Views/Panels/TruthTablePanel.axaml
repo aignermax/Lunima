@@ -4,6 +4,7 @@
              xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              xmlns:logic="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
              x:Class="CAP.Avalonia.Views.Panels.TruthTablePanel"
              x:DataType="vm:MainViewModel">
 
@@ -11,39 +12,13 @@
         <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Localize TruthTable.Title}" Foreground="MediumPurple" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <!-- Plain-language help: why the analog optics needs a threshold to become
-                 digital logic, and why interference (e.g. the 50/50 combiner) shapes
-                 the table. -->
+            <!-- Plain-language help (#1207): short sections + the interference
+                 animation live in the extracted TruthTableHelpFlyout. -->
             <controls:HelpFlyoutButton Grid.Column="1"
                                        Title="{loc:Localize TruthTableHelp.Title}"
                                        VerticalAlignment="Center" Margin="0,-5,0,0">
                 <controls:HelpFlyoutButton.HelpContent>
-                    <StackPanel Spacing="8" MaxWidth="400">
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                   Text="{loc:Localize TruthTableHelp.Intro}"/>
-
-                        <!-- Real-S-matrix honesty (#1101): the table is extracted from
-                             the actual optical simulation, not an idealized digital answer. -->
-                        <TextBlock Text="{loc:Localize TruthTableHelp.SimulationTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize TruthTableHelp.SimulationBody}"/>
-
-                        <TextBlock Text="{loc:Localize TruthTableHelp.ThresholdTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize TruthTableHelp.ThresholdBody}"/>
-
-                        <TextBlock Text="{loc:Localize TruthTableHelp.InterferenceTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize TruthTableHelp.InterferenceBody}"/>
-
-                        <TextBlock Text="{loc:Localize TruthTableHelp.BiasTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize TruthTableHelp.BiasBody}"/>
-
-                        <TextBlock Text="{loc:Localize TruthTableHelp.SignalsTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize TruthTableHelp.SignalsBody}"/>
-                    </StackPanel>
+                    <panels:TruthTableHelpFlyout/>
                 </controls:HelpFlyoutButton.HelpContent>
             </controls:HelpFlyoutButton>
         </Grid>
