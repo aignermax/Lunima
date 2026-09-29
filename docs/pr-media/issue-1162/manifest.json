@@ -1,0 +1,6 @@
+[
+  {"file": "01-statusbar-select-en.png", "caption": "Fixed status bar (en, Select mode): only the mode-relevant hints remain in the bar; the process badge keeps its reserved right-hand column."},
+  {"file": "02-statusbar-connect-en.png", "caption": "Same bar in Connect mode: the hints follow the canvas mode instead of listing every shortcut at once."},
+  {"file": "03-statusbar-select-de.png", "caption": "German — the locale of the original report: the badge no longer covers the (now short) hint text."},
+  {"file": "04-shortcuts-flyout.png", "caption": "The (?) flyout next to the hints carries the full keyboard-shortcut reference."}
+]

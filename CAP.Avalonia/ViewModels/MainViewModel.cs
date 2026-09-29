@@ -826,12 +826,14 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Re-reads the VM-side one-time translations after a live language switch: the
-    /// active-process badge (recomputed, PDK process lock untouched) and — only while the
-    /// status bar shows the idle "Ready" text — the status bar itself.
+    /// active-process badge (recomputed, PDK process lock untouched), the status bar's
+    /// mode-relevant shortcut hints (#1162) and — only while the status bar shows the
+    /// idle "Ready" text — the status bar itself.
     /// </summary>
     private void OnUiLanguageChanged()
     {
         UpdateActiveProcessLabel(FileOperations.ActiveProcess);
+        CanvasInteraction.RefreshModeShortcutHints();
         if (_lastLocalizedStatus is { } status && StatusText == status.Formatted)
             SetLocalizedStatus(status.Key, status.Args);
     }
