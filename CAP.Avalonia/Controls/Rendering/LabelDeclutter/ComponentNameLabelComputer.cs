@@ -29,17 +29,29 @@ public sealed class ComponentNameLabelComputer
 {
     private const double LabelOffsetX = 2.0;
 
-    /// <summary>World-space gap between a component's bottom edge and its name label —
+    /// <summary>World-space gap between a flat component's bottom edge and its name label —
     /// the label sits below the footprint so it never covers the geometry (a 7 µm tall
     /// directional coupler would otherwise be hidden under its own name).</summary>
     private const double LabelGapBelow = 2.0;
 
-    /// <summary>Top-left anchor of a component's name label in world coordinates: just
-    /// below the footprint's bottom-left corner. Single source of truth shared by the
-    /// overlap-resolution bounds measured here and the draw position in
-    /// <see cref="PinRenderer.DrawComponentName"/> — the two must never diverge.</summary>
-    internal static Point GetLabelAnchor(ComponentViewModel comp) =>
-        new(comp.X + LabelOffsetX, comp.Y + comp.Height + LabelGapBelow);
+    /// <summary>Inset from the top-left corner for components tall enough to host their own
+    /// label — pushing every label below its footprint would drop it onto neighbouring
+    /// components or waveguides in dense layouts (e.g. the Full Adder example).</summary>
+    private const double LabelInsetInside = 5.0;
+
+    /// <summary>Top-left anchor of a component's name label in world coordinates. Flat
+    /// components (footprint shorter than the label itself) anchor just below their
+    /// bottom-left corner so the name never hides the geometry; taller components keep the
+    /// classic inside-top-left anchor so dense layouts don't get labels spilling onto
+    /// neighbours. Single source of truth shared by the overlap-resolution bounds measured
+    /// here and the draw position in <see cref="PinRenderer.DrawComponentName"/> — the two
+    /// must never diverge.</summary>
+    /// <param name="comp">The component owning the label.</param>
+    /// <param name="labelHeight">Measured world-space height of the label text.</param>
+    internal static Point GetLabelAnchor(ComponentViewModel comp, double labelHeight) =>
+        comp.Height < labelHeight
+            ? new(comp.X + LabelOffsetX, comp.Y + comp.Height + LabelGapBelow)
+            : new(comp.X + LabelInsetInside, comp.Y + LabelInsetInside);
 
     /// <summary>Zoom is quantized to this step before it factors into the overlap-resolution
     /// signature or the measured font size, so continuous zoom (e.g. a smooth scroll) doesn't
@@ -118,7 +130,7 @@ public sealed class ComponentNameLabelComputer
 
             var id = comp.Component.Id;
             var formatted = GetOrMeasureText(comp.Name, fontSize);
-            var anchor = GetLabelAnchor(comp);
+            var anchor = GetLabelAnchor(comp, formatted.Height);
             var labelBounds = new Rect(anchor.X, anchor.Y, formatted.Width, formatted.Height);
             bounds[id] = labelBounds;
             text[id] = formatted;

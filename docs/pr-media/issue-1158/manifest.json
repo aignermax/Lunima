@@ -1,0 +1,26 @@
+[
+  {
+    "file": "01-mmi-connect-before.png",
+    "caption": "Before: the 2x2 MMI\u0027s two 8 \u00B5m-pitch ports per side render at the full Connect-mode marker size and merge into one blob per side (reproduction of the pre-fix constants on the same scene)."
+  },
+  {
+    "file": "02-mmi-connect-after.png",
+    "caption": "After: PinPitchSizer shrinks the markers to at most 45% of the port pitch, so all four MMI ports are visible as four separate Connect-mode markers."
+  },
+  {
+    "file": "03-dc-label-before.png",
+    "caption": "Before: the name label anchored 5 \u00B5m inside the top-left corner covers the 7 \u00B5m tall directional coupler\u0027s geometry (reproduction of the pre-fix anchor on the same scene)."
+  },
+  {
+    "file": "04-dc-label-after.png",
+    "caption": "After: a component shorter than its own label anchors the name just below the footprint \u2014 the coupler geometry stays fully visible."
+  },
+  {
+    "file": "05-full-adder-dense.png",
+    "caption": "Dense check on the shipped Full Adder example (full design): components tall enough to host their own label keep the classic inside-the-footprint anchor, so no label falls onto neighbouring components or waveguides."
+  },
+  {
+    "file": "06-full-adder-closeup.png",
+    "caption": "Full Adder close-up at working zoom: labels stay inside their own (tall) components instead of dropping below the footprint onto the row of neighbours beneath."
+  }
+]

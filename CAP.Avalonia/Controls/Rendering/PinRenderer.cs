@@ -77,7 +77,8 @@ internal sealed class PinRenderer
     }
 
     /// <summary>
-    /// Enqueues the component name label (anchored just below the footprint, see
+    /// Enqueues the component name label (anchored below the footprint for flat components,
+    /// inside the top-left corner otherwise — see
     /// <see cref="LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor"/>) into the
     /// deferred topmost pass, using the <see cref="FormattedText"/>
     /// <see cref="LabelDeclutter.ComponentNameLabelComputer"/> already measured (screen-space
@@ -90,7 +91,7 @@ internal sealed class PinRenderer
     {
         byte alpha = (byte)(isDimmed ? 128 : 255);
         labels.Enqueue(labelText, new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)),
-            LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor(comp));
+            LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor(comp, labelText.Height));
     }
 
     /// <summary>

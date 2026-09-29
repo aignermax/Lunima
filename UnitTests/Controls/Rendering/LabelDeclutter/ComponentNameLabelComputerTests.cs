@@ -21,18 +21,36 @@ public class ComponentNameLabelComputerTests
 {
     private static readonly Rect WideViewport = new(-1000, -1000, 4000, 4000);
 
+    /// <summary>Typical measured world-space height of the name label at zoom 1.</summary>
+    private const double TypicalLabelHeight = 14.0;
+
     [AvaloniaFact]
-    public void LabelAnchor_SitsBelowTheFootprint_NeverOverTheGeometry()
+    public void LabelAnchor_FlatComponent_SitsBelowTheFootprint_NeverOverTheGeometry()
     {
         // Regression: a flat component (e.g. a 7 µm tall directional coupler) had its name
         // label drawn straight over its waveguide body — the anchor must be below the
         // footprint's bottom edge so the geometry stays visible.
         var comp = MakeComponent("flat", x: 100, y: 200, width: 70, height: 7);
 
-        var anchor = ComponentNameLabelComputer.GetLabelAnchor(comp);
+        var anchor = ComponentNameLabelComputer.GetLabelAnchor(comp, TypicalLabelHeight);
 
         anchor.Y.ShouldBeGreaterThan(200 + 7, "the label must start below the footprint's bottom edge");
         anchor.X.ShouldBeGreaterThanOrEqualTo(100);
+    }
+
+    [AvaloniaFact]
+    public void LabelAnchor_TallComponent_StaysInsideTheFootprint()
+    {
+        // A component tall enough to host its own label keeps the classic inside-top-left
+        // anchor — pushing every label below its footprint would drop it onto neighbouring
+        // components or waveguides in dense layouts (e.g. the Full Adder example).
+        var comp = MakeComponent("tall", x: 100, y: 200, width: 250, height: 250);
+
+        var anchor = ComponentNameLabelComputer.GetLabelAnchor(comp, TypicalLabelHeight);
+
+        anchor.X.ShouldBeInRange(100, 100 + 250);
+        anchor.Y.ShouldBeInRange(200, 200 + 250 - TypicalLabelHeight,
+            "a tall component's label must stay inside its own footprint");
     }
 
     [AvaloniaFact]
@@ -118,8 +136,8 @@ public class ComponentNameLabelComputerTests
         var comp = MakeComponent("mover", x: 0, y: 0);
         var computer = new ComponentNameLabelComputer();
         var components = new[] { comp };
-        // Covers the label's new home below the footprint after the move (label y ≈ 252).
-        var farViewport = new Rect(190, 240, 100, 40);
+        // Covers the label's home inside the (tall, 250 µm) footprint after the move.
+        var farViewport = new Rect(190, -10, 20, 20);
 
         computer.GetVisibleLabelIds(components, hoveredComponentId: null, WideViewport, zoom: 1.0);
         computer.RebuildCount.ShouldBe(1);
