@@ -1225,6 +1225,7 @@
   "Settings.Tidy3d.PackageNote": "Erfordert das tidy3d-Paket in der gewählten Python-Umgebung (pip install tidy3d — siehe Einstellungen → Python-Umgebungen).",
   "Settings.Tidy3d.Title": "Tidy3D Cloud",
   "Settings.Updates.Check": "Nach Updates suchen",
+  "Settings.Updates.CurrentVersion": "Aktuell: v{0}",
   "Settings.Updates.DownloadInstall": "Herunterladen & installieren",
   "Settings.Updates.RemindLater": "Später erinnern",
   "Settings.Updates.SkipVersion": "Version überspringen",
