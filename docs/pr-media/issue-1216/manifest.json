@@ -1,0 +1,14 @@
+[
+  {
+    "file": "fanouthelp-1-first.png",
+    "caption": "Logic fan-out help: every split divides the power \u2014 the \u00BD branch stays above the threshold (badge 1), the \u00BC branches fall below it (badge ?). (first frame)"
+  },
+  {
+    "file": "fanouthelp-2-mid.png",
+    "caption": "Logic fan-out help: every split divides the power \u2014 the \u00BD branch stays above the threshold (badge 1), the \u00BC branches fall below it (badge ?). (mid loop \u2014 the \u00BD branch arrived)"
+  },
+  {
+    "file": "fanouthelp-3-last.png",
+    "caption": "Logic fan-out help: every split divides the power \u2014 the \u00BD branch stays above the threshold (badge 1), the \u00BC branches fall below it (badge ?). (last frame \u2014 the \u00BC branches lost the bit)"
+  }
+]
