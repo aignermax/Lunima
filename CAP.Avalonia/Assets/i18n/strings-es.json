@@ -705,6 +705,7 @@
   "NewComponent.EditModeHeader": "Editando la definición del componente — afecta a todas las instancias",
   "NewComponent.FabricationProcess": "Proceso de fabricación",
   "NewComponent.GdsFactoryExample": "Ejemplo de gdsfactory:",
+  "NewComponent.HelpAnimationCaption": "Tu código se convierte en un componente que puedes colocar en el lienzo.",
   "NewComponent.HelpBody": "Tu código debe crear una variable llamada component que contenga la geometría renderizada — un gdsfactory Component o una Nazca Cell, según el backend seleccionado abajo. Todo lo demás (importaciones, funciones auxiliares, parámetros) queda a tu criterio.",
   "NewComponent.HelpTitle": "¿Qué va aquí?",
   "NewComponent.KLayoutOnlyCellNote": "# Este componente existe solo como celda de KLayout — no hay código editable.\n# Su geometría se renderiza en el lienzo; el editor de código no puede ejecutar celdas de KLayout.",

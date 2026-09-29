@@ -705,6 +705,7 @@
   "NewComponent.EditModeHeader": "コンポーネント定義を編集中 — すべての配置に影響します",
   "NewComponent.FabricationProcess": "製造プロセス",
   "NewComponent.GdsFactoryExample": "gdsfactory の例:",
+  "NewComponent.HelpAnimationCaption": "コードがキャンバスに配置できるコンポーネントに変わります。",
   "NewComponent.HelpBody": "コードは、下で選択したバックエンドに応じて、レンダリングされたジオメトリを保持する component という名前の変数を作成する必要があります — gdsfactory Component または Nazca Cell です。それ以外（インポート、ヘルパー関数、パラメータ）は自由です。",
   "NewComponent.HelpTitle": "ここには何を書きますか？",
   "NewComponent.KLayoutOnlyCellNote": "# このコンポーネントは KLayout セルとしてのみ存在します — 編集可能なコードはありません。\n# ジオメトリはキャンバスに描画されますが、コードエディターは KLayout セルを実行できません。",
