@@ -156,4 +156,39 @@ public class RegistryComponentDraftMapperTests
         var entry = draft.SMatrix!.WavelengthData!.ShouldHaveSingleItem();
         entry.Connections.ShouldHaveSingleItem().ToPin.ShouldBe("o3");
     }
+
+    [Fact]
+    public void ToDraft_SubNanometerGrid_Throws_NamingTheCollidingWavelengths()
+    {
+        var (manifest, artifact, _) = Fixture();
+        // 0.2 nm grid: 1.5500 and 1.5502 µm both round to 1550 nm — adopting
+        // this silently would drop one of the two measured samples.
+        var spectrum = new SParameterSpectrum
+        {
+            WavelengthUm = [1.55, 1.5502, 1.5504],
+            S = [new SParameterTrace { From = "o1", To = "o2", Re = [0.5, 0.5, 0.5], Im = [0.0, 0.0, 0.0] }],
+        };
+
+        var ex = Should.Throw<InvalidDataException>(() =>
+            RegistryComponentDraftMapper.ToDraft(manifest, artifact, "simulated", spectrum));
+
+        ex.Message.ShouldContain("wavelength grid finer than 1 nm is not supported");
+        ex.Message.ShouldContain("1.55");
+        ex.Message.ShouldContain("1.5502");
+    }
+
+    [Fact]
+    public void ToDraft_ExactOneNanometerGrid_IsAccepted()
+    {
+        var (manifest, artifact, _) = Fixture();
+        var spectrum = new SParameterSpectrum
+        {
+            WavelengthUm = [1.549, 1.55, 1.551],
+            S = [new SParameterTrace { From = "o1", To = "o2", Re = [0.5, 0.5, 0.5], Im = [0.0, 0.0, 0.0] }],
+        };
+
+        var draft = RegistryComponentDraftMapper.ToDraft(manifest, artifact, "simulated", spectrum);
+
+        draft.SMatrix!.WavelengthData!.Select(e => e.WavelengthNm).ShouldBe([1549, 1550, 1551]);
+    }
 }

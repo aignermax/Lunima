@@ -1038,6 +1038,7 @@
   "Registry.DownloadHelpTitle": "Was bewirkt der Download?",
   "Registry.DownloadProcessMismatch": "Dieses Bauteil gehört zu einem anderen Prozess als das geladene Design — Übernahme nicht möglich.",
   "Registry.Downloaded": "\"{0}\" zu \"{1}\" hinzugefügt — jetzt in der Bauteilbibliothek verfügbar.",
+  "Registry.DownloadedReplaced": "\"{0}\" in \"{1}\" durch den neuen Download ersetzt — die vorherige Version wurde in .trash gesichert.",
   "Registry.DisputedWarning": "Die Daten dieses Bauteils sind in der Registry umstritten — ihre Genauigkeit wird angezweifelt. Nur laden, wenn du weißt, was du tust.",
   "Registry.Intro": "Open-Source-Komponenten aus der Community. Komponenten mit nutzbaren Daten können in die lokale Bauteilbibliothek übernommen werden.",
   "Registry.LicensePrefix": "Lizenz: ",

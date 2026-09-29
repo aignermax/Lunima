@@ -1038,6 +1038,7 @@
   "Registry.DownloadHelpTitle": "¿Qué hace la descarga?",
   "Registry.DownloadProcessMismatch": "Este componente pertenece a un proceso distinto al del diseño cargado — no se puede adoptar.",
   "Registry.Downloaded": "\"{0}\" añadido a \"{1}\" — ahora aparece en la Biblioteca de componentes.",
+  "Registry.DownloadedReplaced": "\"{0}\" reemplazado en \"{1}\" por la nueva descarga — la versión anterior se guardó en .trash.",
   "Registry.DisputedWarning": "Los datos de este componente están en disputa en el registro — su exactitud está en duda. Descarga solo si sabes lo que haces.",
   "Registry.Intro": "Componentes de código abierto compartidos por la comunidad. Los componentes con datos utilizables se pueden descargar a tu Biblioteca de componentes local.",
   "Registry.LicensePrefix": "Licencia: ",
