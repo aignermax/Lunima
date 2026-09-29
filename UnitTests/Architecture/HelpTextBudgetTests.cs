@@ -48,17 +48,6 @@ public class HelpTextBudgetTests
     private static readonly HashSet<string> ExemptNotYetMigrated = new(StringComparer.Ordinal)
     {
         // Logic panel flyouts (dev-ki lineage, not yet migrated)
-        "LogicPanelHelp.BusBody",
-        "LogicPanelHelp.BusTitle",
-        "LogicPanelHelp.InputsBody",
-        "LogicPanelHelp.InputsTitle",
-        "LogicPanelHelp.Intro",
-        "LogicPanelHelp.RegisterBody",
-        "LogicPanelHelp.RegisterTitle",
-        "LogicPanelHelp.RestorationBody",
-        "LogicPanelHelp.RestorationTitle",
-        "LogicPanelHelp.RunResetBody",
-        "LogicPanelHelp.RunResetTitle",
         "LogicPanelFanOutHelp.ExamplesBody",
         "LogicPanelFanOutHelp.ExamplesTitle",
         "LogicPanelFanOutHelp.Intro",
