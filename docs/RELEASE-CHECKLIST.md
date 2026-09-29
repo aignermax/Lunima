@@ -26,7 +26,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Create a new project → an empty canvas with the chosen process / playground is shown. `(auto: FileOperationsProjectLifecycleTests)`
 - [ ] Reopen the last project on startup → previous file opens automatically if preference is enabled. `(auto: HomeReopenLastProjectTests)`
 - [ ] Save a design as `.lun`, close, and reopen → layout, components, and settings are restored. `(auto: FileOperationsProjectLifecycleTests)`
-- [ ] **Save As** creates a new file without changing the current open path. `(manual)`
+- [ ] **Save As** writes a new file and makes it the current document (title + later Save target switch to it, standard Save-As semantics); the typed file name arrives complete (first keystroke not lost). `(manual)`
 - [ ] Dirty-state marker (`*`) appears in title bar after an edit and clears on save. `(auto: WindowTitleTests)`
 - [ ] Check for update banner appears when a newer release is available. `(manual)`
 - [ ] Settings window opens from toolbar and shows all settings pages. `(manual)`

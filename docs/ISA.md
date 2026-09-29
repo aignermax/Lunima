@@ -48,7 +48,11 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
 
 ## What implements which part
 
-- ALU (`ADD`, `AND`, `NOT`) → shipped example **Logic Gate ALU 1-bit** (scale to 4 bit).
+- `ADD` → shipped example **Logic Gate 4-Bit Adder** (ripple-carry; `Cin = 0`, `Cout`
+  dropped gives exactly the mod-16 wrap above).
+- `AND` → the NAND + NOT datapath of **Logic Gate ALU 1-bit** (one bit slice; scale to 4 bit).
+  Note: that example selects AND/OR — `OR` is not an ISA instruction.
+- `NOT` → **Logic Gate NOT-NAND** (one bit slice; scale to 4 bit).
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
 - Data RAM (`LOAD`/`STORE` path) → shipped example **RAM 2x2** (4 words × 4 bit).
 - The shipped **Logic Gate Register 2-bit** is the template for the accumulator.
