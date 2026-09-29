@@ -1,0 +1,18 @@
+[
+  {
+    "file": "timelinehelp-1-first.png",
+    "caption": "Logic timeline help: a pulse arrives later at every gate \u2014 the badge flips and the step trace rises at each arrival. (first frame)"
+  },
+  {
+    "file": "timelinehelp-2-mid.png",
+    "caption": "Logic timeline help: a pulse arrives later at every gate \u2014 the badge flips and the step trace rises at each arrival. (mid loop \u2014 two gates arrived)"
+  },
+  {
+    "file": "timelinehelp-3-last.png",
+    "caption": "Logic timeline help: a pulse arrives later at every gate \u2014 the badge flips and the step trace rises at each arrival. (last frame \u2014 all three gates arrived)"
+  },
+  {
+    "file": "timinghelp-1-static.png",
+    "caption": "Logic timing help: propagation delay and the critical path in short sections."
+  }
+]

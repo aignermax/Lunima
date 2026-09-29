@@ -236,43 +236,13 @@
                  propagation of the north star. -->
             <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,2">
                 <TextBlock Text="{loc:Localize LogicPanel.Timeline}" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
-                <!-- Plain-language physics: why light takes time, why some gates
-                     switch later, and how the last event relates to the critical
-                     path number shown below. -->
+                <!-- Short sections plus the pulse-arrival animation live in the
+                     extracted LogicTimelineHelpFlyout (#1206). -->
                 <controls:HelpFlyoutButton Grid.Column="1"
                                            Title="{loc:Localize LogicPanelTimelineHelp.Title}"
                                            VerticalAlignment="Center" Margin="4,-4,0,0">
                     <controls:HelpFlyoutButton.HelpContent>
-                        <StackPanel Spacing="8" MaxWidth="400">
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.Intro}"/>
-
-                            <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.PhysicsBody}"/>
-
-                            <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.OrderTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.OrderBody}"/>
-
-                            <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ClockTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.ClockBody}"/>
-
-                            <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ReplayTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.ReplayBody}"/>
-                            <!-- Waveform lanes (#1129): gold vertical lines are the clock
-                                 boundaries, the white cursor is the replayed instant, and
-                                 horizontal distance is real optical path length (L·n_g/c). -->
-                            <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.WaveformTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.WaveformBody}"/>
-                            <!-- Auto-play: the fixed 0.6 s cadence is didactic,
-                                 not to scale — the real events are picoseconds apart. -->
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimelineHelp.PlaybackBody}"/>
-                        </StackPanel>
+                        <panels:LogicTimelineHelpFlyout/>
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
             </Grid>
@@ -355,18 +325,7 @@
                                            Title="{loc:Localize LogicPanelTimingHelp.Title}"
                                            VerticalAlignment="Center" Margin="4,0,0,0">
                     <controls:HelpFlyoutButton.HelpContent>
-                        <StackPanel Spacing="8" MaxWidth="400">
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                       Text="{loc:Localize LogicPanelTimingHelp.Intro}"/>
-
-                            <TextBlock Text="{loc:Localize LogicPanelTimingHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimingHelp.PhysicsBody}"/>
-
-                            <TextBlock Text="{loc:Localize LogicPanelTimingHelp.ClockTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize LogicPanelTimingHelp.ClockBody}"/>
-                        </StackPanel>
+                        <panels:LogicTimingHelpFlyout/>
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
             </Grid>
