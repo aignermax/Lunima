@@ -58,6 +58,13 @@ public partial class CanvasInteractionViewModel : ObservableObject
     [ObservableProperty]
     private InteractionMode _currentMode = InteractionMode.Select;
 
+    /// <summary>
+    /// Short, mode-relevant shortcut hint shown in the status bar (#1162); the full
+    /// shortcut reference lives in the (?) flyout next to it.
+    /// </summary>
+    [ObservableProperty]
+    private string _modeShortcutHints = "";
+
     [ObservableProperty]
     private ComponentTemplate? _selectedTemplate;
 
@@ -186,7 +193,18 @@ public partial class CanvasInteractionViewModel : ObservableObject
         // Rubber-band connection selection (issue #862) feeds the routing panel's visibility.
         _canvas.Selection.SelectedConnections.CollectionChanged +=
             (_, _) => OnPropertyChanged(nameof(IsConnectionSelected));
+
+        RefreshModeShortcutHints();
     }
+
+    /// <summary>
+    /// Recomputes <see cref="ModeShortcutHints"/> from the current mode — invoked on every
+    /// mode change and, via <c>MainViewModel</c>, on a live UI-language switch so the
+    /// status-bar hint stays in the active language.
+    /// </summary>
+    public void RefreshModeShortcutHints() =>
+        ModeShortcutHints = Services.Localization.LocalizationService.Instance
+            .Translate(StatusBarShortcutHints.KeyForMode(CurrentMode));
 
     /// <summary>
     /// Keeps <see cref="SelectedComponent"/> in sync when
@@ -262,6 +280,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         };
 
         UpdateStatus?.Invoke(statusText);
+        RefreshModeShortcutHints();
     }
 
     partial void OnSelectedComponentChanged(ComponentViewModel? value)

@@ -356,8 +356,10 @@
                 <!-- Active process indicator (issue #570): persistent, low-clutter home in the
                      status bar (right) rather than the crowded top toolbar. Green = a real
                      process; amber = Playground (not manufacturable); "No process selected" until
-                     one is chosen via File → New. -->
+                     one is chosen via File → New. MinWidth reserves a fixed right-hand column
+                     so the badge can never slide over the shortcut hints (#1162). -->
                 <Border DockPanel.Dock="Right" x:Name="ActiveProcessIndicator"
+                        MinWidth="170"
                         Margin="6,3" Padding="8,1" CornerRadius="3" VerticalAlignment="Center"
                         Background="#2d4d2d" Classes.playground="{Binding IsPlayground}"
                         ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
@@ -367,14 +369,29 @@
                         </Style>
                     </Border.Styles>
                     <TextBlock Text="{Binding ActiveProcessLabel}"
+                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                                Foreground="White" FontSize="10" VerticalAlignment="Center"/>
                 </Border>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding StatusText}"
+                <!-- Full keyboard-shortcut reference (#1162): moved off the status bar into
+                     this (?) flyout — the bar itself shows only the hints relevant to the
+                     current canvas mode, which always fits. -->
+                <controls:HelpFlyoutButton DockPanel.Dock="Right" VerticalAlignment="Center"
+                                           Margin="0,0,2,0"
+                                           Title="{loc:Localize StatusBar.ShortcutsFlyoutTitle}">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:ShortcutsHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
+                <!-- Grid (not StackPanel) so a long status text is ellipsized by its column
+                     instead of pushing the hints under the badge (#1162). -->
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                               TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
-                    <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray"
-                               Text="{loc:Localize StatusBar.ShortcutHints}"/>
-                </StackPanel>
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0"
+                               Foreground="Gray" TextTrimming="CharacterEllipsis"
+                               Text="{Binding CanvasInteraction.ModeShortcutHints}"/>
+                </Grid>
             </DockPanel>
         </Border>
 
