@@ -47,28 +47,13 @@ public class HelpTextBudgetTests
     /// </summary>
     private static readonly HashSet<string> ExemptNotYetMigrated = new(StringComparer.Ordinal)
     {
-        // Logic panel flyouts (dev-ki lineage, not yet migrated)
+        // Logic panel flyouts (dev-ki lineage, not yet migrated) — the timeline and
+        // timing flyouts were migrated in #1206; the fan-out flyout is a separate follow-up.
         "LogicPanelFanOutHelp.ExamplesBody",
         "LogicPanelFanOutHelp.ExamplesTitle",
         "LogicPanelFanOutHelp.Intro",
         "LogicPanelFanOutHelp.PhysicsBody",
         "LogicPanelFanOutHelp.PhysicsTitle",
-        "LogicPanelTimelineHelp.ClockBody",
-        "LogicPanelTimelineHelp.ClockTitle",
-        "LogicPanelTimelineHelp.Intro",
-        "LogicPanelTimelineHelp.OrderBody",
-        "LogicPanelTimelineHelp.OrderTitle",
-        "LogicPanelTimelineHelp.PhysicsBody",
-        "LogicPanelTimelineHelp.PhysicsTitle",
-        "LogicPanelTimelineHelp.PlaybackBody",
-        "LogicPanelTimelineHelp.ReplayBody",
-        "LogicPanelTimelineHelp.ReplayTitle",
-        "LogicPanelTimelineHelp.WaveformBody",
-        "LogicPanelTimelineHelp.WaveformTitle",
-        "LogicPanelTimingHelp.ClockBody",
-        "LogicPanelTimingHelp.ClockTitle",
-        "LogicPanelTimingHelp.PhysicsBody",
-        "LogicPanelTimingHelp.PhysicsTitle",
 
         // Truth Table panel flyout (dev-ki lineage, not yet migrated)
         "TruthTableHelp.BiasBody",
