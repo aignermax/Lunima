@@ -10,14 +10,20 @@ namespace CAP_Core.Logic.Isa
     {
         private readonly byte[] _program;
         private readonly int[] _ram = new int[IsaMachine.RamWords];
+        private readonly IIsaAlu _alu;
 
         /// <summary>
         /// Creates a machine with the given program loaded into the ROM.
         /// Unused ROM words are zero (LOAD 0).
         /// </summary>
         /// <param name="program">Encoded instruction bytes, at most <see cref="IsaMachine.ProgramRomWords"/>.</param>
+        /// <param name="alu">
+        /// The ALU that computes ADD. Defaults to <see cref="GoldenIsaAlu"/> (the C#
+        /// golden model); pass <see cref="PhotonicAdderAlu"/> to run ADD on the
+        /// photonic 4-bit adder network. No other instruction is affected.
+        /// </param>
         /// <exception cref="ArgumentException">The program is larger than the ROM.</exception>
-        public IsaEmulator(byte[] program)
+        public IsaEmulator(byte[] program, IIsaAlu? alu = null)
         {
             if (program.Length > IsaMachine.ProgramRomWords)
             {
@@ -28,6 +34,7 @@ namespace CAP_Core.Logic.Isa
 
             _program = new byte[IsaMachine.ProgramRomWords];
             program.CopyTo(_program, 0);
+            _alu = alu ?? new GoldenIsaAlu();
         }
 
         /// <summary>Address of the next instruction to execute (0–15).</summary>
@@ -79,7 +86,7 @@ namespace CAP_Core.Logic.Isa
                     Accumulator = operand;
                     break;
                 case IsaOpcode.Add:
-                    Accumulator = (Accumulator + ReadRam(operand)) & IsaMachine.MaxDataValue;
+                    Accumulator = _alu.Add(Accumulator, ReadRam(operand));
                     break;
                 case IsaOpcode.And:
                     Accumulator &= ReadRam(operand);
