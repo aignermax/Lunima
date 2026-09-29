@@ -1065,6 +1065,7 @@
   "Status.Undone": "Deshecho: {0}",
   "StatusBar.ActiveProcessTip": "El proceso de fabricación al que está vinculado este diseño (definido en Archivo → Nuevo). Ámbar = Playground: no fabricable.",
   "StatusBar.ShortcutHints": "S=Seleccionar  C=Conectar  D=Eliminar  R=Rotar  G=Cuadrícula  F=Ajustar  L=Simular  P=Alternar superposición  Supr=Quitar  Ctrl+G=Agrupar  Ctrl+Mayús+G=Desagrupar  Ctrl+L=Bloquear/Desbloquear  Ctrl+Z/Y=Deshacer/Rehacer  Ctrl+C/V=Copiar/Pegar  F12=Consola de errores",
+  "StatusBar.ShortcutHintsTip": "Atajos de teclado",
   "Sweep.End": "Fin:",
   "Sweep.ExportCsv": "Exportar CSV",
   "Sweep.Run": "Ejecutar barrido",

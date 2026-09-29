@@ -1065,6 +1065,7 @@
   "Status.Undone": "Undone: {0}",
   "StatusBar.ActiveProcessTip": "The fabrication process this design is locked to (set via File → New). Amber = Playground: not manufacturable.",
   "StatusBar.ShortcutHints": "S=Select  C=Connect  D=Delete  R=Rotate  G=Grid Snap  F=Fit  L=Simulate  P=Toggle Overlay  Del=Remove  Ctrl+G=Group  Ctrl+Shift+G=Ungroup  Ctrl+L=Lock/Unlock  Ctrl+Z/Y=Undo/Redo  Ctrl+C/V=Copy/Paste  F12=Error Console",
+  "StatusBar.ShortcutHintsTip": "Keyboard shortcuts",
   "Sweep.End": "End:",
   "Sweep.ExportCsv": "Export CSV",
   "Sweep.Run": "Run Sweep",

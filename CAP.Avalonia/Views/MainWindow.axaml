@@ -335,12 +335,22 @@
                     <TextBlock Text="{Binding ActiveProcessLabel}"
                                Foreground="White" FontSize="10" VerticalAlignment="Center"/>
                 </Border>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding StatusText}"
-                               VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
-                    <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray"
-                               Text="{loc:Localize StatusBar.ShortcutHints}"/>
-                </StackPanel>
+                <!-- Full shortcut list lives in a (?) flyout so the status bar never overflows;
+                     the badge and button keep fixed right-side columns. -->
+                <Button DockPanel.Dock="Right" VerticalAlignment="Center" Margin="2,0" Padding="6,0"
+                        Background="Transparent" Foreground="Gray" FontSize="10"
+                        Content="?"
+                        ToolTip.Tip="{loc:Localize StatusBar.ShortcutHintsTip}">
+                    <Button.Flyout>
+                        <Flyout Placement="Top">
+                            <TextBlock MaxWidth="420" TextWrapping="Wrap" FontSize="11"
+                                       Text="{loc:Localize StatusBar.ShortcutHints}"/>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <TextBlock Text="{Binding StatusText}"
+                           VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"
+                           TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
 

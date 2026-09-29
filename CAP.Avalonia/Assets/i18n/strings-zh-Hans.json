@@ -1065,6 +1065,7 @@
   "Status.Undone": "已撤销：{0}",
   "StatusBar.ActiveProcessTip": "此设计绑定的制造工艺（通过 文件 → 新建 设置）。琥珀色 = Playground：不可制造。",
   "StatusBar.ShortcutHints": "S=选择  C=连接  D=删除  R=旋转  G=网格吸附  F=适应  L=仿真  P=切换叠加层  Del=移除  Ctrl+G=组合  Ctrl+Shift+G=取消组合  Ctrl+L=锁定/解锁  Ctrl+Z/Y=撤销/重做  Ctrl+C/V=复制/粘贴  F12=错误控制台",
+  "StatusBar.ShortcutHintsTip": "键盘快捷键",
   "Sweep.End": "结束：",
   "Sweep.ExportCsv": "导出 CSV",
   "Sweep.Run": "运行扫描",

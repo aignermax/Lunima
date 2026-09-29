@@ -1065,6 +1065,7 @@
   "Status.Undone": "Rückgängig gemacht: {0}",
   "StatusBar.ActiveProcessTip": "Der Fertigungsprozess, an den dieses Design gebunden ist (gesetzt über Datei → Neu). Bernstein = Playground: nicht fertigbar.",
   "StatusBar.ShortcutHints": "S=Auswählen  C=Verbinden  D=Löschen  R=Drehen  G=Rasterfang  F=Einpassen  L=Simulieren  P=Overlay umschalten  Entf=Entfernen  Strg+G=Gruppieren  Strg+Umschalt+G=Gruppierung aufheben  Strg+L=Sperren/Entsperren  Strg+Z/Y=Rückgängig/Wiederholen  Strg+C/V=Kopieren/Einfügen  F12=Fehlerkonsole",
+  "StatusBar.ShortcutHintsTip": "Tastenkürzel",
   "Sweep.End": "Ende:",
   "Sweep.ExportCsv": "CSV exportieren",
   "Sweep.Run": "Sweep starten",

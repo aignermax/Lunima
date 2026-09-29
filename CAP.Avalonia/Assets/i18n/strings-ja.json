@@ -1065,6 +1065,7 @@
   "Status.Undone": "元に戻しました: {0}",
   "StatusBar.ActiveProcessTip": "この設計がロックされている製造プロセス（ファイル → 新規で設定）。アンバー = Playground: 製造不可。",
   "StatusBar.ShortcutHints": "S=選択  C=接続  D=削除  R=回転  G=グリッドスナップ  F=フィット  L=シミュレート  P=オーバーレイ切替  Del=削除  Ctrl+G=グループ化  Ctrl+Shift+G=グループ解除  Ctrl+L=ロック/解除  Ctrl+Z/Y=元に戻す/やり直し  Ctrl+C/V=コピー/貼り付け  F12=エラーコンソール",
+  "StatusBar.ShortcutHintsTip": "キーボードショートカット",
   "Sweep.End": "終了:",
   "Sweep.ExportCsv": "CSV をエクスポート",
   "Sweep.Run": "スイープを実行",
