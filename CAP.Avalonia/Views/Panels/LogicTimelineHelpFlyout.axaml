@@ -42,7 +42,7 @@
                     <ha:PulseArrivalAnimation Width="368" Height="124" IsHitTestVisible="False"/>
                 </Canvas>
                 <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" HorizontalAlignment="Center"/>
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
