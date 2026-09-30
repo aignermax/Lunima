@@ -555,6 +555,7 @@
   "IsaPlayground.SamplesLabel": "Beispiel:",
   "IsaPlayground.SampleCountTo5": "Bis 5 zählen",
   "IsaPlayground.SampleAddTwoNumbers": "Zwei Zahlen addieren",
+  "IsaPlayground.SampleMultiply3x4": "3 mal 4 rechnen",
   "IsaPlayground.AssembleButton": "Assemblieren",
   "IsaPlayground.StepButton": "Schritt",
   "IsaPlayground.RunButton": "Ausführen",
