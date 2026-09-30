@@ -35,6 +35,9 @@ public partial class IsaPlaygroundViewModel
     private int _photonicGateCount;
     private PhotonicAdderAlu? _photonicAlu;
 
+    /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic ALU while the toggle is on.</summary>
+    internal PhotonicAdderAlu? PhotonicAlu => _photonicAlu;
+
     /// <summary>
     /// The toggle can be flipped while an adder network is available and the machine
     /// is not auto-stepping (flipping mid-run would reset the machine under the timer).
