@@ -18,6 +18,7 @@ public class ChipletInterfaceCheckerTests
     private const double CouplerWidth = 100;
     private const double CouplerHeight = 19;
     private const double PinY = 9.5;
+    private const double WavelengthNm = 1550;
 
     private readonly ChipletInterfaceChecker _checker = new();
 
@@ -26,7 +27,7 @@ public class ChipletInterfaceCheckerTests
     {
         var (link, _, _) = BuildLink(out _, out _);
 
-        _checker.Check(new[] { link }).ShouldBeEmpty();
+        _checker.Check(new[] { link }, WavelengthNm).ShouldBeEmpty();
     }
 
     [Theory]
@@ -38,7 +39,7 @@ public class ChipletInterfaceCheckerTests
         var (link, _, endCoupler) = BuildLink(out _, out _);
         endCoupler.PhysicalPins[0].AngleDegrees = endPinAngle;
 
-        var issues = _checker.Check(new[] { link });
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
 
         issues.Count(i => i.Type == DesignIssueType.ChipletInterfaceNotFacing)
             .ShouldBe(expectIssue ? 1 : 0);
@@ -50,7 +51,7 @@ public class ChipletInterfaceCheckerTests
         var (link, _, endCoupler) = BuildLink(out _, out _);
         endCoupler.PhysicalPins[0].AngleDegrees = 90.0;
 
-        var issues = _checker.Check(new[] { link });
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
 
         issues.ShouldContain(i => i.Type == DesignIssueType.ChipletInterfaceNotFacing);
         issues.ShouldNotContain(i => i.Type == DesignIssueType.ChipletInterfaceLateralOffset,
@@ -66,7 +67,7 @@ public class ChipletInterfaceCheckerTests
         var (link, _, _) = BuildLink(out _, out var chipletB);
         chipletB.MoveGroup(0, shiftY);
 
-        var issues = _checker.Check(new[] { link });
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
 
         var lateral = issues.Where(i => i.Type == DesignIssueType.ChipletInterfaceLateralOffset).ToList();
         lateral.Count.ShouldBe(expectIssue ? 1 : 0);
@@ -84,7 +85,7 @@ public class ChipletInterfaceCheckerTests
         var (link, _, _) = BuildLink(out _, out var chipletB);
         chipletB.MoveGroup(0, 2.0);
 
-        var issue = _checker.Check(new[] { link })
+        var issue = _checker.Check(new[] { link }, WavelengthNm)
             .Single(i => i.Type == DesignIssueType.ChipletInterfaceLateralOffset);
 
         issue.Description.ShouldContain("2.00");
@@ -101,7 +102,7 @@ public class ChipletInterfaceCheckerTests
         // moves inward — other content defines the chiplet extents.
         MoveEndCouplerInside(link, inset);
 
-        var issues = _checker.Check(new[] { link });
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
 
         issues.Count(i => i.Type == DesignIssueType.ChipletInterfaceOffEdge)
             .ShouldBe(expectIssue ? 1 : 0);
@@ -113,12 +114,69 @@ public class ChipletInterfaceCheckerTests
         var (link, _, _) = BuildLink(out _, out _);
         MoveEndCouplerInside(link, 20.0);
 
-        var issue = _checker.Check(new[] { link })
+        var issue = _checker.Check(new[] { link }, WavelengthNm)
             .Single(i => i.Type == DesignIssueType.ChipletInterfaceOffEdge);
 
         issue.Description.ShouldContain("Chiplet B");
         issue.Description.ShouldContain("b_ec.fiber");
         issue.Description.ShouldContain("20.0");
+    }
+
+    [Theory]
+    [InlineData(0.0, false)] // butt-coupled — no divergence loss
+    [InlineData(1.0, false)] // 0.05 dB at 1550 nm — far inside the 1 dB budget
+    [InlineData(4.0, false)] // 0.76 dB — still inside
+    [InlineData(5.0, true)]  // 1.14 dB — past the 1 dB budget (boundary ≈ 4.64 µm)
+    [InlineData(20.0, true)] // 7.64 dB — clearly gapped
+    public void GapLossBoundary(double gapMicrometers, bool expectIssue)
+    {
+        var (link, _, _) = BuildLink(out _, out var chipletB);
+        chipletB.MoveGroup(gapMicrometers, 0); // along the link axis — pure gap, no offset
+
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
+
+        issues.Count(i => i.Type == DesignIssueType.ChipletInterfaceGapLoss)
+            .ShouldBe(expectIssue ? 1 : 0);
+    }
+
+    [Fact]
+    public void OverlappingFacets_NoGapIssue()
+    {
+        var (link, _, _) = BuildLink(out _, out var chipletB);
+        chipletB.MoveGroup(-5.0, 0); // overlapping facets — a placement concern, not a gap
+
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
+
+        issues.ShouldNotContain(i => i.Type == DesignIssueType.ChipletInterfaceGapLoss);
+    }
+
+    [Fact]
+    public void NotFacing_GapCheckIsSkipped()
+    {
+        var (link, _, endCoupler) = BuildLink(out _, out var chipletB);
+        chipletB.MoveGroup(20.0, 0);
+        endCoupler.PhysicalPins[0].AngleDegrees = 90.0;
+
+        var issues = _checker.Check(new[] { link }, WavelengthNm);
+
+        issues.ShouldContain(i => i.Type == DesignIssueType.ChipletInterfaceNotFacing);
+        issues.ShouldNotContain(i => i.Type == DesignIssueType.ChipletInterfaceGapLoss,
+            "an axial gap is meaningless between crossed axes");
+    }
+
+    [Fact]
+    public void GapLoss_MessageNamesChipletsGapAndLoss()
+    {
+        var (link, _, _) = BuildLink(out _, out var chipletB);
+        chipletB.MoveGroup(10.0, 0); // 3.43 dB at 1550 nm
+
+        var issue = _checker.Check(new[] { link }, WavelengthNm)
+            .Single(i => i.Type == DesignIssueType.ChipletInterfaceGapLoss);
+
+        issue.Description.ShouldContain("Chiplet A");
+        issue.Description.ShouldContain("Chiplet B");
+        issue.Description.ShouldContain("10.00 µm");
+        issue.Description.ShouldContain("3.43 dB");
     }
 
     [Fact]
@@ -135,7 +193,7 @@ public class ChipletInterfaceCheckerTests
             EndPin = endCoupler.PhysicalPins[0],
         };
 
-        _checker.Check(new[] { link }).ShouldBeEmpty();
+        _checker.Check(new[] { link }, WavelengthNm).ShouldBeEmpty();
     }
 
     [Fact]
@@ -145,7 +203,7 @@ public class ChipletInterfaceCheckerTests
         startCoupler.TemplateName = "Grating Coupler";
         endCoupler.TemplateName = "Grating Coupler";
 
-        _checker.Check(new[] { link }).ShouldBeEmpty();
+        _checker.Check(new[] { link }, WavelengthNm).ShouldBeEmpty();
     }
 
     [Fact]
@@ -159,7 +217,7 @@ public class ChipletInterfaceCheckerTests
             EndPin = endCoupler.PhysicalPins[0],
         };
 
-        _checker.Check(new[] { link }).ShouldBeEmpty();
+        _checker.Check(new[] { link }, WavelengthNm).ShouldBeEmpty();
     }
 
     [Fact]
@@ -180,7 +238,7 @@ public class ChipletInterfaceCheckerTests
         };
         inner.MoveGroup(0, 2.0); // lateral offset, reported against the OUTER die
 
-        var issue = _checker.Check(new[] { link })
+        var issue = _checker.Check(new[] { link }, WavelengthNm)
             .Single(i => i.Type == DesignIssueType.ChipletInterfaceLateralOffset);
 
         issue.Description.ShouldContain("Receiver Die");

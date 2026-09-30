@@ -10,7 +10,7 @@ namespace CAP_Core.Analysis;
 /// <see cref="ComponentGroup"/>s) and warns when the butt-coupled pair is misaligned —
 /// the failure mode #1214 proved simulates cleanly but that kills the physical link
 /// (butt-coupling loss grows fast with lateral offset; ~2 µm on a ~3 µm mode is already
-/// several dB). Three checks per link:
+/// several dB). Four checks per link:
 /// 1. Facing — the facet pin directions must be antiparallel within
 ///    <see cref="FacingToleranceDegrees"/>.
 /// 2. Lateral alignment — the offset perpendicular to the pin axis must not exceed
@@ -19,6 +19,9 @@ namespace CAP_Core.Analysis;
 /// 3. At the edge — each facet pin must sit on its chiplet's outer boundary (the group's
 ///    bounding box) within <see cref="EdgeToleranceMicrometers"/>, measured along the
 ///    direction the pin faces.
+/// 4. Facet gap — the longitudinal gap between two facing facets must not cost more than
+///    <see cref="MaxGapLossDecibels"/> on its own (Gaussian beam divergence across the
+///    free-space gap, evaluated at the same wavelength the simulation uses).
 /// All findings are warnings (DRC-lite, not foundry DRC). The matching simulation-side
 /// loss lives in <see cref="ChipletEdgeCouplerCoupling"/> (issue #1228), which reuses
 /// this checker's facet detection and geometry so warning and simulated loss can never
@@ -44,6 +47,13 @@ public class ChipletInterfaceChecker
     /// <summary>Tolerance within which a facet pin counts as lying on the chiplet boundary.</summary>
     public const double EdgeToleranceMicrometers = 1.0;
 
+    /// <summary>
+    /// Gap-only coupling loss budget in dB: a facing facet pair farther apart than this
+    /// costs gets its own warning. 1 dB is the point where the air gap, not alignment
+    /// tolerances, dominates the link budget.
+    /// </summary>
+    public const double MaxGapLossDecibels = 1.0;
+
     private const string EdgeCouplerTemplateToken = "edge coupler";
     private const double DirectionEpsilon = 1e-9;
 
@@ -52,8 +62,10 @@ public class ChipletInterfaceChecker
     /// </summary>
     /// <param name="connections">The connections to check; non-edge-coupler and
     /// same-chiplet links are skipped.</param>
+    /// <param name="wavelengthNm">Wavelength the gap-divergence loss is evaluated at —
+    /// pass the simulation wavelength so warning and simulated loss agree.</param>
     /// <returns>One issue per finding, empty when every cross-chiplet link is aligned.</returns>
-    public List<DesignIssue> Check(IEnumerable<WaveguideConnection> connections)
+    public List<DesignIssue> Check(IEnumerable<WaveguideConnection> connections, double wavelengthNm)
     {
         ArgumentNullException.ThrowIfNull(connections);
 
@@ -67,13 +79,14 @@ public class ChipletInterfaceChecker
                 continue;
             }
 
-            CheckLink(connection, start, end, issues);
+            CheckLink(connection, start, end, wavelengthNm, issues);
         }
         return issues;
     }
 
     private static void CheckLink(
-        WaveguideConnection connection, FacetPin start, FacetPin end, List<DesignIssue> issues)
+        WaveguideConnection connection, FacetPin start, FacetPin end,
+        double wavelengthNm, List<DesignIssue> issues)
     {
         var (startX, startY) = start.Pin.GetAbsolutePosition();
         var (endX, endY) = end.Pin.GetAbsolutePosition();
@@ -109,10 +122,41 @@ public class ChipletInterfaceChecker
                         $"Edge couplers on '{nameA}' / '{nameB}' are laterally offset by {lateral:F2} µm"
                         + $" (max {MaxLateralOffsetMicrometers} µm)")));
             }
+
+            CheckGapLoss(connection, startX, startY, endX, endY,
+                start.Pin.GetAbsoluteAngle(), nameA, nameB, wavelengthNm, midX, midY, issues);
         }
 
         CheckAtEdge(connection, start, issues);
         CheckAtEdge(connection, end, issues);
+    }
+
+    /// <summary>
+    /// Flags a facing facet pair whose longitudinal gap alone burns more than
+    /// <see cref="MaxGapLossDecibels"/> of the link budget — the same divergence model
+    /// (<see cref="ChipletEdgeCouplerCoupling.PowerCouplingForGap"/>) and the same
+    /// wavelength the simulation applies, so warning and simulated loss agree.
+    /// </summary>
+    private static void CheckGapLoss(
+        WaveguideConnection connection,
+        double startX, double startY, double endX, double endY, double startAngleDegrees,
+        string nameA, string nameB, double wavelengthNm,
+        double midX, double midY, List<DesignIssue> issues)
+    {
+        double gap = AxialGap(startX, startY, endX, endY, startAngleDegrees);
+        double lossDb = -10.0 * Math.Log10(ChipletEdgeCouplerCoupling.PowerCouplingForGap(gap, wavelengthNm));
+        if (lossDb <= MaxGapLossDecibels)
+            return;
+
+        issues.Add(new DesignIssue(
+            DesignIssueType.ChipletInterfaceGapLoss,
+            connection,
+            midX,
+            midY,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Edge couplers on '{nameA}' / '{nameB}' stand {gap:F2} µm apart — the facet gap"
+                + $" alone costs {lossDb:F2} dB (max {MaxGapLossDecibels} dB)")));
     }
 
     /// <summary>Flags the facet pin when it does not lie on its chiplet's bounding-box edge.</summary>
@@ -189,6 +233,19 @@ public class ChipletInterfaceChecker
         double dirX = Math.Cos(radians);
         double dirY = Math.Sin(radians);
         return Math.Abs((endX - startX) * dirY - (endY - startY) * dirX);
+    }
+
+    /// <summary>
+    /// Separation of the two facet pins along the start pin's axis — the complement of
+    /// <see cref="LateralOffset"/>. A negative value means the facets overlap; that is
+    /// clamped to 0 here because the overlap is a placement concern, not a coupling gain.
+    /// </summary>
+    internal static double AxialGap(
+        double startX, double startY, double endX, double endY, double startAngleDegrees)
+    {
+        double radians = startAngleDegrees * Math.PI / 180.0;
+        double along = (endX - startX) * Math.Cos(radians) + (endY - startY) * Math.Sin(radians);
+        return Math.Max(0.0, along);
     }
 
     /// <summary>The chiplet's outer boundary: the group's stored bounding box, the same
