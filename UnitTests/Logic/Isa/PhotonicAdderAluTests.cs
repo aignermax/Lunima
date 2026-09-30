@@ -60,25 +60,70 @@ public class PhotonicAdderAluTests
         emulator.IsHalted.ShouldBeTrue();
     }
 
+    [Fact]
+    public void Add_RecordsOperandsSumAndLightTravelTime()
+    {
+        var alu = new PhotonicAdderAlu(BuildNandAdderNetwork(gateDelayPicoseconds: 5));
+
+        alu.Add(3, 5);
+
+        var trace = alu.LastAddTrace.ShouldNotBeNull();
+        trace.A.ShouldBe(3);
+        trace.B.ShouldBe(5);
+        trace.Sum.ShouldBe(8);
+        trace.LightTravelPicoseconds.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void Add_LongerCarryChain_TakesMoreLightTravelTime()
+    {
+        var shortChain = new PhotonicAdderAlu(BuildNandAdderNetwork(gateDelayPicoseconds: 5));
+        var longChain = new PhotonicAdderAlu(BuildNandAdderNetwork(gateDelayPicoseconds: 5));
+
+        shortChain.Add(1, 1);
+        longChain.Add(7, 1);
+
+        var shortDelay = shortChain.LastAddTrace.ShouldNotBeNull().LightTravelPicoseconds;
+        var longDelay = longChain.LastAddTrace.ShouldNotBeNull().LightTravelPicoseconds;
+        longDelay.ShouldBeGreaterThan(shortDelay,
+            "7 + 1 ripples the carry through every stage from power-on, 1 + 1 only through the first");
+    }
+
+    [Fact]
+    public void Add_SameOperandsTwice_SecondAddTravelsNoFurther()
+    {
+        var alu = new PhotonicAdderAlu(BuildNandAdderNetwork(gateDelayPicoseconds: 5));
+
+        alu.Add(3, 5);
+        alu.Add(3, 5);
+
+        alu.LastAddTrace.ShouldNotBeNull().LightTravelPicoseconds.ShouldBe(0,
+            "the inputs did not change, so no output switches — the trace reports the per-input " +
+            "light travel, not the worst-case critical path");
+    }
+
     /// <summary>
     /// Wires a 4-bit ripple-carry adder from the pinned NAND gates: per stage
     /// p = NAND(a, b), x = a XOR b (four NANDs around p), the sum s = x XOR cin
     /// (four more) and cout = NAND(p, NAND(x, cin)) = ab | x·cin, with the carry
-    /// rippling into the next stage.
+    /// rippling into the next stage. Every gate gets <paramref name="gateDelayPicoseconds"/>
+    /// propagation delay so the light-travel trace has real times to walk.
     /// </summary>
     private static LogicNetworkEvaluator BuildNandAdderNetwork(
-        string carryInName = "Cin", bool tapS3 = true)
+        string carryInName = "Cin", bool tapS3 = true, double gateDelayPicoseconds = 0)
     {
         var inputs = new List<string> { "A0", "A1", "A2", "A3", "B0", "B1", "B2", "B3", carryInName };
         var gates = new Dictionary<string, LogicGateModel>();
         var wiring = new Dictionary<LogicPinRef, LogicNetDriver>();
         var taps = new Dictionary<string, LogicPinRef>();
+        var gateDelays = new Dictionary<string, double>();
 
         void Nand(string id, LogicNetDriver inA, LogicNetDriver inB)
         {
             gates[id] = PinnedGateTables.NandGate();
             wiring[new LogicPinRef(id, "A")] = inA;
             wiring[new LogicPinRef(id, "B")] = inB;
+            gateDelays[id] = gateDelayPicoseconds;
         }
 
         LogicNetDriver Out(string id) => new LogicNetDriver.GateOutput(new LogicPinRef(id, "Y"));
@@ -105,6 +150,6 @@ public class PhotonicAdderAluTests
             }
         }
 
-        return new LogicNetworkEvaluator(inputs, gates, wiring, taps);
+        return new LogicNetworkEvaluator(inputs, gates, wiring, taps, gateDelays);
     }
 }

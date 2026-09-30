@@ -15,42 +15,42 @@ using Xunit;
 namespace UnitTests.UI;
 
 /// <summary>
-/// Visual documentation for the #1215 ISA playground photonic-ADD slice: renders the
-/// real <see cref="IsaPlaygroundWindow"/> headless and captures (1) count-to-5
-/// mid-run with the "Compute ADD on the photonic chip" toggle on — the network from
-/// the shipped 4-bit adder published via <see cref="BuiltLogicNetworkProvider"/>,
-/// the photonic status line showing the binary addition and its light-travel time —
-/// and (2) the toggle disabled
-/// with its hint when no adder network has been built. PNGs + manifest.json land in
-/// <c>artifacts/ui-screenshots/issue-1215/</c> (or <c>UI_SHOT_DIR/issue-1215</c>).
-/// Same pattern as <see cref="Issue1204IsaPlaygroundRunScreenshotTests"/>.
+/// Visual documentation for the #1227 ISA playground timing line: renders the real
+/// <see cref="IsaPlaygroundWindow"/> headless with the "Compute ADD on the photonic
+/// chip" toggle on (the shipped 4-bit adder published via
+/// <see cref="BuiltLogicNetworkProvider"/>) and captures count-to-5 mid-run — the
+/// status line shows the last photonic ADD as binary operands plus its light-travel
+/// time in ps, and the header names the photonic adder instead of the golden model.
+/// PNG + manifest.json land in <c>artifacts/ui-screenshots/issue-1227/</c>
+/// (or <c>UI_SHOT_DIR/issue-1227</c>). Same pattern as
+/// <see cref="Issue1215IsaPlaygroundPhotonicScreenshotTests"/>.
 /// </summary>
 [Trait("Category", "UiScreenshots")]
 [Collection("LocalizationSingleton")]
-public class Issue1215IsaPlaygroundPhotonicScreenshotTests
+public class Issue1227IsaPlaygroundTimingScreenshotTests
     : IClassFixture<LogicGateFourBitAdderExampleTests.FourBitAdderFixture>
 {
     private const int MinDistinctSampledColors = 10;
     private const int SampleGridSize = 64;
-    private const int TicksBeforeRunningCapture = 7;
+    private const int TicksBeforeRunningCapture = 6;
 
-    /// <summary>Guards the once-per-run output-directory clearing shared by both capture tests.</summary>
+    /// <summary>Guards the once-per-run output-directory clearing.</summary>
     private static readonly object OutputDirectoryLock = new();
     private static bool _outputDirectoryCleared;
 
     private readonly LogicGateFourBitAdderExampleTests.FourBitAdderFixture _fixture;
 
     /// <summary>Attaches the shared 4-bit-adder fixture (assembles the network once).</summary>
-    public Issue1215IsaPlaygroundPhotonicScreenshotTests(
+    public Issue1227IsaPlaygroundTimingScreenshotTests(
         LogicGateFourBitAdderExampleTests.FourBitAdderFixture fixture) =>
         _fixture = fixture;
 
     /// <summary>One manifest row: PNG file name plus its one-sentence caption.</summary>
     private sealed record ManifestEntry(string File, string Caption);
 
-    /// <summary>Captures the playground mid-run with the photonic-ADD toggle on.</summary>
+    /// <summary>Captures the playground mid-run with the photonic light-travel line visible.</summary>
     [AvaloniaFact]
-    public void CaptureIsaPlaygroundWithPhotonicAdderToggleOn()
+    public void CaptureIsaPlaygroundWithPhotonicLightTravelLine()
     {
         var dir = PrepareOutputDirectory();
         var manifest = new List<ManifestEntry>();
@@ -65,45 +65,20 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
         }
 
         vm.IsRunning.ShouldBeTrue("the capture must show the machine mid-run");
-        vm.PhotonicStatusText.ShouldContain(" = ",
-            customMessage: "a photonic ADD ran, so the status shows the binary addition");
+        vm.PhotonicStatusText.ShouldContain("0000 + 0001 = 0001",
+            customMessage: "the first photonic ADD of count-to-5 shows its operands in binary");
         vm.PhotonicStatusText.ShouldContain("ps",
-            customMessage: "the status names the light-travel time of that addition (issue #1227)");
+            customMessage: "the line names the light-travel time of that addition");
+        vm.HeaderTitle.ShouldNotContain("golden",
+            customMessage: "while photonic ADD is on the header must not claim the golden model");
 
         var window = new IsaPlaygroundWindow { DataContext = vm };
         window.Show();
         try
         {
-            using var bitmap = Capture(window, dir, "isa-playground-photonic-toggle-on.png",
-                "ISA playground with 'Compute ADD on the photonic chip' on: count-to-5 mid-run, the status shows the binary addition and its light-travel time.",
-                manifest);
-        }
-        finally
-        {
-            window.Close();
-            Dispatcher.UIThread.RunJobs();
-        }
-
-        WriteManifest(dir, manifest);
-    }
-
-    /// <summary>Captures the playground with the toggle disabled and its hint showing.</summary>
-    [AvaloniaFact]
-    public void CaptureIsaPlaygroundWithPhotonicToggleDisabled()
-    {
-        var dir = PrepareOutputDirectory();
-        var manifest = new List<ManifestEntry>();
-
-        var vm = new IsaPlaygroundViewModel();
-        vm.IsPhotonicAddAvailable.ShouldBeFalse("no network was built, so the toggle stays disabled");
-        vm.IsPhotonicToggleEnabled.ShouldBeFalse();
-
-        var window = new IsaPlaygroundWindow { DataContext = vm };
-        window.Show();
-        try
-        {
-            using var bitmap = Capture(window, dir, "isa-playground-photonic-toggle-disabled.png",
-                "ISA playground without a built logic network: the photonic-ADD toggle is disabled and the hint points at the 4-bit adder example.",
+            using var bitmap = Capture(window, dir, "isa-playground-photonic-light-travel.png",
+                "ISA playground mid-run on the photonic adder: the status line shows the last ADD "
+                + "in binary with its light-travel time in ps; the header names the photonic adder.",
                 manifest);
         }
         finally
@@ -116,9 +91,7 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
     }
 
     /// <summary>
-    /// Repo-root output directory; clears stale PNGs from previous runs. Both capture
-    /// tests share the folder, so the first test to run does the clearing (the second
-    /// must not delete the first test's fresh output).
+    /// Repo-root output directory; clears stale PNGs from previous runs once per test run.
     /// </summary>
     private static string PrepareOutputDirectory()
     {
@@ -162,10 +135,7 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
         return bitmap;
     }
 
-    /// <summary>
-    /// Merges this test's entries into the shared manifest.json (both capture tests
-    /// write the same file; run order is not guaranteed, so merge instead of overwrite).
-    /// </summary>
+    /// <summary>Writes the manifest.json next to the PNG.</summary>
     private static void WriteManifest(string dir, List<ManifestEntry> manifest)
     {
         var path = Path.Combine(dir, "manifest.json");
@@ -241,7 +211,7 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
         var envDir = Environment.GetEnvironmentVariable("UI_SHOT_DIR");
         if (!string.IsNullOrEmpty(envDir))
         {
-            return Path.Combine(envDir, "issue-1215");
+            return Path.Combine(envDir, "issue-1227");
         }
 
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -249,12 +219,12 @@ public class Issue1215IsaPlaygroundPhotonicScreenshotTests
         {
             if (dir.GetFiles("*.sln").Length > 0)
             {
-                return Path.Combine(dir.FullName, "artifacts", "ui-screenshots", "issue-1215");
+                return Path.Combine(dir.FullName, "artifacts", "ui-screenshots", "issue-1227");
             }
 
             dir = dir.Parent;
         }
 
-        return Path.Combine(AppContext.BaseDirectory, "artifacts", "ui-screenshots", "issue-1215");
+        return Path.Combine(AppContext.BaseDirectory, "artifacts", "ui-screenshots", "issue-1227");
     }
 }

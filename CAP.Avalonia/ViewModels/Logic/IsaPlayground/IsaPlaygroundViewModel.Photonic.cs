@@ -13,9 +13,11 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// enabled only while a network that exposes the adder signals (A0–A3, B0–B3, Cin
 /// in, S0–S3 out) is available; otherwise a hint points at the 4-bit adder example.
 /// Toggling recreates the machine at power-on state, and every photonic ADD leaves
-/// a status line naming the network's gate count. Evaluation is a truth-table walk
-/// over a few dozen gates — microseconds, far under the 100 ms UI budget — so
-/// stepping stays on the UI thread.
+/// a status line with the operands and result in binary plus the light-travel time
+/// of that addition (<see cref="PhotonicAdderAlu.LastAddTrace"/>, issue #1227).
+/// Evaluation is a truth-table walk plus one event-timeline pass over the network
+/// (344 gates on the shipped adder) — microseconds, far under the 100 ms UI budget,
+/// pinned by a budget test — so stepping stays on the UI thread.
 /// </summary>
 public partial class IsaPlaygroundViewModel
 {
@@ -24,18 +26,27 @@ public partial class IsaPlaygroundViewModel
     private bool _isPhotonicAddAvailable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HeaderTitle))]
     private bool _usePhotonicAdder;
 
     [ObservableProperty]
     private string _photonicStatusText = string.Empty;
 
     private int _photonicGateCount;
+    private PhotonicAdderAlu? _photonicAlu;
 
     /// <summary>
     /// The toggle can be flipped while an adder network is available and the machine
     /// is not auto-stepping (flipping mid-run would reset the machine under the timer).
     /// </summary>
     public bool IsPhotonicToggleEnabled => IsPhotonicAddAvailable && !IsRunning;
+
+    /// <summary>
+    /// The header title, naming the active ALU so the window never claims
+    /// "golden model" while ADDs run on the photonic chip.
+    /// </summary>
+    public string HeaderTitle =>
+        Translate(UsePhotonicAdder ? "IsaPlayground.TitlePhotonic" : "IsaPlayground.Title");
 
     /// <summary>Flipping the toggle resets the machine to power-on state with the chosen ALU.</summary>
     partial void OnUsePhotonicAdderChanged(bool value)
@@ -82,9 +93,11 @@ public partial class IsaPlaygroundViewModel
         if (UsePhotonicAdder && _builtNetworkProvider?.Network is { } network)
         {
             _photonicGateCount = network.Gates.Count;
-            return new IsaEmulator(_assembledWords, new PhotonicAdderAlu(network));
+            _photonicAlu = new PhotonicAdderAlu(network);
+            return new IsaEmulator(_assembledWords, _photonicAlu);
         }
 
+        _photonicAlu = null;
         return new IsaEmulator(_assembledWords);
     }
 
@@ -95,10 +108,27 @@ public partial class IsaPlaygroundViewModel
         && _emulator.ProgramCounter < _assembledWords.Length
         && IsaInstruction.Decode(_assembledWords[_emulator.ProgramCounter], out _)?.Opcode == IsaOpcode.Add;
 
-    /// <summary>Status line left after a photonic ADD: names the network's gate count.</summary>
-    private void ReportPhotonicAdd() =>
+    /// <summary>
+    /// Status line left after a photonic ADD: operands and result in binary, the
+    /// light-travel time of that addition in ps, and the network's gate count.
+    /// </summary>
+    private void ReportPhotonicAdd()
+    {
+        if (_photonicAlu?.LastAddTrace is not { } trace)
+        {
+            return;
+        }
+
         PhotonicStatusText = string.Format(
             CultureInfo.InvariantCulture,
             Translate("IsaPlayground.StatusPhotonicAdd"),
+            ToBinary(trace.A),
+            ToBinary(trace.B),
+            ToBinary(trace.Sum),
+            trace.LightTravelPicoseconds,
             _photonicGateCount);
+    }
+
+    private static string ToBinary(int value) =>
+        Convert.ToString(value, 2).PadLeft(AccumulatorBits, '0');
 }

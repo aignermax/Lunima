@@ -52,12 +52,92 @@ public class IsaPlaygroundPhotonicAdderTests : IClassFixture<LogicGateFourBitAdd
         photonic.RamText.ShouldBe(golden.RamText);
         photonic.MachineStatusText.ShouldBe(golden.MachineStatusText);
 
-        var expectedStatus = string.Format(
+        photonic.PhotonicStatusText.ShouldContain(" = ",
+            customMessage: "the last executed ADD ran photonically, so the status shows the binary addition");
+        photonic.PhotonicStatusText.ShouldContain("ps",
+            customMessage: "the status names the light-travel time of that addition");
+        photonic.PhotonicStatusText.ShouldContain(
+            _fixture.Network.Gates.Count.ToString(CultureInfo.InvariantCulture),
+            customMessage: "the status still names the photonic adder's gate count");
+    }
+
+    [Fact]
+    public void PhotonicAdd_ShowsBinaryOperandsResultAndLightTravelTime()
+    {
+        var provider = new BuiltLogicNetworkProvider();
+        provider.Publish(_fixture.Network);
+        var vm = new IsaPlaygroundViewModel(provider) { UsePhotonicAdder = true };
+        vm.ProgramText = "LOAD 5\nSTORE 0\nLOAD 3\nADD 0\nHALT";
+        vm.AssembleCommand.Execute(null);
+
+        for (var i = 0; i < 4; i++)
+        {
+            vm.StepCommand.Execute(null);
+        }
+
+        vm.Accumulator.ShouldBe(8);
+        vm.PhotonicStatusText.ShouldContain("0011 + 0101 = 1000");
+
+        var expectedDelay = LightTravelFromPowerOn(a: 3, b: 5);
+        expectedDelay.ShouldBeGreaterThan(0);
+        vm.PhotonicStatusText.ShouldBe(string.Format(
             CultureInfo.InvariantCulture,
             LocalizationService.Instance.Translate("IsaPlayground.StatusPhotonicAdd"),
-            _fixture.Network.Gates.Count);
-        photonic.PhotonicStatusText.ShouldBe(expectedStatus,
-            "the last executed ADD ran photonically, so the status must name the photonic adder");
+            "0011", "0101", "1000", expectedDelay, _fixture.Network.Gates.Count));
+    }
+
+    [Fact]
+    public void GoldenAdd_ShowsNoLightTravelLine()
+    {
+        var vm = new IsaPlaygroundViewModel();
+        vm.ProgramText = "LOAD 5\nSTORE 0\nLOAD 3\nADD 0\nHALT";
+        vm.AssembleCommand.Execute(null);
+
+        for (var i = 0; i < 4; i++)
+        {
+            vm.StepCommand.Execute(null);
+        }
+
+        vm.Accumulator.ShouldBe(8);
+        vm.PhotonicStatusText.ShouldBeEmpty("a golden-model ADD has no light travel to report");
+    }
+
+    [Fact]
+    public void HeaderTitle_NamesTheActiveAlu()
+    {
+        var provider = new BuiltLogicNetworkProvider();
+        provider.Publish(_fixture.Network);
+        var vm = new IsaPlaygroundViewModel(provider);
+
+        vm.HeaderTitle.ShouldBe(LocalizationService.Instance.Translate("IsaPlayground.Title"));
+
+        vm.UsePhotonicAdder = true;
+
+        vm.HeaderTitle.ShouldBe(LocalizationService.Instance.Translate("IsaPlayground.TitlePhotonic"),
+            "while photonic ADD is on the header must not claim 'golden model'");
+    }
+
+    /// <summary>
+    /// The light-travel time the Logic tab's timeline kernel reports for toggling the
+    /// shipped adder's inputs from the power-on state (all-zero) to the given operands:
+    /// the arrival time of the latest switching network output.
+    /// </summary>
+    private double LightTravelFromPowerOn(int a, int b)
+    {
+        var previous = _fixture.Network.InputPinNames.ToDictionary(name => name, _ => false);
+        var next = new Dictionary<string, bool>(previous);
+        for (var bit = 0; bit < IsaMachine.DataBits; bit++)
+        {
+            next[$"A{bit}"] = ((a >> bit) & 1) == 1;
+            next[$"B{bit}"] = ((b >> bit) & 1) == 1;
+        }
+
+        var outputPins = _fixture.Network.OutputTaps.Values.ToHashSet();
+        return LogicEventTimeline.Compute(_fixture.Network, previous, next)
+            .Where(e => outputPins.Contains(new LogicPinRef(e.GateId, e.OutputPin)))
+            .Select(e => e.TimePicoseconds)
+            .DefaultIfEmpty(0.0)
+            .Max();
     }
 
     [Fact]

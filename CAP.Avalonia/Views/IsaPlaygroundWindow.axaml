@@ -17,7 +17,7 @@
         <!-- Header: title + intro on the left, help flyout on the right -->
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
             <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="{loc:Localize IsaPlayground.Title}" Foreground="DeepSkyBlue"
+                <TextBlock Text="{Binding HeaderTitle}" Foreground="DeepSkyBlue"
                            FontWeight="SemiBold" FontSize="16"/>
                 <TextBlock Text="{loc:Localize IsaPlayground.Intro}" Foreground="Gray"
                            FontSize="11" TextWrapping="Wrap"/>

@@ -9,6 +9,8 @@ namespace CAP_Core.Logic.Isa
     /// to 0 and reads the sum taps S0–S3; Cout is dropped, which is exactly the ISA's
     /// mod-16 wrap. The network is validated at construction, so a design that does
     /// not expose the expected signal names fails loudly before the first instruction.
+    /// Every ADD also records a <see cref="LastAddTrace"/>: the operands, the sum and
+    /// the light-travel time of that addition from the event-timeline kernel.
     /// </summary>
     public sealed class PhotonicAdderAlu : IIsaAlu
     {
@@ -18,6 +20,13 @@ namespace CAP_Core.Logic.Isa
         private static readonly string[] SumSignals = { "S0", "S1", "S2", "S3" };
 
         private readonly LogicNetworkEvaluator _network;
+        private IReadOnlyDictionary<string, bool>? _previousInputs;
+
+        /// <summary>
+        /// The operands, sum and light-travel time of the most recent <see cref="Add"/>,
+        /// or null before the first one.
+        /// </summary>
+        public PhotonicAddTrace? LastAddTrace { get; private set; }
 
         /// <summary>
         /// True when <paramref name="network"/> exposes every signal the ALU drives
@@ -89,7 +98,27 @@ namespace CAP_Core.Logic.Isa
                 }
             }
 
+            LastAddTrace = new PhotonicAddTrace(a, b, sum, LightTravelPicoseconds(bits));
+            _previousInputs = bits;
             return sum;
+        }
+
+        /// <summary>
+        /// Arrival time of the latest switching network output when the operand bits
+        /// move from the previously driven assignment (all-zero at power-on) to
+        /// <paramref name="nextInputs"/>. Reuses the Logic tab's event-timeline kernel,
+        /// so the number matches what the timeline reports for the same input toggle.
+        /// </summary>
+        private double LightTravelPicoseconds(IReadOnlyDictionary<string, bool> nextInputs)
+        {
+            var previous = _previousInputs
+                ?? _network.InputPinNames.ToDictionary(name => name, _ => false);
+            var outputPins = new HashSet<LogicPinRef>(_network.OutputTaps.Values);
+            return LogicEventTimeline.Compute(_network, previous, nextInputs)
+                .Where(e => outputPins.Contains(new LogicPinRef(e.GateId, e.OutputPin)))
+                .Select(e => e.TimePicoseconds)
+                .DefaultIfEmpty(0.0)
+                .Max();
         }
     }
 }
