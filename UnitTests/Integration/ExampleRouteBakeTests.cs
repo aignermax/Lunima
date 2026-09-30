@@ -10,6 +10,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core;
 using CAP_Core.Export;
+using CAP_Core.Routing;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -103,6 +104,11 @@ public class ExampleRouteBakeTests
         await canvas.RecalculateRoutesAsync();
         watch.Stop();
 
+        var blocked = canvas.Connections.Count(c => c.Connection.IsBlockedFallback);
+        var endpoint = canvas.Connections.Count(c => c.Connection.FailureReason == RoutingFailureReason.EndpointBlocked);
+        var contention = canvas.Connections.Count(c => c.Connection.FailureReason == RoutingFailureReason.Contention);
+        ReportProgress(FormatCensusLine(exampleFileName, blocked, endpoint, contention, blocked - endpoint - contention));
+
         await fileOps.SaveDesignCommand.ExecuteAsync(null);
 
         var (verifyCanvas, verifyOps) = CreateCanvasAndFileOperations(prep);
@@ -178,6 +184,15 @@ public class ExampleRouteBakeTests
         fileOps.FileDialogService = new Mock<IFileDialogService>().Object;
         return fileOps;
     }
+
+    /// <summary>
+    /// Formats the per-example blocked-wire census line (issue #1249): how many of the
+    /// blocked wires are endpoint-blocked (sealed pin — no ordering retry can help) vs.
+    /// contention (other wires in the way) vs. unclassified. The mix decides the next
+    /// router slice.
+    /// </summary>
+    internal static string FormatCensusLine(string exampleFileName, int blocked, int endpoint, int contention, int unclassified) =>
+        $"[bake] {exampleFileName}: blocked={blocked} (endpoint={endpoint}, contention={contention}, unclassified={unclassified})";
 
     private static void ReportProgress(string line)
     {
