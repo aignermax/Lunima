@@ -1,7 +1,7 @@
 namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 
 /// <summary>
-/// The ISA sample programs the playground offers in its picker: the two shipped
+/// The ISA sample programs the playground offers in its picker: the shipped
 /// samples from <c>examples/isa/</c>. Missing files are skipped, so a partial
 /// installation degrades instead of failing; never throws.
 /// </summary>
@@ -58,6 +58,7 @@ public sealed class IsaSampleProgramCatalog
         var samples = new List<IsaSampleProgram>();
         TryAdd(samples, samplesDirectory, "count-to-5.asm", "IsaPlayground.SampleCountTo5");
         TryAdd(samples, samplesDirectory, "add-two-numbers.asm", "IsaPlayground.SampleAddTwoNumbers");
+        TryAdd(samples, samplesDirectory, "multiply-3x4.asm", "IsaPlayground.SampleMultiply3x4");
         return samples;
     }
 

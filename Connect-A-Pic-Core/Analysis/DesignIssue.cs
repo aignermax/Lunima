@@ -98,7 +98,15 @@ public enum DesignIssueType
     /// chiplet's outer boundary (measured along the direction it faces). A warning:
     /// the facet cannot butt against the neighbouring die from inside the chiplet.
     /// </summary>
-    ChipletInterfaceOffEdge
+    ChipletInterfaceOffEdge,
+
+    /// <summary>
+    /// Two edge couplers linked across a chiplet boundary face each other but stand so
+    /// far apart that Gaussian beam divergence across the facet gap alone costs more than
+    /// the allowed budget (<see cref="ChipletInterfaceChecker.MaxGapLossDecibels"/>).
+    /// A warning: butt-coupling assumes the facets touch.
+    /// </summary>
+    ChipletInterfaceGapLoss
 }
 
 /// <summary>

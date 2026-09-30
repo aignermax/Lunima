@@ -12,72 +12,50 @@ using Xunit;
 namespace UnitTests.Integration;
 
 /// <summary>
-/// Issue #1228 (rung 6): the simulation must stop being optimistic about misaligned
-/// cross-chiplet edge-coupler links. Built on the #1214 journey design
-/// (<see cref="ChipletEdgeCouplerJourneyDesign"/>): the aligned baseline must transmit
-/// exactly as before, a 1 µm / 2 µm lateral offset must cost the Gaussian mode-overlap
-/// power η = exp(-d²/w0²) with w0 = <see cref="ChipletEdgeCouplerCoupling.ModeWaistMicrometers"/> µm
-/// (−1.93 dB / −7.72 dB), and a non-facing facet must couple nothing — agreeing with the
-/// #1219 <see cref="DesignValidator"/> warning on the same fixture.
+/// Issue #1238 (rung 6): the longitudinal facet GAP between cross-chiplet edge couplers
+/// must cost coupling — Gaussian beam divergence across the free-space gap,
+/// η_gap = 1 / (1 + (z / (2·z_R))²) with z_R = π·n·w0²/λ at the simulation wavelength —
+/// and the DRC-lite check must warn once the gap alone burns more than
+/// <see cref="ChipletInterfaceChecker.MaxGapLossDecibels"/>. Built on the #1214 journey
+/// design (<see cref="ChipletEdgeCouplerJourneyDesign"/>), the same fixture the #1228
+/// lateral-offset loss and the #1219 facing/lateral/edge warnings are proven on.
 /// </summary>
-public class ChipletEdgeCouplerCouplingJourneyTests
+public class ChipletEdgeCouplerGapJourneyTests
 {
     private const int WavelengthNm = 1550;
     private const double AmplitudeTolerance = 1e-6;
     private const double PowerToleranceRelative = 0.01;
-    private const double DbTolerance = 0.05;
 
     [Theory]
-    [InlineData(1.0, -1.93)] // exp(-1²/1.5²) = 0.641 → -1.93 dB
-    [InlineData(2.0, -7.72)] // exp(-2²/1.5²) = 0.169 → -7.72 dB
-    public async Task LateralOffset_OutputPowerDropsByGaussianOverlap(double offsetMicrometers, double expectedDb)
+    [InlineData(10.0, -3.43)] // η_gap = 0.4541 → -3.43 dB (z_R ≈ 4.56 µm at 1550 nm)
+    [InlineData(1.0, -0.05)]  // η_gap = 0.9881 → -0.05 dB
+    public async Task FacetGap_OutputPowerDropsByGaussianDivergence(double gapMicrometers, double expectedDb)
     {
         var design = ChipletEdgeCouplerJourneyDesign.BuildComposed();
         double baseline = await SimulateOutputAmplitudeAsync(design);
         baseline.ShouldBe(design.ExpectedOutputAmplitude, AmplitudeTolerance,
-            "the aligned baseline must transmit exactly as before #1228");
+            "the butt-coupled baseline must transmit exactly as before #1238");
 
-        design.ChipletB.MoveGroup(0, offsetMicrometers);
+        design.ChipletB.MoveGroup(gapMicrometers, 0); // along the link axis — pure gap
         double shifted = await SimulateOutputAmplitudeAsync(design);
 
-        double eta = ChipletEdgeCouplerCoupling.PowerCouplingForOffset(offsetMicrometers);
+        double eta = ChipletEdgeCouplerCoupling.PowerCouplingForGap(gapMicrometers, WavelengthNm);
         double powerRatio = shifted * shifted / (baseline * baseline);
         powerRatio.ShouldBe(eta, eta * PowerToleranceRelative,
-            $"a {offsetMicrometers} µm lateral offset on a w0 = "
+            $"a {gapMicrometers} µm facet gap on a w0 = "
             + $"{ChipletEdgeCouplerCoupling.ModeWaistMicrometers} µm mode must cost {expectedDb} dB "
-            + "(power η = exp(-d²/w0²))");
-        (10 * Math.Log10(powerRatio)).ShouldBe(expectedDb, DbTolerance,
+            + "(power η_gap = 1 / (1 + (z / (2·z_R))²))");
+        (10 * Math.Log10(powerRatio)).ShouldBe(expectedDb, 0.05,
             "the simulated penalty in dB matches the InlineData label");
     }
 
     [Fact]
-    public async Task NonFacingFacets_NoLightCrossesTheChipletBoundary()
-    {
-        var design = ChipletEdgeCouplerJourneyDesign.BuildComposed();
-
-        // The #1219 rotation fixture: turn chiplet B's facet a quarter turn off axis.
-        var bFiber = ChipletEdgeCouplerJourneyDesign.ExposedPin(design.ChipletB, "b_ec_fiber");
-        bFiber.AngleDegrees += 90;
-
-        var fields = await SimulateAsync(design.Canvas, InjectLight(
-            ChipletEdgeCouplerJourneyDesign.ExposedPin(design.ChipletA, "a_gc_fiber")));
-        double output = fields.TryGetValue(
-            ChipletEdgeCouplerJourneyDesign.ExposedPin(design.ChipletB, "b_wg_b0").LogicalPin!.IDOutFlow,
-            out var value)
-            ? value.Magnitude
-            : 0.0;
-
-        output.ShouldBeLessThan(1e-9,
-            "facets that do not face each other couple nothing (η = 0) — no invented angular model");
-    }
-
-    [Fact]
-    public async Task DesignValidatorWarning_AndSimulatedLoss_AgreeOnTheSameOffsetFixture()
+    public async Task FacetGap10Micrometers_DrcWarningFiresAndMatchesSimulatedLoss()
     {
         var design = ChipletEdgeCouplerJourneyDesign.BuildComposed();
         double baseline = await SimulateOutputAmplitudeAsync(design);
 
-        design.ChipletB.MoveGroup(0, 1.0);
+        design.ChipletB.MoveGroup(10.0, 0);
         var link = design.Canvas.ConnectionManager.Connections.Single();
 
         var issues = new DesignValidator().Validate(
@@ -87,18 +65,39 @@ public class ChipletEdgeCouplerCouplingJourneyTests
             externalPortPins: null,
             wavelengthNm: WavelengthNm,
             minWaveguideSpacingMicrometers: 0);
-        issues.ShouldContain(
-            i => i.Type == DesignIssueType.ChipletInterfaceLateralOffset && ReferenceEquals(i.Connection, link),
-            "the #1219 DRC warning must fire on the offset cross-chiplet link");
+        var warning = issues.Where(
+                i => i.Type == DesignIssueType.ChipletInterfaceGapLoss && ReferenceEquals(i.Connection, link))
+            .ShouldHaveSingleItem("the #1238 DRC warning must fire on the gapped cross-chiplet link");
+        warning.Description.ShouldContain(ChipletEdgeCouplerJourneyDesign.ChipletAName);
+        warning.Description.ShouldContain(ChipletEdgeCouplerJourneyDesign.ChipletBName);
+        warning.Description.ShouldContain("10.00 µm");
 
         double shifted = await SimulateOutputAmplitudeAsync(design);
         double powerRatio = shifted * shifted / (baseline * baseline);
-        double eta = ChipletEdgeCouplerCoupling.PowerCouplingForOffset(1.0);
+        double eta = ChipletEdgeCouplerCoupling.PowerCouplingForGap(10.0, WavelengthNm);
         powerRatio.ShouldBe(eta, eta * PowerToleranceRelative,
-            "the simulated loss must back the warning on the very same fixture (-1.93 dB at 1 µm)");
+            "the simulated loss must back the warning on the very same fixture (-3.43 dB at 10 µm)");
     }
 
-    // ── Simulation helpers (same headless recipe as ChipletEdgeCouplerJourneyTests) ──
+    [Fact]
+    public void FacetGap1Micrometer_NoDrcWarning()
+    {
+        var design = ChipletEdgeCouplerJourneyDesign.BuildComposed();
+        design.ChipletB.MoveGroup(1.0, 0);
+
+        var issues = new DesignValidator().Validate(
+            design.Canvas.ConnectionManager.Connections,
+            groups: new[] { design.ChipletA, design.ChipletB },
+            components: design.Canvas.Components.Select(vm => vm.Component),
+            externalPortPins: null,
+            wavelengthNm: WavelengthNm,
+            minWaveguideSpacingMicrometers: 0);
+
+        issues.ShouldNotContain(i => i.Type == DesignIssueType.ChipletInterfaceGapLoss,
+            "a 1 µm gap costs 0.05 dB — far inside the 1 dB budget");
+    }
+
+    // ── Simulation helpers (same headless recipe as ChipletEdgeCouplerCouplingJourneyTests) ──
 
     private static async Task<double> SimulateOutputAmplitudeAsync(ChipletEdgeCouplerJourneyDesign design)
     {

@@ -1326,7 +1326,8 @@ public partial class MainViewModel : ObservableObject
                 processLockActive,
                 minWaveguideSpacingMicrometers: minWaveguideSpacingMicrometers,
                 minWaveguideWidthRules: minWaveguideWidthRules,
-                connectionDrcRuleProvider: connectionDrcRuleProvider);
+                connectionDrcRuleProvider: connectionDrcRuleProvider,
+                wavelengthNm: Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm);
 
             StatusText = RightPanel.DesignValidation.StatusText;
         }
