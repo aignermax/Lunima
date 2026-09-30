@@ -57,6 +57,11 @@
             <Button Content="{loc:Localize DesignChecks.Next}"
                     Command="{Binding RightPanel.DesignValidation.NextIssueCommand}"
                     Width="70" Margin="5,0,0,0" Background="#3d3d3d"/>
+            <!-- One-click fix (issue #1248): only offered on chiplet-interface findings. -->
+            <Button Content="{loc:Localize DesignChecks.AlignChiplet}"
+                    Command="{Binding RightPanel.DesignValidation.AlignChipletCommand}"
+                    IsVisible="{Binding RightPanel.DesignValidation.IsCurrentIssueAlignable}"
+                    Margin="10,0,0,0" Padding="12,4" Background="#3d5d3d"/>
         </StackPanel>
     </StackPanel>
 

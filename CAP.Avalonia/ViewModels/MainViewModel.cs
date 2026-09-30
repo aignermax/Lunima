@@ -748,6 +748,22 @@ public partial class MainViewModel : ObservableObject
                 conn.IsSelected = conn.Connection == connection;
             }
         };
+
+        // "Align chiplet" one-click fix (issue #1248): snap the finding's end chiplet
+        // into butt-coupling through the undoable group move, then re-run the checks.
+        var alignmentService = new ChipletAlignmentService(Canvas, CommandManager);
+        RightPanel.DesignValidation.AlignChipletHandler = async connection =>
+        {
+            double wavelengthNm = Canvas.Components.FirstOrDefault(c => c.IsLightSource)
+                ?.LaserConfig?.WavelengthNm ?? CAP_Core.Components.ComponentHelpers.StandardWaveLengths.RedNM;
+            var refusal = alignmentService.TryAlign(connection, wavelengthNm);
+            if (refusal == null)
+            {
+                await RunDesignChecks();
+                return null;
+            }
+            return LocalizationService.Instance.Translate($"DesignChecks.Align.Refused.{refusal}");
+        };
     }
 
     private void WireFileOperations()

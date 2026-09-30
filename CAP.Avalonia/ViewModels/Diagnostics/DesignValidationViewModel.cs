@@ -31,6 +31,13 @@ public partial class DesignValidationViewModel : ObservableObject
     private bool _hasIssues;
 
     /// <summary>
+    /// True when the currently navigated issue is a cross-chiplet edge-coupler finding
+    /// with a connection — the "Align chiplet" one-click fix (issue #1248) applies to it.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isCurrentIssueAlignable;
+
+    /// <summary>
     /// The list of design issues found during the last validation run.
     /// </summary>
     public ObservableCollection<DesignIssue> Issues { get; } = new();
@@ -47,6 +54,14 @@ public partial class DesignValidationViewModel : ObservableObject
     /// Set by MainViewModel. Parameter: the connection to highlight.
     /// </summary>
     public Action<WaveguideConnection?>? HighlightConnection { get; set; }
+
+    /// <summary>
+    /// Callback that performs the "Align chiplet" one-click fix for a connection
+    /// (issue #1248). Set by MainViewModel. Returns null on success — the callback
+    /// re-runs the checks itself — or the localized refusal reason to show in the
+    /// status text.
+    /// </summary>
+    public Func<WaveguideConnection, Task<string?>>? AlignChipletHandler { get; set; }
 
     /// <summary>
     /// Gets a display string for the current navigation position.
@@ -156,6 +171,7 @@ public partial class DesignValidationViewModel : ObservableObject
     {
         Issues.Clear();
         CurrentIndex = -1;
+        IsCurrentIssueAlignable = false;
         HighlightConnection?.Invoke(null);
     }
 
@@ -284,8 +300,36 @@ public partial class DesignValidationViewModel : ObservableObject
 
         var issue = Issues[index];
         StatusText = issue.Description;
+        IsCurrentIssueAlignable = issue.Connection != null && IsChipletInterfaceIssue(issue.Type);
 
         HighlightConnection?.Invoke(issue.Connection);
         NavigateToPosition?.Invoke(issue.X, issue.Y);
+    }
+
+    /// <summary>True for every finding of the cross-chiplet edge-coupler rule (#1219/#1238).</summary>
+    private static bool IsChipletInterfaceIssue(DesignIssueType type) =>
+        type is DesignIssueType.ChipletInterfaceNotFacing
+            or DesignIssueType.ChipletInterfaceLateralOffset
+            or DesignIssueType.ChipletInterfaceOffEdge
+            or DesignIssueType.ChipletInterfaceGapLoss;
+
+    /// <summary>
+    /// One-click fix (issue #1248): snaps the current chiplet-interface issue's end
+    /// chiplet into butt-coupling through the undoable group move, then re-runs the
+    /// checks. Refusals land in the status text.
+    /// </summary>
+    [RelayCommand]
+    private async Task AlignChiplet()
+    {
+        if (CurrentIndex < 0 || CurrentIndex >= Issues.Count) return;
+
+        var issue = Issues[CurrentIndex];
+        if (issue.Connection == null || AlignChipletHandler == null) return;
+
+        var refusal = await AlignChipletHandler(issue.Connection);
+        if (refusal != null)
+        {
+            StatusText = refusal;
+        }
     }
 }
