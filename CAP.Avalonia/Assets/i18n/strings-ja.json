@@ -555,6 +555,7 @@
   "IsaPlayground.SamplesLabel": "サンプル:",
   "IsaPlayground.SampleCountTo5": "5まで数える",
   "IsaPlayground.SampleAddTwoNumbers": "2つの数を足す",
+  "IsaPlayground.SampleMultiply3x4": "3に4を掛ける",
   "IsaPlayground.AssembleButton": "アセンブル",
   "IsaPlayground.StepButton": "ステップ",
   "IsaPlayground.RunButton": "実行",

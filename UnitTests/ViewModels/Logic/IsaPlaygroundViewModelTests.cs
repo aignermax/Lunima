@@ -21,11 +21,11 @@ public class IsaPlaygroundViewModelTests
     private static string HaltedText => LocalizationService.Instance.Translate("IsaPlayground.StatusHalted");
 
     [Fact]
-    public void Ctor_LoadsBothSamples_AndPreassemblesCountTo5()
+    public void Ctor_LoadsAllShippedSamples_AndPreassemblesCountTo5()
     {
         var vm = new IsaPlaygroundViewModel();
 
-        vm.Samples.Count.ShouldBe(2);
+        vm.Samples.Count.ShouldBe(3);
         vm.Samples[0].FileName.ShouldBe("count-to-5.asm");
         vm.SelectedSample.ShouldBe(vm.Samples[0]);
         vm.ProgramText.ShouldContain("LOAD 1");

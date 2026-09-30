@@ -555,6 +555,7 @@
   "IsaPlayground.SamplesLabel": "示例：",
   "IsaPlayground.SampleCountTo5": "数到 5",
   "IsaPlayground.SampleAddTwoNumbers": "两数相加",
+  "IsaPlayground.SampleMultiply3x4": "3 乘以 4",
   "IsaPlayground.AssembleButton": "汇编",
   "IsaPlayground.StepButton": "单步",
   "IsaPlayground.RunButton": "运行",
