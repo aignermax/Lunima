@@ -103,6 +103,7 @@ public partial class IsaPlaygroundViewModel
         if (photonicAdd)
         {
             ReportPhotonicAdd();
+            PublishDrivenInputs();
         }
 
         if (_emulator.IsHalted)

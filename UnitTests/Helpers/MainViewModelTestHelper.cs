@@ -44,7 +44,8 @@ public static class MainViewModelTestHelper
         UserPreferencesService? preferencesService = null,
         GroupLibraryManager? libraryManager = null,
         DesignCanvasViewModel? canvas = null,
-        LeftPanelViewModel? leftPanel = null)
+        LeftPanelViewModel? leftPanel = null,
+        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null)
     {
         canvas ??= new DesignCanvasViewModel();
         commandManager ??= new CommandManager();
@@ -62,7 +63,7 @@ public static class MainViewModelTestHelper
             new UnitTests.ComponentRegistry.RegistryClient.RegistryTestHarness().CreateClient());
         // A caller-supplied LeftPanel (UI-flow tests) must share canvas/prefs with the rest of the VM.
         leftPanel ??= CreateLeftPanelViewModel(canvas, libraryManager, pdkLoader, preferencesService, commandManager, registryBrowser);
-        var rightPanel = CreateRightPanelViewModel(canvas, preferencesService);
+        var rightPanel = CreateRightPanelViewModel(canvas, preferencesService, logicNetworkProvider);
         var bottomPanel = CreateBottomPanelViewModel(canvas, commandManager);
 
         var errorConsoleService = new CAP_Core.ErrorConsoleService();
@@ -166,7 +167,8 @@ public static class MainViewModelTestHelper
     /// </summary>
     public static RightPanelViewModel CreateRightPanelViewModel(
         DesignCanvasViewModel? canvas = null,
-        UserPreferencesService? preferencesService = null)
+        UserPreferencesService? preferencesService = null,
+        CAP.Avalonia.Services.BuiltLogicNetworkProvider? logicNetworkProvider = null)
     {
         canvas ??= new DesignCanvasViewModel();
         preferencesService ??= new UserPreferencesService(
@@ -190,7 +192,8 @@ public static class MainViewModelTestHelper
             new OnaSweepViewModel(),
             new CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.TruthTableViewModel(),
-            new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(),
+            new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
+                builtNetworkProvider: logicNetworkProvider),
             // Production provider order (CanvasAndPanelExtensions): most specific
             // first, generic fallback last — so panel tests see real editors.
             new ComponentEditorFactory(new IComponentEditorProvider[]

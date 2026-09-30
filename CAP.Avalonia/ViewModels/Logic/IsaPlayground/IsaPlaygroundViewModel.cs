@@ -180,6 +180,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
         if (photonicAdd)
         {
             ReportPhotonicAdd();
+            PublishDrivenInputs();
         }
     }
 
