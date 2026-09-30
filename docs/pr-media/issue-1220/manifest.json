@@ -1,0 +1,14 @@
+[
+  {
+    "file": "laserhelp-1-first.png",
+    "caption": "Laser-source help: the laser switches on, a light pulse travels a short waveguide into a splitter, the two branches glow strong (red) / weak (teal), and the far coupler stays an unlit output. (first frame \u2014 laser off)"
+  },
+  {
+    "file": "laserhelp-2-mid.png",
+    "caption": "Laser-source help: the laser switches on, a light pulse travels a short waveguide into a splitter, the two branches glow strong (red) / weak (teal), and the far coupler stays an unlit output. (mid loop \u2014 laser on, pulse entering the splitter)"
+  },
+  {
+    "file": "laserhelp-3-last.png",
+    "caption": "Laser-source help: the laser switches on, a light pulse travels a short waveguide into a splitter, the two branches glow strong (red) / weak (teal), and the far coupler stays an unlit output. (last frame \u2014 branches glow strong/weak, output stays unlit)"
+  }
+]

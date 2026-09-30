@@ -41,7 +41,7 @@ public class HelpTextBudgetTests
     /// <summary>
     /// Keys of flyouts not yet migrated to the short-sections-plus-animation pattern —
     /// currently the help flyouts that only exist on the dev-ki lineage (Logic panel,
-    /// PDK, Registry download, Laser source) — written before this budget
+    /// PDK, Registry download) — written before this budget
     /// existed and migrated in follow-ups. Adding an entry is a deliberate, review-visible
     /// act; remove it once the flyout is migrated.
     /// </summary>
@@ -69,21 +69,6 @@ public class HelpTextBudgetTests
 
         // Registry browser download help (dev-ki lineage, not yet migrated)
         "Registry.DownloadHelpContent",
-
-        // Laser source help in the properties panel (dev-ki lineage, not yet migrated)
-        "LaserHelp.CanvasBody",
-        "LaserHelp.CanvasTitle",
-        "LaserHelp.CwBody",
-        "LaserHelp.CwTitle",
-        "LaserHelp.DiagramOff",
-        "LaserHelp.DiagramOn",
-        "LaserHelp.DiagramRamp",
-        "LaserHelp.DiagramRampNote",
-        "LaserHelp.DiagramStrong",
-        "LaserHelp.DiagramWeak",
-        "LaserHelp.Intro",
-        "LaserHelp.WavelengthPowerBody",
-        "LaserHelp.WavelengthPowerTitle",
     };
 
     [Fact]
