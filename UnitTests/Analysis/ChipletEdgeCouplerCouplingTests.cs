@@ -20,13 +20,14 @@ public class ChipletEdgeCouplerCouplingTests
     private const double CouplerHeight = 19;
     private const double PinY = 9.5;
     private const double Tolerance = 1e-12;
+    private const double WavelengthNm = 1550;
 
     [Fact]
     public void AlignedFacets_FactorIsExactlyOne()
     {
         var (link, _, _) = BuildLink(out _, out _);
 
-        ChipletEdgeCouplerCoupling.FieldFactor(link).ShouldBe(1.0);
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(1.0);
     }
 
     [Theory]
@@ -39,7 +40,54 @@ public class ChipletEdgeCouplerCouplingTests
 
         double expected = Math.Sqrt(ChipletEdgeCouplerCoupling.PowerCouplingForOffset(shiftY));
 
-        ChipletEdgeCouplerCoupling.FieldFactor(link).ShouldBe(expected, Tolerance);
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(expected, Tolerance);
+    }
+
+    [Theory]
+    [InlineData(5.0)]
+    [InlineData(20.0)]
+    public void FacetGap_FieldFactorIsSqrtOfDivergenceOverlap(double gapMicrometers)
+    {
+        var (link, _, _) = BuildLink(out _, out var chipletB);
+        chipletB.MoveGroup(gapMicrometers, 0); // along the link axis — pure gap, no offset
+
+        double expected = Math.Sqrt(
+            ChipletEdgeCouplerCoupling.PowerCouplingForGap(gapMicrometers, WavelengthNm));
+
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(expected, Tolerance);
+    }
+
+    [Fact]
+    public void OverlappingFacets_GapCountsAsZero()
+    {
+        var (link, _, _) = BuildLink(out _, out var chipletB);
+        chipletB.MoveGroup(-5.0, 0); // facets overlap — a placement concern, not a coupling gain
+
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(1.0);
+    }
+
+    [Theory]
+    [InlineData(0.0, 1.0)]
+    [InlineData(5.0, 0.768921051262829)]  // z_R = π·1.5²/1.55 ≈ 4.5604 µm; 1/(1+(5/2z_R)²)
+    [InlineData(20.0, 0.172165099217314)] // 1/(1+(20/2z_R)²)
+    public void PowerCouplingForGap_GaussianBeamDivergence(double gap, double expected)
+    {
+        ChipletEdgeCouplerCoupling.PowerCouplingForGap(gap, WavelengthNm)
+            .ShouldBe(expected, Tolerance);
+    }
+
+    [Fact]
+    public void PowerCouplingForGap_ShorterWavelengthLosesLess()
+    {
+        // Shorter λ → larger Rayleigh range z_R = π·n·w0²/λ → the beam diverges less.
+        ChipletEdgeCouplerCoupling.PowerCouplingForGap(20.0, 1310)
+            .ShouldBeGreaterThan(ChipletEdgeCouplerCoupling.PowerCouplingForGap(20.0, WavelengthNm));
+    }
+
+    [Fact]
+    public void PowerCouplingForGap_NegativeGapIsButtCoupled()
+    {
+        ChipletEdgeCouplerCoupling.PowerCouplingForGap(-5.0, WavelengthNm).ShouldBe(1.0);
     }
 
     [Theory]
@@ -51,7 +99,7 @@ public class ChipletEdgeCouplerCouplingTests
         var (link, _, endCoupler) = BuildLink(out _, out _);
         endCoupler.PhysicalPins[0].AngleDegrees = endPinAngle;
 
-        double factor = ChipletEdgeCouplerCoupling.FieldFactor(link);
+        double factor = ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm);
 
         if (expectZero)
         {
@@ -77,7 +125,7 @@ public class ChipletEdgeCouplerCouplingTests
             EndPin = endCoupler.PhysicalPins[0],
         };
 
-        ChipletEdgeCouplerCoupling.FieldFactor(link).ShouldBe(1.0);
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(1.0);
     }
 
     [Fact]
@@ -87,7 +135,7 @@ public class ChipletEdgeCouplerCouplingTests
         startCoupler.TemplateName = "Grating Coupler";
         endCoupler.TemplateName = "Grating Coupler";
 
-        ChipletEdgeCouplerCoupling.FieldFactor(link).ShouldBe(1.0);
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(1.0);
     }
 
     [Fact]
@@ -101,7 +149,7 @@ public class ChipletEdgeCouplerCouplingTests
             EndPin = endCoupler.PhysicalPins[0],
         };
 
-        ChipletEdgeCouplerCoupling.FieldFactor(link).ShouldBe(1.0);
+        ChipletEdgeCouplerCoupling.FieldFactor(link, WavelengthNm).ShouldBe(1.0);
     }
 
     [Theory]

@@ -140,14 +140,15 @@ public class DesignValidator
     /// <paramref name="minWaveguideWidthRules"/> are provided) flags waveguides narrower
     /// than the fabrication minimum of their cross-section, and flags cross-chiplet
     /// edge-coupler links whose facets do not face each other, are laterally offset,
-    /// or sit off the chiplet edge (issue #1219 — the checker resolves chiplet
-    /// membership from the pins' parent groups, so it needs no extra input). Each rule
-    /// contributes its findings exactly once.
+    /// sit off the chiplet edge, or stand too far apart (facet-gap divergence loss,
+    /// issues #1219/#1238 — chiplet membership resolves from the pins' parent groups,
+    /// so the checker needs no extra input). Each rule contributes its findings once.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
     /// <param name="components">All placed components whose optical pins are checked.</param>
     /// <param name="externalPortPins">Pins that are external ports and should be skipped.</param>
+    /// <param name="wavelengthNm">Simulation wavelength the chiplet facet-gap loss is evaluated at.</param>
     /// <param name="minWaveguideSpacingMicrometers">
     /// Minimum required edge-to-edge spacing; ≤0 disables the spacing check. When a
     /// per-connection provider is wired this value still governs frozen group paths,
@@ -175,6 +176,7 @@ public class DesignValidator
         IEnumerable<ComponentGroup> groups,
         IEnumerable<Component> components,
         IEnumerable<PhysicalPin>? externalPortPins,
+        double wavelengthNm,
         double minWaveguideSpacingMicrometers = 0,
         IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
         Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null)
@@ -185,7 +187,7 @@ public class DesignValidator
 
         var connectionList = connections.ToList();
         var issues = Validate(connectionList, groups, components, externalPortPins);
-        issues.AddRange(_chipletInterfaceChecker.Check(connectionList));
+        issues.AddRange(_chipletInterfaceChecker.Check(connectionList, wavelengthNm));
 
         if (connectionDrcRuleProvider is not null)
         {

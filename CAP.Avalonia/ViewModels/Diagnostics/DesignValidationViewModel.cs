@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CAP_Core.Analysis;
 using CAP_Core.Components;
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -82,6 +83,8 @@ public partial class DesignValidationViewModel : ObservableObject
     /// per-chiplet limits on a multi-process canvas and PDK rules even in Playground —
     /// instead of the design-wide values above. Optional.
     /// </param>
+    /// <param name="wavelengthNm">Simulation wavelength for the chiplet facet-gap loss
+    /// warning; null falls back to the standard design wavelength (1550 nm). Optional.</param>
     public void RunValidation(
         IEnumerable<WaveguideConnection> connections,
         IEnumerable<ComponentGroup>? groups = null,
@@ -95,7 +98,8 @@ public partial class DesignValidationViewModel : ObservableObject
         IEnumerable<PhysicalPin>? externalPortPins = null,
         double minWaveguideSpacingMicrometers = 0,
         IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
-        Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null)
+        Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null,
+        double? wavelengthNm = null)
     {
         var request = new DesignValidationRequest(
             connections, groups, allComponents,
@@ -103,7 +107,7 @@ public partial class DesignValidationViewModel : ObservableObject
             pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
             processLockActive, externalPortPins,
             minWaveguideSpacingMicrometers, minWaveguideWidthRules,
-            connectionDrcRuleProvider);
+            connectionDrcRuleProvider, wavelengthNm);
         BeginValidation();
         CommitIssues(ComputeIssues(request));
     }
@@ -129,6 +133,7 @@ public partial class DesignValidationViewModel : ObservableObject
         double minWaveguideSpacingMicrometers = 0,
         IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
         Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null,
+        double? wavelengthNm = null,
         CancellationToken cancellationToken = default)
     {
         var request = new DesignValidationRequest(
@@ -137,7 +142,7 @@ public partial class DesignValidationViewModel : ObservableObject
             pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
             processLockActive, externalPortPins,
             minWaveguideSpacingMicrometers, minWaveguideWidthRules,
-            connectionDrcRuleProvider);
+            connectionDrcRuleProvider, wavelengthNm);
         BeginValidation();
         var issues = await Task.Run(() => ComputeIssues(request), cancellationToken);
         CommitIssues(issues);
@@ -192,6 +197,7 @@ public partial class DesignValidationViewModel : ObservableObject
             request.Groups ?? Array.Empty<ComponentGroup>(),
             request.AllComponents ?? Array.Empty<Component>(),
             request.ExternalPortPins,
+            request.WavelengthNm ?? StandardWaveLengths.RedNM,
             request.MinWaveguideSpacingMicrometers,
             request.MinWaveguideWidthRules,
             request.ConnectionDrcRuleProvider));
@@ -235,7 +241,8 @@ public partial class DesignValidationViewModel : ObservableObject
         IEnumerable<PhysicalPin>? ExternalPortPins,
         double MinWaveguideSpacingMicrometers,
         IReadOnlyList<WaveguideMinWidthRule>? MinWaveguideWidthRules,
-        Func<WaveguideConnection, ConnectionDrcRules?>? ConnectionDrcRuleProvider);
+        Func<WaveguideConnection, ConnectionDrcRules?>? ConnectionDrcRuleProvider,
+        double? WavelengthNm);
 
     /// <summary>
     /// Navigates to the next issue in the list (wraps around).

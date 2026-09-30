@@ -24,15 +24,15 @@ namespace CAP_Core.LightCalculation
         {
             var allComponentsSMatrices = GetAllComponentsSMatrices(LaserWaveLengthInNm);
             SMatrix allConnectionsSMatrix = Grid.UsePhysicalCoordinates
-               ? CreatePhysicalConnectionsMatrix()
+               ? CreatePhysicalConnectionsMatrix(LaserWaveLengthInNm)
                : CreateInterComponentsConnectionsMatrix();
             allComponentsSMatrices.Add(allConnectionsSMatrix);
             return SMatrix.CreateSystemSMatrix(allComponentsSMatrices);
         }
-        private SMatrix CreatePhysicalConnectionsMatrix()
+        private SMatrix CreatePhysicalConnectionsMatrix(int laserWaveLengthInNm)
         {
             var connections = Grid.WaveguideConnections.GetConnectionTransfers(
-                ChipletEdgeCouplerCoupling.FieldFactor);
+                connection => ChipletEdgeCouplerCoupling.FieldFactor(connection, laserWaveLengthInNm));
 
             // Also include frozen internal paths from ComponentGroups so that grouped
             // components are treated identically to flat components during simulation.

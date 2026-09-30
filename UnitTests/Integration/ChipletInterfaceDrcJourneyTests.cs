@@ -73,16 +73,21 @@ public class ChipletInterfaceDrcJourneyTests
 
         var panel = RunValidation(design.Canvas);
 
-        var issue = ChipletInterfaceIssues(panel).ShouldHaveSingleItem(Describe(panel));
-        issue.Type.ShouldBe(DesignIssueType.ChipletInterfaceOffEdge);
+        var issues = ChipletInterfaceIssues(panel);
+        var issue = issues.Single(i => i.Type == DesignIssueType.ChipletInterfaceOffEdge);
         issue.Description.ShouldContain(ChipletEdgeCouplerJourneyDesign.ChipletBName);
         issue.Description.ShouldContain("20");
+        // A facet retreated 20 µm into the die also leaves a 20 µm air gap — both
+        // warnings are honest statements about the same fault.
+        issues.ShouldContain(i => i.Type == DesignIssueType.ChipletInterfaceGapLoss, Describe(panel));
+        issues.Count.ShouldBe(2, Describe(panel));
     }
 
     private static List<DesignIssue> ChipletInterfaceIssues(DesignValidationViewModel panel) =>
         panel.Issues.Where(i => i.Type is DesignIssueType.ChipletInterfaceNotFacing
                 or DesignIssueType.ChipletInterfaceLateralOffset
-                or DesignIssueType.ChipletInterfaceOffEdge)
+                or DesignIssueType.ChipletInterfaceOffEdge
+                or DesignIssueType.ChipletInterfaceGapLoss)
             .ToList();
 
     /// <summary>Runs Design Validation wired like MainViewModel.RunDesignChecks (#936).</summary>
