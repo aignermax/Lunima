@@ -29,9 +29,12 @@ public class Issue1167TourSpotlightHitTestTests
     [AvaloniaFact]
     public void DimAndSpotlight_PassClicksThrough_CardStaysClickable()
     {
-        var underlying = new Button
+        // An explicit background keeps the surface hit-testable without relying on the
+        // theme resolving a Button/Window background (it does not on the Linux CI runner).
+        var underlying = new Border
         {
-            Content = "canvas surface",
+            Name = "CanvasSurface",
+            Background = Brushes.Black,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
