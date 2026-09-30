@@ -1,0 +1,14 @@
+[
+  {
+    "file": "chiplet-link-1-butt-coupled.png",
+    "caption": "Design Checks help, \u0022Chiplet links\u0022: light leaves facet A as a widening Gaussian beam \u2014 a facet gap lets it diverge, a lateral offset lets it miss facet B\u0027s mode; the readout is the real simulated coupling \u03B7 at 1550 nm. (butt-coupled \u2014 facets touch, \u03B7 = 100 %)"
+  },
+  {
+    "file": "chiplet-link-2-facet-gap.png",
+    "caption": "Design Checks help, \u0022Chiplet links\u0022: light leaves facet A as a widening Gaussian beam \u2014 a facet gap lets it diverge, a lateral offset lets it miss facet B\u0027s mode; the readout is the real simulated coupling \u03B7 at 1550 nm. (facet gap \u2014 the beam has diverged across the gap)"
+  },
+  {
+    "file": "chiplet-link-3-gap-and-offset.png",
+    "caption": "Design Checks help, \u0022Chiplet links\u0022: light leaves facet A as a widening Gaussian beam \u2014 a facet gap lets it diverge, a lateral offset lets it miss facet B\u0027s mode; the readout is the real simulated coupling \u03B7 at 1550 nm. (gap \u002B lateral offset \u2014 facet B is shifted sideways, lowest \u03B7)"
+  }
+]

@@ -271,6 +271,8 @@
   "DesignChecks.Title": "Design-Prüfungen:",
   "DesignChecksHelp.BendBody": "In einer zu engen Kurve kann das geführte Licht dem Wellenleiter nicht mehr folgen und strahlt in das umgebende Material aus. Der Mindestradius des aktiven Prozesses hält diesen Biegeverlust vernachlässigbar klein.",
   "DesignChecksHelp.BendTitle": "Mindestbiegeradius",
+  "DesignChecksHelp.ChipletBody": "Licht verlässt eine Chiplet-Facette als sich aufweitenden Gauß-Strahl. Steht die gegenüberliegende Facette zu weit zurück oder seitlich versetzt, trifft nur ein Teil des Strahls ihre Mode. Die Design-Checks warnen, sobald der Verlust das Link-Budget überschreitet.",
+  "DesignChecksHelp.ChipletTitle": "Chiplet-Verbindungen",
   "DesignChecksHelp.Intro": "Diese Prüfungen sind eine Light-Version des Design Rule Checks (DRC), den eine Foundry vor der Fertigung durchführt. Jede Regel existiert, weil sonst ein physikalischer Effekt die Schaltung beeinträchtigen würde.",
   "DesignChecksHelp.PinsBody": "Jede abrupte Diskontinuität — ein offenes Pin-Ende oder ein plötzlicher Wechsel der Wellenleiterbreite — reflektiert und streut Licht. Alle Pins zu verbinden und Breiten anzugleichen hält diese Reflexionen klein.",
   "DesignChecksHelp.PinsTitle": "Unverbundene Pins & Breiten-Mismatch",

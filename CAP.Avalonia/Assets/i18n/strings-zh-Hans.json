@@ -271,6 +271,8 @@
   "DesignChecks.Title": "设计检查：",
   "DesignChecksHelp.BendBody": "弯曲过急时,导波光无法跟随波导,会辐射到周围材料中。当前工艺的最小半径可将这种弯曲损耗降到可忽略不计。",
   "DesignChecksHelp.BendTitle": "最小弯曲半径",
+  "DesignChecksHelp.ChipletBody": "光以逐渐发散的高斯光束形式离开芯粒端面。如果对侧端面靠后或横向偏移，只有部分光束能进入其模式。当损耗的光超过链路预算时，设计检查会发出警告。",
+  "DesignChecksHelp.ChipletTitle": "芯粒链路",
   "DesignChecksHelp.Intro": "这些检查是代工厂在流片前执行的设计规则检查(DRC)的精简版。每条规则的存在,都是因为否则某种物理效应会损害你的电路。",
   "DesignChecksHelp.PinsBody": "任何突变的不连续——悬空的引脚端或波导宽度的突然变化——都会反射和散射光。连接所有引脚并匹配宽度可将这些反射保持在较低水平。",
   "DesignChecksHelp.PinsTitle": "未连接引脚与宽度失配",
