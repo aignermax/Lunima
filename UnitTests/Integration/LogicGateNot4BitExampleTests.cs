@@ -40,8 +40,9 @@ public class LogicGateNot4BitExampleTests : IClassFixture<LogicGateNot4BitExampl
         groups.Count.ShouldBe(4, "one NOT slice per bit of the 4-bit word");
         groups.Select(g => g.GroupName).ShouldBe(
             Enumerable.Range(0, 4).Select(i => $"NOT{i}").ToArray(), ignoreOrder: true);
-        foreach (var (group, index) in groups.Select((g, i) => (g, i)))
+        foreach (var index in Enumerable.Range(0, 4))
         {
+            var group = groups.Single(g => g.GroupName == $"NOT{index}");
             var roles = group.TruthTablePinAssignment.ShouldNotBeNull(
                 $"group '{group.GroupName}' must ship its persisted roles");
             roles.InputPinNames.ShouldBe(new[] { "A" });
@@ -105,7 +106,7 @@ public class LogicGateNot4BitExampleTests : IClassFixture<LogicGateNot4BitExampl
         /// <summary>The canvas the shipped example loaded onto.</summary>
         public CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel Canvas { get; private set; } = null!;
 
-        /// <summary>The loaded top-level gate groups, in file order.</summary>
+        /// <summary>The loaded top-level gate groups.</summary>
         public List<ComponentGroup> Groups { get; private set; } = null!;
 
         /// <summary>The logic network assembled from the loaded design.</summary>
