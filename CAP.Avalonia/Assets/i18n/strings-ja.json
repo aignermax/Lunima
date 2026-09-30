@@ -372,6 +372,7 @@
   "Examples.MachZehnder.Description": "光を2つの経路に分けて再合成する — フォトニクスの「Hello World」。",
   "Examples.Mux.Description": "2対1マルチプレクサ:1つの選択ビットが2つの入力を切り替える。",
   "Examples.NotGate.Description": "最初の論理ゲート:NAND 1つで作るNOT。",
+  "Examples.Not4bit.Description": "4つのNOTゲートを並べて:A0–A3を入れY0–Y3へ——光で動くISAのNOT命令。",
   "Examples.OrGate.Description": "NOTとANDのブロックからORゲートを作る。",
   "Examples.RippleCarryAdder.Description": "全加算器を連ねて4ビット・リップルキャリー加算器へ — 344ゲートで1つの結果。",
   "Examples.SrLatch.Description": "2つのNANDレジスタを交差結合して1ビットを記憶する — 初めてのメモリ回路。",
