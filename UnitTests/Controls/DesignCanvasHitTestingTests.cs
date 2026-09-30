@@ -107,6 +107,31 @@ public class DesignCanvasHitTestingTests
         result.ShouldBeSameAs(pin, "clicking exactly on the pin must still hit it regardless of the cap");
     }
 
+    [Fact]
+    public void HitTestPin_AtRenderedMarkerPositionsOfClosePitchPdkPins_ReturnsTheExactPin()
+    {
+        // Issue #1217 regression pin: the real SiEPIC 2x2 MMI (right ports 2.4 µm apart)
+        // and Broadband DC (left ports 4.7 µm apart) from finding #1161. Hit-testing at
+        // each rendered marker position (PinRenderer draws at GetAbsolutePosition) must
+        // resolve to exactly that pin — never the close-pitch neighbour, never a pin of
+        // the other component 466 µm away.
+        var vm = new DesignCanvasViewModel();
+        var templates = TestPdkLoader.LoadFromPdk("siepic-ebeam-pdk.json");
+        var mmi = CAP.Avalonia.ViewModels.Library.ComponentTemplates.CreateFromTemplate(
+            templates.Single(t => t.Name == "MMI 2x2 50/50 TE 1310"), 600, 200);
+        var dc = CAP.Avalonia.ViewModels.Library.ComponentTemplates.CreateFromTemplate(
+            templates.Single(t => t.Name == "Broadband DC TE 1550"), 1100, 200);
+        vm.AddComponent(mmi, "MMI");
+        vm.AddComponent(dc, "DC");
+
+        foreach (var pin in mmi.PhysicalPins.Concat(dc.PhysicalPins))
+        {
+            var (pinX, pinY) = pin.GetAbsolutePosition();
+            DesignCanvasHitTesting.HitTestPin(new Point(pinX, pinY), vm, zoom: 1.0)
+                .ShouldBeSameAs(pin, $"the marker of {pin.Name} must hit-test to itself");
+        }
+    }
+
     private static (DesignCanvasViewModel Vm, CAP_Core.Components.Core.PhysicalPin Pin, double PinX, double PinY)
         CreateComponentWithPin()
     {
