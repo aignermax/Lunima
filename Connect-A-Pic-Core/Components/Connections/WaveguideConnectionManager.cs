@@ -590,6 +590,16 @@ public partial class WaveguideConnectionManager
     /// </summary>
     private static bool IsRouteStillValid(WaveguideConnection connection, WaveguideRouter router)
     {
+        // A cross-chiplet facet link couples free-space between chiplet edges: its
+        // transmission is the ChipletEdgeCouplerCoupling offset × gap model evaluated
+        // from live pin positions, not waveguide geometry. Re-routing it as a waveguide
+        // would draw a wire through free space and double-count the misalignment loss,
+        // so the abutment route is kept no matter how the chiplets move.
+        if (Analysis.ChipletInterfaceChecker.TryGetFacet(connection.StartPin, out var startFacet)
+            && Analysis.ChipletInterfaceChecker.TryGetFacet(connection.EndPin, out var endFacet)
+            && !ReferenceEquals(startFacet.Chiplet, endFacet.Chiplet))
+            return true;
+
         // Frozen paths with matching endpoints are always kept as-is: manual bend edits
         // must survive re-routing. RecalculateTransmission handles the unfreeze case.
         if (connection.IsRouteFrozen && connection.FrozenPathStillMatchesPins())
