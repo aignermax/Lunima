@@ -33,7 +33,7 @@ otherwise describe a curve in words (laser line shape, RIN noise trace, MZI frin
     MarkerBrush="#FFD54F" PingPong="True" IsHitTestVisible="False"/>
 ```
 
-## Bespoke overlays (EyeStackAnimation, LayerStackAnimation)
+## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation)
 
 Panel-specific compositions (eye-diagram stacking, process layer stack) that live in the
 same folder but are not primitives — they draw in their flyout's fixed coordinate space and
