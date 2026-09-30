@@ -41,7 +41,7 @@ public class HelpTextBudgetTests
     /// <summary>
     /// Keys of flyouts not yet migrated to the short-sections-plus-animation pattern —
     /// currently the help flyouts that only exist on the dev-ki lineage (Logic panel,
-    /// PDK, Registry download) — written before this budget
+    /// Registry download) — written before this budget
     /// existed and migrated in follow-ups. Adding an entry is a deliberate, review-visible
     /// act; remove it once the flyout is migrated.
     /// </summary>
@@ -49,18 +49,6 @@ public class HelpTextBudgetTests
     {
         // Logic panel flyouts (dev-ki lineage) — the timeline and timing flyouts were
         // migrated in #1206, the fan-out flyout in #1216; none remain exempt.
-
-        // PDK help flyout in the toolbar (dev-ki lineage, not yet migrated)
-        "PdkHelp.DiagramNote",
-        "PdkHelp.DiagramProcessA",
-        "PdkHelp.DiagramProcessB",
-        "PdkHelp.Intro",
-        "PdkHelp.NoMixBody",
-        "PdkHelp.NoMixTitle",
-        "PdkHelp.ProcessBody",
-        "PdkHelp.ProcessTitle",
-        "PdkHelp.WhatIsBody",
-        "PdkHelp.WhatIsTitle",
 
         // Registry browser download help (dev-ki lineage, not yet migrated)
         "Registry.DownloadHelpContent",
