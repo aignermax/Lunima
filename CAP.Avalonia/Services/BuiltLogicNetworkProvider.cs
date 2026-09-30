@@ -20,6 +20,14 @@ public sealed class BuiltLogicNetworkProvider
     /// <summary>Raised whenever the held network changes (publish or clear).</summary>
     public event Action? Changed;
 
+    /// <summary>
+    /// Raised when a consumer drove operand bits into the held network (issue #1240):
+    /// the ISA playground publishes the A/B/Cin bits of every photonic ADD here, so
+    /// the Logic panel can mirror them onto its input toggles — the canvas 0/1 badges
+    /// then show the addition the program just executed. Carries signal name → bit.
+    /// </summary>
+    public event Action<IReadOnlyDictionary<string, bool>>? InputsDriven;
+
     /// <summary>The last successfully assembled network, or null when none is current.</summary>
     public LogicNetworkEvaluator? Network => _network;
 
@@ -29,6 +37,17 @@ public sealed class BuiltLogicNetworkProvider
     {
         _network = network ?? throw new ArgumentNullException(nameof(network));
         Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Announces operand bits a consumer drove into the network; subscribers (the
+    /// Logic panel) mirror them onto their input toggles. No-op without subscribers.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="bits"/> is null.</exception>
+    public void DriveInputs(IReadOnlyDictionary<string, bool> bits)
+    {
+        ArgumentNullException.ThrowIfNull(bits);
+        InputsDriven?.Invoke(bits);
     }
 
     /// <summary>Drops the held network (rebuild failed, cancelled, or the design changed).</summary>

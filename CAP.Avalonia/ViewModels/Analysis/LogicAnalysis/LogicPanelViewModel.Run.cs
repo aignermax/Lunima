@@ -45,6 +45,11 @@ public partial class LogicPanelViewModel
         BuiltLogicNetworkProvider? builtNetworkProvider = null)
     {
         _builtNetworkProvider = builtNetworkProvider;
+        if (_builtNetworkProvider != null)
+        {
+            _builtNetworkProvider.InputsDriven += OnInputsDriven;
+        }
+
         _runClock = runClock ?? new DispatcherLogicRunClock();
         _runClock.Tick += OnRunClockTick;
         RunIntervalOptions = RunIntervalValues.Select(value => new LogicRunIntervalOption(value)).ToList();
