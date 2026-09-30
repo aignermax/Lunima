@@ -170,4 +170,71 @@ public partial class PathfindingGrid
             return owners.Any(owner => owner.Kind == ComponentCellKind.Body);
         }
     }
+
+    /// <summary>
+    /// True when the pin's escape channel — the corridor the A* attempt punches through
+    /// component geometry (length × width in µm along the pin's outward axis) — is sealed
+    /// by component footprints on EVERY cross-section (widened by one cell beyond the
+    /// punched walls and one cell past the far end, so spilling out sideways or through
+    /// the end cap counts as open), with at least one FOREIGN component body among the
+    /// blocking claims. A sealed pin is unreachable no matter how the remaining wires are
+    /// ordered. Free cells, waveguide cells and frozen path markings leave a lane open
+    /// (waveguide blockage is the contention case a re-ordering can fix); cells claimed
+    /// only by the pin's own component or by padding bands seal the channel but do not
+    /// count as foreign bodies.
+    /// </summary>
+    /// <param name="pin">The pin whose escape channel is checked.</param>
+    /// <param name="corridorLengthMicrometers">Length of the punched corridor in µm.</param>
+    /// <param name="corridorWidthMicrometers">Width of the punched corridor in µm.</param>
+    public bool IsPinEscapeSealedByForeignBody(
+        PhysicalPin pin, double corridorLengthMicrometers, double corridorWidthMicrometers)
+    {
+        var (pinX, pinY) = pin.GetAbsolutePosition();
+        double angleRad = pin.GetAbsoluteAngle() * Math.PI / 180.0;
+        double dx = Math.Cos(angleRad);
+        double dy = Math.Sin(angleRad);
+        double perpX = -dy;
+        double perpY = dx;
+
+        double halfWidth = corridorWidthMicrometers / 2 + CellSizeMicrometers;
+        double scanLength = corridorLengthMicrometers + CellSizeMicrometers;
+        bool sawForeignBody = false;
+
+        for (double dist = 0; dist <= scanLength; dist += CellSizeMicrometers)
+        {
+            bool laneFree = false;
+            for (double offset = -halfWidth; offset <= halfWidth; offset += CellSizeMicrometers)
+            {
+                var (gx, gy) = PhysicalToGrid(
+                    pinX + dx * dist + perpX * offset,
+                    pinY + dy * dist + perpY * offset);
+                if (!IsInBounds(gx, gy) || _cells[gx, gy] != 1)
+                {
+                    laneFree = true;
+                    break;
+                }
+                if (HasForeignBodyClaim(gx, gy, pin.ParentComponent))
+                    sawForeignBody = true;
+            }
+            if (laneFree)
+                return false;
+        }
+        return sawForeignBody;
+    }
+
+    /// <summary>
+    /// True when the cell carries a component-BODY claim by any component other than
+    /// <paramref name="ownComponent"/>. A blocked cell without an ownership record counts
+    /// as a foreign body — conservative.
+    /// </summary>
+    private bool HasForeignBodyClaim(int gridX, int gridY, Component? ownComponent)
+    {
+        lock (_ownershipLock)
+        {
+            if (!_cellOwners.TryGetValue((gridX, gridY), out var owners) || owners.Count == 0)
+                return true;
+            return owners.Any(owner =>
+                owner.Kind == ComponentCellKind.Body && owner.Owner != ownComponent);
+        }
+    }
 }

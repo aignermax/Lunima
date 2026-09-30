@@ -324,6 +324,13 @@ public partial class WaveguideConnectionManager
     public int MaxRoutingAttempts { get; set; } = 6;
 
     /// <summary>
+    /// Number of full-ordering route attempts the last <see cref="RecalculateAllTransmissions"/>
+    /// pass ran (1 = the first ordering was enough, or every failure was endpoint-blocked so
+    /// further orderings were provably pointless). Diagnostic hook for tests and telemetry.
+    /// </summary>
+    public int LastOrderingAttemptCount { get; private set; }
+
+    /// <summary>
     /// Invoked on the routing thread when a connection escalates to Phase 2 (complex route).
     /// Wire this to update a UI progress indicator.
     /// </summary>
@@ -400,19 +407,28 @@ public partial class WaveguideConnectionManager
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
+            LastOrderingAttemptCount = 0;
+
             // Phase 1: Incremental routing — keep valid routes, only re-route broken ones
-            var result = TryRouteIncremental(router, progressCallback, cancellationToken);
+            var incremental = TryRouteIncremental(router, progressCallback, cancellationToken);
             if (cancellationToken.IsCancellationRequested) return;
 
-            if (result.allValid)
+            if (incremental.allValid)
                 return;
 
             // Phase 2: Incremental routing failed for some connections.
             // Fall back to full re-route with ordering strategies.
             // Snapshots: this runs on the routing thread while UI commands may mutate the list.
-            result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
+            var result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
+            LastOrderingAttemptCount++;
             if (cancellationToken.IsCancellationRequested) return;
             if (result.allValid) return;
+
+            // When every failed wire is endpoint-blocked (a pin sealed in by a component
+            // footprint), no ordering can free it — re-ordering cannot fix a footprint,
+            // so the ordering retry storm is skipped and this attempt's routes are kept.
+            if (AllFailuresEndpointBlocked(result.failedConnections))
+                return;
 
             var bestOrder = SnapshotConnections();
             int bestFailedCount = result.failedCount;
@@ -422,8 +438,18 @@ public partial class WaveguideConnectionManager
             {
                 if (cancellationToken.IsCancellationRequested) return;
                 result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
+                LastOrderingAttemptCount++;
+                if (cancellationToken.IsCancellationRequested) return;
 
                 if (result.allValid)
+                {
+                    ReorderConnections(ordering);
+                    return;
+                }
+
+                // An attempt whose only failures are endpoint-blocked is the best any
+                // ordering can achieve: those wires stay blocked under every ordering.
+                if (AllFailuresEndpointBlocked(result.failedConnections))
                 {
                     ReorderConnections(ordering);
                     return;
@@ -604,7 +630,7 @@ public partial class WaveguideConnectionManager
     /// <summary>
     /// Tries to route all connections in the given order (full re-route).
     /// </summary>
-    private (bool allValid, int failedCount) TryRouteInOrder(
+    private (bool allValid, int failedCount, List<WaveguideConnection> failedConnections) TryRouteInOrder(
         List<WaveguideConnection> orderedConnections,
         WaveguideRouter router,
         Action? progressCallback = null,
@@ -614,13 +640,14 @@ public partial class WaveguideConnectionManager
         router.PathfindingGrid!.ClearAllWaveguideObstacles();
 
         int failedCount = 0;
+        var failedConnections = new List<WaveguideConnection>();
         var routedSoFar = new List<WaveguideConnection>();
 
         // Route each connection sequentially
         foreach (var connection in orderedConnections)
         {
             if (cancellationToken.IsCancellationRequested)
-                return (false, failedCount);
+                return (false, failedCount, failedConnections);
 
             connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             RefreshStyledObstacleCollision(connection, router);
@@ -645,17 +672,27 @@ public partial class WaveguideConnectionManager
                 if (connection.IsBlockedFallback || CrossesAnyRoutedSibling(connection, routedSoFar))
                 {
                     failedCount++;
+                    failedConnections.Add(connection);
                 }
                 routedSoFar.Add(connection);
             }
             else
             {
                 failedCount++;
+                failedConnections.Add(connection);
             }
         }
 
-        return (failedCount == 0, failedCount);
+        return (failedCount == 0, failedCount, failedConnections);
     }
+
+    /// <summary>
+    /// True when every failed connection of an attempt is endpoint-blocked: its start or
+    /// end pin is sealed in by a component footprint, so no wire ordering can free it.
+    /// </summary>
+    private static bool AllFailuresEndpointBlocked(List<WaveguideConnection> failedConnections) =>
+        failedConnections.Count > 0 &&
+        failedConnections.All(c => c.FailureReason == RoutingFailureReason.EndpointBlocked);
 
     /// <summary>
     /// True when the connection's routed geometry properly crosses any already-routed
