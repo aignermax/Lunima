@@ -372,6 +372,7 @@
   "Examples.MachZehnder.Description": "Split light into two paths and recombine it — the Hello World of photonics.",
   "Examples.Mux.Description": "A 2-to-1 multiplexer: one select bit chooses between two inputs.",
   "Examples.NotGate.Description": "Your first logic gate: a NOT built from a single NAND.",
+  "Examples.Not4bit.Description": "Four NOT gates side by side: A0–A3 in, Y0–Y3 out — the ISA NOT instruction on light.",
   "Examples.OrGate.Description": "Build an OR gate from NOT and AND building blocks.",
   "Examples.RippleCarryAdder.Description": "Chain full adders into a 4-bit ripple-carry adder — 344 gates, one result.",
   "Examples.SrLatch.Description": "Two cross-coupled NAND registers remember one bit — your first memory circuit.",

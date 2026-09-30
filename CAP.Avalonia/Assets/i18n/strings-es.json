@@ -372,6 +372,7 @@
   "Examples.MachZehnder.Description": "Divide la luz en dos caminos y recómbinala: el «Hola Mundo» de la fotónica.",
   "Examples.Mux.Description": "Un multiplexor 2 a 1: un bit de selección elige entre dos entradas.",
   "Examples.NotGate.Description": "Tu primera puerta lógica: un NOT construido con una sola NAND.",
+  "Examples.Not4bit.Description": "Cuatro puertas NOT en paralelo: entran A0–A3, salen Y0–Y3 — la instrucción NOT del ISA sobre luz.",
   "Examples.OrGate.Description": "Construye una puerta OR a partir de bloques NOT y AND.",
   "Examples.RippleCarryAdder.Description": "Encadena sumadores completos en un sumador de 4 bits con acarreo encadenado: 344 puertas, un resultado.",
   "Examples.SrLatch.Description": "Dos registros NAND acoplados en cruz recuerdan un bit: tu primer circuito de memoria.",

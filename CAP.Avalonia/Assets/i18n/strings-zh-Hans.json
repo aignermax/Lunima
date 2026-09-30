@@ -372,6 +372,7 @@
   "Examples.MachZehnder.Description": "把光分成两条路径再重新合并——光子学的「Hello World」。",
   "Examples.Mux.Description": "2 选 1 多路复用器:一个选择位在两个输入之间切换。",
   "Examples.NotGate.Description": "你的第一个逻辑门:用一个 NAND 搭建 NOT。",
+  "Examples.Not4bit.Description": "四个 NOT 门并排:A0–A3 输入,Y0–Y3 输出——在光上运行的 ISA NOT 指令。",
   "Examples.OrGate.Description": "用 NOT 和 AND 模块搭建 OR 门。",
   "Examples.RippleCarryAdder.Description": "把全加器串成 4 位行波进位加法器——344 个门,一个结果。",
   "Examples.SrLatch.Description": "两个交叉耦合的 NAND 寄存器记住一个比特——你的第一个存储电路。",
