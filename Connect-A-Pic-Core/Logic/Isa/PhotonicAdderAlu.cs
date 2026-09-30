@@ -103,6 +103,14 @@ namespace CAP_Core.Logic.Isa
             return sum;
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// This unit is ADD-only: NOT falls back to the golden model. Use
+        /// <see cref="CompositeIsaAlu"/> with a <see cref="PhotonicNotAlu"/> to run
+        /// both operations on photonic networks.
+        /// </remarks>
+        public int Not(int a) => new GoldenIsaAlu().Not(a);
+
         /// <summary>
         /// Arrival time of the latest switching network output when the operand bits
         /// move from the previously driven assignment (all-zero at power-on) to

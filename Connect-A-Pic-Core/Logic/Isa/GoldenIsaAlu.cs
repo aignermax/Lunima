@@ -1,8 +1,8 @@
 namespace CAP_Core.Logic.Isa
 {
     /// <summary>
-    /// The golden ALU: computes ADD in C#, exactly as docs/ISA.md specifies
-    /// (wrap modulo 16). This is the default <see cref="IIsaAlu"/> of
+    /// The golden ALU: computes ADD and NOT in C#, exactly as docs/ISA.md specifies
+    /// (ADD wraps modulo 16; NOT is <c>~a &amp; 0xF</c>). This is the default <see cref="IIsaAlu"/> of
     /// <see cref="IsaEmulator"/> and the reference the photonic ALU is checked
     /// against cycle by cycle.
     /// </summary>
@@ -10,5 +10,8 @@ namespace CAP_Core.Logic.Isa
     {
         /// <inheritdoc />
         public int Add(int a, int b) => (a + b) & IsaMachine.MaxDataValue;
+
+        /// <inheritdoc />
+        public int Not(int a) => ~a & IsaMachine.MaxDataValue;
     }
 }
