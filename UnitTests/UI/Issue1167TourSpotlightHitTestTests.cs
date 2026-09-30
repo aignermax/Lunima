@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Headless;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Shapes;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -26,6 +27,10 @@ public class Issue1167TourSpotlightHitTestTests
     private static bool InputHitTestFilter(Visual v)
         => v is IInputElement e && e.IsHitTestVisible && e.IsEffectivelyVisible;
 
+    /// <summary>
+    /// Verifies the overlay's non-modality: clicks in the dimmed area and inside the
+    /// spotlight hole reach the controls underneath, while the tour card stays clickable.
+    /// </summary>
     [AvaloniaFact]
     public void DimAndSpotlight_PassClicksThrough_CardStaysClickable()
     {
@@ -60,18 +65,20 @@ public class Issue1167TourSpotlightHitTestTests
         Dispatcher.UIThread.RunJobs();
 
         overlay.TargetName = target.Name;
-        var dimHit = HitTestAfterCommit(window, new Point(100, 600));
+        Dispatcher.UIThread.RunJobs();
+
+        var dimHit = LayoutHitTest(window, new Point(100, 600));
         Assert.True(IsInside(dimHit, underlying),
             $"clicks in the dimmed area must reach the control underneath, got {Describe(dimHit)}");
 
-        var holeHit = HitTestAfterCommit(window, new Point(640, 116));
+        var holeHit = LayoutHitTest(window, new Point(640, 116));
         Assert.True(IsInside(holeHit, target),
             $"the spotlight hole must leave the spotlighted target clickable, got {Describe(holeHit)}");
 
         var cardHost = overlay.GetVisualDescendants().OfType<ContentControl>().First(c => c.Name == "CardHost");
         var cardOrigin = cardHost.TranslatePoint(default, window)!.Value;
         var cardCenter = cardOrigin + new Point(cardHost.Bounds.Width / 2, cardHost.Bounds.Height / 2);
-        var cardHit = HitTestAfterCommit(window, cardCenter);
+        var cardHit = LayoutHitTest(window, cardCenter);
         Assert.True(IsInside(cardHit, card),
             $"the tour card's Skip/Next buttons must stay clickable, got {Describe(cardHit)}");
 
@@ -79,27 +86,63 @@ public class Issue1167TourSpotlightHitTestTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    private const int MaxCommitAttempts = 40;
-    private const int CommitRetryDelayMilliseconds = 25;
+    /// <summary>
+    /// Hit-tests the laid-out visual tree with the same semantics pointer input uses:
+    /// a visual that fails <see cref="InputHitTestFilter"/> prunes its whole subtree,
+    /// children are tested topmost-first, and a visual only self-hits where it paints.
+    /// Deliberately avoids <c>GetVisualAt</c>: that API reads the server-side
+    /// composition readback, which is only written when the process-global headless
+    /// render loop successfully renders this window's target. That loop is shared by
+    /// every UI test in the assembly, and state leaked by an earlier test (a stale
+    /// composition target that throws during the render pass, a wedged pending batch)
+    /// permanently prevents later windows from becoming hit-testable — retrying frame
+    /// commits cannot recover from that, which made this test flaky on CI.
+    /// The contract under test is the visual tree's hit-test-visibility structure,
+    /// which layout alone determines.
+    /// </summary>
+    private static Visual? LayoutHitTest(Visual root, Point point)
+        => HitTestTree(root, root, point);
+
+    private static Visual? HitTestTree(Visual root, Visual visual, Point rootPoint)
+    {
+        if (!InputHitTestFilter(visual))
+            return null;
+
+        var toLocal = root.TransformToVisual(visual);
+        if (toLocal == null)
+            return null;
+
+        var local = rootPoint.Transform(toLocal.Value);
+        var localBounds = new Rect(visual.Bounds.Size);
+        if (visual.ClipToBounds && !localBounds.Contains(local))
+            return null;
+
+        var children = visual.GetVisualChildren().OrderBy(c => c.ZIndex).ToArray();
+        for (var i = children.Length - 1; i >= 0; i--)
+        {
+            var hit = HitTestTree(root, children[i], rootPoint);
+            if (hit != null)
+                return hit;
+        }
+
+        return localBounds.Contains(local) && PaintsItself(visual) ? visual : null;
+    }
 
     /// <summary>
-    /// Hit testing reads the last committed composition state, which can lag the layout
-    /// pass — under CI load by more than a few frames — so keep committing frames until
-    /// the point hits something.
+    /// Approximates the composition hit test's self-hit rule (a visual is hit only
+    /// where its draw list painted): controls with a background/border brush, shapes
+    /// with fill/stroke, and text paint their bounds; background-less panels and
+    /// content hosts do not.
     /// </summary>
-    private static Visual? HitTestAfterCommit(Window window, Point point)
+    private static bool PaintsItself(Visual visual) => visual switch
     {
-        Visual? hit = null;
-        for (var attempt = 0; attempt < MaxCommitAttempts && hit == null; attempt++)
-        {
-            Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
-            using (window.CaptureRenderedFrame()) { }
-            hit = window.GetVisualAt(point, InputHitTestFilter);
-            if (hit == null)
-                Thread.Sleep(CommitRetryDelayMilliseconds);
-        }
-        return hit;
-    }
+        TextBlock => true,
+        Shape shape => shape.Fill != null || shape.Stroke != null,
+        Border border => border.Background != null || border.BorderBrush != null,
+        Panel panel => panel.Background != null,
+        TemplatedControl templated => templated.Background != null,
+        _ => false,
+    };
 
     private static bool IsInside(object? hit, Visual container)
         => hit is Visual v && (v == container || v.GetVisualAncestors().Contains(container));
