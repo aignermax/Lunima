@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -33,8 +34,17 @@ public partial class LogicPanelViewModel
     private readonly ILogicRunClock _runClock;
 
     /// <summary>Initializes the panel; <paramref name="runClock"/> defaults to the dispatcher-based production clock.</summary>
-    public LogicPanelViewModel(ILogicRunClock? runClock = null)
+    /// <param name="runClock">Clock source for auto-run; null uses the dispatcher clock.</param>
+    /// <param name="builtNetworkProvider">
+    /// Shared hand-off for the assembled network (rung 5, issue #1215): the panel
+    /// publishes every successful build here and clears it again on failure or
+    /// design edits, so the ISA playground can compute ADD on the student's chip.
+    /// </param>
+    public LogicPanelViewModel(
+        ILogicRunClock? runClock = null,
+        BuiltLogicNetworkProvider? builtNetworkProvider = null)
     {
+        _builtNetworkProvider = builtNetworkProvider;
         _runClock = runClock ?? new DispatcherLogicRunClock();
         _runClock.Tick += OnRunClockTick;
         RunIntervalOptions = RunIntervalValues.Select(value => new LogicRunIntervalOption(value)).ToList();

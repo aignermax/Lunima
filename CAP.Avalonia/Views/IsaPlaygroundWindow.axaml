@@ -45,6 +45,18 @@
             <Button Content="{loc:Localize IsaPlayground.ResetButton}"
                     Command="{Binding ResetCommand}"
                     Background="#3d3d5d" Padding="12,6"/>
+            <StackPanel VerticalAlignment="Center" Spacing="2" Margin="8,0,0,0">
+                <CheckBox Content="{loc:Localize IsaPlayground.PhotonicAdderToggle}"
+                          IsChecked="{Binding UsePhotonicAdder}"
+                          IsEnabled="{Binding IsPhotonicToggleEnabled}"
+                          FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Localize IsaPlayground.PhotonicAdderHint}"
+                           Foreground="Gray" FontSize="10" TextWrapping="Wrap" MaxWidth="260"
+                           IsVisible="{Binding !IsPhotonicAddAvailable}"/>
+                <TextBlock Text="{Binding PhotonicStatusText}" Foreground="#7ec87e" FontSize="10"
+                           TextWrapping="Wrap" MaxWidth="260"
+                           IsVisible="{Binding PhotonicStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- Main area: editor on the left, machine state + trace on the right -->

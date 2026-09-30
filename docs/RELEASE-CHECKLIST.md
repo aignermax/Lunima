@@ -186,6 +186,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
 - [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
 - [ ] ISA playground Run auto-steps count-to-5 to "halted after N steps" with ACC = 5; Stop mid-run freezes PC and re-enables Step. `(manual)`
+- [ ] ISA playground "Compute ADD on the photonic chip" toggle: disabled with a hint before a build; after building the 4-bit adder example in the Logic tab it runs count-to-5 to ACC = 5 and the status names the photonic adder. `(manual)`
 
 ## 18. Cross-platform sanity
 

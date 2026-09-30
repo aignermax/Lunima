@@ -20,6 +20,18 @@ namespace CAP_Core.Logic.Isa
         private readonly LogicNetworkEvaluator _network;
 
         /// <summary>
+        /// True when <paramref name="network"/> exposes every signal the ALU drives
+        /// (A0–A3, B0–B3, Cin) and reads (S0–S3) — the check the constructor makes,
+        /// without throwing, so callers can decide up-front whether a built network
+        /// can compute ADD photonically. Additional inputs/outputs are allowed:
+        /// extra inputs are tied to 0 on every <see cref="Add"/>.
+        /// </summary>
+        public static bool Accepts(LogicNetworkEvaluator? network) =>
+            network != null
+            && OperandSignals.All(network.InputPinNames.Contains)
+            && SumSignals.All(network.OutputPinNames.Contains);
+
+        /// <summary>
         /// Wraps an assembled adder network.
         /// </summary>
         /// <param name="network">

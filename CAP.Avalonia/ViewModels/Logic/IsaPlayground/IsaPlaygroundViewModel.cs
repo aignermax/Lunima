@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CAP_Core.Logic.Isa;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,14 +14,17 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// <see cref="IsaEmulator"/>, and step through it while the machine state and
 /// the current source line stay visible. Editing the text marks the assembled
 /// state stale until <see cref="AssembleCommand"/> runs again. The Run/Stop
-/// auto-step half (issue #1204) lives in IsaPlaygroundViewModel.Run.cs.
+/// auto-step half (issue #1204) lives in IsaPlaygroundViewModel.Run.cs, the
+/// photonic-ADD toggle (issue #1215) in IsaPlaygroundViewModel.Photonic.cs.
 /// </summary>
 public partial class IsaPlaygroundViewModel : ObservableObject
 {
     private const int AccumulatorBits = 4;
 
     private readonly IsaAssembler _assembler = new();
+    private readonly BuiltLogicNetworkProvider? _builtNetworkProvider;
     private IsaEmulator? _emulator;
+    private byte[] _assembledWords = Array.Empty<byte>();
     private IReadOnlyList<int> _instructionLineNumbers = Array.Empty<int>();
 
     [ObservableProperty]
@@ -55,13 +59,35 @@ public partial class IsaPlaygroundViewModel : ObservableObject
 
     /// <summary>Creates the playground with the samples discovered next to the app (or the repo).</summary>
     public IsaPlaygroundViewModel()
-        : this(IsaSampleProgramCatalog.LoadDefault())
+        : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider: null)
+    {
+    }
+
+    /// <summary>
+    /// Creates the playground wired to the shared <see cref="BuiltLogicNetworkProvider"/>,
+    /// so the "compute ADD on the photonic chip" toggle sees the Logic tab's network.
+    /// </summary>
+    public IsaPlaygroundViewModel(BuiltLogicNetworkProvider networkProvider)
+        : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider)
     {
     }
 
     /// <summary>Creates the playground with an explicit sample catalog (test seam).</summary>
     internal IsaPlaygroundViewModel(IsaSampleProgramCatalog catalog)
+        : this(catalog, networkProvider: null)
     {
+    }
+
+    /// <summary>Creates the playground with an explicit catalog and network provider (test seam).</summary>
+    internal IsaPlaygroundViewModel(IsaSampleProgramCatalog catalog, BuiltLogicNetworkProvider? networkProvider)
+    {
+        _builtNetworkProvider = networkProvider;
+        if (_builtNetworkProvider != null)
+        {
+            _builtNetworkProvider.Changed += OnBuiltNetworkChanged;
+        }
+
+        RefreshPhotonicAvailability();
         Samples = catalog.Samples;
         if (Samples.Count == 0)
         {
@@ -106,10 +132,12 @@ public partial class IsaPlaygroundViewModel : ObservableObject
         try
         {
             var result = _assembler.AssembleWithSourceMap(ProgramText);
-            _emulator = new IsaEmulator(result.Words);
+            _assembledWords = result.Words;
+            _emulator = CreateEmulator();
             _instructionLineNumbers = result.InstructionLineNumbers;
             ErrorText = string.Empty;
             IsAssembled = true;
+            PhotonicStatusText = string.Empty;
             RebuildTraceLines();
             UpdateState();
         }
@@ -122,6 +150,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
                 StripLinePrefix(ex));
             IsAssembled = false;
             _emulator = null;
+            _assembledWords = Array.Empty<byte>();
             _instructionLineNumbers = Array.Empty<int>();
             TraceLines.Clear();
             ZeroState();
@@ -137,6 +166,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
             return;
         }
 
+        var photonicAdd = NextStepIsPhotonicAdd();
         try
         {
             _emulator.Step();
@@ -147,6 +177,10 @@ public partial class IsaPlaygroundViewModel : ObservableObject
         }
 
         UpdateState();
+        if (photonicAdd)
+        {
+            ReportPhotonicAdd();
+        }
     }
 
     /// <summary>Restores the power-on state; the assembled program stays loaded.</summary>
@@ -154,6 +188,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     private void Reset()
     {
         _emulator?.Reset();
+        PhotonicStatusText = string.Empty;
         UpdateState();
     }
 
