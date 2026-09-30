@@ -3,6 +3,7 @@
         xmlns:ctrl="using:CAP.Avalonia.Controls"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         xmlns:isa="using:CAP.Avalonia.ViewModels.Logic.IsaPlayground"
+        xmlns:views="using:CAP.Avalonia.Views"
         x:Class="CAP.Avalonia.Views.IsaPlaygroundWindow"
         x:DataType="isa:IsaPlaygroundViewModel"
         Title="{loc:Localize IsaPlayground.WindowTitle}"
@@ -25,8 +26,7 @@
             <ctrl:HelpFlyoutButton Grid.Column="1" VerticalAlignment="Top"
                                    Title="{loc:Localize IsaPlayground.HelpTitle}">
                 <ctrl:HelpFlyoutButton.HelpContent>
-                    <TextBlock MaxWidth="280" TextWrapping="Wrap" FontSize="11"
-                               Text="{loc:Localize IsaPlayground.HelpContent}"/>
+                    <views:IsaPlaygroundHelpFlyout/>
                 </ctrl:HelpFlyoutButton.HelpContent>
             </ctrl:HelpFlyoutButton>
         </Grid>
