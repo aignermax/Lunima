@@ -367,6 +367,7 @@
   "Examples.Counter2bit.Description": "Ein 2-Bit-Zähler: Drücke Step und sieh zu, wie C1C0 0, 1, 2, 3 zählt — die Schaltung läuft.",
   "Examples.Pc2bit.Description": "Ein 2-Bit-Programmzähler: LOAD=0 zählt pro Step hoch, LOAD=1 lädt L1L0 — der NAND2TETRIS-PC.",
   "Examples.AndGate.Description": "Kombiniere zwei NAND-Gatter zu einem AND-Gatter.",
+  "Examples.And4bit.Description": "Vier AND-Gatter nebeneinander: A0–A3 und B0–B3 rein, Y0–Y3 raus — die ISA-Instruktion AND auf Licht.",
   "Examples.FullAdder.Description": "Addiere zwei Bits plus Übertrag — der Baustein jedes Rechners.",
   "Examples.HalfAdder.Description": "Addiere zwei Bits — deine erste Rechenschaltung.",
   "Examples.MachZehnder.Description": "Teile Licht in zwei Pfade und führe es wieder zusammen — das Hello World der Photonik.",
