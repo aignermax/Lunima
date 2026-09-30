@@ -190,17 +190,7 @@ public class Issue1229PdkHelpFlyoutScreenshotTests
         return pixels;
     }
 
-    /// <summary>Repo-root <c>docs/pr-media/issue-1229</c> (walks up from the test output for the .sln).</summary>
-    private static string ResolveOutputDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            if (dir.GetFiles("*.sln").Length > 0)
-                return Path.Combine(dir.FullName, "docs", "pr-media", "issue-1229");
-            dir = dir.Parent;
-        }
-
-        return Path.Combine(AppContext.BaseDirectory, "docs", "pr-media", "issue-1229");
-    }
+    /// <summary>Repo-root <c>docs/pr-media/issue-1229</c> — only with <c>CAP_UPDATE_PR_MEDIA=1</c>; otherwise a temp dir.</summary>
+    private static string ResolveOutputDirectory() =>
+        ScreenshotArtifacts.ResolvePrMediaDirectory("issue-1229");
 }
