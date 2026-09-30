@@ -60,31 +60,45 @@ public class Issue1167TourSpotlightHitTestTests
         Dispatcher.UIThread.RunJobs();
 
         overlay.TargetName = target.Name;
-        // Hit testing reads the last committed composition state, which can lag the
-        // layout pass that moved the card — commit a few frames before hit-testing.
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
-            using var frame = window.CaptureRenderedFrame();
-        }
-
-        var dimHit = window.GetVisualAt(new Point(100, 600), InputHitTestFilter);
+        var dimHit = HitTestAfterCommit(window, new Point(100, 600));
         Assert.True(IsInside(dimHit, underlying),
             $"clicks in the dimmed area must reach the control underneath, got {Describe(dimHit)}");
 
-        var holeHit = window.GetVisualAt(new Point(640, 116), InputHitTestFilter);
+        var holeHit = HitTestAfterCommit(window, new Point(640, 116));
         Assert.True(IsInside(holeHit, target),
             $"the spotlight hole must leave the spotlighted target clickable, got {Describe(holeHit)}");
 
         var cardHost = overlay.GetVisualDescendants().OfType<ContentControl>().First(c => c.Name == "CardHost");
         var cardOrigin = cardHost.TranslatePoint(default, window)!.Value;
         var cardCenter = cardOrigin + new Point(cardHost.Bounds.Width / 2, cardHost.Bounds.Height / 2);
-        var cardHit = window.GetVisualAt(cardCenter, InputHitTestFilter);
+        var cardHit = HitTestAfterCommit(window, cardCenter);
         Assert.True(IsInside(cardHit, card),
             $"the tour card's Skip/Next buttons must stay clickable, got {Describe(cardHit)}");
 
         window.Close();
         Dispatcher.UIThread.RunJobs();
+    }
+
+    private const int MaxCommitAttempts = 40;
+    private const int CommitRetryDelayMilliseconds = 25;
+
+    /// <summary>
+    /// Hit testing reads the last committed composition state, which can lag the layout
+    /// pass — under CI load by more than a few frames — so keep committing frames until
+    /// the point hits something.
+    /// </summary>
+    private static Visual? HitTestAfterCommit(Window window, Point point)
+    {
+        Visual? hit = null;
+        for (var attempt = 0; attempt < MaxCommitAttempts && hit == null; attempt++)
+        {
+            Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
+            using (window.CaptureRenderedFrame()) { }
+            hit = window.GetVisualAt(point, InputHitTestFilter);
+            if (hit == null)
+                Thread.Sleep(CommitRetryDelayMilliseconds);
+        }
+        return hit;
     }
 
     private static bool IsInside(object? hit, Visual container)

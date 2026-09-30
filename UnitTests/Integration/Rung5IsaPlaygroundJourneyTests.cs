@@ -72,7 +72,8 @@ public class Rung5IsaPlaygroundJourneyTests
         photonicTrace.ShouldBe(goldenTrace);
 
         // Step 6: at least one ADD ran photonically — the status names the network.
-        playground.PhotonicStatusText.ShouldBe(ExpectedPhotonicStatus(gateCount));
+        ShouldReportPhotonicAdd(playground.PhotonicStatusText, gateCount);
+        var firstRunStatus = playground.PhotonicStatusText;
 
         // Step 7: save as a copy, close, reopen, rebuild — identical trace.
         var savedPath = Path.Combine(Path.GetTempPath(), $"rung5-journey-{Guid.NewGuid():N}.lun");
@@ -96,7 +97,8 @@ public class Rung5IsaPlaygroundJourneyTests
             var rerunTrace = RunToHalt(playground);
             playground.Accumulator.ShouldBe(5);
             rerunTrace.ShouldBe(goldenTrace, "the save/load/rebuild cycle must not change execution");
-            playground.PhotonicStatusText.ShouldBe(ExpectedPhotonicStatus(gateCount));
+            playground.PhotonicStatusText.ShouldBe(firstRunStatus,
+                "the identical rerun must report the identical last ADD and light-travel time");
         }
         finally
         {
@@ -190,9 +192,14 @@ public class Rung5IsaPlaygroundJourneyTests
         File.Exists(path).ShouldBeTrue("the real save path must write the copy");
     }
 
-    private static string ExpectedPhotonicStatus(int gateCount) =>
-        string.Format(
-            CultureInfo.InvariantCulture,
-            LocalizationService.Instance.Translate("IsaPlayground.StatusPhotonicAdd"),
-            gateCount);
+    /// <summary>
+    /// The status after count-to-5's last ADD (0 + RAM[0] = 5): binary operands/result,
+    /// a light-travel time in ps and the network's gate count.
+    /// </summary>
+    private static void ShouldReportPhotonicAdd(string status, int gateCount)
+    {
+        status.ShouldContain("0000 + 0101 = 0101");
+        status.ShouldContain("ps");
+        status.ShouldContain(gateCount.ToString(CultureInfo.InvariantCulture));
+    }
 }

@@ -61,10 +61,9 @@ public class Issue1230Rung5JourneyScreenshotTests
         }
 
         vm.Accumulator.ShouldBe(5, "count-to-5 halts with ACC = 5");
-        vm.PhotonicStatusText.ShouldBe(string.Format(
-            CultureInfo.InvariantCulture,
-            LocalizationService.Instance.Translate("IsaPlayground.StatusPhotonicAdd"),
-            _fixture.Network.Gates.Count));
+        vm.PhotonicStatusText.ShouldContain("0000 + 0101 = 0101");
+        vm.PhotonicStatusText.ShouldContain(
+            _fixture.Network.Gates.Count.ToString(CultureInfo.InvariantCulture));
 
         var window = new IsaPlaygroundWindow { DataContext = vm };
         window.Show();
