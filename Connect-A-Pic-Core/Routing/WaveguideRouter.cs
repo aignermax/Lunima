@@ -287,8 +287,35 @@ public partial class WaveguideRouter
             }
         }
 
-        return RouteManhattanFallback(startX, startY, startAngle, endX, endY, endInputAngle,
-                                      connectionRadius, effectiveRadius, floorRaisesRadius);
+        var fallbackPath = RouteManhattanFallback(startX, startY, startAngle, endX, endY, endInputAngle,
+                                                  connectionRadius, effectiveRadius, floorRaisesRadius);
+        if (fallbackPath.IsBlockedFallback)
+        {
+            fallbackPath.FailureReason = ClassifyBlockedFallback(startPin, endPin, effectiveRadius);
+        }
+        return fallbackPath;
+    }
+
+    /// <summary>
+    /// Classifies why a blocked fallback could not be routed. A pin whose escape channel
+    /// (the corridor <see cref="TryRouteAStar"/> punches through component geometry —
+    /// length 3×radius, width radius) is sealed by a FOREIGN component body can never be
+    /// reached, no matter how the remaining wires are ordered:
+    /// <see cref="RoutingFailureReason.EndpointBlocked"/>. Everything else is
+    /// <see cref="RoutingFailureReason.Contention"/>, which ordering retries may fix.
+    /// </summary>
+    private RoutingFailureReason ClassifyBlockedFallback(
+        PhysicalPin startPin, PhysicalPin endPin, double corridorRadius)
+    {
+        var grid = PathfindingGrid;
+        if (grid == null)
+            return RoutingFailureReason.Contention;
+
+        double corridorLength = corridorRadius * 3;
+        return grid.IsPinEscapeSealedByForeignBody(startPin, corridorLength, corridorRadius) ||
+               grid.IsPinEscapeSealedByForeignBody(endPin, corridorLength, corridorRadius)
+            ? RoutingFailureReason.EndpointBlocked
+            : RoutingFailureReason.Contention;
     }
 
     /// <summary>

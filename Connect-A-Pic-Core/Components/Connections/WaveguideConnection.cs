@@ -358,5 +358,12 @@ namespace CAP_Core.Components.Connections
         /// When true, the path should be displayed differently (e.g., red/dashed).
         /// </summary>
         public bool IsBlockedFallback => RoutedPath?.IsBlockedFallback ?? false;
+
+        /// <summary>
+        /// Why the current route is blocked (a pin sealed in by a component footprint vs.
+        /// contention with other routed wires). <see cref="RoutingFailureReason.None"/>
+        /// when the connection routed cleanly or has no route yet.
+        /// </summary>
+        public RoutingFailureReason FailureReason => RoutedPath?.FailureReason ?? RoutingFailureReason.None;
     }
 }

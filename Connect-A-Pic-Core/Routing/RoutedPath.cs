@@ -54,6 +54,15 @@ public class RoutedPath
     public bool PassesThroughComponent { get; set; } = false;
 
     /// <summary>
+    /// Why this path is a blocked fallback: a pin sealed in by a component footprint
+    /// (<see cref="RoutingFailureReason.EndpointBlocked"/>) or contention with other routed
+    /// waveguides (<see cref="RoutingFailureReason.Contention"/>). Stays
+    /// <see cref="RoutingFailureReason.None"/> for clean routes, so design checks and status
+    /// text can later say WHY a wire is blocked.
+    /// </summary>
+    public RoutingFailureReason FailureReason { get; set; } = RoutingFailureReason.None;
+
+    /// <summary>
     /// True when this Auto route was produced by the direct/S-bend-first policy (issue #860):
     /// a smooth styled geometry verified against the obstacle grid, not an A* grid path.
     /// The pin-lead collapse pass skips such routes — their entry/exit stubs are intended
@@ -109,6 +118,7 @@ public class RoutedPath
             IsBlockedFallback = IsBlockedFallback,
             IsInvalidGeometry = IsInvalidGeometry,
             IsPlaceholderGeometry = IsPlaceholderGeometry,
+            FailureReason = FailureReason,
             ViolatesProcessMinBendRadius = ViolatesProcessMinBendRadius,
             PassesThroughComponent = PassesThroughComponent,
             IsDirectStyledRoute = IsDirectStyledRoute,
