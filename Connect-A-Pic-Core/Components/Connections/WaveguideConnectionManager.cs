@@ -144,6 +144,10 @@ public partial class WaveguideConnectionManager
         };
 
         connection.RestoreCachedPath(cachedPath);
+        // The .lun format persists the blocked flag but not the reason — classify the
+        // restored blocked fallback so the design checks can say why the wire is blocked.
+        if (cachedPath.IsBlockedFallback && cachedPath.FailureReason == RoutingFailureReason.None)
+            cachedPath.FailureReason = _router.ClassifyRestoredBlockedFallback(startPin, endPin);
         lock (_connectionsSync)
         {
             Connections.Add(connection);

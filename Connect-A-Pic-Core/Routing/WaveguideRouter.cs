@@ -297,6 +297,18 @@ public partial class WaveguideRouter
     }
 
     /// <summary>
+    /// Classifies an existing blocked fallback whose reason was never recorded — a cached
+    /// route restored from a saved design (the .lun format persists the blocked flag but
+    /// not the reason). Same verdict <see cref="Route"/> stamps on a freshly routed
+    /// blocked fallback.
+    /// </summary>
+    public RoutingFailureReason ClassifyRestoredBlockedFallback(PhysicalPin startPin, PhysicalPin endPin)
+    {
+        double corridorRadius = Math.Max(MinBendRadiusMicrometers, ResolveProcessFloorFor(startPin, endPin));
+        return ClassifyBlockedFallback(startPin, endPin, corridorRadius);
+    }
+
+    /// <summary>
     /// Classifies why a blocked fallback could not be routed. A pin whose escape channel
     /// (the corridor <see cref="TryRouteAStar"/> punches through component geometry —
     /// length 3×radius, width radius) is sealed by a FOREIGN component body can never be

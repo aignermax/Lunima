@@ -745,7 +745,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         {
             IsBlockedFallback = source.IsBlockedFallback,
             IsInvalidGeometry = source.IsInvalidGeometry,
-            IsPlaceholderGeometry = source.IsPlaceholderGeometry
+            IsPlaceholderGeometry = source.IsPlaceholderGeometry,
+            FailureReason = source.FailureReason
         };
 
         foreach (var segment in source.Segments)
