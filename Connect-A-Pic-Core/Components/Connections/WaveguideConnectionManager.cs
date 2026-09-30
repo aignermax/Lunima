@@ -796,7 +796,13 @@ public partial class WaveguideConnectionManager
     /// Connections are bidirectional: light can flow in either direction through a waveguide.
     /// Physical pins without linked logical pins are skipped (they don't participate in light simulation).
     /// </summary>
-    public Dictionary<(Guid PinIdInflow, Guid PinIdOutflow), Complex> GetConnectionTransfers()
+    /// <param name="transmissionFactor">
+    /// Optional per-connection multiplier applied to each connection's transmission
+    /// (e.g. the cross-chiplet edge-coupler mode-overlap loss, issue #1228). Null keeps
+    /// the raw transmission coefficients.
+    /// </param>
+    public Dictionary<(Guid PinIdInflow, Guid PinIdOutflow), Complex> GetConnectionTransfers(
+        Func<WaveguideConnection, double>? transmissionFactor = null)
     {
         // Snapshot under the lock: the crossing pass may swap connections
         // structurally on the routing thread while the S-matrix is being built.
@@ -810,16 +816,22 @@ public partial class WaveguideConnectionManager
                 continue;
             }
 
+            var coefficient = conn.TransmissionCoefficient;
+            if (transmissionFactor != null)
+            {
+                coefficient *= transmissionFactor(conn);
+            }
+
             // Forward: light flows from StartPin OutFlow to EndPin InFlow
             var startPinOutFlow = conn.StartPin.LogicalPin.IDOutFlow;
             var endPinInFlow = conn.EndPin.LogicalPin.IDInFlow;
-            transfers[(startPinOutFlow, endPinInFlow)] = conn.TransmissionCoefficient;
+            transfers[(startPinOutFlow, endPinInFlow)] = coefficient;
 
             // Reverse: light flows from EndPin OutFlow to StartPin InFlow
             // Waveguide connections are inherently bidirectional
             var endPinOutFlow = conn.EndPin.LogicalPin.IDOutFlow;
             var startPinInFlow = conn.StartPin.LogicalPin.IDInFlow;
-            transfers[(endPinOutFlow, startPinInFlow)] = conn.TransmissionCoefficient;
+            transfers[(endPinOutFlow, startPinInFlow)] = coefficient;
         }
         return transfers;
     }

@@ -1,3 +1,4 @@
+using CAP_Core.Analysis;
 using CAP_Core.Analysis.OnaAnalysis;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
@@ -30,7 +31,8 @@ namespace CAP_Core.LightCalculation
         }
         private SMatrix CreatePhysicalConnectionsMatrix()
         {
-            var connections = Grid.WaveguideConnections.GetConnectionTransfers();
+            var connections = Grid.WaveguideConnections.GetConnectionTransfers(
+                ChipletEdgeCouplerCoupling.FieldFactor);
 
             // Also include frozen internal paths from ComponentGroups so that grouped
             // components are treated identically to flat components during simulation.

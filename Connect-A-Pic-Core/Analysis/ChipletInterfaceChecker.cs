@@ -19,8 +19,10 @@ namespace CAP_Core.Analysis;
 /// 3. At the edge — each facet pin must sit on its chiplet's outer boundary (the group's
 ///    bounding box) within <see cref="EdgeToleranceMicrometers"/>, measured along the
 ///    direction the pin faces.
-/// All findings are warnings (DRC-lite, not foundry DRC). The S-matrix model is
-/// deliberately unchanged — a gap/offset-dependent coupling loss is a possible follow-up.
+/// All findings are warnings (DRC-lite, not foundry DRC). The matching simulation-side
+/// loss lives in <see cref="ChipletEdgeCouplerCoupling"/> (issue #1228), which reuses
+/// this checker's facet detection and geometry so warning and simulated loss can never
+/// disagree about what counts as misaligned.
 /// </summary>
 /// <remarks>
 /// Edge-coupler heuristic: a component counts as an edge coupler when its
@@ -137,8 +139,9 @@ public class ChipletInterfaceChecker
     /// <summary>
     /// Resolves a connection endpoint to an edge-coupler facet pin with its top-level
     /// chiplet group; false when the pin is not an edge-coupler pin on a grouped chiplet.
+    /// Internal so <see cref="ChipletEdgeCouplerCoupling"/> detects the exact same links.
     /// </summary>
-    private static bool TryGetFacet(PhysicalPin? pin, out FacetPin facet)
+    internal static bool TryGetFacet(PhysicalPin? pin, out FacetPin facet)
     {
         facet = default;
         var component = pin?.ParentComponent;
@@ -170,7 +173,7 @@ public class ChipletInterfaceChecker
     }
 
     /// <summary>Angular distance from the antiparallel ideal, in degrees (0 = perfectly facing).</summary>
-    private static double AntiparallelDeviation(double angleA, double angleB)
+    internal static double AntiparallelDeviation(double angleA, double angleB)
     {
         double diff = Math.Abs(angleA - angleB) % 360.0;
         if (diff > 180.0)
@@ -179,7 +182,7 @@ public class ChipletInterfaceChecker
     }
 
     /// <summary>Magnitude of the end-pin offset perpendicular to the start pin's axis.</summary>
-    private static double LateralOffset(
+    internal static double LateralOffset(
         double startX, double startY, double endX, double endY, double startAngleDegrees)
     {
         double radians = startAngleDegrees * Math.PI / 180.0;
@@ -231,5 +234,5 @@ public class ChipletInterfaceChecker
         return double.PositiveInfinity;
     }
 
-    private readonly record struct FacetPin(PhysicalPin Pin, ComponentGroup Chiplet);
+    internal readonly record struct FacetPin(PhysicalPin Pin, ComponentGroup Chiplet);
 }
