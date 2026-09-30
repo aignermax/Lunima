@@ -2,6 +2,7 @@ using System.Globalization;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Process;
+using CAP_Core.Routing;
 using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Analysis;
@@ -285,7 +286,7 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Blocked path: {startName} to {endName}"));
+                FormatBlockedPathMessage(connection, startName, endName)));
         }
 
         if (connection.RoutedPath?.ViolatesProcessMinBendRadius == true)
@@ -313,6 +314,24 @@ public class DesignValidator
         }
 
         CheckPinMismatch(connection, issues);
+    }
+
+    /// <summary>
+    /// Builds the blocked-path message from the router's failure classification: a pin
+    /// sealed in by a component footprint needs the component moved (re-routing cannot
+    /// help), while contention between wires may be fixed by re-routing or reordering.
+    /// </summary>
+    private static string FormatBlockedPathMessage(
+        WaveguideConnection connection, string startName, string endName)
+    {
+        return connection.FailureReason switch
+        {
+            RoutingFailureReason.EndpointBlocked =>
+                $"Blocked path: {startName} to {endName} — a pin is sealed in by a component footprint; move the component (re-routing cannot fix this)",
+            RoutingFailureReason.Contention =>
+                $"Blocked path: {startName} to {endName} — no free lane; other waveguides occupy the corridor",
+            _ => $"Blocked path: {startName} to {endName}",
+        };
     }
 
     /// <summary>
