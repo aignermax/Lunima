@@ -47,13 +47,8 @@ public class HelpTextBudgetTests
     /// </summary>
     private static readonly HashSet<string> ExemptNotYetMigrated = new(StringComparer.Ordinal)
     {
-        // Logic panel flyouts (dev-ki lineage, not yet migrated) — the timeline and
-        // timing flyouts were migrated in #1206; the fan-out flyout is a separate follow-up.
-        "LogicPanelFanOutHelp.ExamplesBody",
-        "LogicPanelFanOutHelp.ExamplesTitle",
-        "LogicPanelFanOutHelp.Intro",
-        "LogicPanelFanOutHelp.PhysicsBody",
-        "LogicPanelFanOutHelp.PhysicsTitle",
+        // Logic panel flyouts (dev-ki lineage) — the timeline and timing flyouts were
+        // migrated in #1206, the fan-out flyout in #1216; none remain exempt.
 
         // PDK help flyout in the toolbar (dev-ki lineage, not yet migrated)
         "PdkHelp.DiagramNote",

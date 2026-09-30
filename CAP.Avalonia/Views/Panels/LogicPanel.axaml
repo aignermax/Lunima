@@ -69,23 +69,14 @@
                                Foreground="#e6c860" FontSize="10" FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                     <!-- Education piece: why the half-/full-adder examples duplicate
-                         their XOR ladders instead of splitting one output. -->
+                         their XOR ladders instead of splitting one output. Short
+                         sections plus the power-splitting animation live in the
+                         extracted LogicFanOutHelpFlyout (#1216). -->
                     <controls:HelpFlyoutButton Grid.Column="1"
                                                Title="{loc:Localize LogicPanelFanOutHelp.Title}"
                                                VerticalAlignment="Center" Margin="4,-4,0,0">
                         <controls:HelpFlyoutButton.HelpContent>
-                            <StackPanel Spacing="8" MaxWidth="400">
-                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                           Text="{loc:Localize LogicPanelFanOutHelp.Intro}"/>
-
-                                <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                           Text="{loc:Localize LogicPanelFanOutHelp.PhysicsBody}"/>
-
-                                <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.ExamplesTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                           Text="{loc:Localize LogicPanelFanOutHelp.ExamplesBody}"/>
-                            </StackPanel>
+                            <panels:LogicFanOutHelpFlyout/>
                         </controls:HelpFlyoutButton.HelpContent>
                     </controls:HelpFlyoutButton>
                 </Grid>
