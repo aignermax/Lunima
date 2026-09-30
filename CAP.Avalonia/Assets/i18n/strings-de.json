@@ -375,6 +375,7 @@
   "Examples.OrGate.Description": "Baue ein OR-Gatter aus NOT- und AND-Bausteinen.",
   "Examples.RippleCarryAdder.Description": "Reihe Volladdierer zu einem 4-Bit-Ripple-Carry-Addierer — 344 Gatter, ein Ergebnis.",
   "Examples.SrLatch.Description": "Zwei kreuzgekoppelte NAND-Register merken sich ein Bit — deine erste Speicherschaltung.",
+  "Examples.TwoChiplets.Description": "Zwei Chips, ein Lichtpfad: die Verbindung über die Chipkante.",
   "ErrorConsole.ClearTip": "Konsole leeren",
   "ErrorConsole.CopyAllTip": "Alle Einträge in die Zwischenablage kopieren",
   "ErrorConsole.Title": "Fehlerkonsole",
