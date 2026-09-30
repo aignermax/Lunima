@@ -277,6 +277,8 @@
   "DesignChecks.Title": "Comprobaciones de diseño:",
   "DesignChecksHelp.BendBody": "En una curva demasiado cerrada, la luz guiada ya no puede seguir la guía de ondas y radia hacia el material circundante. El radio mínimo del proceso activo mantiene despreciable esta pérdida por curvatura.",
   "DesignChecksHelp.BendTitle": "Radio de curvatura mínimo",
+  "DesignChecksHelp.ChipletBody": "La luz sale de la faceta de un chiplet como un haz gaussiano que se ensancha. Si la faceta opuesta está retrasada o desplazada lateralmente, solo una parte del haz entra en su modo. Los Design Checks avisan cuando la pérdida supera el presupuesto del enlace.",
+  "DesignChecksHelp.ChipletTitle": "Enlaces entre chiplets",
   "DesignChecksHelp.Intro": "Estas comprobaciones son una versión ligera de la verificación de reglas de diseño (DRC) que una fundición ejecuta antes de la fabricación. Cada regla existe porque, de lo contrario, un efecto físico arruinaría tu circuito.",
   "DesignChecksHelp.PinsBody": "Toda discontinuidad abrupta —un extremo de pin abierto o un cambio repentino en el ancho de la guía— refleja y dispersa la luz. Conectar todos los pines e igualar los anchos mantiene pequeñas estas reflexiones.",
   "DesignChecksHelp.PinsTitle": "Pines sin conectar y desajuste de ancho",

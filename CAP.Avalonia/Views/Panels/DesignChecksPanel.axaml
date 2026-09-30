@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.DesignChecksPanel"
              x:DataType="vm:MainViewModel">
@@ -31,6 +32,11 @@
                         <TextBlock Text="{loc:Localize DesignChecksHelp.PinsTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
                                    Text="{loc:Localize DesignChecksHelp.PinsBody}"/>
+
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.ChipletTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                                   Text="{loc:Localize DesignChecksHelp.ChipletBody}"/>
+                        <ha:ChipletLinkCouplingAnimation Width="336" Height="88" IsHitTestVisible="False"/>
 
                         <TextBlock Text="{loc:Localize DesignChecksHelp.SourceTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"

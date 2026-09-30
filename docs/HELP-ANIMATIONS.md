@@ -33,13 +33,20 @@ otherwise describe a curve in words (laser line shape, RIN noise trace, MZI frin
     MarkerBrush="#FFD54F" PingPong="True" IsHitTestVisible="False"/>
 ```
 
-## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation)
+## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation)
 
 Panel-specific compositions (eye-diagram stacking, process layer stack) that live in the
 same folder but are not primitives — they draw in their flyout's fixed coordinate space and
 are placed as transparent overlays over the flyout's static diagram. They take no content
 properties beyond the base `Progress`/`AutoPlay`/`LoopDuration`; add a new one only when no
 combination of the primitives above expresses the concept.
+
+`ChipletLinkCouplingAnimation` (Design Checks help, #1247) is the exception that proves the
+rule: it is a self-contained scene (two facets, a widening Gaussian beam, a spillover spot)
+placed as regular flyout content, and its η readout is computed with the real
+`ChipletEdgeCouplerCoupling.PowerCouplingForOffset`/`PowerCouplingForGap` at 1550 nm —
+never hard-coded — so the help can never drift from the simulation. New help numbers that
+mirror simulation physics must call the core functions the same way.
 
 ## Rules
 

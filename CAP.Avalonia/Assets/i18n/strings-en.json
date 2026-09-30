@@ -277,6 +277,8 @@
   "DesignChecks.Title": "Design Checks:",
   "DesignChecksHelp.BendBody": "In a bend that is too tight, the guided light can no longer follow the waveguide and radiates into the surrounding material. The minimum radius of the active process keeps this bend loss negligible.",
   "DesignChecksHelp.BendTitle": "Minimum bend radius",
+  "DesignChecksHelp.ChipletBody": "Light leaves a chiplet facet as a widening Gaussian beam. If the facing facet stands back or sits shifted sideways, only part of the beam lands in its mode. Design Checks warn once the lost light exceeds the link budget.",
+  "DesignChecksHelp.ChipletTitle": "Chiplet links",
   "DesignChecksHelp.Intro": "These checks are a light version of the design rule check (DRC) that a foundry runs before fabrication. Each rule exists because a physical effect would otherwise spoil your circuit.",
   "DesignChecksHelp.PinsBody": "Every abrupt discontinuity — an open pin end or a sudden change in waveguide width — reflects and scatters light. Connecting all pins and matching widths keeps these reflections small.",
   "DesignChecksHelp.PinsTitle": "Unconnected pins & width mismatch",
