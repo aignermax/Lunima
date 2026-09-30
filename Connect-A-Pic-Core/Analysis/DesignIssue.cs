@@ -77,7 +77,28 @@ public enum DesignIssueType
     /// cross-section of the active process. Only fires when the PDK declares the
     /// limit; the reported width, minimum, and its source are included in the issue.
     /// </summary>
-    WaveguideBelowMinWidth
+    WaveguideBelowMinWidth,
+
+    /// <summary>
+    /// Two edge couplers linked across a chiplet boundary do not face each other
+    /// (their facet pin directions are not antiparallel). A warning: the design may
+    /// still simulate, but the physical butt-coupled link would not close.
+    /// </summary>
+    ChipletInterfaceNotFacing,
+
+    /// <summary>
+    /// Two edge couplers linked across a chiplet boundary face each other but are
+    /// laterally offset perpendicular to the pin axis beyond the allowed tolerance.
+    /// A warning: butt-coupling loss grows fast with lateral offset.
+    /// </summary>
+    ChipletInterfaceLateralOffset,
+
+    /// <summary>
+    /// An edge-coupler facet pin linked across a chiplet boundary does not lie on its
+    /// chiplet's outer boundary (measured along the direction it faces). A warning:
+    /// the facet cannot butt against the neighbouring die from inside the chiplet.
+    /// </summary>
+    ChipletInterfaceOffEdge
 }
 
 /// <summary>

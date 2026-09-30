@@ -17,6 +17,7 @@ public class DesignValidator
     private readonly WaveguideSpacingDetector _spacingDetector = new();
     private readonly WaveguideMinWidthChecker _minWidthChecker = new();
     private readonly PerConnectionDrcChecker _perConnectionDrcChecker = new();
+    private readonly ChipletInterfaceChecker _chipletInterfaceChecker = new();
 
     /// <summary>
     /// Validates all provided waveguide connections and returns any issues found.
@@ -137,8 +138,11 @@ public class DesignValidator
     /// (when <paramref name="minWaveguideSpacingMicrometers"/> &gt; 0) checks edge-to-edge
     /// waveguide spacing against the process minimum, and (when
     /// <paramref name="minWaveguideWidthRules"/> are provided) flags waveguides narrower
-    /// than the fabrication minimum of their cross-section. Each rule contributes its
-    /// findings exactly once.
+    /// than the fabrication minimum of their cross-section, and flags cross-chiplet
+    /// edge-coupler links whose facets do not face each other, are laterally offset,
+    /// or sit off the chiplet edge (issue #1219 — the checker resolves chiplet
+    /// membership from the pins' parent groups, so it needs no extra input). Each rule
+    /// contributes its findings exactly once.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
@@ -181,6 +185,7 @@ public class DesignValidator
 
         var connectionList = connections.ToList();
         var issues = Validate(connectionList, groups, components, externalPortPins);
+        issues.AddRange(_chipletInterfaceChecker.Check(connectionList));
 
         if (connectionDrcRuleProvider is not null)
         {

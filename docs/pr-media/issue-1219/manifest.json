@@ -1,0 +1,4 @@
+[
+  {"file": "01-design-checks-clean.png", "caption": "Design Checks tab on the two-chiplet edge-coupler journey as built: no chiplet-interface findings."},
+  {"file": "02-design-checks-lateral-offset.png", "caption": "Same tab after chiplet B is shifted 2 µm perpendicular to the link: the DRC-lite warning names both chiplets and the offset."}
+]
