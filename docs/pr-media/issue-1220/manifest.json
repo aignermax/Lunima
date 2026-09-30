@@ -1,0 +1,14 @@
+[
+  {
+    "file": "laserhelp-1-first.png",
+    "caption": "Laser help: the laser switches on, a pulse travels into a splitter, and the branches glow by power (warm = strong, teal = weak) \u2014 the far coupler stays off and listens. (first frame \u2014 laser off)"
+  },
+  {
+    "file": "laserhelp-2-mid.png",
+    "caption": "Laser help: the laser switches on, a pulse travels into a splitter, and the branches glow by power (warm = strong, teal = weak) \u2014 the far coupler stays off and listens. (mid loop \u2014 laser on, split pulses on the branches)"
+  },
+  {
+    "file": "laserhelp-3-last.png",
+    "caption": "Laser help: the laser switches on, a pulse travels into a splitter, and the branches glow by power (warm = strong, teal = weak) \u2014 the far coupler stays off and listens. (last frame \u2014 branches glow strong/weak, far coupler off)"
+  }
+]
