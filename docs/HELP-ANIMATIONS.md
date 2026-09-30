@@ -33,7 +33,7 @@ otherwise describe a curve in words (laser line shape, RIN noise trace, MZI frin
     MarkerBrush="#FFD54F" PingPong="True" IsHitTestVisible="False"/>
 ```
 
-## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation)
+## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation, LengthMatchArrivalAnimation)
 
 Panel-specific compositions (eye-diagram stacking, process layer stack) that live in the
 same folder but are not primitives — they draw in their flyout's fixed coordinate space and
@@ -47,6 +47,14 @@ placed as regular flyout content, and its η readout is computed with the real
 `ChipletEdgeCouplerCoupling.PowerCouplingForOffset`/`PowerCouplingForGap` at 1550 nm —
 never hard-coded — so the help can never drift from the simulation. New help numbers that
 mirror simulation physics must call the core functions the same way.
+
+`LengthMatchArrivalAnimation` (Length Matching help, #1256) follows the same rule: two
+pulses leave a splitter, the longer arm's pulse arrives late (phase slip), then the short
+arm grows a meander and a second pair arrives together. Its ΔL / Δt readout is the real
+group-delay relation Δt = ΔL·n_g/c with the core's `GateDelayCalculator.DefaultGroupIndex`
+and `SpeedOfLightMicrometersPerPicosecond` (the constants `WireDelayCalculator` applies to
+routed wires), and the drawing conserves length — the grown meander is exactly as long as
+the detour arm it matches.
 
 ## Rules
 
