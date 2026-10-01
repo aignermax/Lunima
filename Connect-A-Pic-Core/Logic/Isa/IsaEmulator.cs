@@ -18,11 +18,11 @@ namespace CAP_Core.Logic.Isa
         /// </summary>
         /// <param name="program">Encoded instruction bytes, at most <see cref="IsaMachine.ProgramRomWords"/>.</param>
         /// <param name="alu">
-        /// The ALU that computes ADD and NOT. Defaults to <see cref="GoldenIsaAlu"/>
-        /// (the C# golden model); pass <see cref="PhotonicAdderAlu"/> or
-        /// <see cref="PhotonicNotAlu"/> (or a <see cref="CompositeIsaAlu"/> for both)
-        /// to run the operation on the photonic network. No other instruction is
-        /// affected.
+        /// The ALU that computes ADD, AND and NOT. Defaults to <see cref="GoldenIsaAlu"/>
+        /// (the C# golden model); pass <see cref="PhotonicAdderAlu"/>,
+        /// <see cref="PhotonicNotAlu"/> or <see cref="PhotonicAndAlu"/> (or a
+        /// <see cref="CompositeIsaAlu"/> for several) to run the operation on the
+        /// photonic network. No other instruction is affected.
         /// </param>
         /// <exception cref="ArgumentException">The program is larger than the ROM.</exception>
         public IsaEmulator(byte[] program, IIsaAlu? alu = null)
@@ -91,7 +91,7 @@ namespace CAP_Core.Logic.Isa
                     Accumulator = _alu.Add(Accumulator, ReadRam(operand));
                     break;
                 case IsaOpcode.And:
-                    Accumulator &= ReadRam(operand);
+                    Accumulator = _alu.And(Accumulator, ReadRam(operand));
                     break;
                 case IsaOpcode.Not:
                     Accumulator = _alu.Not(Accumulator);

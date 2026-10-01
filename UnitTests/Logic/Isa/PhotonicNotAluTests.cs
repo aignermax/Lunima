@@ -94,6 +94,8 @@ public class PhotonicNotAluTests
             return new GoldenIsaAlu().Add(a, b);
         }
 
+        public int And(int a, int b) => new GoldenIsaAlu().And(a, b);
+
         public int Not(int a)
         {
             NotCalls++;
