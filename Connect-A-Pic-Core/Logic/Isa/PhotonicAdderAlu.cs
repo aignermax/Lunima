@@ -6,20 +6,19 @@ namespace CAP_Core.Logic.Isa
     /// ADD on the photonic chip: wraps an assembled <see cref="LogicNetworkEvaluator"/>
     /// of the shipped 4-bit ripple-carry adder (the "Logic Gate 4-Bit Adder" example,
     /// docs/ISA.md). Every ADD drives the operand bits A0–A3 and B0–B3 with Cin tied
-    /// to 0 and reads the sum taps S0–S3; Cout is dropped, which is exactly the ISA's
-    /// mod-16 wrap. The network is validated at construction, so a design that does
-    /// not expose the expected signal names fails loudly before the first instruction.
-    /// Every ADD also records a <see cref="LastAddTrace"/>: the operands, the sum and
-    /// the light-travel time of that addition from the event-timeline kernel.
+    /// to 0 and reads the sum taps S0–S3 — or the names of a custom
+    /// <see cref="IsaAluSignalMap"/>, so one chip can expose ADD next to another
+    /// operation without a name collision. Cout is dropped, which is exactly the
+    /// ISA's mod-16 wrap. The network is validated at construction, so a design that
+    /// does not expose the expected signal names fails loudly before the first
+    /// instruction. Every ADD also records a <see cref="LastAddTrace"/>: the
+    /// operands, the sum and the light-travel time of that addition from the
+    /// event-timeline kernel.
     /// </summary>
     public sealed class PhotonicAdderAlu : IIsaAlu
     {
-        private static readonly string[] OperandSignals =
-            { "A0", "A1", "A2", "A3", "B0", "B1", "B2", "B3", "Cin" };
-
-        private static readonly string[] SumSignals = { "S0", "S1", "S2", "S3" };
-
         private readonly LogicNetworkEvaluator _network;
+        private readonly IsaAluSignalMap _signalMap;
         private IReadOnlyDictionary<string, bool>? _previousInputs;
 
         /// <summary>
@@ -29,33 +28,42 @@ namespace CAP_Core.Logic.Isa
         public PhotonicAddTrace? LastAddTrace { get; private set; }
 
         /// <summary>
-        /// True when <paramref name="network"/> exposes every signal the ALU drives
-        /// (A0–A3, B0–B3, Cin) and reads (S0–S3) — the check the constructor makes,
-        /// without throwing, so callers can decide up-front whether a built network
-        /// can compute ADD photonically. Additional inputs/outputs are allowed:
-        /// extra inputs are tied to 0 on every <see cref="Add"/>.
+        /// True when <paramref name="network"/> exposes every signal of
+        /// <paramref name="signalMap"/> (default: the shipped names A0–A3, B0–B3, Cin
+        /// → S0–S3) — the check the constructor makes, without throwing, so callers
+        /// can decide up-front whether a built network can compute ADD photonically.
+        /// Additional inputs/outputs are allowed: extra inputs are tied to 0 on every
+        /// <see cref="Add"/>.
         /// </summary>
-        public static bool Accepts(LogicNetworkEvaluator? network) =>
-            network != null
-            && OperandSignals.All(network.InputPinNames.Contains)
-            && SumSignals.All(network.OutputPinNames.Contains);
+        public static bool Accepts(LogicNetworkEvaluator? network, IsaAluSignalMap? signalMap = null)
+        {
+            var map = signalMap ?? IsaAluSignalMap.Adder;
+            return network != null
+                && map.AllOperands.All(network.InputPinNames.Contains)
+                && map.Result.All(network.OutputPinNames.Contains);
+        }
 
         /// <summary>
         /// Wraps an assembled adder network.
         /// </summary>
         /// <param name="network">
-        /// The logic network of the 4-bit adder. It must expose the input signals
-        /// A0–A3, B0–B3 and Cin and the output signals S0–S3.
+        /// The logic network of the 4-bit adder. It must expose the input and output
+        /// signals named by <paramref name="signalMap"/>.
+        /// </param>
+        /// <param name="signalMap">
+        /// The operand/sum signal names to drive and read; null uses the shipped
+        /// names A0–A3, B0–B3, Cin → S0–S3 (<see cref="IsaAluSignalMap.Adder"/>).
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
         /// <exception cref="ArgumentException">
         /// The network does not expose one of the expected signals; the message names
         /// the first missing signal.
         /// </exception>
-        public PhotonicAdderAlu(LogicNetworkEvaluator network)
+        public PhotonicAdderAlu(LogicNetworkEvaluator network, IsaAluSignalMap? signalMap = null)
         {
             _network = network ?? throw new ArgumentNullException(nameof(network));
-            foreach (var signal in OperandSignals)
+            _signalMap = signalMap ?? IsaAluSignalMap.Adder;
+            foreach (var signal in _signalMap.AllOperands)
             {
                 if (!network.InputPinNames.Contains(signal))
                 {
@@ -66,7 +74,7 @@ namespace CAP_Core.Logic.Isa
                 }
             }
 
-            foreach (var signal in SumSignals)
+            foreach (var signal in _signalMap.Result)
             {
                 if (!network.OutputPinNames.Contains(signal))
                 {
@@ -84,15 +92,15 @@ namespace CAP_Core.Logic.Isa
             var bits = _network.InputPinNames.ToDictionary(name => name, _ => false);
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                bits[$"A{bit}"] = ((a >> bit) & 1) == 1;
-                bits[$"B{bit}"] = ((b >> bit) & 1) == 1;
+                bits[_signalMap.OperandA[bit]] = ((a >> bit) & 1) == 1;
+                bits[_signalMap.OperandB[bit]] = ((b >> bit) & 1) == 1;
             }
 
             var outputs = _network.Evaluate(bits);
             var sum = 0;
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                if (outputs[$"S{bit}"])
+                if (outputs[_signalMap.Result[bit]])
                 {
                     sum |= 1 << bit;
                 }

@@ -59,3 +59,26 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
 - Data RAM (`LOAD`/`STORE` path) → shipped example **RAM 2x2** (4 words × 4 bit).
 - The shipped **Logic Gate Register 2-bit** is the template for the accumulator.
+
+## Photonic ALU signal maps
+
+`PhotonicAdderAlu`, `PhotonicNotAlu` and `PhotonicAndAlu` each take an optional
+`IsaAluSignalMap` (operand names + result names, LSB first, plus an optional
+carry-in for the adder). The defaults are the shipped example names above, so a
+single-operation design needs nothing extra. The map exists so that **one chip can
+expose several ISA operations without a name collision** — the blocker for the
+combined logic unit.
+
+**Combined logic-unit convention** (`IsaAluSignalMap.CombinedLogicUnitNot`): both
+operations share the operand bits `A0–A3` (AND additionally reads `B0–B3`); AND
+keeps the default result taps `Y0–Y3`, NOT reads its own taps `N0–N3`:
+
+| Operation | Operand inputs | Result taps |
+|-----------|----------------|-------------|
+| AND | `A0–A3`, `B0–B3` | `Y0–Y3` |
+| NOT | `A0–A3` (shared) | `N0–N3` |
+
+A network built to this convention passes
+`PhotonicAndAlu.Accepts(network)` (default map) and
+`PhotonicNotAlu.Accepts(network, IsaAluSignalMap.CombinedLogicUnitNot)`, so a
+`CompositeIsaAlu` over that one network computes both operations photonically.
