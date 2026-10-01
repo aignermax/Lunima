@@ -316,26 +316,32 @@ public class Issue1267RunProgramTourScreenshotTests
                 file = "home-tour-entry.png",
                 caption = "The Home card's 'Learn Lunima' row: the new 'Run a program on your chip' tour " +
                     "sits next to 'Learn Lunima' and 'Watch it compute' — the rung-5 wow moment gets its " +
-                    "guided entry point.",
+                    "guided entry point. Placement: third button on the learn row, because all three guided " +
+                    "tours must be reachable from one glance at the Home card.",
             },
             new
             {
                 file = "step2-build-logic.png",
                 caption = "Tour step 1/6 (journey step 2): the Build-logic-network button in the analysis " +
                     "dock's Logic tab is spotlighted in the real MainWindow, the shipped 4-bit adder example " +
-                    "loaded on the canvas behind it.",
+                    "loaded on the canvas behind it. Placement: below the Build button, because the dock sits " +
+                    "at the bottom edge and the card must not cover the adder on the canvas.",
             },
             new
             {
                 file = "step4-photonic-toggle.png",
                 caption = "Tour step 4/6 (journey step 4): the card docks next to the 'Compute ADD on the " +
-                    "photonic chip' toggle inside the ISA playground window, the multiply-3x4 sample assembled.",
+                    "photonic chip' toggle inside the ISA playground window, the multiply-3x4 sample assembled. " +
+                    "Placement: above the bottom button row, because the card must keep the toggle, the trace " +
+                    "and the machine-state readout visible.",
             },
             new
             {
                 file = "step5-photonic-stepping.png",
                 caption = "Tour step 5/6 (journey step 5): three photonic ADDs in — the status line names the " +
-                    "last addition and its light-travel time while the card points at the Step button.",
+                    "last addition and its light-travel time while the card points at the Step button. " +
+                    "Placement: above the button row, so the A/B-driven additions stay readable in the trace " +
+                    "while the user keeps stepping.",
             },
         };
         ScreenshotArtifacts.WriteText(
