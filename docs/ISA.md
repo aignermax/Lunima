@@ -56,6 +56,9 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
   cascade with an OR sibling — `OR` is not an ISA instruction).
 - `NOT` → shipped example **Logic Gate NOT 4-bit** (four NOT-NAND slices, `A0–A3` →
   `Y0–Y3`; the single-slice **Logic Gate NOT-NAND** is the gate it scales).
+- `AND` + `NOT` from the same operands → shipped example **Logic Gate Logic Unit
+  4-bit** (four AND-from-NAND + four NOT-NAND slices, shared `A0–A3` plus `B0–B3` →
+  `Y0–Y3` / `N0–N3`; the first step from single-op chips to a real ALU).
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
 - Data RAM (`LOAD`/`STORE` path) → shipped example **RAM 2x2** (4 words × 4 bit).
 - The shipped **Logic Gate Register 2-bit** is the template for the accumulator.

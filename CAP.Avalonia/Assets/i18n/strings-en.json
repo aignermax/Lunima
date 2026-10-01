@@ -368,6 +368,7 @@
   "Examples.Pc2bit.Description": "A 2-bit program counter: LOAD=0 counts up each Step, LOAD=1 loads L1L0 — the NAND2TETRIS PC.",
   "Examples.AndGate.Description": "Combine two NAND gates into an AND gate.",
   "Examples.And4bit.Description": "Four AND gates side by side: A0–A3 and B0–B3 in, Y0–Y3 out — the ISA AND instruction on light.",
+  "Examples.LogicUnit4bit.Description": "One chip, two operations: four AND and four NOT gates share A0–A3 — Y0–Y3 = A AND B, N0–N3 = NOT A.",
   "Examples.FullAdder.Description": "Add two bits plus a carry-in — the building block of every computer.",
   "Examples.HalfAdder.Description": "Add two bits — your first arithmetic circuit.",
   "Examples.MachZehnder.Description": "Split light into two paths and recombine it — the Hello World of photonics.",
