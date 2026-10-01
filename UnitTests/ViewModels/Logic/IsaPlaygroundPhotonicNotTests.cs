@@ -110,6 +110,21 @@ public class IsaPlaygroundPhotonicNotTests : IClassFixture<LogicGateNot4BitExamp
     }
 
     [Fact]
+    public void NoNetwork_ToggleDisabled_AndHintNamesBothExamples()
+    {
+        var vm = new IsaPlaygroundViewModel();
+
+        vm.IsAnyPhotonicAvailable.ShouldBeFalse();
+        vm.IsPhotonicToggleEnabled.ShouldBeFalse();
+
+        var hint = LocalizationService.Instance.Translate("IsaPlayground.PhotonicAdderHint");
+        hint.ShouldContain("adder", Case.Insensitive,
+            customMessage: "the hint names the 4-bit adder example");
+        hint.ShouldContain("NOT 4-bit",
+            customMessage: "the hint names the NOT 4-bit example");
+    }
+
+    [Fact]
     public void ClearingNotNetwork_WhileToggleOn_DisablesToggle()
     {
         var provider = new BuiltLogicNetworkProvider();
