@@ -86,6 +86,7 @@ public partial class IsaPlaygroundViewModel
         }
 
         var photonicAdd = NextStepIsPhotonicAdd();
+        var photonicNotOperand = NextStepIsPhotonicNot() ? _emulator.Accumulator : (int?)null;
         try
         {
             _emulator.Step();
@@ -104,6 +105,10 @@ public partial class IsaPlaygroundViewModel
         {
             ReportPhotonicAdd();
             PublishDrivenInputs();
+        }
+        else if (photonicNotOperand is { } notOperand)
+        {
+            ReportPhotonicNot(notOperand);
         }
 
         if (_emulator.IsHalted)
