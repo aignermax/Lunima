@@ -105,6 +105,14 @@ namespace CAP_Core.Logic.Isa
 
         /// <inheritdoc />
         /// <remarks>
+        /// This unit is ADD-only: AND falls back to the golden model. Use
+        /// <see cref="CompositeIsaAlu"/> with a <see cref="PhotonicAndAlu"/> to run
+        /// both operations on photonic networks.
+        /// </remarks>
+        public int And(int a, int b) => new GoldenIsaAlu().And(a, b);
+
+        /// <inheritdoc />
+        /// <remarks>
         /// This unit is ADD-only: NOT falls back to the golden model. Use
         /// <see cref="CompositeIsaAlu"/> with a <see cref="PhotonicNotAlu"/> to run
         /// both operations on photonic networks.
