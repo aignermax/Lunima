@@ -373,6 +373,8 @@ public partial class WaveguideConnectionManager
             UpsizeAutoRouteBendRadii(cancellationToken);
             if (!cancellationToken.IsCancellationRequested)
                 MarkUnresolvedSiblingCrossings();
+            if (!cancellationToken.IsCancellationRequested)
+                RepairContentionBlockedWires(cancellationToken);
         }
     }
 
