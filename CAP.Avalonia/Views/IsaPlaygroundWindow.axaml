@@ -53,13 +53,13 @@
                     Background="#3d3d5d" Padding="12,6"/>
             <StackPanel VerticalAlignment="Center" Spacing="2" Margin="8,0,0,0">
                 <CheckBox x:Name="IsaPhotonicToggle"
-                          Content="{loc:Localize IsaPlayground.PhotonicAdderToggle}"
+                          Content="{Binding PhotonicToggleLabel}"
                           IsChecked="{Binding UsePhotonicAdder}"
                           IsEnabled="{Binding IsPhotonicToggleEnabled}"
                           FontSize="12" VerticalAlignment="Center"/>
                 <TextBlock Text="{loc:Localize IsaPlayground.PhotonicAdderHint}"
                            Foreground="Gray" FontSize="10" TextWrapping="Wrap" MaxWidth="260"
-                           IsVisible="{Binding !IsPhotonicAddAvailable}"/>
+                           IsVisible="{Binding !IsAnyPhotonicAvailable}"/>
                 <TextBlock Text="{Binding PhotonicStatusText}" Foreground="#7ec87e" FontSize="10"
                            TextWrapping="Wrap" MaxWidth="260"
                            IsVisible="{Binding PhotonicStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

@@ -15,7 +15,7 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// the current source line stay visible. Editing the text marks the assembled
 /// state stale until <see cref="AssembleCommand"/> runs again. The Run/Stop
 /// auto-step half (issue #1204) lives in IsaPlaygroundViewModel.Run.cs, the
-/// photonic-ADD toggle (issue #1215) in IsaPlaygroundViewModel.Photonic.cs.
+/// photonic toggle (issues #1215, #1275) in IsaPlaygroundViewModel.Photonic.cs.
 /// </summary>
 public partial class IsaPlaygroundViewModel : ObservableObject
 {
@@ -65,7 +65,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
 
     /// <summary>
     /// Creates the playground wired to the shared <see cref="BuiltLogicNetworkProvider"/>,
-    /// so the "compute ADD on the photonic chip" toggle sees the Logic tab's network.
+    /// so the photonic toggle sees the Logic tab's network.
     /// </summary>
     public IsaPlaygroundViewModel(BuiltLogicNetworkProvider networkProvider)
         : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider)
@@ -167,6 +167,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
         }
 
         var photonicAdd = NextStepIsPhotonicAdd();
+        var photonicNotOperand = NextStepIsPhotonicNot() ? _emulator.Accumulator : (int?)null;
         try
         {
             _emulator.Step();
@@ -181,6 +182,10 @@ public partial class IsaPlaygroundViewModel : ObservableObject
         {
             ReportPhotonicAdd();
             PublishDrivenInputs();
+        }
+        else if (photonicNotOperand is { } notOperand)
+        {
+            ReportPhotonicNot(notOperand);
         }
     }
 
