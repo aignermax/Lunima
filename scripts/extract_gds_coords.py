@@ -47,6 +47,7 @@ Output JSON schema:
 """
 
 import json
+import math
 import os
 import sys
 
@@ -192,10 +193,12 @@ def _extract_coords_gdstk(gds_path: str) -> dict:
 
         for ref in cell.references:
             origin = ref.origin if ref.origin is not None else [0, 0]
+            # gdstk reports the angle in radians; the schema (and the gdspy
+            # path above) emit degrees.
             cell_data["refs"].append({
                 "ref_cell": ref.cell_name,
                 "origin": [round(float(origin[0]), 6), round(float(origin[1]), 6)],
-                "rotation": round(float(ref.rotation or 0), 6),
+                "rotation": round(math.degrees(float(ref.rotation or 0)), 6),
                 "magnification": round(float(ref.magnification or 1), 6),
                 "x_reflection": bool(ref.x_reflection)
             })
