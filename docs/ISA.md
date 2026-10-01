@@ -50,8 +50,10 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
 
 - `ADD` → shipped example **Logic Gate 4-Bit Adder** (ripple-carry; `Cin = 0`, `Cout`
   dropped gives exactly the mod-16 wrap above).
-- `AND` → the NAND + NOT datapath of **Logic Gate ALU 1-bit** (one bit slice; scale to 4 bit).
-  Note: that example selects AND/OR — `OR` is not an ISA instruction.
+- `AND` → shipped example **Logic Gate AND 4-bit** (four AND-from-NAND slices,
+  `A0–A3` & `B0–B3` → `Y0–Y3`; the single-slice **Logic Gate AND-from-NAND** is the
+  gate it scales, and the NAND + NOT datapath of **Logic Gate ALU 1-bit** is the same
+  cascade with an OR sibling — `OR` is not an ISA instruction).
 - `NOT` → shipped example **Logic Gate NOT 4-bit** (four NOT-NAND slices, `A0–A3` →
   `Y0–Y3`; the single-slice **Logic Gate NOT-NAND** is the gate it scales).
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
