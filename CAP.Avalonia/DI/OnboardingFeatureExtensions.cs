@@ -9,7 +9,7 @@ namespace CAP.Avalonia.DI;
 /// </summary>
 internal static class OnboardingFeatureExtensions
 {
-    /// <summary>Adds both guided tours as singletons: the first-steps tour over the shared canvas, the 'Watch it compute' tour over the Logic panel.</summary>
+    /// <summary>Adds the guided tours as singletons: the first-steps tour over the shared canvas, the 'Watch it compute' tour over the Logic panel, and the 'Run a program on your chip' tour over both plus the ISA playground.</summary>
     public static IServiceCollection AddOnboardingFeature(this IServiceCollection services)
     {
         services.AddSingleton<TutorialViewModel>();
@@ -17,6 +17,11 @@ internal static class OnboardingFeatureExtensions
         services.AddSingleton(sp => new WatchComputeTourViewModel(
             sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,
             sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis));
+        // Same for the ISA playground: the tour observes the singleton the playground window shows.
+        services.AddSingleton(sp => new RunProgramTourViewModel(
+            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,
+            sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis,
+            sp.GetRequiredService<ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel>()));
 
         return services;
     }

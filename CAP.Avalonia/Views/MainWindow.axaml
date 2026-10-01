@@ -234,7 +234,8 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Tools -->
-                <Button MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
+                <Button x:Name="ToolsMenuButton"
+                        MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
                         ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
                     <Button.Content>
                         <TextBlock Text="{loc:Localize Toolbar.ToolsButton}"/>
@@ -316,7 +317,8 @@
 
                                 <!-- ISA playground (#1194): write & step through 4-bit assembly
                                      programs against the golden-model machine. -->
-                                <Button HorizontalAlignment="Stretch"
+                                <Button x:Name="IsaPlaygroundToolButton"
+                                        HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Left"
                                         Margin="0,2" Padding="10,3"
                                         Background="#3d3d5d"
@@ -1163,6 +1165,16 @@
                                 TargetName="{Binding WatchTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
             <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <!-- "Run a program on your chip" tour overlay (#1267): hosts the card for
+         the steps that anchor in this window (Logic Build, Tools menu); the
+         playground steps are hosted by the overlay in IsaPlaygroundWindow -->
+    <tour:TourAnchorOverlay IsVisible="{Binding RunProgramTour.ShowCardInMainWindow, FallbackValue=False}"
+                                TargetName="{Binding RunProgramTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"/>
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 

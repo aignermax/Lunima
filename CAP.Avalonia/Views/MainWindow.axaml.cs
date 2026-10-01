@@ -749,6 +749,11 @@ public partial class MainWindow : Window
         if (vm == null) return;
 
         var window = new IsaPlaygroundWindow { DataContext = vm };
+        // The "Run a program on your chip" tour (#1267) hosts its card here for
+        // the playground steps and tracks the window's open state.
+        window.Tour = App.Services.GetService(
+            typeof(ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel))
+            as ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel;
         _isaPlaygroundWindow = window;
         // Only clear the field if it still points at THIS window.
         window.Closed += (_, _) =>

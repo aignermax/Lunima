@@ -4,6 +4,8 @@
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         xmlns:isa="using:CAP.Avalonia.ViewModels.Logic.IsaPlayground"
         xmlns:views="using:CAP.Avalonia.Views"
+        xmlns:panels="using:CAP.Avalonia.Views.Panels"
+        xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
         x:Class="CAP.Avalonia.Views.IsaPlaygroundWindow"
         x:DataType="isa:IsaPlaygroundViewModel"
         Title="{loc:Localize IsaPlayground.WindowTitle}"
@@ -13,6 +15,9 @@
         Background="#1e1e1e"
         Foreground="White">
 
+    <!-- Root grid: the tour overlay (#1267) floats above the whole window for
+         the "Run a program on your chip" steps that anchor here. -->
+    <Grid>
     <DockPanel Margin="14" LastChildFill="True">
 
         <!-- Header: title + intro on the left, help flyout on the right -->
@@ -36,7 +41,8 @@
             <Button Content="{loc:Localize IsaPlayground.AssembleButton}"
                     Command="{Binding AssembleCommand}"
                     Background="#3d3d5d" Padding="12,6"/>
-            <Button Content="{loc:Localize IsaPlayground.StepButton}"
+            <Button x:Name="IsaStepButton"
+                    Content="{loc:Localize IsaPlayground.StepButton}"
                     Command="{Binding StepCommand}"
                     Background="#3d3d5d" Padding="12,6"/>
             <Button Content="{Binding RunStopText}"
@@ -46,7 +52,8 @@
                     Command="{Binding ResetCommand}"
                     Background="#3d3d5d" Padding="12,6"/>
             <StackPanel VerticalAlignment="Center" Spacing="2" Margin="8,0,0,0">
-                <CheckBox Content="{loc:Localize IsaPlayground.PhotonicAdderToggle}"
+                <CheckBox x:Name="IsaPhotonicToggle"
+                          Content="{loc:Localize IsaPlayground.PhotonicAdderToggle}"
                           IsChecked="{Binding UsePhotonicAdder}"
                           IsEnabled="{Binding IsPhotonicToggleEnabled}"
                           FontSize="12" VerticalAlignment="Center"/>
@@ -66,7 +73,8 @@
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
                     <TextBlock Text="{loc:Localize IsaPlayground.SamplesLabel}" Foreground="Gray"
                                FontSize="12" VerticalAlignment="Center"/>
-                    <ComboBox ItemsSource="{Binding Samples}"
+                    <ComboBox x:Name="IsaSamplePicker"
+                              ItemsSource="{Binding Samples}"
                               SelectedItem="{Binding SelectedSample}"
                               MinWidth="180" FontSize="12"
                               Background="#252525">
@@ -143,5 +151,18 @@
             </StackPanel>
         </Grid>
     </DockPanel>
+
+    <!-- "Run a program on your chip" tour overlay (#1267): hosts the card for
+         the steps anchored in this window (sample picker, photonic toggle,
+         Step button). The DataContext is the tour ViewModel, assigned by the
+         code-behind via the Tour property; without a tour it stays hidden. -->
+    <tour:TourAnchorOverlay x:Name="RunProgramTourOverlay"
+                            IsVisible="{Binding ShowCardInPlayground, FallbackValue=False}"
+                            TargetName="{Binding CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:RunProgramTourPanel x:Name="RunProgramTourCard"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+    </Grid>
 
 </Window>

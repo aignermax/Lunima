@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using CAP.Avalonia.ViewModels.Logic.IsaPlayground;
+using CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial;
 
 namespace CAP.Avalonia.Views;
 
@@ -19,6 +20,7 @@ public partial class IsaPlaygroundWindow : Window
 {
     private IsaPlaygroundViewModel? _playground;
     private DispatcherTimer? _runTimer;
+    private RunProgramTourViewModel? _tour;
 
     /// <summary>Initializes the window.</summary>
     public IsaPlaygroundWindow()
@@ -26,6 +28,25 @@ public partial class IsaPlaygroundWindow : Window
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Closed += (_, _) => _runTimer?.Stop();
+        Opened += (_, _) => _tour?.NotifyPlaygroundOpened();
+        Closed += (_, _) => _tour?.NotifyPlaygroundClosed();
+    }
+
+    /// <summary>
+    /// The "Run a program on your chip" tour engine (issue #1267) whose card is
+    /// hosted by this window's overlay for the playground steps; also told when
+    /// the window opens and closes. Assigned by <see cref="MainWindow"/> (or by
+    /// tests); null means no tour card is shown here.
+    /// </summary>
+    public RunProgramTourViewModel? Tour
+    {
+        get => _tour;
+        set
+        {
+            _tour = value;
+            RunProgramTourOverlay.DataContext = value;
+            RunProgramTourCard.DataContext = value;
+        }
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

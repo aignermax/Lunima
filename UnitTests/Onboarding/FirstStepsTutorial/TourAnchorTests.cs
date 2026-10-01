@@ -127,20 +127,60 @@ public class TourAnchorTests
         steps[4].TargetName.ShouldBeNull("the closing words have no control to click");
     }
 
+    [Fact]
+    public void RunProgramTour_ActionSteps_AnchorToTheirControls_ClosingStepFloats()
+    {
+        var steps = RunProgramTourSteps();
+
+        steps[0].TargetName.ShouldBe("LogicBuildButton");
+        steps[1].TargetName.ShouldBe("ToolsMenuButton");
+        steps[2].TargetName.ShouldBe("IsaSamplePicker");
+        steps[3].TargetName.ShouldBe("IsaPhotonicToggle");
+        steps[4].TargetName.ShouldBe("IsaStepButton");
+        steps[5].TargetName.ShouldBeNull("the closing words have no control to click");
+    }
+
+    [Fact]
+    public void RunProgramTour_CardWindow_FollowsStepAdvance()
+    {
+        var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
+            new FakeLogicRunClock());
+        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel();
+        var tour = new RunProgramTourViewModel(logic, MakeDock(), playground);
+        tour.Start();
+
+        tour.ShowCardInMainWindow.ShouldBeTrue("the build step anchors in the main window");
+        tour.ShowCardInPlayground.ShouldBeFalse();
+
+        tour.CurrentStepIndex = 2;
+
+        tour.ShowCardInPlayground.ShouldBeTrue("from the sample step on, the card lives in the playground window");
+        tour.ShowCardInMainWindow.ShouldBeFalse();
+    }
+
+    private static IReadOnlyList<TutorialStep> RunProgramTourSteps()
+    {
+        var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
+            new FakeLogicRunClock());
+        var playground = new CAP.Avalonia.ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel();
+        return new RunProgramTourViewModel(logic, MakeDock(), playground).Steps;
+    }
+
     private static IReadOnlyList<TutorialStep> WatchTourSteps()
     {
         var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
             new FakeLogicRunClock());
-        var dock = new CAP.Avalonia.ViewModels.Panels.AnalysisDockViewModel(
-            new CAP.Avalonia.ViewModels.Analysis.TimeDomainViewModel(),
+        return new WatchComputeTourViewModel(logic, MakeDock()).Steps;
+    }
+
+    private static CAP.Avalonia.ViewModels.Panels.AnalysisDockViewModel MakeDock() =>
+        new(new CAP.Avalonia.ViewModels.Analysis.TimeDomainViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.EyeDiagram.EyeDiagramViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum.WavelengthSpectrumViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.AnalysisOutput.AnalysisOutputPanelViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.MonteCarloAnalysis.MonteCarloViewModel(),
             new CAP.Avalonia.ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel(
                 new CAP.Avalonia.Commands.CommandManager()));
-        return new WatchComputeTourViewModel(logic, dock).Steps;
-    }
 
     /// <summary>Manually fired clock — the panel requires an instance, the tour never fires ticks.</summary>
     private sealed class FakeLogicRunClock : CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.ILogicRunClock
