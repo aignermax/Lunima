@@ -158,6 +158,26 @@ public class TourAnchorTests
         tour.ShowCardInMainWindow.ShouldBeFalse();
     }
 
+    [Fact]
+    public void ConnectChipletsTour_ActionSteps_AnchorToTheirControls_ClosingStepFloats()
+    {
+        var steps = ConnectChipletsTourSteps();
+
+        steps[0].TargetName.ShouldBe("DesignCanvasControl");
+        steps[1].TargetName.ShouldBe("RunSimulationButton");
+        steps[2].TargetName.ShouldBe("DesignCanvasControl");
+        steps[3].TargetName.ShouldBe("DesignChecksRunButton");
+        steps[4].TargetName.ShouldBe("AlignChipletButton");
+        steps[5].TargetName.ShouldBeNull("the closing words have no control to click");
+    }
+
+    private static IReadOnlyList<TutorialStep> ConnectChipletsTourSteps() =>
+        new ConnectChipletsTourViewModel(
+            new DesignCanvasViewModel(),
+            new CAP.Avalonia.ViewModels.Diagnostics.DesignValidationViewModel(),
+            MakeDock(),
+            new CAP.Avalonia.Commands.CommandManager()).Steps;
+
     private static IReadOnlyList<TutorialStep> RunProgramTourSteps()
     {
         var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(

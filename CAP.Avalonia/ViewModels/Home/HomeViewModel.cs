@@ -103,6 +103,13 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public Func<Task>? RunProgramTourRequested { get; set; }
 
+    /// <summary>
+    /// Callback to start the "Connect two chiplets" guided tour (issue #1288):
+    /// opens the shipped Two-Chiplets edge-coupler example as an untitled copy
+    /// and activates the tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? ConnectChipletsTourRequested { get; set; }
+
     /// <summary>Initializes the Home screen and builds the recent-projects and examples lists.</summary>
     public HomeViewModel(
         RecentProjectsService recentProjectsService,
@@ -283,6 +290,13 @@ public partial class HomeViewModel : ObservableObject
     {
         if (RunProgramTourRequested != null)
             await RunProgramTourRequested();
+    }
+
+    [RelayCommand]
+    private async Task ConnectChipletsTour()
+    {
+        if (ConnectChipletsTourRequested != null)
+            await ConnectChipletsTourRequested();
     }
 
     [RelayCommand]
