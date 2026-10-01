@@ -22,6 +22,13 @@ internal static class OnboardingFeatureExtensions
             sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,
             sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis,
             sp.GetRequiredService<ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel>()));
+        // Same for the chiplet tour: it observes the canvas, the Design Checks
+        // the window shows and the shared undo history (its helper move is undoable).
+        services.AddSingleton(sp => new ConnectChipletsTourViewModel(
+            sp.GetRequiredService<ViewModels.Canvas.DesignCanvasViewModel>(),
+            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().DesignValidation,
+            sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis,
+            sp.GetRequiredService<Commands.CommandManager>()));
 
         return services;
     }

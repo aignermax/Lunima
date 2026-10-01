@@ -1185,6 +1185,15 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
+    <!-- "Connect two chiplets" tour overlay (#1288): every step anchors in this
+         window — canvas, toolbar Run button, Design Checks tab of the dock -->
+    <tour:TourAnchorOverlay IsVisible="{Binding ConnectChipletsTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding ConnectChipletsTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:ConnectChipletsTourPanel DataContext="{Binding ConnectChipletsTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
     <!-- Home screen overlay: compact centered card over the dimmed editor,
          shown until a project is opened/created; reopenable via the Home button -->
     <Border IsVisible="{Binding Home.IsHomeVisible}" Background="#B3141414">

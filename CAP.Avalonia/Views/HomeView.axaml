@@ -75,6 +75,19 @@
                         </StackPanel>
                     </Button>
                 </StackPanel>
+                <!-- The chiplet tour gets its own row: next to the (long) Run-program
+                     label the pair overflows the fixed-width card in German. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button Command="{Binding ConnectChipletsTourCommand}"
+                            Background="#3d5d3d" Foreground="White" Padding="14,7"
+                            ToolTip.Tip="{loc:Localize Home.ConnectChipletsTourTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="🔗" FontSize="13"/>
+                            <TextBlock Text="{loc:Localize Home.ConnectChipletsTour}" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
             </StackPanel>
 
             <!-- Shipped example designs in learning-path order (curated manifest

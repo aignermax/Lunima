@@ -145,6 +145,13 @@ public partial class MainViewModel : ObservableObject
     public ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel RunProgramTour { get; }
 
     /// <summary>
+    /// Step engine for the "Connect two chiplets" tour (issue #1288). Started
+    /// from the Home screen's fourth tour card; observes the canvas and the
+    /// Design Checks of the Two-Chiplets edge-coupler example it opens.
+    /// </summary>
+    public ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel ConnectChipletsTour { get; }
+
+    /// <summary>
     /// Design file passed on the command line, resolved by
     /// <see cref="Services.DesignFileArguments.FindDesignFile"/> in App startup.
     /// Consumed once by the main window's Loaded handler; takes precedence
@@ -326,7 +333,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel? tutorialViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel? watchComputeTourViewModel = null,
         ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
-        ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
+        ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -374,6 +382,7 @@ public partial class MainViewModel : ObservableObject
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
+        Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
         FileOperations.ProjectOpened = Home.OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
@@ -386,6 +395,11 @@ public partial class MainViewModel : ObservableObject
             ?? new ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel(
                 RightPanel.Logic, BottomPanel.Analysis,
                 isaPlayground ?? new ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel());
+        // The chiplet tour observes the canvas, the Design Checks the window shows
+        // and the shared undo history (its "do it for me" move must be undoable).
+        ConnectChipletsTour = connectChipletsTourViewModel
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel(
+                Canvas, RightPanel.DesignValidation, BottomPanel.Analysis, CommandManager);
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>
@@ -1011,6 +1025,25 @@ public partial class MainViewModel : ObservableObject
             return;
 
         RunProgramTour.Start();
+    }
+
+    /// <summary>
+    /// Home → "Connect two chiplets" (issue #1288): loads the shipped
+    /// Two-Chiplets edge-coupler example as an untitled copy through the same
+    /// loader the Examples list uses; when the user cancels the
+    /// unsaved-changes prompt (or the example is not installed), the tour does
+    /// not start and the current design stays open.
+    /// </summary>
+    private async Task StartConnectChipletsTourAsync()
+    {
+        var chipletsPath = Home.Examples
+            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
+                == ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel.ExampleFileName)
+            ?.FilePath;
+        if (chipletsPath == null || !await FileOperations.OpenDesignAsCopyAsync(chipletsPath))
+            return;
+
+        ConnectChipletsTour.Start();
     }
 
     /// <summary>
