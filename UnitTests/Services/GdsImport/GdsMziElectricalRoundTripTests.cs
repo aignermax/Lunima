@@ -143,9 +143,11 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         designCell.Elements.OfType<GdsPolygon>().Count(p => p.Layer == 11 && p.DataType == 0)
             .ShouldBe(27, "the four curved metal routes, flattened (nazca merges collinear runs)");
         // Curved metal traces are larger routing obstacles, so the optical
-        // A* routes around them settle on different geometry.
+        // A* routes around them settle on different geometry; the contention
+        // rip-up-and-reroute pass then re-routes the wires that the cascade left
+        // on blocked fallbacks, so they flatten into more (real) polygons.
         designCell.Elements.OfType<GdsPolygon>().Count(p => p.Layer == 1111 && p.DataType == 0)
-            .ShouldBe(40, "the six optical routes, flattened");
+            .ShouldBe(42, "the six optical routes, flattened");
         designCell.Elements.OfType<GdsPolygon>().Count(p => p.Layer == 1 && p.DataType == 0)
             .ShouldBe(0, "nothing dissolves into the top cell anymore (the straight keeps its cell)");
 
