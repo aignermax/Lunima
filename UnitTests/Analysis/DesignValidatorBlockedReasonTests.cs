@@ -48,24 +48,26 @@ public class DesignValidatorBlockedReasonTests
     [Fact]
     public void ContentionBlockedWire_ReportsNoFreeLane()
     {
-        // The corridor fixture from EndpointBlockedRetryTests, but with a single routing
-        // attempt so the contention failure of wire B is never retried away.
-        var aWest = CreateTestComponent(-50, 140, width: 50, height: 40);
-        var aEast = CreateTestComponent(460, 140, width: 30, height: 40);
-        var bEast = CreateTestComponent(450, 170, width: 30, height: 40);
-        var roof = CreateTestComponent(60, 105, width: 280, height: 45);
-        var floor = CreateTestComponent(60, 170, width: 280, height: 45);
+        // One-wire corridor: the walls span the full grid height except for a channel
+        // that fits a single wire, so every ordering — and the rip-up-and-reroute repair
+        // pass — leaves exactly one wire blocked by contention.
+        var west1 = CreateTestComponent(-80, 140, width: 50, height: 40);
+        var east1 = CreateTestComponent(640, 140, width: 50, height: 40);
+        var west2 = CreateTestComponent(-80, 60, width: 50, height: 40);
+        var east2 = CreateTestComponent(640, 240, width: 50, height: 40);
+        var roof = CreateTestComponent(0, -100, width: 600, height: 250);
+        var floor = CreateTestComponent(0, 170, width: 600, height: 180);
 
-        var router = CreateRouter(-100, -100, 600, 300, aWest, aEast, bEast, roof, floor);
+        var router = CreateRouter(-100, -100, 700, 350, west1, east1, west2, east2, roof, floor);
         var manager = new WaveguideConnectionManager(router)
         {
             UseSequentialRouting = true,
             MaxRoutingAttempts = 1
         };
 
-        manager.AddConnection(CreatePin(aWest, 50, 20, 0), CreatePin(aEast, 0, 20, 180));
+        manager.AddConnection(CreatePin(west1, 50, 20, 0), CreatePin(east1, 0, 20, 180));
         var connB = manager.AddConnection(
-            CreatePin(bEast, 0, 20, 180), CreatePin(roof, 140, 45, 90));
+            CreatePin(west2, 50, 20, 0), CreatePin(east2, 0, 20, 180));
         connB.FailureReason.ShouldBe(RoutingFailureReason.Contention);
 
         var issues = _validator.Validate(manager.Connections);
