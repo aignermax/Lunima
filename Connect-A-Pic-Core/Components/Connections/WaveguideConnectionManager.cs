@@ -427,6 +427,7 @@ public partial class WaveguideConnectionManager
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
             LastOrderingAttemptCount = 0;
+            LastOrderingEarlyStopped = false;
 
             // Phase 1: Incremental routing — keep valid routes, only re-route broken ones
             var initialWatch = System.Diagnostics.Stopwatch.StartNew();
@@ -445,6 +446,7 @@ public partial class WaveguideConnectionManager
             finally
             {
                 timings.OrderingCascade = cascadeWatch.Elapsed;
+                timings.OrderingEarlyStopped = LastOrderingEarlyStopped;
             }
         }
         else
@@ -458,66 +460,6 @@ public partial class WaveguideConnectionManager
                 progressCallback?.Invoke();
             }
             timings.InitialPass = simpleWatch.Elapsed;
-        }
-    }
-
-    /// <summary>
-    /// Phase 2 of the full re-route: incremental routing failed for some connections, so
-    /// every connection is re-routed under different orderings and the best result is kept.
-    /// </summary>
-    private void RouteWithOrderingCascade(
-        WaveguideRouter router,
-        Action? progressCallback,
-        CancellationToken cancellationToken)
-    {
-        // Snapshots: this runs on the routing thread while UI commands may mutate the list.
-        var result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
-        LastOrderingAttemptCount++;
-        if (cancellationToken.IsCancellationRequested) return;
-        if (result.allValid) return;
-
-        // When every failed wire is endpoint-blocked (a pin sealed in by a component
-        // footprint), no ordering can free it — re-ordering cannot fix a footprint,
-        // so the ordering retry storm is skipped and this attempt's routes are kept.
-        if (AllFailuresEndpointBlocked(result.failedConnections))
-            return;
-
-        var bestOrder = SnapshotConnections();
-        int bestFailedCount = result.failedCount;
-
-        var orderings = GenerateOrderings(SnapshotConnections(), MaxRoutingAttempts - 1);
-        foreach (var ordering in orderings)
-        {
-            if (cancellationToken.IsCancellationRequested) return;
-            result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
-            LastOrderingAttemptCount++;
-            if (cancellationToken.IsCancellationRequested) return;
-
-            if (result.allValid)
-            {
-                ReorderConnections(ordering);
-                return;
-            }
-
-            // An attempt whose only failures are endpoint-blocked is the best any
-            // ordering can achieve: those wires stay blocked under every ordering.
-            if (AllFailuresEndpointBlocked(result.failedConnections))
-            {
-                ReorderConnections(ordering);
-                return;
-            }
-
-            if (result.failedCount < bestFailedCount)
-            {
-                bestFailedCount = result.failedCount;
-                bestOrder = ordering;
-            }
-        }
-
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            ReorderConnections(bestOrder);
-            TryRouteInOrder(bestOrder, router, progressCallback, cancellationToken);
         }
     }
 

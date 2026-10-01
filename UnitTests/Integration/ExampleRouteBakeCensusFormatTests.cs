@@ -52,6 +52,25 @@ public class ExampleRouteBakeCensusFormatTests
     }
 
     [Fact]
+    public void FormatPassTimingsLine_EarlyStoppedCascade_IsMarkedEarlyStop()
+    {
+        var timings = new RoutingPassTimings
+        {
+            Total = TimeSpan.FromSeconds(120.4),
+            InitialPass = TimeSpan.FromSeconds(10.0),
+            OrderingCascade = TimeSpan.FromSeconds(60.0),
+            OrderingAttempts = 3,
+            OrderingEarlyStopped = true,
+        };
+
+        ExampleRouteBakeTests.FormatPassTimingsLine("Logic Gate Register 2-bit.lun", timings)
+            .ShouldBe("[bake] Logic Gate Register 2-bit.lun: passes total=120.4s ("
+                + "initial=10.0s, ordering-cascade=60.0s/3 attempts, crossing-dissolve=0.0s, "
+                + "crossing-insert=0.0s, pin-lead-collapse=0.0s, bend-upsize=0.0s, "
+                + "crossing-scan=0.0s, contention-repair=0.0s/0 attempts/0 accepts) [early-stop]");
+    }
+
+    [Fact]
     public void FormatPassTimingsLine_CancelledPass_IsMarkedCancelled()
     {
         var timings = new RoutingPassTimings

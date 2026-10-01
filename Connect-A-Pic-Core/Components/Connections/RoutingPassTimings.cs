@@ -24,6 +24,12 @@ public sealed record RoutingPassTimings
     /// <summary>Full-ordering route attempts the cascade ran (mirrors LastOrderingAttemptCount).</summary>
     public int OrderingAttempts { get; init; }
 
+    /// <summary>
+    /// True when the ordering cascade stopped early after consecutive non-improving
+    /// attempts (mirrors LastOrderingEarlyStopped) instead of running every ordering.
+    /// </summary>
+    public bool OrderingEarlyStopped { get; init; }
+
     /// <summary>Adaptive crossing-insertion pass (no-op without a crossing service).</summary>
     public TimeSpan CrossingInsertion { get; init; }
 
