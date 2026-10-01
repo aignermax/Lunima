@@ -1436,7 +1436,7 @@
   "ConnectChipletsTour.Step2Title": "Deja pasar la luz",
   "ConnectChipletsTour.Step3Body": "Arrastra el dado de la derecha unos micrómetros lejos de su pareja, o pulsa «Muévelo por mí» abajo para desplazarlo 5 µm. Un hueco tan pequeño ya cuesta luz.",
   "ConnectChipletsTour.Step3Title": "Mueve un dado",
-  "ConnectChipletsTour.Step4Body": "En la pestaña Comprobaciones de diseño, pulsa «Ejecutar comprobaciones»: el comprobador señala el hueco entre facetas. Vuelve a ejecutar la simulación y la potencia recibida ha caído.",
+  "ConnectChipletsTour.Step4Body": "En la pestaña Comprobaciones de diseño, pulsa «Ejecutar comprobaciones de diseño»: el comprobador señala el hueco entre facetas. Vuelve a ejecutar la simulación y la potencia recibida ha caído.",
   "ConnectChipletsTour.Step4Title": "Mira el aviso",
   "ConnectChipletsTour.Step5Body": "Pulsa «Alinear chiplet» en el hallazgo. El dado vuelve al acoplamiento a tope y las comprobaciones quedan limpias: ejecuta de nuevo la simulación para ver cómo vuelve la potencia.",
   "ConnectChipletsTour.Step5Title": "Arréglalo con un clic",

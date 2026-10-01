@@ -1436,7 +1436,7 @@
   "ConnectChipletsTour.Step2Title": "光を渡す",
   "ConnectChipletsTour.Step3Body": "右側のダイを相手から数マイクロメートル離すようにドラッグするか、下の「代わりに動かす」で 5 µm ずらします。これほど小さなギャップでも光を失います。",
   "ConnectChipletsTour.Step3Title": "ダイを動かす",
-  "ConnectChipletsTour.Step4Body": "「デザインチェック」タブで「チェック実行」を押すと、チェッカーがファセットギャップを指摘します。シミュレーションを再実行すると、受信パワーが低下しています。",
+  "ConnectChipletsTour.Step4Body": "「デザインチェック」タブで「デザインチェックを実行」を押すと、チェッカーがファセットギャップを指摘します。シミュレーションを再実行すると、受信パワーが低下しています。",
   "ConnectChipletsTour.Step4Title": "警告を見る",
   "ConnectChipletsTour.Step5Body": "指摘項目の「チップレットを整列」を押してください。ダイがバットカップリングに戻り、チェックはクリーンになります。シミュレーションを再実行するとパワーが戻ります。",
   "ConnectChipletsTour.Step5Title": "ワンクリックで修正",

@@ -1436,7 +1436,7 @@
   "ConnectChipletsTour.Step2Title": "Licht hinüberschicken",
   "ConnectChipletsTour.Step3Body": "Ziehen Sie den rechten Die ein paar Mikrometer vom Partner weg — oder drücken Sie unten auf „Für mich verschieben“, um ihn um 5 µm zu versetzen. Schon so ein kleiner Spalt kostet Licht.",
   "ConnectChipletsTour.Step3Title": "Einen Die verschieben",
-  "ConnectChipletsTour.Step4Body": "Drücken Sie im Tab „Design Checks“ auf „Prüfungen ausführen“ — der Checker meldet den Facettenspalt. Starten Sie die Simulation erneut: Die empfangene Leistung ist gesunken.",
+  "ConnectChipletsTour.Step4Body": "Drücken Sie im Tab „Design Checks“ auf „Design-Prüfungen ausführen“ — der Checker meldet den Facettenspalt. Starten Sie die Simulation erneut: Die empfangene Leistung ist gesunken.",
   "ConnectChipletsTour.Step4Title": "Die Warnung sehen",
   "ConnectChipletsTour.Step5Body": "Drücken Sie beim Befund auf „Chiplet ausrichten“. Der Die rastet wieder in Stoßkopplung ein und die Prüfung ist sauber — starten Sie die Simulation erneut und die Leistung ist zurück.",
   "ConnectChipletsTour.Step5Title": "Mit einem Klick reparieren",

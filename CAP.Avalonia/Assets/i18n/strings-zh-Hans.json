@@ -1436,7 +1436,7 @@
   "ConnectChipletsTour.Step2Title": "让光穿过去",
   "ConnectChipletsTour.Step3Body": "把右侧芯片拖离其伙伴几微米，或点击下方“帮我移动”将其移动 5 µm。如此小的间隙已经会损耗光。",
   "ConnectChipletsTour.Step3Title": "移动一个芯片",
-  "ConnectChipletsTour.Step4Body": "在“设计检查”选项卡中点击“运行检查”——检查器会标记端面间隙。重新运行仿真，接收功率已经下降。",
+  "ConnectChipletsTour.Step4Body": "在“设计检查”选项卡中点击“运行设计检查”——检查器会标记端面间隙。重新运行仿真，接收功率已经下降。",
   "ConnectChipletsTour.Step4Title": "查看警告",
   "ConnectChipletsTour.Step5Body": "点击该检查结果上的“对齐芯粒”。芯片会回到对接耦合位置，检查恢复干净——再次运行仿真即可看到功率恢复。",
   "ConnectChipletsTour.Step5Title": "一键修复",

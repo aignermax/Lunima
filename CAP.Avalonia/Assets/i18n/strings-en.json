@@ -1436,7 +1436,7 @@
   "ConnectChipletsTour.Step2Title": "Let the light cross",
   "ConnectChipletsTour.Step3Body": "Drag the right-hand die a few micrometres away from its partner — or press 'Move it for me' below to shift it 5 µm. A gap this small already costs light.",
   "ConnectChipletsTour.Step3Title": "Move a die",
-  "ConnectChipletsTour.Step4Body": "In the Design Checks tab, press 'Run checks' — the checker flags the facet gap. Re-run the simulation and the received power has dropped.",
+  "ConnectChipletsTour.Step4Body": "In the Design Checks tab, press 'Run Design Checks' — the checker flags the facet gap. Re-run the simulation and the received power has dropped.",
   "ConnectChipletsTour.Step4Title": "See the warning",
   "ConnectChipletsTour.Step5Body": "Press 'Align chiplet' on the finding. The die snaps back into butt-coupling and the checks come back clean — run the simulation again to see the power return.",
   "ConnectChipletsTour.Step5Title": "Fix it with one click",
