@@ -402,11 +402,18 @@
                 </controls:HelpFlyoutButton>
                 <!-- Grid (not StackPanel) so a long status text is ellipsized by its column
                      instead of pushing the hints under the badge (#1162). -->
-                <Grid ColumnDefinitions="Auto,*">
+                <Grid ColumnDefinitions="Auto,Auto,*">
                     <TextBlock Grid.Column="0" Text="{Binding StatusText}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
-                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0"
+                    <!-- Stop for a full re-route (#1278): visible only while routing runs,
+                         cancels the pass; already-routed wires keep their routes. -->
+                    <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
+                            Command="{Binding Canvas.StopRoutingCommand}"
+                            IsVisible="{Binding Canvas.IsRouting}"
+                            VerticalAlignment="Center" Margin="6,0,0,0" FontSize="11"
+                            ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="20,0,0,0"
                                Foreground="Gray" TextTrimming="CharacterEllipsis"
                                Text="{Binding CanvasInteraction.ModeShortcutHints}"/>
                 </Grid>

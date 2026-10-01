@@ -290,6 +290,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     [RelayCommand] public void NavigateToBreadcrumbLevel(ComponentGroup? group)
         => Groups.NavigateToBreadcrumbLevel(group);
 
+    // ── Routing delegation ────────────────────────────────────────────────
+
+    /// <summary>Cancels the running routing pass (status-bar Stop button).</summary>
+    [RelayCommand] public void StopRouting() => Routing.CancelRouting();
+
     // ── Pin highlight delegation ──────────────────────────────────────────
 
     public PinViewModel? UpdatePinHighlight(double x, double y, PhysicalPin? excludePin = null)
