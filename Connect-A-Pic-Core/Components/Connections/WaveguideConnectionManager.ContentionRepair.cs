@@ -30,9 +30,10 @@ public partial class WaveguideConnectionManager
     /// routes inside one, so the pass stays bounded even on dense designs; a single
     /// in-flight route may overrun it by its own routing time. One attempt is a handful of
     /// A* routes and legitimately takes seconds, so the budget must be generous — the hard
-    /// bound is <see cref="MaxContentionRepairAttemptsPerPass"/>.
+    /// bound is <see cref="MaxContentionRepairAttemptsPerPass"/>. Settable so tests on slow
+    /// CI runners can pin the repair outcome independently of machine speed.
     /// </summary>
-    private static readonly TimeSpan ContentionRepairTimeBudget = TimeSpan.FromSeconds(10);
+    internal TimeSpan ContentionRepairTimeBudget { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// Number of rip-up-and-reroute attempts the last <see cref="RecalculateAllTransmissions"/>

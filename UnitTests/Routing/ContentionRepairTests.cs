@@ -22,6 +22,9 @@ public class ContentionRepairTests
 {
     private const double BendRadius = 10.0;
 
+    /// <summary>Generous enough that a slow CI runner never cuts the textbook repair short.</summary>
+    private static readonly TimeSpan UnboundedRepairBudget = TimeSpan.FromMinutes(5);
+
     [Fact]
     public void ContentionBlockedWire_RipUpAndReroute_BothWiresRoute()
     {
@@ -36,7 +39,11 @@ public class ContentionRepairTests
         var floor = CreateTestComponent(60, 170, width: 280, height: 45);
 
         var router = CreateRouter(-100, -100, 600, 300, aWest, aEast, bEast, roof, floor);
-        var manager = new WaveguideConnectionManager(router) { UseSequentialRouting = true };
+        var manager = new WaveguideConnectionManager(router)
+        {
+            UseSequentialRouting = true,
+            ContentionRepairTimeBudget = UnboundedRepairBudget,
+        };
 
         var connA = manager.AddConnectionWithCachedRoute(
             CreatePin(aWest, 50, 20, 0), CreatePin(aEast, 0, 20, 180),

@@ -324,9 +324,11 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         r.Outcome.Infos.ShouldContain(i =>
             i.Contains("junction with 4 pins") && i.Contains("'anode'") && i.Contains("'cathode'")
             && i.Contains("'elec'"));
-        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(38,
-            "9 + 15 optical + 14 metal polygons of the three junction networks ride the group as frozen paths");
-        r.Report.FrozenRoutePathCount.ShouldBe(38);
+        // The contention repair re-routes two former fallback wires, which flatten
+        // into two more optical polygons inside the junction networks.
+        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(40,
+            "the optical + metal polygons of the three junction networks ride the group as frozen paths");
+        r.Report.FrozenRoutePathCount.ShouldBe(40);
 
         // His ask: zero WARNINGS in the clean case (infos acceptable).
         r.Outcome.Warnings.ShouldBeEmpty(
@@ -358,8 +360,8 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         var electrical = r.Outcome.Connections.Where(c => c.IsElectrical).ToList();
         electrical.Count.ShouldBe(2);
         electrical.ShouldAllBe(c => c.IsRouteDerived);
-        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(38,
-            "same frozen remainder as the stub scenario: 9 + 15 optical + 14 metal junction polygons");
+        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(40,
+            "same frozen remainder as the stub scenario");
 
         // With the pins anchoring the placement, the marker-path bbox inflation
         // is benign — no size-mismatch warning anymore.
