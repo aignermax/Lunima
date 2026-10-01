@@ -138,6 +138,13 @@ public partial class MainViewModel : ObservableObject
     public ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel WatchTour { get; }
 
     /// <summary>
+    /// Step engine for the "Run a program on your chip" tour (issue #1267).
+    /// Started from the Home screen's third tour card; observes the Logic panel
+    /// and the ISA playground of the 4-bit adder example it opens.
+    /// </summary>
+    public ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel RunProgramTour { get; }
+
+    /// <summary>
     /// Design file passed on the command line, resolved by
     /// <see cref="Services.DesignFileArguments.FindDesignFile"/> in App startup.
     /// Consumed once by the main window's Loaded handler; takes precedence
@@ -317,7 +324,9 @@ public partial class MainViewModel : ObservableObject
         Services.GdsImport.DesignScope.DesignScopedGdsComponentService? designScopedGdsComponents = null,
         ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel? layerVisibility = null,
         ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel? tutorialViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel? watchComputeTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel? watchComputeTourViewModel = null,
+        ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
+        ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -364,12 +373,19 @@ public partial class MainViewModel : ObservableObject
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
+        Home.RunProgramTourRequested = StartRunProgramTourAsync;
         FileOperations.ProjectOpened = Home.OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
         // The tour must observe the panel instance the user actually clicks.
         WatchTour = watchComputeTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        // Same for the ISA playground: the tour must observe the singleton the
+        // playground window shows, not a private instance.
+        RunProgramTour = runProgramTourViewModel
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel(
+                RightPanel.Logic, BottomPanel.Analysis,
+                isaPlayground ?? new ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel());
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>
@@ -976,6 +992,25 @@ public partial class MainViewModel : ObservableObject
             return;
 
         WatchTour.Start();
+    }
+
+    /// <summary>
+    /// Starts the "Run a program on your chip" tour on the shipped 4-bit adder
+    /// example (Home tour card, issue #1267). The example opens as an untitled
+    /// copy through the same loader the Examples list uses; when the user
+    /// cancels the unsaved-changes prompt (or the example is not installed),
+    /// the tour does not start and the current design stays open.
+    /// </summary>
+    private async Task StartRunProgramTourAsync()
+    {
+        var adderPath = Home.Examples
+            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
+                == ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel.AdderExampleFileName)
+            ?.FilePath;
+        if (adderPath == null || !await FileOperations.OpenDesignAsCopyAsync(adderPath))
+            return;
+
+        RunProgramTour.Start();
     }
 
     /// <summary>

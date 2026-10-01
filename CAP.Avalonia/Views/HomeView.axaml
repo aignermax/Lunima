@@ -25,8 +25,9 @@
                        FontSize="12" Foreground="Gray"
                        HorizontalAlignment="Center" Margin="0,2,0,18"/>
 
-            <!-- Primary actions: file actions on the first row, the guided tours on the
-                 second — four buttons never fit the fixed-width card in every language. -->
+            <!-- Primary actions: file actions on the first row, the guided tours on
+                 the following rows — five buttons never fit the fixed-width card in
+                 every language, so each tour row wraps before it overflows. -->
             <StackPanel Spacing="10" Margin="0,0,0,18">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
                     <Button Command="{Binding NewProjectCommand}"
@@ -61,6 +62,16 @@
                         <StackPanel Orientation="Horizontal" Spacing="7">
                             <TextBlock Text="⏱" FontSize="13"/>
                             <TextBlock Text="{loc:Localize Home.WatchComputeTour}" FontWeight="SemiBold" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button Command="{Binding RunProgramTourCommand}"
+                            Background="#3d5d3d" Foreground="White" Padding="14,7"
+                            ToolTip.Tip="{loc:Localize Home.RunProgramTourTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="🧮" FontSize="13"/>
+                            <TextBlock Text="{loc:Localize Home.RunProgramTour}" FontWeight="SemiBold" FontSize="13"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
