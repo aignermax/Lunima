@@ -75,7 +75,7 @@ public partial class WaveguideConnectionManager
     /// pass and rendered as blocked until the crossing is resolved. Forced routes (styled or
     /// manually frozen) keep their shape; their overlap is reported by the design checks.
     /// </summary>
-    private void MarkUnresolvedSiblingCrossings()
+    internal void MarkUnresolvedSiblingCrossings()
     {
         // Snapshot: runs at the end of the routing pass on the routing thread while
         // UI commands may mutate the list — see _connectionsSync in the main partial.
@@ -91,7 +91,13 @@ public partial class WaveguideConnectionManager
                     continue;
                 var target = PickReroutableSide(routed[i], routed[j]);
                 if (target != null)
+                {
                     target.RoutedPath!.IsBlockedFallback = true;
+                    // A crossing with a routed sibling is contention by definition; keep an
+                    // existing classification (a sealed pin stays the actionable advice).
+                    if (target.RoutedPath.FailureReason == RoutingFailureReason.None)
+                        target.RoutedPath.FailureReason = RoutingFailureReason.Contention;
+                }
             }
         }
     }
