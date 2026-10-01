@@ -12,41 +12,53 @@ namespace CAP_Core.Logic.Isa
     /// </summary>
     public sealed class PhotonicAndAlu : IIsaAlu
     {
-        private static readonly string[] OperandSignals =
-            { "A0", "A1", "A2", "A3", "B0", "B1", "B2", "B3" };
-
-        private static readonly string[] ResultSignals = { "Y0", "Y1", "Y2", "Y3" };
-
         private readonly LogicNetworkEvaluator _network;
+        private readonly IsaAluSignalMap _map;
 
         /// <summary>
-        /// True when <paramref name="network"/> exposes every signal the ALU drives
-        /// (A0–A3, B0–B3) and reads (Y0–Y3) — the check the constructor makes, without
-        /// throwing, so callers can decide up-front whether a built network can
-        /// compute AND photonically. Additional inputs/outputs are allowed: extra
+        /// True when <paramref name="network"/> exposes every signal of
+        /// <paramref name="map"/> (defaults to <see cref="IsaAluSignalMap.AndDefault"/>:
+        /// drives A0–A3 and B0–B3, reads Y0–Y3) — the check the constructor makes,
+        /// without throwing, so callers can decide up-front whether a built network
+        /// can compute AND photonically. Additional inputs/outputs are allowed: extra
         /// inputs are tied to 0 on every <see cref="And"/>.
         /// </summary>
-        public static bool Accepts(LogicNetworkEvaluator? network) =>
-            network != null
-            && OperandSignals.All(network.InputPinNames.Contains)
-            && ResultSignals.All(network.OutputPinNames.Contains);
+        public static bool Accepts(LogicNetworkEvaluator? network, IsaAluSignalMap? map = null)
+        {
+            map ??= IsaAluSignalMap.AndDefault;
+            return network != null
+                && map.Inputs.All(network.InputPinNames.Contains)
+                && map.Result.All(network.OutputPinNames.Contains);
+        }
 
         /// <summary>
         /// Wraps an assembled AND network.
         /// </summary>
         /// <param name="network">
-        /// The logic network of the 4-bit AND. It must expose the input signals
-        /// A0–A3 and B0–B3 and the output signals Y0–Y3.
+        /// The logic network of the 4-bit AND. It must expose the operand and
+        /// result signals of <paramref name="map"/>.
+        /// </param>
+        /// <param name="map">
+        /// The signal names to drive and read; defaults to
+        /// <see cref="IsaAluSignalMap.AndDefault"/> (A0–A3 &amp; B0–B3 → Y0–Y3),
+        /// which the combined logic-unit chip keeps for its AND.
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
         /// <exception cref="ArgumentException">
         /// The network does not expose one of the expected signals; the message names
         /// the first missing signal.
         /// </exception>
-        public PhotonicAndAlu(LogicNetworkEvaluator network)
+        public PhotonicAndAlu(LogicNetworkEvaluator network, IsaAluSignalMap? map = null)
         {
             _network = network ?? throw new ArgumentNullException(nameof(network));
-            foreach (var signal in OperandSignals)
+            _map = map ?? IsaAluSignalMap.AndDefault;
+            if (_map.OperandB == null)
+            {
+                throw new ArgumentException(
+                    "The AND map must name the second operand (operandB).", nameof(map));
+            }
+
+            foreach (var signal in _map.Inputs)
             {
                 if (!network.InputPinNames.Contains(signal))
                 {
@@ -57,7 +69,7 @@ namespace CAP_Core.Logic.Isa
                 }
             }
 
-            foreach (var signal in ResultSignals)
+            foreach (var signal in _map.Result)
             {
                 if (!network.OutputPinNames.Contains(signal))
                 {
@@ -82,15 +94,15 @@ namespace CAP_Core.Logic.Isa
             var bits = _network.InputPinNames.ToDictionary(name => name, _ => false);
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                bits[$"A{bit}"] = ((a >> bit) & 1) == 1;
-                bits[$"B{bit}"] = ((b >> bit) & 1) == 1;
+                bits[_map.OperandA[bit]] = ((a >> bit) & 1) == 1;
+                bits[_map.OperandB![bit]] = ((b >> bit) & 1) == 1;
             }
 
             var outputs = _network.Evaluate(bits);
             var result = 0;
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                if (outputs[$"Y{bit}"])
+                if (outputs[_map.Result[bit]])
                 {
                     result |= 1 << bit;
                 }

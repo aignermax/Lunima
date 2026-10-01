@@ -59,3 +59,15 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
 - Data RAM (`LOAD`/`STORE` path) → shipped example **RAM 2x2** (4 words × 4 bit).
 - The shipped **Logic Gate Register 2-bit** is the template for the accumulator.
+
+## Signal-map convention (one chip, several operations)
+
+The photonic ALU wrappers (`PhotonicAdderAlu`, `PhotonicNotAlu`, `PhotonicAndAlu`)
+take an optional `IsaAluSignalMap` naming the operand/result signals they drive and
+read; the defaults above are the maps of the shipped single-operation examples. To
+expose several operations on **one** chip their result taps must not collide. The
+convention for the combined logic-unit chip is:
+
+- shared operand inputs `A0–A3` (plus `B0–B3` for binary operations),
+- `AND` keeps the default result taps `Y0–Y3`,
+- `NOT` taps its results on `N0–N3` (`IsaAluSignalMap.CombinedNot`).

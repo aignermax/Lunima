@@ -14,12 +14,8 @@ namespace CAP_Core.Logic.Isa
     /// </summary>
     public sealed class PhotonicAdderAlu : IIsaAlu
     {
-        private static readonly string[] OperandSignals =
-            { "A0", "A1", "A2", "A3", "B0", "B1", "B2", "B3", "Cin" };
-
-        private static readonly string[] SumSignals = { "S0", "S1", "S2", "S3" };
-
         private readonly LogicNetworkEvaluator _network;
+        private readonly IsaAluSignalMap _map;
         private IReadOnlyDictionary<string, bool>? _previousInputs;
 
         /// <summary>
@@ -29,33 +25,49 @@ namespace CAP_Core.Logic.Isa
         public PhotonicAddTrace? LastAddTrace { get; private set; }
 
         /// <summary>
-        /// True when <paramref name="network"/> exposes every signal the ALU drives
-        /// (A0–A3, B0–B3, Cin) and reads (S0–S3) — the check the constructor makes,
+        /// True when <paramref name="network"/> exposes every signal of
+        /// <paramref name="map"/> (defaults to <see cref="IsaAluSignalMap.AdderDefault"/>:
+        /// drives A0–A3, B0–B3 and Cin, reads S0–S3) — the check the constructor makes,
         /// without throwing, so callers can decide up-front whether a built network
         /// can compute ADD photonically. Additional inputs/outputs are allowed:
         /// extra inputs are tied to 0 on every <see cref="Add"/>.
         /// </summary>
-        public static bool Accepts(LogicNetworkEvaluator? network) =>
-            network != null
-            && OperandSignals.All(network.InputPinNames.Contains)
-            && SumSignals.All(network.OutputPinNames.Contains);
+        public static bool Accepts(LogicNetworkEvaluator? network, IsaAluSignalMap? map = null)
+        {
+            map ??= IsaAluSignalMap.AdderDefault;
+            return network != null
+                && map.Inputs.All(network.InputPinNames.Contains)
+                && map.Result.All(network.OutputPinNames.Contains);
+        }
 
         /// <summary>
         /// Wraps an assembled adder network.
         /// </summary>
         /// <param name="network">
-        /// The logic network of the 4-bit adder. It must expose the input signals
-        /// A0–A3, B0–B3 and Cin and the output signals S0–S3.
+        /// The logic network of the 4-bit adder. It must expose the operand,
+        /// carry-in and sum signals of <paramref name="map"/>.
+        /// </param>
+        /// <param name="map">
+        /// The signal names to drive and read; defaults to
+        /// <see cref="IsaAluSignalMap.AdderDefault"/> (A0–A3 &amp; B0–B3, Cin → S0–S3).
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
         /// <exception cref="ArgumentException">
         /// The network does not expose one of the expected signals; the message names
         /// the first missing signal.
         /// </exception>
-        public PhotonicAdderAlu(LogicNetworkEvaluator network)
+        public PhotonicAdderAlu(LogicNetworkEvaluator network, IsaAluSignalMap? map = null)
         {
             _network = network ?? throw new ArgumentNullException(nameof(network));
-            foreach (var signal in OperandSignals)
+            _map = map ?? IsaAluSignalMap.AdderDefault;
+            if (_map.OperandB == null || _map.CarryIn == null)
+            {
+                throw new ArgumentException(
+                    "The adder map must name the second operand (operandB) and the carry-in.",
+                    nameof(map));
+            }
+
+            foreach (var signal in _map.Inputs)
             {
                 if (!network.InputPinNames.Contains(signal))
                 {
@@ -66,7 +78,7 @@ namespace CAP_Core.Logic.Isa
                 }
             }
 
-            foreach (var signal in SumSignals)
+            foreach (var signal in _map.Result)
             {
                 if (!network.OutputPinNames.Contains(signal))
                 {
@@ -84,15 +96,15 @@ namespace CAP_Core.Logic.Isa
             var bits = _network.InputPinNames.ToDictionary(name => name, _ => false);
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                bits[$"A{bit}"] = ((a >> bit) & 1) == 1;
-                bits[$"B{bit}"] = ((b >> bit) & 1) == 1;
+                bits[_map.OperandA[bit]] = ((a >> bit) & 1) == 1;
+                bits[_map.OperandB![bit]] = ((b >> bit) & 1) == 1;
             }
 
             var outputs = _network.Evaluate(bits);
             var sum = 0;
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                if (outputs[$"S{bit}"])
+                if (outputs[_map.Result[bit]])
                 {
                     sum |= 1 << bit;
                 }
