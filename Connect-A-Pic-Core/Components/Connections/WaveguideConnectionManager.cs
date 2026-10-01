@@ -599,9 +599,7 @@ public partial class WaveguideConnectionManager
         // from live pin positions, not waveguide geometry. Re-routing it as a waveguide
         // would draw a wire through free space and double-count the misalignment loss,
         // so the abutment route is kept no matter how the chiplets move.
-        if (Analysis.ChipletInterfaceChecker.TryGetFacet(connection.StartPin, out var startFacet)
-            && Analysis.ChipletInterfaceChecker.TryGetFacet(connection.EndPin, out var endFacet)
-            && !ReferenceEquals(startFacet.Chiplet, endFacet.Chiplet))
+        if (connection.IsCrossChipletFacetLink)
             return true;
 
         // Frozen paths with matching endpoints are always kept as-is: manual bend edits

@@ -360,6 +360,19 @@ namespace CAP_Core.Components.Connections
         public bool IsBlockedFallback => RoutedPath?.IsBlockedFallback ?? false;
 
         /// <summary>
+        /// True when this connection is a cross-chiplet facet link: both endpoints are
+        /// edge-coupler facet pins on DIFFERENT top-level chiplet groups. Such a link couples
+        /// free space between two separate dies — its transmission comes from the
+        /// <see cref="Analysis.ChipletEdgeCouplerCoupling"/> offset × gap model, not from
+        /// waveguide geometry — so it is never re-routed when the chiplets move and must
+        /// never be exported as waveguide geometry.
+        /// </summary>
+        public bool IsCrossChipletFacetLink =>
+            Analysis.ChipletInterfaceChecker.TryGetFacet(StartPin, out var startFacet)
+            && Analysis.ChipletInterfaceChecker.TryGetFacet(EndPin, out var endFacet)
+            && !ReferenceEquals(startFacet.Chiplet, endFacet.Chiplet);
+
+        /// <summary>
         /// Why the current route is blocked (a pin sealed in by a component footprint vs.
         /// contention with other routed wires). <see cref="RoutingFailureReason.None"/>
         /// when the connection routed cleanly or has no route yet.

@@ -689,6 +689,16 @@ public class SimpleNazcaExporter
             if (conn.StartPin?.ParentComponent?.IsAnalysisTool == true) continue;
             if (conn.EndPin?.ParentComponent?.IsAnalysisTool == true) continue;
 
+            // A cross-chiplet facet link couples free space between two separate dies —
+            // its transmission is the edge-coupler offset × gap model, not waveguide
+            // geometry. Emitting it would draw a waveguide across the gap between the
+            // chiplets, so it is noted as a comment instead (the export stays verifiable).
+            if (conn.IsCrossChipletFacetLink)
+            {
+                sb.AppendLine("        # Cross-chiplet facet link (free-space edge coupling) - no waveguide exported");
+                continue;
+            }
+
             // A placeholder (self-crossing fallback with no optical model) or invalid
             // (bend radius violation) route must never render as geometry — the design
             // still exports, just without this connection's geometry. A missing route is
@@ -854,6 +864,9 @@ public class SimpleNazcaExporter
             // crossable geometry either, or a metal trace would get a bridge marker over
             // a waveguide that isn't actually drawn.
             if (!conn.IsExportable()) continue;
+            // A cross-chiplet facet link is not drawn (free-space coupling), so it must
+            // not count as crossable geometry either.
+            if (conn.IsCrossChipletFacetLink) continue;
             var segments = conn.GetPathSegments();
             if (segments.Count > 0)
                 paths.Add(segments);
