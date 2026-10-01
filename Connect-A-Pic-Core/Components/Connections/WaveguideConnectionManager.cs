@@ -351,16 +351,19 @@ public partial class WaveguideConnectionManager
         Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
+        var totalWatch = System.Diagnostics.Stopwatch.StartNew();
+        var timings = new RoutingPassTimingsBuilder();
+
         // Re-evaluate existing crossings first: when a net endpoint moved, the
         // crossing is dissolved so its originals are routed from scratch below and
         // the insertion pass re-inserts a crossing only if it is still beneficial.
         if (CrossingInsertion != null && !_isCrossingPassRunning)
         {
-            CrossingInsertion.DissolveStaleRecords(this, _router);
+            timings.CrossingDissolution = MeasurePass(() => CrossingInsertion.DissolveStaleRecords(this, _router));
         }
 
-        RouteAllConnections(progressCallback, cancellationToken);
-        RunCrossingInsertionPass(cancellationToken);
+        RouteAllConnections(timings, progressCallback, cancellationToken);
+        timings.CrossingInsertion = MeasurePass(() => RunCrossingInsertionPass(cancellationToken));
 
         if (UseSequentialRouting && _router.PathfindingGrid != null &&
             !cancellationToken.IsCancellationRequested)
@@ -369,13 +372,21 @@ public partial class WaveguideConnectionManager
             // bends to the gentlest radius the remaining free space permits, then flag any
             // crossing that even the collapse could not keep clear (there should be none). The
             // crossing scan must not run on a half-collapsed state if cancellation interrupted it.
-            CollapseAutoRoutePinLeads(cancellationToken);
-            UpsizeAutoRouteBendRadii(cancellationToken);
+            timings.PinLeadCollapse = MeasurePass(() => CollapseAutoRoutePinLeads(cancellationToken));
+            timings.BendUpsizing = MeasurePass(() => UpsizeAutoRouteBendRadii(cancellationToken));
             if (!cancellationToken.IsCancellationRequested)
-                MarkUnresolvedSiblingCrossings();
+                timings.CrossingScan = MeasurePass(MarkUnresolvedSiblingCrossings);
             if (!cancellationToken.IsCancellationRequested)
-                RepairContentionBlockedWires(cancellationToken);
+            {
+                timings.ContentionRepair = MeasurePass(() => RepairContentionBlockedWires(cancellationToken));
+                timings.ContentionRepairAttempts = LastContentionRepairAttemptCount;
+                timings.ContentionRepairAccepts = LastContentionRepairAcceptCount;
+            }
         }
+
+        totalWatch.Stop();
+        LastRoutingPassTimings = timings.Build(
+            totalWatch.Elapsed, LastOrderingAttemptCount, cancellationToken.IsCancellationRequested);
     }
 
     /// <summary>
@@ -400,9 +411,11 @@ public partial class WaveguideConnectionManager
 
     /// <summary>
     /// Routes all connections (incremental first, then full re-route with ordering
-    /// strategies) without running the crossing-insertion pass.
+    /// strategies) without running the crossing-insertion pass. Records the initial-pass
+    /// and ordering-cascade wall-clock into <paramref name="timings"/>.
     /// </summary>
     private void RouteAllConnections(
+        RoutingPassTimingsBuilder timings,
         Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
@@ -416,73 +429,95 @@ public partial class WaveguideConnectionManager
             LastOrderingAttemptCount = 0;
 
             // Phase 1: Incremental routing — keep valid routes, only re-route broken ones
+            var initialWatch = System.Diagnostics.Stopwatch.StartNew();
             var incremental = TryRouteIncremental(router, progressCallback, cancellationToken);
+            timings.InitialPass = initialWatch.Elapsed;
             if (cancellationToken.IsCancellationRequested) return;
 
             if (incremental.allValid)
                 return;
 
-            // Phase 2: Incremental routing failed for some connections.
-            // Fall back to full re-route with ordering strategies.
-            // Snapshots: this runs on the routing thread while UI commands may mutate the list.
-            var result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
-            LastOrderingAttemptCount++;
-            if (cancellationToken.IsCancellationRequested) return;
-            if (result.allValid) return;
-
-            // When every failed wire is endpoint-blocked (a pin sealed in by a component
-            // footprint), no ordering can free it — re-ordering cannot fix a footprint,
-            // so the ordering retry storm is skipped and this attempt's routes are kept.
-            if (AllFailuresEndpointBlocked(result.failedConnections))
-                return;
-
-            var bestOrder = SnapshotConnections();
-            int bestFailedCount = result.failedCount;
-
-            var orderings = GenerateOrderings(SnapshotConnections(), MaxRoutingAttempts - 1);
-            foreach (var ordering in orderings)
+            var cascadeWatch = System.Diagnostics.Stopwatch.StartNew();
+            try
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
-                LastOrderingAttemptCount++;
-                if (cancellationToken.IsCancellationRequested) return;
-
-                if (result.allValid)
-                {
-                    ReorderConnections(ordering);
-                    return;
-                }
-
-                // An attempt whose only failures are endpoint-blocked is the best any
-                // ordering can achieve: those wires stay blocked under every ordering.
-                if (AllFailuresEndpointBlocked(result.failedConnections))
-                {
-                    ReorderConnections(ordering);
-                    return;
-                }
-
-                if (result.failedCount < bestFailedCount)
-                {
-                    bestFailedCount = result.failedCount;
-                    bestOrder = ordering;
-                }
+                RouteWithOrderingCascade(router, progressCallback, cancellationToken);
             }
-
-            if (!cancellationToken.IsCancellationRequested)
+            finally
             {
-                ReorderConnections(bestOrder);
-                TryRouteInOrder(bestOrder, router, progressCallback, cancellationToken);
+                timings.OrderingCascade = cascadeWatch.Elapsed;
             }
         }
         else
         {
             // Simple routing without collision avoidance. Snapshot: see _connectionsSync.
+            var simpleWatch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var connection in SnapshotConnections())
             {
-                if (cancellationToken.IsCancellationRequested) return;
+                if (cancellationToken.IsCancellationRequested) break;
                 connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
                 progressCallback?.Invoke();
             }
+            timings.InitialPass = simpleWatch.Elapsed;
+        }
+    }
+
+    /// <summary>
+    /// Phase 2 of the full re-route: incremental routing failed for some connections, so
+    /// every connection is re-routed under different orderings and the best result is kept.
+    /// </summary>
+    private void RouteWithOrderingCascade(
+        WaveguideRouter router,
+        Action? progressCallback,
+        CancellationToken cancellationToken)
+    {
+        // Snapshots: this runs on the routing thread while UI commands may mutate the list.
+        var result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
+        LastOrderingAttemptCount++;
+        if (cancellationToken.IsCancellationRequested) return;
+        if (result.allValid) return;
+
+        // When every failed wire is endpoint-blocked (a pin sealed in by a component
+        // footprint), no ordering can free it — re-ordering cannot fix a footprint,
+        // so the ordering retry storm is skipped and this attempt's routes are kept.
+        if (AllFailuresEndpointBlocked(result.failedConnections))
+            return;
+
+        var bestOrder = SnapshotConnections();
+        int bestFailedCount = result.failedCount;
+
+        var orderings = GenerateOrderings(SnapshotConnections(), MaxRoutingAttempts - 1);
+        foreach (var ordering in orderings)
+        {
+            if (cancellationToken.IsCancellationRequested) return;
+            result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
+            LastOrderingAttemptCount++;
+            if (cancellationToken.IsCancellationRequested) return;
+
+            if (result.allValid)
+            {
+                ReorderConnections(ordering);
+                return;
+            }
+
+            // An attempt whose only failures are endpoint-blocked is the best any
+            // ordering can achieve: those wires stay blocked under every ordering.
+            if (AllFailuresEndpointBlocked(result.failedConnections))
+            {
+                ReorderConnections(ordering);
+                return;
+            }
+
+            if (result.failedCount < bestFailedCount)
+            {
+                bestFailedCount = result.failedCount;
+                bestOrder = ordering;
+            }
+        }
+
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            ReorderConnections(bestOrder);
+            TryRouteInOrder(bestOrder, router, progressCallback, cancellationToken);
         }
     }
 
