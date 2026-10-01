@@ -96,7 +96,7 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     }
 
     [Fact]
-    public void NoNetwork_ToggleDisabled_AndHintNamesAllThreeExamples()
+    public void NoNetwork_ToggleDisabled_AndHintNamesAllExamples()
     {
         var vm = new IsaPlaygroundViewModel();
 
@@ -110,6 +110,8 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
             customMessage: "the hint names the NOT 4-bit example");
         hint.ShouldContain("AND 4-bit",
             customMessage: "the hint names the AND 4-bit example");
+        hint.ShouldContain("Logic Unit 4-bit",
+            customMessage: "the hint names the Logic Unit 4-bit example (issue #1295)");
     }
 
     [Fact]

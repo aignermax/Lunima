@@ -25,8 +25,9 @@ public class IsaPlaygroundViewModelTests
     {
         var vm = new IsaPlaygroundViewModel();
 
-        vm.Samples.Count.ShouldBe(3);
+        vm.Samples.Count.ShouldBe(4);
         vm.Samples[0].FileName.ShouldBe("count-to-5.asm");
+        vm.Samples[3].FileName.ShouldBe("mask-and-invert.asm");
         vm.SelectedSample.ShouldBe(vm.Samples[0]);
         vm.ProgramText.ShouldContain("LOAD 1");
         vm.IsAssembled.ShouldBeTrue();

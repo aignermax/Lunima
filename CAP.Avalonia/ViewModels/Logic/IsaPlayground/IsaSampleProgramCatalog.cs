@@ -59,6 +59,7 @@ public sealed class IsaSampleProgramCatalog
         TryAdd(samples, samplesDirectory, "count-to-5.asm", "IsaPlayground.SampleCountTo5");
         TryAdd(samples, samplesDirectory, "add-two-numbers.asm", "IsaPlayground.SampleAddTwoNumbers");
         TryAdd(samples, samplesDirectory, "multiply-3x4.asm", "IsaPlayground.SampleMultiply3x4");
+        TryAdd(samples, samplesDirectory, "mask-and-invert.asm", "IsaPlayground.SampleMaskAndInvert");
         return samples;
     }
 
