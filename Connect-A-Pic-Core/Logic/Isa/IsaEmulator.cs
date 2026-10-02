@@ -11,6 +11,7 @@ namespace CAP_Core.Logic.Isa
         private readonly byte[] _program;
         private readonly int[] _ram = new int[IsaMachine.RamWords];
         private readonly IIsaAlu _alu;
+        private readonly IIsaZeroFlag _zeroFlag;
 
         /// <summary>
         /// Creates a machine with the given program loaded into the ROM.
@@ -24,8 +25,14 @@ namespace CAP_Core.Logic.Isa
         /// <see cref="CompositeIsaAlu"/> for several) to run the operation on the
         /// photonic network. No other instruction is affected.
         /// </param>
+        /// <param name="zeroFlag">
+        /// The zero flag <c>JZ</c> asks for its branch decision. Defaults to
+        /// <see cref="GoldenIsaZeroFlag"/> (the C# <c>ACC == 0</c> check); pass
+        /// <see cref="PhotonicZeroFlag"/> to decide every <c>JZ</c> on the photonic
+        /// zero-detect network. No other instruction is affected.
+        /// </param>
         /// <exception cref="ArgumentException">The program is larger than the ROM.</exception>
-        public IsaEmulator(byte[] program, IIsaAlu? alu = null)
+        public IsaEmulator(byte[] program, IIsaAlu? alu = null, IIsaZeroFlag? zeroFlag = null)
         {
             if (program.Length > IsaMachine.ProgramRomWords)
             {
@@ -37,6 +44,7 @@ namespace CAP_Core.Logic.Isa
             _program = new byte[IsaMachine.ProgramRomWords];
             program.CopyTo(_program, 0);
             _alu = alu ?? new GoldenIsaAlu();
+            _zeroFlag = zeroFlag ?? new GoldenIsaZeroFlag();
         }
 
         /// <summary>Address of the next instruction to execute (0–15).</summary>
@@ -103,7 +111,7 @@ namespace CAP_Core.Logic.Isa
                     nextPc = operand;
                     break;
                 case IsaOpcode.Jz:
-                    nextPc = Accumulator == 0 ? operand : nextPc;
+                    nextPc = _zeroFlag.IsZero(Accumulator) ? operand : nextPc;
                     break;
                 case IsaOpcode.Halt:
                     IsHalted = true;
