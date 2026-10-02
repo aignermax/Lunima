@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations;
 
@@ -41,10 +42,10 @@ public class InterferenceOutputAnimation : HelpAnimationBase
     private static readonly (double Start, double End) FadeWindow = (0.48, 0.56);
     private static readonly (double Start, double End) PiFadeWindow = (0.60, 0.66);
 
-    private static readonly IBrush GlowBrush = new SolidColorBrush(0xFFFFF176);
-    private static readonly IBrush PiBrush = new SolidColorBrush(0xFF4FC3F7);
-    private static readonly IBrush BadgeIdleBrush = new SolidColorBrush(0xFF666666);
-    private static readonly IBrush BadgeOneBrush = new SolidColorBrush(0xFF81C784);
+    private static readonly IBrush GlowBrush = new ImmutableSolidColorBrush(0xFFFFF176);
+    private static readonly IBrush PiBrush = new ImmutableSolidColorBrush(0xFF4FC3F7);
+    private static readonly IBrush BadgeIdleBrush = new ImmutableSolidColorBrush(0xFF666666);
+    private static readonly IBrush BadgeOneBrush = new ImmutableSolidColorBrush(0xFF81C784);
 
     private readonly Ellipse _glow;
     private readonly Border _badge;

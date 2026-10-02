@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using CAP_Core.Analysis.LogicAnalysis;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 
@@ -71,13 +72,13 @@ public class LengthMatchArrivalAnimation : HelpAnimationBase
     private const double ReadoutLeft = 130;
     private const double ReadoutTop = 4;
 
-    private static readonly IBrush TrackBrush = new SolidColorBrush(0xFF4D4D4D);
-    private static readonly IBrush MeanderTrackBrush = new SolidColorBrush(0xFF6D6D5A);
-    private static readonly IBrush PulseBrush = new SolidColorBrush(0xFFFFF176);
-    private static readonly IBrush FlashBrush = new SolidColorBrush(0xFF81C784);
-    private static readonly IBrush SplitterBrush = new SolidColorBrush(0xFF23232B);
-    private static readonly IBrush SplitterBorderBrush = new SolidColorBrush(0xFF5A5A60);
-    private static readonly IBrush LabelBrush = new SolidColorBrush(0xFFCFCFD6);
+    private static readonly IBrush TrackBrush = new ImmutableSolidColorBrush(0xFF4D4D4D);
+    private static readonly IBrush MeanderTrackBrush = new ImmutableSolidColorBrush(0xFF6D6D5A);
+    private static readonly IBrush PulseBrush = new ImmutableSolidColorBrush(0xFFFFF176);
+    private static readonly IBrush FlashBrush = new ImmutableSolidColorBrush(0xFF81C784);
+    private static readonly IBrush SplitterBrush = new ImmutableSolidColorBrush(0xFF23232B);
+    private static readonly IBrush SplitterBorderBrush = new ImmutableSolidColorBrush(0xFF5A5A60);
+    private static readonly IBrush LabelBrush = new ImmutableSolidColorBrush(0xFFCFCFD6);
 
     private readonly Polyline _straightTrack;
     private readonly Polyline _meanderTrack;

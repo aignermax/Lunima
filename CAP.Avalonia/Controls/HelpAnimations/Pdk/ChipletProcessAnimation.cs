@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations.Pdk;
 
@@ -49,9 +50,9 @@ public class ChipletProcessAnimation : HelpAnimationBase
     private static readonly (double Start, double End) CrossFadeIn = (0.58, 0.64);
     private static readonly (double Start, double End) CrossFadeOut = (0.70, 0.78);
 
-    private static readonly IBrush ProcessABrush = new SolidColorBrush(0xFF4CAF50);
-    private static readonly IBrush ProcessBBrush = new SolidColorBrush(0xFFFF9800);
-    private static readonly IBrush RejectBrush = new SolidColorBrush(0xFFFF8A65);
+    private static readonly IBrush ProcessABrush = new ImmutableSolidColorBrush(0xFF4CAF50);
+    private static readonly IBrush ProcessBBrush = new ImmutableSolidColorBrush(0xFFFF9800);
+    private static readonly IBrush RejectBrush = new ImmutableSolidColorBrush(0xFFFF8A65);
 
     private readonly Border _componentA;
     private readonly Border _componentB;

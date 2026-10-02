@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using CAP_Core.Analysis;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 
@@ -67,10 +68,10 @@ public class ChipletLinkCouplingAnimation : HelpAnimationBase
     private const double ReadoutLeft = 190;
     private const double ReadoutTop = 10;
 
-    private static readonly IBrush FacetBrush = new SolidColorBrush(0xFF23232B);
-    private static readonly IBrush FacetBorderBrush = new SolidColorBrush(0xFF5A5A60);
-    private static readonly IBrush BeamBrush = new SolidColorBrush(0xFFFFF176);
-    private static readonly IBrush LabelBrush = new SolidColorBrush(0xFFCFCFD6);
+    private static readonly IBrush FacetBrush = new ImmutableSolidColorBrush(0xFF23232B);
+    private static readonly IBrush FacetBorderBrush = new ImmutableSolidColorBrush(0xFF5A5A60);
+    private static readonly IBrush BeamBrush = new ImmutableSolidColorBrush(0xFFFFF176);
+    private static readonly IBrush LabelBrush = new ImmutableSolidColorBrush(0xFFCFCFD6);
 
     private readonly Border _facetB;
     private readonly TextBlock _facetBLabel;

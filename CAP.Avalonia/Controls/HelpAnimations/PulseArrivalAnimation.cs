@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations;
 
@@ -45,9 +46,9 @@ public class PulseArrivalAnimation : HelpAnimationBase
     private const double BadgeSize = 20;
     private const double BadgeTop = 2;
 
-    private static readonly IBrush TraceBrush = new SolidColorBrush(0xFF7FAAFF);
-    private static readonly IBrush BadgeIdleBrush = new SolidColorBrush(0xFF666666);
-    private static readonly IBrush BadgeOneBrush = new SolidColorBrush(0xFF81C784);
+    private static readonly IBrush TraceBrush = new ImmutableSolidColorBrush(0xFF7FAAFF);
+    private static readonly IBrush BadgeIdleBrush = new ImmutableSolidColorBrush(0xFF666666);
+    private static readonly IBrush BadgeOneBrush = new ImmutableSolidColorBrush(0xFF81C784);
 
     private readonly Border[] _badges;
     private readonly TextBlock[] _badgeZeros;

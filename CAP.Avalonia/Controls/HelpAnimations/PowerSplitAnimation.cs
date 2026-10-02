@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations;
 
@@ -46,10 +47,10 @@ public class PowerSplitAnimation : HelpAnimationBase
     private static readonly double[] Level1LineY = { 20, 100 };
     private static readonly double[] Level2LineY = { 14, 62, 98, 144 };
 
-    private static readonly IBrush ThresholdBrush = new SolidColorBrush(0xFF8A8A8A);
-    private static readonly IBrush BadgeIdleBrush = new SolidColorBrush(0xFF666666);
-    private static readonly IBrush BadgeOneBrush = new SolidColorBrush(0xFF81C784);
-    private static readonly IBrush BadgeUnknownBrush = new SolidColorBrush(0xFF9A8A4A);
+    private static readonly IBrush ThresholdBrush = new ImmutableSolidColorBrush(0xFF8A8A8A);
+    private static readonly IBrush BadgeIdleBrush = new ImmutableSolidColorBrush(0xFF666666);
+    private static readonly IBrush BadgeOneBrush = new ImmutableSolidColorBrush(0xFF81C784);
+    private static readonly IBrush BadgeUnknownBrush = new ImmutableSolidColorBrush(0xFF9A8A4A);
 
     private readonly Border[] _level1Badges = new Border[Level1LineY.Length];
     private readonly TextBlock[] _level1Texts = new TextBlock[Level1LineY.Length];

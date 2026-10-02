@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations;
 
@@ -44,10 +45,10 @@ public class LogicThresholdAnimation : HelpAnimationBase
     private const double HalfLoop = 0.50;
     private const double LowPulseArrival = 0.70;
 
-    private static readonly IBrush BarLowBrush = new SolidColorBrush(0xFF7FAAFF);
-    private static readonly IBrush BarHighBrush = new SolidColorBrush(0xFF81C784);
-    private static readonly IBrush BadgeIdleBrush = new SolidColorBrush(0xFF666666);
-    private static readonly IBrush BadgeOneBrush = new SolidColorBrush(0xFF81C784);
+    private static readonly IBrush BarLowBrush = new ImmutableSolidColorBrush(0xFF7FAAFF);
+    private static readonly IBrush BarHighBrush = new ImmutableSolidColorBrush(0xFF81C784);
+    private static readonly IBrush BadgeIdleBrush = new ImmutableSolidColorBrush(0xFF666666);
+    private static readonly IBrush BadgeOneBrush = new ImmutableSolidColorBrush(0xFF81C784);
 
     private readonly Rectangle _barFill;
     private readonly Border _badge;

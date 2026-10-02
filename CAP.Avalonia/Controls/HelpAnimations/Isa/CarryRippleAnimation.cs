@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations.Isa;
 
@@ -63,12 +64,12 @@ public class CarryRippleAnimation : HelpAnimationBase
     private const double SumFlipAt = 0.88;
     private static readonly string[] SumFinalBits = { "0", "0", "0", "1" };
 
-    private static readonly IBrush BoxBrush = new SolidColorBrush(0xFF23232B);
-    private static readonly IBrush BoxBorderBrush = new SolidColorBrush(0xFF5A5A60);
-    private static readonly IBrush PulseBrush = new SolidColorBrush(0xFFFFF176);
-    private static readonly IBrush BarBrush = new SolidColorBrush(0xFF7EC87E);
-    private static readonly IBrush SumDoneBrush = new SolidColorBrush(0xFF3D5D3D);
-    private static readonly IBrush LabelBrush = new SolidColorBrush(0xFFCFCFD6);
+    private static readonly IBrush BoxBrush = new ImmutableSolidColorBrush(0xFF23232B);
+    private static readonly IBrush BoxBorderBrush = new ImmutableSolidColorBrush(0xFF5A5A60);
+    private static readonly IBrush PulseBrush = new ImmutableSolidColorBrush(0xFFFFF176);
+    private static readonly IBrush BarBrush = new ImmutableSolidColorBrush(0xFF7EC87E);
+    private static readonly IBrush SumDoneBrush = new ImmutableSolidColorBrush(0xFF3D5D3D);
+    private static readonly IBrush LabelBrush = new ImmutableSolidColorBrush(0xFFCFCFD6);
 
     private readonly Border[] _glows = new Border[4];
     private readonly Border[] _sumSquares = new Border[4];

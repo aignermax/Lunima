@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using AnimCanvas = global::Avalonia.Controls.Canvas;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 
 namespace CAP.Avalonia.Controls.HelpAnimations;
 
@@ -40,9 +41,9 @@ public class LaserInputGlowAnimation : HelpAnimationBase
     private static readonly (double Start, double End) LaserOnWindow = (0.02, 0.12);
     private static readonly (double Start, double End) BranchGlowWindow = (0.60, 0.85);
 
-    private static readonly IBrush LaserOnBrush = new SolidColorBrush(0xFFFF5252);
-    private static readonly IBrush StrongGlowBrush = new SolidColorBrush(0xFFFF6450);
-    private static readonly IBrush WeakGlowBrush = new SolidColorBrush(0xFF00B4B4);
+    private static readonly IBrush LaserOnBrush = new ImmutableSolidColorBrush(0xFFFF5252);
+    private static readonly IBrush StrongGlowBrush = new ImmutableSolidColorBrush(0xFFFF6450);
+    private static readonly IBrush WeakGlowBrush = new ImmutableSolidColorBrush(0xFF00B4B4);
 
     private readonly Ellipse _laserOnDot;
     private readonly Line[] _rays;
