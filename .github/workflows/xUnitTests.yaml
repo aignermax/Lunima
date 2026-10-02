@@ -15,8 +15,8 @@ jobs:
   nunit_tests:
     name: 🔍 xUnit Tests
     runs-on: ubuntu-latest
-    # Safety net: the suite takes ~8 min when healthy; anything beyond 30 min is a
-    # hang (previously it burned the full 6h default timeout).
+    # Safety net: the suite takes ~40 min serial; the sharded run below targets
+    # <= 35 min of wall clock. Anything beyond 50 min is a hang.
     timeout-minutes: 50
 
     env:
@@ -121,7 +121,30 @@ jobs:
           # block the render subprocess waiting for a display.
           MPLBACKEND: Agg
           QT_QPA_PLATFORM: offscreen
-        run: dotnet test --no-restore
+        run: |
+          set -euo pipefail
+          # The suite runs serially inside one process (xunit.runner.json disables
+          # collection parallelization because the Avalonia headless app is a
+          # process-wide singleton). Wall clock is cut by running three disjoint,
+          # complementary filter shards as separate processes in parallel — union
+          # of the filters is the whole suite, so coverage is unchanged.
+          dotnet build --no-restore
+          mkdir -p TestResults
+          run_shard() {
+            local name="$1" filter="$2"
+            dotnet test --no-build --filter "$filter" \
+              --results-directory TestResults \
+              --logger "trx;LogFileName=${name}.trx" \
+              --logger "console;verbosity=minimal" \
+              > "TestResults/${name}.log" 2>&1
+          }
+          run_shard shard-fast      'Category!=Slow' &
+          run_shard shard-slow-ui   'Category=Slow&FullyQualifiedName~UnitTests.UI' &
+          run_shard shard-slow-core 'Category=Slow&FullyQualifiedName!~UnitTests.UI' &
+          status=0
+          for pid in $(jobs -p); do wait "$pid" || status=1; done
+          for log in TestResults/shard-*.log; do echo "===== $log ====="; cat "$log"; done
+          exit $status
 
       - name: 📎 Upload TestResults (hang diagnostics)
         if: always()
