@@ -11,6 +11,7 @@ namespace CAP_Core.Logic.Isa
         private readonly byte[] _program;
         private readonly int[] _ram = new int[IsaMachine.RamWords];
         private readonly IIsaAlu _alu;
+        private readonly Func<int, bool> _zeroFlag;
 
         /// <summary>
         /// Creates a machine with the given program loaded into the ROM.
@@ -24,8 +25,14 @@ namespace CAP_Core.Logic.Isa
         /// <see cref="CompositeIsaAlu"/> for several) to run the operation on the
         /// photonic network. No other instruction is affected.
         /// </param>
+        /// <param name="zeroFlag">
+        /// The provider <c>JZ</c> asks whether the accumulator is zero. Defaults to the
+        /// golden <c>== 0</c> check (unchanged behaviour); pass
+        /// <see cref="PhotonicZeroFlag.IsZero"/> to decide the branch on the photonic
+        /// zero-detect network. No other instruction is affected.
+        /// </param>
         /// <exception cref="ArgumentException">The program is larger than the ROM.</exception>
-        public IsaEmulator(byte[] program, IIsaAlu? alu = null)
+        public IsaEmulator(byte[] program, IIsaAlu? alu = null, Func<int, bool>? zeroFlag = null)
         {
             if (program.Length > IsaMachine.ProgramRomWords)
             {
@@ -37,6 +44,7 @@ namespace CAP_Core.Logic.Isa
             _program = new byte[IsaMachine.ProgramRomWords];
             program.CopyTo(_program, 0);
             _alu = alu ?? new GoldenIsaAlu();
+            _zeroFlag = zeroFlag ?? (accumulator => accumulator == 0);
         }
 
         /// <summary>Address of the next instruction to execute (0–15).</summary>
@@ -103,7 +111,7 @@ namespace CAP_Core.Logic.Isa
                     nextPc = operand;
                     break;
                 case IsaOpcode.Jz:
-                    nextPc = Accumulator == 0 ? operand : nextPc;
+                    nextPc = _zeroFlag(Accumulator) ? operand : nextPc;
                     break;
                 case IsaOpcode.Halt:
                     IsHalted = true;

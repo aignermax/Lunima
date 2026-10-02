@@ -367,6 +367,7 @@
   "Examples.Counter2bit.Description": "2ビットカウンタ:Stepを押すとC1C0が0、1、2、3とカウントする — 回路が動き出す。",
   "Examples.Pc2bit.Description": "2ビットプログラムカウンタ:LOAD=0でStepごとにカウントアップ、LOAD=1でL1L0をロード — NAND2TETRISのPC。",
   "Examples.AndGate.Description": "2つのNANDゲートを組み合わせてANDゲートを作る。",
+  "Examples.ZeroDetect4bit.Description": "3つのORゲートと1つのNOTをツリー状に:A0–A3を入れZへ——A == 0のときだけZが光る、ISAのJZ命令が分岐に使うゼロフラグ。",
   "Examples.And4bit.Description": "4つのANDゲートを並べて:A0–A3とB0–B3を入れY0–Y3へ——光で動くISAのAND命令。",
   "Examples.LogicUnit4bit.Description": "1チップで2つの演算:4つのANDと4つのNOTがA0–A3を共有——Y0–Y3 = A AND B、N0–N3 = NOT A。",
   "Examples.FullAdder.Description": "2ビットとキャリー入力を加算する — あらゆるコンピュータの基本ブロック。",

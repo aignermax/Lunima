@@ -59,6 +59,9 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
 - `AND` + `NOT` from the same operands → shipped example **Logic Gate Logic Unit
   4-bit** (four AND-from-NAND + four NOT-NAND slices, shared `A0–A3` plus `B0–B3` →
   `Y0–Y3` / `N0–N3`; the first step from single-op chips to a real ALU).
+- `JZ` (zero flag) → shipped example **Logic Gate Zero Detect 4-bit** (OR-AND tree +
+  NOT-NAND slice, `A0–A3` → `Z`; `Z = 1` exactly when `ACC == 0`, so the branch
+  decision runs on light via the `IsaEmulator` zero-flag seam, `PhotonicZeroFlag`).
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
 - Data RAM (`LOAD`/`STORE` path) → shipped example **RAM 2x2** (4 words × 4 bit).
 - The shipped **Logic Gate Register 2-bit** is the template for the accumulator.

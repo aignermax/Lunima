@@ -367,6 +367,7 @@
   "Examples.Counter2bit.Description": "2 位计数器:按下 Step,观看 C1C0 依次计出 0、1、2、3——电路动起来了。",
   "Examples.Pc2bit.Description": "2 位程序计数器:LOAD=0 时每次 Step 递增,LOAD=1 时载入 L1L0——NAND2TETRIS 的 PC。",
   "Examples.AndGate.Description": "把两个 NAND 门组合成一个 AND 门。",
+  "Examples.ZeroDetect4bit.Description": "三个 OR 门和一个 NOT 组成树:A0–A3 输入,Z 输出——仅当 A == 0 时 Z 点亮,即 ISA JZ 指令跳转所依据的零标志。",
   "Examples.And4bit.Description": "四个 AND 门并排:A0–A3 与 B0–B3 输入,Y0–Y3 输出——在光上运行的 ISA AND 指令。",
   "Examples.LogicUnit4bit.Description": "一个芯片,两种运算:四个 AND 门与四个 NOT 门共享 A0–A3——Y0–Y3 = A AND B,N0–N3 = NOT A。",
   "Examples.FullAdder.Description": "把两个比特连同进位相加——每台计算机的基本构件。",
