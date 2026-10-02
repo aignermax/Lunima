@@ -43,6 +43,7 @@ public partial class WaveguideConnectionManager
         public TimeSpan ContentionRepair;
         public int ContentionRepairAttempts;
         public int ContentionRepairAccepts;
+        public bool OrderingEarlyStopped;
 
         public RoutingPassTimings Build(TimeSpan total, int orderingAttempts, bool wasCancelled) =>
             new()
@@ -52,6 +53,7 @@ public partial class WaveguideConnectionManager
                 InitialPass = InitialPass,
                 OrderingCascade = OrderingCascade,
                 OrderingAttempts = orderingAttempts,
+                OrderingEarlyStopped = OrderingEarlyStopped,
                 CrossingInsertion = CrossingInsertion,
                 PinLeadCollapse = PinLeadCollapse,
                 BendUpsizing = BendUpsizing,

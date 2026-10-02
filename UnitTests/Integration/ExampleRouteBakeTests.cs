@@ -220,6 +220,7 @@ public class ExampleRouteBakeTests
             + $"contention-repair={Seconds(timings.ContentionRepair)}s"
             + $"/{timings.ContentionRepairAttempts} attempts"
             + $"/{timings.ContentionRepairAccepts} accepts)"
+            + (timings.OrderingEarlyStopped ? " [early-stop]" : "")
             + (timings.WasCancelled ? " [cancelled]" : "");
     }
 
