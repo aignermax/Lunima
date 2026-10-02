@@ -92,12 +92,18 @@ internal static class GdsUserDesignFixture
     public static UserPdkStore CreateStore(string root, string name) => new(
         Path.Combine(root, name), new PdkJsonSaver(), new PdkLoader());
 
+    // The tool environment cannot change mid-run, so the probe spawns its
+    // subprocesses once per test process instead of once per calling test.
+    private static readonly Lazy<Task<string?>> CachedNazcaPython = new(FindNazcaPythonUncachedAsync);
+
     /// <summary>
     /// Locates a Python with nazca importable: first a Lunima managed env
-    /// (%LOCALAPPDATA%/Lunima/envs/*), then python/python3 on PATH (mirrors
-    /// <c>GdsExportFullCircleTests</c>).
+    /// (%LOCALAPPDATA%/Lunima/envs/*), then python/python3 on PATH. Shared and
+    /// cached for all nazca-gated tests.
     /// </summary>
-    public static async Task<string?> FindNazcaPythonAsync()
+    public static Task<string?> FindNazcaPythonAsync() => CachedNazcaPython.Value;
+
+    private static async Task<string?> FindNazcaPythonUncachedAsync()
     {
         var envs = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");

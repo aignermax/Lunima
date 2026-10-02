@@ -176,7 +176,7 @@ public class GdsRoundTripImportTests : IDisposable
     [SkippableFact]
     public async Task RoundTrip_OwnNazcaExport_DesignIsTopCell_AllComponentsReimport()
     {
-        var python = await FindNazcaPythonAsync();
+        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
         Skip.If(python == null, "No Python with nazca available — full-circle proof needs the real engine.");
 
         // 1. The user's design: input grating coupler → MMI → output grating
@@ -338,44 +338,5 @@ public class GdsRoundTripImportTests : IDisposable
             });
         }
         return component;
-    }
-
-    private static async Task<string?> FindNazcaPythonAsync()
-    {
-        var envs = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");
-        if (Directory.Exists(envs))
-        {
-            foreach (var root in Directory.GetDirectories(envs))
-            {
-                foreach (var rel in new[] { Path.Combine("Scripts", "python.exe"), Path.Combine("bin", "python") })
-                {
-                    var py = Path.Combine(root, rel);
-                    if (File.Exists(py) && await ProbeNazca(py))
-                        return py;
-                }
-            }
-        }
-
-        foreach (var candidate in new[] { "python", "python3" })
-        {
-            if (await ProbeNazca(candidate))
-                return candidate;
-        }
-        return null;
-    }
-
-    private static async Task<bool> ProbeNazca(string python)
-    {
-        try
-        {
-            var probe = await SiepicRealGeometryExportTests.RunPythonAsync(
-                python, Path.GetTempPath(), "-c", "import nazca");
-            return probe.ExitCode == 0;
-        }
-        catch
-        {
-            return false;   // not on PATH at all
-        }
     }
 }
