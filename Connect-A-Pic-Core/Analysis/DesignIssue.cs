@@ -106,7 +106,15 @@ public enum DesignIssueType
     /// the allowed budget (<see cref="ChipletInterfaceChecker.MaxGapLossDecibels"/>).
     /// A warning: butt-coupling assumes the facets touch.
     /// </summary>
-    ChipletInterfaceGapLoss
+    ChipletInterfaceGapLoss,
+
+    /// <summary>
+    /// Two top-level placed items (components or groups) occupy the same
+    /// physical area — their placed, rotation-aware footprint rectangles
+    /// overlap beyond the fabrication tolerance. An error on par with
+    /// <see cref="OverlappingPaths"/>: the layout cannot be fabricated as drawn.
+    /// </summary>
+    ComponentFootprintOverlap
 }
 
 /// <summary>

@@ -369,6 +369,7 @@
   "Examples.AndGate.Description": "Combina dos puertas NAND en una puerta AND.",
   "Examples.And4bit.Description": "Cuatro puertas AND en paralelo: entran A0–A3 y B0–B3, salen Y0–Y3 — la instrucción AND del ISA sobre luz.",
   "Examples.LogicUnit4bit.Description": "Un chip, dos operaciones: cuatro puertas AND y cuatro NOT comparten A0–A3 — Y0–Y3 = A AND B, N0–N3 = NOT A.",
+  "Examples.ZeroDetect4bit.Description": "Una detección de cero de 4 bits: tres OR y un NOT elevan Z exactamente cuando A0–A3 están todos apagados — la decisión JZ de la ISA sobre luz.",
   "Examples.FullAdder.Description": "Suma dos bits más el acarreo: el bloque fundamental de todo ordenador.",
   "Examples.HalfAdder.Description": "Suma dos bits: tu primer circuito aritmético.",
   "Examples.MachZehnder.Description": "Divide la luz en dos caminos y recómbinala: el «Hola Mundo» de la fotónica.",

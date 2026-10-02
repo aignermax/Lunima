@@ -369,6 +369,7 @@
   "Examples.AndGate.Description": "Kombiniere zwei NAND-Gatter zu einem AND-Gatter.",
   "Examples.And4bit.Description": "Vier AND-Gatter nebeneinander: A0–A3 und B0–B3 rein, Y0–Y3 raus — die ISA-Instruktion AND auf Licht.",
   "Examples.LogicUnit4bit.Description": "Ein Chip, zwei Operationen: vier AND- und vier NOT-Gatter teilen sich A0–A3 — Y0–Y3 = A AND B, N0–N3 = NOT A.",
+  "Examples.ZeroDetect4bit.Description": "Eine 4-Bit-Nullerkennung: drei OR und ein NOT heben Z genau dann, wenn A0–A3 alle dunkel sind — die ISA-Entscheidung JZ auf Licht.",
   "Examples.FullAdder.Description": "Addiere zwei Bits plus Übertrag — der Baustein jedes Rechners.",
   "Examples.HalfAdder.Description": "Addiere zwei Bits — deine erste Rechenschaltung.",
   "Examples.MachZehnder.Description": "Teile Licht in zwei Pfade und führe es wieder zusammen — das Hello World der Photonik.",

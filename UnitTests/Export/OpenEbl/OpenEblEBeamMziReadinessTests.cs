@@ -84,13 +84,11 @@ public class OpenEblEBeamMziReadinessTests
             output.ShouldContain("black box cell: ebeam_gc_te1550");
             output.ShouldContain("Number of unreplaced BB cells: 0");
 
-            // What remains is the exporter's layer mapping (gap #3): routes still
-            // land on nazca's default interconnect layer 1111/0, which the EBeam
-            // layer map does not define. Floorplan (99/0) and opt_in labels (10/0)
-            // are gaps #5/#6 — census lines, not submission-check errors.
-            output.ShouldContain("Error: the layer 1111/0 in the design is not defined in the PDK.");
-            errorCount.ShouldBe(1,
-                "only the interconnect layer mapping (gap #3) still fails — this pin flips when the EBeam layer map lands");
+            // Gap #3 closed (#1309): the EBeam-only export routes on Si 1/0 and drops
+            // the bb_body frame, so no layer-conformity error remains. Floorplan (99/0)
+            // and opt_in labels (10/0) are gaps #5/#6 — census lines, not errors.
+            output.ShouldNotContain("in the design is not defined in the PDK");
+            errorCount.ShouldBe(0, $"the EBeam MZI must pass the submission-check port:\n{output}");
         }
         finally
         {

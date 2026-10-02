@@ -1,0 +1,10 @@
+[
+  {
+    "file": "01-design-checks-clean.png",
+    "caption": "Design Checks tab with the AND0/NOT0 slices standing clear: no footprint-overlap finding."
+  },
+  {
+    "file": "02-design-checks-footprint-overlap.png",
+    "caption": "Same tab after NOT0 is shoved 120 \u00B5m into AND0\u0027s footprint: the DRC-lite warning names both items and the overlap size."
+  }
+]

@@ -19,6 +19,7 @@ public class DesignValidator
     private readonly PerConnectionDrcChecker _perConnectionDrcChecker = new();
     private readonly ChipletInterfaceChecker _chipletInterfaceChecker = new();
     private readonly ComponentPdkCompatibilityChecker _pdkCompatibilityChecker = new();
+    private readonly ComponentFootprintOverlapChecker _footprintOverlapChecker = new();
 
     /// <summary>
     /// Validates all provided waveguide connections and returns any issues found.
@@ -87,9 +88,10 @@ public class DesignValidator
     /// Validates waveguide connections and checks every optical pin on the provided
     /// components for a waveguide connection. Pins listed in <paramref name="externalPortPins"/>
     /// are treated as external ports and are not reported as unconnected.
+    /// Also flags top-level placed items whose footprints physically overlap.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
-    /// <param name="components">All placed components whose optical pins are checked.</param>
+    /// <param name="components">All placed components whose optical pins and footprints are checked.</param>
     /// <param name="externalPortPins">Pins that are external ports and should be skipped. Optional.</param>
     /// <returns>A list of all design issues found, empty if the design is valid.</returns>
     public List<DesignIssue> Validate(
@@ -103,6 +105,7 @@ public class DesignValidator
         var connectionList = connections.ToList();
         var issues = Validate(connectionList);
         issues.AddRange(ValidateUnconnectedPins(components, connectionList, externalPortPins));
+        issues.AddRange(_footprintOverlapChecker.DetectOverlaps(components));
         return issues;
     }
 
@@ -110,11 +113,13 @@ public class DesignValidator
     /// Validates waveguide connections, detects overlaps with frozen paths, and checks
     /// every optical pin on the provided components for a waveguide connection.
     /// Pins listed in <paramref name="externalPortPins"/> are treated as external ports
-    /// and are not reported as unconnected.
+    /// and are not reported as unconnected. Also flags top-level placed items
+    /// (components and groups, one footprint per group) whose placed, rotation-aware
+    /// footprint rectangles physically overlap.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
-    /// <param name="components">All placed components whose optical pins are checked.</param>
+    /// <param name="components">All placed components whose optical pins and footprints are checked.</param>
     /// <param name="externalPortPins">Pins that are external ports and should be skipped. Optional.</param>
     /// <returns>A list of all design issues found, empty if the design is valid.</returns>
     public List<DesignIssue> Validate(
@@ -130,12 +135,14 @@ public class DesignValidator
         var connectionList = connections.ToList();
         var issues = Validate(connectionList, groups);
         issues.AddRange(ValidateUnconnectedPins(components, connectionList, externalPortPins));
+        issues.AddRange(_footprintOverlapChecker.DetectOverlaps(components));
         return issues;
     }
 
     /// <summary>
     /// Full DRC-lite aggregation: validates waveguide connections, detects overlaps with
     /// frozen paths, checks every optical pin on the provided components for a connection,
+    /// flags top-level components/groups whose footprints physically overlap,
     /// (when <paramref name="minWaveguideSpacingMicrometers"/> &gt; 0) checks edge-to-edge
     /// waveguide spacing against the process minimum, and (when
     /// <paramref name="minWaveguideWidthRules"/> are provided) flags waveguides narrower

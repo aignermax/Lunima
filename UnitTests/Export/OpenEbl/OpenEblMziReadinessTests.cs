@@ -170,11 +170,14 @@ public class OpenEblMziReadinessTests
     /// (https://github.com/SiEPIC/openEBL-2026-10/blob/main/run_submission_checks.py),
     /// reduced to klayout.db + siepic_ebeam_pdk so it runs without SiEPIC-Tools:
     /// same single-top-cell rule, same 605000 x 410000 dbu bbox over (1,0)+(4,0),
-    /// same black-box census (allow-list + leftover 998/0 shapes), same
-    /// layer-vs-PDK check against the EBeam.lyp layer properties. Adds a
-    /// functional-readiness census (floorplan shapes, opt_in labels) that
-    /// openEBL's <c>run_verification.py</c> (SiEPIC layout_check) requires.
-    /// Last stdout line is the error count, like the original.
+    /// same black-box census (allow-list, then leftover 998/0 shapes counted from the
+    /// top cell down after clearing the allow-listed cells — the genuine script's
+    /// replace-with-empty-cell + hierarchy walk), same layer-vs-PDK check against the
+    /// EBeam.lyp layer properties. Adds a functional-readiness census (floorplan
+    /// shapes, opt_in labels) that openEBL's <c>run_verification.py</c>
+    /// (SiEPIC layout_check) requires. Last stdout line is the error count, like the
+    /// original. Internal so <see cref="OpenEblEBeamSubmissionCheckTests"/> runs the
+    /// identical port against an EBeam-only design.
     /// </summary>
     internal const string SubmissionCheckerScript = """
         import os, sys
@@ -254,31 +257,31 @@ public class OpenEblMziReadinessTests
             print('No shapes found in the specified layers.')
             num_errors += 1
 
-        # Black-box census, mirroring the genuine script's replace-then-count flow:
-        # allow-listed cells count as REPLACED, so their whole internal hierarchy is
-        # exempt — the foundry GC carries its 998/0 polygons in subcells (named TEXT),
-        # which the genuine script never sees after replace_cell swaps the GC for a dummy.
+        # Black-box census: allowed BB cells, plus leftover 998/0 shapes elsewhere.
+        # Mirrors the genuine script's semantics: allow-listed BB cells are swapped
+        # for an EMPTY cell (here: cleared in place), then leftover 998/0 shapes are
+        # counted walking the hierarchy from the top cell — shapes inside a swapped
+        # BB cell's own subtree (the PDK's GC cells carry 998/0 TEXT subcells) become
+        # unreachable and do not count, exactly like SiEPIC's replace_cell +
+        # cells_containing_bb_layers.
         bb_found = sorted({c.name.split('$')[0] for c in layout.each_cell()
                            if c.name.split('$')[0] in BB_CELLS})
         print('Performing Black Box cell replacement check')
         for name in bb_found:
             print(' - black box cell: %s' % name)
         print(' - Number of black box cells to be replaced: %s' % len(bb_found))
-
-        def subtree_indexes(cell):
-            result = {cell.cell_index()}
-            for inst in cell.each_inst():
-                result |= subtree_indexes(inst.cell)
-            return result
-
-        exempt = set()
         for c in layout.each_cell():
             if c.name.split('$')[0] in BB_CELLS:
-                exempt |= subtree_indexes(c)
+                c.clear()
+        unreplaced = []
         li998 = layout.find_layer(pya.LayerInfo(998, 0))
-        unreplaced = sorted({c.name for c in layout.each_cell()
-                             if c.cell_index() not in exempt
-                             and li998 is not None and not c.shapes(li998).is_empty()})
+        if li998 is not None:
+            seen = set()
+            it = pya.RecursiveShapeIterator(layout, top, li998)
+            while not it.at_end():
+                seen.add(it.cell().name)
+                it.next()
+            unreplaced = sorted(seen)
         print(' - Number of unreplaced BB cells: %s' % len(unreplaced))
         if unreplaced:
             print('ERROR: unidentified black box cells: %s' % unreplaced)
