@@ -73,12 +73,26 @@ Unknown error occurred
 
 This is a content gap, not a headless limitation: the check itself runs headlessly (openEBL's CI does exactly this), and the waveguide/connectivity/DFT rules were never reached.
 
+**Update 2026-10-02 (#1321, gap #2):** the same vendored `run_verification.py` port was run against the **EBeam MZI** export (the gap #1 design, with the #1309/#1320 layers/DFT markers). With one DevRec (68, 0) per component cell the run **completes** — `layout_check` reports **23 layout errors** in two categories, both the gap #4 surface and deliberately left for the next slice:
+
+```
+Running SiEPIC-Tools automated verification (Lunima headless port) for file ebeam_mzi_verify.gds
+Top cell: ConnectAPIC_Design
+Design for Test rules from PDK: .../siepic_ebeam_pdk/DFT.xml
+23 layout errors detected.
+category Disconnected pin: 8
+category Shapes outside component: 15
+23
+```
+
+Reading: `find_components` succeeds (4 components), DFT rules load and pass, and the entire remainder is the missing SiEPIC route conventions — the 4 routed connections export as 15 top-cell Si polygons ("Shapes outside component") instead of Waveguide (1, 99) guiding shapes inside the DevRec hierarchy, so none of the 8 optical pins (2 × 4 components) sees a connected waveguide ("Disconnected pin"). The durable pin is the CI test `UnitTests/Export/OpenEbl/OpenEblEBeamMziVerificationTests.cs`.
+
 ## 3. Gap list
 
 | # | Gap | Effort |
 |---|-----|--------|
 | 1 | **EBeam design to export**: the shipped MZI is a Demo-PDK teaching circuit; an EBeam MZI variant must be built from the bundled `CAP-DataAccess/PDKs/siepic-ebeam-pdk.json` (44 components incl. `ebeam_gc_te1550`, MMIs) — GC placement must follow the DFT array rules (127 µm pitch, vertical, 0°) | **M** — **closed** (#1310): `examples/EBeam Mach-Zehnder Interferometer.lun` ships exactly this (2× `ebeam_gc_te1550` at 0°, 127 µm vertical pitch, 2× `ebeam_y_1550`, 307.373 × 147.228 µm on the checked layers); together with gap #3's EBeam layer mapping (#1309) its export passes the submission-check port with **0 errors**, pinned by `OpenEblEBeamMziReadinessTests` |
-| 2 | **DevRec (68/0) + component hierarchy**: exporter must wrap each component cell in a DevRec polygon and keep the layout hierarchical (routes currently flatten to top-cell polygons → "shapes outside component" errors once on 1/0) | **M** |
+| 2 | **DevRec (68/0) + component hierarchy** — **verification gate unblocked** (#1321, measured 2026-10-02): a vendored headless port of openEBL's `run_verification.py` (`layout_check` with the same top-cell pick + EBeam technology attach, plus a per-category census from the `.lyrdb`) now runs in CI as `OpenEblEBeamMziVerificationTests` against the real EBeam MZI export. **The run completes — no `Unknown error occurred`**: `find_components` sees one DevRec (68, 0) per component cell. The klayout upgrade pass brings the foundry cells' own DevRec (verified: `ebeam_gc_te1550`/`ebeam_y_1550` carry 3 each); a new ensure-pass in `SiepicCellUpgradeWriter` (`addDevRec`, EBeam-only) draws the cell-footprint DevRec on any cell that kept its stub box (PDK/klayout missing at export time) and never duplicates a foundry one. Remaining errors, all gap #4 and deliberately unfixed: **23 = 15 "Shapes outside component"** (routes flatten to top-cell Si polygons on 1/0) **+ 8 "Disconnected pin"** (2 optical pins × 4 components; routes carry no PinRec/Waveguide (1, 99) conventions). Non-EBeam exports stay byte-identical (`OpenEblEBeamDevRecTests`). Residual limitation: SiEPIC parametric-straight stubs (per-length cell names) are outside the ensure-pass cell list — the EBeam MZI has none | ~~M~~ **done** (gate unblocked; remainder is gap #4) |
 | 3 | **Layer mapping** — **CLOSED (#1309, measured 2026-10-02)**: EBeam-only designs (every component from `siepic-ebeam-pdk.json`) now export interconnect on **Si 1/0** at the PDK's 0.5 µm strip width (via the process stamps placed on the pins; `SiepicEBeamExportProfile`) and drop the demofab `bb_body` 1003/0 frame; pin labels stay on 1/10 (PinRec). Measured: a two-`ebeam_gc_te1550` + waveguide design passes the ported submission check with **0 errors** (`OpenEblEBeamSubmissionCheckTests`), and the genuine `run_submission_checks.py` reports **0** on the same GDS. (The 501/* layers in the §2 listing are demofab pin layers — they vanish with the demo PDK, i.e. gap 1's EBeam re-layout, not this gap.) | ~~S~~ **done** |
 | 4 | **SiEPIC pin/waveguide conventions**: PinRec pin shapes with SiEPIC geometry + Waveguide (1/99) guide shapes on routes, Manhattan end segments | **M** |
 | 5 | **`opt_in_*` measurement labels on Text (10/0)** at each injection GC (unique, ≤10 µm from tip) | **S** — **closed** (#1320, measured 2026-10-02): EBeam-only exports now emit one `opt_in_TE_1550_device_<design>` text on (10,0) per laser-injection GC (the light source with its laser on; detector couplers with the laser off get none), anchored on the GC's cell origin (distance 0 ≤ 10 µm), design name sanitized to `[A-Za-z0-9_]`, unique suffixes for multiple inputs (`NazcaOpenEblDftWriter`). Measured: the EBeam MZI census reads `opt_in labels (10/0): 1`, submission-check error count stays **0** (`OpenEblEBeamMziReadinessTests`) |
