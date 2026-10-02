@@ -15,7 +15,7 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// the current source line stay visible. Editing the text marks the assembled
 /// state stale until <see cref="AssembleCommand"/> runs again. The Run/Stop
 /// auto-step half (issue #1204) lives in IsaPlaygroundViewModel.Run.cs, the
-/// photonic toggle (issues #1215, #1275) in IsaPlaygroundViewModel.Photonic.cs.
+/// photonic toggle (issues #1215, #1275, #1322) in IsaPlaygroundViewModel.Photonic.cs.
 /// </summary>
 public partial class IsaPlaygroundViewModel : ObservableObject
 {
