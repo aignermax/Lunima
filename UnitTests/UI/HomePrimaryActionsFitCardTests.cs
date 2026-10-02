@@ -14,8 +14,9 @@ namespace UnitTests.UI;
 
 /// <summary>
 /// The Home card has a fixed width, so its primary-action buttons must fit inside it in
-/// every shipped language — long labels ("Lunima kennenlernen", "Beim Rechnen zusehen")
-/// must wrap onto a further row instead of running past the card's right edge.
+/// every shipped language — including the full-width rows of the "Learn Lunima" tour
+/// list, whose long German labels ("Beim Rechnen zusehen") previously wrapped the tour
+/// buttons across three rows (issue #1301).
 /// </summary>
 public class HomePrimaryActionsFitCardTests
 {
@@ -43,7 +44,7 @@ public class HomePrimaryActionsFitCardTests
             var card = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "HomeCard");
             var contentRight = card.Bounds.Width - card.Padding.Right;
             var buttons = card.GetVisualDescendants().OfType<Button>().Where(b => b.Command != null).ToList();
-            buttons.Count.ShouldBeGreaterThanOrEqualTo(4, "the card shows New, Open and the two tour buttons");
+            buttons.Count.ShouldBeGreaterThanOrEqualTo(4, "the card shows New, Open and the Learn-Lunima tour rows");
             foreach (var button in buttons)
             {
                 var origin = button.TranslatePoint(new Point(0, 0), card)!.Value;
