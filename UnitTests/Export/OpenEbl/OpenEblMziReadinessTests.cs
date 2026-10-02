@@ -126,7 +126,17 @@ public class OpenEblMziReadinessTests
     /// gdsfactory — the openEBL check port does not need it, and the CI runner
     /// installs exactly these three packages.
     /// </summary>
-    internal static async Task<string?> FindOpenEblCheckPythonAsync()
+    internal static Task<string?> FindOpenEblCheckPythonAsync() =>
+        FindPythonWithImportsAsync("import klayout.db, siepic_ebeam_pdk, nazca");
+
+    /// <summary>
+    /// Same probe as <see cref="FindOpenEblCheckPythonAsync"/>, additionally requiring
+    /// SiEPIC-Tools — the functional-verification port (<c>layout_check</c>) imports it.
+    /// </summary>
+    internal static Task<string?> FindOpenEblVerificationPythonAsync() =>
+        FindPythonWithImportsAsync("import klayout.db, siepic_ebeam_pdk, nazca, SiEPIC");
+
+    private static async Task<string?> FindPythonWithImportsAsync(string importStatement)
     {
         var envs = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");
@@ -137,7 +147,7 @@ public class OpenEblMziReadinessTests
                 foreach (var rel in new[] { Path.Combine("Scripts", "python.exe"), Path.Combine("bin", "python") })
                 {
                     var py = Path.Combine(root, rel);
-                    if (File.Exists(py) && await Probe(py))
+                    if (File.Exists(py) && await Probe(py, importStatement))
                         return py;
                 }
             }
@@ -145,18 +155,18 @@ public class OpenEblMziReadinessTests
 
         foreach (var candidate in new[] { "python", "python3" })
         {
-            if (await Probe(candidate))
+            if (await Probe(candidate, importStatement))
                 return candidate;
         }
         return null;
     }
 
-    private static async Task<bool> Probe(string python)
+    private static async Task<bool> Probe(string python, string importStatement)
     {
         try
         {
             var probe = await SiepicRealGeometryExportTests.RunPythonAsync(
-                python, Path.GetTempPath(), "-c", "import klayout.db, siepic_ebeam_pdk, nazca");
+                python, Path.GetTempPath(), "-c", importStatement);
             return probe.ExitCode == 0;
         }
         catch

@@ -133,7 +133,7 @@ public class SimpleNazcaExporter
         if (ebeamProfile != null)
             NazcaOpenEblDftWriter.AppendDftMarkers(sb, canvas, designName);
         AppendFooter(sb);
-        SiepicCellUpgradeWriter.AppendUpgradeBlock(sb, canvas);
+        SiepicCellUpgradeWriter.AppendUpgradeBlock(sb, canvas, addDevRec: ebeamProfile != null);
         if (emitVerification)
             AppendVerificationEpilog(sb);
 
