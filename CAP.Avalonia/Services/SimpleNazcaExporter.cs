@@ -50,7 +50,9 @@ public class SimpleNazcaExporter
     /// A design built entirely from the SiEPIC EBeam PDK routes its waveguide
     /// interconnect on the EBeam cross-section stamped onto its pins (width + Si layer)
     /// instead of the nazca default layer and drops the demofab bb_body frame —
-    /// see <see cref="SiepicEBeamExportProfile"/>.
+    /// see <see cref="SiepicEBeamExportProfile"/> — and additionally carries the
+    /// openEBL design-for-test markers (opt_in label, floorplan box) of
+    /// <see cref="NazcaOpenEblDftWriter"/>.
     /// </summary>
     /// <param name="canvas">The design canvas to export.</param>
     /// <param name="pdkModuleName">Optional PDK module name (e.g., "siepic_ebeam_pdk") for import.</param>
@@ -92,6 +94,11 @@ public class SimpleNazcaExporter
     /// as a placeholder box stub — a template placed ten times warns once, matching the
     /// once-per-template fallback emission.
     /// </param>
+    /// <param name="designName">
+    /// Optional design/file name used for the openEBL opt_in measurement labels of an
+    /// EBeam-only export (<see cref="NazcaOpenEblDftWriter"/>); null falls back to the
+    /// top-cell name. Ignored for every other design.
+    /// </param>
     public string Export(
         DesignCanvasViewModel canvas,
         string? pdkModuleName = null,
@@ -100,7 +107,8 @@ public class SimpleNazcaExporter
         List<string>? skippedConnections = null,
         List<string>? unresolvedCrossings = null,
         IEnumerable<ComponentTemplate>? library = null,
-        List<string>? exportWarnings = null)
+        List<string>? exportWarnings = null,
+        string? designName = null)
     {
         var sb = new StringBuilder();
         var metal = metalSpec ?? MetalRoutingSpec.Default;
@@ -122,6 +130,8 @@ public class SimpleNazcaExporter
         AppendConnections(
             sb, canvas, componentNames, metal, interconnectSettings.GdsLayer,
             skippedConnections, unresolvedCrossings, interconnectPlan, ebeamProfile != null);
+        if (ebeamProfile != null)
+            NazcaOpenEblDftWriter.AppendDftMarkers(sb, canvas, designName);
         AppendFooter(sb);
         SiepicCellUpgradeWriter.AppendUpgradeBlock(sb, canvas);
         if (emitVerification)
