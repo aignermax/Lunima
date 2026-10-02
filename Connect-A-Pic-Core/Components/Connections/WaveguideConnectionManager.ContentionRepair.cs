@@ -16,6 +16,14 @@ namespace CAP_Core.Components.Connections;
 /// the pass can never make a design worse. Endpoint-blocked wires (a pin sealed by a
 /// component footprint) and frozen/manual routes are never touched — no wire ordering
 /// can free a footprint, and manual edits are sacred.
+/// <para>
+/// The budget is hard: every attempt routes on a token that cancels when the remaining
+/// budget expires, so one stubborn in-flight A* search cannot overrun the pass — a
+/// budget-cut attempt is restored exactly and the caller's own token stays uncancelled.
+/// And an attempt that failed once is not repeated verbatim: its fingerprint (blocked
+/// wire, ripped-up siblings, their pin positions) is remembered, and an identical
+/// attempt is skipped on later passes until an involved component moves.
+/// </para>
 /// </summary>
 public partial class WaveguideConnectionManager
 {
@@ -26,12 +34,21 @@ public partial class WaveguideConnectionManager
     private const int MaxContentionRepairAttemptsPerPass = 8;
 
     /// <summary>
-    /// Wall-clock budget for one repair pass. Checked before every attempt and between the
-    /// routes inside one, so the pass stays bounded even on dense designs; a single
-    /// in-flight route may overrun it by its own routing time. One attempt is a handful of
-    /// A* routes and legitimately takes seconds, so the budget must be generous — the hard
-    /// bound is <see cref="MaxContentionRepairAttemptsPerPass"/>. Settable so tests on slow
-    /// CI runners can pin the repair outcome independently of machine speed.
+    /// Fingerprints of attempts that failed in this manager. An identical attempt (same
+    /// blocked wire, same ripped-up siblings, same pin positions) is skipped on later
+    /// passes instead of being paid for again; moving any involved component changes the
+    /// fingerprint's pin positions, which re-enables the attempt.
+    /// </summary>
+    private readonly HashSet<ContentionRepairAttemptKey> _knownFailedAttempts = new();
+
+    /// <summary>
+    /// Wall-clock budget for one repair pass. Checked before every attempt, and enforced
+    /// INSIDE one through a linked cancellation token (<see cref="TryRepairContentionWire"/>)
+    /// that interrupts an in-flight route when the remaining budget expires. One attempt is
+    /// a handful of A* routes and legitimately takes seconds, so the budget must be
+    /// generous — the bound on attempt COUNT is <see cref="MaxContentionRepairAttemptsPerPass"/>.
+    /// Settable so tests on slow CI runners can pin the repair outcome independently of
+    /// machine speed.
     /// </summary>
     internal TimeSpan ContentionRepairTimeBudget { get; set; } = TimeSpan.FromSeconds(10);
 
@@ -72,9 +89,23 @@ public partial class WaveguideConnectionManager
             if (!IsContentionRepairCandidate(blocked))
                 continue;
 
+            var siblings = FindConflictingSiblings(blocked, SnapshotConnections());
+            if (siblings.Count == 0)
+                continue; // No wire conflict to rip up — nothing this pass can try.
+
+            // A fingerprint the pass already paid for and lost is not tried again while
+            // nothing it involves changed — on a design with one permanently blocked wire
+            // every full re-route would otherwise burn the whole budget for 0 accepts.
+            var attemptKey = ContentionRepairAttemptKey.For(blocked, siblings);
+            if (!_knownFailedAttempts.Add(attemptKey))
+                continue;
+
             LastContentionRepairAttemptCount++;
-            if (TryRepairContentionWire(blocked, grid, budget, cancellationToken))
+            if (TryRepairContentionWire(blocked, siblings, grid, budget, cancellationToken))
+            {
                 LastContentionRepairAcceptCount++;
+                _knownFailedAttempts.Remove(attemptKey);
+            }
         }
     }
 
@@ -82,18 +113,22 @@ public partial class WaveguideConnectionManager
     /// One repair attempt: rip up the blocked wire and its nearest crossing siblings,
     /// route the blocked wire first, re-route the siblings, and keep the result only on
     /// a strict improvement. Returns true when the attempt was accepted.
+    /// <para>
+    /// The attempt routes on a token linked to the caller's token that cancels when the
+    /// remaining pass budget expires: an in-flight A* search is interrupted instead of
+    /// overrunning the budget by its own routing time. A budget-cut (or caller-cancelled)
+    /// attempt is restored exactly; the caller's token itself is never cancelled by the
+    /// budget — only the linked attempt token fires.
+    /// </para>
     /// </summary>
-    private bool TryRepairContentionWire(
+    internal bool TryRepairContentionWire(
         WaveguideConnection blocked,
+        List<WaveguideConnection> siblings,
         PathfindingGrid grid,
         Stopwatch budget,
         CancellationToken cancellationToken)
     {
         var all = SnapshotConnections();
-        var siblings = FindConflictingSiblings(blocked, all);
-        if (siblings.Count == 0)
-            return false; // No wire conflict to rip up — nothing this pass can try.
-
         var touched = new List<WaveguideConnection> { blocked };
         touched.AddRange(siblings);
         int blockedBefore = touched.Count(c => c.IsBlockedFallback);
@@ -103,7 +138,14 @@ public partial class WaveguideConnectionManager
         foreach (var connection in touched)
             grid.RemoveWaveguideObstacle(connection.Id);
 
-        bool completed = RouteTouched(touched, grid, budget, cancellationToken);
+        using var attemptTokens = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var remaining = ContentionRepairTimeBudget - budget.Elapsed;
+        if (remaining <= TimeSpan.Zero)
+            attemptTokens.Cancel();
+        else
+            attemptTokens.CancelAfter(remaining);
+
+        bool completed = RouteTouched(touched, grid, attemptTokens.Token);
 
         bool accept = completed
             && !cancellationToken.IsCancellationRequested
@@ -119,21 +161,23 @@ public partial class WaveguideConnectionManager
 
     /// <summary>
     /// Routes the blocked wire first, then the ripped-up siblings, registering each valid
-    /// result as a grid obstacle. False when cancellation or the time budget cut the
-    /// attempt short — the attempt must then be restored, because an un-rerouted sibling
-    /// would be missing from the obstacle grid.
+    /// result as a grid obstacle. False when the attempt token (caller cancellation OR the
+    /// expired time budget) cut the attempt short — the attempt must then be restored,
+    /// because an un-rerouted sibling would be missing from the obstacle grid and a
+    /// cancelled route's fallback geometry is not a repair result.
     /// </summary>
     private bool RouteTouched(
         List<WaveguideConnection> touched,
         PathfindingGrid grid,
-        Stopwatch budget,
-        CancellationToken cancellationToken)
+        CancellationToken attemptToken)
     {
         foreach (var connection in touched)
         {
-            if (cancellationToken.IsCancellationRequested || budget.Elapsed >= ContentionRepairTimeBudget)
+            if (attemptToken.IsCancellationRequested)
                 return false;
-            connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
+            connection.RecalculateTransmission(_router, cancellationToken: attemptToken);
+            if (attemptToken.IsCancellationRequested)
+                return false;
             if (connection.IsPathValid && connection.RoutedPath != null)
             {
                 grid.AddWaveguideObstacle(
@@ -280,4 +324,76 @@ public partial class WaveguideConnectionManager
         (double MinX, double MinY, double MaxX, double MaxY) second) =>
         first.MinX <= second.MaxX && first.MaxX >= second.MinX
         && first.MinY <= second.MaxY && first.MaxY >= second.MinY;
+
+    /// <summary>
+    /// Fingerprint of one repair attempt: the blocked wire's id, the ripped-up siblings'
+    /// ids (order-independent), and a quantization of every involved pin position. Two
+    /// passes over an unchanged design produce the same fingerprint, so a known failure is
+    /// skipped; moving any involved component changes its pins' positions and thereby the
+    /// fingerprint, which re-enables the attempt. Route GEOMETRY is deliberately not part
+    /// of the key: the re-routes inside an attempt must not wash a failure out of memory.
+    /// </summary>
+    private readonly struct ContentionRepairAttemptKey : IEquatable<ContentionRepairAttemptKey>
+    {
+        /// <summary>
+        /// Pin positions are quantized to this grid, so sub-quantum float noise in the
+        /// pin math cannot fragment an otherwise identical attempt into different keys.
+        /// </summary>
+        private const double PositionQuantumMicrometers = 0.5;
+
+        private readonly Guid _blockedId;
+        private readonly Guid[] _siblingIds;
+        private readonly int _pinPositionHash;
+
+        private ContentionRepairAttemptKey(Guid blockedId, Guid[] siblingIds, int pinPositionHash)
+        {
+            _blockedId = blockedId;
+            _siblingIds = siblingIds;
+            _pinPositionHash = pinPositionHash;
+        }
+
+        /// <summary>Builds the fingerprint of an attempt over <paramref name="blocked"/> and its siblings.</summary>
+        public static ContentionRepairAttemptKey For(
+            WaveguideConnection blocked, List<WaveguideConnection> siblings)
+        {
+            var ordered = siblings.OrderBy(s => s.Id).ToArray();
+            var hash = new HashCode();
+            AddPinPositions(ref hash, blocked);
+            foreach (var sibling in ordered)
+                AddPinPositions(ref hash, sibling);
+            return new ContentionRepairAttemptKey(
+                blocked.Id, ordered.Select(s => s.Id).ToArray(), hash.ToHashCode());
+
+            static void AddPinPositions(ref HashCode hash, WaveguideConnection connection)
+            {
+                var (startX, startY) = connection.StartPin.GetAbsolutePosition();
+                var (endX, endY) = connection.EndPin.GetAbsolutePosition();
+                hash.Add(Quantize(startX));
+                hash.Add(Quantize(startY));
+                hash.Add(Quantize(endX));
+                hash.Add(Quantize(endY));
+            }
+
+            static long Quantize(double micrometers) =>
+                (long)Math.Round(micrometers / PositionQuantumMicrometers);
+        }
+
+        public bool Equals(ContentionRepairAttemptKey other) =>
+            _blockedId == other._blockedId
+            && _pinPositionHash == other._pinPositionHash
+            && _siblingIds.SequenceEqual(other._siblingIds);
+
+        public override bool Equals(object? obj) =>
+            obj is ContentionRepairAttemptKey other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(_blockedId);
+            hash.Add(_pinPositionHash);
+            foreach (var id in _siblingIds)
+                hash.Add(id);
+            return hash.ToHashCode();
+        }
+    }
 }
