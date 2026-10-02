@@ -16,9 +16,9 @@ namespace UnitTests.Export.OpenEbl;
 /// <para>
 /// Unlike the Demo-PDK MZI, this export contains only real EBeam foundry cells,
 /// so the die-size rule passes by construction. The pinned error count covers
-/// what gap #1 deliberately does not fix: the interconnect layer mapping
-/// (gap #3) and the missing floorplan/opt_in conventions (gaps #5/#6) are
-/// exporter slices of their own. The pin flips when those land.
+/// what gap #1 deliberately did not fix and what has since landed: the
+/// interconnect layer mapping (gap #3, #1309) and the floorplan/opt_in
+/// conventions (gaps #5/#6, #1320 — pinned by the census lines below).
 /// </para>
 /// <para>
 /// Gating: needs a Python with nazca + klayout + siepic_ebeam_pdk (installed on
@@ -85,9 +85,14 @@ public class OpenEblEBeamMziReadinessTests
             output.ShouldContain("Number of unreplaced BB cells: 0");
 
             // Gap #3 closed (#1309): the EBeam-only export routes on Si 1/0 and drops
-            // the bb_body frame, so no layer-conformity error remains. Floorplan (99/0)
-            // and opt_in labels (10/0) are gaps #5/#6 — census lines, not errors.
+            // the bb_body frame, so no layer-conformity error remains.
             output.ShouldNotContain("in the design is not defined in the PDK");
+            // Gaps #5/#6 closed (#1320): the export carries the die floorplan box and
+            // exactly one opt_in measurement label at the laser-injection GC (the
+            // second GC is the detector — its laser is off), what the functional
+            // verification (DFT.xml) requires. Census lines, not errors.
+            output.ShouldContain("Floorplan (99/0) shapes: 1");
+            output.ShouldContain("opt_in labels (10/0): 1");
             errorCount.ShouldBe(0, $"the EBeam MZI must pass the submission-check port:\n{output}");
         }
         finally

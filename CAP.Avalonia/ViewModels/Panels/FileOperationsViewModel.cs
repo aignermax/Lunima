@@ -1995,7 +1995,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 var nazcaCode = _nazcaExporter.Export(
                     _canvas, metalSpec: MetalRoutingSpecProvider?.Invoke(),
                     skippedConnections: skippedConnectionsList, unresolvedCrossings: unresolvedCrossingsList,
-                    library: _componentLibrary, exportWarnings: exportWarningsList);
+                    library: _componentLibrary, exportWarnings: exportWarningsList,
+                    designName: CurrentFilePath != null ? Path.GetFileNameWithoutExtension(CurrentFilePath) : null);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
 
                 // Raw-code components whose geometry source vanished (a deleted .gds) exported

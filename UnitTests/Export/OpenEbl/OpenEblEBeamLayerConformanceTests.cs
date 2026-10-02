@@ -1,7 +1,10 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Core;
+using CAP_Core.Export;
 using CAP_Core.Routing;
 using Shouldly;
 using Xunit;
@@ -52,7 +55,98 @@ public class OpenEblEBeamLayerConformanceTests
         script.ShouldContain("nd.strt(length=127.00).put(");
         // The demofab bb_body frame stays for designs that are not EBeam-only.
         script.ShouldContain("(1003, 0)");
+        // openEBL DFT markers are EBeam-only: no opt_in label, no floorplan box.
+        script.ShouldNotContain("opt_in");
+        script.ShouldNotContain("layer=(10, 0)");
+        script.ShouldNotContain("layer=(99, 0)");
     }
+
+    [Fact]
+    public void Export_EBeamOnlyDesign_EmitsOptInLabelAtLaserInputGratingCoupler()
+    {
+        var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
+        // The second coupler is the detector: laser off (listen-only output, #690).
+        EBeamCanvasBuilder.SetLaserEnabled(canvas, 127, false);
+
+        var script = new SimpleNazcaExporter().Export(
+            canvas, designName: "EBeam Mach-Zehnder Interferometer");
+
+        var labels = FindOptInLabels(script);
+        labels.Count.ShouldBe(1);
+        labels[0].Text.ShouldBe("opt_in_TE_1550_device_EBeam_Mach_Zehnder_Interferometer");
+
+        // The label anchors on the input GC's cell origin — distance 0, well inside
+        // the 10 µm DFT tolerance — and far from the detector GC 127 µm away.
+        var gc1 = EBeamCanvasBuilder.FindComponentAtX(canvas, 0);
+        var origin = NazcaCoordinateMapper.GetCellPlacement(gc1, rawOverrideAnchor: null);
+        var dx = labels[0].X - origin.X;
+        var dy = labels[0].Y - origin.Y;
+        Math.Sqrt(dx * dx + dy * dy).ShouldBeLessThanOrEqualTo(10.0);
+    }
+
+    [Fact]
+    public void Export_EBeamOnlyDesign_TwoLaserInputs_GetUniqueOptInLabels()
+    {
+        var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
+
+        var script = new SimpleNazcaExporter().Export(canvas, designName: "chip");
+
+        var labels = FindOptInLabels(script).Select(l => l.Text).ToList();
+        labels.Count.ShouldBe(2);
+        labels.Distinct().Count().ShouldBe(2);
+        labels.ShouldContain("opt_in_TE_1550_device_chip");
+        labels.ShouldContain("opt_in_TE_1550_device_chip_2");
+    }
+
+    [Fact]
+    public void Export_EBeamOnlyDesign_WithoutDesignName_UsesTopCellNameInLabel()
+    {
+        var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
+
+        var script = new SimpleNazcaExporter().Export(canvas);
+
+        FindOptInLabels(script).Select(l => l.Text)
+            .ShouldContain("opt_in_TE_1550_device_ConnectAPIC_Design");
+    }
+
+    [Fact]
+    public void Export_EBeamOnlyDesign_EmitsDieFloorplanBoxAroundDesign()
+    {
+        var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
+
+        var script = new SimpleNazcaExporter().Export(canvas);
+
+        var boxes = Regex.Matches(
+            script,
+            @"nd\.Polygon\(points=\[\((-?[\d.]+),(-?[\d.]+)\),\((-?[\d.]+),(-?[\d.]+)\)," +
+            @"\((-?[\d.]+),(-?[\d.]+)\),\((-?[\d.]+),(-?[\d.]+)\)\], layer=\(99, 0\)\)");
+        boxes.Count.ShouldBe(1);
+
+        double Coord(int group) => double.Parse(boxes[0].Groups[group].Value, CultureInfo.InvariantCulture);
+        // Points are (x0,y0), (x1,y0), (x1,y1), (x0,y1) — the openEBL die, exactly.
+        var x0 = Coord(1);
+        var y0 = Coord(2);
+        (Coord(3) - x0).ShouldBe(605.0, 0.001);
+        (Coord(6) - y0).ShouldBe(410.0, 0.001);
+
+        // The box's lower-left corner is the design bbox lower-left (nazca space:
+        // min PhysicalX, negated max bottom edge), so the design sits inside it.
+        // Tolerance covers the exporter's F2 coordinate rounding.
+        var components = canvas.Components.Select(vm => vm.Component).ToList();
+        x0.ShouldBe(components.Min(c => c.PhysicalX), 0.01);
+        y0.ShouldBe(-components.Max(c => c.PhysicalY + c.HeightMicrometers), 0.01);
+    }
+
+    private static List<(string Text, double X, double Y)> FindOptInLabels(string script) =>
+        Regex.Matches(
+                script,
+                @"nd\.Annotation\(text='(opt_in_TE_1550_device_[^']+)', layer=\(10, 0\)\)" +
+                @"\.put\((-?[\d.]+), (-?[\d.]+)\)")
+            .Select(m => (
+                m.Groups[1].Value,
+                double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture)))
+            .ToList();
 }
 
 /// <summary>Builds the small in-test EBeam designs of the openEBL layer-conformance tests.</summary>
@@ -81,6 +175,14 @@ internal static class EBeamCanvasBuilder
         canvas.ConnectPinsWithCachedRoute(from, to, path).ShouldNotBeNull();
         return canvas;
     }
+
+    /// <summary>Returns the placed component whose left edge sits at the given X.</summary>
+    public static Component FindComponentAtX(DesignCanvasViewModel canvas, double physicalX) =>
+        canvas.Components.Select(vm => vm.Component).First(c => c.PhysicalX == physicalX);
+
+    /// <summary>Switches a coupler's laser on (input) or off (listen-only output).</summary>
+    public static void SetLaserEnabled(DesignCanvasViewModel canvas, double physicalX, bool enabled) =>
+        FindComponentAtX(canvas, physicalX).LaserEnabled = enabled;
 
     /// <summary>
     /// A parametric-straight SiEPIC component (process-stamped pins): the only stub
