@@ -7103,6 +7103,12 @@
           "offsetXMicrometers": 39.969,
           "offsetYMicrometers": 13.669,
           "angleDegrees": 0
+        },
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 13.5,
+          "angleDegrees": 180
         }
       ],
       "sMatrix": {

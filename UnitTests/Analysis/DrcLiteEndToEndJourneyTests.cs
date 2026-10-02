@@ -39,6 +39,7 @@ public class DrcLiteEndToEndJourneyTests
             allComponents: broken.Components,
             pdkSourceByComponent: broken.PdkSourceByComponent,
             enabledPdkNames: broken.EnabledPdkNames,
+            externalPortPins: broken.ExternalPortPins,
             minWaveguideSpacingMicrometers: broken.MinWaveguideSpacingMicrometers);
 
         // ── Journey step 3: the complete result set — types, counts, attribution, text ──
@@ -98,6 +99,7 @@ public class DrcLiteEndToEndJourneyTests
             allComponents: fixedDesign.Components,
             pdkSourceByComponent: fixedDesign.PdkSourceByComponent,
             enabledPdkNames: fixedDesign.EnabledPdkNames,
+            externalPortPins: fixedDesign.ExternalPortPins,
             minWaveguideSpacingMicrometers: fixedDesign.MinWaveguideSpacingMicrometers);
 
         fixedPanel.Issues.ShouldBeEmpty(Describe(fixedPanel));

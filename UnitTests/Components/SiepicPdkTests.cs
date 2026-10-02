@@ -321,11 +321,14 @@ public class SiepicPdkTests
         // Calibrated against the actual SiEPIC ebeam_gc_te1550 cell — width
         // and height come from the cell's bbox, the single PinRec is on the
         // chip-side waveguide (no fiber-side geometry in SiEPIC's GDS).
+        // A second, fiber-side "port 1" pin completes the simulation model:
+        // the PDK's own wavelength-resolved S-matrix references it, so without
+        // the pin the fiber↔waveguide coupling is silently dropped on load.
         // Validates that the loader passes the calibration through; the
         // exact numbers are pinned by PdkJsonSaverRoundTripTests.
         gratingCoupler.WidthMicrometers.ShouldBeGreaterThan(0);
         gratingCoupler.HeightMicrometers.ShouldBeGreaterThan(0);
-        gratingCoupler.Pins.Count.ShouldBe(1);
+        gratingCoupler.Pins.Count.ShouldBe(2);
         gratingCoupler.NazcaOriginOffsetX.ShouldNotBeNull();
         gratingCoupler.NazcaOriginOffsetY.ShouldNotBeNull();
 

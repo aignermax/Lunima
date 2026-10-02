@@ -372,6 +372,7 @@
   "Examples.FullAdder.Description": "2ビットとキャリー入力を加算する — あらゆるコンピュータの基本ブロック。",
   "Examples.HalfAdder.Description": "2ビットを加算する — 初めての算術回路。",
   "Examples.MachZehnder.Description": "光を2つの経路に分けて再合成する — フォトニクスの「Hello World」。",
+  "Examples.EBeamMachZehnder.Description": "実際のSiEPIC EBeam PDKで構成したマッハツェンダー — 127 µmピッチのテストアレイ状グレーティングカプラ、openEBLダイサイズに適合。",
   "Examples.Mux.Description": "2対1マルチプレクサ:1つの選択ビットが2つの入力を切り替える。",
   "Examples.NotGate.Description": "最初の論理ゲート:NAND 1つで作るNOT。",
   "Examples.Not4bit.Description": "4つのNOTゲートを並べて:A0–A3を入れY0–Y3へ——光で動くISAのNOT命令。",

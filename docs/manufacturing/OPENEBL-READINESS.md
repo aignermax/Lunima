@@ -77,12 +77,12 @@ This is a content gap, not a headless limitation: the check itself runs headless
 
 | # | Gap | Effort |
 |---|-----|--------|
-| 1 | **EBeam design to export**: the shipped MZI is a Demo-PDK teaching circuit; an EBeam MZI variant must be built from the bundled `CAP-DataAccess/PDKs/siepic-ebeam-pdk.json` (44 components incl. `ebeam_gc_te1550`, MMIs) — GC placement must follow the DFT array rules (127 µm pitch, vertical, 0°) | **M** |
+| 1 | **EBeam design to export**: the shipped MZI is a Demo-PDK teaching circuit; an EBeam MZI variant must be built from the bundled `CAP-DataAccess/PDKs/siepic-ebeam-pdk.json` (44 components incl. `ebeam_gc_te1550`, MMIs) — GC placement must follow the DFT array rules (127 µm pitch, vertical, 0°) | **M** — **closed** (#1310): `examples/EBeam Mach-Zehnder Interferometer.lun` ships exactly this (2× `ebeam_gc_te1550` at 0°, 127 µm vertical pitch, 2× `ebeam_y_1550`, 307.373 × 147.228 µm on the checked layers); its export passes the submission-check port with **1 error** (the interconnect layer 1111/0 = gap #3), pinned by `OpenEblEBeamMziReadinessTests` |
 | 2 | **DevRec (68/0) + component hierarchy**: exporter must wrap each component cell in a DevRec polygon and keep the layout hierarchical (routes currently flatten to top-cell polygons → "shapes outside component" errors once on 1/0) | **M** |
 | 3 | **Layer mapping**: interconnect → Si 1/0 (override exists: `InterconnectSettings.GdsLayer`, per-process plans #939/#960); drop/remap the `bb_body` 1003/0 frame and demofab pin layers 501/*; pin labels stay on 1/10 (PinRec — already the export's label layer) | **S** |
 | 4 | **SiEPIC pin/waveguide conventions**: PinRec pin shapes with SiEPIC geometry + Waveguide (1/99) guide shapes on routes, Manhattan end segments | **M** |
 | 5 | **`opt_in_*` measurement labels on Text (10/0)** at each injection GC (unique, ≤10 µm from tip) | **S** |
-| 6 | **Floorplan (99/0) box + die fit**: current MZI is 620 µm wide on the measured layers vs the 605 µm limit; an EBeam re-layout on the 127 µm GC grid fixes this by construction | **S** |
+| 6 | **Floorplan (99/0) box + die fit**: current MZI is 620 µm wide on the measured layers vs the 605 µm limit; an EBeam re-layout on the 127 µm GC grid fixes this by construction | **S** — **die fit closed** (#1310): the EBeam MZI measures 307.373 × 147.228 µm on layers (1,0)+(4,0), inside 605 × 410 µm by construction; the (99,0) floorplan box itself is still not emitted by the exporter |
 | 7 | **Black-box GC fidelity**: the existing klayout post-pass (`SiepicCellUpgradeWriter`) already swaps stubs for real foundry cells, but openEBL requires the PDK's unmodified cell names/origins — the upgrade keeps stub names/labels, so an EBeam tapeout profile must place the real GC cells as-is | **M** |
 | 8 | **Tapeout export profile**: top-cell/filename convention (`openEBL_<user>.gds`), single top cell (already holds: `ConnectAPIC_Design`) | **S** |
 

@@ -106,7 +106,7 @@ public class OpenEblMziReadinessTests
     /// When LUNIMA_OPENEBL_ARTIFACT_DIR is set, copies the export script, the GDS,
     /// the checker and its raw output there (the readiness report quotes them).
     /// </summary>
-    private static void CopyArtifacts(
+    internal static void CopyArtifacts(
         string workDir, string scriptPath, string gdsPath, string checkerPath, string checkerOutput)
     {
         var artifactDir = Environment.GetEnvironmentVariable("LUNIMA_OPENEBL_ARTIFACT_DIR");
@@ -126,7 +126,7 @@ public class OpenEblMziReadinessTests
     /// gdsfactory — the openEBL check port does not need it, and the CI runner
     /// installs exactly these three packages.
     /// </summary>
-    private static async Task<string?> FindOpenEblCheckPythonAsync()
+    internal static async Task<string?> FindOpenEblCheckPythonAsync()
     {
         var envs = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");
@@ -176,7 +176,7 @@ public class OpenEblMziReadinessTests
     /// openEBL's <c>run_verification.py</c> (SiEPIC layout_check) requires.
     /// Last stdout line is the error count, like the original.
     /// </summary>
-    private const string SubmissionCheckerScript = """
+    internal const string SubmissionCheckerScript = """
         import os, sys
         import xml.etree.ElementTree as ET
         import klayout.db as pya
@@ -254,16 +254,30 @@ public class OpenEblMziReadinessTests
             print('No shapes found in the specified layers.')
             num_errors += 1
 
-        # Black-box census: allowed BB cells, plus leftover 998/0 shapes elsewhere.
+        # Black-box census, mirroring the genuine script's replace-then-count flow:
+        # allow-listed cells count as REPLACED, so their whole internal hierarchy is
+        # exempt — the foundry GC carries its 998/0 polygons in subcells (named TEXT),
+        # which the genuine script never sees after replace_cell swaps the GC for a dummy.
         bb_found = sorted({c.name.split('$')[0] for c in layout.each_cell()
                            if c.name.split('$')[0] in BB_CELLS})
         print('Performing Black Box cell replacement check')
         for name in bb_found:
             print(' - black box cell: %s' % name)
         print(' - Number of black box cells to be replaced: %s' % len(bb_found))
+
+        def subtree_indexes(cell):
+            result = {cell.cell_index()}
+            for inst in cell.each_inst():
+                result |= subtree_indexes(inst.cell)
+            return result
+
+        exempt = set()
+        for c in layout.each_cell():
+            if c.name.split('$')[0] in BB_CELLS:
+                exempt |= subtree_indexes(c)
         li998 = layout.find_layer(pya.LayerInfo(998, 0))
         unreplaced = sorted({c.name for c in layout.each_cell()
-                             if c.name.split('$')[0] not in BB_CELLS
+                             if c.cell_index() not in exempt
                              and li998 is not None and not c.shapes(li998).is_empty()})
         print(' - Number of unreplaced BB cells: %s' % len(unreplaced))
         if unreplaced:

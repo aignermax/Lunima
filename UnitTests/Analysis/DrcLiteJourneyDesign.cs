@@ -53,6 +53,11 @@ internal sealed class DrcLiteJourneyDesign
     public WaveguideConnection? SpacingConnectionB { get; private set; }
     /// <summary>The router-produced connection whose bends fall below the Cornerstone process floor (30 µm).</summary>
     public WaveguideConnection? BendConnection { get; private set; }
+    /// <summary>
+    /// Fiber-side pins of the placed grating couplers: the GC is the design's fiber
+    /// interface, so its fiber port is an external port, not a dangling waveguide pin.
+    /// </summary>
+    public List<PhysicalPin> ExternalPortPins { get; } = new();
 
     /// <summary>
     /// Broken design: one dangling pin, one cross-PDK connection (width 0.5 vs 1.2 µm,
@@ -74,6 +79,7 @@ internal sealed class DrcLiteJourneyDesign
         // coupler's remaining pins feed a Cornerstone-only Straight loop — keeping the
         // downstream chain single-PDK is what keeps the mismatch count at exactly ×2.
         var gc = design.Place(siepic, "Grating Coupler TE 1550", 0, 0);
+        design.ExternalPortPins.Add(Pin(gc, "port 1"));
         var yb = design.Place(siepic, "Y-Branch 1550", 60, 10.2);
         var cs1 = design.Place(cornerstone, "Coupler", 200, 0);
         var stA = design.Place(cornerstone, "Straight", 400, 0);
@@ -114,6 +120,7 @@ internal sealed class DrcLiteJourneyDesign
             siepic.Process.GetMinWaveguideSpacingMicrometersOrDefault());
 
         var gc = design.Place(siepic, "Grating Coupler TE 1550", 0, 0);
+        design.ExternalPortPins.Add(Pin(gc, "port 1"));
         var yb = design.Place(siepic, "Y-Branch 1550", 60, 10.2);
         var dc = design.Place(siepic, "Directional Coupler TE 1550", 200, 0);
         var taper = design.Place(siepic, "Taper TE 1550", 400, 0);
@@ -173,6 +180,7 @@ internal sealed class DrcLiteJourneyDesign
         right.PhysicalX = rightX;
         right.PhysicalY = 340;
         var gc2 = design.Place(siepic, "Grating Coupler TE 1550", 0, 411.3);
+        design.ExternalPortPins.Add(Pin(gc2, "port 1"));
         var term5 = design.Place(siepic, "Terminator TE 1550", rightX + 270, 462.5);
 
         design.Components.Add(left);
