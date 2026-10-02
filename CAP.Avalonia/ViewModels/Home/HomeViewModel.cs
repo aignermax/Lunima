@@ -60,6 +60,12 @@ public partial class HomeViewModel : ObservableObject
     /// <summary>Shipped example designs; empty when none are installed.</summary>
     public ObservableCollection<ExampleDesign> Examples { get; } = new();
 
+    /// <summary>
+    /// The "Learn Lunima" list: the guided tours in learning order. Data-driven
+    /// so the next tour is one more entry, not another hand-made button row.
+    /// </summary>
+    public ObservableCollection<HomeTourEntry> TourEntries { get; } = new();
+
     /// <summary>True when any shipped examples were found (shows the Examples section).</summary>
     [ObservableProperty]
     private bool _hasExamples;
@@ -122,6 +128,29 @@ public partial class HomeViewModel : ObservableObject
         _reopenLastProjectOnStartup = preferences.GetReopenLastProjectOnStartup();
         RefreshRecentProjects();
         RefreshExamples();
+        RefreshTourEntries();
+    }
+
+    /// <summary>
+    /// Rebuilds the Learn-Lunima list. The entries re-resolve their localized
+    /// texts on rebuild, so — like the examples list — a language switched in
+    /// Settings since startup shows on the next <see cref="Show"/>.
+    /// </summary>
+    private void RefreshTourEntries()
+    {
+        TourEntries.Clear();
+        TourEntries.Add(new HomeTourEntry(1, "🎓",
+            "Home.Learn.FirstSteps", "Home.Learn.FirstStepsDescription",
+            "Home.LearnTutorialTip", LearnTutorialCommand));
+        TourEntries.Add(new HomeTourEntry(2, "⏱",
+            "Home.WatchComputeTour", "Home.Learn.WatchComputeDescription",
+            "Home.WatchComputeTourTip", WatchComputeTourCommand));
+        TourEntries.Add(new HomeTourEntry(3, "🧮",
+            "Home.RunProgramTour", "Home.Learn.RunProgramDescription",
+            "Home.RunProgramTourTip", RunProgramTourCommand));
+        TourEntries.Add(new HomeTourEntry(4, "🔗",
+            "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
+            "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
     }
 
     /// <summary>Rebuilds the shipped-examples list from disk.</summary>
@@ -173,6 +202,7 @@ public partial class HomeViewModel : ObservableObject
     {
         RefreshRecentProjects();
         RefreshExamples();
+        RefreshTourEntries();
         IsHomeVisible = true;
     }
 

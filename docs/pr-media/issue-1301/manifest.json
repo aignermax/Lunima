@@ -1,0 +1,10 @@
+[
+  {
+    "file": "home-learn-list-en.png",
+    "caption": "Home in English: the four guided tours are one numbered \u0027Learn Lunima\u0027 list in learning order \u2014 First steps, Watch it compute, Run a program, Connect two chiplets \u2014 each row one full-width entry with a one-line description. Placement: directly under New/Open on the Home card, because a first-time user must see the start-here path before examples and recents."
+  },
+  {
+    "file": "home-learn-list-de.png",
+    "caption": "Home in German: the long labels that previously wrapped the tour buttons across three rows now sit in the same single-column list \u2014 no wrapped button rows, nothing clipped."
+  }
+]
