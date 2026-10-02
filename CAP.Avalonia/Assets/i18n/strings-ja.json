@@ -82,6 +82,12 @@
   "Analysis.Spectrum.Complete": "スペクトル完了: {0} 点",
   "Analysis.Spectrum.NoLight": "中止 — レーザーがオンになっていません。エラーコンソールを参照してください。",
   "Analysis.Spectrum.Running": "波長スイープ実行中（{0} ステップ）...",
+  "Analysis.Spectrum.Measured.LoadDialogTitle": "測定スペクトルの読み込み",
+  "Analysis.Spectrum.Measured.LoadFailed": "測定スペクトルを読み込めませんでした: {0}",
+  "Analysis.Spectrum.Measured.LegendLabel": "測定値",
+  "Analysis.Spectrum.Measured.ResultWithNg": "測定: FSR = {0} ± {1} nm, n_g = {2} (ΔL = {3} µm)",
+  "Analysis.Spectrum.Measured.ResultNoNg": "測定: FSR = {0} ± {1} nm",
+  "Analysis.Spectrum.Measured.NoFringes": "測定: フリンジが見つかりません（平坦なスペクトル）。",
   "Analysis.Sweep.Complete": "スイープ完了：{0} 点",
   "Analysis.Sweep.Failed": "スイープに失敗しました：{0}",
   "Analysis.Sweep.NoDataPoints": "データ点がありません",
@@ -1596,5 +1602,11 @@
   "LogicPanelHelp.RunResetTitle": "実行とリセット",
   "LogicPanelHelp.RunResetBody": "「実行」は選択したペースで自動的にクロックを進め、各ティックは「クロックを1ステップ進める」1回分で、入力トグルは実行中も操作できます。「リセット」はネットワークを組み直さず、全レジスタを電源投入時の状態に戻します。",
   "LogicPanelTimelineHelp.WaveformTitle": "同じイベントを波形レーンで",
-  "LogicPanelTimelineHelp.WaveformBody": "同じイベントが下に、名前付き信号ごとの 0/1 ステップ波形として描かれます。金色の縦線は「── クロック #k ──」の境界で、白いカーソルはリプレイ中の時刻です。エッジは実際の到着時刻 L·n_g/c に置かれ、横方向の距離は光学経路長そのものです。"
+  "LogicPanelTimelineHelp.WaveformBody": "同じイベントが下に、名前付き信号ごとの 0/1 ステップ波形として描かれます。金色の縦線は「── クロック #k ──」の境界で、白いカーソルはリプレイ中の時刻です。エッジは実際の到着時刻 L·n_g/c に置かれ、横方向の距離は光学経路長そのものです。",
+  "Spectrum.Measured.LoadButton": "測定スペクトルを読み込む…",
+  "Spectrum.Measured.LoadTip": "ラボで出力した 2 列 CSV（波長・パワー）を選ぶと、シミュレーション結果に重ねて表示されます。",
+  "Spectrum.Measured.ArmImbalance": "ΔL (µm)",
+  "Spectrum.Measured.ClearTip": "測定スペクトルのオーバーレイを削除",
+  "Spectrum.Measured.HelpTitle": "測定スペクトルのオーバーレイ",
+  "Spectrum.Measured.HelpBody": "測定スペクトル（波長とパワーの列を持つ CSV）をシミュレーション結果に重ねます。FSR はフリンジ間隔で、アーム不平衡 ΔL を持つ MZI では群屈折率は n_g = λ²/(FSR·ΔL) です。"
 }

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:oxy="using:OxyPlot.Avalonia"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.WavelengthSpectrumPanel"
@@ -58,6 +59,51 @@
                         Command="{Binding BottomPanel.Analysis.Spectrum.CancelSweepCommand}"/>
             </StackPanel>
         </WrapPanel>
+
+        <!-- Measured-spectrum overlay (#1335): load a lab CSV, overlay it on the
+             simulated transmission, show extracted FSR / n_g. ΔL only feeds the
+             n_g formula, so the input hides until an overlay is loaded. -->
+        <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+            <StackPanel Margin="0,0,12,4" VerticalAlignment="Bottom">
+                <TextBlock Text=" " FontSize="9" Margin="0,0,0,1"/>
+                <Button Content="{loc:Localize Spectrum.Measured.LoadButton}" Classes="analysis" Background="#3d3d3d"
+                        Command="{Binding BottomPanel.Analysis.Spectrum.Overlay.LoadMeasuredCommand}"
+                        IsEnabled="{Binding BottomPanel.Analysis.Spectrum.Overlay.IsLoading, Converter={x:Static BoolConverters.Not}}"
+                        ToolTip.Tip="{loc:Localize Spectrum.Measured.LoadTip}"/>
+            </StackPanel>
+            <StackPanel Margin="0,0,12,4"
+                        IsVisible="{Binding BottomPanel.Analysis.Spectrum.Overlay.HasOverlay}">
+                <TextBlock Text="{loc:Localize Spectrum.Measured.ArmImbalance}" Foreground="Gray" FontSize="9" Margin="0,0,0,1"/>
+                <NumericUpDown Value="{Binding BottomPanel.Analysis.Spectrum.Overlay.ArmImbalanceUm}"
+                               Minimum="0" Maximum="10000" Increment="10" Width="120" FormatString="F0"/>
+            </StackPanel>
+            <StackPanel Margin="0,0,12,4" VerticalAlignment="Bottom"
+                        IsVisible="{Binding BottomPanel.Analysis.Spectrum.Overlay.HasOverlay}">
+                <TextBlock Text=" " FontSize="9" Margin="0,0,0,1"/>
+                <Button Content="×" Classes="analysis" Background="#3d3d3d" Width="26"
+                        Command="{Binding BottomPanel.Analysis.Spectrum.Overlay.ClearMeasuredCommand}"
+                        ToolTip.Tip="{loc:Localize Spectrum.Measured.ClearTip}"/>
+            </StackPanel>
+            <controls:HelpFlyoutButton VerticalAlignment="Bottom" Margin="0,0,0,4"
+                                       Title="{loc:Localize Spectrum.Measured.HelpTitle}">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff" MaxWidth="380"
+                               Text="{loc:Localize Spectrum.Measured.HelpBody}"/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </WrapPanel>
+
+        <!-- Measured-spectrum result line: FSR ± std (+ n_g when ΔL > 0), or "no fringes". -->
+        <TextBlock Text="{Binding BottomPanel.Analysis.Spectrum.Overlay.ResultText}"
+                   Foreground="#a8d8a8" FontSize="10" Margin="0,2,0,2"
+                   IsVisible="{Binding BottomPanel.Analysis.Spectrum.Overlay.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   TextWrapping="Wrap"/>
+
+        <!-- Inline parse error (line number from the reader), never a modal dialog. -->
+        <TextBlock Text="{Binding BottomPanel.Analysis.Spectrum.Overlay.ErrorText}"
+                   Foreground="#e08080" FontSize="10" Margin="0,2,0,2"
+                   IsVisible="{Binding BottomPanel.Analysis.Spectrum.Overlay.ErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   TextWrapping="Wrap"/>
 
         <!-- Status -->
         <TextBlock Text="{Binding BottomPanel.Analysis.Spectrum.StatusText}"

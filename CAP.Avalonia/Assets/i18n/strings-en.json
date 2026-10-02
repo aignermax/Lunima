@@ -82,6 +82,12 @@
   "Analysis.Spectrum.Complete": "Spectrum complete: {0} points",
   "Analysis.Spectrum.NoLight": "Aborted — no laser switched on. See Error Console.",
   "Analysis.Spectrum.Running": "Sweeping wavelength ({0} steps)...",
+  "Analysis.Spectrum.Measured.LoadDialogTitle": "Load measured spectrum",
+  "Analysis.Spectrum.Measured.LoadFailed": "Could not load measured spectrum: {0}",
+  "Analysis.Spectrum.Measured.LegendLabel": "Measured",
+  "Analysis.Spectrum.Measured.ResultWithNg": "Measured: FSR = {0} ± {1} nm, n_g = {2} (ΔL = {3} µm)",
+  "Analysis.Spectrum.Measured.ResultNoNg": "Measured: FSR = {0} ± {1} nm",
+  "Analysis.Spectrum.Measured.NoFringes": "Measured: no fringes found (flat spectrum).",
   "Analysis.Sweep.Complete": "Sweep complete: {0} points",
   "Analysis.Sweep.Failed": "Sweep failed: {0}",
   "Analysis.Sweep.NoDataPoints": "No data points",
@@ -1596,5 +1602,11 @@
   "LogicPanelHelp.RunResetTitle": "Run and Reset",
   "LogicPanelHelp.RunResetBody": "'Run' clocks the network on its own at the selected cadence; every tick is one 'Step clock' press, and input toggles stay live. 'Reset' returns all registers to their power-up state without rebuilding the network.",
   "LogicPanelTimelineHelp.WaveformTitle": "The same events as waveform lanes",
-  "LogicPanelTimelineHelp.WaveformBody": "The same events draw below as one 0/1 step trace per named signal. Gold verticals are '── clock #k ──' boundaries; the white cursor is the replayed instant. Edges sit at real arrival times L·n_g/c — horizontal distance is optical path length."
+  "LogicPanelTimelineHelp.WaveformBody": "The same events draw below as one 0/1 step trace per named signal. Gold verticals are '── clock #k ──' boundaries; the white cursor is the replayed instant. Edges sit at real arrival times L·n_g/c — horizontal distance is optical path length.",
+  "Spectrum.Measured.LoadButton": "Load measured spectrum…",
+  "Spectrum.Measured.LoadTip": "Pick a two-column CSV (wavelength, power) exported by your lab setup; it is overlaid on the simulated spectrum.",
+  "Spectrum.Measured.ArmImbalance": "ΔL (µm)",
+  "Spectrum.Measured.ClearTip": "Remove the measured-spectrum overlay",
+  "Spectrum.Measured.HelpTitle": "Measured spectrum overlay",
+  "Spectrum.Measured.HelpBody": "Overlay a measured spectrum (CSV with wavelength + power columns) on the simulated one. FSR is the fringe spacing; for a MZI with arm imbalance ΔL the group index is n_g = λ²/(FSR·ΔL)."
 }

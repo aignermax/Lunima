@@ -82,6 +82,12 @@
   "Analysis.Spectrum.Complete": "Spektrum fertig: {0} Punkte",
   "Analysis.Spectrum.NoLight": "Abgebrochen — kein Laser eingeschaltet. Siehe Fehlerkonsole.",
   "Analysis.Spectrum.Running": "Wellenlängen-Sweep läuft ({0} Schritte)...",
+  "Analysis.Spectrum.Measured.LoadDialogTitle": "Gemessenes Spektrum laden",
+  "Analysis.Spectrum.Measured.LoadFailed": "Gemessenes Spektrum konnte nicht geladen werden: {0}",
+  "Analysis.Spectrum.Measured.LegendLabel": "Gemessen",
+  "Analysis.Spectrum.Measured.ResultWithNg": "Gemessen: FSR = {0} ± {1} nm, n_g = {2} (ΔL = {3} µm)",
+  "Analysis.Spectrum.Measured.ResultNoNg": "Gemessen: FSR = {0} ± {1} nm",
+  "Analysis.Spectrum.Measured.NoFringes": "Gemessen: keine Interferenzminima gefunden (flaches Spektrum).",
   "Analysis.Sweep.Complete": "Sweep abgeschlossen: {0} Punkte",
   "Analysis.Sweep.Failed": "Sweep fehlgeschlagen: {0}",
   "Analysis.Sweep.NoDataPoints": "Keine Datenpunkte",
@@ -1596,5 +1602,11 @@
   "LogicPanelHelp.RunResetTitle": "Run und Reset",
   "LogicPanelHelp.RunResetBody": "„Starten“ lässt das Netzwerk im gewählten Tempo von selbst takten — jeder Tick ist genau ein „Takt weiterschalten“ — und die Eingänge bleiben bedienbar. „Zurücksetzen“ bringt alle Register ohne Neuaufbau in den Einschaltzustand zurück.",
   "LogicPanelTimelineHelp.WaveformTitle": "Die gleichen Ereignisse als Signalverläufe",
-  "LogicPanelTimelineHelp.WaveformBody": "Die gleichen Ereignisse zeichnen unten je einen 0/1-Schrittverlauf pro benanntem Signal. Goldene Vertikallinien sind die „── Takt #k ──“-Grenzen, der weiße Cursor ist der wiedergegebene Zeitpunkt. Kanten sitzen an echten Ankunftszeiten L·n_g/c — der horizontale Abstand ist echte optische Weglänge."
+  "LogicPanelTimelineHelp.WaveformBody": "Die gleichen Ereignisse zeichnen unten je einen 0/1-Schrittverlauf pro benanntem Signal. Goldene Vertikallinien sind die „── Takt #k ──“-Grenzen, der weiße Cursor ist der wiedergegebene Zeitpunkt. Kanten sitzen an echten Ankunftszeiten L·n_g/c — der horizontale Abstand ist echte optische Weglänge.",
+  "Spectrum.Measured.LoadButton": "Gemessenes Spektrum laden…",
+  "Spectrum.Measured.LoadTip": "Zweispaltige CSV (Wellenlänge, Leistung) aus dem Labor wählen; sie wird über das simulierte Spektrum gelegt.",
+  "Spectrum.Measured.ArmImbalance": "ΔL (µm)",
+  "Spectrum.Measured.ClearTip": "Messkurven-Overlay entfernen",
+  "Spectrum.Measured.HelpTitle": "Messkurven-Overlay",
+  "Spectrum.Measured.HelpBody": "Lege ein gemessenes Spektrum (CSV mit Wellenlängen- und Leistungsspalte) über die Simulation. FSR ist der Abstand der Interferenzminima; bei einem MZI mit Armlängendifferenz ΔL gilt n_g = λ²/(FSR·ΔL)."
 }

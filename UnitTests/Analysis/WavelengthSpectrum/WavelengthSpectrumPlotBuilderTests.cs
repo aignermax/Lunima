@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CAP_Core.Analysis.WavelengthSpectrum;
 using CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum;
+using OxyPlot;
 using OxyPlot.Annotations;
 using OxyPlot.Axes;
 using OxyPlot.Series;
@@ -123,5 +124,30 @@ public class WavelengthSpectrumPlotBuilderTests
             Array.Empty<TransmissionCurve>(), _ => null, DesignWavelengthNm);
 
         model.Series.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void BuildPlotModel_WithMeasuredOverlay_AddsDashedMeasuredSeries()
+    {
+        var measured = new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrum(
+            new double[] { 1500, 1550, 1600 }, new[] { 0.4, 0.6, 0.4 }, "lab.csv");
+
+        var model = WavelengthSpectrumPlotBuilder.BuildPlotModel(
+            new[] { CreateCurve() }, _ => null, DesignWavelengthNm, measured);
+
+        model.Series.Count.ShouldBe(2);
+        var measuredSeries = model.Series.Cast<LineSeries>().Last();
+        measuredSeries.Title.ShouldBe("Measured");
+        measuredSeries.LineStyle.ShouldBe(LineStyle.Dash);
+        measuredSeries.Points.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void BuildPlotModel_WithoutMeasuredOverlay_HasOnlySimulatedSeries()
+    {
+        var model = WavelengthSpectrumPlotBuilder.BuildPlotModel(
+            new[] { CreateCurve() }, _ => null, DesignWavelengthNm, measured: null);
+
+        model.Series.Count.ShouldBe(1);
     }
 }
