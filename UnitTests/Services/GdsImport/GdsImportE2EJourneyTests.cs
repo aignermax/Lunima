@@ -84,8 +84,8 @@ public class GdsImportE2EJourneyTests : IDisposable
         MarkOutputCouplersListenOnly(children1);
         var simulation = await new SimulationService().RunAsync(canvas1);
         simulation.Success.ShouldBeTrue($"step 4: simulation must run — {simulation.ErrorMessage}");
-        simulation.SourceConfigs.Select(s => s.ComponentId).Distinct().Count().ShouldBe(1,
-            "step 4: only the input coupler injects; the two output couplers listen");
+        simulation.LightSourceCount.ShouldBe(1,
+            "step 4: only the input coupler injects (on its fiber pin only); the two output couplers listen");
         foreach (var outputPin in OutputCouplerPins(children1))
         {
             ArrivingAmplitudeAt(simulation, outputPin).ShouldBeGreaterThan(NoiseFloorAmplitude,
