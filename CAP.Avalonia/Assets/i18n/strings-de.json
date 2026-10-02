@@ -373,6 +373,7 @@
   "Examples.FullAdder.Description": "Addiere zwei Bits plus Übertrag — der Baustein jedes Rechners.",
   "Examples.HalfAdder.Description": "Addiere zwei Bits — deine erste Rechenschaltung.",
   "Examples.MachZehnder.Description": "Teile Licht in zwei Pfade und führe es wieder zusammen — das Hello World der Photonik.",
+  "Examples.EBeamMachZehnder.Description": "Der Mach-Zehnder aus dem echten SiEPIC-EBeam-PDK — Gitterkoppler in einem 127-µm-Testarray, dimensioniert für einen openEBL-Chip.",
   "Examples.Mux.Description": "Ein 2-zu-1-Multiplexer: Ein Auswahl-Bit wählt zwischen zwei Eingängen.",
   "Examples.NotGate.Description": "Dein erstes Logikgatter: ein NOT aus einem einzigen NAND.",
   "Examples.Not4bit.Description": "Vier NOT-Gatter nebeneinander: A0–A3 rein, Y0–Y3 raus — die ISA-Instruktion NOT auf Licht.",

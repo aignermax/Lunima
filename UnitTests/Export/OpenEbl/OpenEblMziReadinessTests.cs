@@ -106,7 +106,7 @@ public class OpenEblMziReadinessTests
     /// When LUNIMA_OPENEBL_ARTIFACT_DIR is set, copies the export script, the GDS,
     /// the checker and its raw output there (the readiness report quotes them).
     /// </summary>
-    private static void CopyArtifacts(
+    internal static void CopyArtifacts(
         string workDir, string scriptPath, string gdsPath, string checkerPath, string checkerOutput)
     {
         var artifactDir = Environment.GetEnvironmentVariable("LUNIMA_OPENEBL_ARTIFACT_DIR");

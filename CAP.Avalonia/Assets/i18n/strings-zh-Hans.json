@@ -373,6 +373,7 @@
   "Examples.FullAdder.Description": "把两个比特连同进位相加——每台计算机的基本构件。",
   "Examples.HalfAdder.Description": "把两个比特相加——你的第一个算术电路。",
   "Examples.MachZehnder.Description": "把光分成两条路径再重新合并——光子学的「Hello World」。",
+  "Examples.EBeamMachZehnder.Description": "采用真实 SiEPIC EBeam PDK 构建的马赫-曾德尔干涉仪——127 µm 间距测试阵列光栅耦合器,尺寸符合 openEBL 芯片要求。",
   "Examples.Mux.Description": "2 选 1 多路复用器:一个选择位在两个输入之间切换。",
   "Examples.NotGate.Description": "你的第一个逻辑门:用一个 NAND 搭建 NOT。",
   "Examples.Not4bit.Description": "四个 NOT 门并排:A0–A3 输入,Y0–Y3 输出——在光上运行的 ISA NOT 指令。",
