@@ -18,6 +18,14 @@ namespace CAP_Core.Components.Connections
         /// <summary>Default bend radius in micrometers.</summary>
         public const double DefaultBendRadiusMicrometers = 10.0;
 
+        /// <summary>
+        /// Fallback effective refractive index used for the coherent propagation phase
+        /// when no <see cref="DispersionModel"/> is assigned. 2.45 is the typical n_eff of a
+        /// 220 nm SOI strip waveguide at 1550 nm and matches the <c>ConstantDispersion</c>
+        /// fallback used for PDKs without a materialDispersion block.
+        /// </summary>
+        public const double DefaultEffectiveIndex = 2.45;
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public PhysicalPin StartPin { get; set; }
         public PhysicalPin EndPin { get; set; }
@@ -310,6 +318,29 @@ namespace CAP_Core.Components.Connections
             // |amplitude| = 10^(-loss_dB / 20)
             double amplitudeCoefficient = Math.Pow(10, -TotalLossDb / 20.0);
             TransmissionCoefficient = new Complex(amplitudeCoefficient, 0);
+        }
+
+        /// <summary>
+        /// Effective refractive index at the given wavelength: from <see cref="DispersionModel"/>
+        /// when assigned, otherwise <see cref="DefaultEffectiveIndex"/>.
+        /// </summary>
+        /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+        public double GetEffectiveIndex(double wavelengthNm) =>
+            DispersionModel?.NEffAt(wavelengthNm) ?? DefaultEffectiveIndex;
+
+        /// <summary>
+        /// Loss-only <see cref="TransmissionCoefficient"/> multiplied by the coherent
+        /// propagation phase exp(-i·2π·n_eff(λ)·L/λ) accumulated along the routed path,
+        /// with L = <see cref="PathLengthMicrometers"/>. The magnitude is unchanged;
+        /// only the phase carries the optical path length.
+        /// </summary>
+        /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+        public Complex GetCoherentTransmission(double wavelengthNm)
+        {
+            double wavelengthMicrometers = wavelengthNm / 1000.0;
+            double phaseRadians = -2.0 * Math.PI * GetEffectiveIndex(wavelengthNm)
+                * PathLengthMicrometers / wavelengthMicrometers;
+            return TransmissionCoefficient * Complex.Exp(new Complex(0, phaseRadians));
         }
 
         /// <summary>

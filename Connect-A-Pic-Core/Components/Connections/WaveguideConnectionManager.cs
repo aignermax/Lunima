@@ -59,6 +59,19 @@ public partial class WaveguideConnectionManager
     public double DefaultPropagationLossDbPerCm { get; set; } = 0.5;
 
     /// <summary>
+    /// Opt-in coherent propagation-phase mode for top-level routed waveguide
+    /// connections (issue #1319). When true, the S-matrix transfer of every optical
+    /// routed connection carries the propagation phase exp(-i·2π·n_eff(λ)·L/λ) on top
+    /// of the loss-only amplitude, so routed-path length differences (e.g. an MZI arm
+    /// meander) produce interference. Default false: every existing design, golden
+    /// file and logic truth table is unaffected. Frozen paths inside ComponentGroups
+    /// are deliberately not phase-aware yet. This flag is the future anchor for a UI
+    /// toggle and .lun persistence; it lives here because this manager is shared by
+    /// the canvas and every simulation grid built from it.
+    /// </summary>
+    public bool EnableCoherentPropagationPhase { get; set; } = false;
+
+    /// <summary>
     /// Default bend loss applied to new connections (dB per 90° bend).
     /// </summary>
     public double DefaultBendLossDbPer90Deg { get; set; } = 0.05;
@@ -829,8 +842,13 @@ public partial class WaveguideConnectionManager
     /// (e.g. the cross-chiplet edge-coupler mode-overlap loss, issue #1228). Null keeps
     /// the raw transmission coefficients.
     /// </param>
+    /// <param name="wavelengthNm">
+    /// Wavelength in nm at which the system matrix is being built. Only used when
+    /// <see cref="EnableCoherentPropagationPhase"/> is on, to evaluate n_eff(λ).
+    /// </param>
     public Dictionary<(Guid PinIdInflow, Guid PinIdOutflow), Complex> GetConnectionTransfers(
-        Func<WaveguideConnection, double>? transmissionFactor = null)
+        Func<WaveguideConnection, double>? transmissionFactor = null,
+        double wavelengthNm = 1550.0)
     {
         // Snapshot under the lock: the crossing pass may swap connections
         // structurally on the routing thread while the S-matrix is being built.
@@ -844,7 +862,11 @@ public partial class WaveguideConnectionManager
                 continue;
             }
 
-            var coefficient = conn.TransmissionCoefficient;
+            // Metal traces and cross-chiplet free-space facet links are not routed
+            // optical waveguides — the waveguide phase model does not apply to them.
+            var coefficient = EnableCoherentPropagationPhase && !conn.IsElectrical && !conn.IsCrossChipletFacetLink
+                ? conn.GetCoherentTransmission(wavelengthNm)
+                : conn.TransmissionCoefficient;
             if (transmissionFactor != null)
             {
                 coefficient *= transmissionFactor(conn);
