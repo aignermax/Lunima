@@ -3,6 +3,8 @@
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:oxy="using:OxyPlot.Avalonia"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
              x:Class="CAP.Avalonia.Views.Panels.WavelengthSpectrumPanel"
              x:DataType="vm:MainViewModel">
 
@@ -59,8 +61,22 @@
             </StackPanel>
         </WrapPanel>
 
-        <!-- Status -->
-        <TextBlock Text="{Binding BottomPanel.Analysis.Spectrum.StatusText}"
+        <!-- Coherent interference toggle (#1333): routed waveguides carry their
+             propagation phase, so a ΔL between arms shows as fringes. Flipping it
+             re-runs the sweep automatically once a first result exists. -->
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+            <CheckBox VerticalAlignment="Center"
+                      IsChecked="{Binding BottomPanel.Analysis.Spectrum.IsCoherentInterference}"
+                      Content="{loc:Localize Spectrum.CoherentToggle}"/>
+            <controls:HelpFlyoutButton VerticalAlignment="Center"
+                                       Title="{loc:Localize SpectrumCoherentHelp.Title}">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <panels:SpectrumCoherentHelpFlyout/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </StackPanel>
+
+        <!-- Status -->        <TextBlock Text="{Binding BottomPanel.Analysis.Spectrum.StatusText}"
                    Foreground="Gray" FontSize="9" Margin="0,2,0,2"
                    IsVisible="{Binding BottomPanel.Analysis.Spectrum.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                    TextWrapping="Wrap"/>

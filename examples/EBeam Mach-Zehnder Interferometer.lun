@@ -1,5 +1,6 @@
 {
   "FormatVersion": "2.0",
+  "CoherentPropagationPhase": true,
   "Components": [
     {
       "TemplateName": "Grating Coupler TE 1550",
