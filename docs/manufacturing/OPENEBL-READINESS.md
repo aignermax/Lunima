@@ -1,0 +1,96 @@
+# openEBL Readiness Report — what a Lunima MZI export needs to pass openEBL's automated checks
+
+**Issue:** #1299 (rung 7 spike, decision support for PR #1197) · **Date:** 2026-10-02 · **Deadline assessed:** openEBL-2026-10 submissions close **2026-10-17**
+**Verdict up front:** [Feasible: **yes, conditionally**](#4-recommendation) — every check is headless-reproducible today, the current export fails them in fully understood ways (16 submission-check errors + 1 functional-verification error, raw output in §2), and the gap list is closable in ~1–2 focused weeks. The non-technical preconditions (SiEPIC course alumni eligibility, fork + PR under a real username) are maintainer tasks.
+
+## 1. What an openEBL submission requires
+
+Source: [SiEPIC/openEBL-2026-10](https://github.com/SiEPIC/openEBL-2026-10) (mirror: jiesun83/openEBL-2026-10). Process: passive SOI 220 nm, single full etch, oxide cladding, fabricated by Applied Nanotools. Submission = fork of the repo, upload one binary file to `submissions/`, filename `openEBL_<username>.gds` (past-participant category; `EBeam_*`/`ELEC413_*`/`SiEPIC_Passives_*` for current courses), green GitHub Actions, then a PR. Two workflows gate the merge:
+
+**a) Submission checks** — [`.github/workflows/run-submission-check.yml`](https://github.com/SiEPIC/openEBL-2026-10/blob/main/.github/workflows/run-submission-check.yml) runs [`run_submission_checks.py`](https://github.com/SiEPIC/openEBL-2026-10/blob/main/run_submission_checks.py) (`pip install klayout SiEPIC siepic_ebeam_pdk packaging`, headless). The script enforces, per file:
+
+- exactly **1 top cell**;
+- **die size**: bounding box of layers (1,0)+(4,0) ≤ **605 µm × 410 µm**;
+- **black-box cells**: only 13 allow-listed GC/SWG cells (`ebeam_gc_te1550`, `GC_TE_1550_8degOxide_BB`, …, hardcoded in the script) may contain BB geometry (layer 998/0); these are IP-replaced at fabrication and **must not be renamed, moved, resized or re-origined**;
+- **layer conformity**: every layer used in the design must exist in the EBeam PDK layer properties (`EBeam.lyp` from `siepic_ebeam_pdk`).
+
+**b) Functional verification** — [`.github/workflows/run-verification.yml`](https://github.com/SiEPIC/openEBL-2026-10/blob/main/.github/workflows/run-verification.yml) runs [`run_verification.py`](https://github.com/SiEPIC/openEBL-2026-10/blob/main/run_verification.py), which calls `SiEPIC.verification.layout_check` (SiEPIC-Tools 0.5.31, [`verification.py`](https://github.com/SiEPIC/SiEPIC-Tools/blob/master/klayout_dot_config/python/SiEPIC/verification.py)). It requires the SiEPIC layout conventions:
+
+- **components**: hierarchical (not flattened) cells wrapped in **DevRec (68/0)**; device-layer shapes outside any DevRec are errors; overlapping DevRecs are errors;
+- **pins**: **PinRec (1/10)** shapes per optical pin; disconnected pins and pin-width mismatches are errors;
+- **waveguides**: **Waveguide (1/99)** guiding shapes; Manhattan end segments, bend-radius and 2-point-path rules;
+- **design-for-test** ([`DFT.xml`](https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/DFT.xml), shipped in `siepic_ebeam_pdk` 0.4.53): an **`opt_in_*` label on Text (10/0)** at every laser-injection grating coupler (format `opt_in_TE_1550_device_<name>`, unique, ≤10 µm from the GC tip, wavelength/polarization must match a DFT laser: 1550/1310, TE/TM); GCs at **0° orientation**, **127 µm pitch, vertical array**, ≥60 µm spacing, ≤1 detector GC above / ≤2 below the laser GC.
+
+Layer table (repo README): Si 1/0 (fabricated), Floorplan 99/0, Text 10/0, DevRec 68/0, PinRec 1/10, Waveguide 1/99, SEM 200/0.
+
+## 2. What we ran, and the exact output
+
+Method (all headless, Windows runner, Python 3.14.3 venv; `klayout==0.30.12`, `SiEPIC==0.5.31`, `siepic_ebeam_pdk==0.4.53`, `nazca==0.6.1` — the same pip set as openEBL's CI):
+
+1. Loaded the shipped `examples/Mach-Zehnder Interferometer.lun` (7 components, 7 connections) through the app's real load path.
+2. Exported it with `SimpleNazcaExporter` (the app's "Whole Layout GDS" path) and ran the generated script under real nazca → 29 KB GDS, single top cell `ConnectAPIC_Design`, cells: demofab `io`/`pd_dp_50`/`eopm_dc_500`/`mmi1x2_sh`/`mmi2x2_dp` etc.
+3. Ran openEBL's **own** `run_submission_checks.py` and `run_verification.py` verbatim against that GDS, plus a klayout-only port of the submission checks that is pinned in CI as the `Category=Slow` test `UnitTests/Export/OpenEbl/OpenEblMziReadinessTests.cs` (its output was byte-identical to the genuine script on the checks both perform).
+
+**`run_submission_checks.py submissions/openEBL_lunima_mzi.gds` → 16 errors (last line = error count):**
+
+```
+Running submission checks for file submissions/openEBL_lunima_mzi.gds
+Error: Bounding box of selected layers (620.000 µm x 51.725 µm) exceeds allowed size 605.000 µm x 410.000 µm
+Performing Black Box cell replacement check
+ - Number of black box cells to be replaced: 0
+ - Number of unreplaced BB cells: 0
+Error: the layer 1600/0 in the design is not defined in the PDK.
+Error: the layer 501/0 in the design is not defined in the PDK.
+Error: the layer 501/1 in the design is not defined in the PDK.
+Error: the layer 10/20 in the design is not defined in the PDK.
+Error: the layer 1004/0 in the design is not defined in the PDK.
+Error: the layer 502/0 in the design is not defined in the PDK.
+Error: the layer 21/0 in the design is not defined in the PDK.
+Error: the layer 1003/0 in the design is not defined in the PDK.
+Error: the layer 10/10 in the design is not defined in the PDK.
+Error: the layer 3/10 in the design is not defined in the PDK.
+Error: the layer 4/10 in the design is not defined in the PDK.
+Error: the layer 3/20 in the design is not defined in the PDK.
+Error: the layer 1/20 in the design is not defined in the PDK.
+Error: the layer 2/10 in the design is not defined in the PDK.
+Error: the layer 1111/0 in the design is not defined in the PDK.
+16
+```
+
+Reading: the single-top-cell and black-box rules pass trivially; the die-size rule fails because demofab geometry on 1/0 spans 620 µm (the MZI is ~1.3 mm wide overall); the 15 layer errors are the demofab component layers plus nazca's default interconnect layer 1111/0 and Lunima's `bb_body` frame layer 1003/0 — none exist in the EBeam layer map.
+
+**`run_verification.py submissions/openEBL_lunima_mzi.gds` → 1 error.** The script prints `Unknown error occurred` because `layout_check` raises inside `find_components` — the export contains **no DevRec (68/0) shapes**, so SiEPIC-Tools finds zero components and aborts before any further rule runs:
+
+```
+Running SiEPIC-Tools automated verification for file submissions/openEBL_lunima_mzi.gds
+Top cell: ConnectAPIC_Design
+Unknown error occurred
+1
+# underlying traceback (reproduced with the same packages):
+# SiEPIC/extend.py, line 1212, in find_components
+# Exception: SiEPIC.extend.find_components: No component found for cell_selected=None
+```
+
+This is a content gap, not a headless limitation: the check itself runs headlessly (openEBL's CI does exactly this), and the waveguide/connectivity/DFT rules were never reached.
+
+## 3. Gap list
+
+| # | Gap | Effort |
+|---|-----|--------|
+| 1 | **EBeam design to export**: the shipped MZI is a Demo-PDK teaching circuit; an EBeam MZI variant must be built from the bundled `CAP-DataAccess/PDKs/siepic-ebeam-pdk.json` (44 components incl. `ebeam_gc_te1550`, MMIs) — GC placement must follow the DFT array rules (127 µm pitch, vertical, 0°) | **M** |
+| 2 | **DevRec (68/0) + component hierarchy**: exporter must wrap each component cell in a DevRec polygon and keep the layout hierarchical (routes currently flatten to top-cell polygons → "shapes outside component" errors once on 1/0) | **M** |
+| 3 | **Layer mapping**: interconnect → Si 1/0 (override exists: `InterconnectSettings.GdsLayer`, per-process plans #939/#960); drop/remap the `bb_body` 1003/0 frame and demofab pin layers 501/*; pin labels stay on 1/10 (PinRec — already the export's label layer) | **S** |
+| 4 | **SiEPIC pin/waveguide conventions**: PinRec pin shapes with SiEPIC geometry + Waveguide (1/99) guide shapes on routes, Manhattan end segments | **M** |
+| 5 | **`opt_in_*` measurement labels on Text (10/0)** at each injection GC (unique, ≤10 µm from tip) | **S** |
+| 6 | **Floorplan (99/0) box + die fit**: current MZI is 620 µm wide on the measured layers vs the 605 µm limit; an EBeam re-layout on the 127 µm GC grid fixes this by construction | **S** |
+| 7 | **Black-box GC fidelity**: the existing klayout post-pass (`SiepicCellUpgradeWriter`) already swaps stubs for real foundry cells, but openEBL requires the PDK's unmodified cell names/origins — the upgrade keeps stub names/labels, so an EBeam tapeout profile must place the real GC cells as-is | **M** |
+| 8 | **Tapeout export profile**: top-cell/filename convention (`openEBL_<user>.gds`), single top cell (already holds: `ConnectAPIC_Design`) | **S** |
+
+## 4. Recommendation
+
+**Feasible for 2026-10-17: yes, conditionally.** Every automated check is reproducible headlessly today (proven above, and the ported submission check now runs in CI), the failures are conventional gaps rather than architectural ones, and the sum of the gaps is ~2 M + 3 M + 3 S ≈ 1–2 focused weeks against a 15-day runway — with the EBeam-MZI example + DevRec/layer export slice (gaps 1–3) as the critical path. Conditions: (a) the slice is green against both openEBL scripts by ~2026-10-10, else defer to the next run; (b) the maintainer confirms openEBL eligibility (the `openEBL_<username>` category is for **past SiEPIC course/workshop participants**) and performs the fork + PR by hand — nothing may be submitted from CI/agents.
+
+**Not feasible** without that focused slice: today's MZI export fails both gates (16 + 1 errors) for structural reasons (demofab cells, no DevRec, no labels, too wide).
+
+---
+*Artifacts of this spike (export script, GDS, checker, raw outputs) were produced locally under `artifacts/openebl-issue-1299/` (gitignored); the durable pin is the CI test `UnitTests/Export/OpenEbl/OpenEblMziReadinessTests.cs`. Nothing was submitted to openEBL.*
