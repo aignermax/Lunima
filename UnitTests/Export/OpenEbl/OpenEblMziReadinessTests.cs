@@ -126,7 +126,7 @@ public class OpenEblMziReadinessTests
     /// gdsfactory — the openEBL check port does not need it, and the CI runner
     /// installs exactly these three packages.
     /// </summary>
-    private static async Task<string?> FindOpenEblCheckPythonAsync()
+    internal static async Task<string?> FindOpenEblCheckPythonAsync()
     {
         var envs = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");
@@ -170,13 +170,16 @@ public class OpenEblMziReadinessTests
     /// (https://github.com/SiEPIC/openEBL-2026-10/blob/main/run_submission_checks.py),
     /// reduced to klayout.db + siepic_ebeam_pdk so it runs without SiEPIC-Tools:
     /// same single-top-cell rule, same 605000 x 410000 dbu bbox over (1,0)+(4,0),
-    /// same black-box census (allow-list + leftover 998/0 shapes), same
-    /// layer-vs-PDK check against the EBeam.lyp layer properties. Adds a
-    /// functional-readiness census (floorplan shapes, opt_in labels) that
-    /// openEBL's <c>run_verification.py</c> (SiEPIC layout_check) requires.
-    /// Last stdout line is the error count, like the original.
+    /// same black-box census (allow-list, then leftover 998/0 shapes counted from the
+    /// top cell down after clearing the allow-listed cells — the genuine script's
+    /// replace-with-empty-cell + hierarchy walk), same layer-vs-PDK check against the
+    /// EBeam.lyp layer properties. Adds a functional-readiness census (floorplan
+    /// shapes, opt_in labels) that openEBL's <c>run_verification.py</c>
+    /// (SiEPIC layout_check) requires. Last stdout line is the error count, like the
+    /// original. Internal so <see cref="OpenEblEBeamSubmissionCheckTests"/> runs the
+    /// identical port against an EBeam-only design.
     /// </summary>
-    private const string SubmissionCheckerScript = """
+    internal const string SubmissionCheckerScript = """
         import os, sys
         import xml.etree.ElementTree as ET
         import klayout.db as pya
@@ -255,16 +258,30 @@ public class OpenEblMziReadinessTests
             num_errors += 1
 
         # Black-box census: allowed BB cells, plus leftover 998/0 shapes elsewhere.
+        # Mirrors the genuine script's semantics: allow-listed BB cells are swapped
+        # for an EMPTY cell (here: cleared in place), then leftover 998/0 shapes are
+        # counted walking the hierarchy from the top cell — shapes inside a swapped
+        # BB cell's own subtree (the PDK's GC cells carry 998/0 TEXT subcells) become
+        # unreachable and do not count, exactly like SiEPIC's replace_cell +
+        # cells_containing_bb_layers.
         bb_found = sorted({c.name.split('$')[0] for c in layout.each_cell()
                            if c.name.split('$')[0] in BB_CELLS})
         print('Performing Black Box cell replacement check')
         for name in bb_found:
             print(' - black box cell: %s' % name)
         print(' - Number of black box cells to be replaced: %s' % len(bb_found))
+        for c in layout.each_cell():
+            if c.name.split('$')[0] in BB_CELLS:
+                c.clear()
+        unreplaced = []
         li998 = layout.find_layer(pya.LayerInfo(998, 0))
-        unreplaced = sorted({c.name for c in layout.each_cell()
-                             if c.name.split('$')[0] not in BB_CELLS
-                             and li998 is not None and not c.shapes(li998).is_empty()})
+        if li998 is not None:
+            seen = set()
+            it = pya.RecursiveShapeIterator(layout, top, li998)
+            while not it.at_end():
+                seen.add(it.cell().name)
+                it.next()
+            unreplaced = sorted(seen)
         print(' - Number of unreplaced BB cells: %s' % len(unreplaced))
         if unreplaced:
             print('ERROR: unidentified black box cells: %s' % unreplaced)
