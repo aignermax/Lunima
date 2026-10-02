@@ -76,9 +76,18 @@ namespace CAP_Core.Logic.Isa
             }
         }
 
+        /// <summary>
+        /// How many <see cref="IsZero"/> consultations this flag answered since
+        /// construction — the trace seam that pins "the flag is consulted exactly
+        /// once per executed <c>JZ</c>" (the same role
+        /// <see cref="PhotonicAdderAlu.LastAddTrace"/> plays for photonic ADDs).
+        /// </summary>
+        public int ConsultationCount { get; private set; }
+
         /// <inheritdoc />
         public bool IsZero(int value)
         {
+            ConsultationCount++;
             var bits = _network.InputPinNames.ToDictionary(name => name, _ => false);
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {

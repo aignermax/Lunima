@@ -23,10 +23,14 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// exception: it keeps AND on Y0–Y3 and moves NOT to its own taps N0–N3
 /// (<see cref="IsaAluSignalMap.CombinedLogicUnitNot"/>), so on it AND and NOT both
 /// run on light (issue #1295) and the toggle label, header and status line name
-/// both operations. The toggle is enabled while the built network is accepted by
-/// any ALU; otherwise a hint points at the shipped examples (4-bit adder, NOT
-/// 4-bit, AND 4-bit, Logic Unit 4-bit). Toggling recreates the machine at power-on
-/// state, and every photonic operation leaves a status line with operands and result
+/// both operations. The zero-detect network (A0–A3 in, Z out) is no ALU, so with
+/// the toggle on it instead moves the machine's one branch decision onto light:
+/// every <c>JZ</c> asks a <see cref="PhotonicZeroFlag"/> whether the accumulator is
+/// zero (issue #1322), and toggle label and header name the zero flag. The toggle
+/// is enabled while the built network is accepted by any ALU or the zero flag;
+/// otherwise a hint points at the shipped examples (4-bit adder, NOT 4-bit, AND
+/// 4-bit, Logic Unit 4-bit, Zero Detect 4-bit). Toggling recreates the machine at
+/// power-on state, and every photonic operation leaves a status line with operands and result
 /// in binary plus the gate count (photonic ADDs also name the light-travel time of
 /// that addition, <see cref="PhotonicAdderAlu.LastAddTrace"/>, issue #1227).
 /// Evaluation is a truth-table walk plus one event-timeline pass over the network —
@@ -54,6 +58,12 @@ public partial class IsaPlaygroundViewModel
     private bool _isPhotonicAndAvailable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAnyPhotonicAvailable))]
+    [NotifyPropertyChangedFor(nameof(IsPhotonicToggleEnabled))]
+    [NotifyPropertyChangedFor(nameof(PhotonicToggleLabel))]
+    private bool _isPhotonicZeroFlagAvailable;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HeaderTitle))]
     private bool _usePhotonicAdder;
 
@@ -64,6 +74,7 @@ public partial class IsaPlaygroundViewModel
     private PhotonicAdderAlu? _photonicAlu;
     private PhotonicNotAlu? _photonicNotAlu;
     private PhotonicAndAlu? _photonicAndAlu;
+    private PhotonicZeroFlag? _photonicZeroFlag;
 
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic ADD ALU while the toggle is on.</summary>
     internal PhotonicAdderAlu? PhotonicAlu => _photonicAlu;
@@ -74,12 +85,17 @@ public partial class IsaPlaygroundViewModel
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic AND ALU while the toggle is on.</summary>
     internal PhotonicAndAlu? PhotonicAndAlu => _photonicAndAlu;
 
+    /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic zero flag while the toggle is on.</summary>
+    internal PhotonicZeroFlag? ZeroFlag => _photonicZeroFlag;
+
     /// <summary>
     /// True while the built network can run at least one operation on the photonic
-    /// chip — the adder signals, the NOT signals or the AND signals.
+    /// chip — the adder signals, the NOT signals, the AND signals or the zero-flag
+    /// signals (A0–A3 in, Z out).
     /// </summary>
     public bool IsAnyPhotonicAvailable =>
-        IsPhotonicAddAvailable || IsPhotonicNotAvailable || IsPhotonicAndAvailable;
+        IsPhotonicAddAvailable || IsPhotonicNotAvailable || IsPhotonicAndAvailable
+        || IsPhotonicZeroFlagAvailable;
 
     /// <summary>
     /// The toggle can be flipped while an accepted network is available and the
@@ -93,16 +109,21 @@ public partial class IsaPlaygroundViewModel
     /// light: the adder label when the network exposes the adder signals, the AND
     /// label when it exposes the AND signals, the NOT label when it only exposes
     /// the NOT signals — and the combined label when the network runs both AND and
-    /// NOT on light (the Logic Unit 4-bit chip, issue #1295).
+    /// NOT on light (the Logic Unit 4-bit chip, issue #1295) — and the zero-flag
+    /// label when the network only decides <c>JZ</c> on light (the Zero Detect
+    /// 4-bit chip, issue #1322).
     /// </summary>
     public string PhotonicToggleLabel =>
-        Translate(IsPhotonicAddAvailable || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable)
+        Translate(IsPhotonicAddAvailable
+                || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable && !IsPhotonicZeroFlagAvailable)
             ? "IsaPlayground.PhotonicAdderToggle"
-            : IsPhotonicAndAvailable && IsPhotonicNotAvailable
-                ? "IsaPlayground.PhotonicAndNotToggle"
-                : IsPhotonicAndAvailable
-                    ? "IsaPlayground.PhotonicAndToggle"
-                    : "IsaPlayground.PhotonicNotToggle");
+            : IsPhotonicZeroFlagAvailable && !IsPhotonicAndAvailable && !IsPhotonicNotAvailable
+                ? "IsaPlayground.PhotonicZeroFlagToggle"
+                : IsPhotonicAndAvailable && IsPhotonicNotAvailable
+                    ? "IsaPlayground.PhotonicAndNotToggle"
+                    : IsPhotonicAndAvailable
+                        ? "IsaPlayground.PhotonicAndToggle"
+                        : "IsaPlayground.PhotonicNotToggle");
 
     /// <summary>
     /// The header title, naming the ALU the machine actually uses so the window
@@ -117,7 +138,9 @@ public partial class IsaPlaygroundViewModel
                     ? "IsaPlayground.TitlePhotonicAndNot"
                     : _photonicAndAlu is not null
                         ? "IsaPlayground.TitlePhotonicAnd"
-                        : "IsaPlayground.TitlePhotonicNot")
+                        : _photonicNotAlu is not null
+                            ? "IsaPlayground.TitlePhotonicNot"
+                            : "IsaPlayground.TitlePhotonicZeroFlag")
             : "IsaPlayground.Title");
 
     /// <summary>Flipping the toggle resets the machine to power-on state with the chosen ALU.</summary>
@@ -164,6 +187,7 @@ public partial class IsaPlaygroundViewModel
         IsPhotonicNotAvailable =
             (PhotonicNotAlu.Accepts(network) && !IsPhotonicAndAvailable)
             || PhotonicNotAlu.Accepts(network, IsaAluSignalMap.CombinedLogicUnitNot);
+        IsPhotonicZeroFlagAvailable = PhotonicZeroFlag.Accepts(network);
     }
 
     /// <summary>
@@ -185,16 +209,19 @@ public partial class IsaPlaygroundViewModel
             _photonicAlu = PhotonicAdderAlu.Accepts(network) ? new PhotonicAdderAlu(network) : null;
             _photonicAndAlu = PhotonicAndAlu.Accepts(network) ? new PhotonicAndAlu(network) : null;
             _photonicNotAlu = CreatePhotonicNotAlu(network);
+            _photonicZeroFlag = PhotonicZeroFlag.Accepts(network) ? new PhotonicZeroFlag(network) : null;
             var golden = new GoldenIsaAlu();
             return new IsaEmulator(_assembledWords, new CompositeIsaAlu(
                 _photonicAlu ?? (IIsaAlu)golden,
                 _photonicNotAlu ?? (IIsaAlu)golden,
-                _photonicAndAlu ?? (IIsaAlu)golden));
+                _photonicAndAlu ?? (IIsaAlu)golden),
+                _photonicZeroFlag);
         }
 
         _photonicAlu = null;
         _photonicNotAlu = null;
         _photonicAndAlu = null;
+        _photonicZeroFlag = null;
         return new IsaEmulator(_assembledWords);
     }
 
