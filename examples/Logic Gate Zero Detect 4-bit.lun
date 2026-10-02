@@ -1,0 +1,1250 @@
+{
+  "FormatVersion": "2.0",
+  "Components": [],
+  "Connections": [
+    {
+      "StartComponentIndex": 0,
+      "StartPinName": "Y",
+      "EndComponentIndex": 2,
+      "EndPinName": "A",
+      "StartComponentId": "group_cb3b8de11f42425d8ee527698b550199",
+      "EndComponentId": "group_092a4496dec3416f902737e29778aac7",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 890,
+          "StartY": 126,
+          "EndX": 950,
+          "EndY": 126,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 950,
+          "StartY": 126,
+          "EndX": 983.9028547398531,
+          "EndY": 139.24953822754844,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 42.69200350586849,
+          "CenterX": 950,
+          "CenterY": 176,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 42.69200350586849
+        },
+        {
+          "Type": "Straight",
+          "StartX": 983.9028547398531,
+          "StartY": 139.24953822754844,
+          "EndX": 1096.097145260147,
+          "EndY": 242.75046177245156,
+          "StartAngleDegrees": 42.69200350586849,
+          "EndAngleDegrees": 42.69200350586849
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1096.097145260147,
+          "StartY": 242.75046177245156,
+          "EndX": 1130,
+          "EndY": 256,
+          "StartAngleDegrees": 42.69200350586849,
+          "EndAngleDegrees": 0,
+          "CenterX": 1130,
+          "CenterY": 206,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -42.69200350586849
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1130,
+          "StartY": 256,
+          "EndX": 1190,
+          "EndY": 256,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 1,
+      "StartPinName": "Y",
+      "EndComponentIndex": 2,
+      "EndPinName": "B",
+      "StartComponentId": "group_abcdf5cfb30943ecb479bcbd38bb5521",
+      "EndComponentId": "group_092a4496dec3416f902737e29778aac7",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 890,
+          "StartY": 386,
+          "EndX": 950,
+          "EndY": 386,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 950,
+          "StartY": 386,
+          "EndX": 982.4292070081707,
+          "EndY": 374.05714824866953,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -40.43493697701187,
+          "CenterX": 950,
+          "CenterY": 336,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": -40.43493697701187
+        },
+        {
+          "Type": "Straight",
+          "StartX": 982.4292070081707,
+          "StartY": 374.05714824866953,
+          "EndX": 1097.5707929918292,
+          "EndY": 275.94285175133047,
+          "StartAngleDegrees": -40.43493697701187,
+          "EndAngleDegrees": -40.43493697701187
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1097.5707929918292,
+          "StartY": 275.94285175133047,
+          "EndX": 1130,
+          "EndY": 264,
+          "StartAngleDegrees": -40.43493697701187,
+          "EndAngleDegrees": 0,
+          "CenterX": 1130,
+          "CenterY": 314,
+          "RadiusMicrometers": 50,
+          "SweepAngleDegrees": 40.43493697701187
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1130,
+          "StartY": 264,
+          "EndX": 1190,
+          "EndY": 264,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 2,
+      "StartPinName": "Y",
+      "EndComponentIndex": 3,
+      "EndPinName": "A",
+      "StartComponentId": "group_092a4496dec3416f902737e29778aac7",
+      "EndComponentId": "group_9e4fb3ab2c824c5ca81b085820bc470f",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 1680,
+          "StartY": 256,
+          "EndX": 1980,
+          "EndY": 256,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    }
+  ],
+  "Groups": [
+    {
+      "GroupDto": {
+        "GroupName": "OR01",
+        "Description": "OR reading (inputs A and B, threshold 0.25) of the shipped \u0027Logic Gate OR-AND\u0027 gate. Role in the 4-bit zero detect: OR01 reads the operand bits A0 and A1 \u2014 its output is 1 when either bit is lit. The cascade composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction.",
+        "Identifier": "group_cb3b8de11f42425d8ee527698b550199",
+        "IdGuid": "649a7fe8-e24c-4160-a5ae-09b35724877c",
+        "ChildComponentGuids": [
+          "4d4ada64-15ad-4284-89d8-713a3d7a490e",
+          "9144dd3d-e679-4dc0-bf82-9c76805bd1ac",
+          "fc28ba95-796d-4e67-9395-27176f8dac82",
+          "7d5d62bd-891a-4f93-a1bf-3d961a92c49e"
+        ],
+        "GridX": 0,
+        "GridY": 0,
+        "PhysicalX": 400,
+        "PhysicalY": 100,
+        "Rotation90CounterClock": 0,
+        "ChildComponentIds": [
+          "input_a_d10bc0116ce04a2f98fc689d46e6376c",
+          "input_b_0950d4b98e9348cba138eda48eb9da77",
+          "combiner_ed5e0ce1c20142e4be69c784f4672ecb",
+          "output_03ef5307e26c4a498d983ebfeaad6687"
+        ],
+        "InternalPaths": [
+          {
+            "PathId": "cd72e302-34c4-400a-a9db-d6c5efb8c72f",
+            "StartComponentId": "input_a_d10bc0116ce04a2f98fc689d46e6376c",
+            "StartComponentGuid": "4d4ada64-15ad-4284-89d8-713a3d7a490e",
+            "StartPinName": "b0",
+            "EndComponentId": "combiner_ed5e0ce1c20142e4be69c784f4672ecb",
+            "EndComponentGuid": "fc28ba95-796d-4e67-9395-27176f8dac82",
+            "EndPinName": "in1",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 500,
+                "StartY": 126,
+                "EndX": 520,
+                "EndY": 126,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "65bcb2e0-261b-48da-b70a-28ea6062f8dd",
+            "StartComponentId": "input_b_0950d4b98e9348cba138eda48eb9da77",
+            "StartComponentGuid": "9144dd3d-e679-4dc0-bf82-9c76805bd1ac",
+            "StartPinName": "b0",
+            "EndComponentId": "combiner_ed5e0ce1c20142e4be69c784f4672ecb",
+            "EndComponentGuid": "fc28ba95-796d-4e67-9395-27176f8dac82",
+            "EndPinName": "in2",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 500,
+                "StartY": 134,
+                "EndX": 520,
+                "EndY": 134,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "411255ef-1d5f-4ecc-bb5a-29cd314078d3",
+            "StartComponentId": "combiner_ed5e0ce1c20142e4be69c784f4672ecb",
+            "StartComponentGuid": "fc28ba95-796d-4e67-9395-27176f8dac82",
+            "StartPinName": "out1",
+            "EndComponentId": "output_03ef5307e26c4a498d983ebfeaad6687",
+            "EndComponentGuid": "7d5d62bd-891a-4f93-a1bf-3d961a92c49e",
+            "EndPinName": "a0",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 770,
+                "StartY": 126,
+                "EndX": 790,
+                "EndY": 126,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          }
+        ],
+        "ExternalPins": [
+          {
+            "PinId": "eb442ba4-32f3-42b5-85e4-932713c882ba",
+            "Name": "A",
+            "InternalComponentId": "input_a_d10bc0116ce04a2f98fc689d46e6376c",
+            "InternalComponentGuid": "4d4ada64-15ad-4284-89d8-713a3d7a490e",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 26,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "4c30cde3-a636-42f8-89bc-ee0a244c3d01",
+            "Name": "B",
+            "InternalComponentId": "input_b_0950d4b98e9348cba138eda48eb9da77",
+            "InternalComponentGuid": "9144dd3d-e679-4dc0-bf82-9c76805bd1ac",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 34,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "f13bfbe3-19d5-4e07-9ad3-766644182285",
+            "Name": "AUX",
+            "InternalComponentId": "combiner_ed5e0ce1c20142e4be69c784f4672ecb",
+            "InternalComponentGuid": "fc28ba95-796d-4e67-9395-27176f8dac82",
+            "InternalPinName": "out2",
+            "RelativeX": 370,
+            "RelativeY": 34,
+            "AngleDegrees": 0
+          },
+          {
+            "PinId": "6d7704e3-ab54-494a-b1b2-bf6a3ef7ff41",
+            "Name": "Y",
+            "InternalComponentId": "output_03ef5307e26c4a498d983ebfeaad6687",
+            "InternalComponentGuid": "7d5d62bd-891a-4f93-a1bf-3d961a92c49e",
+            "InternalPinName": "b0",
+            "RelativeX": 490,
+            "RelativeY": 26,
+            "AngleDegrees": 0
+          }
+        ]
+      },
+      "ChildComponents": [
+        {
+          "Identifier": "input_a_d10bc0116ce04a2f98fc689d46e6376c",
+          "ComponentGuid": "4d4ada64-15ad-4284-89d8-713a3d7a490e",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 400,
+          "Y": 121,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "input_b_0950d4b98e9348cba138eda48eb9da77",
+          "ComponentGuid": "9144dd3d-e679-4dc0-bf82-9c76805bd1ac",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 400,
+          "Y": 129,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "combiner_ed5e0ce1c20142e4be69c784f4672ecb",
+          "ComponentGuid": "fc28ba95-796d-4e67-9395-27176f8dac82",
+          "TemplateName": "2x2 MMI Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 520,
+          "Y": 100,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0,
+            "1": 50
+          },
+          "HumanReadableName": "2x2 MMI Coupler"
+        },
+        {
+          "Identifier": "output_03ef5307e26c4a498d983ebfeaad6687",
+          "ComponentGuid": "7d5d62bd-891a-4f93-a1bf-3d961a92c49e",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 790,
+          "Y": 121,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        }
+      ],
+      "CanvasX": 400,
+      "CanvasY": 100,
+      "TruthTablePinAssignment": {
+        "InputPinNames": [
+          "A",
+          "B"
+        ],
+        "OutputPinNames": [
+          "Y"
+        ],
+        "BiasPinNames": [],
+        "Threshold": 0.25,
+        "InputSignalNames": {
+          "A": "A0",
+          "B": "A1"
+        }
+      }
+    },
+    {
+      "GroupDto": {
+        "GroupName": "OR23",
+        "Description": "OR reading (inputs A and B, threshold 0.25) of the shipped \u0027Logic Gate OR-AND\u0027 gate. Role in the 4-bit zero detect: OR23 reads the operand bits A2 and A3 \u2014 its output is 1 when either bit is lit. The cascade composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction.",
+        "Identifier": "group_abcdf5cfb30943ecb479bcbd38bb5521",
+        "IdGuid": "364446ea-f320-4044-9187-e57ed9ce6eb4",
+        "ChildComponentGuids": [
+          "4542033f-9714-41ec-aa97-343c68a6f565",
+          "b3b81e85-21b1-46b3-b94f-4e13fae3eb1d",
+          "4ec04914-5c59-4d44-865b-6f5cdceab424",
+          "0cfeee57-8273-4d94-8fb5-a570b3fb1432"
+        ],
+        "GridX": 0,
+        "GridY": 0,
+        "PhysicalX": 400,
+        "PhysicalY": 360,
+        "Rotation90CounterClock": 0,
+        "ChildComponentIds": [
+          "input_a_72b0ce0900244aca9483a8b50288871f",
+          "input_b_c595e84f3d0e44518d650d9bfafa81f6",
+          "combiner_7fc194d9b32e4b97809f7e7b5e8e562d",
+          "output_cc9bc2de3acc45119a967565a7864d58"
+        ],
+        "InternalPaths": [
+          {
+            "PathId": "0676e486-4b0d-42a1-814d-a989cab58c67",
+            "StartComponentId": "input_a_72b0ce0900244aca9483a8b50288871f",
+            "StartComponentGuid": "4542033f-9714-41ec-aa97-343c68a6f565",
+            "StartPinName": "b0",
+            "EndComponentId": "combiner_7fc194d9b32e4b97809f7e7b5e8e562d",
+            "EndComponentGuid": "4ec04914-5c59-4d44-865b-6f5cdceab424",
+            "EndPinName": "in1",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 500,
+                "StartY": 386,
+                "EndX": 520,
+                "EndY": 386,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "216d50f8-6b94-4162-a490-0b59023d5a8a",
+            "StartComponentId": "input_b_c595e84f3d0e44518d650d9bfafa81f6",
+            "StartComponentGuid": "b3b81e85-21b1-46b3-b94f-4e13fae3eb1d",
+            "StartPinName": "b0",
+            "EndComponentId": "combiner_7fc194d9b32e4b97809f7e7b5e8e562d",
+            "EndComponentGuid": "4ec04914-5c59-4d44-865b-6f5cdceab424",
+            "EndPinName": "in2",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 500,
+                "StartY": 394,
+                "EndX": 520,
+                "EndY": 394,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "1d656a15-f240-4fc1-90ee-9230479453dd",
+            "StartComponentId": "combiner_7fc194d9b32e4b97809f7e7b5e8e562d",
+            "StartComponentGuid": "4ec04914-5c59-4d44-865b-6f5cdceab424",
+            "StartPinName": "out1",
+            "EndComponentId": "output_cc9bc2de3acc45119a967565a7864d58",
+            "EndComponentGuid": "0cfeee57-8273-4d94-8fb5-a570b3fb1432",
+            "EndPinName": "a0",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 770,
+                "StartY": 386,
+                "EndX": 790,
+                "EndY": 386,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          }
+        ],
+        "ExternalPins": [
+          {
+            "PinId": "576cbbce-ec22-4d24-af13-8e9828147b5e",
+            "Name": "A",
+            "InternalComponentId": "input_a_72b0ce0900244aca9483a8b50288871f",
+            "InternalComponentGuid": "4542033f-9714-41ec-aa97-343c68a6f565",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 26,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "9d33df93-5182-437d-9f0c-30fdae4ff012",
+            "Name": "B",
+            "InternalComponentId": "input_b_c595e84f3d0e44518d650d9bfafa81f6",
+            "InternalComponentGuid": "b3b81e85-21b1-46b3-b94f-4e13fae3eb1d",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 34,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "9574866d-a4a5-4165-9e14-c1fc6552cecf",
+            "Name": "AUX",
+            "InternalComponentId": "combiner_7fc194d9b32e4b97809f7e7b5e8e562d",
+            "InternalComponentGuid": "4ec04914-5c59-4d44-865b-6f5cdceab424",
+            "InternalPinName": "out2",
+            "RelativeX": 370,
+            "RelativeY": 34,
+            "AngleDegrees": 0
+          },
+          {
+            "PinId": "514072cb-7f86-4fde-9e4d-b4cb73cf105e",
+            "Name": "Y",
+            "InternalComponentId": "output_cc9bc2de3acc45119a967565a7864d58",
+            "InternalComponentGuid": "0cfeee57-8273-4d94-8fb5-a570b3fb1432",
+            "InternalPinName": "b0",
+            "RelativeX": 490,
+            "RelativeY": 26,
+            "AngleDegrees": 0
+          }
+        ]
+      },
+      "ChildComponents": [
+        {
+          "Identifier": "input_a_72b0ce0900244aca9483a8b50288871f",
+          "ComponentGuid": "4542033f-9714-41ec-aa97-343c68a6f565",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 400,
+          "Y": 381,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "input_b_c595e84f3d0e44518d650d9bfafa81f6",
+          "ComponentGuid": "b3b81e85-21b1-46b3-b94f-4e13fae3eb1d",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 400,
+          "Y": 389,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "combiner_7fc194d9b32e4b97809f7e7b5e8e562d",
+          "ComponentGuid": "4ec04914-5c59-4d44-865b-6f5cdceab424",
+          "TemplateName": "2x2 MMI Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 520,
+          "Y": 360,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0,
+            "1": 50
+          },
+          "HumanReadableName": "2x2 MMI Coupler"
+        },
+        {
+          "Identifier": "output_cc9bc2de3acc45119a967565a7864d58",
+          "ComponentGuid": "0cfeee57-8273-4d94-8fb5-a570b3fb1432",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 790,
+          "Y": 381,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        }
+      ],
+      "CanvasX": 400,
+      "CanvasY": 360,
+      "TruthTablePinAssignment": {
+        "InputPinNames": [
+          "A",
+          "B"
+        ],
+        "OutputPinNames": [
+          "Y"
+        ],
+        "BiasPinNames": [],
+        "Threshold": 0.25,
+        "InputSignalNames": {
+          "A": "A2",
+          "B": "A3"
+        }
+      }
+    },
+    {
+      "GroupDto": {
+        "GroupName": "ORALL",
+        "Description": "OR reading (inputs A and B, threshold 0.25) of the shipped \u0027Logic Gate OR-AND\u0027 gate. Role in the 4-bit zero detect: ORALL combines the two partial ORs \u2014 its output is 1 when any of A0\u2013A3 is lit. The cascade composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction.",
+        "Identifier": "group_092a4496dec3416f902737e29778aac7",
+        "IdGuid": "f6933add-5235-4433-b1b5-687a5f43a502",
+        "ChildComponentGuids": [
+          "bd45cb6b-3c0a-4a2b-9f00-f3ca4eb4a080",
+          "b53708c4-48f9-4953-ac0a-b849653abb27",
+          "7c07d510-9eb0-424d-8f2f-db111cd53797",
+          "8773ca36-a037-4c03-82f3-7830057993bf"
+        ],
+        "GridX": 0,
+        "GridY": 0,
+        "PhysicalX": 1190,
+        "PhysicalY": 230,
+        "Rotation90CounterClock": 0,
+        "ChildComponentIds": [
+          "input_a_0465ab1c963547118fbf2eefb82db40c",
+          "input_b_9e18a8d24b624b779a0fe5d35be7fbd7",
+          "combiner_cf0900181da041f395fb828f5fa5bafe",
+          "output_fd55cfdc5d294bb09a99d8b34064d111"
+        ],
+        "InternalPaths": [
+          {
+            "PathId": "2b73d306-4ad5-4d81-b57f-9b7790c39146",
+            "StartComponentId": "input_a_0465ab1c963547118fbf2eefb82db40c",
+            "StartComponentGuid": "bd45cb6b-3c0a-4a2b-9f00-f3ca4eb4a080",
+            "StartPinName": "b0",
+            "EndComponentId": "combiner_cf0900181da041f395fb828f5fa5bafe",
+            "EndComponentGuid": "7c07d510-9eb0-424d-8f2f-db111cd53797",
+            "EndPinName": "in1",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 1290,
+                "StartY": 256,
+                "EndX": 1310,
+                "EndY": 256,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "afe96786-1fdc-4156-8af1-893bc2336d23",
+            "StartComponentId": "input_b_9e18a8d24b624b779a0fe5d35be7fbd7",
+            "StartComponentGuid": "b53708c4-48f9-4953-ac0a-b849653abb27",
+            "StartPinName": "b0",
+            "EndComponentId": "combiner_cf0900181da041f395fb828f5fa5bafe",
+            "EndComponentGuid": "7c07d510-9eb0-424d-8f2f-db111cd53797",
+            "EndPinName": "in2",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 1290,
+                "StartY": 264,
+                "EndX": 1310,
+                "EndY": 264,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "fbad5b08-b7f7-40e6-a441-89cb6728b43e",
+            "StartComponentId": "combiner_cf0900181da041f395fb828f5fa5bafe",
+            "StartComponentGuid": "7c07d510-9eb0-424d-8f2f-db111cd53797",
+            "StartPinName": "out1",
+            "EndComponentId": "output_fd55cfdc5d294bb09a99d8b34064d111",
+            "EndComponentGuid": "8773ca36-a037-4c03-82f3-7830057993bf",
+            "EndPinName": "a0",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 1560,
+                "StartY": 256,
+                "EndX": 1580,
+                "EndY": 256,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          }
+        ],
+        "ExternalPins": [
+          {
+            "PinId": "696a3355-7454-4612-9eca-8d69f8fe0174",
+            "Name": "A",
+            "InternalComponentId": "input_a_0465ab1c963547118fbf2eefb82db40c",
+            "InternalComponentGuid": "bd45cb6b-3c0a-4a2b-9f00-f3ca4eb4a080",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 26,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "c1812044-0a5d-4f37-abcd-18666705cd04",
+            "Name": "B",
+            "InternalComponentId": "input_b_9e18a8d24b624b779a0fe5d35be7fbd7",
+            "InternalComponentGuid": "b53708c4-48f9-4953-ac0a-b849653abb27",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 34,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "926163da-0d6b-4c73-9672-2b1769a1df51",
+            "Name": "AUX",
+            "InternalComponentId": "combiner_cf0900181da041f395fb828f5fa5bafe",
+            "InternalComponentGuid": "7c07d510-9eb0-424d-8f2f-db111cd53797",
+            "InternalPinName": "out2",
+            "RelativeX": 370,
+            "RelativeY": 34,
+            "AngleDegrees": 0
+          },
+          {
+            "PinId": "d020279f-3f54-47c4-a0c7-1d17208b1fb0",
+            "Name": "Y",
+            "InternalComponentId": "output_fd55cfdc5d294bb09a99d8b34064d111",
+            "InternalComponentGuid": "8773ca36-a037-4c03-82f3-7830057993bf",
+            "InternalPinName": "b0",
+            "RelativeX": 490,
+            "RelativeY": 26,
+            "AngleDegrees": 0
+          }
+        ]
+      },
+      "ChildComponents": [
+        {
+          "Identifier": "input_a_0465ab1c963547118fbf2eefb82db40c",
+          "ComponentGuid": "bd45cb6b-3c0a-4a2b-9f00-f3ca4eb4a080",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 1190,
+          "Y": 251,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "input_b_9e18a8d24b624b779a0fe5d35be7fbd7",
+          "ComponentGuid": "b53708c4-48f9-4953-ac0a-b849653abb27",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 1190,
+          "Y": 259,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "combiner_cf0900181da041f395fb828f5fa5bafe",
+          "ComponentGuid": "7c07d510-9eb0-424d-8f2f-db111cd53797",
+          "TemplateName": "2x2 MMI Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 1310,
+          "Y": 230,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0,
+            "1": 50
+          },
+          "HumanReadableName": "2x2 MMI Coupler"
+        },
+        {
+          "Identifier": "output_fd55cfdc5d294bb09a99d8b34064d111",
+          "ComponentGuid": "8773ca36-a037-4c03-82f3-7830057993bf",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 1580,
+          "Y": 251,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        }
+      ],
+      "CanvasX": 1190,
+      "CanvasY": 230,
+      "TruthTablePinAssignment": {
+        "InputPinNames": [
+          "A",
+          "B"
+        ],
+        "OutputPinNames": [
+          "Y"
+        ],
+        "BiasPinNames": [],
+        "Threshold": 0.25
+      }
+    },
+    {
+      "GroupDto": {
+        "GroupName": "NOTZ",
+        "Description": "NOT reading (input A, BIAS constantly on, threshold 0.375) of the shipped \u0027Logic Gate NOT-NAND\u0027 gate. Role in the 4-bit zero detect: NOTZ inverts the combined OR \u2014 its output Z is 1 exactly when A0\u2013A3 are all dark, the zero flag the ISA JZ branches on. The cascade composes at the logic layer, not optically: every gate\u0027s truth table is extracted once in isolation, so each stage restores clean 0/1 levels by construction.",
+        "Identifier": "group_9e4fb3ab2c824c5ca81b085820bc470f",
+        "IdGuid": "16274799-84a2-4628-b555-eab3427d1953",
+        "ChildComponentGuids": [
+          "01c538b7-791b-4441-a90d-d9127f637be7",
+          "9271b189-50b4-4b7a-872e-a8a01e66383f",
+          "174d5751-dfb4-4e00-bc6c-c196753a3c23",
+          "49654ec1-8cfd-4fea-a59f-bf659eda2a8c",
+          "b81e8155-047d-406e-bd20-c9d1fe70e610",
+          "d059a260-0032-4f1c-a87a-640fb509f15b"
+        ],
+        "GridX": 0,
+        "GridY": 0,
+        "PhysicalX": 1980,
+        "PhysicalY": 232.5,
+        "Rotation90CounterClock": 0,
+        "ChildComponentIds": [
+          "input_a_62be07703aaf4670abc859e688f00bb2",
+          "input_b_db45c3763a92429b866e8ce145809d7c",
+          "combine_59ea9aa464e94517a0f602dafb68633f",
+          "phase_2d4acff5bb5e411590d1e6d585a8e497",
+          "recombine_a14acc878bcc421dbf7855765f0f2578",
+          "output_edb2786f712b4d078930081e467a8651"
+        ],
+        "InternalPaths": [
+          {
+            "PathId": "8240a6da-9862-4b62-8b1e-9aa63c74cb3f",
+            "StartComponentId": "input_a_62be07703aaf4670abc859e688f00bb2",
+            "StartComponentGuid": "01c538b7-791b-4441-a90d-d9127f637be7",
+            "StartPinName": "b0",
+            "EndComponentId": "combine_59ea9aa464e94517a0f602dafb68633f",
+            "EndComponentGuid": "174d5751-dfb4-4e00-bc6c-c196753a3c23",
+            "EndPinName": "in1",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 2080,
+                "StartY": 256,
+                "EndX": 2100,
+                "EndY": 256,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "c1d98717-f40d-4a39-98d9-67724cdec5b3",
+            "StartComponentId": "input_b_db45c3763a92429b866e8ce145809d7c",
+            "StartComponentGuid": "9271b189-50b4-4b7a-872e-a8a01e66383f",
+            "StartPinName": "b0",
+            "EndComponentId": "combine_59ea9aa464e94517a0f602dafb68633f",
+            "EndComponentGuid": "174d5751-dfb4-4e00-bc6c-c196753a3c23",
+            "EndPinName": "in2",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 2080,
+                "StartY": 264,
+                "EndX": 2100,
+                "EndY": 264,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "5ce7b4c0-3b3d-4184-8890-f6257b01b1b5",
+            "StartComponentId": "combine_59ea9aa464e94517a0f602dafb68633f",
+            "StartComponentGuid": "174d5751-dfb4-4e00-bc6c-c196753a3c23",
+            "StartPinName": "out1",
+            "EndComponentId": "recombine_a14acc878bcc421dbf7855765f0f2578",
+            "EndComponentGuid": "b81e8155-047d-406e-bd20-c9d1fe70e610",
+            "EndPinName": "in1",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 2350,
+                "StartY": 256,
+                "EndX": 2530,
+                "EndY": 256,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "a7b8df5d-ee5c-4fbb-94c1-c759d17b1d3a",
+            "StartComponentId": "phase_2d4acff5bb5e411590d1e6d585a8e497",
+            "StartComponentGuid": "49654ec1-8cfd-4fea-a59f-bf659eda2a8c",
+            "StartPinName": "out",
+            "EndComponentId": "recombine_a14acc878bcc421dbf7855765f0f2578",
+            "EndComponentGuid": "b81e8155-047d-406e-bd20-c9d1fe70e610",
+            "EndPinName": "in2",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 2480,
+                "StartY": 370,
+                "EndX": 2495,
+                "EndY": 370,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              },
+              {
+                "Type": "arc",
+                "StartX": 2495,
+                "StartY": 370,
+                "EndX": 2505,
+                "EndY": 360,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": -90,
+                "CenterX": 2495,
+                "CenterY": 360,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": -90
+              },
+              {
+                "Type": "straight",
+                "StartX": 2505,
+                "StartY": 360,
+                "EndX": 2505,
+                "EndY": 274,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": -90
+              },
+              {
+                "Type": "arc",
+                "StartX": 2505,
+                "StartY": 274,
+                "EndX": 2515,
+                "EndY": 264,
+                "StartAngleDegrees": -90,
+                "EndAngleDegrees": 0,
+                "CenterX": 2515,
+                "CenterY": 274,
+                "RadiusMicrometers": 10,
+                "SweepAngleDegrees": 90
+              },
+              {
+                "Type": "straight",
+                "StartX": 2515,
+                "StartY": 264,
+                "EndX": 2530,
+                "EndY": 264,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          },
+          {
+            "PathId": "8da68160-4992-418f-8380-56d3f04eac2a",
+            "StartComponentId": "recombine_a14acc878bcc421dbf7855765f0f2578",
+            "StartComponentGuid": "b81e8155-047d-406e-bd20-c9d1fe70e610",
+            "StartPinName": "out1",
+            "EndComponentId": "output_edb2786f712b4d078930081e467a8651",
+            "EndComponentGuid": "d059a260-0032-4f1c-a87a-640fb509f15b",
+            "EndPinName": "a0",
+            "Segments": [
+              {
+                "Type": "straight",
+                "StartX": 2780,
+                "StartY": 256,
+                "EndX": 2800,
+                "EndY": 256,
+                "StartAngleDegrees": 0,
+                "EndAngleDegrees": 0
+              }
+            ],
+            "IsBlockedFallback": false,
+            "IsInvalidGeometry": false,
+            "IsPlaceholderGeometry": false,
+            "ConnectionType": "Auto",
+            "BendRadiusMicrometers": 10,
+            "WidthMicrometers": 0.5,
+            "IsRouteFrozen": true,
+            "PropagationLossDbPerCm": 0,
+            "BendRadiusOverrides": {},
+            "StraightShiftOffsets": {}
+          }
+        ],
+        "ExternalPins": [
+          {
+            "PinId": "e6ec963c-789a-4c29-9972-a25886bfe23f",
+            "Name": "A",
+            "InternalComponentId": "input_a_62be07703aaf4670abc859e688f00bb2",
+            "InternalComponentGuid": "01c538b7-791b-4441-a90d-d9127f637be7",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 23.5,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "71ed0766-388c-4dc0-95fd-3becba0cea3c",
+            "Name": "B",
+            "InternalComponentId": "input_b_db45c3763a92429b866e8ce145809d7c",
+            "InternalComponentGuid": "9271b189-50b4-4b7a-872e-a8a01e66383f",
+            "InternalPinName": "a0",
+            "RelativeX": 0,
+            "RelativeY": 31.5,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "2e02cb43-4288-448c-a158-66906c156691",
+            "Name": "BIAS",
+            "InternalComponentId": "phase_2d4acff5bb5e411590d1e6d585a8e497",
+            "InternalComponentGuid": "49654ec1-8cfd-4fea-a59f-bf659eda2a8c",
+            "InternalPinName": "in",
+            "RelativeX": 0,
+            "RelativeY": 137.5,
+            "AngleDegrees": 180
+          },
+          {
+            "PinId": "972f9df8-f430-4550-af91-e98f5a4ea49c",
+            "Name": "Y",
+            "InternalComponentId": "output_edb2786f712b4d078930081e467a8651",
+            "InternalComponentGuid": "d059a260-0032-4f1c-a87a-640fb509f15b",
+            "InternalPinName": "b0",
+            "RelativeX": 920,
+            "RelativeY": 23.5,
+            "AngleDegrees": 0
+          }
+        ]
+      },
+      "ChildComponents": [
+        {
+          "Identifier": "input_a_62be07703aaf4670abc859e688f00bb2",
+          "ComponentGuid": "01c538b7-791b-4441-a90d-d9127f637be7",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 1980,
+          "Y": 251,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "input_b_db45c3763a92429b866e8ce145809d7c",
+          "ComponentGuid": "9271b189-50b4-4b7a-872e-a8a01e66383f",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 1980,
+          "Y": 259,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        },
+        {
+          "Identifier": "combine_59ea9aa464e94517a0f602dafb68633f",
+          "ComponentGuid": "174d5751-dfb4-4e00-bc6c-c196753a3c23",
+          "TemplateName": "2x2 MMI Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 2100,
+          "Y": 230,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0,
+            "1": 50
+          },
+          "HumanReadableName": "2x2 MMI Coupler"
+        },
+        {
+          "Identifier": "phase_2d4acff5bb5e411590d1e6d585a8e497",
+          "ComponentGuid": "49654ec1-8cfd-4fea-a59f-bf659eda2a8c",
+          "TemplateName": "Phase Shifter",
+          "PdkSource": "Demo PDK",
+          "X": 1980,
+          "Y": 340,
+          "Rotation": 0,
+          "SliderValue": 135,
+          "SliderValues": {
+            "0": 135
+          },
+          "HumanReadableName": "Phase Shifter"
+        },
+        {
+          "Identifier": "recombine_a14acc878bcc421dbf7855765f0f2578",
+          "ComponentGuid": "b81e8155-047d-406e-bd20-c9d1fe70e610",
+          "TemplateName": "2x2 MMI Coupler",
+          "PdkSource": "Demo PDK",
+          "X": 2530,
+          "Y": 230,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0,
+            "1": 50
+          },
+          "HumanReadableName": "2x2 MMI Coupler"
+        },
+        {
+          "Identifier": "output_edb2786f712b4d078930081e467a8651",
+          "ComponentGuid": "d059a260-0032-4f1c-a87a-640fb509f15b",
+          "TemplateName": "Straight Waveguide 100\u00B5m",
+          "PdkSource": "Demo PDK",
+          "X": 2800,
+          "Y": 251,
+          "Rotation": 0,
+          "SliderValue": 0,
+          "SliderValues": {
+            "0": 0
+          },
+          "HumanReadableName": "Straight Waveguide 100\u00B5m"
+        }
+      ],
+      "CanvasX": 1980,
+      "CanvasY": 232.5,
+      "TruthTablePinAssignment": {
+        "InputPinNames": [
+          "A"
+        ],
+        "OutputPinNames": [
+          "Y"
+        ],
+        "BiasPinNames": [
+          "BIAS"
+        ],
+        "Threshold": 0.375,
+        "OutputSignalNames": {
+          "Y": "Z"
+        }
+      }
+    }
+  ],
+  "Metadata": {
+    "PdkVersions": {},
+    "Authorship": {
+      "Created": "2026-10-02",
+      "Modified": "2026-10-02T03:45:01.0948743Z"
+    }
+  },
+  "ChipWidthMicrometers": 3300,
+  "ChipHeightMicrometers": 520,
+  "ActiveProcess": {
+    "DisplayName": "Playground",
+    "IsPlayground": true,
+    "DesignWavelengthNm": 1550,
+    "MemberPdkNames": []
+  }
+}

@@ -369,6 +369,7 @@
   "Examples.AndGate.Description": "2つのNANDゲートを組み合わせてANDゲートを作る。",
   "Examples.And4bit.Description": "4つのANDゲートを並べて:A0–A3とB0–B3を入れY0–Y3へ——光で動くISAのAND命令。",
   "Examples.LogicUnit4bit.Description": "1チップで2つの演算:4つのANDと4つのNOTがA0–A3を共有——Y0–Y3 = A AND B、N0–N3 = NOT A。",
+  "Examples.ZeroDetect4bit.Description": "4ビットのゼロ検出:3つのORと1つのNOTが、A0–A3がすべて消灯しているときだけZを点灯——ISAのJZ分岐を光で決定。",
   "Examples.FullAdder.Description": "2ビットとキャリー入力を加算する — あらゆるコンピュータの基本ブロック。",
   "Examples.HalfAdder.Description": "2ビットを加算する — 初めての算術回路。",
   "Examples.MachZehnder.Description": "光を2つの経路に分けて再合成する — フォトニクスの「Hello World」。",
