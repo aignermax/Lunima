@@ -6,6 +6,18 @@
   "version": "0.5.4",
   "defaultWavelengthNm": 1550,
   "nazcaModuleName": "siepic_ebeam_pdk",
+  "materialDispersion": {
+    "type": "polynomial",
+    "centerWavelengthNm": 1550,
+    "effectiveIndex": {
+      "n0": 2.44553,
+      "n1": -0.00112603,
+      "n2": 0
+    },
+    "groupIndex": {
+      "ng0": 4.19088
+    }
+  },
   "process": {
     "name": "SiEPIC EBeam SOI 220nm",
     "foundry": "Applied Nanotools",

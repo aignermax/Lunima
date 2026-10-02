@@ -113,6 +113,7 @@ public static class ComponentTemplates
 
         component.HumanReadableName = template.Name;
         component.TemplateName = template.Name;
+        component.WaveguideDispersion = template.WaveguideDispersion;
         component.ParameterDefinitions = template.ParameterDefinitions;
         component.OutlinePolygons = template.OutlinePolygons;
 
@@ -178,6 +179,15 @@ public partial class ComponentTemplate : ObservableObject
     public string? NazcaParameters { get; set; }
 
     public string PdkSource { get; set; } = "Built-in";
+
+    /// <summary>
+    /// Wavelength-dependent waveguide dispersion of this template's PDK (root
+    /// <c>materialDispersion</c>, or the component's own block when it declares one),
+    /// resolved to a domain model. Stamped onto every placed instance as
+    /// <see cref="Component.WaveguideDispersion"/> so routed waveguide connections
+    /// inherit the PDK's n_eff(λ)/n_g(λ). Null when the PDK declares no dispersion.
+    /// </summary>
+    public CAP_Core.LightCalculation.MaterialDispersion.IDispersionModel? WaveguideDispersion { get; set; }
 
     public double NazcaOriginOffsetX { get; set; } = 0;
     public double NazcaOriginOffsetY { get; set; } = 0;
