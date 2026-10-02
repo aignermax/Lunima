@@ -65,7 +65,30 @@ A PDK JSON file describes a set of photonic components — their physical dimens
 | `nazcaModuleName` | No | Python module name for Nazca export (e.g. `"nazca"`) |
 | `process` | No | Fabrication-process block (see below) — enables single-process grouping |
 | `processAgnostic` | No | `true` for tool PDKs (e.g. virtual analyzers) that are usable in **any** process and never exported to GDS |
+| `materialDispersion` | No | Waveguide dispersion of the routing medium (see below) — routed connections inherit it |
 | `components` | Yes | List of component definitions |
+
+### Material Dispersion Block (`materialDispersion`)
+
+Declares the wavelength-dependent behaviour of the PDK's routed waveguide medium.
+Routed `WaveguideConnection`s between this PDK's components inherit it, so the
+coherent propagation phase uses the PDK's `n_eff(λ)`/`n_g(λ)` instead of the generic
+fallback. A component-level block overrides the root block for that component.
+
+```json
+"materialDispersion": {
+  "type": "polynomial",
+  "centerWavelengthNm": 1550,
+  "effectiveIndex": { "n0": 2.44553, "n1": -0.00112603, "n2": 0 },
+  "groupIndex": { "ng0": 4.19088 }
+}
+```
+
+`n_eff(λ) = n0 + n1·(λ−λ₀) + n2·(λ−λ₀)²`; `n_g` is taken from `groupIndex.ng0` when
+present, else derived as `n0 − λ₀·n1`. An optional `propagationLossDbPerCm` block
+(`{"type": "constant", "constantDbPerCm": …}` or tabulated `points`) overrides the
+connection's scalar loss; when omitted the connection keeps its existing loss so
+loaded designs are unchanged.
 
 ### Process Block (`process`)
 

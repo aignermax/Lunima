@@ -31,7 +31,9 @@ public static class TestPdkLoader
             {
                 var pdk = loader.LoadFromFile(file);
                 foreach (var comp in pdk.Components)
-                    templates.Add(PdkTemplateConverter.ConvertToTemplate(comp, pdk.Name, pdk.NazcaModuleName, process: pdk.Process));
+                    templates.Add(PdkTemplateConverter.ConvertToTemplate(
+                        comp, pdk.Name, pdk.NazcaModuleName, process: pdk.Process,
+                        pdkMaterialDispersion: pdk.MaterialDispersion));
             }
             catch
             {
@@ -56,7 +58,9 @@ public static class TestPdkLoader
         var loader = new PdkLoader();
         var pdk = loader.LoadFromFile(filePath);
         return pdk.Components
-            .Select(c => PdkTemplateConverter.ConvertToTemplate(c, pdk.Name, pdk.NazcaModuleName, process: pdk.Process))
+            .Select(c => PdkTemplateConverter.ConvertToTemplate(
+                c, pdk.Name, pdk.NazcaModuleName, process: pdk.Process,
+                pdkMaterialDispersion: pdk.MaterialDispersion))
             .ToList();
     }
 }

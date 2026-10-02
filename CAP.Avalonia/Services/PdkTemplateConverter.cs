@@ -18,12 +18,18 @@ public static class PdkTemplateConverter
     /// cross-section of <paramref name="process"/> fills in. When neither exists the
     /// values stay null and the rule stays silent (legacy PDKs, playground).
     /// </summary>
+    /// <param name="pdkMaterialDispersion">
+    /// The PDK root's <c>materialDispersion</c> block. Routed waveguide connections
+    /// are not components, so their dispersion comes from the PDK-level medium
+    /// description; a component-level block (rare) wins over the root block.
+    /// </param>
     public static ComponentTemplate ConvertToTemplate(
         PdkComponentDraft pdkComp,
         string pdkName,
         string? nazcaModuleName,
         string? gdsFactoryRoutingCrossSection = null,
-        ProcessDefinition? process = null)
+        ProcessDefinition? process = null,
+        MaterialDispersionDraft? pdkMaterialDispersion = null)
     {
         var opticalDefaults = ProcessOpticalDefaultsResolver.Resolve(process);
         var pinDefs = pdkComp.Pins.Select(p =>
@@ -68,6 +74,7 @@ public static class PdkTemplateConverter
             RawCodeBackend = pdkComp.RawCodeBackend,
             OutlinePolygons = pdkComp.OutlinePolygons,
             SourceDraft = pdkComp,
+            WaveguideDispersion = (pdkComp.MaterialDispersion ?? pdkMaterialDispersion).ToDispersionModel(),
         };
 
         if (pdkComp.SMatrix?.WavelengthData is { Count: > 0 } wlData)

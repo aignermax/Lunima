@@ -124,7 +124,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
         lock (_connectionsSync)
         {
@@ -153,7 +154,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
 
         connection.RestoreCachedPath(cachedPath);
@@ -181,6 +183,26 @@ public partial class WaveguideConnectionManager
     }
 
     /// <summary>
+    /// Resolves the waveguide dispersion model a new connection between the two pins
+    /// inherits: the PDK dispersion stamped on an endpoint's component
+    /// (<see cref="Core.Component.WaveguideDispersion"/>). The start pin wins when both
+    /// endpoints carry a model (mixed-PDK playground designs); null when neither PDK
+    /// declares a dispersion block, keeping the documented fallback behaviour.
+    /// Electrical connections are metal traces — the optical waveguide dispersion
+    /// model does not apply to them.
+    /// </summary>
+    private static CAP_Core.LightCalculation.MaterialDispersion.IDispersionModel? ResolveWaveguideDispersion(
+        PhysicalPin startPin, PhysicalPin endPin)
+    {
+        bool isElectrical = startPin?.MatterType == MatterType.Electricity ||
+                            endPin?.MatterType == MatterType.Electricity;
+        if (isElectrical)
+            return null;
+        return startPin?.ParentComponent?.WaveguideDispersion
+            ?? endPin?.ParentComponent?.WaveguideDispersion;
+    }
+
+    /// <summary>
     /// Adds a connection without triggering route calculation.
     /// Used for async routing: add connection first, then route asynchronously.
     /// </summary>
@@ -191,7 +213,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
         lock (_connectionsSync)
         {
