@@ -32,7 +32,8 @@ namespace CAP_Core.LightCalculation
         private SMatrix CreatePhysicalConnectionsMatrix(int laserWaveLengthInNm)
         {
             var connections = Grid.WaveguideConnections.GetConnectionTransfers(
-                connection => ChipletEdgeCouplerCoupling.FieldFactor(connection, laserWaveLengthInNm));
+                connection => ChipletEdgeCouplerCoupling.FieldFactor(connection, laserWaveLengthInNm),
+                laserWaveLengthInNm);
 
             // Also include frozen internal paths from ComponentGroups so that grouped
             // components are treated identically to flat components during simulation.
