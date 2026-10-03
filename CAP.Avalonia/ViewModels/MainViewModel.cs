@@ -845,6 +845,12 @@ public partial class MainViewModel : ObservableObject
         FileOperations.ApplyChipSizeAfterLoad = (widthUm, heightUm) =>
             ChipSize.ApplyFromMicrometers(widthUm, heightUm);
 
+        // Re-sync the Spectrum tab's coherent-interference toggle with the flag
+        // just restored from the loaded file (the canvas survives loads, so the
+        // panel's one-time Configure never sees the new value).
+        FileOperations.CoherentModeRestoredAfterLoad = () =>
+            BottomPanel.Analysis.Spectrum.SyncCoherentToggleFromCanvas();
+
         // Auto-check Python/Nazca environment on startup
         // If no custom path is set, trigger auto-discovery
         var gdsExport = FileOperations.GdsExport;
@@ -1524,6 +1530,13 @@ public class DesignFileData
     /// files saved before canvas-level frozen paths existed.
     /// </summary>
     public List<CAP_DataAccess.Persistence.DTOs.FrozenPathDto>? CanvasFrozenPaths { get; set; }
+
+    /// <summary>
+    /// Coherent interference mode of the Wavelength Spectrum tab (issue #1333): routed
+    /// waveguides carry their propagation phase, so arm-length differences show as
+    /// fringes. Null in files saved before the mode existed — loads as off.
+    /// </summary>
+    public bool? CoherentPropagationPhase { get; set; }
 }
 
 /// <summary>

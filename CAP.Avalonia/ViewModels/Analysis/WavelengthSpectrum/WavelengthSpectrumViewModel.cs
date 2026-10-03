@@ -27,6 +27,14 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private PlotModel _plotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
 
+    /// <summary>
+    /// Coherent interference mode (#1333): routed waveguides carry their propagation
+    /// phase exp(-i·2π·n_eff(λ)·L/λ), so arm-length differences show as fringes.
+    /// Mirrors <see cref="CAP_Core.Components.Connections.WaveguideConnectionManager.EnableCoherentPropagationPhase"/>
+    /// on the configured canvas.
+    /// </summary>
+    [ObservableProperty] private bool _isCoherentInterference;
+
     /// <summary>True once a completed sweep is available (enables the plot and auto-refresh).</summary>
     [ObservableProperty] private bool _hasResult;
 
@@ -42,6 +50,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
     private readonly SemaphoreSlim _sweepGate = new(1, 1);
     private DesignCanvasViewModel? _canvas;
+    private bool _suppressToggleRefresh;
     private CancellationTokenSource? _sweepCts;
     private CancellationTokenSource? _debounceCts;
 
@@ -70,6 +79,9 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         _lastCurves = null;
         _lastPinNames = null;
         PlotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
+        // Sync the toggle from the canvas (e.g. a .lun just loaded with the flag on)
+        // without triggering a refresh: HasResult is already false here.
+        IsCoherentInterference = canvas?.ConnectionManager.EnableCoherentPropagationPhase ?? false;
     }
 
     /// <summary>Runs the wavelength sweep and updates the transmission plot.</summary>
@@ -83,6 +95,33 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     partial void OnStartNmChanged(int value) => ScheduleAutoRefresh();
     partial void OnEndNmChanged(int value) => ScheduleAutoRefresh();
     partial void OnStepCountChanged(int value) => ScheduleAutoRefresh();
+
+    partial void OnIsCoherentInterferenceChanged(bool value)
+    {
+        if (_canvas != null)
+            _canvas.ConnectionManager.EnableCoherentPropagationPhase = value;
+        if (!_suppressToggleRefresh)
+            ScheduleAutoRefresh();
+    }
+
+    /// <summary>
+    /// Re-syncs the toggle from the canvas flag after a .lun load restored it
+    /// (the canvas instance survives loads, so Configure is not re-run). Never
+    /// schedules a sweep — loading a design must not kick off a simulation.
+    /// </summary>
+    public void SyncCoherentToggleFromCanvas()
+    {
+        if (_canvas == null) return;
+        _suppressToggleRefresh = true;
+        try
+        {
+            IsCoherentInterference = _canvas.ConnectionManager.EnableCoherentPropagationPhase;
+        }
+        finally
+        {
+            _suppressToggleRefresh = false;
+        }
+    }
 
     /// <summary>
     /// Re-runs the sweep automatically after a parameter change — but only once

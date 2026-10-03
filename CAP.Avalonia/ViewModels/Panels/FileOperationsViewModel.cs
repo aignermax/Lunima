@@ -188,6 +188,13 @@ public partial class FileOperationsViewModel : ObservableObject
     public Action<double, double>? ApplyChipSizeAfterLoad { get; set; }
 
     /// <summary>
+    /// Callback fired after a load restored the coherent interference mode, so
+    /// views holding a toggle bound to that mode can re-sync (the canvas and
+    /// its connection manager survive loads, so their Configure is not re-run).
+    /// </summary>
+    public Action? CoherentModeRestoredAfterLoad { get; set; }
+
+    /// <summary>
     /// File dialog service for showing open/save dialogs.
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
@@ -488,6 +495,11 @@ public partial class FileOperationsViewModel : ObservableObject
             // the runtime Component.Id is regenerated on every load.
             designData.AnalysisOutputCoupler = _canvas.AnalysisOutput.CouplerId is Guid outputId
                 ? componentsList.FirstOrDefault(c => c.Component.Id == outputId)?.Component.Identifier
+                : null;
+            // Coherent interference mode (#1333): only stored when on — off is the
+            // default, so old files without the field round-trip identically.
+            designData.CoherentPropagationPhase = _canvas.ConnectionManager.EnableCoherentPropagationPhase
+                ? true
                 : null;
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
@@ -1095,6 +1107,12 @@ public partial class FileOperationsViewModel : ObservableObject
                         _canvas.CanvasFrozenPaths.Add(new CanvasFrozenPathViewModel(frozenPath));
                     }
                 }
+
+                // Restore the coherent interference mode (#1333) before post-load
+                // routing recalculates transmissions; missing field (old files) = off.
+                _canvas.ConnectionManager.EnableCoherentPropagationPhase =
+                    designData.CoherentPropagationPhase == true;
+                CoherentModeRestoredAfterLoad?.Invoke();
 
                 ReportPinCalibrationMigrations();
                 StartPostLoadRouting();

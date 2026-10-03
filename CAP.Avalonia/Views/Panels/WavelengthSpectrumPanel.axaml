@@ -4,6 +4,7 @@
              xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:oxy="using:OxyPlot.Avalonia"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
              x:Class="CAP.Avalonia.Views.Panels.WavelengthSpectrumPanel"
              x:DataType="vm:MainViewModel">
 
@@ -59,6 +60,21 @@
                         Command="{Binding BottomPanel.Analysis.Spectrum.CancelSweepCommand}"/>
             </StackPanel>
         </WrapPanel>
+
+        <!-- Coherent interference toggle (#1333): routed waveguides carry their
+             propagation phase, so a ΔL between arms shows as fringes. Flipping it
+             re-runs the sweep automatically once a first result exists. -->
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+            <CheckBox VerticalAlignment="Center"
+                      IsChecked="{Binding BottomPanel.Analysis.Spectrum.IsCoherentInterference}"
+                      Content="{loc:Localize Spectrum.CoherentToggle}"/>
+            <controls:HelpFlyoutButton VerticalAlignment="Center"
+                                       Title="{loc:Localize SpectrumCoherentHelp.Title}">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <panels:SpectrumCoherentHelpFlyout/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </StackPanel>
 
         <!-- Measured-spectrum overlay (#1335): load a lab CSV, overlay it on the
              simulated transmission, show extracted FSR / n_g. ΔL only feeds the
