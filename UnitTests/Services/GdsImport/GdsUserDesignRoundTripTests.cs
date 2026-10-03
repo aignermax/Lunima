@@ -31,15 +31,18 @@ namespace UnitTests.Services.GdsImport;
 /// external ports leave no trace in the GDS either way.
 /// </para>
 /// <para>
-/// One environment fork is pinned honestly: when the Python that runs the script
-/// also has klayout + siepic_ebeam_pdk (the Lunima managed env, CI), the export's
-/// klayout post-pass swaps the four ebeam stub boxes for the REAL foundry cells —
-/// re-anchored into the stub frame and with the stub's (1, 10) pin labels
-/// re-emitted (#811), so the pins keep the app template names (<c>port 1..4</c>)
-/// at exactly the foundry pins' anchors. With a bare nazca-only Python the stub
-/// boxes survive: same (1, 10) labels, PLUS <c>heur_N</c> edge pins, because the
-/// stub box IS waveguide-layer geometry spanning the cell bounding box. Both
-/// shapes are verified and asserted per scenario; everything else is identical.
+/// Environment gating (#1353): the export's klayout post-pass swaps the four
+/// ebeam stub boxes for the REAL foundry cells — re-anchored into the stub
+/// frame and with the stub's (1, 10) pin labels re-emitted (#811), so the pins
+/// keep the app template names (<c>port 1..4</c>) at exactly the foundry pins'
+/// anchors. The connection census and frozen-path counts below pin that
+/// UPGRADED topology unconditionally, so the test runs only on a Python with
+/// nazca + klayout + siepic_ebeam_pdk (<see cref="GdsUserDesignFixture.FindSiepicRoundTripPythonAsync"/>):
+/// a nazca-only interpreter silently keeps the stub boxes (the export degrades
+/// by design) and the round trip then sees the stub topology — <c>heur_N</c>
+/// edge pins, entangled route chains. The stub topology itself is pinned
+/// deterministically by the forced-stub scenario in
+/// <see cref="GdsHighestLevelRoundTripTests"/>.
 /// </para>
 /// </summary>
 [Trait("Category", "Slow")]
@@ -56,8 +59,12 @@ public class GdsUserDesignRoundTripTests : IDisposable
     [SkippableFact]
     public async Task RoundTrip_UserDesign_ExportThenReimport_ExplodesAllSevenComponents()
     {
-        var python = await FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        // The connection census and frozen-path counts below pin the
+        // SiEPIC-upgraded topology — the interpreter must be able to execute
+        // the export's klayout upgrade, not just import nazca (#1353).
+        var python = await FindSiepicRoundTripPythonAsync();
+        Skip.If(python == null,
+            "No Python with nazca + klayout + siepic_ebeam_pdk available — the round trip pins the SiEPIC-upgraded topology.");
 
         // ── 1. Build the user's design verbatim from the bundled PDK templates ──
         var canvas = BuildUserDesignCanvas();
@@ -336,5 +343,6 @@ public class GdsUserDesignRoundTripTests : IDisposable
     private static DesignCanvasViewModel BuildUserDesignCanvas() =>
         GdsUserDesignFixture.BuildUserDesignCanvas();
 
-    private static Task<string?> FindNazcaPythonAsync() => GdsUserDesignFixture.FindNazcaPythonAsync();
+    private static Task<string?> FindSiepicRoundTripPythonAsync() =>
+        GdsUserDesignFixture.FindSiepicRoundTripPythonAsync();
 }

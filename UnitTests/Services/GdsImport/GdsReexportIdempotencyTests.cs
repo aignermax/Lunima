@@ -44,8 +44,12 @@ public class GdsReexportIdempotencyTests : IDisposable
     [SkippableFact]
     public async Task ReexportedImport_Generation2_MatchesGeneration1()
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        // The generation comparisons pin the SiEPIC-upgraded topology — the
+        // interpreter must be able to execute the export's klayout upgrade, not
+        // just import nazca (#1353).
+        var python = await GdsUserDesignFixture.FindSiepicRoundTripPythonAsync();
+        Skip.If(python == null,
+            "No Python with nazca + klayout + siepic_ebeam_pdk available — the round trip pins the SiEPIC-upgraded topology.");
 
         // ── Generation 1: the exact round-trip arc (frozen placement — the
         // deterministic, router-independent mode the netlist comparisons use) ──
