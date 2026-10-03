@@ -117,6 +117,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     private ComponentGroupSMatrixBuilder? _sMatrixBuilder;
 
     /// <summary>
+    /// The coherent-phase mode the cached S-Matrix was built with; a mode flip must
+    /// trigger a recompute instead of serving the previous mode's cached physics.
+    /// </summary>
+    private bool _sMatrixBuiltWithCoherentPhase;
+
+    /// <summary>
     /// Offset from PhysicalX to the minimum X coordinate of child components.
     /// Used by BoundingBoxCalculator to correctly position the group's bounding box.
     /// </summary>
@@ -811,7 +817,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// Computes or retrieves the S-Matrix for this group at all supported wavelengths.
     /// The S-Matrix is cached until the group structure changes.
     /// </summary>
-    public void ComputeSMatrix()
+    /// <param name="enableCoherentPropagationPhase">
+    /// When on, frozen internal paths carry the coherent propagation phase like routed
+    /// connections do; when off (default) they keep the loss-only real amplitude.
+    /// </param>
+    public void ComputeSMatrix(bool enableCoherentPropagationPhase = false)
     {
         // Early exit if group has no external pins (can't participate in simulation)
         if (ExternalPins.Count == 0)
@@ -819,9 +829,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         // Lazy-initialize the builder
         _sMatrixBuilder ??= new ComponentGroupSMatrixBuilder();
+        _sMatrixBuilder.EnableCoherentPropagationPhase = enableCoherentPropagationPhase;
 
         // Build S-Matrices for all wavelengths
         var matrices = _sMatrixBuilder.BuildGroupSMatrixAllWavelengths(this);
+        _sMatrixBuiltWithCoherentPhase = enableCoherentPropagationPhase;
 
         if (matrices != null)
         {
@@ -861,13 +873,22 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
     /// <summary>
     /// Ensures the S-Matrix is computed and up-to-date.
-    /// Call this before using the group in simulation.
+    /// Call this before using the group in simulation. Recomputes when the cached
+    /// matrix was built with a different coherent-phase mode, so the cache never
+    /// silently serves the previous mode's physics after the toggle flips.
     /// </summary>
-    public void EnsureSMatrixComputed()
+    /// <param name="enableCoherentPropagationPhase">
+    /// The coherent propagation phase mode the cached matrix must reflect.
+    /// </param>
+    public void EnsureSMatrixComputed(bool enableCoherentPropagationPhase = false)
     {
-        if (WaveLengthToSMatrixMap.Count == 0 && ExternalPins.Count > 0)
+        if (ExternalPins.Count == 0)
+            return;
+
+        if (WaveLengthToSMatrixMap.Count == 0
+            || _sMatrixBuiltWithCoherentPhase != enableCoherentPropagationPhase)
         {
-            ComputeSMatrix();
+            ComputeSMatrix(enableCoherentPropagationPhase);
         }
     }
 }

@@ -136,8 +136,12 @@ internal static class MziFringeAnalysis
             c.Connection.StartPin?.ParentComponent.Identifier == startComponentId
             && c.Connection.StartPin?.Name == startPinName).Connection;
 
+    internal static Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps, ErrorConsoleService ErrorConsole)>
+        LoadExample(string exampleFileName) =>
+        LoadDesignFromPath(Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), exampleFileName));
+
     internal static async Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps, ErrorConsoleService ErrorConsole)>
-        LoadExample(string exampleFileName)
+        LoadDesignFromPath(string path)
     {
         var canvas = new DesignCanvasViewModel();
         var errorConsole = new ErrorConsoleService();
@@ -161,9 +165,8 @@ internal static class MziFringeAnalysis
             canvas.InitializeAStarRouting(0, 0, widthUm, heightUm);
         };
 
-        var path = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), exampleFileName);
         (await fileOps.LoadDesignFromPathAsync(path)).ShouldBeTrue(
-            $"'{exampleFileName}' must load through the real load path");
+            $"'{path}' must load through the real load path");
         return (canvas, fileOps, errorConsole);
     }
 }

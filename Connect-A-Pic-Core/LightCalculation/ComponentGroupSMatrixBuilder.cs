@@ -12,6 +12,13 @@ namespace CAP_Core.LightCalculation;
 public class ComponentGroupSMatrixBuilder
 {
     /// <summary>
+    /// When on, frozen internal waveguide paths contribute the coherent propagation
+    /// phase exp(-i·2π·n_eff(λ)·L/λ) exactly like routed connections do in coherent
+    /// mode; when off (default) they keep the loss-only real amplitude.
+    /// </summary>
+    public bool EnableCoherentPropagationPhase { get; set; } = false;
+
+    /// <summary>
     /// Computes the S-Matrix for a ComponentGroup at a specific wavelength.
     /// The resulting matrix maps external GroupPins to each other via internal components and paths.
     /// </summary>
@@ -207,7 +214,7 @@ public class ComponentGroupSMatrixBuilder
         var childMatrices = CollectChildMatrices(group, wavelengthNm);
 
         // Add connections from frozen internal paths
-        var internalConnections = BuildInternalConnectionMatrix(group, allChildPinIds);
+        var internalConnections = BuildInternalConnectionMatrix(group, allChildPinIds, wavelengthNm);
         if (internalConnections != null)
         {
             childMatrices.Add(internalConnections);
@@ -363,7 +370,7 @@ public class ComponentGroupSMatrixBuilder
     /// <summary>
     /// Builds a connection matrix for frozen internal waveguide paths.
     /// </summary>
-    private SMatrix? BuildInternalConnectionMatrix(ComponentGroup group, List<Guid> allPinIds)
+    private SMatrix? BuildInternalConnectionMatrix(ComponentGroup group, List<Guid> allPinIds, int wavelengthNm)
     {
         if (group.InternalPaths.Count == 0)
             return null;
@@ -381,7 +388,9 @@ public class ComponentGroupSMatrixBuilder
             var endOutFlow = frozenPath.EndPin.LogicalPin.IDOutFlow;
             var endInFlow = frozenPath.EndPin.LogicalPin.IDInFlow;
 
-            var transmission = frozenPath.TransmissionCoefficient;
+            var transmission = EnableCoherentPropagationPhase
+                ? frozenPath.GetCoherentTransmission(wavelengthNm)
+                : frozenPath.TransmissionCoefficient;
 
             // Forward: light exits StartPin (OutFlow) and enters EndPin (InFlow)
             connections[(startOutFlow, endInFlow)] = transmission;

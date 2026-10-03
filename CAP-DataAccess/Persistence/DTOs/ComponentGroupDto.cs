@@ -211,6 +211,12 @@ public class FrozenPathDto
     public double? PropagationLossDbPerCm { get; set; }
 
     /// <summary>
+    /// Bend loss of the original connection in dB per 90-degree bend.
+    /// Null in old design files — loads with the model default.
+    /// </summary>
+    public double? BendLossDbPer90Deg { get; set; }
+
+    /// <summary>
     /// Manual per-bend radius overrides keyed by bend index.
     /// Null in old design files — loads empty.
     /// </summary>
