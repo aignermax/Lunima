@@ -1347,6 +1347,11 @@ public partial class FileOperationsViewModel : ObservableObject
         // Clear the canvas
         ClearCanvas();
 
+        // The coherent interference mode is per design: a fresh project must not
+        // inherit it from the previously loaded one (and later save it as its own).
+        _canvas.ConnectionManager.EnableCoherentPropagationPhase = false;
+        CoherentModeRestoredAfterLoad?.Invoke();
+
         CurrentFilePath = null;
         _loadedMetadata = null;
         HasUnsavedChanges = false;

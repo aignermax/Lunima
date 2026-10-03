@@ -158,6 +158,21 @@ public class CoherentPropagationPhasePersistenceTests
         }
     }
 
+    [Fact]
+    public async Task NewProject_ResetsModeOff_AndFiresResyncCallback()
+    {
+        var (vm, canvas) = CreateSetup();
+        canvas.ConnectionManager.EnableCoherentPropagationPhase = true;
+        int callbackCount = 0;
+        vm.CoherentModeRestoredAfterLoad = () => callbackCount++;
+
+        (await vm.TryNewProjectAsync()).ShouldBeTrue();
+
+        canvas.ConnectionManager.EnableCoherentPropagationPhase.ShouldBeFalse(
+            "File → New must not inherit the previous design's coherent mode");
+        callbackCount.ShouldBe(1, "the Spectrum toggle must re-sync to off");
+    }
+
     private (FileOperationsViewModel vm, DesignCanvasViewModel canvas) CreateSetup()
     {
         var canvas = new DesignCanvasViewModel();
