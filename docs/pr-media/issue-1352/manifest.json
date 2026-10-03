@@ -1,0 +1,22 @@
+[
+  {
+    "file": "sweep-tab-en.png",
+    "caption": "Sweep tab (en): the new (?) help button sits at the end of the parameter row, right of Run Sweep."
+  },
+  {
+    "file": "flyout-en-quadrature.png",
+    "caption": "Sweep help (en): the knob is mid-travel and the dot sits at the quadrature point (half power) on the falling slope of the cos\u00B2 fringe."
+  },
+  {
+    "file": "flyout-en-rising.png",
+    "caption": "Sweep help (en): the knob has passed the null \u2014 the traced fringe climbs back toward full power."
+  },
+  {
+    "file": "flyout-de-quadrature.png",
+    "caption": "Sweep help (de): the knob is mid-travel and the dot sits at the quadrature point (half power) on the falling slope of the cos\u00B2 fringe."
+  },
+  {
+    "file": "flyout-de-rising.png",
+    "caption": "Sweep help (de): the knob has passed the null \u2014 the traced fringe climbs back toward full power."
+  }
+]
