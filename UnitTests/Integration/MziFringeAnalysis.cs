@@ -70,28 +70,12 @@ internal static class MziFringeAnalysis
 
             var power = sweep.GetInsertionLossSeriesForPin(outputPin.LogicalPin!.IDInFlow)
                 .Select(TransmissionSpectrumBuilder.DbToLinear).ToArray();
-            // The sweep grid rounds to integer nm, so sub-nm step counts revisit
-            // wavelengths; collapse the duplicates for the fringe analysis.
-            return Deduplicate(sweep.GetWavelengthValues().Select(w => (double)w).ToArray(), power);
+            return (sweep.GetWavelengthValues(), power);
         }
         finally
         {
             canvas.ConnectionManager.EnableCoherentPropagationPhase = false;
         }
-    }
-
-    internal static (double[] WavelengthsNm, double[] Power) Deduplicate(double[] wavelengths, double[] power)
-    {
-        var distinctWavelengths = new List<double>();
-        var distinctPower = new List<double>();
-        for (int i = 0; i < wavelengths.Length; i++)
-        {
-            if (distinctWavelengths.Count > 0 && wavelengths[i] == distinctWavelengths[^1])
-                continue;
-            distinctWavelengths.Add(wavelengths[i]);
-            distinctPower.Add(power[i]);
-        }
-        return (distinctWavelengths.ToArray(), distinctPower.ToArray());
     }
 
     internal static List<int> FindFringeMinimaIndices(double[] power, int window = 3)

@@ -76,6 +76,9 @@ internal static class ExportFeatureExtensions
 
         services.AddSingleton<SaxExporter>();
 
+        // openEBL submission checker (headless core service; UI lands in the follow-up slice)
+        services.AddSingleton<CAP.Avalonia.Services.OpenEblCheck.OpenEblSubmissionChecker>();
+
         // Netlist view/export (gdsfactory YAML, issue #687)
         services.AddSingleton<CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel>();
 

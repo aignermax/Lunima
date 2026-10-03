@@ -28,9 +28,27 @@ namespace CAP_Core.Analysis.OnaAnalysis
         public static SMatrix GetMatrix(
             IReadOnlyDictionary<int, SMatrix> wavelengthMap,
             int targetNm,
+            out bool wasInterpolated) =>
+            GetMatrix(wavelengthMap, (double)targetNm, out wasInterpolated);
+
+        /// <summary>
+        /// Sub-nm overload of <see cref="GetMatrix(IReadOnlyDictionary{int, SMatrix}, int, out bool)"/>
+        /// for the wavelength sweep: an integral target still hits the exact stop, a
+        /// fractional target is interpolated between the bracketing integer-nm stops.
+        /// </summary>
+        /// <param name="wavelengthMap">Component's wavelength-to-SMatrix dictionary.</param>
+        /// <param name="targetNm">Requested wavelength in nm (may be fractional).</param>
+        /// <param name="wasInterpolated">
+        ///   <see langword="true"/> when the returned matrix was linearly interpolated;
+        ///   <see langword="false"/> for exact or nearest-neighbour results.
+        /// </param>
+        public static SMatrix GetMatrix(
+            IReadOnlyDictionary<int, SMatrix> wavelengthMap,
+            double targetNm,
             out bool wasInterpolated)
         {
-            if (wavelengthMap.TryGetValue(targetNm, out var exact))
+            int integralNm = (int)targetNm;
+            if (targetNm == integralNm && wavelengthMap.TryGetValue(integralNm, out var exact))
             {
                 wasInterpolated = false;
                 return exact;
@@ -60,9 +78,9 @@ namespace CAP_Core.Analysis.OnaAnalysis
         /// Creates a new SMatrix by linearly interpolating real and imaginary parts
         /// of every coefficient between two adjacent wavelength stops.
         /// </summary>
-        private static SMatrix Interpolate(SMatrix lower, SMatrix upper, int lowerNm, int upperNm, int targetNm)
+        private static SMatrix Interpolate(SMatrix lower, SMatrix upper, int lowerNm, int upperNm, double targetNm)
         {
-            double t = (double)(targetNm - lowerNm) / (upperNm - lowerNm);
+            double t = (targetNm - lowerNm) / (upperNm - lowerNm);
             var pins = lower.PinReference.Keys.ToList();
             var sliders = lower.SliderReference
                 .Select(kvp => (kvp.Key, kvp.Value))

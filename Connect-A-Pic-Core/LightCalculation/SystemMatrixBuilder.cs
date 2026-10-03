@@ -12,6 +12,14 @@ namespace CAP_Core.LightCalculation
     public interface ISystemMatrixBuilder
     {
         public SMatrix GetSystemSMatrix(int LaserWaveLengthInNm);
+
+        /// <summary>
+        /// Sub-nm overload for the ONA wavelength sweep: component S-matrices keyed by
+        /// integer nm are interpolated, while the coherent propagation phase and PDK
+        /// dispersion are evaluated at the exact <paramref name="wavelengthNm"/>.
+        /// Integral values return bit-identical results to the integer overload.
+        /// </summary>
+        public SMatrix GetSystemSMatrix(double wavelengthNm);
     }
     public class  SystemMatrixBuilder : ISystemMatrixBuilder
     {
@@ -21,15 +29,18 @@ namespace CAP_Core.LightCalculation
             Grid = grid;
         }
         public SMatrix GetSystemSMatrix(int LaserWaveLengthInNm)
+            => GetSystemSMatrix((double)LaserWaveLengthInNm);
+
+        public SMatrix GetSystemSMatrix(double wavelengthNm)
         {
-            var allComponentsSMatrices = GetAllComponentsSMatrices(LaserWaveLengthInNm);
+            var allComponentsSMatrices = GetAllComponentsSMatrices(wavelengthNm);
             SMatrix allConnectionsSMatrix = Grid.UsePhysicalCoordinates
-               ? CreatePhysicalConnectionsMatrix(LaserWaveLengthInNm)
+               ? CreatePhysicalConnectionsMatrix(wavelengthNm)
                : CreateInterComponentsConnectionsMatrix();
             allComponentsSMatrices.Add(allConnectionsSMatrix);
             return SMatrix.CreateSystemSMatrix(allComponentsSMatrices);
         }
-        private SMatrix CreatePhysicalConnectionsMatrix(int laserWaveLengthInNm)
+        private SMatrix CreatePhysicalConnectionsMatrix(double laserWaveLengthInNm)
         {
             var connections = Grid.WaveguideConnections.GetConnectionTransfers(
                 connection => ChipletEdgeCouplerCoupling.FieldFactor(connection, laserWaveLengthInNm),
@@ -66,7 +77,7 @@ namespace CAP_Core.LightCalculation
         /// connection would, so grouping stays transparent to interference.
         /// </summary>
         private Dictionary<(Guid, Guid), Complex> GetAllFrozenPathTransfers(
-            int wavelengthNm, bool coherentPropagationPhase)
+            double wavelengthNm, bool coherentPropagationPhase)
         {
             var transfers = new Dictionary<(Guid, Guid), Complex>();
             foreach (var component in Grid.TileManager.GetAllComponents())
@@ -82,7 +93,7 @@ namespace CAP_Core.LightCalculation
         private static void CollectFrozenPathTransfers(
             ComponentGroup group,
             Dictionary<(Guid, Guid), Complex> transfers,
-            int wavelengthNm,
+            double wavelengthNm,
             bool coherentPropagationPhase)
         {
             foreach (var path in group.InternalPaths)
@@ -119,7 +130,7 @@ namespace CAP_Core.LightCalculation
             allConnectionsSMatrix.SetValues(interComponentConnections);
             return allConnectionsSMatrix;
         }
-        private List<SMatrix> GetAllComponentsSMatrices(int waveLength)
+        private List<SMatrix> GetAllComponentsSMatrices(double waveLength)
         {
             var allComponents = Grid.TileManager.GetAllComponents();
             var allSMatrices = new List<SMatrix>();
@@ -147,7 +158,7 @@ namespace CAP_Core.LightCalculation
         }
 
         private static void CollectChildSMatrices(
-            ComponentGroup group, int waveLength, List<SMatrix> result)
+            ComponentGroup group, double waveLength, List<SMatrix> result)
         {
             foreach (var child in group.ChildComponents)
             {
@@ -163,7 +174,7 @@ namespace CAP_Core.LightCalculation
         }
 
         private static void AddComponentSMatrix(
-            Component component, int waveLength, List<SMatrix> result)
+            Component component, double waveLength, List<SMatrix> result)
         {
             if (component.WaveLengthToSMatrixMap.Count > 0)
             {

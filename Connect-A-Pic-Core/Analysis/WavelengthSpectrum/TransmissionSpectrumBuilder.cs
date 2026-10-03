@@ -34,7 +34,7 @@ namespace CAP_Core.Analysis.WavelengthSpectrum
             if (result == null) throw new ArgumentNullException(nameof(result));
 
             var pinIds = SelectPinIds(result, outputPinFilter);
-            var wavelengths = ToDoubleArray(result.GetWavelengthValues());
+            var wavelengths = result.GetWavelengthValues();
 
             var curves = new List<TransmissionCurve>(pinIds.Count);
             foreach (var pinId in pinIds)
@@ -71,13 +71,5 @@ namespace CAP_Core.Analysis.WavelengthSpectrum
 
         /// <summary>Converts an insertion-loss value in dB to linear power transmission.</summary>
         public static double DbToLinear(double db) => Math.Pow(10.0, db / 10.0);
-
-        private static double[] ToDoubleArray(int[] values)
-        {
-            var result = new double[values.Length];
-            for (int i = 0; i < values.Length; i++)
-                result[i] = values[i];
-            return result;
-        }
     }
 }

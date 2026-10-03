@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.SweepHelpFlyout">
+
+    <!-- Help of the Sweep tab (#1352, #1152 pattern): two short sections
+         (text budget, all five locales) plus one looping scene — a slider knob
+         travels from Start to End while a dot traces the cos² output fringe
+         point by point (steep slope = sensitive, half power = quadrature bias
+         point). Hosted as the HelpContent of the panel's HelpFlyoutButton,
+         which supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock Text="{loc:Localize SweepHelp.WhatTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize SweepHelp.WhatBody}"/>
+
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <ha:SweepSliderFringeAnimation Width="368" Height="150" IsHitTestVisible="False"/>
+                <TextBlock Text="{loc:Localize SweepHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize SweepHelp.CurveTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize SweepHelp.CurveBody}"/>
+
+    </StackPanel>
+
+</UserControl>
