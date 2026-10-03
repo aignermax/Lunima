@@ -25,22 +25,23 @@ adder is the largest shipped logic example (90 blocked wires).
 
 ## Router initial-pass re-measure (#1342)
 
-Same machine, same benchmark (`RamScaleDesignBuilder.Build(2, 4)`), re-taken after the
-router initial-pass optimization (#1342: A* search bounded to an endpoint-corridor window
-with a full-grid fallback, a reachability flood that skips provably-unreachable searches,
-one continuous search instead of the quick+extended re-run, memoized proximity cost).
-Before/after rows are bound just past each build's initial pass, so the blocked counts are
-like-for-like snapshots at the same route stage (one ordering-cascade attempt underway):
+Same benchmark (`RamScaleDesignBuilder.Build(2, 4)`), re-taken after the router
+initial-pass optimization (#1342: a reachability flood that skips provably-unreachable
+searches, one continuous search instead of the quick+extended re-run, memoized proximity
+cost, lock-free pin-zone lookups). An endpoint-corridor search window was part of the
+first measurement but was reverted in the #1348 review: it changed which valid path A*
+finds, which broke the pinned GDS round-trip topology — the kept optimizations leave the
+found routes unchanged (pinned by the nazca GDS round-trip suite). Both rows below ran on
+one machine with the same 600 s bound:
 
 | Router | Route bound | Initial pass | Blocked at cancel | Unrouted |
 |---|---|---|---|---|
-| dev-ki HEAD (before) | 385 s | 356.7 s | 35 | 0 |
-| #1342 (after) | 170 s | 160.2 s | 33 | 0 |
-| #1342 (after, long run) | 600 s | 165.3 s | 31 (3 cascade attempts) | 0 |
+| dev-ki (before) | 600 s | 409.3 s | 36 (1 cascade attempt) | 0 |
+| #1342 without window (after) | 600 s | 124.8 s | 20 (5 cascade attempts) | 0 |
 
-**Initial pass 356.7 s → 160.2 s = 2.2× faster; blocked not worse (35 → 33).** The full
-route still does not converge within 15 min — the ordering cascade is now the dominant
-share (~435 s of the 600 s long run) and is the next router target, not the initial pass.
+**Initial pass 409.3 s → 124.8 s = 3.3× faster with unchanged routes.** The full route
+still does not converge within 10 min — the ordering cascade is now the dominant share
+(~475 s of the 600 s run) and is the next router target, not the initial pass.
 
 ## Slope
 

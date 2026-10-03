@@ -44,34 +44,6 @@ public class AStarPathfinder
     public bool UseDiagonals { get; set; } = true;
 
     /// <summary>
-    /// Optional bounding window (inclusive grid-cell bounds) outside of which the
-    /// search never expands. Routing a wire across a large chip otherwise lets the
-    /// search flood the entire grid even though a sane route stays near the corridor
-    /// between its endpoints. Null searches the whole grid. Callers fall back to an
-    /// unbounded search when a bounded attempt finds no path, so a window can only
-    /// change which valid path is found, never whether one is found.
-    /// </summary>
-    public (int MinX, int MinY, int MaxX, int MaxY)? SearchWindow { get; set; }
-
-    /// <summary>
-    /// Bounding box of the cells the last <see cref="FindPath"/> call dequeued
-    /// (diagnostic hook for tests profiling the search space). Null when the last
-    /// search expanded nothing.
-    /// </summary>
-    public (int MinX, int MinY, int MaxX, int MaxY)? LastExpandedBounds { get; private set; }
-
-    /// <summary>Nodes the last <see cref="FindPath"/> call expanded (diagnostic hook).</summary>
-    public int LastNodesExpanded { get; private set; }
-
-    /// <summary>
-    /// True when the last <see cref="FindPath"/> ended because it hit
-    /// <see cref="MaxNodesExpanded"/> with frontier left — the search was cut short,
-    /// not exhausted. False when it found a path, was cancelled, or proved no path
-    /// exists by emptying the open set (diagnostic hook for profiling).
-    /// </summary>
-    public bool LastSearchHitNodeBudget { get; private set; }
-
-    /// <summary>
     /// Node count at which <see cref="OnEscalationThresholdReached"/> fires once
     /// (default: never). Lets a caller keep a single continuous search while still
     /// surfacing "this route is complex" at the point a separate quick phase would
@@ -139,26 +111,17 @@ public class AStarPathfinder
         visited[StateKey(startNode)] = startNode;
 
         int nodesExpanded = 0;
-        LastExpandedBounds = null;
-        LastSearchHitNodeBudget = false;
 
         while (openSet.Count > 0 && nodesExpanded < MaxNodesExpanded)
         {
             // Check cancellation periodically to remain responsive
             if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)
-            {
-                LastNodesExpanded = nodesExpanded;
                 return null;
-            }
 
             var current = openSet.Dequeue();
             nodesExpanded++;
             if (nodesExpanded == EscalationThresholdNodes)
                 OnEscalationThresholdReached?.Invoke();
-            LastExpandedBounds = LastExpandedBounds is { } b
-                ? (Math.Min(b.MinX, current.X), Math.Min(b.MinY, current.Y),
-                   Math.Max(b.MaxX, current.X), Math.Max(b.MaxY, current.Y))
-                : (current.X, current.Y, current.X, current.Y);
 
             // Check if we reached the goal
             if (IsGoalReached(current, endX, endY, endDirection))
@@ -169,10 +132,7 @@ public class AStarPathfinder
                 // looping arrivals — e.g. a full 360° circle at the start pin — and keep
                 // searching for a loop-free alternative.
                 if (!PathLoopDetector.IsSelfIntersecting(path))
-                {
-                    LastNodesExpanded = nodesExpanded;
                     return path;
-                }
 
                 // Forget this looping arrival's grid state, otherwise its (cheaper) entry
                 // stays in the visited map and rejects a later, more expensive but loop-free
@@ -197,8 +157,6 @@ public class AStarPathfinder
 
         // No path found: hitting the budget with frontier left is a cut-short
         // search; an empty open set is a proof that no path exists.
-        LastNodesExpanded = nodesExpanded;
-        LastSearchHitNodeBudget = openSet.Count > 0;
         return null;
     }
 
@@ -284,11 +242,6 @@ public class AStarPathfinder
             var (dx, dy) = dir.GetDelta();
             int newX = current.X + dx;
             int newY = current.Y + dy;
-
-            // Bounded search: never expand outside the endpoint corridor window.
-            if (SearchWindow is { } window &&
-                (newX < window.MinX || newX > window.MaxX || newY < window.MinY || newY > window.MaxY))
-                continue;
 
             // Check bounds and obstacles
             if (_grid.IsBlocked(newX, newY))

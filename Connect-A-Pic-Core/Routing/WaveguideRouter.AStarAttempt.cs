@@ -17,11 +17,9 @@ public partial class WaveguideRouter
     /// Before any search runs, a direction-aware reachability flood
     /// (<see cref="PathfindingGrid.CanReachGoalDirected"/>) decides whether a path can exist
     /// at all — a proven-unreachable goal skips every search below with the same null result
-    /// they would return after burning their full node budgets. The search itself runs first
-    /// bounded to a corridor window around the endpoints (<see cref="ComputeSearchWindow"/>);
-    /// when the window holds no path, the unbounded search runs with the extended node budget
-    /// (<see cref="Phase2MaxNodes"/>), firing <see cref="OnComplexRouteStarted"/> at the
-    /// quick-phase mark (<see cref="Phase1MaxNodes"/>).
+    /// they would return after burning their full node budgets. The search runs over the
+    /// whole grid with the extended node budget (<see cref="Phase2MaxNodes"/>), firing
+    /// <see cref="OnComplexRouteStarted"/> at the quick-phase mark (<see cref="Phase1MaxNodes"/>).
     /// </summary>
     private bool TryRouteAStar(double bendRadius,
                                 double startX, double startY, double startAngle,
@@ -30,8 +28,6 @@ public partial class WaveguideRouter
                                 CancellationToken cancellationToken = default)
     {
         if (PathfindingGrid == null) return false;
-
-        LastAStarSearchWindow = null;
 
         // Sync the cost model to the radius of THIS attempt: turns must be spaced far
         // enough apart that the smoother can realize them as arcs of this radius.
@@ -110,27 +106,10 @@ public partial class WaveguideRouter
                     gridStartX, gridStartY, startDir,
                     gridEndX, gridEndY, endDir);
             }
-            else
+            else if (goalReachable)
             {
-                // Bounded attempt first: the search space is clipped to a corridor
-                // window around the endpoints, so a wire on a large chip no longer
-                // floods the whole grid before finding (or ruling out) a path.
-                // When the window holds no path, the unbounded phases below run
-                // exactly as before — the window can only change which valid path
-                // is found, never whether one is found.
-                var window = ComputeSearchWindow(gridStartX, gridStartY, gridEndX, gridEndY);
-                LastAStarSearchWindow = window;
-                if (goalReachable)
-                {
-                    gridPath = RunAStarPhases(window, gridStartX, gridStartY, startDir,
-                                              gridEndX, gridEndY, endDir, cancellationToken);
-
-                    if (gridPath == null && !cancellationToken.IsCancellationRequested)
-                    {
-                        gridPath = RunAStarPhases(null, gridStartX, gridStartY, startDir,
-                                                  gridEndX, gridEndY, endDir, cancellationToken);
-                    }
-                }
+                gridPath = RunAStarPhases(gridStartX, gridStartY, startDir,
+                                          gridEndX, gridEndY, endDir, cancellationToken);
             }
 
             // Lateral-tolerance retry: the strict phases require an exact
@@ -205,23 +184,8 @@ public partial class WaveguideRouter
     }
 
     /// <summary>
-    /// The search window (grid cells) of the most recent bounded A* attempt — a
-    /// diagnostic hook for tests pinning that the search space stays bounded to a
-    /// corridor around the endpoints instead of spanning the whole chip.
-    /// </summary>
-    public (int MinX, int MinY, int MaxX, int MaxY)? LastAStarSearchWindow { get; private set; }
-
-    /// <summary>
-    /// Minimum margin (grid cells) the search window keeps around the endpoint bounding
-    /// box on every side, so a route can dodge obstacles sitting directly on the
-    /// pin-to-pin corridor without leaving the window.
-    /// </summary>
-    private const int SearchWindowMinMarginCells = 40;
-
-    /// <summary>
-    /// Runs the A* search for one routing attempt, optionally bounded to
-    /// <paramref name="window"/>. One continuous search replaces the former
-    /// back-to-back Phase-1/Phase-2 runs: the extended phase's budget IS the total
+    /// Runs the A* search for one routing attempt. One continuous search replaces the
+    /// former back-to-back Phase-1/Phase-2 runs: the extended phase's budget IS the total
     /// budget and <see cref="AStarPathfinder.AStarPathfinder.OnEscalationThresholdReached"/>
     /// marks where the quick phase would have ended. The expansion sequence — and
     /// therefore the outcome — is identical to the two-phase version, minus the
@@ -230,7 +194,6 @@ public partial class WaveguideRouter
     /// exhausted search returns null again).
     /// </summary>
     private List<AStarNode>? RunAStarPhases(
-        (int MinX, int MinY, int MaxX, int MaxY)? window,
         int gridStartX, int gridStartY, GridDirection startDir,
         int gridEndX, int gridEndY, GridDirection endDir,
         CancellationToken cancellationToken)
@@ -243,31 +206,11 @@ public partial class WaveguideRouter
             // the total budget — the quick phase survives only as the escalation mark.
             MaxNodesExpanded = Phase2MaxNodes,
             UseDiagonals = UseDiagonalRouting,
-            SearchWindow = window,
             EscalationThresholdNodes = Phase1MaxNodes,
             OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke()
         };
         return search.FindPath(gridStartX, gridStartY, startDir,
                                gridEndX, gridEndY, endDir, cancellationToken);
-    }
-
-    /// <summary>
-    /// The bounded search window for one wire: the endpoint bounding box inflated by
-    /// half its extent per axis and at least <see cref="SearchWindowMinMarginCells"/>
-    /// cells, clamped to the grid. Long wires get proportionally more detour room;
-    /// short wires search a small local window instead of the whole chip.
-    /// </summary>
-    private (int MinX, int MinY, int MaxX, int MaxY) ComputeSearchWindow(
-        int gridStartX, int gridStartY, int gridEndX, int gridEndY)
-    {
-        var grid = PathfindingGrid!;
-        int marginX = Math.Max(SearchWindowMinMarginCells, Math.Abs(gridEndX - gridStartX) / 2);
-        int marginY = Math.Max(SearchWindowMinMarginCells, Math.Abs(gridEndY - gridStartY) / 2);
-        return (
-            Math.Max(0, Math.Min(gridStartX, gridEndX) - marginX),
-            Math.Max(0, Math.Min(gridStartY, gridEndY) - marginY),
-            Math.Min(grid.Width - 1, Math.Max(gridStartX, gridEndX) + marginX),
-            Math.Min(grid.Height - 1, Math.Max(gridStartY, gridEndY) + marginY));
     }
 
     /// <summary>
