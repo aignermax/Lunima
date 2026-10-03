@@ -61,6 +61,11 @@ a waveguide cross-section whose width wobbles, a transmission dip that shifts wi
 and dots dropping into a histogram that builds a bell shape. The dot landing bins come
 from a fixed-seed generator, so every loop (and every screenshot) is identical.
 
+`SweepSliderFringeAnimation` (Sweep help, #1352): a slider knob travels from Start to
+End while a dot traces the cos² output fringe point by point. Knob and dot share one x
+axis, so "slider value → point on the curve" is read directly; the trace grows with the
+sweep and the last frame keeps the finished fringe visible.
+
 ## Rules
 
 - One animation per flyout; keep text sections to ≤3 short sentences (enforced by
