@@ -183,7 +183,8 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     [SkippableFact]
     public async Task ExportedGds_IndependentPythonCrossCheck_ConfirmsDesignStructure()
     {
-        var export = await ExportUserDesignAsync("export-pycheck", stripSiepicUpgrade: false);
+        // Scenario-agnostic (asserts fork on export.SiepicUpgraded) — plain nazca gating suffices.
+        var export = await ExportUserDesignAsync("export-pycheck", stripSiepicUpgrade: false, requireSiepicUpgradeStack: false);
 
         var engine = await ProbeGdsEngineAsync(export.Python);
         Skip.If(engine == null, "Python has neither klayout.db nor gdstk — no independent GDS reader.");
@@ -270,7 +271,10 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     [SkippableFact]
     public async Task FullLoop_StubScenario_RouteDerivationRestoresMmiBraids_WithoutMiswires()
     {
-        var export = await ExportUserDesignAsync("export-stub", stripSiepicUpgrade: true);
+        // The stripped script needs only nazca — bare-nazca machines are exactly
+        // what this scenario pins, so it must not gate on the SiEPIC stack.
+        var export = await ExportUserDesignAsync(
+            "export-stub", stripSiepicUpgrade: true, requireSiepicUpgradeStack: false);
         export.SiepicUpgraded.ShouldBeFalse("the upgrade call was stripped — the stubs survive");
 
         var (outcome, host) = await ImportExplodeAsync(export.GdsPath);
@@ -504,8 +508,9 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         string StdErr);
 
     /// <summary>Instance wrapper over the shared static harness, bound to this fixture's temp root.</summary>
-    private async Task<ExportResult> ExportUserDesignAsync(string subdir, bool stripSiepicUpgrade) =>
-        await ExportUserDesignAsync(_root, subdir, stripSiepicUpgrade);
+    private async Task<ExportResult> ExportUserDesignAsync(
+        string subdir, bool stripSiepicUpgrade, bool requireSiepicUpgradeStack = true) =>
+        await ExportUserDesignAsync(_root, subdir, stripSiepicUpgrade, requireSiepicUpgradeStack);
 
     /// <summary>
     /// Builds the user's design, exports it with the app's exporter and runs the
@@ -515,10 +520,21 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     /// static with an explicit temp root so <see cref="GdsReexportIdempotencyTests"/>
     /// reuses the same harness.
     /// </summary>
-    internal static async Task<ExportResult> ExportUserDesignAsync(string root, string subdir, bool stripSiepicUpgrade)
+    internal static async Task<ExportResult> ExportUserDesignAsync(
+        string root, string subdir, bool stripSiepicUpgrade, bool requireSiepicUpgradeStack = true)
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        // Scenario-honest gating (#1353): a script that KEEPS the klayout upgrade
+        // call pins the SiEPIC-upgraded topology, so it must run on a Python that
+        // can actually execute the upgrade — a nazca-only interpreter silently
+        // keeps the stub boxes (the export degrades by design) and the pinned
+        // numbers fail. The stripped (stub-scenario) script genuinely needs
+        // only nazca.
+        var python = requireSiepicUpgradeStack
+            ? await GdsUserDesignFixture.FindSiepicRoundTripPythonAsync()
+            : await GdsUserDesignFixture.FindNazcaPythonAsync();
+        Skip.If(python == null, requireSiepicUpgradeStack
+            ? "No Python with nazca + klayout + siepic_ebeam_pdk available — the round trip pins the SiEPIC-upgraded topology."
+            : "No Python with nazca available — the round trip needs the real engine.");
 
         var canvas = GdsUserDesignFixture.BuildUserDesignCanvas();
         var skippedConnections = new List<string>();
