@@ -152,7 +152,7 @@ internal static class WavelengthSpectrumPlotBuilder
             Color = color,
             StrokeThickness = SeriesStrokeThickness,
             CanTrackerInterpolatePoints = true,
-            TrackerTextProvider = dp => $"{label}\nλ = {dp.X:0} nm\nT = {dp.Y:0.000}",
+            TrackerTextProvider = dp => $"{label}\nλ = {dp.X:0.0##} nm\nT = {dp.Y:0.000}",
         };
         for (int i = 0; i < curve.WavelengthsNm.Count; i++)
             series.Points.Add(new DataPoint(curve.WavelengthsNm[i], curve.Transmission[i]));

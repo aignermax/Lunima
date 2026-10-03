@@ -1,0 +1,10 @@
+[
+  {
+    "file": "spectrum-integer-grid-before.png",
+    "caption": "Before: the old rounding collapses a 300-step request to these 16 integer-nm points \u2014 the fringe notch is a single sample."
+  },
+  {
+    "file": "spectrum-subnm-after.png",
+    "caption": "After: 300 requested steps stay 300 distinct wavelengths (0.05 nm) \u2014 the interference notch is spectrally resolved."
+  }
+]

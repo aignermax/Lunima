@@ -11,8 +11,8 @@ namespace CAP_Core.Analysis.OnaAnalysis
         /// <summary>Insertion-loss floor applied when output power is zero or negative.</summary>
         public const double MinInsertionLossDb = -120.0;
 
-        /// <summary>Wavelength (nm) at which this simulation step was run.</summary>
-        public int WavelengthNm { get; }
+        /// <summary>Wavelength (nm) at which this simulation step was run. Sub-nm resolution.</summary>
+        public double WavelengthNm { get; }
 
         /// <summary>Output power (|field|²) per pin GUID.</summary>
         public IReadOnlyDictionary<Guid, double> OutputPowers { get; }
@@ -29,7 +29,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
         /// <param name="wavelengthNm">Wavelength of this step.</param>
         /// <param name="fieldResults">Complex field amplitudes keyed by pin GUID.</param>
         /// <param name="inputPower">Total input power (linear) for insertion-loss reference.</param>
-        public WavelengthDataPoint(int wavelengthNm, Dictionary<Guid, Complex> fieldResults, double inputPower)
+        public WavelengthDataPoint(double wavelengthNm, Dictionary<Guid, Complex> fieldResults, double inputPower)
         {
             if (fieldResults == null)
                 throw new ArgumentNullException(nameof(fieldResults));

@@ -37,10 +37,10 @@ namespace CAP_Core.Analysis.OnaAnalysis
             Warnings = warnings ?? new List<string>();
         }
 
-        /// <summary>Returns the wavelength values (nm) across all data points.</summary>
-        public int[] GetWavelengthValues()
+        /// <summary>Returns the wavelength values (nm, sub-nm resolution) across all data points.</summary>
+        public double[] GetWavelengthValues()
         {
-            var values = new int[DataPoints.Count];
+            var values = new double[DataPoints.Count];
             for (int i = 0; i < DataPoints.Count; i++)
                 values[i] = DataPoints[i].WavelengthNm;
             return values;
@@ -80,7 +80,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
 
             foreach (var dp in DataPoints)
             {
-                sb.Append(dp.WavelengthNm);
+                sb.Append(dp.WavelengthNm.ToString("G", CultureInfo.InvariantCulture));
                 foreach (var pinId in MonitoredPinIds)
                 {
                     dp.InsertionLossDb.TryGetValue(pinId, out double loss);

@@ -102,8 +102,7 @@ public class EBeamMziSpectrumToggleTests
         {
             var wavelengths = series.Points.Select(p => p.X).ToArray();
             var power = series.Points.Select(p => p.Y).ToArray();
-            // The sweep grid rounds to integer nm; collapse revisited wavelengths.
-            curves.Add(Deduplicate(wavelengths, power));
+            curves.Add((wavelengths, power));
         }
         curves.ShouldNotBeEmpty("the gc_out waveguide port must be plotted");
         return curves;

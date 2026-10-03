@@ -6,8 +6,8 @@ public sealed class GoldenGateResult
     /// <summary>Gate violations (load/route/DRC/pin-resolution). Empty means the gate passed.</summary>
     public List<string> Violations { get; } = new();
 
-    /// <summary>Sweep wavelengths actually simulated (nm).</summary>
-    public int[] WavelengthsNm { get; set; } = Array.Empty<int>();
+    /// <summary>Sweep wavelengths actually simulated (nm, sub-nm resolution).</summary>
+    public double[] WavelengthsNm { get; set; } = Array.Empty<double>();
 
     /// <summary>Measured linear transmission per output pin reference.</summary>
     public Dictionary<string, double[]> Transmission { get; } = new();
