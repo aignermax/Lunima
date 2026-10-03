@@ -10,6 +10,10 @@ namespace CAP_Core.Components.Connections;
 /// re-routing the best ordering a second time, and the remaining orderings are skipped
 /// once <see cref="MaxNonImprovingOrderingAttempts"/> consecutive attempts brought no
 /// improvement. Both bounds leave the kept routes identical to an unbounded cascade.
+/// On top of that the orderings are evaluated speculatively in parallel on isolated router
+/// clones (issue #1360, see WaveguideConnectionManager.ParallelCascade.cs): the attempts are
+/// independent full re-routes from the same component-only grid state, and the sequential
+/// selection logic is replayed over their outcomes, so the kept routes stay identical.
 /// </summary>
 public partial class WaveguideConnectionManager
 {
@@ -36,6 +40,16 @@ public partial class WaveguideConnectionManager
         Action? progressCallback,
         CancellationToken cancellationToken)
     {
+        // Every ordering is an independent full re-route from the same component-only grid
+        // state, so the attempts are evaluated speculatively in parallel on isolated router
+        // clones and the sequential selection below is replayed over their outcomes —
+        // identical kept routes at a fraction of the wall-clock. The sequential path stays
+        // for routers a clone cannot reproduce (hierarchical pathfinding) and for the
+        // degenerate no-alternative-ordering case.
+        if (UseParallelOrderingCascade && !router.UseHierarchicalPathfinding
+            && RunOrderingCascadeInParallel(router, progressCallback, cancellationToken))
+            return;
+
         // Snapshots: this runs on the routing thread while UI commands may mutate the list.
         var result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
         LastOrderingAttemptCount++;
