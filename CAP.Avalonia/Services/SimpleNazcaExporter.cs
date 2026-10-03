@@ -50,9 +50,11 @@ public class SimpleNazcaExporter
     /// A design built entirely from the SiEPIC EBeam PDK routes its waveguide
     /// interconnect on the EBeam cross-section stamped onto its pins (width + Si layer)
     /// instead of the nazca default layer and drops the demofab bb_body frame —
-    /// see <see cref="SiepicEBeamExportProfile"/> — and additionally carries the
+    /// see <see cref="SiepicEBeamExportProfile"/> — additionally carries the
     /// openEBL design-for-test markers (opt_in label, floorplan box) of
-    /// <see cref="NazcaOpenEblDftWriter"/>.
+    /// <see cref="NazcaOpenEblDftWriter"/>, and wraps every routed optical
+    /// connection in its own SiEPIC waveguide cell (Waveguide 1/99 guide + DevRec
+    /// + PinRec pins, <see cref="SiepicWaveguideCellWriter"/>).
     /// </summary>
     /// <param name="canvas">The design canvas to export.</param>
     /// <param name="pdkModuleName">Optional PDK module name (e.g., "siepic_ebeam_pdk") for import.</param>
@@ -127,13 +129,19 @@ public class SimpleNazcaExporter
         NazcaPinLabelWrapperWriter.AppendCells(sb, wrapperPlan);
         var componentNames = AppendComponents(sb, canvas, emitVerification, rawCodePlan: rawCodePlan, wrapperPlan: wrapperPlan);
         NazcaOutlinePolygonWriter.AppendGroupOutlinePolygons(sb, canvas);
+        var waveguideCells = ebeamProfile != null
+            ? new SiepicWaveguideCellWriter(ebeamProfile.WidthMicrometers)
+            : null;
         AppendConnections(
             sb, canvas, componentNames, metal, interconnectSettings.GdsLayer,
-            skippedConnections, unresolvedCrossings, interconnectPlan, ebeamProfile != null);
+            skippedConnections, unresolvedCrossings, interconnectPlan, ebeamProfile != null, waveguideCells);
         if (ebeamProfile != null)
             NazcaOpenEblDftWriter.AppendDftMarkers(sb, canvas, designName);
         AppendFooter(sb);
         SiepicCellUpgradeWriter.AppendUpgradeBlock(sb, canvas, addDevRec: ebeamProfile != null);
+        // The spine pass must run after the foundry-cell upgrade: its pin matching
+        // reads the real foundry PinRec paths from the upgraded GDS.
+        waveguideCells?.AppendSpineBlock(sb);
         if (emitVerification)
             AppendVerificationEpilog(sb);
 
@@ -699,7 +707,8 @@ public class SimpleNazcaExporter
         List<string>? skippedConnections = null,
         List<string>? unresolvedCrossings = null,
         NazcaProcessInterconnectPlan? interconnectPlan = null,
-        bool forceProcessCrossSections = false)
+        bool forceProcessCrossSections = false,
+        SiepicWaveguideCellWriter? waveguideCells = null)
     {
         var hasFrozenPaths = canvas.Components.Any(vm => vm.Component is ComponentGroup)
             || canvas.CanvasFrozenPaths.Count > 0;
@@ -788,11 +797,24 @@ public class SimpleNazcaExporter
             }
 
             // Routed connections export their real segments; only routeless
-            // connections fall back to a p2p interconnect.
+            // connections fall back to a p2p interconnect. An EBeam-only export
+            // wraps each routed optical connection in its own SiEPIC waveguide
+            // cell (openEBL gap #4) instead of flattening it into the top cell.
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+            {
+                if (metal == null && waveguideCells != null)
+                {
+                    var cellContent = new StringBuilder();
+                    AppendSegmentExport(cellContent, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+                    waveguideCells.AppendWaveguideCell(sb, cellContent, segments, conn.StartPin, conn.EndPin);
+                }
+                else
+                {
+                    AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+                }
+            }
             else
                 AppendFallbackExport(sb, conn.StartPin, conn.EndPin, componentNames, metal, sourceLayer,
                     interconnectPlan?.InterconnectFor(conn) ?? "ic");

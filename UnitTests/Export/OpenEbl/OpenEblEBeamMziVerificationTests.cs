@@ -6,21 +6,23 @@ using Xunit;
 namespace UnitTests.Export.OpenEbl;
 
 /// <summary>
-/// openEBL readiness gate for gap #2 (#1321): exports the shipped
+/// openEBL readiness gate for gap #4 (#1336): exports the shipped
 /// <c>EBeam Mach-Zehnder Interferometer.lun</c> through the real nazca path and runs
 /// a vendored headless port of openEBL's <c>run_verification.py</c>
 /// (SiEPIC-Tools <c>layout_check</c>) against the produced GDS — the same top-cell
 /// pick, the same EBeam technology attach, the same call, plus a per-category census
 /// parsed from the .lyrdb report.
 /// <para>
-/// The pinned state is the HONEST one after gap #2's DevRec slice: the run completes
-/// (no "Unknown error occurred" — <c>find_components</c> sees a DevRec (68, 0) per
-/// component cell, from the foundry cells of the klayout upgrade pass or the
-/// ensure-pass of <see cref="SiepicCellUpgradeWriter"/>), and what remains is the
-/// gap #4 surface: the routed waveguides flatten to top-cell Si polygons (15
-/// "Shapes outside component") and carry no SiEPIC PinRec/Waveguide (1/99)
-/// conventions, so every optical pin reports disconnected (8 "Disconnected pin",
-/// 2 pins × 4 components). Those are deliberately NOT fixed here.
+/// The pinned state is the gap #4 fix: every routed connection exports as its own
+/// SiEPIC-conformant <c>Waveguide_&lt;n&gt;</c> cell (Si 1/0 polygons + Waveguide
+/// (1/99) guide-outline polygon + DevRec (68/0) + PinRec (1/10) pins that are exact
+/// reversed copies of the foundry pins, <see cref="SiepicWaveguideCellWriter"/>), so
+/// the run completes with ZERO layout errors: no "Shapes outside component" (the
+/// routes no longer flatten into the top cell), no "Disconnected pin" (every optical
+/// pin is netted to a waveguide pin — identical centre, 180°-opposite direction, the
+/// two conditions <c>identify_nets</c> requires), and no new category (no
+/// "Overlapping component", no "Waveguide: Path" — the guide is stored as the path's
+/// outline polygon exactly like the SiEPIC Waveguide PCell).
 /// </para>
 /// <para>
 /// Gating: needs a Python with nazca + klayout + siepic_ebeam_pdk + SiEPIC (installed
@@ -76,17 +78,16 @@ public class OpenEblEBeamMziVerificationTests
 
             CopyArtifacts(dir, scriptPath, gdsPath, runnerPath, output);
 
-            // ── 5. Pin the honest state after gap #2 ──
+            // ── 5. Pin the gap #4 result: verification passes with zero errors ──
             output.ShouldContain("Top cell: ConnectAPIC_Design");
-            // Gap #2 closed: find_components sees every component cell's DevRec, so
-            // layout_check no longer aborts before the real rules run.
             output.ShouldNotContain("Unknown error occurred");
-            // Remaining findings, all gap #4 (SiEPIC pin/waveguide conventions on the
-            // routed interconnect) — listed, deliberately unfixed:
-            output.ShouldContain("category Shapes outside component: 15");
-            output.ShouldContain("category Disconnected pin: 8");
-            errorCount.ShouldBe(23,
-                $"the EBeam MZI verification must keep this exact gap-#4 remainder:\n{output}");
+            // Gap #4 closed (#1336): every routed connection is a SiEPIC-conformant
+            // Waveguide_<n> cell, so no route polygon sits outside a component and
+            // every optical pin is netted to a waveguide pin.
+            output.ShouldContain("category Shapes outside component: 0");
+            output.ShouldContain("category Disconnected pin: 0");
+            errorCount.ShouldBe(0,
+                $"the EBeam MZI verification must pass cleanly after gap #4:\n{output}");
         }
         finally
         {
@@ -166,19 +167,22 @@ public class OpenEblEBeamMziVerificationTests
             num_errors = 1
 
         # Per-category census from the report database (klayout.rdb reads the lyrdb).
-        if num_errors and os.path.exists(file_lyrdb):
+        # The two gap-#4 categories are ALWAYS printed (0 when absent or when the
+        # run was clean enough to skip writing items), so the pinned assertion
+        # names the fixed rules instead of relying on a missing line.
+        counts = {}
+        if os.path.exists(file_lyrdb):
             try:
                 import klayout.rdb as rdb
                 db = rdb.ReportDatabase()
                 db.load(file_lyrdb)
-                counts = {}
                 for item in db.each_item():
                     cat = db.category_by_id(item.category_id()).name()
                     counts[cat] = counts.get(cat, 0) + 1
-                for name in sorted(counts):
-                    print('category %s: %d' % (name, counts[name]))
             except Exception as exc:
                 print('# category census failed: %s' % exc)
+        for name in sorted(set(counts) | {'Disconnected pin', 'Shapes outside component'}):
+            print('category %s: %d' % (name, counts.get(name, 0)))
 
         print(num_errors)
         """;
