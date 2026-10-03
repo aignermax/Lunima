@@ -53,7 +53,8 @@ public class SimpleNazcaExporter
     /// see <see cref="SiepicEBeamExportProfile"/> — additionally carries the
     /// openEBL design-for-test markers (opt_in label, floorplan box) of
     /// <see cref="NazcaOpenEblDftWriter"/>, and wraps every routed optical
-    /// connection in its own SiEPIC waveguide cell (Waveguide 1/99 guide + DevRec
+    /// connection AND every optical frozen path (group-internal or canvas-level)
+    /// in its own SiEPIC waveguide cell (Waveguide 1/99 guide + DevRec
     /// + PinRec pins, <see cref="SiepicWaveguideCellWriter"/>).
     /// </summary>
     /// <param name="canvas">The design canvas to export.</param>
@@ -512,10 +513,14 @@ public class SimpleNazcaExporter
             if (include == null && !string.IsNullOrEmpty(comp.GdsFactoryFunction)) continue;
             if (comp is ComponentGroup group)
             {
-                // Flatten group: export all child components at their absolute positions
+                // Flatten group: export all child components at their absolute positions.
+                // GetAllComponentsRecursive lists nested group NODES too — a group is not a
+                // physical cell and placing it would emit a demofab heuristic box on top of
+                // its (also listed) leaf children.
                 foreach (var child in group.GetAllComponentsRecursive())
                 {
                     if (child.IsAnalysisTool) continue;
+                    if (child is ComponentGroup) continue;
                     if (include == null && !string.IsNullOrEmpty(child.GdsFactoryFunction)) continue;
                     if (include != null && !include(child)) continue;
                     AppendSingleComponent(sb, child, componentNames, ref compIndex, ci, plan, wrapperPlan);
@@ -824,13 +829,13 @@ public class SimpleNazcaExporter
         foreach (var compVm in canvas.Components)
         {
             if (compVm.Component is ComponentGroup group)
-                AppendGroupFrozenPaths(sb, group, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections);
+                AppendGroupFrozenPaths(sb, group, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
         }
 
         // Canvas-level pin-less frozen paths (issue #856): imported route geometry
         // released by ungrouping exports exactly like it did inside the group.
         foreach (var pathVm in canvas.CanvasFrozenPaths)
-            AppendFrozenPath(sb, pathVm.Path, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections);
+            AppendFrozenPath(sb, pathVm.Path, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
 
         AppendBridgeMarkers(sb, canvas, metalConnections, metalSpec);
         CollectUnresolvedCrossings(unresolvedCrossingCandidates, metalConnections, metalSpec, unresolvedCrossings);
@@ -969,20 +974,24 @@ public class SimpleNazcaExporter
     /// an empty <c>RoutedPath</c>, not null) renders the same pin-to-pin fallback a routeless
     /// live connection gets, instead of silently vanishing. A path carrying the import's
     /// source-layer tag (<see cref="FrozenWaveguidePath.Layer"/>) exports on THAT layer —
-    /// manufacturing needs the original layers back, not the process defaults.
+    /// manufacturing needs the original layers back, not the process defaults. An EBeam-only
+    /// export wraps each optical frozen path in its own SiEPIC waveguide cell
+    /// (<see cref="SiepicWaveguideCellWriter"/>) exactly like a routed connection — grouping
+    /// must stay transparent to openEBL verification (hierarchy × export seam).
     /// </summary>
     private static void AppendGroupFrozenPaths(
         StringBuilder sb, ComponentGroup group, MetalTraceStyle metalStyle,
         Dictionary<Component, string> componentNames, List<string>? skippedConnections = null,
-        NazcaProcessInterconnectPlan? interconnectPlan = null, bool forceProcessCrossSections = false)
+        NazcaProcessInterconnectPlan? interconnectPlan = null, bool forceProcessCrossSections = false,
+        SiepicWaveguideCellWriter? waveguideCells = null)
     {
         foreach (var frozenPath in group.InternalPaths)
-            AppendFrozenPath(sb, frozenPath, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections);
+            AppendFrozenPath(sb, frozenPath, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
 
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup nestedGroup)
-                AppendGroupFrozenPaths(sb, nestedGroup, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections);
+                AppendGroupFrozenPaths(sb, nestedGroup, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
         }
     }
 
@@ -994,7 +1003,8 @@ public class SimpleNazcaExporter
     private static void AppendFrozenPath(
         StringBuilder sb, FrozenWaveguidePath? frozenPath, MetalTraceStyle metalStyle,
         Dictionary<Component, string> componentNames, List<string>? skippedConnections,
-        NazcaProcessInterconnectPlan? interconnectPlan = null, bool forceProcessCrossSections = false)
+        NazcaProcessInterconnectPlan? interconnectPlan = null, bool forceProcessCrossSections = false,
+        SiepicWaveguideCellWriter? waveguideCells = null)
     {
         if (frozenPath == null) return;
 
@@ -1039,6 +1049,17 @@ public class SimpleNazcaExporter
         var crossSection = interconnectPlan?.UsesPerProcessCrossSections == true || forceProcessCrossSections
             ? ConnectionCrossSectionResolver.Resolve(frozenPath.StartPin, frozenPath.EndPin)
             : default;
+        // An EBeam-only export wraps the optical frozen path in its own SiEPIC
+        // waveguide cell — the same treatment routed connections get — so a grouped
+        // design passes openEBL verification instead of flattening the frozen route
+        // into the top cell ("Shapes outside component" / "Disconnected pin").
+        if (metal == null && waveguideCells != null)
+        {
+            var cellContent = new StringBuilder();
+            AppendSegmentExport(cellContent, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection);
+            waveguideCells.AppendWaveguideCell(sb, cellContent, segments, frozenPath.StartPin, frozenPath.EndPin);
+            return;
+        }
         AppendSegmentExport(sb, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection);
     }
 

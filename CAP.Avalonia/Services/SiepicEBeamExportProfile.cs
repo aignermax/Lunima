@@ -34,13 +34,15 @@ internal sealed class SiepicEBeamExportProfile
     /// Resolves the profile for a canvas whose non-analysis components (groups
     /// flattened) ALL come from a SiEPIC module and whose optical pins ALL carry the
     /// same process width/layer stamps; returns null otherwise — a mixed/demo design
-    /// or components without process stamps both keep the legacy export.
+    /// or components without process stamps both keep the legacy export. Nested
+    /// group nodes (included by <c>GetAllComponentsRecursive</c>) are not physical
+    /// cells and carry no module name — they are skipped, their leaves decide.
     /// </summary>
     public static SiepicEBeamExportProfile? Resolve(DesignCanvasViewModel canvas)
     {
         var components = canvas.Components
             .SelectMany(vm => Flatten(vm.Component))
-            .Where(c => !c.IsAnalysisTool)
+            .Where(c => !c.IsAnalysisTool && c is not ComponentGroup)
             .ToList();
         if (components.Count == 0 || components.Any(c => !IsSiepic(c)))
             return null;

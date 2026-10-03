@@ -8,7 +8,9 @@ namespace CAP.Avalonia.Services;
 
 /// <summary>
 /// Emits the SiEPIC-conformant waveguide cells of an EBeam-only export (openEBL
-/// gap #4). Every routed optical connection becomes its own cell
+/// gap #4). Every routed optical connection — and every optical frozen path
+/// (group-internal or canvas-level), so a grouped design stays submittable —
+/// becomes its own cell
 /// (<c>Waveguide_&lt;n&gt;</c>) placed at the origin of the top cell: the routed
 /// geometry (Si polygons on 1/0) is written inside the cell by the nazca script,
 /// and a klayout post-pass (<c>_lunima_add_waveguide_spines</c>, running after the

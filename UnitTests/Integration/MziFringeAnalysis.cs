@@ -136,6 +136,36 @@ internal static class MziFringeAnalysis
             c.Connection.StartPin?.ParentComponent.Identifier == startComponentId
             && c.Connection.StartPin?.Name == startPinName).Connection;
 
+    /// <summary>
+    /// Groups splitter and combiner via the real grouping command, so both MZI arms
+    /// (connections with both endpoints inside the selection) become frozen paths.
+    /// </summary>
+    internal static ComponentGroup GroupMziBody(DesignCanvasViewModel canvas)
+    {
+        var bodyVms = canvas.Components
+            .Where(c => c.Component.Identifier is "mzi_splitter" or "mzi_combiner")
+            .ToList();
+        bodyVms.Count.ShouldBe(2, "the example must contain the MZI body components");
+
+        new CreateGroupCommand(canvas, bodyVms).Execute();
+
+        var group = canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().Single();
+        group.InternalPaths.Count.ShouldBe(2, "both MZI arms must be frozen inside the group");
+        return group;
+    }
+
+    /// <summary>Saves the design through the real save path with a stubbed save dialog.</summary>
+    internal static async Task SaveToFileAsync(FileOperationsViewModel fileOps, string filePath)
+    {
+        var dialog = new Mock<IFileDialogService>();
+        dialog.Setup(f => f.ShowSaveFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(filePath);
+        fileOps.FileDialogService = dialog.Object;
+        await fileOps.SaveDesignAsCommand.ExecuteAsync(null);
+        File.Exists(filePath).ShouldBeTrue("the design must be written to disk");
+    }
+
     internal static Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps, ErrorConsoleService ErrorConsole)>
         LoadExample(string exampleFileName) =>
         LoadDesignFromPath(Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), exampleFileName));

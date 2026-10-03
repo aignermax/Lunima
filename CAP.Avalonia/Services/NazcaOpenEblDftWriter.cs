@@ -60,7 +60,7 @@ internal static class NazcaOpenEblDftWriter
     {
         var components = canvas.Components
             .SelectMany(vm => Flatten(vm.Component))
-            .Where(c => !c.IsAnalysisTool)
+            .Where(c => !c.IsAnalysisTool && c is not ComponentGroup)
             .ToList();
         if (components.Count == 0)
             return;
