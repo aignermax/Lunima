@@ -1,3 +1,4 @@
+using CAP_Core.Analysis.MeasuredSpectrum;
 using CAP_Core.Analysis.WavelengthSpectrum;
 using CAP.Avalonia.Controls.Plotting;
 using CAP.Avalonia.Services.Localization;
@@ -36,6 +37,7 @@ internal static class WavelengthSpectrumPlotBuilder
     private static readonly OxyColor PlotGridline = OxyColor.Parse("#404040");
     private static readonly OxyColor PlotAxisline = OxyColor.Parse("#808080");
     private static readonly OxyColor DesignWavelengthColor = OxyColor.Parse("#E5C07B");
+    private static readonly OxyColor MeasuredColor = OxyColor.Parse("#E0E0E0");
 
     /// <summary>
     /// Builds the spectrum plot: X = wavelength (nm), Y = linear transmission |S|²,
@@ -47,10 +49,12 @@ internal static class WavelengthSpectrumPlotBuilder
     /// <param name="curves">Curves produced by <see cref="TransmissionSpectrumBuilder"/>.</param>
     /// <param name="resolveLabel">Maps a pin Guid to a display label; may return null.</param>
     /// <param name="designWavelengthNm">Design wavelength to mark (marker drawn only when inside the sweep range).</param>
+    /// <param name="measured">Optional measured spectrum (#1335) overlaid as a dashed light-grey "Measured" series on the same axes.</param>
     public static PlotModel BuildPlotModel(
         IReadOnlyList<TransmissionCurve> curves,
         Func<Guid, string?> resolveLabel,
-        double designWavelengthNm)
+        double designWavelengthNm,
+        MeasuredSpectrum? measured = null)
     {
         var model = CreateEmptyPlotModel();
         var visible = SelectVisibleCurves(curves);
@@ -66,8 +70,45 @@ internal static class WavelengthSpectrumPlotBuilder
         for (int i = 0; i < visible.Count; i++)
             model.Series.Add(CreateSeries(visible[i], resolveLabel, Palette[i % Palette.Length]));
 
+        if (measured != null) AddMeasuredSeries(model, measured);
+
         model.InvalidatePlot(true);
         return model;
+    }
+
+    /// <summary>
+    /// Appends the measured spectrum as a dashed light-grey series titled
+    /// "Measured" — visually distinct from the simulated pin curves without
+    /// consuming one of the palette colours.
+    /// </summary>
+    public static void AddMeasuredSeries(PlotModel model, MeasuredSpectrum measured)
+    {
+        var label = LocalizationService.Instance.Translate("Analysis.Spectrum.Measured.LegendLabel");
+        var series = new XTrackingLineSeries
+        {
+            Title = label,
+            Color = MeasuredColor,
+            StrokeThickness = SeriesStrokeThickness,
+            LineStyle = LineStyle.Dash,
+            CanTrackerInterpolatePoints = true,
+            TrackerTextProvider = dp => $"{label}\nλ = {dp.X:0.0} nm\nT = {dp.Y:0.000}",
+        };
+        for (int i = 0; i < measured.WavelengthNm.Count; i++)
+            series.Points.Add(new DataPoint(measured.WavelengthNm[i], measured.PowerLinear[i]));
+        model.Series.Add(series);
+        ExtendTransmissionAxisToFit(model, measured);
+    }
+
+    // A lab trace usually sits above the simulated curves (e.g. fibre-normalised),
+    // so the axis must grow with it or the overlay is clipped at the top.
+    private static void ExtendTransmissionAxisToFit(PlotModel model, MeasuredSpectrum measured)
+    {
+        var yAxis = (LinearAxis)model.Axes.First(a => a.Position == AxisPosition.Left);
+        if (double.IsNaN(yAxis.Maximum) || measured.PowerLinear.Count == 0) return;
+        double measuredMax = measured.PowerLinear.Max() * (1 + SpectrumAxisScaler.TransmissionPaddingFraction);
+        if (measuredMax <= yAxis.Maximum) return;
+        yAxis.Maximum = measuredMax;
+        yAxis.MajorStep = SpectrumAxisScaler.NiceTickStep(0, measuredMax);
     }
 
     /// <summary>Creates an empty, dark-themed spectrum plot model with labelled axes and legend.</summary>

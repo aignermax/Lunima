@@ -82,6 +82,12 @@
   "Analysis.Spectrum.Complete": "Espectro completado: {0} puntos",
   "Analysis.Spectrum.NoLight": "Abortado — ningún láser encendido. Ver consola de errores.",
   "Analysis.Spectrum.Running": "Barrido de longitud de onda ({0} pasos)...",
+  "Analysis.Spectrum.Measured.LoadDialogTitle": "Cargar espectro medido",
+  "Analysis.Spectrum.Measured.LoadFailed": "No se pudo cargar el espectro medido: {0}",
+  "Analysis.Spectrum.Measured.LegendLabel": "Medido",
+  "Analysis.Spectrum.Measured.ResultWithNg": "Medido: FSR = {0} ± {1} nm, n_g = {2} (ΔL = {3} µm)",
+  "Analysis.Spectrum.Measured.ResultNoNg": "Medido: FSR = {0} ± {1} nm",
+  "Analysis.Spectrum.Measured.NoFringes": "Medido: no se encontraron franjas (espectro plano).",
   "Analysis.Sweep.Complete": "Barrido completo: {0} puntos",
   "Analysis.Sweep.Failed": "Error de barrido: {0}",
   "Analysis.Sweep.NoDataPoints": "Sin puntos de datos",
@@ -1608,5 +1614,11 @@
   "LogicPanelHelp.RunResetTitle": "Ejecutar y Restablecer",
   "LogicPanelHelp.RunResetBody": "«Ejecutar» mueve el reloj por sí solo con el ritmo elegido — cada tick es una pulsación de «Avanzar un ciclo de reloj» — y las entradas siguen activas. «Restablecer» devuelve todos los registros a su estado de arranque sin reconstruir la red.",
   "LogicPanelTimelineHelp.WaveformTitle": "Los mismos eventos como formas de onda",
-  "LogicPanelTimelineHelp.WaveformBody": "Los mismos eventos se dibujan abajo como un rastro de paso 0/1 por señal con nombre. Las verticales doradas son los límites «── reloj #k ──»; el cursor blanco es el instante reproducido. Los bordes se sitúan en tiempos de llegada reales L·n_g/c — la distancia horizontal es longitud de camino óptico real."
+  "LogicPanelTimelineHelp.WaveformBody": "Los mismos eventos se dibujan abajo como un rastro de paso 0/1 por señal con nombre. Las verticales doradas son los límites «── reloj #k ──»; el cursor blanco es el instante reproducido. Los bordes se sitúan en tiempos de llegada reales L·n_g/c — la distancia horizontal es longitud de camino óptico real.",
+  "Spectrum.Measured.LoadButton": "Cargar espectro medido…",
+  "Spectrum.Measured.LoadTip": "Elige un CSV de dos columnas (longitud de onda, potencia) exportado por tu equipo de laboratorio; se superpone al espectro simulado.",
+  "Spectrum.Measured.ArmImbalance": "ΔL (µm)",
+  "Spectrum.Measured.ClearTip": "Quitar la superposición del espectro medido",
+  "Spectrum.Measured.HelpTitle": "Superposición de espectro medido",
+  "Spectrum.Measured.HelpBody": "Superpone un espectro medido (CSV con columnas de longitud de onda y potencia) sobre el simulado. FSR es el espaciado de las franjas; para un MZI con desequilibrio ΔL, el índice de grupo es n_g = λ²/(FSR·ΔL)."
 }

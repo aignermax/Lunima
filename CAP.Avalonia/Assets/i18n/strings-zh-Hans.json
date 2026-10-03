@@ -82,6 +82,12 @@
   "Analysis.Spectrum.Complete": "光谱完成：{0} 个点",
   "Analysis.Spectrum.NoLight": "已中止 — 没有打开的激光器。请查看错误控制台。",
   "Analysis.Spectrum.Running": "正在进行波长扫描（{0} 步）...",
+  "Analysis.Spectrum.Measured.LoadDialogTitle": "加载实测光谱",
+  "Analysis.Spectrum.Measured.LoadFailed": "无法加载实测光谱：{0}",
+  "Analysis.Spectrum.Measured.LegendLabel": "实测",
+  "Analysis.Spectrum.Measured.ResultWithNg": "实测：FSR = {0} ± {1} nm，n_g = {2}（ΔL = {3} µm）",
+  "Analysis.Spectrum.Measured.ResultNoNg": "实测：FSR = {0} ± {1} nm",
+  "Analysis.Spectrum.Measured.NoFringes": "实测：未找到条纹（光谱平坦）。",
   "Analysis.Sweep.Complete": "扫描完成：{0} 个点",
   "Analysis.Sweep.Failed": "扫描失败：{0}",
   "Analysis.Sweep.NoDataPoints": "无数据点",
@@ -1608,5 +1614,11 @@
   "LogicPanelHelp.RunResetTitle": "运行与复位",
   "LogicPanelHelp.RunResetBody": "“运行”会以所选节奏自动走时钟,每个节拍都等于一次“时钟单步”,运行中输入开关仍可使用。“复位”无需重建网络即可将所有寄存器恢复到上电状态。",
   "LogicPanelTimelineHelp.WaveformTitle": "同一事件的波形图",
-  "LogicPanelTimelineHelp.WaveformBody": "同样的事件在下方按命名信号画成 0/1 阶梯轨迹。金色竖线是“── 时钟 #k ──”的边界，白色游标是正在回放的瞬间。边沿落在真实到达时刻 L·n_g/c 上，水平距离就是真实的光学路径长度。"
+  "LogicPanelTimelineHelp.WaveformBody": "同样的事件在下方按命名信号画成 0/1 阶梯轨迹。金色竖线是“── 时钟 #k ──”的边界，白色游标是正在回放的瞬间。边沿落在真实到达时刻 L·n_g/c 上，水平距离就是真实的光学路径长度。",
+  "Spectrum.Measured.LoadButton": "加载实测光谱…",
+  "Spectrum.Measured.LoadTip": "选择实验室导出的两列 CSV（波长、功率），将叠加在仿真光谱上。",
+  "Spectrum.Measured.ArmImbalance": "ΔL (µm)",
+  "Spectrum.Measured.ClearTip": "移除实测光谱叠加",
+  "Spectrum.Measured.HelpTitle": "实测光谱叠加",
+  "Spectrum.Measured.HelpBody": "将实测光谱（包含波长与功率列的 CSV）叠加到仿真光谱上。FSR 为条纹间距；对于臂长差为 ΔL 的 MZI，群折射率 n_g = λ²/(FSR·ΔL)。"
 }

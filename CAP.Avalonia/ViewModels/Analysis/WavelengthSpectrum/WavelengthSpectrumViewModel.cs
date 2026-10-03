@@ -38,6 +38,9 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     /// <summary>True once a completed sweep is available (enables the plot and auto-refresh).</summary>
     [ObservableProperty] private bool _hasResult;
 
+    /// <summary>Measured-spectrum overlay (#1335): CSV load + FSR/n_g extraction drawn on the same plot.</summary>
+    public MeasuredSpectrumOverlayViewModel Overlay { get; }
+
     /// <summary>Debounce used by the auto-refresh; tests set this to zero.</summary>
     internal TimeSpan AutoRefreshDelay { get; set; } = DefaultAutoRefreshDelay;
 
@@ -51,11 +54,19 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     private CancellationTokenSource? _sweepCts;
     private CancellationTokenSource? _debounceCts;
 
+    // Last rendered sweep, kept so the measured-spectrum overlay can be drawn
+    // on top without re-running the simulation.
+    private IReadOnlyList<TransmissionCurve>? _lastCurves;
+    private IReadOnlyDictionary<Guid, string>? _lastPinNames;
+    private double _lastDesignWavelengthNm;
+
     /// <summary>Initializes a new instance of <see cref="WavelengthSpectrumViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
     public WavelengthSpectrumViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
     {
         _errorConsole = errorConsole;
+        Overlay = new MeasuredSpectrumOverlayViewModel(errorConsole);
+        Overlay.OverlayChanged += (_, _) => RedrawPlotWithOverlay();
     }
 
     /// <summary>Configures the panel with the current canvas context.</summary>
@@ -65,6 +76,8 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         _canvas = canvas;
         StatusText = "";
         HasResult = false;
+        _lastCurves = null;
+        _lastPinNames = null;
         PlotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
         // Sync the toggle from the canvas (e.g. a .lun just loaded with the flag on)
         // without triggering a refresh: HasResult is already false here.
@@ -191,10 +204,10 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
             _errorConsole?.LogWarning(warning);
 
         var curves = TransmissionSpectrumBuilder.Build(result, circuit.OutputCouplerPinIds);
-        PlotModel = WavelengthSpectrumPlotBuilder.BuildPlotModel(
-            curves,
-            pinId => circuit.PinNames.TryGetValue(pinId, out var name) ? name : null,
-            circuit.DesignWavelengthNm);
+        _lastCurves = curves;
+        _lastPinNames = circuit.PinNames;
+        _lastDesignWavelengthNm = circuit.DesignWavelengthNm;
+        RedrawPlotWithOverlay();
         HasResult = true;
 
         StatusText = curves.All(c => c.IsAtNoiseFloor)
@@ -202,6 +215,22 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
             : string.Format(
                 LocalizationService.Instance.Translate("Analysis.Spectrum.Complete"),
                 result.DataPoints.Count);
+    }
+
+    /// <summary>
+    /// Rebuilds the plot from the last sweep plus the current measured-spectrum
+    /// overlay (if any). No-op when no sweep has been rendered yet — the overlay
+    /// is only meaningful on top of a simulated curve.
+    /// </summary>
+    private void RedrawPlotWithOverlay()
+    {
+        if (_lastCurves == null || _lastPinNames == null) return;
+        var pinNames = _lastPinNames;
+        PlotModel = WavelengthSpectrumPlotBuilder.BuildPlotModel(
+            _lastCurves,
+            pinId => pinNames.TryGetValue(pinId, out var name) ? name : null,
+            _lastDesignWavelengthNm,
+            Overlay.Spectrum);
     }
 
     private bool TryCreateConfiguration(out WavelengthSweepConfiguration? config)
