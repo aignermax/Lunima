@@ -185,6 +185,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Routing diagnostics panel highlights blocked paths and detours. `(manual)`
 - [ ] GDS coordinate comparison view loads two coordinate JSON exports side by side. `(manual)`
 - [ ] Help flyouts for transient and eye workflows appear on first use. `(manual)`
+- [ ] Monte Carlo tab (?) help explains fabrication variance and yield; the scatter/histogram animation loops. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
 - [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
 - [ ] ISA playground Run auto-steps count-to-5 to "halted after N steps" with ACC = 5; Stop mid-run freezes PC and re-enables Step. `(manual)`
