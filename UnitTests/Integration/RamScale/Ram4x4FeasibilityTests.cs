@@ -22,7 +22,7 @@ namespace UnitTests.Integration.RamScale;
 /// time, a behavioural write/read-back check through the real assembled network, and the
 /// full-route wall-clock of the freshly generated design on the current router (the load
 /// routes every wire: the generated file carries no cached geometry, so the post-load pass
-/// IS a full route of the design). The route measurement is bounded by a 15-minute timeout
+/// IS a full route of the design). The route measurement is bounded by a 60-second timeout
 /// (<c>CAP_RAM_SPIKE_ROUTE_TIMEOUT_S</c> overrides it) — a timeout is itself a result and
 /// does not fail the test; the structural and behavioural assertions always hold. The 2×4
 /// variant gives the scaling slope. Numbers land in
@@ -31,8 +31,11 @@ namespace UnitTests.Integration.RamScale;
 [Trait("Category", "Slow")]
 public class Ram4x4FeasibilityTests
 {
-    /// <summary>Default bound of the full-route measurement: 15 minutes (issue #1337).</summary>
-    private const double DefaultRouteTimeoutSeconds = 15 * 60;
+    /// <summary>
+    /// Default bound of the full-route measurement: 60 s, so the unfiltered CI suite stays
+    /// within its job cap. Set the override to 900 to re-take the 15-minute measurement.
+    /// </summary>
+    private const double DefaultRouteTimeoutSeconds = 60;
     private const string RouteTimeoutVariable = "CAP_RAM_SPIKE_ROUTE_TIMEOUT_S";
     private const int WavelengthNm = 1550;
 

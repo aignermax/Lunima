@@ -8,7 +8,8 @@ s0))`), 16 load-enabled register bits (`H = NAND(R, EN)`, `LE = NAND(D, IW)`,
 at the sum levels), with copy-cascade fan-outs (one waveguide per driven signal). The
 builder lives in the test only — `UnitTests/Integration/RamScale/RamScaleDesignBuilder.cs`;
 every number re-takes via the `[Trait("Category", "Slow")]` test `Ram4x4FeasibilityTests`
-(route bound overridable with `CAP_RAM_SPIKE_ROUTE_TIMEOUT_S`, default 15 min). Measured
+(route bound: default 60 s so CI stays within its job cap; the numbers below were taken with
+`CAP_RAM_SPIKE_ROUTE_TIMEOUT_S=900`, i.e. 15 min). Measured
 2026-10-03 on the dev box, router at `dev-ki` HEAD.
 
 ## Numbers
