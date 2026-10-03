@@ -797,6 +797,25 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Opens the "Check for openEBL…" dialog (issue #1361): exports the current design to
+    /// GDS and runs the openEBL submission + verification checks on it. The ViewModel is a
+    /// DI singleton so a reopened dialog keeps the entered username/design name.
+    /// </summary>
+    private async void CheckOpenEblMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        var checkVm = App.Services.GetService(typeof(ViewModels.Export.OpenEbl.OpenEblCheckViewModel))
+            as ViewModels.Export.OpenEbl.OpenEblCheckViewModel;
+        if (checkVm == null) return;
+
+        var designName = DataContext is MainViewModel vm && vm.FileOperations.CurrentFilePath != null
+            ? System.IO.Path.GetFileNameWithoutExtension(vm.FileOperations.CurrentFilePath)
+            : null;
+        checkVm.PrepareForOpen(designName);
+        var dialog = new Views.Dialogs.OpenEblCheckDialog { DataContext = checkVm };
+        await dialog.ShowDialog(this);
+    }
+
+    /// <summary>
     /// Gets the actual viewport size (visible area) independent of zoom level.
     /// Uses the DesignCanvas control's own layout bounds, which correctly excludes
     /// the left panel, right panel, and toolbar from the viewport dimensions.

@@ -226,6 +226,31 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Button>
+                                <!-- openEBL submission check (#1361): exports the design to GDS and runs
+                                     the official openEBL submission + verification checks on it.
+                                     Lives in the Export menu because checking precedes tapeout export. -->
+                                <Button HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#4d3d5d"
+                                        Click="CheckOpenEblMenuItem_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.CheckOpenEblTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🧪" FontSize="15"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEbl}"
+                                                       Foreground="White"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEblDescription}"
+                                                       Foreground="#aaaaaa"
+                                                       FontSize="9"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="180"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
