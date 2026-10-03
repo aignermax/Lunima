@@ -242,6 +242,64 @@ public class GdsRouteCellDissolveTests
     }
 
     [Fact]
+    public async Task Explode_SiepicWaveguideCell_DissolvesDespitePinFurniture()
+    {
+        // Lunima's own EBeam export wraps each route in a SiEPIC waveguide cell
+        // (Waveguide 1/99 guide, DevRec 68/0, PinRec 1/10 pin stubs + optN
+        // labels). The pin furniture must not block dissolution: the cell is
+        // route geometry, not a component (phantom components without an
+        // S-matrix would wreck the re-import, see #1351 review).
+        var library = await ReadLibraryAsync(GdsTestWriter.Create()
+            .StandardPrologue()
+            .BeginCell("TOP")
+                .SRef("wgA", 0, 0)
+                .SRef("Waveguide_0", 10000, 0)
+                .SRef("wgB", 20000, 0)
+            .EndCell()
+            .DeviceCell("wgA")
+            .DeviceCell("wgB")
+            .SiepicWaveguideCell("Waveguide_0")
+            .EndLibrary()
+            .ToArray());
+
+        var result = await GdsHierarchyImporter.ImportAsync(library, "TOP", new GdsHierarchyImportOptions());
+
+        result.ImportedCellDrafts.Select(d => d.CellName).ShouldBe(new[] { "wgA", "wgB" });
+        result.Instances.Count.ShouldBe(2);
+        result.Instances.ShouldAllBe(i => i.CellName != "Waveguide_0");
+        var connection = result.Connections.ShouldHaveSingleItem();
+        EndpointNames(result, connection).ShouldBe(new[] { "wgA#0.out", "wgB#0.in" }, ignoreOrder: true);
+        result.TopCellWaveguidePolygons.ShouldBeEmpty("the core was consumed by the matcher");
+        result.Infos.ShouldContain(i => i.Contains("Route cell 'Waveguide_0'") && i.Contains("dissolved"));
+    }
+
+    [Fact]
+    public async Task Explode_OptLabeledCellWithoutSiepicGuide_IsNotDissolved()
+    {
+        // optN PinRec labels alone are not the SiEPIC waveguide signature — a
+        // device cell carries the same pin labels. Without the Waveguide (1/99)
+        // guide the strict no-texts rule stays in force.
+        var library = await ReadLibraryAsync(GdsTestWriter.Create()
+            .StandardPrologue()
+            .BeginCell("TOP")
+                .SRef("Waveguide_0", 0, 0)
+            .EndCell()
+            .BeginCell("Waveguide_0")
+                .Boundary(1, 0, (0, 1750), (10000, 1750), (10000, 2250), (0, 2250), (0, 1750))
+                .Text(1, 10, "opt1", 0, 2000)
+                .Text(1, 10, "opt2", 10000, 2000)
+            .EndCell()
+            .EndLibrary()
+            .ToArray());
+
+        var result = await GdsHierarchyImporter.ImportAsync(library, "TOP", new GdsHierarchyImportOptions());
+
+        result.ImportedCellDrafts.ShouldHaveSingleItem().CellName.ShouldBe("Waveguide_0");
+        result.Instances.ShouldHaveSingleItem().CellName.ShouldBe("Waveguide_0");
+        result.Infos.ShouldNotContain(i => i.Contains("dissolved"));
+    }
+
+    [Fact]
     public async Task Explode_RouteCellWithOwnDeviceGeometry_IsNotDissolved()
     {
         // An extra polygon that does NOT wrap the route geometry is device
@@ -302,5 +360,23 @@ file static class GdsRouteCellDissolveTestCells
         writer
             .BeginCell(name)
                 .Boundary(layer, 0, (0, 1750), (10000, 1750), (10000, 2250), (0, 2250), (0, 1750))
+            .EndCell();
+
+    /// <summary>
+    /// SiEPIC-conformant waveguide cell as Lunima's EBeam export emits it: the
+    /// Si route strip on (1,0), a Waveguide guide on (1,99) and a DevRec
+    /// envelope on (68,0) tracing the same outline, and at each end a small
+    /// PinRec (1,10) pin stub with an optN label.
+    /// </summary>
+    public static GdsTestWriter SiepicWaveguideCell(this GdsTestWriter writer, string name) =>
+        writer
+            .BeginCell(name)
+                .Boundary(1, 0, (0, 1750), (10000, 1750), (10000, 2250), (0, 2250), (0, 1750))
+                .Boundary(1, 99, (0, 1750), (10000, 1750), (10000, 2250), (0, 2250), (0, 1750))
+                .Boundary(68, 0, (0, 1750), (10000, 1750), (10000, 2250), (0, 2250), (0, 1750))
+                .Boundary(1, 10, (-50, 1900), (50, 1900), (50, 2100), (-50, 2100), (-50, 1900))
+                .Boundary(1, 10, (9950, 1900), (10050, 1900), (10050, 2100), (9950, 2100), (9950, 1900))
+                .Text(1, 10, "opt1", 0, 2000)
+                .Text(1, 10, "opt2", 10000, 2000)
             .EndCell();
 }
