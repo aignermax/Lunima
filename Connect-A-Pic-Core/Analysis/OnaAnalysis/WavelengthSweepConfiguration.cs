@@ -40,14 +40,17 @@ namespace CAP_Core.Analysis.OnaAnalysis
         }
 
         /// <summary>
-        /// Generates evenly-spaced integer wavelength values for this configuration.
+        /// Generates evenly-spaced wavelength values for this configuration.
+        /// The grid is NOT rounded to integer nanometres: sub-nm steps stay exact,
+        /// so <see cref="StepCount"/> requests always yield that many distinct,
+        /// strictly increasing wavelengths.
         /// </summary>
-        public int[] GenerateWavelengthValues()
+        public double[] GenerateWavelengthValues()
         {
-            var values = new int[StepCount];
+            var values = new double[StepCount];
             double step = (double)(EndNm - StartNm) / (StepCount - 1);
             for (int i = 0; i < StepCount; i++)
-                values[i] = (int)Math.Round(StartNm + i * step);
+                values[i] = StartNm + i * step;
             return values;
         }
     }

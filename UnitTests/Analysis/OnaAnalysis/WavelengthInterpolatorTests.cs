@@ -131,4 +131,53 @@ public class WavelengthInterpolatorTests
         result.ShouldBeSameAs(only);
         wasInterpolated.ShouldBeFalse();
     }
+
+    // ── sub-nm (double) targets — the ONA sweep grid (#1349) ───────────────────
+
+    [Fact]
+    public void GetMatrix_IntegralDoubleTarget_ReturnsSameInstanceAsIntPath()
+    {
+        var pinA = Guid.NewGuid();
+        var pinB = Guid.NewGuid();
+        var lo = CreateMatrix(pinA, pinB, new Complex(0.3, 0));
+        var hi = CreateMatrix(pinA, pinB, new Complex(0.9, 0));
+        var map = new Dictionary<int, SMatrix> { { 1500, lo }, { 1600, hi } };
+
+        var result = WavelengthInterpolator.GetMatrix(map, 1500.0, out bool wasInterpolated);
+
+        result.ShouldBeSameAs(lo,
+            "an integral double must hit the exact stop, not interpolate — " +
+            "this keeps all-integer sweeps bit-identical to the old integer grid");
+        wasInterpolated.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetMatrix_FractionalTarget_InterpolatesBetweenBracketingStops()
+    {
+        var pinA = Guid.NewGuid();
+        var pinB = Guid.NewGuid();
+        var lo = CreateMatrix(pinA, pinB, new Complex(0.0, 0));
+        var hi = CreateMatrix(pinA, pinB, new Complex(1.0, 0));
+        var map = new Dictionary<int, SMatrix> { { 1550, lo }, { 1551, hi } };
+
+        var result = WavelengthInterpolator.GetMatrix(map, 1550.25, out bool wasInterpolated);
+
+        wasInterpolated.ShouldBeTrue();
+        result.SMat[0, 1].Real.ShouldBe(0.25, 1e-10);
+    }
+
+    [Fact]
+    public void GetMatrix_FractionalTargetOutsideRange_FallsBackToNearestStop()
+    {
+        var pinA = Guid.NewGuid();
+        var pinB = Guid.NewGuid();
+        var lo = CreateMatrix(pinA, pinB, new Complex(0.3, 0));
+        var hi = CreateMatrix(pinA, pinB, new Complex(0.9, 0));
+        var map = new Dictionary<int, SMatrix> { { 1500, lo }, { 1600, hi } };
+
+        var result = WavelengthInterpolator.GetMatrix(map, 1499.7, out bool wasInterpolated);
+
+        result.ShouldBeSameAs(lo);
+        wasInterpolated.ShouldBeFalse();
+    }
 }

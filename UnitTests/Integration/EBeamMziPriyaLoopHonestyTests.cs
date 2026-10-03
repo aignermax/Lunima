@@ -57,8 +57,8 @@ public class EBeamMziPriyaLoopHonestyTests
 
         double deltaL = MeasureArmLengthDifference(canvas);
         var (wavelengthsNm, powerDb) = await SweepOutputFiberPowerAsync(canvas);
-        wavelengthsNm.Length.ShouldBeGreaterThanOrEqualTo(100,
-            "the integer-nm sweep grid deduplicates 400 steps to ~101 distinct wavelengths");
+        wavelengthsNm.Length.ShouldBe(SweepStepCount,
+            "the sub-nm sweep grid keeps every requested step — no rounding collapse");
 
         var directResult = Analyze(wavelengthsNm, powerDb, deltaL);
         AssertRecoversPdkIndices(directResult, deltaL);
@@ -112,11 +112,9 @@ public class EBeamMziPriyaLoopHonestyTests
                 circuit.GridManager);
 
             var outputPin = FindPin(FindComponent(canvas, "gc_out"), "port 1");
-            var wavelengths = sweep.GetWavelengthValues().Select(w => (double)w).ToArray();
+            var wavelengths = sweep.GetWavelengthValues();
             var powerDb = sweep.GetInsertionLossSeriesForPin(outputPin.LogicalPin!.IDOutFlow).ToArray();
-            // The sweep grid rounds to integer nm, so sub-nm steps revisit
-            // wavelengths; collapse the duplicates for the fringe analysis.
-            return Deduplicate(wavelengths, powerDb);
+            return (wavelengths, powerDb);
         }
         finally
         {

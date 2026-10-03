@@ -27,7 +27,7 @@ public sealed class GoldenTruthRow
 public sealed class GoldenReference
 {
     /// <summary>Sweep wavelengths (nm) this reference was generated with.</summary>
-    public int[] WavelengthsNm { get; set; } = Array.Empty<int>();
+    public double[] WavelengthsNm { get; set; } = Array.Empty<double>();
 
     /// <summary>Expected linear transmission per output pin reference, one value per wavelength.</summary>
     public Dictionary<string, double[]> Transmission { get; set; } = new();
