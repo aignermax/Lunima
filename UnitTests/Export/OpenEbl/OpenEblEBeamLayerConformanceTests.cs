@@ -256,8 +256,7 @@ public class OpenEblEBeamSubmissionCheckTests
             var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
             File.Exists(gdsPath).ShouldBeTrue($"script did not write {gdsPath}:\n{run.StdOut}");
 
-            var checkerPath = Path.Combine(dir, "openebl_submission_check.py");
-            await File.WriteAllTextAsync(checkerPath, OpenEblMziReadinessTests.SubmissionCheckerScript);
+            var checkerPath = OpenEblScriptFiles.SubmissionCheckScriptPath;
             var check = await SiepicRealGeometryExportTests.RunPythonAsync(python, dir, checkerPath, gdsPath);
             check.ExitCode.ShouldBe(0, $"submission-check port crashed:\n{check.StdOut}\n{check.StdErr}");
             var output = check.StdOut;
