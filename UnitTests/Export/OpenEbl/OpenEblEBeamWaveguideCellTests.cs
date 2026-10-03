@@ -1,7 +1,10 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
+using CAP_Core.Components.Core;
 using CAP_Core.Export;
+using CAP_Core.Routing;
 using Shouldly;
 using Xunit;
 
@@ -68,6 +71,53 @@ public class OpenEblEBeamWaveguideCellTests
         var (x2, y2) = NazcaCoordinateMapper.GetPinNazcaPosition(gc2.PhysicalPins[0]);
         points[0].ShouldBe((double.Parse(x1.ToString("F2", ci), ci), double.Parse(y1.ToString("F2", ci), ci)));
         points[^1].ShouldBe((double.Parse(x2.ToString("F2", ci), ci), double.Parse(y2.ToString("F2", ci), ci)));
+    }
+
+    [Fact]
+    public void Export_EBeamOnlyDesign_WrapsFrozenGroupPathInWaveguideCell()
+    {
+        var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
+        new CreateGroupCommand(canvas, canvas.Components.ToList()).Execute();
+        var group = canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().Single();
+        group.InternalPaths.Count.ShouldBe(1, "grouping both couplers freezes the waveguide connection");
+
+        var script = new SimpleNazcaExporter().Export(canvas);
+
+        // The frozen group path gets the same Waveguide_<n> cell treatment as a
+        // routed connection — grouping must stay transparent to openEBL verification.
+        script.ShouldContain("with nd.Cell(name='Waveguide_0') as waveguide_0:");
+        script.ShouldContain("    nd.strt(length=127.00, width=0.5, layer=1).put(");
+        script.ShouldContain("waveguide_0.put(0, 0)");
+        script.ShouldContain("_lunima_add_waveguide_spines(gds_filename, {'Waveguide_0':");
+    }
+
+    [Fact]
+    public void Export_DemoOnlyDesign_GroupedFrozenPath_EmitsNoWaveguideCells()
+    {
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var comp1 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        var comp2 = TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins();
+        comp2.PhysicalX = 500;
+        canvas.AddComponent(comp1, "WG1");
+        canvas.AddComponent(comp2, "WG2");
+
+        var from = comp1.PhysicalPins[1];
+        var to = comp2.PhysicalPins[0];
+        var (x1, y1) = from.GetAbsolutePosition();
+        var (x2, y2) = to.GetAbsolutePosition();
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(x1, y1, x2, y2, 0));
+        canvas.ConnectPinsWithCachedRoute(from, to, path).ShouldNotBeNull();
+        new CreateGroupCommand(canvas, canvas.Components.ToList()).Execute();
+
+        var script = new SimpleNazcaExporter().Export(canvas);
+
+        // The profile does not resolve on a demo canvas: the frozen path still
+        // exports — flattened into the top cell exactly as before, no spine pass.
+        script.ShouldNotContain("Waveguide_");
+        script.ShouldNotContain("_lunima_add_waveguide_spines");
+        script.ShouldNotContain("(1, 99)");
+        script.ShouldContain("nd.strt(");
     }
 
     [Fact]

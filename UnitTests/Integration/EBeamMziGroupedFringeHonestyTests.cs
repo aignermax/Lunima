@@ -4,7 +4,6 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core.Analysis.MeasuredSpectrum;
 using CAP_Core.Components.Core;
-using Moq;
 using Shouldly;
 using Xunit;
 using static UnitTests.Integration.MziFringeAnalysis;
@@ -49,7 +48,7 @@ public class EBeamMziGroupedFringeHonestyTests
         var tempFile = Path.Combine(Path.GetTempPath(), $"mzi_grouped_{Guid.NewGuid():N}.lun");
         try
         {
-            await SaveToFile(fileOps, tempFile);
+            await SaveToFileAsync(fileOps, tempFile);
 
             var (loadCanvas, loadFileOps, _) = await LoadDesignFromPath(tempFile);
             await loadFileOps.PostLoadRouting;
@@ -110,23 +109,6 @@ public class EBeamMziGroupedFringeHonestyTests
         AssertSpectraMatchDb(flatOff, groupedOff, IncoherentToleranceDb, "incoherent grouped");
     }
 
-    /// <summary>
-    /// Groups splitter and combiner via the real grouping command, so both MZI arms
-    /// (connections with both endpoints inside the selection) become frozen paths.
-    /// </summary>
-    private static void GroupMziBody(DesignCanvasViewModel canvas)
-    {
-        var bodyVms = canvas.Components
-            .Where(c => c.Component.Identifier is "mzi_splitter" or "mzi_combiner")
-            .ToList();
-        bodyVms.Count.ShouldBe(2, "the example must contain the MZI body components");
-
-        new CreateGroupCommand(canvas, bodyVms).Execute();
-
-        var group = canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().Single();
-        group.InternalPaths.Count.ShouldBe(2, "both MZI arms must be frozen inside the group");
-    }
-
     private static void AssertSpectraMatch(
         (double[] WavelengthsNm, double[] Power) reference,
         (double[] WavelengthsNm, double[] Power) actual,
@@ -166,14 +148,4 @@ public class EBeamMziGroupedFringeHonestyTests
         }
     }
 
-    private static async Task SaveToFile(FileOperationsViewModel fileOps, string filePath)
-    {
-        var dialog = new Mock<IFileDialogService>();
-        dialog.Setup(f => f.ShowSaveFileDialogAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(filePath);
-        fileOps.FileDialogService = dialog.Object;
-        await fileOps.SaveDesignAsCommand.ExecuteAsync(null);
-        File.Exists(filePath).ShouldBeTrue("the grouped design must be written to disk");
-    }
 }
