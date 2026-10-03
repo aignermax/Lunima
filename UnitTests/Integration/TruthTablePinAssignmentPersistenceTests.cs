@@ -436,9 +436,9 @@ public class TruthTablePinAssignmentPersistenceTests : IDisposable
         vm.OutputHeaders.ShouldBe(NandOutputs);
         vm.BiasSummaryText.ShouldContain("BIAS");
         vm.Rows.Count.ShouldBe(4);
-        AssertPanelRow(vm, "0 0", expectedBit: true, expectedPowerText: "0.50");
-        AssertPanelRow(vm, "1 0", expectedBit: true, expectedPowerText: "0.25");
-        AssertPanelRow(vm, "0 1", expectedBit: true, expectedPowerText: "0.25");
+        AssertPanelRow(vm, "0 0", expectedBit: true, expectedPowerText: "0.49");
+        AssertPanelRow(vm, "1 0", expectedBit: true, expectedPowerText: "0.24");
+        AssertPanelRow(vm, "0 1", expectedBit: true, expectedPowerText: "0.24");
         AssertPanelRow(vm, "1 1", expectedBit: false, expectedPowerText: "0.00");
     }
 

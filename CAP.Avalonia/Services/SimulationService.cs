@@ -99,7 +99,7 @@ public class SimulationService
             // Ensure ComponentGroups have computed S-Matrices before simulation
             if (compVm.Component is ComponentGroup group)
             {
-                group.EnsureSMatrixComputed();
+                group.EnsureSMatrixComputed(connectionManager.EnableCoherentPropagationPhase);
             }
             tileManager.AddComponent(compVm.Component);
         }
