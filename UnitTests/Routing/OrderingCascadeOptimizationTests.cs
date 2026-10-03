@@ -143,6 +143,149 @@ public class OrderingCascadeOptimizationTests
         manager.LastOrderingEarlyStopped.ShouldBeTrue();
     }
 
+    [Fact]
+    public void ParallelCascade_KeepsSequentialResult_RoutesOrderAndCounters()
+    {
+        var (parallelManager, _, parallelWires) = CreateSingleFileCorridorFixture(useParallelCascade: true);
+        var (sequentialManager, _, sequentialWires) = CreateSingleFileCorridorFixture(useParallelCascade: false);
+
+        parallelManager.LastOrderingEarlyStopped.ShouldBeTrue("fixture sanity: the corridor never improves");
+        sequentialManager.LastOrderingAttemptCount.ShouldBe(parallelManager.LastOrderingAttemptCount,
+            "the replay reports exactly the attempts the sequential cascade would have run");
+        sequentialManager.LastOrderingEarlyStopped.ShouldBe(parallelManager.LastOrderingEarlyStopped);
+        parallelWires.Select(w => parallelManager.Connections.IndexOf(w))
+            .ShouldBe(sequentialWires.Select(w => sequentialManager.Connections.IndexOf(w)),
+                "the kept ordering must be the same permutation");
+        sequentialWires.Select(w => w.IsBlockedFallback).ShouldBe(parallelWires.Select(w => w.IsBlockedFallback));
+        foreach (var (parallel, sequential) in parallelWires.Zip(sequentialWires))
+        {
+            SegmentSignature(sequential).ShouldBe(SegmentSignature(parallel),
+                "the parallel cascade must keep the exact routes the sequential cascade keeps");
+        }
+    }
+
+    [Fact]
+    public void ParallelCascade_ImprovingAttempt_MatchesSequentialResult()
+    {
+        var parallel = CreatePairAndCorridorFixture(useParallelCascade: true);
+        var sequential = CreatePairAndCorridorFixture(useParallelCascade: false);
+
+        parallel.Manager.LastOrderingAttemptCount.ShouldBe(4,
+            "sanity: initial attempt + improving retry + two non-improving retries, then the early stop");
+        sequential.Manager.LastOrderingAttemptCount.ShouldBe(parallel.Manager.LastOrderingAttemptCount);
+        sequential.Manager.LastOrderingEarlyStopped.ShouldBe(parallel.Manager.LastOrderingEarlyStopped);
+        sequential.ConnA.IsBlockedFallback.ShouldBe(parallel.ConnA.IsBlockedFallback);
+        sequential.ConnB.IsBlockedFallback.ShouldBe(parallel.ConnB.IsBlockedFallback);
+        SegmentSignature(sequential.ConnA).ShouldBe(SegmentSignature(parallel.ConnA));
+        SegmentSignature(sequential.ConnB).ShouldBe(SegmentSignature(parallel.ConnB));
+        foreach (var (p, s) in parallel.CorridorWires.Zip(sequential.CorridorWires))
+        {
+            s.IsBlockedFallback.ShouldBe(p.IsBlockedFallback);
+            SegmentSignature(s).ShouldBe(SegmentSignature(p));
+        }
+    }
+
+    [Fact]
+    public void ParallelCascade_FullyResolvedByRetry_KeepsTheSequentialWinningOrdering()
+    {
+        var parallel = CreateResolvablePairFixture(useParallelCascade: true);
+        var sequential = CreateResolvablePairFixture(useParallelCascade: false);
+
+        parallel.ConnA.IsBlockedFallback.ShouldBeFalse("the pair resolves once B is ordered before A");
+        parallel.ConnB.IsBlockedFallback.ShouldBeFalse();
+        parallel.Manager.LastOrderingAttemptCount.ShouldBe(2,
+            "the first retry ordering routes both wires — the cascade returns at the first clean attempt");
+        sequential.Manager.LastOrderingAttemptCount.ShouldBe(2);
+        new[]
+        {
+            parallel.Manager.Connections.IndexOf(parallel.ConnA),
+            parallel.Manager.Connections.IndexOf(parallel.ConnB),
+        }.ShouldBe(new[]
+        {
+            sequential.Manager.Connections.IndexOf(sequential.ConnA),
+            sequential.Manager.Connections.IndexOf(sequential.ConnB),
+        }, "the winning ordering must be the same permutation");
+        SegmentSignature(sequential.ConnA).ShouldBe(SegmentSignature(parallel.ConnA));
+        SegmentSignature(sequential.ConnB).ShouldBe(SegmentSignature(parallel.ConnB));
+    }
+
+    private sealed record PairFixture(
+        WaveguideConnectionManager Manager,
+        WaveguideConnection ConnA,
+        WaveguideConnection ConnB,
+        List<WaveguideConnection> CorridorWires);
+
+    /// <summary>
+    /// The improving-attempt fixture of <see cref="ImprovingAttempt_ResetsTheNonImprovingCounter"/>
+    /// (a resolvable contention pair plus the never-improving corridor trio), parameterized
+    /// on the cascade path so the parallel and sequential cascades can be pinned against each
+    /// other.
+    /// </summary>
+    private static PairFixture CreatePairAndCorridorFixture(bool useParallelCascade)
+    {
+        var (aWest, aEast, bEast, roof, floor) = CreateContentionPairComponents();
+        var corridor = CreateCorridorComponents();
+
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = BendRadius,
+            MinWaveguideSpacingMicrometers = 2.0
+        };
+        router.InitializePathfindingGrid(-100, -100, 600, 400,
+            new[] { aWest, aEast, bEast, roof, floor }.Concat(corridor.All).ToArray());
+        var manager = new WaveguideConnectionManager(router)
+        {
+            UseSequentialRouting = true,
+            UseParallelOrderingCascade = useParallelCascade,
+        };
+
+        var connA = manager.AddConnection(CreatePin(aWest, 50, 20, 0), CreatePin(aEast, 0, 20, 180));
+        // B is added LAST so the final cascade's initial attempt routes A first and fails
+        // B — the reverse retry then improves (B routes, A detours), resetting the counter.
+        var corridorWires = AddCorridorWires(manager, corridor);
+        var connB = manager.AddConnection(CreatePin(bEast, 0, 20, 180), CreatePin(roof, 140, 45, 90));
+        return new PairFixture(manager, connA, connB, corridorWires);
+    }
+
+    /// <summary>
+    /// The contention pair alone: the initial ordering routes A first and blocks B, the
+    /// reverse ordering routes both — a cascade that succeeds on its first retry.
+    /// </summary>
+    private static PairFixture CreateResolvablePairFixture(bool useParallelCascade)
+    {
+        var (aWest, aEast, bEast, roof, floor) = CreateContentionPairComponents();
+
+        var router = new WaveguideRouter
+        {
+            MinBendRadiusMicrometers = BendRadius,
+            MinWaveguideSpacingMicrometers = 2.0
+        };
+        router.InitializePathfindingGrid(-100, -100, 600, 400,
+            new[] { aWest, aEast, bEast, roof, floor });
+        var manager = new WaveguideConnectionManager(router)
+        {
+            UseSequentialRouting = true,
+            UseParallelOrderingCascade = useParallelCascade,
+        };
+
+        var connA = manager.AddConnection(CreatePin(aWest, 50, 20, 0), CreatePin(aEast, 0, 20, 180));
+        var connB = manager.AddConnection(CreatePin(bEast, 0, 20, 180), CreatePin(roof, 140, 45, 90));
+        return new PairFixture(manager, connB, connA, new List<WaveguideConnection>());
+    }
+
+    /// <summary>
+    /// The pair geometry: A crosses the 20 µm channel between roof and floor at y 160, and
+    /// B must dive through the same channel into the roof's downward pin — B routes only
+    /// when ordered before A (A then detours north around the roof).
+    /// </summary>
+    private static (Component AWest, Component AEast, Component BEast, Component Roof, Component Floor)
+        CreateContentionPairComponents() =>
+        (CreateTestComponent(-50, 140, width: 50, height: 40),
+         CreateTestComponent(460, 140, width: 30, height: 40),
+         CreateTestComponent(450, 170, width: 30, height: 40),
+         CreateTestComponent(60, 105, width: 280, height: 45),
+         CreateTestComponent(60, 170, width: 280, height: 45));
+
     /// <summary>
     /// Three wires in a 20 µm corridor sealed by full-width walls: one straight, two
     /// crossing diagonals. The corridor is so tight that every wire stays blocked under
@@ -150,7 +293,7 @@ public class OrderingCascadeOptimizationTests
     /// the failure count can never improve and no attempt is fully valid.
     /// </summary>
     private static (WaveguideConnectionManager Manager, WaveguideRouter Router, List<WaveguideConnection> Wires)
-        CreateSingleFileCorridorFixture()
+        CreateSingleFileCorridorFixture(bool useParallelCascade = true)
     {
         var corridor = CreateCorridorComponents();
         var router = new WaveguideRouter
@@ -159,7 +302,11 @@ public class OrderingCascadeOptimizationTests
             MinWaveguideSpacingMicrometers = 2.0
         };
         router.InitializePathfindingGrid(60, 245, 340, 355, corridor.All);
-        var manager = new WaveguideConnectionManager(router) { UseSequentialRouting = true };
+        var manager = new WaveguideConnectionManager(router)
+        {
+            UseSequentialRouting = true,
+            UseParallelOrderingCascade = useParallelCascade,
+        };
         var wires = AddCorridorWires(manager, corridor);
         return (manager, router, wires);
     }
