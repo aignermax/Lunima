@@ -380,6 +380,7 @@
   "Examples.HalfAdder.Description": "Add two bits — your first arithmetic circuit.",
   "Examples.MachZehnder.Description": "Split light into two paths and recombine it — the Hello World of photonics.",
   "Examples.EBeamMachZehnder.Description": "The Mach-Zehnder built from the real SiEPIC EBeam PDK — grating couplers in a 127 µm test array, sized for an openEBL die.",
+  "Examples.EBeamAddDropRing.Description": "An add-drop ring resonator from two SiEPIC EBeam halfring couplers — watch the through-port dips and drop-port peaks spaced by the ring's free spectral range.",
   "Examples.Mux.Description": "A 2-to-1 multiplexer: one select bit chooses between two inputs.",
   "Examples.NotGate.Description": "Your first logic gate: a NOT built from a single NAND.",
   "Examples.Not4bit.Description": "Four NOT gates side by side: A0–A3 in, Y0–Y3 out — the ISA NOT instruction on light.",

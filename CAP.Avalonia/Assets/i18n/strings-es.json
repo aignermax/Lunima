@@ -380,6 +380,7 @@
   "Examples.HalfAdder.Description": "Suma dos bits: tu primer circuito aritmético.",
   "Examples.MachZehnder.Description": "Divide la luz en dos caminos y recómbinala: el «Hola Mundo» de la fotónica.",
   "Examples.EBeamMachZehnder.Description": "El Mach-Zehnder con el PDK real SiEPIC EBeam — acopladores de red en una matriz de prueba de 127 µm, dimensionado para un dado openEBL.",
+  "Examples.EBeamAddDropRing.Description": "Un anillo resonador add-drop con dos acopladores de semianillo SiEPIC EBeam — caídas en el puerto through y picos en el puerto drop espaciados por el rango espectral libre del anillo.",
   "Examples.Mux.Description": "Un multiplexor 2 a 1: un bit de selección elige entre dos entradas.",
   "Examples.NotGate.Description": "Tu primera puerta lógica: un NOT construido con una sola NAND.",
   "Examples.Not4bit.Description": "Cuatro puertas NOT en paralelo: entran A0–A3, salen Y0–Y3 — la instrucción NOT del ISA sobre luz.",
