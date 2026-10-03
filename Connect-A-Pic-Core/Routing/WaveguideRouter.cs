@@ -215,7 +215,7 @@ public partial class WaveguideRouter
     /// <summary>
     /// Routes a waveguide between two pins. With <see cref="PreferDirectStyledRoutes"/> (the
     /// default) the DIRECT styled geometry is tried first and A* only runs when obstacles
-    /// actually block the styled path (issue #860). The A* attempt itself is two-phase.
+    /// actually block the styled path (issue #860).
     /// The first attempt honors the process bend-radius floor
     /// (<see cref="ResolveProcessFloorFor"/> — per-connection when
     /// <see cref="ConnectionProcessFloorProvider"/> is wired, else the canvas-wide

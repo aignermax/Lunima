@@ -50,18 +50,28 @@ public partial class PathfindingGrid
 
     // Pin reservation zones: cells near pins that get a soft cost penalty (not blocked).
     // Routes CAN pass through but A* prefers to avoid them, keeping pin areas accessible.
-    private readonly HashSet<(int x, int y)> _pinZoneCells = new();
+    // Refcounted per cell in a plain grid array: the A* cost probe reads this once per
+    // neighbor (hundreds of millions of times on large chips), so it must be a
+    // lock-free O(1) array read — atomic int reads match the consistency model _cells
+    // already uses during searches.
+    private readonly int[,] _pinZoneRefGrid;
     private readonly object _pinZoneLock = new();
 
     // Per-component pin-zone bookkeeping so RemoveComponentObstacle can unmark a
     // component's zones without erasing zones that overlapping components still need —
     // otherwise a dissolved crossing leaves stale soft penalties on the grid.
     private readonly Dictionary<Component, HashSet<(int x, int y)>> _componentPinZones = new();
-    private readonly Dictionary<(int x, int y), int> _pinZoneRefCounts = new();
 
     /// <summary>
-    /// Callback invoked when waveguide cells are added (for distance transform updates).
+    /// Monotonic counter bumped on every mutation of waveguide obstacle cells (state 2).
+    /// Memoized per-cell data derived from waveguide occupancy (e.g. the proximity-cost
+    /// cache in <see cref="RoutingCostCalculator"/>) keys on this version: a stale entry
+    /// is one stamped with an older version. Bumping generously is safe — a spurious bump
+    /// only causes recomputation, never a stale read.
     /// </summary>
+    public int WaveguideVersion { get; private set; }
+
+    /// <summary>Callback invoked when waveguide cells are added (for distance transform updates).</summary>
     public Action<HashSet<(int, int)>>? OnWaveguideCellsAdded { get; set; }
 
     /// <summary>
@@ -96,6 +106,7 @@ public partial class PathfindingGrid
         Height = Math.Max(Height, 1);
 
         _cells = new byte[Width, Height];
+        _pinZoneRefGrid = new int[Width, Height];
     }
 
     /// <summary>
@@ -135,6 +146,9 @@ public partial class PathfindingGrid
 
         // Regular component obstacle handling
         AddSingleComponentObstacle(component);
+        // A component body may stamp over waveguide cells (state 2) — derived caches
+        // keyed on the waveguide version must not serve stale proximity values.
+        WaveguideVersion++;
     }
 
     /// <summary>
@@ -202,6 +216,11 @@ public partial class PathfindingGrid
         {
             _componentCells[group] = groupCells;
         }
+
+        // Frozen-path markings and child bodies may stamp over waveguide cells
+        // (state 2) — derived caches keyed on the waveguide version must not
+        // serve stale proximity values.
+        WaveguideVersion++;
     }
 
     /// <summary>
@@ -365,6 +384,9 @@ public partial class PathfindingGrid
         }
         UnregisterComponentOwnership(component, cells);
         UnregisterPinZones(component);
+        // A freed cell may have held a waveguide obstacle (state 2) that a later
+        // waveguide registration claimed — invalidate derived caches regardless.
+        WaveguideVersion++;
     }
 
     /// <summary>
@@ -422,6 +444,7 @@ public partial class PathfindingGrid
                 }
             }
         }
+        WaveguideVersion++;
     }
 
     /// <summary>
@@ -456,6 +479,8 @@ public partial class PathfindingGrid
                 }
             }
         }
+        if (clearedCells.Count > 0)
+            WaveguideVersion++;
 
         return clearedCells;
     }
@@ -472,6 +497,8 @@ public partial class PathfindingGrid
                 _cells[gx, gy] = state; // Restore original state (1 or 2)
             }
         }
+        if (cells.Count > 0)
+            WaveguideVersion++;
     }
 
     /// <summary>
@@ -567,7 +594,10 @@ public partial class PathfindingGrid
     public void SetCellState(int gridX, int gridY, byte state)
     {
         if (IsInBounds(gridX, gridY))
+        {
             _cells[gridX, gridY] = state;
+            WaveguideVersion++;
+        }
     }
 
     /// <summary>
@@ -597,11 +627,11 @@ public partial class PathfindingGrid
         }
         lock (_pinZoneLock)
         {
-            _pinZoneCells.Clear();
+            Array.Clear(_pinZoneRefGrid);
             _componentPinZones.Clear();
-            _pinZoneRefCounts.Clear();
         }
         ClearOwnership();
+        WaveguideVersion++;
 
         foreach (var component in components)
         {
@@ -683,6 +713,7 @@ public partial class PathfindingGrid
                 (segmentList[0].StartPoint.X, segmentList[0].StartPoint.Y),
                 (segmentList[^1].EndPoint.X, segmentList[^1].EndPoint.Y));
         }
+        WaveguideVersion++;
         OnWaveguideCellsAdded?.Invoke(cells);
     }
 
@@ -708,6 +739,7 @@ public partial class PathfindingGrid
                 _cells[gx, gy] = 0;
             }
         }
+        WaveguideVersion++;
     }
 
     /// <summary>
@@ -784,13 +816,11 @@ public partial class PathfindingGrid
 
     /// <summary>
     /// Checks if a cell is in a pin reservation zone (soft penalty, not blocked).
+    /// Lock-free read of the refcount grid — see <see cref="_pinZoneRefGrid"/>.
     /// </summary>
     public bool IsPinReservationZone(int gridX, int gridY)
     {
-        lock (_pinZoneLock)
-        {
-            return _pinZoneCells.Contains((gridX, gridY));
-        }
+        return IsInBounds(gridX, gridY) && _pinZoneRefGrid[gridX, gridY] > 0;
     }
 
     /// <summary>
@@ -829,11 +859,9 @@ public partial class PathfindingGrid
         {
             UnregisterPinZonesLocked(component);
             _componentPinZones[component] = cells;
-            foreach (var cell in cells)
+            foreach (var (gx, gy) in cells)
             {
-                _pinZoneRefCounts.TryGetValue(cell, out int count);
-                _pinZoneRefCounts[cell] = count + 1;
-                _pinZoneCells.Add(cell);
+                _pinZoneRefGrid[gx, gy]++;
             }
         }
     }
@@ -853,18 +881,9 @@ public partial class PathfindingGrid
     private void UnregisterPinZonesLocked(Component component)
     {
         if (!_componentPinZones.Remove(component, out var cells)) return;
-        foreach (var cell in cells)
+        foreach (var (gx, gy) in cells)
         {
-            if (!_pinZoneRefCounts.TryGetValue(cell, out int count)) continue;
-            if (count <= 1)
-            {
-                _pinZoneRefCounts.Remove(cell);
-                _pinZoneCells.Remove(cell);
-            }
-            else
-            {
-                _pinZoneRefCounts[cell] = count - 1;
-            }
+            _pinZoneRefGrid[gx, gy]--;
         }
     }
 
