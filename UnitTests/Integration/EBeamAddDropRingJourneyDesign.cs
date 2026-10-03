@@ -12,7 +12,9 @@ namespace UnitTests.Integration;
 /// EBeam PDK: three grating couplers in a vertical 127 µm openEBL test array
 /// (gc_in / gc_through / gc_drop, all 0°) and two <c>DC Halfring-Straight</c>
 /// couplers (gap 100 nm, R = 3 µm) facing each other so the ring closes through
-/// two straight vertical waveguide segments.
+/// two straight vertical waveguide segments. Only gc_in injects light (one opt_in
+/// label, middle of the array) and the unused add port ends in a terminator, so
+/// the export passes openEBL functional verification.
 /// <para>
 /// Pin math (halfring, 21.52 × 11.46 µm, canvas Y pointing DOWN): unrotated, the
 /// ring ports 2/4 sit at the top edge (y ≈ 0, angle 270° = north) and the bus
@@ -40,6 +42,7 @@ public sealed class EBeamAddDropRingJourneyDesign
 
     private const string GratingTemplateName = "Grating Coupler TE 1550";
     private const string HalfringTemplateName = "DC Halfring-Straight";
+    private const string TerminatorTemplateName = "Disconnected Waveguide TE 1550";
     private const string EBeamPdkName = "SiEPIC EBeam PDK";
 
     // Halfring local pin geometry (from siepic-ebeam-pdk.json).
@@ -49,6 +52,13 @@ public sealed class EBeamAddDropRingJourneyDesign
 
     // GC local pin geometry: port 2 (waveguide) sits at (39.969, 13.669), pointing right.
     private const double GcPort2OffsetY = 13.669;
+
+    // Terminator (ebeam_terminator_te1550, 10.905 x 1.5): port 1 sits at (10.9, 0.75),
+    // pointing right; rotated 180 deg it faces the ring's add port across this gap.
+    // The gap keeps the terminator tail clear of the through route's vertical run
+    // at x = 150 (DevRec layers must not overlap).
+    private const double TerminatorPinOffsetY = 0.75;
+    private const double TerminatorGapMicrometers = 4.0;
 
     private EBeamAddDropRingJourneyDesign(DesignCanvasViewModel canvas, List<ComponentTemplate> templates)
     {
@@ -73,6 +83,7 @@ public sealed class EBeamAddDropRingJourneyDesign
         var templates = TestPdkLoader.LoadAllTemplates();
         var gratingTemplate = TemplateFor(templates, GratingTemplateName);
         var halfringTemplate = TemplateFor(templates, HalfringTemplateName);
+        var terminatorTemplate = TemplateFor(templates, TerminatorTemplateName);
 
         var canvas = new DesignCanvasViewModel();
         canvas.ChipMinX = 0;
@@ -85,6 +96,12 @@ public sealed class EBeamAddDropRingJourneyDesign
         var gcDrop = Place(canvas, "gc_drop", gratingTemplate, 20, 40);
         var gcIn = Place(canvas, "gc_in", gratingTemplate, 20, 40 + OpenEblPitchMicrometers);
         var gcThrough = Place(canvas, "gc_through", gratingTemplate, 20, 40 + 2 * OpenEblPitchMicrometers);
+
+        // Only gc_in injects light: one opt_in label in the middle of the test array
+        // (1 GC above, 1 below) keeps openEBL's fibre-array rule satisfied; the drop
+        // and through couplers are listen-only detectors.
+        gcDrop.LaserEnabled = false;
+        gcThrough.LaserEnabled = false;
 
         // Top halfring (rotated 180°): its bus row lands at y+0.75, level with
         // gc_in's waveguide port, so the input link is a straight horizontal route.
@@ -108,6 +125,15 @@ public sealed class EBeamAddDropRingJourneyDesign
         Route(canvas, Pin(gcIn, "port 2"), Pin(ringTop, "port 3"));
         Route(canvas, Pin(ringTop, "port 1"), Pin(gcThrough, "port 2"));
         Route(canvas, Pin(ringBottom, "port 1"), Pin(gcDrop, "port 2"));
+
+        // The unused add port (bottom bus right) must not dangle — openEBL's
+        // verification flags disconnected pins — so it ends in a terminator.
+        var (addX, addY) = Pin(ringBottom, "port 3").GetAbsolutePosition();
+        var terminator = Place(canvas, "add_term", terminatorTemplate,
+            addX + TerminatorGapMicrometers, addY - TerminatorPinOffsetY);
+        ComponentPoseTransform.Rotate90CounterClockwise(terminator);
+        ComponentPoseTransform.Rotate90CounterClockwise(terminator);
+        Route(canvas, Pin(ringBottom, "port 3"), Pin(terminator, "port 1"));
 
         canvas.ConnectionManager.EnableCoherentPropagationPhase = true;
         return new EBeamAddDropRingJourneyDesign(canvas, templates);

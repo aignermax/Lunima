@@ -10,6 +10,7 @@
       "Rotation": 0,
       "LaserWavelengthNm": 1550,
       "LaserPower": 1,
+      "LaserEnabled": false,
       "LaserLinewidthFwhmNm": 2,
       "LaserRinDbPerHz": -145,
       "HumanReadableName": "Grating Coupler TE 1550"
@@ -36,6 +37,7 @@
       "Rotation": 0,
       "LaserWavelengthNm": 1550,
       "LaserPower": 1,
+      "LaserEnabled": false,
       "LaserLinewidthFwhmNm": 2,
       "LaserRinDbPerHz": -145,
       "HumanReadableName": "Grating Coupler TE 1550"
@@ -57,6 +59,15 @@
       "Identifier": "ring_bottom",
       "Rotation": 0,
       "HumanReadableName": "DC Halfring-Straight"
+    },
+    {
+      "TemplateName": "Disconnected Waveguide TE 1550",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 135.51,
+      "Y": 221.31900000000002,
+      "Identifier": "add_term",
+      "Rotation": 2,
+      "HumanReadableName": "Disconnected Waveguide TE 1550"
     }
   ],
   "Connections": [
@@ -310,13 +321,35 @@
       "IsPlaceholderGeometry": false,
       "WidthMicrometers": 0.5,
       "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 4,
+      "StartPinName": "port 3",
+      "EndComponentIndex": 5,
+      "EndPinName": "port 1",
+      "StartComponentId": "ring_bottom",
+      "EndComponentId": "add_term",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 131.51,
+          "StartY": 222.06900000000002,
+          "EndX": 135.515,
+          "EndY": 222.06900000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
     }
   ],
   "Metadata": {
     "PdkVersions": {},
     "Authorship": {
       "Created": "2026-10-03",
-      "Modified": "2026-10-03T16:46:58.6718203Z"
+      "Modified": "2026-10-03T21:35:10.0747021Z"
     }
   },
   "ChipWidthMicrometers": 605,

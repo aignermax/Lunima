@@ -42,8 +42,8 @@ public class EBeamAddDropRingExampleTests
             EBeamAddDropRingExampleAuthoringTests.ExampleFileName);
         await fileOps.PostLoadRouting;
 
-        canvas.Components.Count.ShouldBe(5);
-        canvas.Connections.Count.ShouldBe(5);
+        canvas.Components.Count.ShouldBe(6);
+        canvas.Connections.Count.ShouldBe(6);
         foreach (var compVm in canvas.Components)
         {
             compVm.TemplatePdkSource.ShouldBe(EBeamPdkName,
