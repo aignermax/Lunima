@@ -16,11 +16,14 @@ public class AStarPathfinder
     /// </summary>
     public int MaxNodesExpanded { get; set; } = 200000;
 
+    /// <summary>Default <see cref="GoalTolerance"/> in grid cells.</summary>
+    public const int DefaultGoalTolerance = 3;
+
     /// <summary>
     /// Distance tolerance for reaching the goal (in grid cells).
     /// With 5µm cells, 3 cells = 15µm tolerance.
     /// </summary>
-    public int GoalTolerance { get; set; } = 3;
+    public int GoalTolerance { get; set; } = DefaultGoalTolerance;
 
     /// <summary>
     /// When true, the goal also accepts arrivals laterally offset from the
@@ -39,6 +42,45 @@ public class AStarPathfinder
     /// are expanded — a much smaller search space for faster everyday routing.
     /// </summary>
     public bool UseDiagonals { get; set; } = true;
+
+    /// <summary>
+    /// Optional bounding window (inclusive grid-cell bounds) outside of which the
+    /// search never expands. Routing a wire across a large chip otherwise lets the
+    /// search flood the entire grid even though a sane route stays near the corridor
+    /// between its endpoints. Null searches the whole grid. Callers fall back to an
+    /// unbounded search when a bounded attempt finds no path, so a window can only
+    /// change which valid path is found, never whether one is found.
+    /// </summary>
+    public (int MinX, int MinY, int MaxX, int MaxY)? SearchWindow { get; set; }
+
+    /// <summary>
+    /// Bounding box of the cells the last <see cref="FindPath"/> call dequeued
+    /// (diagnostic hook for tests profiling the search space). Null when the last
+    /// search expanded nothing.
+    /// </summary>
+    public (int MinX, int MinY, int MaxX, int MaxY)? LastExpandedBounds { get; private set; }
+
+    /// <summary>Nodes the last <see cref="FindPath"/> call expanded (diagnostic hook).</summary>
+    public int LastNodesExpanded { get; private set; }
+
+    /// <summary>
+    /// True when the last <see cref="FindPath"/> ended because it hit
+    /// <see cref="MaxNodesExpanded"/> with frontier left — the search was cut short,
+    /// not exhausted. False when it found a path, was cancelled, or proved no path
+    /// exists by emptying the open set (diagnostic hook for profiling).
+    /// </summary>
+    public bool LastSearchHitNodeBudget { get; private set; }
+
+    /// <summary>
+    /// Node count at which <see cref="OnEscalationThresholdReached"/> fires once
+    /// (default: never). Lets a caller keep a single continuous search while still
+    /// surfacing "this route is complex" at the point a separate quick phase would
+    /// have given up.
+    /// </summary>
+    public int EscalationThresholdNodes { get; set; } = int.MaxValue;
+
+    /// <summary>Fired once when the search expands its <see cref="EscalationThresholdNodes"/>-th node.</summary>
+    public Action? OnEscalationThresholdReached { get; set; }
 
     public AStarPathfinder(PathfindingGrid grid, RoutingCostCalculator costCalculator)
     {
@@ -73,9 +115,9 @@ public class AStarPathfinder
                                       int endX, int endY, GridDirection endDirection,
                                       CancellationToken cancellationToken = default)
     {
-        var openSet = new PriorityQueue<AStarNode, double>();
-        var visited = new Dictionary<(int, int, GridDirection, int), AStarNode>();
-        var distanceFromStart = new Dictionary<(int, int, GridDirection, int), int>();
+        var openSet = new PriorityQueue<AStarNode, double>(initialCapacity: 4096);
+        var visited = new Dictionary<long, AStarNode>(capacity: 4096);
+        var neighborBuffer = new List<AStarNode>(8);
 
         // Create start node.
         // A pin start needs room for only ONE arc tangent before the first turn (the
@@ -95,18 +137,28 @@ public class AStarPathfinder
 
         openSet.Enqueue(startNode, startNode.FCost);
         visited[StateKey(startNode)] = startNode;
-        distanceFromStart[StateKey(startNode)] = 0;
 
         int nodesExpanded = 0;
+        LastExpandedBounds = null;
+        LastSearchHitNodeBudget = false;
 
         while (openSet.Count > 0 && nodesExpanded < MaxNodesExpanded)
         {
             // Check cancellation periodically to remain responsive
             if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)
+            {
+                LastNodesExpanded = nodesExpanded;
                 return null;
+            }
 
             var current = openSet.Dequeue();
             nodesExpanded++;
+            if (nodesExpanded == EscalationThresholdNodes)
+                OnEscalationThresholdReached?.Invoke();
+            LastExpandedBounds = LastExpandedBounds is { } b
+                ? (Math.Min(b.MinX, current.X), Math.Min(b.MinY, current.Y),
+                   Math.Max(b.MaxX, current.X), Math.Max(b.MaxY, current.Y))
+                : (current.X, current.Y, current.X, current.Y);
 
             // Check if we reached the goal
             if (IsGoalReached(current, endX, endY, endDirection))
@@ -117,7 +169,10 @@ public class AStarPathfinder
                 // looping arrivals — e.g. a full 360° circle at the start pin — and keep
                 // searching for a loop-free alternative.
                 if (!PathLoopDetector.IsSelfIntersecting(path))
+                {
+                    LastNodesExpanded = nodesExpanded;
                     return path;
+                }
 
                 // Forget this looping arrival's grid state, otherwise its (cheaper) entry
                 // stays in the visited map and rejects a later, more expensive but loop-free
@@ -127,42 +182,41 @@ public class AStarPathfinder
                 if (visited.TryGetValue(loopingKey, out var stored) && ReferenceEquals(stored, current))
                 {
                     visited.Remove(loopingKey);
-                    distanceFromStart.Remove(loopingKey);
                 }
                 continue;
             }
 
             // Expand neighbors
-            foreach (var neighbor in GetNeighbors(current, endX, endY, endDirection,
-                                                   distanceFromStart))
+            CollectNeighbors(current, endX, endY, endDirection, visited, neighborBuffer);
+            foreach (var neighbor in neighborBuffer)
             {
-                var key = StateKey(neighbor);
-
-                if (visited.TryGetValue(key, out var existingNode))
-                {
-                    // Skip if we've found a better path already
-                    if (neighbor.GCost >= existingNode.GCost)
-                        continue;
-                }
-
-                visited[key] = neighbor;
+                visited[StateKey(neighbor)] = neighbor;
                 openSet.Enqueue(neighbor, neighbor.FCost);
             }
         }
 
-        // No path found
+        // No path found: hitting the budget with frontier left is a cut-short
+        // search; an empty open set is a proof that no path exists.
+        LastNodesExpanded = nodesExpanded;
+        LastSearchHitNodeBudget = openSet.Count > 0;
         return null;
     }
 
     /// <summary>
-    /// State identity of a node in the octile search. The straight-run length
-    /// is part of the state: a cheap arrival with a short run must not shadow
-    /// a costlier arrival with a long run, because only the latter may be
-    /// allowed to turn (IsTurnValid). Runs are capped at the largest value
-    /// IsTurnValid ever requires.
+    /// State identity of a node in the octile search, packed into one long for cheap
+    /// hashing. The straight-run length is part of the state: a cheap arrival with a
+    /// short run must not shadow a costlier arrival with a long run, because only the
+    /// latter may be allowed to turn (IsTurnValid). Runs are capped at the largest
+    /// value IsTurnValid ever requires. Bit budget: X 28, Y 20, direction+1 4, run 12.
     /// </summary>
-    private (int X, int Y, GridDirection Dir, int Run) StateKey(AStarNode n) =>
-        (n.X, n.Y, n.Direction, Math.Min(n.StraightRunLength, _costCalculator.MinStraightRunCells));
+    private long StateKey(AStarNode n) =>
+        StateKey(n.X, n.Y, n.Direction, n.StraightRunLength);
+
+    private long StateKey(int x, int y, GridDirection dir, int straightRunLength) =>
+        ((long)x << 36)
+        | ((long)y << 16)
+        | ((long)((int)dir + 1) << 12)
+        | (uint)Math.Min(straightRunLength, _costCalculator.MinStraightRunCells);
 
     /// <summary>
     /// Checks if the current node has reached the goal.
@@ -201,14 +255,25 @@ public class AStarPathfinder
     }
 
     /// <summary>
-    /// Gets valid neighboring nodes from the current position.
+    /// Collects the valid neighboring nodes of the current position into
+    /// <paramref name="buffer"/> (cleared first — a reusable buffer avoids an
+    /// iterator allocation per expansion). Neighbors that cannot beat the stored
+    /// arrival at their state are rejected BEFORE the node is allocated — the
+    /// accepted sequence is unchanged.
     /// </summary>
-    private IEnumerable<AStarNode> GetNeighbors(AStarNode current,
-                                                  int goalX, int goalY, GridDirection goalDir,
-                                                  Dictionary<(int, int, GridDirection, int), int> distFromStart)
+    private void CollectNeighbors(AStarNode current,
+                                  int goalX, int goalY, GridDirection goalDir,
+                                  Dictionary<long, AStarNode> visited,
+                                  List<AStarNode> buffer)
     {
-        // Get distance from start for pin escape enforcement
-        int distanceFromStart = distFromStart.GetValueOrDefault(StateKey(current), 0);
+        buffer.Clear();
+
+        // Distance from start for pin escape enforcement: the LATEST arrival at the
+        // current state (the dequeued node may have been superseded by a cheaper one).
+        int distanceFromStart =
+            visited.TryGetValue(StateKey(current), out var latestArrival)
+                ? latestArrival.DistanceFromStart
+                : current.DistanceFromStart;
 
         var directions = UseDiagonals
             ? GridDirectionExtensions.GetAllDirections()
@@ -219,6 +284,11 @@ public class AStarPathfinder
             var (dx, dy) = dir.GetDelta();
             int newX = current.X + dx;
             int newY = current.Y + dy;
+
+            // Bounded search: never expand outside the endpoint corridor window.
+            if (SearchWindow is { } window &&
+                (newX < window.MinX || newX > window.MaxX || newY < window.MinY || newY > window.MaxY))
+                continue;
 
             // Check bounds and obstacles
             if (_grid.IsBlocked(newX, newY))
@@ -273,6 +343,14 @@ public class AStarPathfinder
             double proximityCost = _costCalculator.CalculateProximityCost(_grid, newX, newY);
             double pinZoneCost = _costCalculator.CalculatePinZoneCost(_grid, newX, newY);
             double newGCost = current.GCost + moveCost + proximityCost + pinZoneCost;
+
+            // Skip a worse arrival before paying for the node — the g-check the
+            // search loop used to run after construction.
+            int newStraightRun = (current.Direction == dir) ? current.StraightRunLength + 1 : 1;
+            if (visited.TryGetValue(StateKey(newX, newY, dir, newStraightRun), out var existingNode)
+                && newGCost >= existingNode.GCost)
+                continue;
+
             double newHCost = _costCalculator.CalculateHeuristic(
                 newX, newY, dir, goalX, goalY, goalDir);
 
@@ -281,15 +359,11 @@ public class AStarPathfinder
                 GCost = newGCost,
                 HCost = newHCost,
                 Parent = current,
-                StraightRunLength = (current.Direction == dir)
-                    ? current.StraightRunLength + 1
-                    : 1
+                StraightRunLength = newStraightRun,
+                DistanceFromStart = distanceFromStart + 1
             };
 
-            // Track distance from start for this neighbor
-            distFromStart[StateKey(neighbor)] = distanceFromStart + 1;
-
-            yield return neighbor;
+            buffer.Add(neighbor);
         }
     }
 

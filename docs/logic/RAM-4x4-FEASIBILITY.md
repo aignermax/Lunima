@@ -23,6 +23,25 @@ Reference points already on record: shipped RAM 2x2 = 37 gates / 49 wires (18 bl
 the baked cache); 2-bit Register full re-route ≈ 90 s (#1302/#1303); the 344-gate 4-bit
 adder is the largest shipped logic example (90 blocked wires).
 
+## Router initial-pass re-measure (#1342)
+
+Same machine, same benchmark (`RamScaleDesignBuilder.Build(2, 4)`), re-taken after the
+router initial-pass optimization (#1342: A* search bounded to an endpoint-corridor window
+with a full-grid fallback, a reachability flood that skips provably-unreachable searches,
+one continuous search instead of the quick+extended re-run, memoized proximity cost).
+Before/after rows are bound just past each build's initial pass, so the blocked counts are
+like-for-like snapshots at the same route stage (one ordering-cascade attempt underway):
+
+| Router | Route bound | Initial pass | Blocked at cancel | Unrouted |
+|---|---|---|---|---|
+| dev-ki HEAD (before) | 385 s | 356.7 s | 35 | 0 |
+| #1342 (after) | 170 s | 160.2 s | 33 | 0 |
+| #1342 (after, long run) | 600 s | 165.3 s | 31 (3 cascade attempts) | 0 |
+
+**Initial pass 356.7 s → 160.2 s = 2.2× faster; blocked not worse (35 → 33).** The full
+route still does not converge within 15 min — the ordering cascade is now the dominant
+share (~435 s of the 600 s long run) and is the next router target, not the initial pass.
+
 ## Slope
 
 - **Gates:** 37 (2×2) → 71 (2×4) → 183 (4×4) — roughly ×1.9 per dimension doubling.
