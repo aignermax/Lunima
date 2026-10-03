@@ -33,7 +33,7 @@ otherwise describe a curve in words (laser line shape, RIN noise trace, MZI frin
     MarkerBrush="#FFD54F" PingPong="True" IsHitTestVisible="False"/>
 ```
 
-## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation, LengthMatchArrivalAnimation)
+## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation, LengthMatchArrivalAnimation, MonteCarloScatterAnimation)
 
 Panel-specific compositions (eye-diagram stacking, process layer stack) that live in the
 same folder but are not primitives — they draw in their flyout's fixed coordinate space and
@@ -55,6 +55,11 @@ group-delay relation Δt = ΔL·n_g/c with the core's `GateDelayCalculator.Defau
 and `SpeedOfLightMicrometersPerPicosecond` (the constants `WireDelayCalculator` applies to
 routed wires), and the drawing conserves length — the grown meander is exactly as long as
 the detour arm it matches.
+
+`MonteCarloScatterAnimation` (Monte Carlo help, #1344) is another self-contained scene:
+a waveguide cross-section whose width wobbles, a transmission dip that shifts with it,
+and dots dropping into a histogram that builds a bell shape. The dot landing bins come
+from a fixed-seed generator, so every loop (and every screenshot) is identical.
 
 ## Rules
 
