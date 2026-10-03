@@ -156,6 +156,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Export guards warn when the design contains broken routes or missing PDKs. `(auto: Export/GdsExportGuardTests, Export/NazcaExportSkipsBrokenConnectionsTests)`
 - [ ] Foundry environment selection resolves a working Python/Nazca interpreter. `(auto: Export/GdsExportEnvironmentSelectionTests, Export/ProcessLaunchFactoryTests)`
 - [ ] PDK resolution check validates all Nazca functions resolve for export. `(auto: Export/PdkResolution/PdkFunctionResolutionServiceTests)`
+- [ ] Export → "Check for openEBL…" exports the design to GDS and reports pass/fail per check (submission + verification) with typed errors; a missing Python toolchain shows the pip hint with a copy button. `(auto: Export/OpenEbl/OpenEblCheckViewModelTests, Export/OpenEbl/OpenEblSubmissionCheckerTests)`
+- [ ] openEBL check against a real toolchain passes on a valid EBeam design and fails on an oversized die. `(manual)`
 
 ## 14. Layers & geometry
 

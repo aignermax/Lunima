@@ -12,7 +12,7 @@ namespace CAP.Avalonia.Services.OpenEblCheck;
 /// SiEPIC-Tools not importable) yields <see cref="OpenEblCheckStatus.ToolchainMissing"/>
 /// with an actionable pip hint — never a crash and never a false "passed".
 /// </summary>
-public sealed class OpenEblSubmissionChecker
+public class OpenEblSubmissionChecker
 {
     private static readonly TimeSpan ScriptTimeout = TimeSpan.FromMinutes(5);
 
@@ -49,10 +49,11 @@ public sealed class OpenEblSubmissionChecker
     /// <summary>
     /// Runs both openEBL checks against <paramref name="gdsPath"/>. The returned report
     /// always reflects reality: only zero parsed errors on both scripts is a pass.
+    /// Virtual so ViewModel tests can substitute a fake checker.
     /// </summary>
     /// <param name="gdsPath">Path to the exported GDS file.</param>
     /// <param name="cancellationToken">Cancels the run (the Python process tree is killed).</param>
-    public async Task<OpenEblCheckReport> CheckAsync(
+    public virtual async Task<OpenEblCheckReport> CheckAsync(
         string gdsPath,
         CancellationToken cancellationToken = default)
     {
