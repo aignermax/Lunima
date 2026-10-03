@@ -1,0 +1,26 @@
+[
+  {
+    "file": "spectrum-tab-en.png",
+    "caption": "Wavelength Spectrum tab (en): the \u0022Coherent interference (propagation phase)\u0022 toggle with its (?) help below the sweep parameters."
+  },
+  {
+    "file": "flyout-en-peak.png",
+    "caption": "Coherent interference help (en): the wave in the longer meander arm lags, the swept \u03BB makes the output pulse \u2014 bright peak on the fringe curve."
+  },
+  {
+    "file": "flyout-en-null.png",
+    "caption": "Coherent interference help (en): anti-phase arms cancel \u2014 the output goes dark, the marker sits in a fringe null."
+  },
+  {
+    "file": "spectrum-tab-de.png",
+    "caption": "Wavelength Spectrum tab (de): the \u0022Coherent interference (propagation phase)\u0022 toggle with its (?) help below the sweep parameters."
+  },
+  {
+    "file": "flyout-de-peak.png",
+    "caption": "Coherent interference help (de): the wave in the longer meander arm lags, the swept \u03BB makes the output pulse \u2014 bright peak on the fringe curve."
+  },
+  {
+    "file": "flyout-de-null.png",
+    "caption": "Coherent interference help (de): anti-phase arms cancel \u2014 the output goes dark, the marker sits in a fringe null."
+  }
+]
