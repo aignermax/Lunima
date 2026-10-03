@@ -138,8 +138,7 @@ public class OpenEblEBeamGroupedMziVerificationTests
             CopyArtifact(gdsPath);
 
             // ── Submission checks (klayout-only port, same as the flat readiness gate) ──
-            var checkerPath = Path.Combine(dir, fileStem + "_submission_check.py");
-            await File.WriteAllTextAsync(checkerPath, OpenEblMziReadinessTests.SubmissionCheckerScript);
+            var checkerPath = OpenEblScriptFiles.SubmissionCheckScriptPath;
             var check = await SiepicRealGeometryExportTests.RunPythonAsync(python, dir, checkerPath, gdsPath);
             check.ExitCode.ShouldBe(0, $"submission-check port crashed:\n{check.StdOut}\n{check.StdErr}");
             var checkOutput = check.StdOut;
@@ -150,8 +149,7 @@ public class OpenEblEBeamGroupedMziVerificationTests
             checkErrors.ShouldBe(0, $"the grouped EBeam MZI must pass the submission checks:\n{checkOutput}");
 
             // ── Functional verification (SiEPIC layout_check port) ──
-            var runnerPath = Path.Combine(dir, fileStem + "_verification.py");
-            await File.WriteAllTextAsync(runnerPath, OpenEblEBeamMziVerificationTests.VerificationRunnerScript);
+            var runnerPath = OpenEblScriptFiles.VerificationScriptPath;
             var verify = await SiepicRealGeometryExportTests.RunPythonAsync(python, dir, runnerPath, gdsPath);
             verify.ExitCode.ShouldBe(0, $"verification port crashed:\n{verify.StdOut}\n{verify.StdErr}");
             var verifyOutput = verify.StdOut;
