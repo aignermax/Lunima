@@ -96,6 +96,19 @@ internal static class WavelengthSpectrumPlotBuilder
         for (int i = 0; i < measured.WavelengthNm.Count; i++)
             series.Points.Add(new DataPoint(measured.WavelengthNm[i], measured.PowerLinear[i]));
         model.Series.Add(series);
+        ExtendTransmissionAxisToFit(model, measured);
+    }
+
+    // A lab trace usually sits above the simulated curves (e.g. fibre-normalised),
+    // so the axis must grow with it or the overlay is clipped at the top.
+    private static void ExtendTransmissionAxisToFit(PlotModel model, MeasuredSpectrum measured)
+    {
+        var yAxis = (LinearAxis)model.Axes.First(a => a.Position == AxisPosition.Left);
+        if (double.IsNaN(yAxis.Maximum) || measured.PowerLinear.Count == 0) return;
+        double measuredMax = measured.PowerLinear.Max() * (1 + SpectrumAxisScaler.TransmissionPaddingFraction);
+        if (measuredMax <= yAxis.Maximum) return;
+        yAxis.Maximum = measuredMax;
+        yAxis.MajorStep = SpectrumAxisScaler.NiceTickStep(0, measuredMax);
     }
 
     /// <summary>Creates an empty, dark-themed spectrum plot model with labelled axes and legend.</summary>

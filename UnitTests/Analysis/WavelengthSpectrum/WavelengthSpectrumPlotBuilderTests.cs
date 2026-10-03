@@ -137,9 +137,23 @@ public class WavelengthSpectrumPlotBuilderTests
 
         model.Series.Count.ShouldBe(2);
         var measuredSeries = model.Series.Cast<LineSeries>().Last();
-        measuredSeries.Title.ShouldBe("Measured");
+        measuredSeries.Title.ShouldBe(
+            CAP.Avalonia.Services.Localization.LocalizationService.Instance.Translate("Analysis.Spectrum.Measured.LegendLabel"));
         measuredSeries.LineStyle.ShouldBe(LineStyle.Dash);
         measuredSeries.Points.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void BuildPlotModel_MeasuredAboveSimulated_TransmissionAxisFitsMeasuredPeak()
+    {
+        var measured = new CAP_Core.Analysis.MeasuredSpectrum.MeasuredSpectrum(
+            new double[] { 1500, 1550, 1600 }, new[] { 0.4, 5.0, 0.4 }, "lab.csv");
+
+        var model = WavelengthSpectrumPlotBuilder.BuildPlotModel(
+            new[] { CreateCurve() }, _ => null, DesignWavelengthNm, measured);
+
+        var yAxis = (LinearAxis)model.Axes.First(a => a.Position == AxisPosition.Left);
+        yAxis.Maximum.ShouldBeGreaterThanOrEqualTo(5.0);
     }
 
     [Fact]
