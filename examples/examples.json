@@ -2,6 +2,7 @@
   "examples": [
     { "file": "Mach-Zehnder Interferometer.lun", "rank": 10, "level": "Basics", "descriptionKey": "Examples.MachZehnder.Description" },
     { "file": "EBeam Mach-Zehnder Interferometer.lun", "rank": 15, "level": "Basics", "descriptionKey": "Examples.EBeamMachZehnder.Description" },
+    { "file": "EBeam Add-Drop Ring.lun", "rank": 16, "level": "Basics", "descriptionKey": "Examples.EBeamAddDropRing.Description" },
     { "file": "Logic Gate NOT-NAND.lun", "rank": 20, "level": "Basics", "descriptionKey": "Examples.NotGate.Description" },
     { "file": "Logic Gate AND-from-NAND.lun", "rank": 30, "level": "Basics", "descriptionKey": "Examples.AndGate.Description" },
     { "file": "Logic Gate OR-AND.lun", "rank": 40, "level": "Basics", "descriptionKey": "Examples.OrGate.Description" },

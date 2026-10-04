@@ -4,7 +4,7 @@ using System.Numerics;
 namespace CAP_Core.Analysis.OnaAnalysis
 {
     /// <summary>
-    /// Provides linear interpolation of S-matrices between defined wavelength stops.
+    /// Provides interpolation of S-matrices between defined wavelength stops.
     /// Used by <see cref="SystemMatrixBuilder"/> to produce smooth ONA spectra rather
     /// than the step-shaped curves that nearest-neighbour fallback would give.
     /// </summary>
@@ -15,14 +15,14 @@ namespace CAP_Core.Analysis.OnaAnalysis
         /// <paramref name="wavelengthMap"/>.
         /// <list type="bullet">
         ///   <item>Exact match → returns it directly (no interpolation).</item>
-        ///   <item>Two adjacent stops bracket the target → linear interpolation.</item>
+        ///   <item>Two adjacent stops bracket the target → polar interpolation (magnitude linear, phase unwrapped).</item>
         ///   <item>Target outside the defined range → nearest-neighbour fallback.</item>
         /// </list>
         /// </summary>
         /// <param name="wavelengthMap">Component's wavelength-to-SMatrix dictionary.</param>
         /// <param name="targetNm">Requested wavelength in nm.</param>
         /// <param name="wasInterpolated">
-        ///   <see langword="true"/> when the returned matrix was linearly interpolated;
+        ///   <see langword="true"/> when the returned matrix was interpolated;
         ///   <see langword="false"/> for exact or nearest-neighbour results.
         /// </param>
         public static SMatrix GetMatrix(
@@ -39,7 +39,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
         /// <param name="wavelengthMap">Component's wavelength-to-SMatrix dictionary.</param>
         /// <param name="targetNm">Requested wavelength in nm (may be fractional).</param>
         /// <param name="wasInterpolated">
-        ///   <see langword="true"/> when the returned matrix was linearly interpolated;
+        ///   <see langword="true"/> when the returned matrix was interpolated;
         ///   <see langword="false"/> for exact or nearest-neighbour results.
         /// </param>
         public static SMatrix GetMatrix(
@@ -75,8 +75,12 @@ namespace CAP_Core.Analysis.OnaAnalysis
         }
 
         /// <summary>
-        /// Creates a new SMatrix by linearly interpolating real and imaginary parts
-        /// of every coefficient between two adjacent wavelength stops.
+        /// Creates a new SMatrix by interpolating every coefficient between two
+        /// adjacent wavelength stops in polar form: magnitude linearly, phase on the
+        /// unwrapped circle. Component-wise (cartesian) lerp would cut the chord
+        /// between two phasors, attenuating fast-rotating entries by up to
+        /// 1−cos(Δφ/2) mid-interval — e.g. ~13 % for the 58°/10 nm halfring arc of
+        /// the SiEPIC EBeam PDK, which destroys ring-resonator loop gain.
         /// </summary>
         private static SMatrix Interpolate(SMatrix lower, SMatrix upper, int lowerNm, int upperNm, double targetNm)
         {
@@ -103,10 +107,50 @@ namespace CAP_Core.Analysis.OnaAnalysis
             foreach (var kvp in lower.NonLinearConnections)
                 result.NonLinearConnections[kvp.Key] = kvp.Value;
 
+            EnforcePassivity(result);
             return result;
         }
 
+        /// <summary>
+        /// Polar lerp is not a convex combination of the endpoint matrices, so the
+        /// interpolated matrix's largest singular value can exceed both stops'
+        /// (phases rotating into constructive alignment) by up to ~1 % for the
+        /// bundled PDKs. Scale the whole matrix back to the passivity boundary:
+        /// phases are untouched, and a uniform attenuation never fabricates energy.
+        /// </summary>
+        private static void EnforcePassivity(SMatrix matrix)
+        {
+            double sigmaMax = matrix.SMat.L2Norm();
+            if (sigmaMax <= 1.0)
+                return;
+            double scale = 1.0 / sigmaMax;
+            for (int row = 0; row < matrix.SMat.RowCount; row++)
+            {
+                for (int col = 0; col < matrix.SMat.ColumnCount; col++)
+                {
+                    if (matrix.SMat[row, col] != Complex.Zero)
+                        matrix.SMat[row, col] *= scale;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Polar lerp: magnitude linear, phase along the shorter unwrapped arc.
+        /// Identical to component-wise lerp when both values share a phase (e.g. all
+        /// real-valued fixtures); for a zero endpoint (undefined phase) the other
+        /// endpoint's phase is used from t=0 on.
+        /// </summary>
         private static Complex LerpComplex(Complex a, Complex b, double t)
-            => new(a.Real + t * (b.Real - a.Real), a.Imaginary + t * (b.Imaginary - a.Imaginary));
+        {
+            double magnitude = a.Magnitude + t * (b.Magnitude - a.Magnitude);
+            if (a.Magnitude == 0)
+                return Complex.FromPolarCoordinates(magnitude, b.Phase);
+            if (b.Magnitude == 0)
+                return Complex.FromPolarCoordinates(magnitude, a.Phase);
+            double phaseDelta = b.Phase - a.Phase;
+            if (phaseDelta > Math.PI) phaseDelta -= 2 * Math.PI;
+            if (phaseDelta < -Math.PI) phaseDelta += 2 * Math.PI;
+            return Complex.FromPolarCoordinates(magnitude, a.Phase + t * phaseDelta);
+        }
     }
 }
