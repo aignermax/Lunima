@@ -72,6 +72,35 @@ public class TruthTablePinAssignmentPersistenceTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_GateNestedInsidePlainGroup_KeepsItsAssignment()
+    {
+        // A hierarchical design nests its gates inside plain cell-instance groups;
+        // the nested gate's roles must ride the save → load round trip like a
+        // top-level gate's, or the cell loses its gates on save.
+        var canvas = await LoadGateOnCanvas();
+        await ExtractNandThroughPanel(canvas);
+
+        var gateVm = canvas.Components.Single(c => c.Component is ComponentGroup);
+        canvas.Components.Remove(gateVm);
+        var cell = new ComponentGroup("CELL");
+        cell.AddChild((ComponentGroup)gateVm.Component);
+        canvas.Components.Add(new ComponentViewModel(cell));
+
+        await Save(canvas);
+        var reloaded = await LoadFromDisk();
+
+        var reloadedCell = reloaded.Components.Select(c => c.Component).OfType<ComponentGroup>().Single();
+        reloadedCell.TruthTablePinAssignment.ShouldBeNull("the plain cell stays role-less");
+        var nestedGate = reloadedCell.ChildComponents.OfType<ComponentGroup>().Single();
+        var saved = nestedGate.TruthTablePinAssignment.ShouldNotBeNull(
+            "the nested gate keeps its persisted roles after the round trip");
+        saved.InputPinNames.ShouldBe(NandInputs);
+        saved.OutputPinNames.ShouldBe(NandOutputs);
+        saved.BiasPinNames.ShouldBe(NandBiases);
+        saved.Threshold.ShouldBe(NandThreshold);
+    }
+
+    [Fact]
     public async Task RoundTrip_SignalNamesSurviveSaveAndReload()
     {
         // Issue #1025: the network-signal identity assigned to input pins is part of

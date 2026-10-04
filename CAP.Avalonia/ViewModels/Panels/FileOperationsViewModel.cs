@@ -690,8 +690,10 @@ public partial class FileOperationsViewModel : ObservableObject
             // Only top-level groups act as chiplets (issue #938); a nested group's
             // process scope is its top-level parent's.
             ProcessBinding = group.ParentGroup == null ? ResolveGroupBindingForSave(group) : null,
-            // Same top-level-only rule for the Truth Table pin roles (issue #981).
-            TruthTablePinAssignment = group.ParentGroup == null ? group.TruthTablePinAssignment : null
+            // Truth Table pin roles persist on every group: a gate nested inside a
+            // cell instance must keep its assignment or hierarchical designs lose
+            // their gates on save.
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         });
     }
 
@@ -739,7 +741,9 @@ public partial class FileOperationsViewModel : ObservableObject
             GroupDto = groupDto,
             ChildComponents = childDataList,
             CanvasX = group.PhysicalX,
-            CanvasY = group.PhysicalY
+            CanvasY = group.PhysicalY,
+            // A nested gate keeps its Truth Table pin roles like a top-level one.
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         });
     }
 
@@ -1566,13 +1570,15 @@ public partial class FileOperationsViewModel : ObservableObject
             }
             nameFallback[group.Identifier] = group;
 
+            // Truth Table pin roles: restore as persisted on every group — a gate
+            // nested inside a cell instance keeps its roles; the panel silently
+            // skips pin names that no longer match a real external pin.
+            group.TruthTablePinAssignment = groupData.TruthTablePinAssignment;
+
             // Only add top-level groups (groups without a parent) to the canvas
             if (groupData.GroupDto.ParentGroupId == null)
             {
                 group.ProcessBinding = RestoreGroupBinding(groupData);
-                // Truth Table pin roles (issue #981): restore as persisted — the panel
-                // silently skips pin names that no longer match a real external pin.
-                group.TruthTablePinAssignment = groupData.TruthTablePinAssignment;
                 var groupVm = _canvas.AddComponent(group);
                 groupVm.X = groupData.CanvasX;
                 groupVm.Y = groupData.CanvasY;
