@@ -27,14 +27,25 @@ namespace CAP_Core.Analysis.MeasuredSpectrum
         /// λ_i² / (Δλ_i · ΔL) (λ in µm, ΔL in µm). A spectrum without detectable
         /// fringes yields <see cref="FringeAnalysisResult.NoFringes"/>.
         /// </summary>
-        public static FringeAnalysisResult Analyze(MeasuredSpectrum spectrum, double armImbalanceUm = 0.0)
+        /// <param name="smoothingWindow">
+        ///   Optional override for the moving-average window (points). Noise-free
+        ///   simulated spectra pass <see cref="MinSmoothingWindow"/>: the default
+        ///   noise smoothing smears narrow comb features that ride on a strong
+        ///   bandpass envelope (e.g. a ring's through port).
+        /// </param>
+        public static FringeAnalysisResult Analyze(
+            MeasuredSpectrum spectrum, double armImbalanceUm = 0.0, int? smoothingWindow = null)
         {
             if (spectrum == null) throw new ArgumentNullException(nameof(spectrum));
             int n = spectrum.WavelengthNm.Count;
             if (n < 5) return FringeAnalysisResult.NoFringes;
 
+            int window = smoothingWindow is int w
+                ? Math.Clamp(w, MinSmoothingWindow, MaxSmoothingWindow)
+                : SmoothingWindow(n);
+            if (window % 2 == 0) window++;
             double[] wl = spectrum.WavelengthNm.ToArray();
-            double[] smoothed = MovingAverage(spectrum.PowerLinear, SmoothingWindow(n));
+            double[] smoothed = MovingAverage(spectrum.PowerLinear, window);
 
             var minima = FindMinima(wl, smoothed);
             if (minima.Count < 2) return FringeAnalysisResult.NoFringes;
