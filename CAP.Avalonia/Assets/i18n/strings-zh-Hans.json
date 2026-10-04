@@ -281,6 +281,7 @@
   "DesignChecks.Prev": "<< 上一个",
   "DesignChecks.Run": "运行设计检查",
   "DesignChecks.Title": "设计检查：",
+  "DesignChecks.WaveguideCrossing": "波导交叉：{0} 与 {1} 相交 — 交点处没有交叉元件；导出的版图将无法通过重叠检查",
   "DesignChecksHelp.BendBody": "弯曲过急时,导波光无法跟随波导,会辐射到周围材料中。当前工艺的最小半径可将这种弯曲损耗降到可忽略不计。",
   "DesignChecksHelp.BendTitle": "最小弯曲半径",
   "DesignChecksHelp.ChipletBody": "光以逐渐发散的高斯光束形式离开芯粒端面。如果对侧端面靠后或横向偏移，只有部分光束能进入其模式。当损耗的光超过链路预算时，设计检查会发出警告。",

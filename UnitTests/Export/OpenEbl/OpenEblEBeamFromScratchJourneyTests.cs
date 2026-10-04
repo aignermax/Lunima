@@ -38,12 +38,13 @@ namespace UnitTests.Export.OpenEbl;
 /// PINNED DEFECT (the journey's finding): the cross-connected arms are a non-planar
 /// two-wire crossover, and the router leaves the second arm CROSSING the first — the
 /// contention repair clears the scan's blocked-fallback stamp while keeping the
-/// crossing, so nothing on the canvas or in DRC-lite reports it. The exported GDS then
-/// has exactly one SiEPIC verification error ("Overlapping component" where the two
-/// arm waveguide cells intersect near (267, 36) µm). The test pins that single error
-/// with its category; every other journey step — routing, DRC-lite, fringes, submission
-/// check, opt_in labels, die size, save/load — is asserted green. When the router fix
-/// lands, this test must flip to 0/0.
+/// crossing. Since issue #1380 DRC-lite reports the pair as a waveguide-crossing
+/// error (detection only); the exported GDS still has exactly one SiEPIC verification
+/// error ("Overlapping component" where the two arm waveguide cells intersect near
+/// (267, 36) µm). The test pins that single error with its category; every other
+/// journey step — routing, fringes, submission check, opt_in labels, die size,
+/// save/load — is asserted green. When the router fix lands (the sibling of #1380),
+/// the arms no longer cross and both pins flip to 0.
 /// </para>
 /// <para>
 /// Gating: needs a Python with nazca + klayout + siepic_ebeam_pdk + SiEPIC (installed
@@ -82,16 +83,27 @@ public class OpenEblEBeamFromScratchJourneyTests
             .Where(c => c.Identifier is "gc_in" or "gc_out" or "gc_spare")
             .SelectMany(c => c.PhysicalPins.Where(p => p.Name == "port 1"))
             .ToList();
-        validator.Validate(canvas.ConnectionManager.Connections, components, externalPortPins)
-            .ShouldBeEmpty("DRC-lite must report zero issues on the student-built MZI");
+        var drcIssues = validator.Validate(
+            canvas.ConnectionManager.Connections, components, externalPortPins);
+        var crossingIssues = drcIssues
+            .Where(i => i.Type == CAP_Core.Analysis.DesignIssueType.WaveguideCrossing).ToList();
+        crossingIssues.Count.ShouldBeGreaterThanOrEqualTo(1,
+            "pinned defect #1363: DRC-lite must now report the cross-connected arms as a " +
+            "waveguide crossing (issue #1380) — 0 issues here means the detection regressed");
+        crossingIssues.ShouldContain(i =>
+                i.Description.Contains("mzi_splitter") && i.Description.Contains("mzi_combiner"),
+            "the crossing issue must name both crossed arm connections");
+        drcIssues.Where(i => i.Type != CAP_Core.Analysis.DesignIssueType.WaveguideCrossing)
+            .ShouldBeEmpty("apart from the pinned arm crossing, DRC-lite must report zero issues " +
+                "on the student-built MZI");
         validator.ValidateComponentBounds(components,
                 EBeamFromScratchMziDesign.ChipWidthMicrometers,
                 EBeamFromScratchMziDesign.ChipHeightMicrometers)
             .ShouldBeEmpty("every component must sit inside the 605 x 410 µm floorplan");
 
-        // The pinned defect, canvas level: the two arms cross and NOTHING reports it —
-        // no blocked fallback, no DRC-lite issue. When the router fix lands, the arms
-        // no longer cross and this test flips to 0/0.
+        // The pinned defect, canvas level: the two arms cross — no blocked fallback,
+        // and DRC-lite reports it (asserted above, #1380). When the router fix lands,
+        // the arms no longer cross and this test flips to 0 crossings / 0 errors.
         var upperArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 2");
         var lowerArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 3");
         PathIntersectionDetector.Crosses(upperArm.RoutedPath!, lowerArm.RoutedPath!)

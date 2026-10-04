@@ -281,6 +281,7 @@
   "DesignChecks.Prev": "<< Zurück",
   "DesignChecks.Run": "Design-Prüfungen ausführen",
   "DesignChecks.Title": "Design-Prüfungen:",
+  "DesignChecks.WaveguideCrossing": "Wellenleiter-Kreuzung: {0} kreuzt {1} — keine Kreuzungskomponente an der Schnittstelle; das exportierte Layout scheitert an den Überlappungsprüfungen",
   "DesignChecksHelp.BendBody": "In einer zu engen Kurve kann das geführte Licht dem Wellenleiter nicht mehr folgen und strahlt in das umgebende Material aus. Der Mindestradius des aktiven Prozesses hält diesen Biegeverlust vernachlässigbar klein.",
   "DesignChecksHelp.BendTitle": "Mindestbiegeradius",
   "DesignChecksHelp.ChipletBody": "Licht verlässt eine Chiplet-Facette als sich aufweitenden Gauß-Strahl. Steht die gegenüberliegende Facette zu weit zurück oder seitlich versetzt, trifft nur ein Teil des Strahls ihre Mode. Die Design-Checks warnen, sobald der Verlust das Link-Budget überschreitet.",
