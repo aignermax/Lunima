@@ -1,0 +1,358 @@
+{
+  "FormatVersion": "2.0",
+  "Components": [
+    {
+      "TemplateName": "Grating Coupler TE 1550",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 20,
+      "Y": 40,
+      "Identifier": "gc_drop",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserEnabled": false,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler TE 1550"
+    },
+    {
+      "TemplateName": "Grating Coupler TE 1550",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 20,
+      "Y": 167,
+      "Identifier": "gc_in",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler TE 1550"
+    },
+    {
+      "TemplateName": "Grating Coupler TE 1550",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 20,
+      "Y": 294,
+      "Identifier": "gc_through",
+      "Rotation": 0,
+      "LaserWavelengthNm": 1550,
+      "LaserPower": 1,
+      "LaserEnabled": false,
+      "LaserLinewidthFwhmNm": 2,
+      "LaserRinDbPerHz": -145,
+      "HumanReadableName": "Grating Coupler TE 1550"
+    },
+    {
+      "TemplateName": "DC Halfring-Straight",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 110,
+      "Y": 179.919,
+      "Identifier": "ring_top",
+      "Rotation": 2,
+      "HumanReadableName": "DC Halfring-Straight"
+    },
+    {
+      "TemplateName": "DC Halfring-Straight",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 110,
+      "Y": 211.359,
+      "Identifier": "ring_bottom",
+      "Rotation": 0,
+      "HumanReadableName": "DC Halfring-Straight"
+    },
+    {
+      "TemplateName": "Disconnected Waveguide TE 1550",
+      "PdkSource": "SiEPIC EBeam PDK",
+      "X": 135.51,
+      "Y": 221.31900000000002,
+      "Identifier": "add_term",
+      "Rotation": 2,
+      "HumanReadableName": "Disconnected Waveguide TE 1550"
+    }
+  ],
+  "Connections": [
+    {
+      "StartComponentIndex": 3,
+      "StartPinName": "port 4",
+      "EndComponentIndex": 4,
+      "EndPinName": "port 2",
+      "StartComponentId": "ring_top",
+      "EndComponentId": "ring_bottom",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 110.76,
+          "StartY": 191.369,
+          "EndX": 110.76,
+          "EndY": 211.369,
+          "StartAngleDegrees": 90,
+          "EndAngleDegrees": 90
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 3,
+      "StartPinName": "port 2",
+      "EndComponentIndex": 4,
+      "EndPinName": "port 4",
+      "StartComponentId": "ring_top",
+      "EndComponentId": "ring_bottom",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 130.76,
+          "StartY": 191.369,
+          "EndX": 130.76,
+          "EndY": 211.369,
+          "StartAngleDegrees": 90,
+          "EndAngleDegrees": 90
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 1,
+      "StartPinName": "port 2",
+      "EndComponentIndex": 3,
+      "EndPinName": "port 3",
+      "StartComponentId": "gc_in",
+      "EndComponentId": "ring_top",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 59.969,
+          "StartY": 180.669,
+          "EndX": 110.01,
+          "EndY": 180.669,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 3,
+      "StartPinName": "port 1",
+      "EndComponentIndex": 2,
+      "EndPinName": "port 2",
+      "StartComponentId": "ring_top",
+      "EndComponentId": "gc_through",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 131.51,
+          "StartY": 180.669,
+          "EndX": 140,
+          "EndY": 180.669,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 140,
+          "StartY": 180.669,
+          "EndX": 150,
+          "EndY": 190.669,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 90,
+          "CenterX": 140,
+          "CenterY": 190.669,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 150,
+          "StartY": 190.669,
+          "EndX": 150,
+          "EndY": 297.669,
+          "StartAngleDegrees": 90,
+          "EndAngleDegrees": 90
+        },
+        {
+          "Type": "Bend",
+          "StartX": 150,
+          "StartY": 297.669,
+          "EndX": 140,
+          "EndY": 307.669,
+          "StartAngleDegrees": 90,
+          "EndAngleDegrees": 180,
+          "CenterX": 140,
+          "CenterY": 297.669,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 140,
+          "StartY": 307.669,
+          "EndX": 70,
+          "EndY": 307.669,
+          "StartAngleDegrees": 180,
+          "EndAngleDegrees": 180
+        },
+        {
+          "Type": "Straight",
+          "StartX": 70,
+          "StartY": 307.669,
+          "EndX": 59.969,
+          "EndY": 307.669,
+          "StartAngleDegrees": 180,
+          "EndAngleDegrees": 180
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 4,
+      "StartPinName": "port 1",
+      "EndComponentIndex": 0,
+      "EndPinName": "port 2",
+      "StartComponentId": "ring_bottom",
+      "EndComponentId": "gc_drop",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 110.01,
+          "StartY": 222.06900000000002,
+          "EndX": 12,
+          "EndY": 222.06900000000002,
+          "StartAngleDegrees": 180,
+          "EndAngleDegrees": 180
+        },
+        {
+          "Type": "Bend",
+          "StartX": 11.999999999999998,
+          "StartY": 222.06900000000002,
+          "EndX": 1.9999999999999982,
+          "EndY": 212.06900000000002,
+          "StartAngleDegrees": 180,
+          "EndAngleDegrees": 270,
+          "CenterX": 11.999999999999998,
+          "CenterY": 212.06900000000002,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 1.9999999999999982,
+          "StartY": 212.06900000000002,
+          "EndX": 1.999999999999977,
+          "EndY": 96,
+          "StartAngleDegrees": 270,
+          "EndAngleDegrees": 270
+        },
+        {
+          "Type": "Bend",
+          "StartX": 1.999999999999977,
+          "StartY": 96,
+          "EndX": 11.999999999999975,
+          "EndY": 86,
+          "StartAngleDegrees": 270,
+          "EndAngleDegrees": 360,
+          "CenterX": 11.999999999999977,
+          "CenterY": 96,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 11.999999999999975,
+          "StartY": 86,
+          "EndX": 68,
+          "EndY": 86,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 68,
+          "StartY": 86,
+          "EndX": 78,
+          "EndY": 76,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -90,
+          "CenterX": 68,
+          "CenterY": 76,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 78,
+          "StartY": 76,
+          "EndX": 78,
+          "EndY": 63.669,
+          "StartAngleDegrees": 270,
+          "EndAngleDegrees": 270
+        },
+        {
+          "Type": "Bend",
+          "StartX": 78,
+          "StartY": 63.669,
+          "EndX": 68,
+          "EndY": 53.669,
+          "StartAngleDegrees": 270,
+          "EndAngleDegrees": 180,
+          "CenterX": 68,
+          "CenterY": 63.669,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 68,
+          "StartY": 53.669,
+          "EndX": 59.969,
+          "EndY": 53.669,
+          "StartAngleDegrees": 180,
+          "EndAngleDegrees": 180
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    },
+    {
+      "StartComponentIndex": 4,
+      "StartPinName": "port 3",
+      "EndComponentIndex": 5,
+      "EndPinName": "port 1",
+      "StartComponentId": "ring_bottom",
+      "EndComponentId": "add_term",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 131.51,
+          "StartY": 222.06900000000002,
+          "EndX": 135.515,
+          "EndY": 222.06900000000002,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10
+    }
+  ],
+  "Metadata": {
+    "PdkVersions": {},
+    "Authorship": {
+      "Created": "2026-10-03",
+      "Modified": "2026-10-03T21:35:10.0747021Z"
+    }
+  },
+  "ChipWidthMicrometers": 605,
+  "ChipHeightMicrometers": 410,
+  "CoherentPropagationPhase": true
+}
