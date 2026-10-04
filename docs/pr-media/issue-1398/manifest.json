@@ -1,0 +1,6 @@
+[
+  {
+    "file": "ram2x4-cell0-badges.png",
+    "caption": "Issue #1398: the RAM 2x4 after writing 5 into word 0, zoomed onto the CELL0 word-cell instance \u2014 the four register bits nested inside the cell carry their live 0/1 badges (REG00 and REG02 read 1, the stored 5) and their \u0027R\u0027 register markers exactly like top-level gates."
+  }
+]

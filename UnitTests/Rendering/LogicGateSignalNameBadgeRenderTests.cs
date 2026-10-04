@@ -7,6 +7,7 @@ using CAP.Avalonia.Controls;
 using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Core;
 using Shouldly;
 using UnitTests.Integration;
 using Xunit;
@@ -112,6 +113,13 @@ public class LogicGateSignalNameBadgeRenderTests
         child.WidthMicrometers = 100;
         child.HeightMicrometers = 60;
         group.AddChild(child);
+        group.TruthTablePinAssignment = new TruthTablePinAssignment
+        {
+            InputPinNames = new List<string> { "A" },
+            OutputPinNames = new List<string> { "Y" },
+            BiasPinNames = new List<string>(),
+            Threshold = 0.125,
+        };
         canvas.AddComponent(group);
         canvas.LogicGateStates.ShowStates(new[]
         {
@@ -141,6 +149,13 @@ public class LogicGateSignalNameBadgeRenderTests
         child.WidthMicrometers = 100;
         child.HeightMicrometers = 60;
         group.AddChild(child);
+        group.TruthTablePinAssignment = new TruthTablePinAssignment
+        {
+            InputPinNames = new List<string> { "A" },
+            OutputPinNames = new List<string> { "Y" },
+            BiasPinNames = new List<string>(),
+            Threshold = 0.125,
+        };
         canvas.AddComponent(group);
         canvas.LogicGateStates.ShowStates(new[]
         {
