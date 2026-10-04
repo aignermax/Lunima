@@ -21,11 +21,16 @@
                     Command="{Binding ExportAndCheckCommand}"
                     Background="#3d5d4d" Padding="12,4"
                     IsEnabled="{Binding !IsChecking}"/>
+            <Button Content="{loc:Localize OpenEblCheck.Preflight.CheckAnyway}"
+                    Command="{Binding CheckAnywayCommand}"
+                    Background="#5d523d" Padding="12,4"
+                    IsVisible="{Binding HasPreflightErrors}"
+                    IsEnabled="{Binding !IsChecking}"/>
             <Button Content="{loc:Localize Common.Cancel}"
                     Command="{Binding CancelCommand}"
                     Background="#5d3d3d"
                     IsVisible="{Binding IsChecking}"/>
-            <Button Content="{loc:Localize Common.Close}" Width="70" Click="OnCloseClicked"/>
+            <Button Content="{loc:Localize Common.Close}" MinWidth="70" Click="OnCloseClicked"/>
         </StackPanel>
 
         <!-- Busy state + transient status line -->
@@ -82,6 +87,45 @@
                                  FontFamily="Monospace"/>
                     </StackPanel>
                 </Grid>
+
+                <!-- Lunima pre-flight findings (issue #1375): shown above the external result;
+                     errors hold the run until "Check anyway", warnings only annotate it -->
+                <Border Background="#242424" CornerRadius="4" Padding="10"
+                        IsVisible="{Binding PreflightIssues.Count}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{loc:Localize OpenEblCheck.Preflight.ErrorsHeading}"
+                                   Foreground="#ff8888" FontSize="11" FontWeight="SemiBold"
+                                   IsVisible="{Binding HasPreflightErrors}"/>
+                        <TextBlock Text="{loc:Localize OpenEblCheck.Preflight.WarningsHeading}"
+                                   Foreground="#e8c872" FontSize="11" FontWeight="SemiBold"
+                                   IsVisible="{Binding !HasPreflightErrors}"/>
+                        <ItemsControl ItemsSource="{Binding PreflightIssues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:OpenEblPreflightIssueViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" Margin="0,1">
+                                        <Border Grid.Column="0" Background="#5d3d3d"
+                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,0"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding IsError}">
+                                            <TextBlock Text="{Binding SeverityLabel}"
+                                                       Foreground="#ffc9c9" FontSize="10"/>
+                                        </Border>
+                                        <Border Grid.Column="0" Background="#5d523d"
+                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,0"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding !IsError}">
+                                            <TextBlock Text="{Binding SeverityLabel}"
+                                                       Foreground="#e8c872" FontSize="10"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Message}"
+                                                   Foreground="#dddddd" FontSize="11"
+                                                   TextWrapping="Wrap"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
                 <!-- Result -->
                 <Border Background="#242424" CornerRadius="4" Padding="10"

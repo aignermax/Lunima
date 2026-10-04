@@ -2,7 +2,10 @@ using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.OpenEblCheck;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Export.OpenEbl;
+using CAP_Core.Components.Connections;
+using CAP_Core.Components.Core;
 using CAP_Core.Export;
+using CAP_Core.Routing;
 
 namespace UnitTests.Export.OpenEbl;
 
@@ -30,6 +33,50 @@ internal static class OpenEblCheckTestDoubles
         FakeGdsExportService gdsExport,
         FakeOpenEblSubmissionChecker checker) =>
         new(canvas, gdsExport, checker);
+
+    /// <summary>Canvas with two components joined by a blocked-fallback connection (pre-flight error).</summary>
+    public static DesignCanvasViewModel CanvasWithBlockedConnection() =>
+        CanvasWithConnection(path => path.IsBlockedFallback = true);
+
+    /// <summary>Canvas with a connection whose only finding is a bend-radius warning.</summary>
+    public static DesignCanvasViewModel CanvasWithWarningConnection() =>
+        CanvasWithConnection(path => path.ViolatesProcessMinBendRadius = true);
+
+    /// <summary>Canvas with two components joined by a connection that has no routed path at all.</summary>
+    public static DesignCanvasViewModel CanvasWithUnroutedConnection() =>
+        CanvasWithConnection(markPath: null);
+
+    private static DesignCanvasViewModel CanvasWithConnection(Action<RoutedPath>? markPath)
+    {
+        var canvas = new DesignCanvasViewModel();
+        var first = TestComponentFactory.CreateBasicComponent();
+        first.Identifier = "C1";
+        first.NazcaFunctionName = "ebeam_gc_te1550";
+        first.PhysicalPins.Add(new PhysicalPin { Name = "out", ParentComponent = first });
+        canvas.AddComponent(first, "ebeam_gc_te1550");
+
+        var second = TestComponentFactory.CreateBasicComponent();
+        second.Identifier = "C2";
+        second.NazcaFunctionName = "ebeam_gc_te1550";
+        second.PhysicalX = 500;
+        second.PhysicalPins.Add(new PhysicalPin { Name = "in", ParentComponent = second });
+        canvas.AddComponent(second, "ebeam_gc_te1550");
+
+        var connection = new WaveguideConnection
+        {
+            StartPin = first.PhysicalPins.Last(),
+            EndPin = second.PhysicalPins.Last(),
+        };
+        if (markPath != null)
+        {
+            var path = new RoutedPath();
+            path.Segments.Add(new StraightSegment(0, 0, 500, 0, 0));
+            markPath(path);
+            connection.RestoreCachedPath(path);
+        }
+        canvas.ConnectionManager.Connections.Add(connection);
+        return canvas;
+    }
 }
 
 /// <summary>VM subclass that stubs the Nazca script build (the exporter itself is tested elsewhere).</summary>
