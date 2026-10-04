@@ -65,7 +65,7 @@ public class GroupTemplateTruthTablePersistenceTests
             new Component[] { result },
             Array.Empty<WaveguideConnection>(),
             LogicGateFixtureFactory.WavelengthNm);
-        network.Gates.Keys.ShouldBe(new[] { "OR1", "OR2" },
+        network.Gates.Keys.ShouldBe(new[] { "CELL/OR1", "CELL/OR2" },
             "the assembler must find both gates after the prefab-library round-trip");
     }
 
