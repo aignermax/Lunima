@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-photonic-and-after-step.png",
+    "caption": "ISA playground with the AND 4-bit network built: toggle on (\u0027Compute AND on the photonic chip\u0027), right after the AND step \u2014 the status line shows the photonic AND with both operands and the result in binary plus the gate count."
+  },
+  {
+    "file": "isa-playground-photonic-toggle-disabled.png",
+    "caption": "ISA playground without a built logic network: the photonic toggle is disabled and the hint names all three accepted examples (4-bit adder, NOT 4-bit, AND 4-bit)."
+  }
+]

@@ -92,12 +92,69 @@ internal static class GdsUserDesignFixture
     public static UserPdkStore CreateStore(string root, string name) => new(
         Path.Combine(root, name), new PdkJsonSaver(), new PdkLoader());
 
+    // The tool environment cannot change mid-run, so the probe spawns its
+    // subprocesses once per test process instead of once per calling test.
+    private static readonly Lazy<Task<string?>> CachedNazcaPython = new(FindNazcaPythonUncachedAsync);
+    private static readonly Lazy<Task<string?>> CachedSiepicRoundTripPython = new(FindSiepicRoundTripPythonUncachedAsync);
+
     /// <summary>
     /// Locates a Python with nazca importable: first a Lunima managed env
-    /// (%LOCALAPPDATA%/Lunima/envs/*), then python/python3 on PATH (mirrors
-    /// <c>GdsExportFullCircleTests</c>).
+    /// (%LOCALAPPDATA%/Lunima/envs/*), then python/python3 on PATH. Shared and
+    /// cached for all nazca-gated tests.
     /// </summary>
-    public static async Task<string?> FindNazcaPythonAsync()
+    public static Task<string?> FindNazcaPythonAsync() => CachedNazcaPython.Value;
+
+    /// <summary>
+    /// Locates a Python carrying the FULL stack the SiEPIC round-trip scenario
+    /// pins: nazca plus klayout.db + siepic_ebeam_pdk, so the export's klayout
+    /// post-pass swaps the ebeam stub boxes for the real foundry cells. A
+    /// nazca-only interpreter is NEVER returned: with it the upgrade silently
+    /// keeps the stub boxes (by design the export degrades instead of breaking)
+    /// and the round trip then sees the stub topology — heuristic edge pins,
+    /// entangled route chains — while its expectations are pinned to the
+    /// upgraded scenario (#1353: a nazca-only managed env enumerated first on a
+    /// Windows dev machine shadowed the full env and the CI PATH python).
+    /// Same scan order as <see cref="FindNazcaPythonAsync"/>: Lunima managed
+    /// envs first, then python/python3 on PATH.
+    /// </summary>
+    public static Task<string?> FindSiepicRoundTripPythonAsync() => CachedSiepicRoundTripPython.Value;
+
+    /// <summary>Probed capabilities of one interpreter candidate — the pure selection input.</summary>
+    internal sealed record PythonCandidateCapabilities(string Path, bool HasNazca, bool HasSiepicUpgradeStack);
+
+    /// <summary>
+    /// Picks the interpreter for the SiEPIC round-trip tests: the first candidate
+    /// in scan order that carries the full stack. Nazca-only candidates are
+    /// skipped, never selected — regardless of where they appear in the
+    /// (OS/filesystem-dependent) enumeration order.
+    /// </summary>
+    internal static string? SelectRoundTripPython(IEnumerable<PythonCandidateCapabilities> candidates) =>
+        candidates.FirstOrDefault(c => c.HasNazca && c.HasSiepicUpgradeStack)?.Path;
+
+    private static async Task<string?> FindNazcaPythonUncachedAsync()
+    {
+        foreach (var candidate in EnumeratePythonCandidates())
+        {
+            if (await ProbeNazca(candidate))
+                return candidate;
+        }
+        return null;
+    }
+
+    private static async Task<string?> FindSiepicRoundTripPythonUncachedAsync()
+    {
+        var candidates = new List<PythonCandidateCapabilities>();
+        foreach (var python in EnumeratePythonCandidates())
+        {
+            var hasNazca = await ProbeNazca(python);
+            var hasSiepicUpgradeStack = hasNazca && await ProbeSiepicUpgradeStack(python);
+            candidates.Add(new PythonCandidateCapabilities(python, hasNazca, hasSiepicUpgradeStack));
+        }
+        return SelectRoundTripPython(candidates);
+    }
+
+    /// <summary>Managed-env interpreters that exist on disk, then the PATH command names.</summary>
+    private static IEnumerable<string> EnumeratePythonCandidates()
     {
         var envs = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lunima", "envs");
@@ -108,18 +165,14 @@ internal static class GdsUserDesignFixture
                 foreach (var rel in new[] { Path.Combine("Scripts", "python.exe"), Path.Combine("bin", "python") })
                 {
                     var py = Path.Combine(root, rel);
-                    if (File.Exists(py) && await ProbeNazca(py))
-                        return py;
+                    if (File.Exists(py))
+                        yield return py;
                 }
             }
         }
 
-        foreach (var candidate in new[] { "python", "python3" })
-        {
-            if (await ProbeNazca(candidate))
-                return candidate;
-        }
-        return null;
+        yield return "python";
+        yield return "python3";
     }
 
     /// <summary>True when <paramref name="python"/> starts and can import nazca.</summary>
@@ -129,6 +182,24 @@ internal static class GdsUserDesignFixture
         {
             var probe = await SiepicRealGeometryExportTests.RunPythonAsync(
                 python, Path.GetTempPath(), "-c", "import nazca");
+            return probe.ExitCode == 0;
+        }
+        catch
+        {
+            return false;   // not on PATH at all
+        }
+    }
+
+    /// <summary>
+    /// True when <paramref name="python"/> can import the klayout/SiEPIC stack the
+    /// export's stub→real-cell upgrade post-pass needs (klayout.db + siepic_ebeam_pdk).
+    /// </summary>
+    private static async Task<bool> ProbeSiepicUpgradeStack(string python)
+    {
+        try
+        {
+            var probe = await SiepicRealGeometryExportTests.RunPythonAsync(
+                python, Path.GetTempPath(), "-c", "import klayout.db, siepic_ebeam_pdk");
             return probe.ExitCode == 0;
         }
         catch

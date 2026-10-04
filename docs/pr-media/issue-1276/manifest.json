@@ -1,0 +1,10 @@
+[
+  {
+    "file": "contention-repair-before.png",
+    "caption": "Before: wire A (green, through the single-file corridor between roof and floor walls) was routed first; wire B\u0027s fallback (red) crosses it \u2014 a contention-blocked wire."
+  },
+  {
+    "file": "contention-repair-after.png",
+    "caption": "After the bounded rip-up-and-reroute pass (issue #1276): the pass ripped up wire A, routed B first through the corridor, then re-routed A around the roof. Both wires are clean \u2014 the blocked count went from 1 to 0 with no new crossing."
+  }
+]

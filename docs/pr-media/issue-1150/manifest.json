@@ -1,0 +1,4 @@
+[
+  {"file": "busy-design-checks.png", "caption": "Issue #1150: RunDesignChecks backgrounded — status bar shows localized 'Running design checks...' while validation computes off the UI thread."},
+  {"file": "busy-simulation.png", "caption": "Issue #1150: RunSimulation backgrounded — status bar shows 'Running simulation...' with IsSimulating set while the S-matrix pass computes off the UI thread."}
+]

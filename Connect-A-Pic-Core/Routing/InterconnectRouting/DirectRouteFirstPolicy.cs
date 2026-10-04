@@ -6,8 +6,8 @@ namespace CAP_Core.Routing.InterconnectRouting;
 
 /// <summary>
 /// Builds the DIRECT styled candidate the router tries BEFORE falling back to A*
-/// (issue #860): for a clear line between two pins a smooth straight / arc-S / sine /
-/// cobra is almost always the route a photonics designer expects, while grid-based A*
+/// (issue #860): for a clear line between two pins a smooth straight / arc-S / sine
+/// is almost always the route a photonics designer expects, while grid-based A*
 /// produces Manhattan-style detours that add bend loss and wall off later routes.
 ///
 /// The style is chosen from the pin geometry, mirroring the explicit-style rules of
@@ -16,13 +16,17 @@ namespace CAP_Core.Routing.InterconnectRouting;
 /// <item>Arc geometry first (<see cref="WaveguideType.Bend"/>): exact straight for
 /// collinear facing pins, two-arc S for parallel-offset pins, stub–arc–stub for angled
 /// pins — all honoring the bend-radius floor when it fits.</item>
-/// <item>When the arcs cannot honor the floor: the smooth polyline — sine S-bend for
-/// parallel pins, cobra for angled pins — accepted only when its sampled curvature stays
-/// above the floor.</item>
+/// <item>When the arcs cannot honor the floor: the sine S-bend polyline for parallel
+/// pins, accepted only when its sampled curvature stays above the floor. Angled pins
+/// get NO polyline fallback: the only angle-matching polyline is the cobra, whose
+/// sharp corners scatter light in fabrication, so Auto never proposes it — A* routes
+/// instead. An explicitly chosen Cobra style is unaffected; it goes through
+/// <see cref="ConnectionStyleRouteBuilder"/>.</item>
 /// </list>
 ///
-/// A candidate is only a PROPOSAL: the router verifies it against the same obstacle grid
-/// A* uses and falls back to A* when the styled path is actually blocked. Returns null
+/// A candidate is only a PROPOSAL: the router verifies it against the component obstacle
+/// grid A* uses and against the exact geometry of registered sibling routes, and falls
+/// back to A* when the styled path is actually blocked. Returns null
 /// when no styled geometry can leave the start pin along its direction (e.g. the end pin
 /// lies behind the start) or none satisfies the radius floor — A* then routes as before.
 /// </summary>
@@ -39,8 +43,8 @@ public static class DirectRouteFirstPolicy
     /// chord construction slightly underestimates the true osculating radius.</summary>
     private const double ChordApproximationFactor = 0.95;
 
-    /// <summary>Two pin axes within this |turn| (degrees) count as parallel; the smooth
-    /// polyline for them is the sine S-bend, otherwise the angle-matching cobra.</summary>
+    /// <summary>Two pin axes within this |turn| (degrees) count as parallel; only they get
+    /// the sine S-bend polyline fallback — angled pins defer to A* when the arcs do not fit.</summary>
     private const double ParallelToleranceDegrees = 1.0;
 
     /// <summary>
@@ -56,27 +60,39 @@ public static class DirectRouteFirstPolicy
         PhysicalPin startPin, PhysicalPin endPin, double minBendRadiusMicrometers) =>
         TryBuildWithStyle(startPin, endPin, minBendRadiusMicrometers, out _);
 
-    /// <summary>Like <see cref="TryBuildCandidate"/>, also reporting the chosen style.</summary>
+    /// <summary>
+    /// Like <see cref="TryBuildCandidate"/>, also reporting the chosen style and optionally
+    /// snapping arc radii to foundry allowed values.
+    /// </summary>
+    /// <param name="allowedBendRadii">Optional foundry-style allowed radii (µm). When supplied,
+    /// the largest allowed radius that fits the styled geometry and honors the floor is used
+    /// — larger radii mean lower bend loss.</param>
     public static RoutedPath? TryBuildWithStyle(
         PhysicalPin startPin, PhysicalPin endPin, double minBendRadiusMicrometers,
-        out CAP_Core.Components.Connections.WaveguideType style)
+        out CAP_Core.Components.Connections.WaveguideType style,
+        IReadOnlyList<double>? allowedBendRadii = null)
     {
         var arcPath = ConnectionStyleRouteBuilder.Build(
-            startPin, endPin, WaveguideType.Bend, minBendRadiusMicrometers);
+            startPin, endPin, WaveguideType.Bend, minBendRadiusMicrometers, allowedBendRadii);
         if (MeetsRadiusFloor(arcPath, minBendRadiusMicrometers))
         {
             style = WaveguideType.Bend;
             return arcPath;
         }
 
-        var smoothStyle = PinAxesAreParallel(startPin, endPin)
-            ? WaveguideType.SBend
-            : WaveguideType.Cobra;
+        // Angled pins get no polyline fallback: the only angle-matching polyline is the
+        // cobra, whose sharp corners scatter light in fabrication — A* routes instead.
+        if (!PinAxesAreParallel(startPin, endPin))
+        {
+            style = WaveguideType.Auto;
+            return null;
+        }
+
         var smoothPath = ConnectionStyleRouteBuilder.Build(
-            startPin, endPin, smoothStyle, minBendRadiusMicrometers);
+            startPin, endPin, WaveguideType.SBend, minBendRadiusMicrometers, allowedBendRadii);
         if (MeetsRadiusFloor(smoothPath, minBendRadiusMicrometers))
         {
-            style = smoothStyle;
+            style = WaveguideType.SBend;
             return smoothPath;
         }
         style = WaveguideType.Auto;
@@ -114,7 +130,7 @@ public static class DirectRouteFirstPolicy
     }
 
     /// <summary>Checks the sampled curvature radius at every vertex joining two straight
-    /// chords (sine/cobra polylines) against the floor.</summary>
+    /// chords (sine S-bend polylines) against the floor.</summary>
     private static bool PolylineMeetsRadiusFloor(RoutedPath path, double minBendRadiusMicrometers)
     {
         for (int i = 1; i < path.Segments.Count; i++)

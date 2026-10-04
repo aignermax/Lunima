@@ -1,0 +1,84 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:CAP.Avalonia.ViewModels.GdsImport.LayerPicker"
+        xmlns:ctrl="clr-namespace:CAP.Avalonia.Controls.GdsImport"
+        xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        x:Class="CAP.Avalonia.Views.Dialogs.GdsLayerPickerWindow"
+        x:DataType="vm:GdsLayerPickerViewModel"
+        Title="{loc:Localize GdsImport.LayerPickerTitle}"
+        Width="680" Height="640"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        Background="#1e1e1e"
+        Foreground="White">
+
+    <DockPanel Margin="16">
+
+        <!-- Header + hint -->
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10" Spacing="4">
+            <TextBlock Text="{loc:Localize GdsImport.LayerPickerTitle}" FontSize="15" FontWeight="Bold"/>
+            <TextBlock Text="{loc:Localize GdsImport.LayerPickerHint}" Foreground="Gray"
+                       FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Close -->
+        <Border DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <Button Content="{loc:Localize Common.Close}" HorizontalAlignment="Right"
+                    Background="#3d3d3d" Foreground="White" Width="90"
+                    Click="OnCloseClicked"/>
+        </Border>
+
+        <!-- Selection status + assignment buttons -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
+            <TextBlock Text="{Binding SelectionText}" Foreground="LightGray" FontSize="11"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{loc:Localize GdsImport.LayerPickerAssignWaveguide}"
+                        Command="{Binding AssignWaveguideCommand}"
+                        Background="#2d4d3d" Foreground="White" FontSize="11" Padding="10,4"/>
+                <Button Content="{loc:Localize GdsImport.LayerPickerAssignMetal}"
+                        Command="{Binding AssignMetalCommand}"
+                        Background="#4d4028" Foreground="White" FontSize="11" Padding="10,4"/>
+                <Button Content="{loc:Localize GdsImport.LayerPickerAssignPortLabels}"
+                        Command="{Binding AssignPortLabelsCommand}"
+                        Background="#2d3d4d" Foreground="White" FontSize="11" Padding="10,4"/>
+                <Button Content="{loc:Localize GdsImport.LayerPickerAssignIgnore}"
+                        Command="{Binding AssignIgnoreCommand}"
+                        Background="#3d3d3d" Foreground="LightGray" FontSize="11" Padding="10,4"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Legend: one row per layer, clickable as an alternative to geometry clicks -->
+        <Border DockPanel.Dock="Bottom" Background="#252526" CornerRadius="4"
+                Margin="0,10,0,0" Padding="4" MaxHeight="150">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GdsLayerPickerLayerRow">
+                            <Button HorizontalAlignment="Stretch" Padding="6,2" Margin="0,1"
+                                    Background="Transparent"
+                                    Command="{Binding $parent[Window].((vm:GdsLayerPickerViewModel)DataContext).SelectRowCommand}"
+                                    CommandParameter="{Binding}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="▶" Foreground="White" FontSize="9"
+                                               VerticalAlignment="Center" IsVisible="{Binding IsSelected}"/>
+                                    <Border Background="{Binding Swatch}" Width="14" Height="10"
+                                            CornerRadius="2" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding PairText}" Foreground="White" FontSize="10"
+                                               FontFamily="Consolas, Courier New, monospace" MinWidth="64"/>
+                                    <TextBlock Text="{Binding CountsText}" Foreground="LightGray" FontSize="10"/>
+                                    <TextBlock Text="{Binding AssignmentText}" Foreground="#7dd87d" FontSize="10"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- The clickable geometry preview -->
+        <Border CornerRadius="4" ClipToBounds="True" BorderBrush="#3d3d3d" BorderThickness="1">
+            <ctrl:GdsLayerPickView ViewModel="{Binding}" Cursor="Hand"/>
+        </Border>
+
+    </DockPanel>
+</Window>

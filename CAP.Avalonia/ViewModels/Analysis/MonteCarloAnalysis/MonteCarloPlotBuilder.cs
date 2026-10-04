@@ -30,7 +30,7 @@ internal static class MonteCarloPlotBuilder
         => CreateBaseModel(title, "Wavelength (nm)", "Insertion Loss (dB)");
 
     /// <summary>Envelope plot: nominal curve, p5–p95 percentile band, min/max extremes.</summary>
-    public static PlotModel BuildEnvelopePlot(int[] wavelengths, MonteCarloResult result, string pinName)
+    public static PlotModel BuildEnvelopePlot(double[] wavelengths, MonteCarloResult result, string pinName)
     {
         var model = CreateBaseModel(
             $"Fabrication spread — {pinName} ({result.RunCurves.Count} runs)",
@@ -87,7 +87,7 @@ internal static class MonteCarloPlotBuilder
     }
 
     private static LineSeries CreateCurve(
-        string title, double[] values, int[] wavelengths,
+        string title, double[] values, double[] wavelengths,
         OxyColor color, LineStyle style, double thickness)
     {
         var series = new LineSeries

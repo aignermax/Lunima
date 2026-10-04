@@ -47,6 +47,15 @@ public class SimpleNazcaExporter
     /// layer (1, 10) so the GDS re-import detects named pins (issue #808). Group outline
     /// polygons (GDS-imported background geometry) export as nd.Polygon on their original
     /// (layer, datatype) — see <see cref="NazcaOutlinePolygonWriter"/>.
+    /// A design built entirely from the SiEPIC EBeam PDK routes its waveguide
+    /// interconnect on the EBeam cross-section stamped onto its pins (width + Si layer)
+    /// instead of the nazca default layer and drops the demofab bb_body frame —
+    /// see <see cref="SiepicEBeamExportProfile"/> — additionally carries the
+    /// openEBL design-for-test markers (opt_in label, floorplan box) of
+    /// <see cref="NazcaOpenEblDftWriter"/>, and wraps every routed optical
+    /// connection AND every optical frozen path (group-internal or canvas-level)
+    /// in its own SiEPIC waveguide cell (Waveguide 1/99 guide + DevRec
+    /// + PinRec pins, <see cref="SiepicWaveguideCellWriter"/>).
     /// </summary>
     /// <param name="canvas">The design canvas to export.</param>
     /// <param name="pdkModuleName">Optional PDK module name (e.g., "siepic_ebeam_pdk") for import.</param>
@@ -88,6 +97,11 @@ public class SimpleNazcaExporter
     /// as a placeholder box stub — a template placed ten times warns once, matching the
     /// once-per-template fallback emission.
     /// </param>
+    /// <param name="designName">
+    /// Optional design/file name used for the openEBL opt_in measurement labels of an
+    /// EBeam-only export (<see cref="NazcaOpenEblDftWriter"/>); null falls back to the
+    /// top-cell name. Ignored for every other design.
+    /// </param>
     public string Export(
         DesignCanvasViewModel canvas,
         string? pdkModuleName = null,
@@ -96,25 +110,39 @@ public class SimpleNazcaExporter
         List<string>? skippedConnections = null,
         List<string>? unresolvedCrossings = null,
         IEnumerable<ComponentTemplate>? library = null,
-        List<string>? exportWarnings = null)
+        List<string>? exportWarnings = null,
+        string? designName = null)
     {
         var sb = new StringBuilder();
         var metal = metalSpec ?? MetalRoutingSpec.Default;
         var interconnectSettings = SettingsSource?.Invoke() ?? new InterconnectSettings();
+        var ebeamProfile = SiepicEBeamExportProfile.Resolve(canvas);
+        if (ebeamProfile != null)
+            interconnectSettings = ebeamProfile.ApplyTo(interconnectSettings);
+        var interconnectPlan = NazcaProcessInterconnectPlan.Build(canvas, interconnectSettings);
         var rawCodePlan = NazcaRawCodeCellWriter.BuildPlan(canvas, include: null, library, exportWarnings);
         var wrapperPlan = NazcaPinLabelWrapperWriter.BuildPlan(canvas, include: null, rawCodePlan, library);
 
         AppendHeader(sb, interconnectSettings, metal);
-        AppendPdkComponentStubs(sb, canvas, include: null, rawCodePlan, wrapperPlan);
+        interconnectPlan.AppendTo(sb);
+        AppendPdkComponentStubs(sb, canvas, include: null, rawCodePlan, wrapperPlan, ebeamProfile != null);
         NazcaRawCodeCellWriter.AppendCells(sb, rawCodePlan, CultureInfo.InvariantCulture);
         NazcaPinLabelWrapperWriter.AppendCells(sb, wrapperPlan);
         var componentNames = AppendComponents(sb, canvas, emitVerification, rawCodePlan: rawCodePlan, wrapperPlan: wrapperPlan);
         NazcaOutlinePolygonWriter.AppendGroupOutlinePolygons(sb, canvas);
+        var waveguideCells = ebeamProfile != null
+            ? new SiepicWaveguideCellWriter(ebeamProfile.WidthMicrometers)
+            : null;
         AppendConnections(
             sb, canvas, componentNames, metal, interconnectSettings.GdsLayer,
-            skippedConnections, unresolvedCrossings);
+            skippedConnections, unresolvedCrossings, interconnectPlan, ebeamProfile != null, waveguideCells);
+        if (ebeamProfile != null)
+            NazcaOpenEblDftWriter.AppendDftMarkers(sb, canvas, designName);
         AppendFooter(sb);
-        SiepicCellUpgradeWriter.AppendUpgradeBlock(sb, canvas);
+        SiepicCellUpgradeWriter.AppendUpgradeBlock(sb, canvas, addDevRec: ebeamProfile != null);
+        // The spine pass must run after the foundry-cell upgrade: its pin matching
+        // reads the real foundry PinRec paths from the upgraded GDS.
+        waveguideCells?.AppendSpineBlock(sb);
         if (emitVerification)
             AppendVerificationEpilog(sb);
 
@@ -197,7 +225,8 @@ public class SimpleNazcaExporter
     /// </summary>
     private static void AppendPdkComponentStubs(
         StringBuilder sb, DesignCanvasViewModel canvas, Func<Component, bool>? include = null,
-        RawCodeExportPlan? rawCodePlan = null, PinLabelWrapperPlan? wrapperPlan = null)
+        RawCodeExportPlan? rawCodePlan = null, PinLabelWrapperPlan? wrapperPlan = null,
+        bool omitBlackBoxFrame = false)
     {
         var ci = CultureInfo.InvariantCulture;
         var generated = new HashSet<string>(StringComparer.Ordinal);
@@ -213,13 +242,13 @@ public class SimpleNazcaExporter
                 {
                     if (child.IsAnalysisTool) continue;
                     if (include != null && !include(child)) continue;
-                    AppendComponentStub(sb, child, generated, ci, plan, wrapperPlan);
+                    AppendComponentStub(sb, child, generated, ci, plan, wrapperPlan, omitBlackBoxFrame);
                 }
             }
             else
             {
                 if (include != null && !include(comp)) continue;
-                AppendComponentStub(sb, comp, generated, ci, plan, wrapperPlan);
+                AppendComponentStub(sb, comp, generated, ci, plan, wrapperPlan, omitBlackBoxFrame);
             }
         }
     }
@@ -236,7 +265,8 @@ public class SimpleNazcaExporter
     /// </summary>
     private static void AppendComponentStub(
         StringBuilder sb, Component comp, HashSet<string> generated, CultureInfo ci,
-        RawCodeExportPlan plan, PinLabelWrapperPlan? wrapperPlan = null)
+        RawCodeExportPlan plan, PinLabelWrapperPlan? wrapperPlan = null,
+        bool omitBlackBoxFrame = false)
     {
         if (plan.TryGetEntry(comp, out var rawEntry))
         {
@@ -261,7 +291,7 @@ public class SimpleNazcaExporter
             return;
 
         if (NazcaCoordinateMapper.IsParametricStraight(funcName, comp.NazcaFunctionParameters))
-            AppendParametricStraightStub(sb, funcName, comp, ci);
+            AppendParametricStraightStub(sb, funcName, comp, ci, omitBlackBoxFrame);
         else
             AppendStandardComponentStub(sb, funcName, stubName, comp, ci);
     }
@@ -286,8 +316,14 @@ public class SimpleNazcaExporter
     /// the old NazcaOriginOffsetY-based anchor differed from the placement and shifted the
     /// rendered geometry off the pins (issue #565).
     /// </summary>
+    /// <param name="omitBlackBoxFrame">
+    /// True for EBeam-only designs (<see cref="SiepicEBeamExportProfile"/>): the demofab
+    /// bb_body frame layer (1003, 0) does not exist in EBeam.lyp, so the frame polygon
+    /// is left out of the stub.
+    /// </param>
     private static void AppendParametricStraightStub(
-        StringBuilder sb, string funcName, Component comp, CultureInfo ci)
+        StringBuilder sb, string funcName, Component comp, CultureInfo ci,
+        bool omitBlackBoxFrame = false)
     {
         // The cell is rotation-independent (placement applies .put(rot)); use the
         // UNROTATED first-pin offset as the org anchor (oy), mirroring the mapper. The
@@ -316,15 +352,19 @@ public class SimpleNazcaExporter
         // the bare straight is 0.45 µm tall while the app component is W×H, so
         // without the frame the cell bbox (and with it the re-imported
         // placement position) would sit ~(H−0.45)/2 off the original.
-        var w = comp.WidthMicrometers;
-        var h = comp.HeightMicrometers;
-        var bx0 = NazcaCoordinateMapper.NormalizeZero(-anchorX).ToString("F2", ci);
-        var by0 = NazcaCoordinateMapper.NormalizeZero(anchorY - h).ToString("F2", ci);
-        var bx1 = NazcaCoordinateMapper.NormalizeZero(w - anchorX).ToString("F2", ci);
-        var by1 = NazcaCoordinateMapper.NormalizeZero(anchorY).ToString("F2", ci);
-        sb.AppendLine(
-            $"        nd.Polygon(points=[({bx0},{by0}),({bx1},{by0}),({bx1},{by1}),({bx0},{by1})], " +
-            "layer=(1003, 0)).put(0, 0)  # bb_body frame (documentation layer)");
+        // EBeam-only designs skip it: 1003/0 does not exist in EBeam.lyp.
+        if (!omitBlackBoxFrame)
+        {
+            var w = comp.WidthMicrometers;
+            var h = comp.HeightMicrometers;
+            var bx0 = NazcaCoordinateMapper.NormalizeZero(-anchorX).ToString("F2", ci);
+            var by0 = NazcaCoordinateMapper.NormalizeZero(anchorY - h).ToString("F2", ci);
+            var bx1 = NazcaCoordinateMapper.NormalizeZero(w - anchorX).ToString("F2", ci);
+            var by1 = NazcaCoordinateMapper.NormalizeZero(anchorY).ToString("F2", ci);
+            sb.AppendLine(
+                $"        nd.Polygon(points=[({bx0},{by0}),({bx1},{by0}),({bx1},{by1}),({bx0},{by1})], " +
+                "layer=(1003, 0)).put(0, 0)  # bb_body frame (documentation layer)");
+        }
 
         // Generate pins from the UNROTATED offsets, relative to org (the mapper anchor);
         // a straight's pins share the centre line, so their local Y is oy - OffsetY = 0.
@@ -473,10 +513,14 @@ public class SimpleNazcaExporter
             if (include == null && !string.IsNullOrEmpty(comp.GdsFactoryFunction)) continue;
             if (comp is ComponentGroup group)
             {
-                // Flatten group: export all child components at their absolute positions
+                // Flatten group: export all child components at their absolute positions.
+                // GetAllComponentsRecursive lists nested group NODES too — a group is not a
+                // physical cell and placing it would emit a demofab heuristic box on top of
+                // its (also listed) leaf children.
                 foreach (var child in group.GetAllComponentsRecursive())
                 {
                     if (child.IsAnalysisTool) continue;
+                    if (child is ComponentGroup) continue;
                     if (include == null && !string.IsNullOrEmpty(child.GdsFactoryFunction)) continue;
                     if (include != null && !include(child)) continue;
                     AppendSingleComponent(sb, child, componentNames, ref compIndex, ci, plan, wrapperPlan);
@@ -666,9 +710,13 @@ public class SimpleNazcaExporter
         MetalRoutingSpec metalSpec,
         int? gdsLayer = null,
         List<string>? skippedConnections = null,
-        List<string>? unresolvedCrossings = null)
+        List<string>? unresolvedCrossings = null,
+        NazcaProcessInterconnectPlan? interconnectPlan = null,
+        bool forceProcessCrossSections = false,
+        SiepicWaveguideCellWriter? waveguideCells = null)
     {
-        var hasFrozenPaths = canvas.Components.Any(vm => vm.Component is ComponentGroup);
+        var hasFrozenPaths = canvas.Components.Any(vm => vm.Component is ComponentGroup)
+            || canvas.CanvasFrozenPaths.Count > 0;
         if (canvas.Connections.Count == 0 && !hasFrozenPaths)
             return;
 
@@ -684,6 +732,16 @@ public class SimpleNazcaExporter
             // have no physical fab counterpart.
             if (conn.StartPin?.ParentComponent?.IsAnalysisTool == true) continue;
             if (conn.EndPin?.ParentComponent?.IsAnalysisTool == true) continue;
+
+            // A cross-chiplet facet link couples free space between two separate dies —
+            // its transmission is the edge-coupler offset × gap model, not waveguide
+            // geometry. Emitting it would draw a waveguide across the gap between the
+            // chiplets, so it is noted as a comment instead (the export stays verifiable).
+            if (conn.IsCrossChipletFacetLink)
+            {
+                sb.AppendLine("        # Cross-chiplet facet link (free-space edge coupling) - no waveguide exported");
+                continue;
+            }
 
             // A placeholder (self-crossing fallback with no optical model) or invalid
             // (bend radius violation) route must never render as geometry — the design
@@ -715,6 +773,16 @@ public class SimpleNazcaExporter
                 ? (sourceL, sourceD)
                 : ((int Layer, int DataType)?)null;
 
+            // On a multi-process canvas the endpoint pins' PDK stamps decide which
+            // process cross-section this connection routes on (width/layer per segment,
+            // its own interconnect for the pin-to-pin fallback). A single-process canvas
+            // keeps the default cross-section so its export stays byte-identical to the
+            // legacy global-interconnect output — except an EBeam-only design
+            // (forceProcessCrossSections), whose segments must land on the EBeam layer.
+            var crossSection = interconnectPlan?.UsesPerProcessCrossSections == true || forceProcessCrossSections
+                ? ConnectionCrossSectionResolver.Resolve(conn.StartPin, conn.EndPin)
+                : default;
+
             // Explicit routing style (issue #574) applies to OPTICAL waveguides only:
             // point-to-point styles export a single Nazca primitive (strt/sinebend/cobra)
             // on the waveguide layer instead of the routed segments; Bend and Euler return
@@ -725,7 +793,7 @@ public class SimpleNazcaExporter
             // set, so styled export is gated on metal == null.
             if (metal == null)
             {
-                var styledLine = NazcaConnectionStyleWriter.Format(conn, gdsLayer, sourceLayer);
+                var styledLine = NazcaConnectionStyleWriter.Format(conn, crossSection.GdsLayer ?? gdsLayer, sourceLayer);
                 if (styledLine != null)
                 {
                     sb.AppendLine(styledLine);
@@ -734,21 +802,40 @@ public class SimpleNazcaExporter
             }
 
             // Routed connections export their real segments; only routeless
-            // connections fall back to a p2p interconnect.
+            // connections fall back to a p2p interconnect. An EBeam-only export
+            // wraps each routed optical connection in its own SiEPIC waveguide
+            // cell (openEBL gap #4) instead of flattening it into the top cell.
             var segments = conn.GetPathSegments();
 
             if (segments.Count > 0)
-                AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, metal, sourceLayer);
+            {
+                if (metal == null && waveguideCells != null)
+                {
+                    var cellContent = new StringBuilder();
+                    AppendSegmentExport(cellContent, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+                    waveguideCells.AppendWaveguideCell(sb, cellContent, segments, conn.StartPin, conn.EndPin);
+                }
+                else
+                {
+                    AppendSegmentExport(sb, segments, conn.StartPin, conn.EndPin, metal, sourceLayer, crossSection);
+                }
+            }
             else
-                AppendFallbackExport(sb, conn.StartPin, conn.EndPin, componentNames, metal, sourceLayer);
+                AppendFallbackExport(sb, conn.StartPin, conn.EndPin, componentNames, metal, sourceLayer,
+                    interconnectPlan?.InterconnectFor(conn) ?? "ic");
         }
 
         // Export frozen waveguide paths from ComponentGroups
         foreach (var compVm in canvas.Components)
         {
             if (compVm.Component is ComponentGroup group)
-                AppendGroupFrozenPaths(sb, group, metalStyle, componentNames, skippedConnections);
+                AppendGroupFrozenPaths(sb, group, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
         }
+
+        // Canvas-level pin-less frozen paths (issue #856): imported route geometry
+        // released by ungrouping exports exactly like it did inside the group.
+        foreach (var pathVm in canvas.CanvasFrozenPaths)
+            AppendFrozenPath(sb, pathVm.Path, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
 
         AppendBridgeMarkers(sb, canvas, metalConnections, metalSpec);
         CollectUnresolvedCrossings(unresolvedCrossingCandidates, metalConnections, metalSpec, unresolvedCrossings);
@@ -835,6 +922,9 @@ public class SimpleNazcaExporter
             // crossable geometry either, or a metal trace would get a bridge marker over
             // a waveguide that isn't actually drawn.
             if (!conn.IsExportable()) continue;
+            // A cross-chiplet facet link is not drawn (free-space coupling), so it must
+            // not count as crossable geometry either.
+            if (conn.IsCrossChipletFacetLink) continue;
             var segments = conn.GetPathSegments();
             if (segments.Count > 0)
                 paths.Add(segments);
@@ -844,6 +934,12 @@ public class SimpleNazcaExporter
         {
             if (compVm.Component is ComponentGroup group)
                 CollectGroupFrozenPaths(group, paths);
+        }
+
+        foreach (var pathVm in canvas.CanvasFrozenPaths)
+        {
+            if (pathVm.Path.Path?.Segments?.Count > 0 && pathVm.Path.Path.IsExportable())
+                paths.Add(pathVm.Path.Path.Segments);
         }
         return paths;
     }
@@ -878,57 +974,93 @@ public class SimpleNazcaExporter
     /// an empty <c>RoutedPath</c>, not null) renders the same pin-to-pin fallback a routeless
     /// live connection gets, instead of silently vanishing. A path carrying the import's
     /// source-layer tag (<see cref="FrozenWaveguidePath.Layer"/>) exports on THAT layer —
-    /// manufacturing needs the original layers back, not the process defaults.
+    /// manufacturing needs the original layers back, not the process defaults. An EBeam-only
+    /// export wraps each optical frozen path in its own SiEPIC waveguide cell
+    /// (<see cref="SiepicWaveguideCellWriter"/>) exactly like a routed connection — grouping
+    /// must stay transparent to openEBL verification (hierarchy × export seam).
     /// </summary>
     private static void AppendGroupFrozenPaths(
         StringBuilder sb, ComponentGroup group, MetalTraceStyle metalStyle,
-        Dictionary<Component, string> componentNames, List<string>? skippedConnections = null)
+        Dictionary<Component, string> componentNames, List<string>? skippedConnections = null,
+        NazcaProcessInterconnectPlan? interconnectPlan = null, bool forceProcessCrossSections = false,
+        SiepicWaveguideCellWriter? waveguideCells = null)
     {
         foreach (var frozenPath in group.InternalPaths)
-        {
-            if (frozenPath == null) continue;
-
-            // A PIN-LESS frozen path holds imported top-cell route geometry: the source
-            // polygon's OUTLINE traced as a closed ring of straight segments
-            // (GdsImport.GdsFrozenRoutePathFactory.Create) — not a centerline. Emitting the ring
-            // edges as waveguides would draw a waveguide along every outline edge (the
-            // route polygon becomes two parallel lines, and every re-import multiplies
-            // the frozen geometry: 45 rings came back as 2520 polygons in the
-            // re-export round-trip test). The honest round-trip is the polygon itself,
-            // verbatim on its original layer — exactly what the import read.
-            if (frozenPath.StartPin is null
-                && frozenPath.Layer is int outlineLayer && frozenPath.DataType is int outlineDataType
-                && TryChainOutlineRing(frozenPath.Path?.Segments) is { } ring)
-            {
-                AppendOutlineRingExport(sb, ring, outlineLayer, outlineDataType);
-                continue;
-            }
-
-            var metal = IsMetalConnection(frozenPath.StartPin, frozenPath.EndPin) ? metalStyle : null;
-            // The import source's (layer, datatype) tag: emitted per segment so imported
-            // geometry lands back on its original layer (a metal polygon's tag also wins
-            // over the process metal layer). Untagged paths keep the historical defaults.
-            var sourceLayer = frozenPath.Layer is int layer && frozenPath.DataType is int dataType
-                ? (layer, dataType)
-                : ((int Layer, int DataType)?)null;
-            var segments = frozenPath.Path?.Segments;
-            if (segments == null || segments.Count == 0)
-            {
-                AppendFallbackExport(sb, frozenPath.StartPin, frozenPath.EndPin, componentNames, metal, sourceLayer);
-                continue;
-            }
-
-            if (ExportableConnections.TryRecordSkip(
-                    frozenPath.Path, frozenPath.StartPin, frozenPath.EndPin, skippedConnections))
-                continue;
-            AppendSegmentExport(sb, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer);
-        }
+            AppendFrozenPath(sb, frozenPath, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
 
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup nestedGroup)
-                AppendGroupFrozenPaths(sb, nestedGroup, metalStyle, componentNames, skippedConnections);
+                AppendGroupFrozenPaths(sb, nestedGroup, metalStyle, componentNames, skippedConnections, interconnectPlan, forceProcessCrossSections, waveguideCells);
         }
+    }
+
+    /// <summary>
+    /// Exports one frozen waveguide path — shared by group-internal paths and
+    /// canvas-level paths (issue #856), so a path released by ungrouping exports
+    /// byte-identically to the same path inside its group.
+    /// </summary>
+    private static void AppendFrozenPath(
+        StringBuilder sb, FrozenWaveguidePath? frozenPath, MetalTraceStyle metalStyle,
+        Dictionary<Component, string> componentNames, List<string>? skippedConnections,
+        NazcaProcessInterconnectPlan? interconnectPlan = null, bool forceProcessCrossSections = false,
+        SiepicWaveguideCellWriter? waveguideCells = null)
+    {
+        if (frozenPath == null) return;
+
+        // A PIN-LESS frozen path holds imported top-cell route geometry: the source
+        // polygon's OUTLINE traced as a closed ring of straight segments
+        // (GdsImport.GdsFrozenRoutePathFactory.Create) — not a centerline. Emitting the ring
+        // edges as waveguides would draw a waveguide along every outline edge (the
+        // route polygon becomes two parallel lines, and every re-import multiplies
+        // the frozen geometry: 45 rings came back as 2520 polygons in the
+        // re-export round-trip test). The honest round-trip is the polygon itself,
+        // verbatim on its original layer — exactly what the import read.
+        if (frozenPath.StartPin is null
+            && frozenPath.Layer is int outlineLayer && frozenPath.DataType is int outlineDataType
+            && TryChainOutlineRing(frozenPath.Path?.Segments) is { } ring)
+        {
+            AppendOutlineRingExport(sb, ring, outlineLayer, outlineDataType);
+            return;
+        }
+
+        var metal = IsMetalConnection(frozenPath.StartPin, frozenPath.EndPin) ? metalStyle : null;
+        // The import source's (layer, datatype) tag: emitted per segment so imported
+        // geometry lands back on its original layer (a metal polygon's tag also wins
+        // over the process metal layer). Untagged paths keep the historical defaults.
+        var sourceLayer = frozenPath.Layer is int layer && frozenPath.DataType is int dataType
+            ? (layer, dataType)
+            : ((int Layer, int DataType)?)null;
+        var segments = frozenPath.Path?.Segments;
+        if (segments == null || segments.Count == 0)
+        {
+            AppendFallbackExport(sb, frozenPath.StartPin, frozenPath.EndPin, componentNames, metal, sourceLayer,
+                interconnectPlan?.InterconnectFor(frozenPath) ?? "ic");
+            return;
+        }
+
+        if (ExportableConnections.TryRecordSkip(
+                frozenPath.Path, frozenPath.StartPin, frozenPath.EndPin, skippedConnections))
+            return;
+        // The frozen path keeps its endpoint pins — frozen together with the geometry at
+        // freeze time — so on a multi-process canvas their PDK stamps still carry the
+        // chiplet's cross-section; a single-process canvas stays byte-identical to legacy
+        // (except EBeam-only designs, which route on the EBeam layer).
+        var crossSection = interconnectPlan?.UsesPerProcessCrossSections == true || forceProcessCrossSections
+            ? ConnectionCrossSectionResolver.Resolve(frozenPath.StartPin, frozenPath.EndPin)
+            : default;
+        // An EBeam-only export wraps the optical frozen path in its own SiEPIC
+        // waveguide cell — the same treatment routed connections get — so a grouped
+        // design passes openEBL verification instead of flattening the frozen route
+        // into the top cell ("Shapes outside component" / "Disconnected pin").
+        if (metal == null && waveguideCells != null)
+        {
+            var cellContent = new StringBuilder();
+            AppendSegmentExport(cellContent, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection);
+            waveguideCells.AppendWaveguideCell(sb, cellContent, segments, frozenPath.StartPin, frozenPath.EndPin);
+            return;
+        }
+        AppendSegmentExport(sb, segments, frozenPath.StartPin, frozenPath.EndPin, metal, sourceLayer, crossSection);
     }
 
     /// <summary>
@@ -997,16 +1129,26 @@ public class SimpleNazcaExporter
     /// <c>layer=(L, D)</c> on every segment (winning over the metal style's process
     /// default layer, see <see cref="SegmentKwargs"/>). Null keeps the default layers.
     /// </param>
+    /// <param name="crossSection">
+    /// The endpoint pins' process cross-section: stamped waveguide width/GDS layer are
+    /// emitted as <c>width=…, layer=…</c> kwargs on every optical segment, so each
+    /// chiplet's routed waveguides land on their own process stack. Callers pass it
+    /// on a multi-process canvas (≥2 distinct stamped stacks) and for EBeam-only
+    /// designs (<see cref="SiepicEBeamExportProfile"/>); the default (all-null) value
+    /// keeps the historical bare calls. The import source-layer tag wins over it
+    /// (verbatim round-trip); the metal style ignores it.
+    /// </param>
     internal static void AppendSegmentExport(
         StringBuilder sb, IReadOnlyList<PathSegment> segments,
         PhysicalPin? startPin = null, PhysicalPin? endPin = null,
-        MetalTraceStyle? metal = null, (int Layer, int DataType)? sourceLayer = null)
+        MetalTraceStyle? metal = null, (int Layer, int DataType)? sourceLayer = null,
+        ProcessCrossSection crossSection = default)
     {
         // Single straight segment: compute geometry directly from both pin positions
         // so the waveguide hits both pins exactly even if the stored segment drifts.
         if (segments.Count == 1 && segments[0] is StraightSegment && startPin != null && endPin != null)
         {
-            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin, metal, sourceLayer));
+            sb.AppendLine(FormatStraightSegmentFromPins(startPin, endPin, metal, sourceLayer, crossSection));
             return;
         }
 
@@ -1015,7 +1157,7 @@ public class SimpleNazcaExporter
             var (nStartX, nStartY) = NazcaCoordinateMapper.ToNazca(segment.StartPoint.X, segment.StartPoint.Y);
             var (nEndX, nEndY) = NazcaCoordinateMapper.ToNazca(segment.EndPoint.X, segment.EndPoint.Y);
 
-            sb.AppendLine(FormatSegmentAbsolute(segment, nStartX, nStartY, nEndX, nEndY, metal, sourceLayer));
+            sb.AppendLine(FormatSegmentAbsolute(segment, nStartX, nStartY, nEndX, nEndY, metal, sourceLayer, crossSection));
         }
     }
 
@@ -1025,9 +1167,13 @@ public class SimpleNazcaExporter
     /// and route-derived connections) wins over the process default: for a metal trace the
     /// tag replaces <see cref="MetalTraceStyle.LayerTuple"/> (the metal WIDTH is kept — the
     /// tag carries no width); for an optical segment it is the only override, so untagged
-    /// geometry keeps the Nazca default layer exactly like before.
+    /// geometry keeps the Nazca default layer exactly like before. An untagged optical
+    /// segment takes the endpoint pins' process stamps (<paramref name="crossSection"/>);
+    /// pins without stamps keep the historical bare call (the Nazca/default layer).
     /// </summary>
-    private static string SegmentKwargs(MetalTraceStyle? metal, (int Layer, int DataType)? sourceLayer)
+    private static string SegmentKwargs(
+        MetalTraceStyle? metal, (int Layer, int DataType)? sourceLayer,
+        ProcessCrossSection crossSection = default)
     {
         if (metal is not null)
         {
@@ -1036,7 +1182,17 @@ public class SimpleNazcaExporter
                 : metal.LayerTuple;
             return $", width={metal.WidthLiteral}, layer={layerTuple}";
         }
-        return sourceLayer is { } s ? $", layer={LayerTupleLiteral(s)}" : string.Empty;
+        if (sourceLayer is { } s)
+            return $", layer={LayerTupleLiteral(s)}";
+
+        var ci = CultureInfo.InvariantCulture;
+        var width = crossSection.WidthMicrometers is double w
+            ? $", width={w.ToString("0.0###", ci)}"
+            : string.Empty;
+        var layer = crossSection.GdsLayer is int l
+            ? $", layer={l.ToString(ci)}"
+            : string.Empty;
+        return width + layer;
     }
 
     /// <summary>The <c>(layer, datatype)</c> tuple literal of a source-layer tag.</summary>
@@ -1060,14 +1216,14 @@ public class SimpleNazcaExporter
     private static string FormatSegmentAbsolute(
         PathSegment segment, double nazcaStartX, double nazcaStartY,
         double nazcaEndX, double nazcaEndY, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null)
+        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
     {
         var ci = CultureInfo.InvariantCulture;
         return segment switch
         {
             StraightSegment => FormatStraightAbsolute(
-                nazcaStartX, nazcaStartY, nazcaEndX, nazcaEndY, ci, metal, sourceLayer),
-            BendSegment bend => FormatBendAbsolute(bend, nazcaStartX, nazcaStartY, ci, metal, sourceLayer),
+                nazcaStartX, nazcaStartY, nazcaEndX, nazcaEndY, ci, metal, sourceLayer, crossSection),
+            BendSegment bend => FormatBendAbsolute(bend, nazcaStartX, nazcaStartY, ci, metal, sourceLayer, crossSection),
             _ => $"        # Unknown segment type: {segment.GetType().Name}"
         };
     }
@@ -1080,7 +1236,7 @@ public class SimpleNazcaExporter
     private static string FormatStraightAbsolute(
         double nazcaStartX, double nazcaStartY,
         double nazcaEndX, double nazcaEndY, CultureInfo ci, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null)
+        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
     {
         double dx = nazcaEndX - nazcaStartX;
         double dy = nazcaEndY - nazcaStartY;
@@ -1091,7 +1247,7 @@ public class SimpleNazcaExporter
         var x = NazcaCoordinateMapper.NormalizeZero(nazcaStartX).ToString("F2", ci);
         var y = NazcaCoordinateMapper.NormalizeZero(nazcaStartY).ToString("F2", ci);
         var a = NazcaCoordinateMapper.NormalizeZero(angleDeg).ToString("F2", ci);
-        return $"        nd.strt(length={l}{SegmentKwargs(metal, sourceLayer)}).put({x}, {y}, {a})";
+        return $"        nd.strt(length={l}{SegmentKwargs(metal, sourceLayer, crossSection)}).put({x}, {y}, {a})";
     }
 
     /// <summary>
@@ -1100,14 +1256,14 @@ public class SimpleNazcaExporter
     /// </summary>
     private static string FormatBendAbsolute(
         BendSegment bend, double nazcaX, double nazcaY, CultureInfo ci, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null)
+        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
     {
         var radius = bend.RadiusMicrometers.ToString("F2", ci);
         var sweepAngle = NazcaCoordinateMapper.NormalizeZero(-bend.SweepAngleDegrees).ToString("F2", ci);
         var x = NazcaCoordinateMapper.NormalizeZero(nazcaX).ToString("F2", ci);
         var y = NazcaCoordinateMapper.NormalizeZero(nazcaY).ToString("F2", ci);
         var angle = NazcaCoordinateMapper.NormalizeZero(-bend.StartAngleDegrees).ToString("F2", ci);
-        return $"        nd.bend(radius={radius}, angle={sweepAngle}{SegmentKwargs(metal, sourceLayer)}).put({x}, {y}, {angle})";
+        return $"        nd.bend(radius={radius}, angle={sweepAngle}{SegmentKwargs(metal, sourceLayer, crossSection)}).put({x}, {y}, {angle})";
     }
 
     /// <summary>
@@ -1117,7 +1273,7 @@ public class SimpleNazcaExporter
     /// </summary>
     private static string FormatStraightSegmentFromPins(
         PhysicalPin startPin, PhysicalPin endPin, MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null)
+        (int Layer, int DataType)? sourceLayer = null, ProcessCrossSection crossSection = default)
     {
         var ci = CultureInfo.InvariantCulture;
         var (sx, sy) = NazcaCoordinateMapper.GetPinNazcaPosition(startPin);
@@ -1133,7 +1289,7 @@ public class SimpleNazcaExporter
         var a = NazcaCoordinateMapper.NormalizeZero(angleDeg).ToString("F2", ci);
         var l = length.ToString("F2", ci);
 
-        return $"        nd.strt(length={l}{SegmentKwargs(metal, sourceLayer)}).put({x}, {y}, {a})";
+        return $"        nd.strt(length={l}{SegmentKwargs(metal, sourceLayer, crossSection)}).put({x}, {y}, {a})";
     }
 
     /// <summary>
@@ -1247,7 +1403,8 @@ public class SimpleNazcaExporter
         PhysicalPin? endPin,
         Dictionary<Component, string> componentNames,
         MetalTraceStyle? metal = null,
-        (int Layer, int DataType)? sourceLayer = null)
+        (int Layer, int DataType)? sourceLayer = null,
+        string interconnect = "ic")
     {
         if (startPin == null || endPin == null)
             return;
@@ -1264,7 +1421,7 @@ public class SimpleNazcaExporter
         var endRef = BuildEndpointReference(endPin, componentNames);
 
         if (startRef != null && endRef != null)
-            sb.AppendLine($"        ic.sbend_p2p({startRef}, {endRef}).put()");
+            sb.AppendLine($"        {interconnect}.sbend_p2p({startRef}, {endRef}).put()");
     }
 
     /// <summary>

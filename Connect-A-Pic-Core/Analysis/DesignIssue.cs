@@ -49,7 +49,80 @@ public enum DesignIssueType
     /// obstacles by design and are never auto-rerouted, so the collision must be resolved
     /// manually — move the component or pick a different routing style.
     /// </summary>
-    StyledRouteThroughComponent
+    StyledRouteThroughComponent,
+
+    /// <summary>
+    /// An optical pin on a placed component has no waveguide connection and is not
+    /// designated as an external port. This is a warning because the design may still
+    /// simulate, but the dangling pin will not export to GDS.
+    /// </summary>
+    UnconnectedPin,
+
+    /// <summary>
+    /// Two pins joined by a waveguide connection have different PDK-driven waveguide
+    /// widths or layers. This is an error because the exported geometry cannot satisfy
+    /// both endpoints simultaneously.
+    /// </summary>
+    PinMismatch,
+
+    /// <summary>
+    /// Two waveguide routes are closer than the active process' minimum edge-to-edge
+    /// spacing. The reported distance and required minimum are included in the issue.
+    /// </summary>
+    WaveguideSpacingViolation,
+
+    /// <summary>
+    /// An optical waveguide route (or one of its endpoint pins) is narrower than the
+    /// fabrication minimum feature width (<c>minWidthUm</c>) of the associated
+    /// cross-section of the active process. Only fires when the PDK declares the
+    /// limit; the reported width, minimum, and its source are included in the issue.
+    /// </summary>
+    WaveguideBelowMinWidth,
+
+    /// <summary>
+    /// Two edge couplers linked across a chiplet boundary do not face each other
+    /// (their facet pin directions are not antiparallel). A warning: the design may
+    /// still simulate, but the physical butt-coupled link would not close.
+    /// </summary>
+    ChipletInterfaceNotFacing,
+
+    /// <summary>
+    /// Two edge couplers linked across a chiplet boundary face each other but are
+    /// laterally offset perpendicular to the pin axis beyond the allowed tolerance.
+    /// A warning: butt-coupling loss grows fast with lateral offset.
+    /// </summary>
+    ChipletInterfaceLateralOffset,
+
+    /// <summary>
+    /// An edge-coupler facet pin linked across a chiplet boundary does not lie on its
+    /// chiplet's outer boundary (measured along the direction it faces). A warning:
+    /// the facet cannot butt against the neighbouring die from inside the chiplet.
+    /// </summary>
+    ChipletInterfaceOffEdge,
+
+    /// <summary>
+    /// Two edge couplers linked across a chiplet boundary face each other but stand so
+    /// far apart that Gaussian beam divergence across the facet gap alone costs more than
+    /// the allowed budget (<see cref="ChipletInterfaceChecker.MaxGapLossDecibels"/>).
+    /// A warning: butt-coupling assumes the facets touch.
+    /// </summary>
+    ChipletInterfaceGapLoss,
+
+    /// <summary>
+    /// Two top-level placed items (components or groups) occupy the same
+    /// physical area — their placed, rotation-aware footprint rectangles
+    /// overlap beyond the fabrication tolerance. An error on par with
+    /// <see cref="OverlappingPaths"/>: the layout cannot be fabricated as drawn.
+    /// </summary>
+    ComponentFootprintOverlap,
+
+    /// <summary>
+    /// Two routed connections properly cross each other without a crossing component
+    /// at the intersection. An error: the exported geometry overlaps and fails
+    /// foundry verification (e.g. openEBL "Overlapping component"). Pairs that only
+    /// touch at a shared pin or endpoint are not crossings.
+    /// </summary>
+    WaveguideCrossing
 }
 
 /// <summary>
@@ -80,25 +153,22 @@ public class DesignIssue
     public double Y { get; }
 
     /// <summary>
-    /// Human-readable description of the issue (English, used as fallback when no
-    /// localized template is available).
+    /// Human-readable description of the issue (English fallback).
     /// </summary>
     public string Description { get; }
 
     /// <summary>
-    /// Localization key identifying a translated message template in the UI string
-    /// tables (e.g. <c>DesignChecks.BlockedPath</c>). Null when the issue type does
-    /// not yet ship a template; <see cref="Description"/> is the fallback then.
-    /// The core stays UI-agnostic — only the UI layer resolves the key.
+    /// Optional localization key into the UI string tables (e.g. "DesignChecks.WaveguideCrossing").
+    /// When set, the UI renders the translated, <see cref="LocalizationArgs"/>-formatted message
+    /// instead of <see cref="Description"/>. The core stays UI-agnostic; only the display layer
+    /// resolves the key.
     /// </summary>
     public string? LocalizationKey { get; }
 
     /// <summary>
-    /// Format arguments for the <see cref="LocalizationKey"/> template, in
-    /// <see cref="string.Format(System.IFormatProvider,string,object[])"/> order.
-    /// Null when the template takes no arguments.
+    /// Format arguments for <see cref="LocalizationKey"/>, in placeholder order.
     /// </summary>
-    public object[]? LocalizationArgs { get; }
+    public IReadOnlyList<object>? LocalizationArgs { get; }
 
     /// <summary>
     /// Creates a new design issue with an associated connection.
@@ -108,8 +178,8 @@ public class DesignIssue
     /// <param name="x">Location X in micrometers.</param>
     /// <param name="y">Location Y in micrometers.</param>
     /// <param name="description">Human-readable description (English fallback).</param>
-    /// <param name="localizationKey">Localization key for the translated template (optional).</param>
-    /// <param name="localizationArgs">Format arguments for the template (optional).</param>
+    /// <param name="localizationKey">Optional UI string-table key for the translated message.</param>
+    /// <param name="localizationArgs">Format arguments for <paramref name="localizationKey"/>.</param>
     public DesignIssue(
         DesignIssueType type,
         WaveguideConnection? connection,
@@ -117,7 +187,7 @@ public class DesignIssue
         double y,
         string description,
         string? localizationKey = null,
-        object[]? localizationArgs = null)
+        IReadOnlyList<object>? localizationArgs = null)
     {
         Type = type;
         Connection = connection;

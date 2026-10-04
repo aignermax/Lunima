@@ -1,0 +1,10 @@
+[
+  {
+    "file": "ebeam-mzi-overview.png",
+    "caption": "The shipped \u0027EBeam Mach-Zehnder Interferometer\u0027 example (issue #1310): built only from the SiEPIC EBeam PDK \u2014 two grating couplers (left, 0\u00B0 orientation, vertical 127 \u00B5m pitch per openEBL\u0027s design-for-test rules), a Y-branch splitter and combiner, and the lower arm stretched by a meander for the visible length difference. The whole design fits the 605 \u00D7 410 \u00B5m openEBL die; DRC-lite reports no issues."
+  },
+  {
+    "file": "ebeam-mzi-gc-array.png",
+    "caption": "The grating-coupler test array: gc_in (top, laser on) and gc_out (127 \u00B5m below, laser off \u2014 listen-only output), both at 0\u00B0 orientation on a vertical column \u2014 the openEBL fiber-array geometry the measurement hardware expects."
+  }
+]

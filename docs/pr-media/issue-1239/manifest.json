@@ -1,0 +1,6 @@
+[
+  {
+    "file": "isa-playground-multiply-photonic-halted.png",
+    "caption": "ISA playground halted on the multiply-3x4 sample with the photonic-ADD toggle on: ACC = 12, every loop ADD computed on the photonic 4-bit adder \u2014 the status line names the last addition and its light-travel time."
+  }
+]

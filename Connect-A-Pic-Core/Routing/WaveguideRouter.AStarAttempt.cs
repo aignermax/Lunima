@@ -11,11 +11,15 @@ namespace CAP_Core.Routing;
 public partial class WaveguideRouter
 {
     /// <summary>
-    /// Attempts to route using two-phase A* pathfinding with obstacle avoidance at the given
+    /// Attempts to route using A* pathfinding with obstacle avoidance at the given
     /// bend radius. The cost model (minimum straight run before turns) and the path smoother
     /// are synced to that radius, so the grid path leaves room for the arcs that will be built.
-    /// Phase 1 uses <see cref="Phase1MaxNodes"/> for fast results.
-    /// Phase 2 uses <see cref="Phase2MaxNodes"/> and fires <see cref="OnComplexRouteStarted"/> if Phase 1 fails.
+    /// Before any search runs, a direction-aware reachability flood
+    /// (<see cref="PathfindingGrid.CanReachGoalDirected"/>) decides whether a path can exist
+    /// at all — a proven-unreachable goal skips every search below with the same null result
+    /// they would return after burning their full node budgets. The search runs over the
+    /// whole grid with the extended node budget (<see cref="Phase2MaxNodes"/>), firing
+    /// <see cref="OnComplexRouteStarted"/> at the quick-phase mark (<see cref="Phase1MaxNodes"/>).
     /// </summary>
     private bool TryRouteAStar(double bendRadius,
                                 double startX, double startY, double startAngle,
@@ -83,35 +87,29 @@ public partial class WaveguideRouter
             // The heuristic's distance metric must match the movement model.
             CostCalculator.UseDiagonals = UseDiagonalRouting;
 
+            // Reachability gate: a cheap flood fill over the whole grid decides whether
+            // ANY path to the goal region can exist at all. The flood ignores direction,
+            // turn and pin-escape constraints, so its reachable set is a superset of what
+            // the constrained searches below could ever reach — a negative verdict lets
+            // every search (windowed, full-grid, tolerant and minimal-constraint retries)
+            // be skipped with the same null result they would have returned after burning
+            // their full node budgets. The flood sees the same grid state the searches
+            // would: the pin corridors above are already cleared.
+            bool goalReachable = _hierarchicalPathfinder != null && UseHierarchicalPathfinding
+                || PathfindingGrid.CanReachGoalDirected(
+                    gridStartX, gridStartY, gridEndX, gridEndY,
+                    AStarPathfinder.AStarPathfinder.DefaultGoalTolerance, UseDiagonalRouting);
+
             if (_hierarchicalPathfinder != null && UseHierarchicalPathfinding)
             {
                 gridPath = _hierarchicalPathfinder.FindPath(
                     gridStartX, gridStartY, startDir,
                     gridEndX, gridEndY, endDir);
             }
-            else
+            else if (goalReachable)
             {
-                // Phase 1: Quick search with limited node budget for fast results
-                var phase1 = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
-                {
-                    MaxNodesExpanded = Phase1MaxNodes,
-                    UseDiagonals = UseDiagonalRouting
-                };
-                gridPath = phase1.FindPath(gridStartX, gridStartY, startDir,
-                                           gridEndX, gridEndY, endDir, cancellationToken);
-
-                // Phase 2: Extended search when Phase 1 exhausted its node budget
-                if (gridPath == null && !cancellationToken.IsCancellationRequested)
-                {
-                    OnComplexRouteStarted?.Invoke();
-                    var phase2 = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
-                    {
-                        MaxNodesExpanded = Phase2MaxNodes,
-                        UseDiagonals = UseDiagonalRouting
-                    };
-                    gridPath = phase2.FindPath(gridStartX, gridStartY, startDir,
-                                               gridEndX, gridEndY, endDir, cancellationToken);
-                }
+                gridPath = RunAStarPhases(gridStartX, gridStartY, startDir,
+                                          gridEndX, gridEndY, endDir, cancellationToken);
             }
 
             // Lateral-tolerance retry: the strict phases require an exact
@@ -120,7 +118,7 @@ public partial class WaveguideRouter
             // Retry accepting a small lateral offset; the smoother snaps the
             // final approach onto the axis. Only otherwise-blocked routes
             // reach this point, so successful routes are unaffected.
-            if (gridPath == null && !cancellationToken.IsCancellationRequested)
+            if (gridPath == null && goalReachable && !cancellationToken.IsCancellationRequested)
             {
                 var tolerantRetry = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
                 {
@@ -147,7 +145,7 @@ public partial class WaveguideRouter
                     gridPath = retryPath;
             }
 
-            if (gridPath == null || gridPath.Count < 2)
+            if ((gridPath == null || gridPath.Count < 2) && goalReachable)
             {
                 CostCalculator.MinPinEscapeCells = 2;
                 CostCalculator.MinStraightRunCells = 2;
@@ -183,6 +181,36 @@ public partial class WaveguideRouter
             PathfindingGrid.RestoreCells(clearedStartFanout);
             PathfindingGrid.RestoreCells(clearedEndFanout);
         }
+    }
+
+    /// <summary>
+    /// Runs the A* search for one routing attempt. One continuous search replaces the
+    /// former back-to-back Phase-1/Phase-2 runs: the extended phase's budget IS the total
+    /// budget and <see cref="AStarPathfinder.AStarPathfinder.OnEscalationThresholdReached"/>
+    /// marks where the quick phase would have ended. The expansion sequence — and
+    /// therefore the outcome — is identical to the two-phase version, minus the
+    /// repeated quick-phase work and minus the redundant extended re-run when the
+    /// quick phase had already emptied the open set (a deterministic re-run of an
+    /// exhausted search returns null again).
+    /// </summary>
+    private List<AStarNode>? RunAStarPhases(
+        int gridStartX, int gridStartY, GridDirection startDir,
+        int gridEndX, int gridEndY, GridDirection endDir,
+        CancellationToken cancellationToken)
+    {
+        var search = new AStarPathfinder.AStarPathfinder(PathfindingGrid!, CostCalculator)
+        {
+            // The continuous search replays the exact expansion sequence of the
+            // former quick-then-extended phases (the extended phase re-expanded the
+            // quick phase's prefix identically), so the extended phase's budget IS
+            // the total budget — the quick phase survives only as the escalation mark.
+            MaxNodesExpanded = Phase2MaxNodes,
+            UseDiagonals = UseDiagonalRouting,
+            EscalationThresholdNodes = Phase1MaxNodes,
+            OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke()
+        };
+        return search.FindPath(gridStartX, gridStartY, startDir,
+                               gridEndX, gridEndY, endDir, cancellationToken);
     }
 
     /// <summary>

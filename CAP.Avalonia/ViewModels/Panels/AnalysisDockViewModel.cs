@@ -41,6 +41,12 @@ public partial class AnalysisDockViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedTabIndex;
 
+    /// <summary>Index of the Design Checks tab in the dock (tab order in AnalysisDockPanel.axaml).</summary>
+    private const int ChecksTabIndex = 6;
+
+    /// <summary>Index of the Logic tab in the dock (tab order in AnalysisDockPanel.axaml).</summary>
+    private const int LogicTabIndex = 8;
+
     /// <summary>Minimum dock content height (px) when dragging the resize grip.</summary>
     public const double MinDockHeight = 120;
 
@@ -90,6 +96,20 @@ public partial class AnalysisDockViewModel : ObservableObject
     public void OpenTransient()
     {
         SelectedTabIndex = 0;
+        IsVisible = true;
+    }
+
+    /// <summary>Opens the dock on the Design Checks tab (called by the "Check design" menu entry).</summary>
+    public void OpenChecks()
+    {
+        SelectedTabIndex = ChecksTabIndex;
+        IsVisible = true;
+    }
+
+    /// <summary>Opens the dock on the Logic tab (called when the "Watch it compute" tour starts).</summary>
+    public void OpenLogic()
+    {
+        SelectedTabIndex = LogicTabIndex;
         IsVisible = true;
     }
 

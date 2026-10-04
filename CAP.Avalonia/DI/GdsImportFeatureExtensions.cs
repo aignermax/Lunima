@@ -33,7 +33,16 @@ internal static class GdsImportFeatureExtensions
             var leftPanel = sp.GetRequiredService<LeftPanelViewModel>();
             return new GdsImportService(
                 sp.GetRequiredService<DesignScopedGdsComponentService>(),
-                () => leftPanel.AllTemplates.ToList());
+                () => leftPanel.AllTemplates.ToList(),
+                // Resolved lazily inside the delegate (like the bend-radius wiring in
+                // MainViewModel): the active process changes per design. The file-operations
+                // view model is owned by MainViewModel, not registered on its own, so it is
+                // reached through the main view model at call time.
+                () => CAP_DataAccess.Components.ComponentDraftMapper.ProcessOpticalDefaultsResolver
+                    .Resolve(
+                        sp.GetRequiredService<ViewModels.MainViewModel>().FileOperations.ActiveProcess,
+                        leftPanel.GetLoadedPdkDrafts())
+                    .WidthUm);
         });
         services.AddSingleton(sp =>
         {
@@ -47,6 +56,8 @@ internal static class GdsImportFeatureExtensions
             sp.GetRequiredService<GdsImportService>(),
             sp.GetRequiredService<GdsPlacementExecutor>(),
             sp.GetService<CAP_Core.ErrorConsoleService>()));
+        services.AddSingleton(sp => new ViewModels.GdsImport.LayerVisibility.GdsLayerVisibilityViewModel(
+            sp.GetRequiredService<DesignCanvasViewModel>()));
         return services;
     }
 }

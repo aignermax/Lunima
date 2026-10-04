@@ -1,0 +1,4 @@
+[
+  {"file": "01-design-checks-clean.png", "caption": "Design Checks tab on the two-chiplet edge-coupler journey as built (butt-coupled facets): no chiplet-interface findings."},
+  {"file": "02-design-checks-facet-gap.png", "caption": "Same tab after chiplet B is shifted 10 µm along the link axis: the DRC-lite warning names both chiplets, the 10 µm gap and the 3.43 dB gap-only loss."}
+]

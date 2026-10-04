@@ -1,0 +1,4 @@
+[
+  {"file": "01-design-checks-align-offer.png", "caption": "Design Checks tab on the two-chiplet journey with chiplet B shifted (10 µm gap + 2 µm lateral offset): the findings warn, and the 'Align chiplet' one-click fix sits next to Prev/Next."},
+  {"file": "02-design-checks-aligned.png", "caption": "Same tab after the fix snaps chiplet B into butt-coupling: the checks come back clean."}
+]

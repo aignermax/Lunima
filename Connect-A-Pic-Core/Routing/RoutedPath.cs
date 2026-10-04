@@ -36,8 +36,10 @@ public class RoutedPath
     public bool IsPlaceholderGeometry { get; set; } = false;
 
     /// <summary>
-    /// True when the path could only be routed with a bend radius below the active
-    /// fabrication process' minimum (<see cref="WaveguideRouter.ProcessMinBendRadiusMicrometers"/>).
+    /// True when the path could only be routed with a bend radius below the fabrication
+    /// process' minimum for THIS connection (<see cref="WaveguideRouter.ResolveProcessFloorFor"/>:
+    /// the endpoint chiplets' process when a per-connection provider is wired, else the
+    /// canvas-wide <see cref="WaveguideRouter.ProcessMinBendRadiusMicrometers"/>).
     /// The geometry itself is clean, but the design violates the process rule; the
     /// design checks surface it as a <c>BendRadiusBelowProcessMinimum</c> issue.
     /// </summary>
@@ -50,6 +52,15 @@ public class RoutedPath
     /// <c>StyledRouteThroughComponent</c> issue instead. Refreshed on every routing pass.
     /// </summary>
     public bool PassesThroughComponent { get; set; } = false;
+
+    /// <summary>
+    /// Why this path is a blocked fallback: a pin sealed in by a component footprint
+    /// (<see cref="RoutingFailureReason.EndpointBlocked"/>) or contention with other routed
+    /// waveguides (<see cref="RoutingFailureReason.Contention"/>). Stays
+    /// <see cref="RoutingFailureReason.None"/> for clean routes, so design checks and status
+    /// text can later say WHY a wire is blocked.
+    /// </summary>
+    public RoutingFailureReason FailureReason { get; set; } = RoutingFailureReason.None;
 
     /// <summary>
     /// True when this Auto route was produced by the direct/S-bend-first policy (issue #860):
@@ -107,6 +118,7 @@ public class RoutedPath
             IsBlockedFallback = IsBlockedFallback,
             IsInvalidGeometry = IsInvalidGeometry,
             IsPlaceholderGeometry = IsPlaceholderGeometry,
+            FailureReason = FailureReason,
             ViolatesProcessMinBendRadius = ViolatesProcessMinBendRadius,
             PassesThroughComponent = PassesThroughComponent,
             IsDirectStyledRoute = IsDirectStyledRoute,

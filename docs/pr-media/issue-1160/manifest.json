@@ -1,0 +1,4 @@
+[
+  {"file": "01-grid-snap-de.png", "caption": "Issue #1160: German 'Raster & Ausrichtung' settings page — the guide description now wraps inside the content pane instead of clipping at the right window edge."},
+  {"file": "02-updates-de.png", "caption": "Issue #1160: German 'Software-Updates' settings page — the version label is localized ('Aktuell: v…') instead of hardcoded English."}
+]

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Components.Parametric;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 using CAP_Core.Tiles;
@@ -58,7 +59,10 @@ public static class GroupTemplateSerializer
             PhysicalY = group.PhysicalY,
             WidthMicrometers = group.WidthMicrometers,
             HeightMicrometers = group.HeightMicrometers,
-            Rotation = (int)group.Rotation90CounterClock
+            Rotation = (int)group.Rotation90CounterClock,
+            // A prefabbed gate cell must stay a gate: without the roles, instances
+            // placed after an app restart lose their logic identity silently.
+            TruthTablePinAssignment = group.TruthTablePinAssignment?.Copy()
         };
 
         // Serialize child components inline
@@ -105,7 +109,10 @@ public static class GroupTemplateSerializer
             PhysicalX = dto.PhysicalX,
             PhysicalY = dto.PhysicalY,
             WidthMicrometers = dto.WidthMicrometers,
-            HeightMicrometers = dto.HeightMicrometers
+            HeightMicrometers = dto.HeightMicrometers,
+            // Copied, not shared: the lists are mutable, so a template and its later
+            // edits must not alias the deserialized assignment.
+            TruthTablePinAssignment = dto.TruthTablePinAssignment?.Copy()
         };
 
         // Deserialize child components
@@ -161,15 +168,21 @@ public static class GroupTemplateSerializer
             LogicalPinIdInFlow = p.LogicalPin?.IDInFlow ?? Guid.Empty,
             LogicalPinIdOutFlow = p.LogicalPin?.IDOutFlow ?? Guid.Empty,
             MatterType = p.MatterType,
-            Polarization = p.LogicalPin?.Polarization.ToString()
+            Polarization = p.LogicalPin?.Polarization.ToString(),
+            WaveguideWidthMicrometers = p.WaveguideWidthMicrometers,
+            Layer = p.Layer
         }).ToList();
 
         // Serialize S-Matrices so child components keep their simulation data after reload.
         // Without this, deserialized children have empty WaveLengthToSMatrixMap → crash.
         var sMatrices = comp.WaveLengthToSMatrixMap.Select(kvp =>
         {
+            // Parametric matrices keep their transfers in formula connections while the
+            // numeric matrix stays zero — snapshot with the formulas evaluated so the
+            // serialized transfers reflect the current parameter values.
+            var numericSnapshot = kvp.Value.CreateEvaluatedSnapshot();
             var allPinIds = kvp.Value.PinReference.Keys.ToList();
-            var transfers = kvp.Value.GetNonNullValues()
+            var transfers = numericSnapshot.GetNonNullValues()
                 .Select(t => new TransferEntryDto
                 {
                     FromPinId = t.Key.PinIdStart,
@@ -183,7 +196,8 @@ public static class GroupTemplateSerializer
             {
                 WavelengthNm = kvp.Key,
                 AllPinIds = allPinIds,
-                Transfers = transfers
+                Transfers = transfers,
+                Parametric = SerializeParametricSnapshot(kvp.Value.ParametricSnapshot)
             };
         }).ToList();
 
@@ -203,7 +217,46 @@ public static class GroupTemplateSerializer
             HeightMicrometers = comp.HeightMicrometers,
             Rotation = (int)comp.Rotation90CounterClock,
             Pins = pins,
-            SMatrices = sMatrices
+            SMatrices = sMatrices,
+            Sliders = comp.GetAllSliders().Select(s => new SliderDto
+            {
+                Id = s.ID,
+                Number = s.Number,
+                Value = s.Value,
+                MinValue = s.MinValue,
+                MaxValue = s.MaxValue
+            }).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Maps a parametric snapshot to its DTO so prefab instances keep live,
+    /// slider-bound formulas after a disk round-trip. Null for non-parametric matrices.
+    /// </summary>
+    private static ParametricSMatrixDto? SerializeParametricSnapshot(ParametricSMatrixSnapshot? snapshot)
+    {
+        if (snapshot == null)
+            return null;
+
+        return new ParametricSMatrixDto
+        {
+            Parameters = snapshot.Parameters.Select(p => new ParametricParameterDto
+            {
+                Name = p.Name,
+                DefaultValue = p.DefaultValue,
+                MinValue = p.MinValue,
+                MaxValue = p.MaxValue,
+                Label = p.Label,
+                SliderNumber = p.SliderNumber,
+                Unit = p.Unit
+            }).ToList(),
+            Connections = snapshot.Connections.Select(c => new ParametricConnectionDto
+            {
+                FromPin = c.FromPin,
+                ToPin = c.ToPin,
+                MagnitudeFormula = c.MagnitudeFormula,
+                PhaseDegFormula = c.PhaseDegFormula
+            }).ToList()
         };
     }
 
@@ -233,15 +286,34 @@ public static class GroupTemplateSerializer
                 OffsetXMicrometers = p.OffsetX,
                 OffsetYMicrometers = p.OffsetY,
                 AngleDegrees = p.AngleDegrees,
-                LogicalPin = logicalPin
+                LogicalPin = logicalPin,
+                WaveguideWidthMicrometers = p.WaveguideWidthMicrometers,
+                Layer = p.Layer
             };
         }).ToList();
 
+        // Restore sliders with their original IDs so the S-matrices' slider references
+        // stay valid. Ordered by number: slider-bound parameters index positionally.
+        var sliders = dto.Sliders
+            .OrderBy(s => s.Number)
+            .Select(s => new Slider(
+                s.Id == Guid.Empty ? Guid.NewGuid() : s.Id,
+                s.Number, s.Value, s.MaxValue, s.MinValue))
+            .ToList();
+
+        var logicalPins = physicalPins
+            .Where(p => p.LogicalPin != null)
+            .Select(p => p.LogicalPin!)
+            .ToList();
+
         // Rebuild S-Matrices from serialized data so children are simulation-ready.
         var sMatrixMap = new Dictionary<int, SMatrix>();
+        IReadOnlyList<ParameterDefinition>? parameterDefinitions = null;
         foreach (var entry in dto.SMatrices)
         {
-            var sMatrix = new SMatrix(entry.AllPinIds, new());
+            var sMatrix = BuildSMatrix(entry, logicalPins, sliders);
+            parameterDefinitions ??= sMatrix.ParametricSnapshot?.Parameters;
+
             var transfers = entry.Transfers.ToDictionary(
                 t => (t.FromPinId, t.ToPinId),
                 t => new System.Numerics.Complex(t.Real, t.Imaginary));
@@ -249,9 +321,9 @@ public static class GroupTemplateSerializer
             sMatrixMap[entry.WavelengthNm] = sMatrix;
         }
 
-        return new Component(
+        var component = new Component(
             sMatrixMap,
-            new List<Slider>(),
+            sliders,
             dto.NazcaFunctionName ?? "",
             dto.NazcaFunctionParameters ?? "",
             new Part[1, 1] { { new Part() } },
@@ -266,8 +338,44 @@ public static class GroupTemplateSerializer
             HeightMicrometers = dto.HeightMicrometers,
             NazcaModuleName = dto.NazcaModuleName,
             GdsFactoryFunction = dto.GdsFactoryFunction,
-            HumanReadableName = dto.HumanReadableName
+            HumanReadableName = dto.HumanReadableName,
+            ParameterDefinitions = parameterDefinitions ?? Array.Empty<ParameterDefinition>()
         };
+
+        // The Component constructor resets every slider to its range midpoint;
+        // re-assert the serialized values so the prefab keeps the parameter state
+        // it was saved with (the change notification updates the matrices' slider
+        // references, so formulas evaluate against the restored values).
+        foreach (var sliderDto in dto.Sliders)
+        {
+            var slider = component.GetSlider(sliderDto.Number);
+            if (slider != null)
+                slider.Value = sliderDto.Value;
+        }
+
+        return component;
+    }
+
+    /// <summary>
+    /// Rebuilds one wavelength's S-matrix: a live, slider-bound parametric matrix
+    /// when the template carries the formula snapshot, otherwise a plain numeric
+    /// matrix (old templates and non-parametric components).
+    /// </summary>
+    private static SMatrix BuildSMatrix(
+        SMatrixEntryDto entry,
+        List<Pin> logicalPins,
+        List<Slider> sliders)
+    {
+        if (entry.Parametric == null)
+            return new SMatrix(entry.AllPinIds, new());
+
+        var snapshot = new ParametricSMatrixSnapshot(
+            entry.Parametric.Parameters.Select(p => new ParameterDefinition(
+                p.Name, p.DefaultValue, p.MinValue, p.MaxValue, p.Label, p.SliderNumber, p.Unit)),
+            entry.Parametric.Connections.Select(c => new FormulaConnection(
+                c.FromPin, c.ToPin, c.MagnitudeFormula, c.PhaseDegFormula)));
+
+        return ParametricSMatrixFactory.Build(logicalPins, sliders, snapshot);
     }
 
     /// <summary>
@@ -281,6 +389,11 @@ public static class GroupTemplateSerializer
     {
         int startIdx = path.StartPin is null ? -1 : children.IndexOf(path.StartPin.ParentComponent);
         int endIdx = path.EndPin is null ? -1 : children.IndexOf(path.EndPin.ParentComponent);
+        // Endpoint pins of a hierarchical cell sit on components nested inside child
+        // groups — a flat child index cannot reach them, so the index path through
+        // the group tree travels along (null for direct children and pin-less paths).
+        var startPath = path.StartPin is null ? null : FindChildPath(children, path.StartPin.ParentComponent);
+        var endPath = path.EndPin is null ? null : FindChildPath(children, path.EndPin.ParentComponent);
 
         var segments = path.Path.Segments.Select(seg =>
         {
@@ -316,8 +429,10 @@ public static class GroupTemplateSerializer
         {
             StartChildIndex = startIdx,
             StartPinName = path.StartPin?.Name ?? "",
+            StartChildPath = startPath,
             EndChildIndex = endIdx,
             EndPinName = path.EndPin?.Name ?? "",
+            EndChildPath = endPath,
             IsBlockedFallback = path.Path.IsBlockedFallback,
             IsInvalidGeometry = path.Path.IsInvalidGeometry,
             IsPlaceholderGeometry = path.Path.IsPlaceholderGeometry,
@@ -343,16 +458,14 @@ public static class GroupTemplateSerializer
     {
         PhysicalPin? startPin = null;
         PhysicalPin? endPin = null;
-        bool pinLess = dto.StartChildIndex < 0 && dto.EndChildIndex < 0;
+        bool pinLess = dto.StartChildIndex < 0 && dto.EndChildIndex < 0
+            && dto.StartChildPath == null && dto.EndChildPath == null;
         if (!pinLess)
         {
-            if (dto.StartChildIndex < 0 || dto.StartChildIndex >= children.Count)
+            var startComp = ResolveChild(children, dto.StartChildIndex, dto.StartChildPath);
+            var endComp = ResolveChild(children, dto.EndChildIndex, dto.EndChildPath);
+            if (startComp == null || endComp == null)
                 return null;
-            if (dto.EndChildIndex < 0 || dto.EndChildIndex >= children.Count)
-                return null;
-
-            var startComp = children[dto.StartChildIndex];
-            var endComp = children[dto.EndChildIndex];
 
             startPin = startComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.StartPinName);
             endPin = endComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.EndPinName);
@@ -434,6 +547,51 @@ public static class GroupTemplateSerializer
     }
 
     /// <summary>
+    /// Finds the index path to a descendant component through the group tree
+    /// (e.g. [1, 0] = first child of the second child group), or null when the
+    /// component is not among the descendants.
+    /// </summary>
+    private static List<int>? FindChildPath(IList<Component> children, Component target)
+    {
+        for (var i = 0; i < children.Count; i++)
+        {
+            if (ReferenceEquals(children[i], target))
+                return new List<int> { i };
+            if (children[i] is ComponentGroup childGroup
+                && FindChildPath(childGroup.ChildComponents, target) is { } subPath)
+            {
+                subPath.Insert(0, i);
+                return subPath;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves the referenced endpoint component: by the child-index path when the
+    /// DTO carries one (nested references), else by the flat direct-child index.
+    /// </summary>
+    private static Component? ResolveChild(
+        IList<Component> children, int childIndex, List<int>? childPath)
+    {
+        if (childPath is { Count: > 0 })
+        {
+            Component? current = null;
+            var level = children;
+            foreach (var index in childPath)
+            {
+                if (index < 0 || index >= level.Count)
+                    return null;
+                current = level[index];
+                if (current is ComponentGroup group)
+                    level = group.ChildComponents;
+            }
+            return current;
+        }
+        return childIndex >= 0 && childIndex < children.Count ? children[childIndex] : null;
+    }
+
+    /// <summary>
     /// Serializes a group pin, referencing internal component by child index.
     /// </summary>
     private static ExternalPinDto SerializeGroupPin(
@@ -441,11 +599,15 @@ public static class GroupTemplateSerializer
         List<Component> children)
     {
         int childIdx = children.IndexOf(pin.InternalPin.ParentComponent);
+        // A cell port bound to a pin inside a nested gate group needs the index path
+        // through the group tree — the flat child index alone cannot reach it.
+        var childPath = FindChildPath(children, pin.InternalPin.ParentComponent);
 
         return new ExternalPinDto
         {
             Name = pin.Name,
             ChildIndex = childIdx,
+            ChildPath = childPath,
             InternalPinName = pin.InternalPin.Name,
             RelativeX = pin.RelativeX,
             RelativeY = pin.RelativeY,
@@ -454,16 +616,17 @@ public static class GroupTemplateSerializer
     }
 
     /// <summary>
-    /// Deserializes a group pin, resolving internal component by child index.
+    /// Deserializes a group pin, resolving the internal component by its child-index
+    /// path when present (nested references), else by the flat child index.
     /// </summary>
     private static GroupPin? DeserializeGroupPin(
         ExternalPinDto dto,
         List<Component> children)
     {
-        if (dto.ChildIndex < 0 || dto.ChildIndex >= children.Count)
+        var internalComp = ResolveChild(children, dto.ChildIndex, dto.ChildPath);
+        if (internalComp == null)
             return null;
 
-        var internalComp = children[dto.ChildIndex];
         var internalPin = internalComp.PhysicalPins.FirstOrDefault(
             p => p.Name == dto.InternalPinName);
 
@@ -498,6 +661,16 @@ public class GroupTemplateDto
     public double WidthMicrometers { get; set; }
     public double HeightMicrometers { get; set; }
     public int Rotation { get; set; }
+
+    /// <summary>
+    /// Pin-role assignment when the group is a logic gate (or a gate cell whose nested
+    /// gates carry their own assignments). Null for plain groups and for templates
+    /// written before gate roles persisted into the library.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
+
     public List<ChildComponentDto> Children { get; set; } = new();
     public List<FrozenPathDto> InternalPaths { get; set; } = new();
     public List<ExternalPinDto> ExternalPins { get; set; } = new();
@@ -540,6 +713,25 @@ public class ChildComponentDto
     /// deserialized components remain simulation-ready without PDK re-loading.
     /// </summary>
     public List<SMatrixEntryDto> SMatrices { get; set; } = new();
+
+    /// <summary>
+    /// Slider state of the child component (empty for slider-less components and
+    /// for templates written before slider persistence existed). Restored with the
+    /// original slider IDs so parametric formulas keep their bindings.
+    /// </summary>
+    public List<SliderDto> Sliders { get; set; } = new();
+}
+
+/// <summary>
+/// DTO for one slider of a child component: identity, current value, and range.
+/// </summary>
+public class SliderDto
+{
+    public Guid Id { get; set; }
+    public int Number { get; set; }
+    public double Value { get; set; }
+    public double MinValue { get; set; }
+    public double MaxValue { get; set; }
 }
 
 /// <summary>
@@ -568,6 +760,15 @@ public class PinDto
     /// Null in old prefab files — deserializes to the TE default.
     /// </summary>
     public string? Polarization { get; set; }
+
+    /// <summary>
+    /// PDK-sourced waveguide width in µm at this pin (DRC-lite pin-mismatch rule).
+    /// Null in old prefab files and for pins without PDK data.
+    /// </summary>
+    public double? WaveguideWidthMicrometers { get; set; }
+
+    /// <summary>PDK-sourced GDS layer number of this pin's waveguide; null in old prefab files.</summary>
+    public int? Layer { get; set; }
 }
 
 /// <summary>
@@ -583,6 +784,49 @@ public class SMatrixEntryDto
 
     /// <summary>Non-zero transfer entries (inflow→outflow with complex coefficient).</summary>
     public List<TransferEntryDto> Transfers { get; set; } = new();
+
+    /// <summary>
+    /// Parametric definition (parameters + formula connections) of this matrix.
+    /// Null for non-parametric matrices and for templates written before parametric
+    /// persistence existed — those restore as plain numeric matrices.
+    /// </summary>
+    public ParametricSMatrixDto? Parametric { get; set; }
+}
+
+/// <summary>
+/// DTO for the parametric definition of one S-matrix: the named parameters and
+/// formula connections needed to rebuild a live, slider-bound matrix.
+/// </summary>
+public class ParametricSMatrixDto
+{
+    public List<ParametricParameterDto> Parameters { get; set; } = new();
+    public List<ParametricConnectionDto> Connections { get; set; } = new();
+}
+
+/// <summary>
+/// DTO for one named parameter of a parametric S-matrix (mirrors
+/// <see cref="Parametric.ParameterDefinition"/> in a serializable shape).
+/// </summary>
+public class ParametricParameterDto
+{
+    public string Name { get; set; } = "";
+    public double DefaultValue { get; set; }
+    public double MinValue { get; set; }
+    public double MaxValue { get; set; }
+    public string Label { get; set; } = "";
+    public int? SliderNumber { get; set; }
+    public string Unit { get; set; } = "";
+}
+
+/// <summary>
+/// DTO for one formula-based connection between named pins.
+/// </summary>
+public class ParametricConnectionDto
+{
+    public string FromPin { get; set; } = "";
+    public string ToPin { get; set; } = "";
+    public string MagnitudeFormula { get; set; } = "";
+    public string PhaseDegFormula { get; set; } = "0";
 }
 
 /// <summary>
@@ -606,6 +850,19 @@ public class FrozenPathDto
     public string StartPinName { get; set; } = "";
     public int EndChildIndex { get; set; }
     public string EndPinName { get; set; } = "";
+
+    /// <summary>
+    /// Index path to the start endpoint's component through nested child groups
+    /// (e.g. [2, 0] = Children[2].ChildComponents[0]). Null in templates that predate
+    /// nested references — the flat <see cref="StartChildIndex"/> is the fallback.
+    /// </summary>
+    public List<int>? StartChildPath { get; set; }
+
+    /// <summary>
+    /// Index path to the end endpoint's component through nested child groups.
+    /// Null in old templates — <see cref="EndChildIndex"/> is the fallback.
+    /// </summary>
+    public List<int>? EndChildPath { get; set; }
     public bool IsBlockedFallback { get; set; }
     public bool IsInvalidGeometry { get; set; }
 
@@ -687,6 +944,14 @@ public class ExternalPinDto
 {
     public string Name { get; set; } = "";
     public int ChildIndex { get; set; }
+
+    /// <summary>
+    /// Index path to the internal pin's component through nested child groups
+    /// (e.g. [1, 0] = Children[1].ChildComponents[0]). Null in templates that predate
+    /// nested references — the flat <see cref="ChildIndex"/> is the fallback.
+    /// </summary>
+    public List<int>? ChildPath { get; set; }
+
     public string InternalPinName { get; set; } = "";
     public double RelativeX { get; set; }
     public double RelativeY { get; set; }
