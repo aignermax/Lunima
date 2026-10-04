@@ -29,9 +29,21 @@ public static class OpenEblPreflightChecker
         }
 
         foreach (var issue in new DesignValidator().Validate(connections))
-            findings.Add(new OpenEblPreflightFinding(issue.Description, IsErrorType(issue.Type)));
+            findings.Add(new OpenEblPreflightFinding(FormatIssue(issue), IsErrorType(issue.Type)));
 
         return findings;
+    }
+
+    /// <summary>Translated message when the issue carries a string-table key, else its English description.</summary>
+    private static string FormatIssue(DesignIssue issue)
+    {
+        if (issue.LocalizationKey is not { } key)
+            return issue.Description;
+
+        var template = LocalizationService.Instance.Translate(key);
+        return issue.LocalizationArgs is { Count: > 0 } args
+            ? string.Format(CultureInfo.CurrentCulture, template, args as object[] ?? args.ToArray())
+            : template;
     }
 
     /// <summary>Severity mapping: findings that export broken or flat geometry are errors.</summary>
@@ -42,7 +54,8 @@ public static class OpenEblPreflightChecker
             or DesignIssueType.OverlappingPaths
             or DesignIssueType.PinMismatch
             or DesignIssueType.StyledRouteThroughComponent
-            or DesignIssueType.ComponentFootprintOverlap => true,
+            or DesignIssueType.ComponentFootprintOverlap
+            or DesignIssueType.WaveguideCrossing => true,
         _ => false,
     };
 

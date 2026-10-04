@@ -30,7 +30,7 @@
                     Command="{Binding CancelCommand}"
                     Background="#5d3d3d"
                     IsVisible="{Binding IsChecking}"/>
-            <Button Content="{loc:Localize Common.Close}" Width="70" Click="OnCloseClicked"/>
+            <Button Content="{loc:Localize Common.Close}" MinWidth="70" Click="OnCloseClicked"/>
         </StackPanel>
 
         <!-- Busy state + transient status line -->
