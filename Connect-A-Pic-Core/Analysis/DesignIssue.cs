@@ -80,9 +80,25 @@ public class DesignIssue
     public double Y { get; }
 
     /// <summary>
-    /// Human-readable description of the issue.
+    /// Human-readable description of the issue (English, used as fallback when no
+    /// localized template is available).
     /// </summary>
     public string Description { get; }
+
+    /// <summary>
+    /// Localization key identifying a translated message template in the UI string
+    /// tables (e.g. <c>DesignChecks.BlockedPath</c>). Null when the issue type does
+    /// not yet ship a template; <see cref="Description"/> is the fallback then.
+    /// The core stays UI-agnostic — only the UI layer resolves the key.
+    /// </summary>
+    public string? LocalizationKey { get; }
+
+    /// <summary>
+    /// Format arguments for the <see cref="LocalizationKey"/> template, in
+    /// <see cref="string.Format(System.IFormatProvider,string,object[])"/> order.
+    /// Null when the template takes no arguments.
+    /// </summary>
+    public object[]? LocalizationArgs { get; }
 
     /// <summary>
     /// Creates a new design issue with an associated connection.
@@ -91,18 +107,24 @@ public class DesignIssue
     /// <param name="connection">The affected connection (may be null for frozen-path-only overlaps).</param>
     /// <param name="x">Location X in micrometers.</param>
     /// <param name="y">Location Y in micrometers.</param>
-    /// <param name="description">Human-readable description.</param>
+    /// <param name="description">Human-readable description (English fallback).</param>
+    /// <param name="localizationKey">Localization key for the translated template (optional).</param>
+    /// <param name="localizationArgs">Format arguments for the template (optional).</param>
     public DesignIssue(
         DesignIssueType type,
         WaveguideConnection? connection,
         double x,
         double y,
-        string description)
+        string description,
+        string? localizationKey = null,
+        object[]? localizationArgs = null)
     {
         Type = type;
         Connection = connection;
         X = x;
         Y = y;
         Description = description;
+        LocalizationKey = localizationKey;
+        LocalizationArgs = localizationArgs;
     }
 }

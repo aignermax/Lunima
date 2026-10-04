@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CAP.Avalonia.Services;
 using CAP_Core.Analysis;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
@@ -161,7 +162,7 @@ public partial class DesignValidationViewModel : ObservableObject
         OnPropertyChanged(nameof(NavigationText));
 
         var issue = Issues[index];
-        StatusText = issue.Description;
+        StatusText = DesignIssueFormatter.Format(issue);
 
         HighlightConnection?.Invoke(issue.Connection);
         NavigateToPosition?.Invoke(issue.X, issue.Y);

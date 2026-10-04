@@ -73,7 +73,9 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Bend radius violation: {startName} to {endName}"));
+                $"Bend radius violation: {startName} to {endName}",
+                localizationKey: "DesignChecks.InvalidGeometry",
+                localizationArgs: new object[] { startName, endName }));
         }
 
         if (connection.IsBlockedFallback)
@@ -85,7 +87,9 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Blocked path: {startName} to {endName}"));
+                $"Blocked path: {startName} to {endName}",
+                localizationKey: "DesignChecks.BlockedPath",
+                localizationArgs: new object[] { startName, endName }));
         }
 
         if (connection.RoutedPath?.ViolatesProcessMinBendRadius == true)
@@ -97,7 +101,9 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Bend radius below process minimum: {startName} to {endName}"));
+                $"Bend radius below process minimum: {startName} to {endName}",
+                localizationKey: "DesignChecks.BendRadiusBelowProcessMinimum",
+                localizationArgs: new object[] { startName, endName }));
         }
 
         if (connection.RoutedPath?.PassesThroughComponent == true)
@@ -109,7 +115,9 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Styled route passes through a component: {startName} to {endName}"));
+                $"Styled route passes through a component: {startName} to {endName}",
+                localizationKey: "DesignChecks.StyledRouteThroughComponent",
+                localizationArgs: new object[] { startName, endName }));
         }
     }
 
@@ -171,7 +179,9 @@ public class DesignValidator
                 // unit format. Without this, de-DE / fr-FR machines render '5,0'.
                 description: string.Create(
                     CultureInfo.InvariantCulture,
-                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)")));
+                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)"),
+                localizationKey: "DesignChecks.OutOfBounds",
+                localizationArgs: new object[] { name, wMm, hMm }));
         }
 
         return issues;
@@ -235,7 +245,11 @@ public class DesignValidator
                 y: centerY,
                 description: processLockActive
                     ? $"'{name}' belongs to '{pdkSource}', which no longer matches the active process."
-                    : $"'{name}' belongs to '{pdkSource}', which is not loaded (the PDK may have been deleted or moved)."));
+                    : $"'{name}' belongs to '{pdkSource}', which is not loaded (the PDK may have been deleted or moved).",
+                localizationKey: processLockActive
+                    ? "DesignChecks.PdkProcessMismatch"
+                    : "DesignChecks.PdkNotLoaded",
+                localizationArgs: new object[] { name, pdkSource! }));
         }
 
         return issues;
