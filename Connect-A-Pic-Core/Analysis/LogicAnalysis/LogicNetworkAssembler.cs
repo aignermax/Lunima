@@ -11,8 +11,10 @@ namespace CAP_Core.Analysis.LogicAnalysis;
 /// and threshold, and the design's own connections wire the gates (the canvas stays
 /// the source of truth, see <see cref="LogicNetworkBuilder"/>). Groups without a
 /// persisted assignment are not gates: the assembler descends into them, so a gate
-/// nested inside a hierarchical cell instance joins the network exactly like a
-/// top-level one, and each pin-bound frozen internal path of such a plain group
+/// nested inside a hierarchical cell instance joins the network like a top-level one
+/// — identified by its hierarchical path <c>&lt;topGroup&gt;/&lt;…&gt;/&lt;gateGroup&gt;</c>,
+/// so two instances of one cell template keep distinct gate identities — and each
+/// pin-bound frozen internal path of such a plain group
 /// becomes a virtual connection — the intra-cell wiring of a hierarchical design is
 /// frozen into the cell, never live on the canvas. A gate group's own internal paths
 /// are its extracted behaviour, never network edges. A design with no gate group at
@@ -71,9 +73,9 @@ public sealed class LogicNetworkAssembler
         if (components == null) throw new ArgumentNullException(nameof(components));
         if (connections == null) throw new ArgumentNullException(nameof(connections));
 
-        var gateGroups = new List<ComponentGroup>();
+        var gateGroups = new List<(ComponentGroup Group, string GateId)>();
         var internalWires = new List<WaveguideConnection>();
-        CollectGates(components, gateGroups, internalWires);
+        CollectGates(components, ancestorPath: null, gateGroups, internalWires);
         if (gateGroups.Count == 0)
         {
             throw new InvalidOperationException(
@@ -83,9 +85,9 @@ public sealed class LogicNetworkAssembler
         }
 
         var gates = new List<LogicGateInstance>(gateGroups.Count);
-        foreach (var group in gateGroups)
+        foreach (var (group, gateId) in gateGroups)
         {
-            gates.Add(await ExtractGateAsync(group, wavelengthNm, cancellationToken));
+            gates.Add(await ExtractGateAsync(group, gateId, wavelengthNm, cancellationToken));
         }
 
         var allConnections = internalWires.Count == 0
@@ -102,27 +104,33 @@ public sealed class LogicNetworkAssembler
     /// builder resolves its endpoint pins through the gate groups' external pins
     /// exactly like a canvas connection. A group WITH a persisted assignment is a
     /// gate: its subtree and internal paths are its own extracted behaviour.
+    /// A nested gate's id is the hierarchical path <c>&lt;topGroup&gt;/&lt;…&gt;/&lt;gateGroup&gt;</c>
+    /// built from the enclosing wrapper names, so two instances of one cell template
+    /// keep distinct gate identities (both contain a gate of the same name) without
+    /// mutating any <c>GroupName</c>; a top-level gate keeps its plain group name.
     /// </summary>
     private static void CollectGates(
         IEnumerable<Component> components,
-        ICollection<ComponentGroup> gates,
+        string? ancestorPath,
+        ICollection<(ComponentGroup Group, string GateId)> gates,
         ICollection<WaveguideConnection> internalWires)
     {
         foreach (var group in components.OfType<ComponentGroup>())
         {
+            var groupPath = ancestorPath == null ? group.GroupName : $"{ancestorPath}/{group.GroupName}";
             if (group.TruthTablePinAssignment != null)
             {
-                gates.Add(group);
+                gates.Add((group, groupPath));
                 continue;
             }
-            foreach (var path in group.InternalPaths)
+            foreach (var frozenPath in group.InternalPaths)
             {
-                if (path.StartPin != null && path.EndPin != null)
+                if (frozenPath.StartPin != null && frozenPath.EndPin != null)
                 {
-                    internalWires.Add(ToVirtualConnection(path));
+                    internalWires.Add(ToVirtualConnection(frozenPath));
                 }
             }
-            CollectGates(group.ChildComponents, gates, internalWires);
+            CollectGates(group.ChildComponents, groupPath, gates, internalWires);
         }
     }
 
@@ -136,7 +144,7 @@ public sealed class LogicNetworkAssembler
 
     /// <summary>Re-extracts one gate group's model with exactly its persisted roles and threshold.</summary>
     private async Task<LogicGateInstance> ExtractGateAsync(
-        ComponentGroup group, int wavelengthNm, CancellationToken cancellationToken)
+        ComponentGroup group, string gateId, int wavelengthNm, CancellationToken cancellationToken)
     {
         var persisted = group.TruthTablePinAssignment!;
         var roles = new GateRoleAssignment(
@@ -155,6 +163,6 @@ public sealed class LogicNetworkAssembler
             roles.PowerThreshold,
             wavelengthNm,
             cancellationToken);
-        return new LogicGateInstance(group, LogicGateModel.FromTruthTable(table), roles);
+        return new LogicGateInstance(group, LogicGateModel.FromTruthTable(table), roles, gateId);
     }
 }

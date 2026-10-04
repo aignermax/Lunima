@@ -26,7 +26,8 @@ public sealed partial class LogicNetworkBuilder
         var duplicate = contexts.GroupBy(c => c.GateId).FirstOrDefault(g => g.Count() > 1)?.Key;
         if (duplicate != null)
             throw new ArgumentException(
-                $"Two gate groups are named '{duplicate}'. Gate ids come from the group name " +
+                $"Two gates have the same id '{duplicate}'. Gate ids come from the group name " +
+                "(a gate nested inside wrapper groups carries the path of enclosing group names) " +
                 "and must be unique — rename one of the groups.",
                 nameof(contexts));
     }
@@ -61,8 +62,11 @@ public sealed partial class LogicNetworkBuilder
         /// <summary>The gate instance this context wraps.</summary>
         public LogicGateInstance Instance { get; }
 
-        /// <summary>The network-local gate id: the group name.</summary>
-        public string GateId => Instance.Group.GroupName;
+        /// <summary>
+        /// The network-local gate id: the explicit hierarchical path for a gate nested
+        /// inside wrapper groups, else the plain group name.
+        /// </summary>
+        public string GateId => Instance.GateId ?? Instance.Group.GroupName;
 
         /// <summary>The placed gate group.</summary>
         public ComponentGroup Group => Instance.Group;
