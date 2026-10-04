@@ -281,6 +281,7 @@
   "DesignChecks.Prev": "<< Ant.",
   "DesignChecks.Run": "Ejecutar comprobaciones de diseño",
   "DesignChecks.Title": "Comprobaciones de diseño:",
+  "DesignChecks.WaveguideCrossing": "Cruce de guías de onda: {0} cruza {1} — no hay componente de cruce en la intersección; el diseño exportado no superará las comprobaciones de solapamiento",
   "DesignChecksHelp.BendBody": "En una curva demasiado cerrada, la luz guiada ya no puede seguir la guía de ondas y radia hacia el material circundante. El radio mínimo del proceso activo mantiene despreciable esta pérdida por curvatura.",
   "DesignChecksHelp.BendTitle": "Radio de curvatura mínimo",
   "DesignChecksHelp.ChipletBody": "La luz sale de la faceta de un chiplet como un haz gaussiano que se ensancha. Si la faceta opuesta está retrasada o desplazada lateralmente, solo una parte del haz entra en su modo. Los Design Checks avisan cuando la pérdida supera el presupuesto del enlace.",

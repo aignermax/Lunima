@@ -9,11 +9,13 @@ namespace CAP_Core.Analysis;
 /// <summary>
 /// Validates waveguide connections in a design and reports issues
 /// such as invalid geometry (bend radius violations), blocked paths,
-/// and overlapping waveguides including frozen group paths.
+/// connection×connection waveguide crossings, and overlapping waveguides
+/// including frozen group paths.
 /// </summary>
 public class DesignValidator
 {
     private readonly WaveguideOverlapDetector _overlapDetector = new();
+    private readonly ConnectionCrossingDetector _crossingDetector = new();
     private readonly WaveguideSpacingDetector _spacingDetector = new();
     private readonly WaveguideMinWidthChecker _minWidthChecker = new();
     private readonly PerConnectionDrcChecker _perConnectionDrcChecker = new();
@@ -38,6 +40,8 @@ public class DesignValidator
         {
             CheckConnection(connection, issues);
         }
+
+        issues.AddRange(_crossingDetector.DetectCrossings(connectionList));
 
         return issues;
     }

@@ -281,6 +281,7 @@
   "DesignChecks.Prev": "<< Prev",
   "DesignChecks.Run": "Run Design Checks",
   "DesignChecks.Title": "Design Checks:",
+  "DesignChecks.WaveguideCrossing": "Waveguide crossing: {0} crosses {1} — no crossing component at the intersection; the exported layout will fail overlap checks",
   "DesignChecksHelp.BendBody": "In a bend that is too tight, the guided light can no longer follow the waveguide and radiates into the surrounding material. The minimum radius of the active process keeps this bend loss negligible.",
   "DesignChecksHelp.BendTitle": "Minimum bend radius",
   "DesignChecksHelp.ChipletBody": "Light leaves a chiplet facet as a widening Gaussian beam. If the facing facet stands back or sits shifted sideways, only part of the beam lands in its mode. Design Checks warn once the lost light exceeds the link budget.",
