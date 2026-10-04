@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
 using CAP_Core.Analysis.OnaAnalysis;
 using CAP_Core.Analysis.WavelengthSpectrum;
 using CAP_Core.LightCalculation;
@@ -41,6 +43,16 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     /// <summary>Measured-spectrum overlay (#1335): CSV load + FSR/n_g extraction drawn on the same plot.</summary>
     public MeasuredSpectrumOverlayViewModel Overlay { get; }
 
+    /// <summary>
+    /// FSR readout lines under the plot (#1382) — one per simulated curve with
+    /// at least two fringes, so a ring's FSR can be checked against
+    /// FSR = λ²/(n_g·L) without reading it off the axis by eye.
+    /// </summary>
+    public ObservableCollection<FsrReadoutLine> FsrReadouts { get; } = new();
+
+    /// <summary>True when at least one curve produced an FSR readout line.</summary>
+    [ObservableProperty] private bool _hasFsrReadouts;
+
     /// <summary>Debounce used by the auto-refresh; tests set this to zero.</summary>
     internal TimeSpan AutoRefreshDelay { get; set; } = DefaultAutoRefreshDelay;
 
@@ -80,6 +92,8 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         _lastCurves = null;
         _lastPinNames = null;
         _lastInputLabel = null;
+        FsrReadouts.Clear();
+        HasFsrReadouts = false;
         PlotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
         // Sync the toggle from the canvas (e.g. a .lun just loaded with the flag on)
         // without triggering a refresh: HasResult is already false here.
@@ -211,6 +225,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         _lastInputLabel = circuit.InputLabel;
         _lastDesignWavelengthNm = circuit.DesignWavelengthNm;
         RedrawPlotWithOverlay();
+        UpdateFsrReadouts(curves, circuit.PinNames, circuit.InputLabel);
         HasResult = true;
 
         StatusText = curves.All(c => c.IsAtNoiseFloor)
@@ -237,6 +252,40 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
                 : null,
             _lastDesignWavelengthNm,
             Overlay.Spectrum);
+    }
+
+    /// <summary>
+    /// Rebuilds the FSR readout lines from a finished sweep (#1382). Labels match
+    /// the plot legend so each line is attributable to its curve; curves without
+    /// at least two fringes are skipped silently. Internal so tests can drive it
+    /// with synthetic curves instead of a full simulation.
+    /// </summary>
+    internal void UpdateFsrReadouts(
+        IReadOnlyList<TransmissionCurve> curves,
+        IReadOnlyDictionary<Guid, string> pinNames,
+        string? inputLabel)
+    {
+        FsrReadouts.Clear();
+        var i18n = LocalizationService.Instance;
+        foreach (var curve in curves)
+        {
+            var fsr = CurveFsrAnalyzer.Analyze(curve);
+            if (fsr == null) continue;
+
+            string outputLabel = pinNames.TryGetValue(curve.PinId, out var name)
+                ? name
+                : curve.PinId.ToString("N")[..8];
+            string label = SpectrumLegendLabelBuilder.ComposeCurveLabel(inputLabel, outputLabel);
+            string fsrText = fsr.MeanFsrNm.ToString("0.0", CultureInfo.InvariantCulture);
+            string key = fsr.ExtremumKind == SpectrumExtremumKind.Peaks
+                ? "Spectrum.Fsr.ReadoutPeaks"
+                : "Spectrum.Fsr.ReadoutDips";
+            string text = string.Format(
+                CultureInfo.InvariantCulture, i18n.Translate(key), label, fsrText, fsr.ExtremumCount);
+            FsrReadouts.Add(new FsrReadoutLine(
+                label, fsr.MeanFsrNm, fsr.ExtremumCount, fsr.ExtremumKind, text));
+        }
+        HasFsrReadouts = FsrReadouts.Count > 0;
     }
 
     private bool TryCreateConfiguration(out WavelengthSweepConfiguration? config)
