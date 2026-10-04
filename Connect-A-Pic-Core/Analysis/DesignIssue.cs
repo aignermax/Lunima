@@ -114,7 +114,15 @@ public enum DesignIssueType
     /// overlap beyond the fabrication tolerance. An error on par with
     /// <see cref="OverlappingPaths"/>: the layout cannot be fabricated as drawn.
     /// </summary>
-    ComponentFootprintOverlap
+    ComponentFootprintOverlap,
+
+    /// <summary>
+    /// Two routed connections properly cross each other without a crossing component
+    /// at the intersection. An error: the exported geometry overlaps and fails
+    /// foundry verification (e.g. openEBL "Overlapping component"). Pairs that only
+    /// touch at a shared pin or endpoint are not crossings.
+    /// </summary>
+    WaveguideCrossing
 }
 
 /// <summary>
@@ -145,9 +153,22 @@ public class DesignIssue
     public double Y { get; }
 
     /// <summary>
-    /// Human-readable description of the issue.
+    /// Human-readable description of the issue (English fallback).
     /// </summary>
     public string Description { get; }
+
+    /// <summary>
+    /// Optional localization key into the UI string tables (e.g. "DesignChecks.WaveguideCrossing").
+    /// When set, the UI renders the translated, <see cref="LocalizationArgs"/>-formatted message
+    /// instead of <see cref="Description"/>. The core stays UI-agnostic; only the display layer
+    /// resolves the key.
+    /// </summary>
+    public string? LocalizationKey { get; }
+
+    /// <summary>
+    /// Format arguments for <see cref="LocalizationKey"/>, in placeholder order.
+    /// </summary>
+    public IReadOnlyList<object>? LocalizationArgs { get; }
 
     /// <summary>
     /// Creates a new design issue with an associated connection.
@@ -156,18 +177,24 @@ public class DesignIssue
     /// <param name="connection">The affected connection (may be null for frozen-path-only overlaps).</param>
     /// <param name="x">Location X in micrometers.</param>
     /// <param name="y">Location Y in micrometers.</param>
-    /// <param name="description">Human-readable description.</param>
+    /// <param name="description">Human-readable description (English fallback).</param>
+    /// <param name="localizationKey">Optional UI string-table key for the translated message.</param>
+    /// <param name="localizationArgs">Format arguments for <paramref name="localizationKey"/>.</param>
     public DesignIssue(
         DesignIssueType type,
         WaveguideConnection? connection,
         double x,
         double y,
-        string description)
+        string description,
+        string? localizationKey = null,
+        IReadOnlyList<object>? localizationArgs = null)
     {
         Type = type;
         Connection = connection;
         X = x;
         Y = y;
         Description = description;
+        LocalizationKey = localizationKey;
+        LocalizationArgs = localizationArgs;
     }
 }

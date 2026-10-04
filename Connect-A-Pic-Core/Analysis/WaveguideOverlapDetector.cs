@@ -23,6 +23,10 @@ public class WaveguideOverlapDetector
     /// <summary>
     /// Detects all overlapping waveguide path pairs and returns a design issue for each.
     /// Checks regular connections against frozen paths and frozen paths against each other.
+    /// A connection×connection pair whose paths properly cross is NOT reported here —
+    /// <see cref="ConnectionCrossingDetector"/> owns that case (<see cref="DesignIssueType.WaveguideCrossing"/>),
+    /// so a crossing is never double-reported. Non-crossing conn×conn overlaps
+    /// (e.g. collinear runs on top of each other) are still reported here.
     /// </summary>
     /// <param name="connections">Regular waveguide connections in the design.</param>
     /// <param name="groups">ComponentGroups whose frozen internal paths are included.</param>
@@ -36,6 +40,18 @@ public class WaveguideOverlapDetector
 
         var paths = CollectPaths(connections, groups);
         return CheckAllPairs(paths);
+    }
+
+    /// <summary>
+    /// True when both descriptors are regular connections whose routed paths properly
+    /// cross — that pair is reported as a crossing by <see cref="ConnectionCrossingDetector"/>,
+    /// not as an overlap.
+    /// </summary>
+    private static bool IsProperConnectionCrossing(PathDescriptor a, PathDescriptor b)
+    {
+        return a.Connection?.RoutedPath is { } pathA
+            && b.Connection?.RoutedPath is { } pathB
+            && PathIntersectionDetector.Crosses(pathA, pathB);
     }
 
     /// <summary>
@@ -84,6 +100,9 @@ public class WaveguideOverlapDetector
         {
             for (int j = i + 1; j < paths.Count; j++)
             {
+                if (IsProperConnectionCrossing(paths[i], paths[j]))
+                    continue;
+
                 var overlap = FindFirstOverlapPoint(paths[i].Segments, paths[j].Segments);
                 if (overlap.HasValue)
                 {

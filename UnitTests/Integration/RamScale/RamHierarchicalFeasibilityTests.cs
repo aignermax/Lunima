@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
+using CAP_Core.Components.Core;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,8 +17,8 @@ namespace UnitTests.Integration.RamScale;
 /// route fully or there is no template. The top-level route of the inter-cell wires uses
 /// the spike's standard bound (<c>CAP_RAM_SPIKE_ROUTE_TIMEOUT_S</c>, default 60 s) — a
 /// timeout is a result, not a failure. Behaviour (store/read/hold, 16-value sweep,
-/// isolation) is asserted through the real assembler/evaluator via the test-side
-/// <see cref="RamHierarchicalNetwork"/> adapter, and must match the flat RAM exactly —
+/// isolation) is asserted through the real assembler/evaluator over the canvas exactly
+/// as the Logic panel runs it, and must match the flat RAM exactly —
 /// same gates, same signals, same read taps. Numbers land in
 /// <c>docs/logic/RAM-HIERARCHICAL-SPIKE.md</c>.
 /// </summary>
@@ -25,6 +26,7 @@ namespace UnitTests.Integration.RamScale;
 public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
 {
     private const int BitCount = 4;
+    private const int WavelengthNm = 1550;
 
     private readonly RamWordCellFixture _cell;
     private readonly ITestOutputHelper _output;
@@ -43,6 +45,61 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
     [Fact]
     public Task Ram4Words4Bits_Hierarchical_AssemblyBehaviorAndRoute_Measured() =>
         MeasureAsync(words: 4, expectedGates: 183, expectedTopLevelWires: 84, expectedTopLevelGroups: 55);
+
+    /// <summary>
+    /// The production-path proof of the spike's product gap: the hierarchical 2×4
+    /// loads, and the plain <see cref="LogicNetworkAssembler"/> over the canvas's
+    /// top-level components and connections exposes the nested word-cell gates —
+    /// no test-side adapter. The 8 register bits hidden inside the two cell
+    /// instances are committed register state, and the network shape matches the
+    /// flat RAM exactly (same inputs, same outputs, same read taps).
+    /// </summary>
+    [Fact]
+    public async Task ProductionAssemblyPath_HierarchicalRam_ExposesNestedRegisters()
+    {
+        const int words = 2;
+        var design = RamHierarchicalDesignBuilder.Build(_cell.Template, words, BitCount);
+        var tempPath = design.WriteToTempFile();
+        try
+        {
+            var canvas = new DesignCanvasViewModel();
+            Ram4x4FeasibilityTests.ApplyChipSize(canvas, design.ChipWidthMicrometers, design.ChipHeightMicrometers);
+            var fileOps = Ram4x4FeasibilityTests.CreateFileOperations(canvas);
+            fileOps.ApplyChipSizeAfterLoad = (width, height) => Ram4x4FeasibilityTests.ApplyChipSize(canvas, width, height);
+            (await fileOps.LoadDesignFromPathAsync(tempPath)).ShouldBeTrue(
+                "the hierarchical RAM must load onto the canvas");
+            try
+            {
+                await fileOps.PostLoadRouting.WaitAsync(TimeSpan.FromMinutes(3));
+            }
+            catch (TimeoutException)
+            {
+                // A route timeout degrades delays, never the logic under test.
+                canvas.Routing.CancelRouting();
+                await fileOps.PostLoadRouting.WaitAsync(TimeSpan.FromMinutes(2));
+            }
+
+            var cellInstances = canvas.Components.Select(c => c.Component).OfType<ComponentGroup>()
+                .Where(g => g.TruthTablePinAssignment == null).ToList();
+            cellInstances.ShouldNotBeEmpty("the cell instances load as plain groups");
+            cellInstances.SelectMany(g => g.ChildComponents.OfType<ComponentGroup>())
+                .ShouldAllBe(g => g.TruthTablePinAssignment != null,
+                    "every gate nested inside a cell instance keeps its persisted pin roles after load");
+
+            var network = await AssembleProductionPath(canvas);
+
+            network.Gates.Count.ShouldBe(design.GateCount,
+                "every gate nested inside the cell instances joins the network");
+            network.RegisterState.Count.ShouldBe(words * BitCount,
+                "the register bits hidden inside the cell instances are committed register state");
+            Ram4x4FeasibilityTests.AssertNetworkShape(network, design, words, BitCount);
+            Ram4x4FeasibilityTests.AssertStoreReadHold(network, design, words, BitCount);
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+        }
+    }
 
     private async Task MeasureAsync(int words, int expectedGates, int expectedTopLevelWires, int expectedTopLevelGroups)
     {
@@ -85,16 +142,27 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
         }
     }
 
-    /// <summary>Assembles the logic network through the hierarchical adapter and times it.</summary>
+    /// <summary>Assembles the logic network through the production path and times it.</summary>
     private async Task<LogicNetworkEvaluator> MeasureAssembly(DesignCanvasViewModel canvas, RamScaleDesign design, string label)
     {
         var watch = Stopwatch.StartNew();
-        var network = await RamHierarchicalNetwork.Assemble(canvas, design.Json);
+        var network = await AssembleProductionPath(canvas);
         watch.Stop();
         Report($"[ram-hier-spike] {label}: assemble={watch.Elapsed.TotalSeconds:F1}s "
             + $"inputs={network.InputPinNames.Count} outputs={network.OutputPinNames.Count} "
             + $"registers={network.RegisterState.Count}");
         return network;
+    }
+
+    /// <summary>
+    /// The shipped logic pipeline, exactly as the Logic panel runs it: the plain
+    /// assembler over the canvas's top-level components and connections.
+    /// </summary>
+    private static async Task<LogicNetworkEvaluator> AssembleProductionPath(DesignCanvasViewModel canvas)
+    {
+        var components = canvas.Components.Select(c => c.Component).ToList();
+        var connections = canvas.Connections.Select(c => c.Connection).ToList();
+        return await new LogicNetworkAssembler().AssembleAsync(components, connections, WavelengthNm);
     }
 
     private void Report(string line)
