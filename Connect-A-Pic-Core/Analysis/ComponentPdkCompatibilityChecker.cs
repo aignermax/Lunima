@@ -67,7 +67,11 @@ public class ComponentPdkCompatibilityChecker
                 y: centerY,
                 description: processLockActive
                     ? $"'{name}' belongs to '{pdkSource}', which no longer matches the active process."
-                    : $"'{name}' belongs to '{pdkSource}', which is not loaded (the PDK may have been deleted or moved)."));
+                    : $"'{name}' belongs to '{pdkSource}', which is not loaded (the PDK may have been deleted or moved).",
+                localizationKey: processLockActive
+                    ? "DesignChecks.PdkProcessMismatch"
+                    : "DesignChecks.PdkNotLoaded",
+                localizationArgs: new object[] { name, pdkSource! }));
         }
 
         return issues;

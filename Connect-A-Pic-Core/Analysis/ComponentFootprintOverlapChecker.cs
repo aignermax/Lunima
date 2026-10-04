@@ -115,7 +115,9 @@ public class ComponentFootprintOverlapChecker
             centerY,
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"Overlapping component footprints: '{a.Name}' ↔ '{b.Name}' ({overlapX:F1} × {overlapY:F1} µm)"));
+                $"Overlapping component footprints: '{a.Name}' ↔ '{b.Name}' ({overlapX:F1} × {overlapY:F1} µm)"),
+            localizationKey: "DesignChecks.ComponentFootprintOverlap",
+            localizationArgs: new object[] { a.Name, b.Name, overlapX, overlapY });
     }
 
     private static string DisplayName(Component item) =>

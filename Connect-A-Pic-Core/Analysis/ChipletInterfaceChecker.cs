@@ -105,7 +105,9 @@ public class ChipletInterfaceChecker
                 midY,
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Edge couplers on '{nameA}' / '{nameB}' do not face each other ({deviation:F1}° off axis)")));
+                    $"Edge couplers on '{nameA}' / '{nameB}' do not face each other ({deviation:F1}° off axis)"),
+                localizationKey: "DesignChecks.ChipletInterfaceNotFacing",
+                localizationArgs: new object[] { nameA, nameB, deviation }));
         }
         else
         {
@@ -120,7 +122,9 @@ public class ChipletInterfaceChecker
                     string.Create(
                         CultureInfo.InvariantCulture,
                         $"Edge couplers on '{nameA}' / '{nameB}' are laterally offset by {lateral:F2} µm"
-                        + $" (max {MaxLateralOffsetMicrometers} µm)")));
+                        + $" (max {MaxLateralOffsetMicrometers} µm)"),
+                    localizationKey: "DesignChecks.ChipletInterfaceLateralOffset",
+                    localizationArgs: new object[] { nameA, nameB, lateral, MaxLateralOffsetMicrometers }));
             }
 
             CheckGapLoss(connection, startX, startY, endX, endY,
@@ -156,7 +160,9 @@ public class ChipletInterfaceChecker
             string.Create(
                 CultureInfo.InvariantCulture,
                 $"Edge couplers on '{nameA}' / '{nameB}' stand {gap:F2} µm apart — the facet gap"
-                + $" alone costs {lossDb:F2} dB (max {MaxGapLossDecibels} dB)")));
+                + $" alone costs {lossDb:F2} dB (max {MaxGapLossDecibels} dB)"),
+            localizationKey: "DesignChecks.ChipletInterfaceGapLoss",
+            localizationArgs: new object[] { nameA, nameB, gap, lossDb, MaxGapLossDecibels }));
     }
 
     /// <summary>Flags the facet pin when it does not lie on its chiplet's bounding-box edge.</summary>
@@ -177,7 +183,14 @@ public class ChipletInterfaceChecker
             string.Create(
                 CultureInfo.InvariantCulture,
                 $"Edge coupler '{facet.Pin.ParentComponent.Identifier}.{facet.Pin.Name}' on"
-                + $" '{facet.Chiplet.GroupName}' sits {distance:F1} µm off the chiplet edge it faces")));
+                + $" '{facet.Chiplet.GroupName}' sits {distance:F1} µm off the chiplet edge it faces"),
+            localizationKey: "DesignChecks.ChipletInterfaceOffEdge",
+            localizationArgs: new object[]
+            {
+                $"{facet.Pin.ParentComponent.Identifier}.{facet.Pin.Name}",
+                facet.Chiplet.GroupName,
+                distance,
+            }));
     }
 
     /// <summary>

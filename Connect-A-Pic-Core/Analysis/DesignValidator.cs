@@ -262,7 +262,9 @@ public class DesignValidator
                     y,
                     string.Create(
                         CultureInfo.InvariantCulture,
-                        $"Unconnected pin: {FormatPinName(pin)} at ({x}, {y})")));
+                        $"Unconnected pin: {FormatPinName(pin)} at ({x}, {y})"),
+                    localizationKey: "DesignChecks.UnconnectedPin",
+                    localizationArgs: new object[] { FormatPinName(pin), x, y }));
             }
         }
 
@@ -277,54 +279,34 @@ public class DesignValidator
         List<DesignIssue> issues)
     {
         var (midX, midY) = CalculateMidpoint(connection);
+        var startName = FormatPinName(connection.StartPin);
+        var endName = FormatPinName(connection.EndPin);
+
+        void Add(DesignIssueType type, string description, string localizationKey) =>
+            issues.Add(new DesignIssue(
+                type, connection, midX, midY, description,
+                localizationKey: localizationKey,
+                localizationArgs: new object[] { startName, endName }));
 
         if (connection.RoutedPath?.IsInvalidGeometry == true)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.InvalidGeometry,
-                connection,
-                midX,
-                midY,
-                $"Bend radius violation: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.InvalidGeometry,
+                $"Bend radius violation: {startName} to {endName}",
+                "DesignChecks.InvalidGeometry");
 
         if (connection.IsBlockedFallback)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.BlockedPath,
-                connection,
-                midX,
-                midY,
-                FormatBlockedPathMessage(connection, startName, endName)));
-        }
+            Add(DesignIssueType.BlockedPath,
+                FormatBlockedPathMessage(connection, startName, endName),
+                BlockedPathLocalizationKey(connection));
 
         if (connection.RoutedPath?.ViolatesProcessMinBendRadius == true)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.BendRadiusBelowProcessMinimum,
-                connection,
-                midX,
-                midY,
-                $"Bend radius below process minimum: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.BendRadiusBelowProcessMinimum,
+                $"Bend radius below process minimum: {startName} to {endName}",
+                "DesignChecks.BendRadiusBelowProcessMinimum");
 
         if (connection.RoutedPath?.PassesThroughComponent == true)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.StyledRouteThroughComponent,
-                connection,
-                midX,
-                midY,
-                $"Styled route passes through a component: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.StyledRouteThroughComponent,
+                $"Styled route passes through a component: {startName} to {endName}",
+                "DesignChecks.StyledRouteThroughComponent");
 
         CheckPinMismatch(connection, issues);
     }
@@ -344,6 +326,20 @@ public class DesignValidator
             RoutingFailureReason.Contention =>
                 $"Blocked path: {startName} to {endName} — no free lane; other waveguides occupy the corridor",
             _ => $"Blocked path: {startName} to {endName}",
+        };
+    }
+
+    /// <summary>
+    /// Localization key for the blocked-path wording matching
+    /// <see cref="FormatBlockedPathMessage"/>'s failure-reason classification.
+    /// </summary>
+    private static string BlockedPathLocalizationKey(WaveguideConnection connection)
+    {
+        return connection.FailureReason switch
+        {
+            RoutingFailureReason.EndpointBlocked => "DesignChecks.BlockedPath.EndpointBlocked",
+            RoutingFailureReason.Contention => "DesignChecks.BlockedPath.Contention",
+            _ => "DesignChecks.BlockedPath",
         };
     }
 
@@ -373,7 +369,9 @@ public class DesignValidator
                 midY,
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Pin width mismatch: {startName} ({startWidth.Value} µm) vs {endName} ({endWidth.Value} µm)")));
+                    $"Pin width mismatch: {startName} ({startWidth.Value} µm) vs {endName} ({endWidth.Value} µm)"),
+                localizationKey: "DesignChecks.PinWidthMismatch",
+                localizationArgs: new object[] { startName, startWidth.Value, endName, endWidth.Value }));
         }
 
         var startLayer = connection.StartPin.Layer;
@@ -387,7 +385,9 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Pin layer mismatch: {startName} (layer {startLayer.Value}) vs {endName} (layer {endLayer.Value})"));
+                $"Pin layer mismatch: {startName} (layer {startLayer.Value}) vs {endName} (layer {endLayer.Value})",
+                localizationKey: "DesignChecks.PinLayerMismatch",
+                localizationArgs: new object[] { startName, startLayer.Value, endName, endLayer.Value }));
         }
     }
 
@@ -449,7 +449,9 @@ public class DesignValidator
                 // unit format. Without this, de-DE / fr-FR machines render '5,0'.
                 description: string.Create(
                     CultureInfo.InvariantCulture,
-                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)")));
+                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)"),
+                localizationKey: "DesignChecks.OutOfBounds",
+                localizationArgs: new object[] { name, wMm, hMm }));
         }
 
         return issues;

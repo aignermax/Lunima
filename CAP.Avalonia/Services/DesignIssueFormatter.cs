@@ -37,12 +37,12 @@ public static class DesignIssueFormatter
         if (ReferenceEquals(template, issue.LocalizationKey))
             return issue.Description; // key missing in every table — never leak the key
 
-        if (issue.LocalizationArgs is not { Length: > 0 } args)
+        if (issue.LocalizationArgs is not { Count: > 0 } args)
             return template;
 
         // Use the *display language's* culture for numbers, not the OS culture — a user
         // running a de-DE machine with the UI forced to English expects "5.0", not "5,0".
         var culture = CultureInfo.GetCultureInfo(localization.ActiveLanguageCode);
-        return string.Format(culture, template, args);
+        return string.Format(culture, template, args as object[] ?? args.ToArray());
     }
 }
