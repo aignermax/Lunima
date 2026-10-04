@@ -1,0 +1,10 @@
+[
+  {
+    "file": "spectrum-legend-readable-en.png",
+    "caption": "Spectrum of the EBeam add-drop ring: unique, readable legend entries (\u0022In \u2192 Through.port 2\u0022, \u0022In \u2192 Drop.port 2\u0022) and the legend box moved outside the plot area so it never covers curve data."
+  },
+  {
+    "file": "spectrum-legend-readable-de.png",
+    "caption": "Spektrum des EBeam-Add-Drop-Rings: eindeutige, lesbare Legende (\u201EIn \u2192 Through.port 2\u201C, \u201EIn \u2192 Drop.port 2\u201C), Legendenbox au\u00DFerhalb des Diagrammbereichs \u2014 sie verdeckt keine Kurven mehr."
+  }
+]

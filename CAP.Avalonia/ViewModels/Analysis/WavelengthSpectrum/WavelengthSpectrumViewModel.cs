@@ -58,6 +58,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     // on top without re-running the simulation.
     private IReadOnlyList<TransmissionCurve>? _lastCurves;
     private IReadOnlyDictionary<Guid, string>? _lastPinNames;
+    private string? _lastInputLabel;
     private double _lastDesignWavelengthNm;
 
     /// <summary>Initializes a new instance of <see cref="WavelengthSpectrumViewModel"/>.</summary>
@@ -78,6 +79,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         HasResult = false;
         _lastCurves = null;
         _lastPinNames = null;
+        _lastInputLabel = null;
         PlotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
         // Sync the toggle from the canvas (e.g. a .lun just loaded with the flag on)
         // without triggering a refresh: HasResult is already false here.
@@ -206,6 +208,7 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         var curves = TransmissionSpectrumBuilder.Build(result, circuit.OutputCouplerPinIds);
         _lastCurves = curves;
         _lastPinNames = circuit.PinNames;
+        _lastInputLabel = circuit.InputLabel;
         _lastDesignWavelengthNm = circuit.DesignWavelengthNm;
         RedrawPlotWithOverlay();
         HasResult = true;
@@ -226,9 +229,12 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     {
         if (_lastCurves == null || _lastPinNames == null) return;
         var pinNames = _lastPinNames;
+        var inputLabel = _lastInputLabel;
         PlotModel = WavelengthSpectrumPlotBuilder.BuildPlotModel(
             _lastCurves,
-            pinId => pinNames.TryGetValue(pinId, out var name) ? name : null,
+            pinId => pinNames.TryGetValue(pinId, out var name)
+                ? SpectrumLegendLabelBuilder.ComposeCurveLabel(inputLabel, name)
+                : null,
             _lastDesignWavelengthNm,
             Overlay.Spectrum);
     }
