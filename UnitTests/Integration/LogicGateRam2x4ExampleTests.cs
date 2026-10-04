@@ -35,7 +35,7 @@ public class LogicGateRam2x4ExampleTests
     private static readonly string[] TopLevelGroupNames = { "NOTA", "OUT0", "OUT1", "OUT2", "OUT3", "CELL0", "CELL1" };
     private static readonly LogicPinRef[] RegisterRefs = Enumerable
         .Range(0, WordCount * BitCount)
-        .Select(i => new LogicPinRef($"REG{i / BitCount}{i % BitCount}", "Y"))
+        .Select(i => new LogicPinRef($"CELL{i / BitCount}/REG{i / BitCount}{i % BitCount}", "Y"))
         .ToArray();
 
     private readonly Ram2x4Fixture _fixture;
