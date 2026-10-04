@@ -1,0 +1,10 @@
+[
+  {
+    "file": "word-cell-before.png",
+    "caption": "One word cell (CELL0) of the shipped 'Logic Gate RAM 2x4' example before the re-floorplan (issue #1400): 17 of the 44 intra-cell wires fall back to the straight blocked line — the diagonal orange segments cutting through the gates — and every instance replicates them."
+  },
+  {
+    "file": "word-cell-after.png",
+    "caption": "The same word cell after the re-floorplan (issue #1400): channel row per bit slice, hand-placed distribution-tree copies, wires emitted in route-priority order — 9 of 44 intra-cell wires remain on the blocked fallback (the straight diagonals), down from 17. Behavior, gate ids and signal names are unchanged."
+  }
+]

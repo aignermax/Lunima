@@ -9,11 +9,23 @@ namespace UnitTests.Integration.RamScale;
 /// (EN = NAND(select, LOAD), IW = NOT(EN)), the hold/load distribution trees, one
 /// register with read-tap copy per bit, and the word's read-mux arms
 /// (M = NAND(stored bit, select)) — exactly the per-word slice of the flat
-/// <see cref="RamScaleDesignBuilder"/> pattern, laid out standalone and compact. The
-/// emitted document carries the intra-cell wires as plain connections with no cached
-/// geometry, so the test loads it, routes it once, and freezes the result into the
-/// instanced group template (<see cref="RamWordCellTemplate"/>). Which gate pin forms
-/// which cell port is reported in <see cref="RamWordCellDesign.Ports"/>.
+/// <see cref="RamScaleDesignBuilder"/> pattern, laid out standalone. The emitted
+/// document carries the intra-cell wires as plain connections with no cached geometry,
+/// so the test loads it, routes it once, and freezes the result into the instanced
+/// group template (<see cref="RamWordCellTemplate"/>). Which gate pin forms which cell
+/// port is reported in <see cref="RamWordCellDesign.Ports"/>.
+/// <para>
+/// Floorplan (issue #1400 — the compact auto-row layout left 17 of 44 wires on the
+/// blocked fallback): every bit slice owns a main row (H, REG, CP, M — forward flow
+/// left to right) plus the channel row below it, which carries the backward hold
+/// feedback and the tree-to-arm wires; row 0 stays empty as a horizontal highway for
+/// the two cell-spanning select wires. LE sits in the channel row of the arms column
+/// so its output reaches REG.B without crossing H. The distribution-tree copies are
+/// hand-placed next to their targets: the hold/load pair copies in the corridor column
+/// left of the arms, the select copies in the mux column (the pair copies between their
+/// two arms, the intermediate copy between them) — only the root → intermediate select
+/// wire still spans the cell, plus the short forward root → EN.B hop.
+/// </para>
 /// </summary>
 internal sealed class RamWordCellBuilder
 {
@@ -21,13 +33,14 @@ internal sealed class RamWordCellBuilder
     private const int EnColumn = 1;
     private const int CpeaColumn = 3;
     private const int IwColumn = 4;
-    private const int HoldTreeColumn = 4;
-    private const int LoadTreeColumn = 5;
-    private const int LoadColumn = 7;
-    private const int HoldColumn = 8;
+    private const int HoldTreeRootColumn = 4;
+    private const int LoadTreeRootColumn = 6;
+    private const int TreeLeafColumn = 7;
+    private const int ArmsColumn = 8;
     private const int RegColumn = 9;
     private const int TapColumn = 10;
-    private const int MuxArmColumn = 12;
+    private const int MuxArmColumn = 11;
+    private const int SupportedBitCount = 4;
     private const double ChipMargin = 500;
 
     private readonly int _bitCount;
@@ -37,7 +50,13 @@ internal sealed class RamWordCellBuilder
     private RamWordCellBuilder(int bitCount) => _bitCount = bitCount;
 
     /// <summary>Builds the standalone, unrouted word-cell document.</summary>
-    public static RamWordCellDesign Build(int bitCount) => new RamWordCellBuilder(bitCount).Build();
+    public static RamWordCellDesign Build(int bitCount)
+    {
+        if (bitCount != SupportedBitCount)
+            throw new NotSupportedException(
+                $"the re-floorplanned word cell (issue #1400) supports exactly the {SupportedBitCount}-bit word");
+        return new RamWordCellBuilder(bitCount).Build();
+    }
 
     /// <summary>
     /// The instance gate name for a cell gate: cell gates carry the flat RAM's word-0
@@ -48,9 +67,15 @@ internal sealed class RamWordCellBuilder
 
     private RamWordCellDesign Build()
     {
-        EmitEnableChain();
-        EmitSelectTree();
-        EmitRegisterBits();
+        EmitGates();
+        // Wire order is route priority: the contention repair stamps the LATER wire of a
+        // crossing blocked, so the short local hops — least routing freedom — come first
+        // and the cell-spanning select trunks, which may detour through the empty highway
+        // row 0, the empty left column and the empty bottom row, come last.
+        WireSlices();
+        WireTreeLeaves();
+        WireTreeTrunks();
+        WireSelectTrunks();
 
         var document = BuildDocumentWithBounds();
         return new RamWordCellDesign
@@ -65,52 +90,49 @@ internal sealed class RamWordCellBuilder
         };
     }
 
-    /// <summary>EN = NAND(select, LOAD) with its copy onto the hold tree and the IW inverter.</summary>
-    private void EmitEnableChain()
-    {
-        Emit(RamGateFactory.NandShape, "EN0", EnColumn, "EN", "inverted load enable of the word: EN = NAND(select, LOAD)");
-        Emit(RamGateFactory.CopyShape, "CPEA0", CpeaColumn, "CPEA", "copy: the inverted enable onto the inverter and the hold-arm tree");
-        Emit(RamGateFactory.NotShape, "IW0", IwColumn, "IW", "inverter: the true word load enable");
-        _factory.Wire("EN0", "Y", "CPEA0", "A");
-        _factory.Wire("CPEA0", "Y1", "IW0", "A");
-        _factory.Distribute("CPEA0", "Y2",
-            Enumerable.Range(0, _bitCount).Select(i => (H(i), "B")).ToList(),
-            HoldTreeColumn, "CPEB0");
-        TrackCopies("CPEB", 3);
-        _factory.Distribute("IW0", "Y",
-            Enumerable.Range(0, _bitCount).Select(i => (Le(i), "B")).ToList(),
-            LoadTreeColumn, "CPI0");
-        TrackCopies("CPI", 3);
-    }
-
     /// <summary>
-    /// The word-select fan-out tree (EN.B plus every mux arm) rooted at an unconnected
-    /// copy whose A pin becomes the cell's SEL port. The root is named outside the
-    /// copy counter's space (<c>CSEL0R</c>, not <c>CSEL0_0</c>) so the tree's first
-    /// emitted copy can take <c>CSEL0_0</c> without a name collision.
+    /// All cell gates: the enable chain (EN = NAND(select, LOAD), its copy CPEA, the IW
+    /// inverter), the hold/load distribution trees (a root copy near the source and one
+    /// pair copy per two bits in the corridor column, each at the channel row between its
+    /// two targets), the select tree (root, the left copy feeding EN.B and the first pair
+    /// copy, and one pair copy per two mux arms in the mux column), and the register bits.
     /// </summary>
-    private void EmitSelectTree()
+    private void EmitGates()
     {
+        Emit(RamGateFactory.NandShape, "EN0", EnColumn, "EN", "inverted load enable of the word: EN = NAND(select, LOAD)", row: 1);
+        Emit(RamGateFactory.CopyShape, "CPEA0", CpeaColumn, "CPEA", "copy: the inverted enable onto the inverter and the hold-arm tree", row: 1);
+        Emit(RamGateFactory.NotShape, "IW0", IwColumn, "IW", "inverter: the true word load enable", row: 1);
+        Emit(RamGateFactory.CopyShape, "CPEB0_0", HoldTreeRootColumn, "CPEB_0", "fan-out copy of CPEA0 onto the hold-arm pair copies", row: 2);
+        Emit(RamGateFactory.CopyShape, "CPEB0_1", TreeLeafColumn, "CPEB_1", "fan-out pair copy of the hold arms of bits 0 and 1", row: 2);
+        Emit(RamGateFactory.CopyShape, "CPEB0_2", TreeLeafColumn, "CPEB_2", "fan-out pair copy of the hold arms of bits 2 and 3", row: 6);
+        Emit(RamGateFactory.CopyShape, "CPI0_0", LoadTreeRootColumn, "CPI_0", "fan-out copy of IW0 onto the load-arm pair copies", row: 1);
+        Emit(RamGateFactory.CopyShape, "CPI0_1", TreeLeafColumn, "CPI_1", "fan-out pair copy of the load arms of bits 0 and 1", row: 3);
+        Emit(RamGateFactory.CopyShape, "CPI0_2", TreeLeafColumn, "CPI_2", "fan-out pair copy of the load arms of bits 2 and 3", row: 7);
         Emit(RamGateFactory.CopyShape, "CSEL0R", SelTreeColumn, "CSELR",
-            "root of the word-select fan-out tree (its A pin is the cell's SEL port)");
-        var destinations = new List<(string, string)> { ("EN0", "B") };
-        destinations.AddRange(Enumerable.Range(0, _bitCount).Select(i => (M(i), "B")));
-        int half = (destinations.Count + 1) / 2;
-        _factory.Distribute("CSEL0R", "Y1", destinations.Take(half).ToList(), SelTreeColumn + 1, "CSEL0");
-        _factory.Distribute("CSEL0R", "Y2", destinations.Skip(half).ToList(), SelTreeColumn + 1, "CSEL0");
-        TrackCopies("CSEL", 3);
+            "root of the word-select fan-out tree (its A pin is the cell's SEL port)", row: 1);
+        Emit(RamGateFactory.CopyShape, "CSEL0_0", MuxArmColumn, "CSEL_0",
+            "select copy: feeds the two mux-arm pair copies", row: 4);
+        Emit(RamGateFactory.CopyShape, "CSEL0_1", MuxArmColumn, "CSEL_1",
+            "select pair copy of mux arms 0 and 1", row: 2);
+        Emit(RamGateFactory.CopyShape, "CSEL0_2", MuxArmColumn, "CSEL_2",
+            "select pair copy of mux arms 2 and 3", row: 6);
+        for (int i = 0; i < _bitCount; i++)
+        {
+            int mainRow = 2 * i + 1;
+            int channelRow = mainRow + 1;
+            Emit(RamGateFactory.NandShape, H(i), ArmsColumn, $"H{i}", $"hold arm of bit D{i}: H = NAND(R{i}, EN)", row: mainRow);
+            Emit(RamGateFactory.NandShape, Le(i), ArmsColumn, $"LE{i}", $"load arm of bit D{i}: LE = NAND(D{i}, IW)", row: channelRow);
+            Emit(RamGateFactory.NandShape, Reg(i), RegColumn, $"REG{i}", $"register of bit D{i}: REG = NAND(H, LE)", row: mainRow, isRegister: true);
+            Emit(RamGateFactory.CopyShape, Cp(i), TapColumn, $"CP{i}", $"read tap of stored bit D{i}: one arm the hold feedback, one the read mux", row: mainRow);
+            Emit(RamGateFactory.NandShape, M(i), MuxArmColumn, $"M{i}", $"read-mux arm of bit D{i}: M = NAND(stored bit, select)", row: mainRow);
+        }
     }
 
-    /// <summary>The register bits: hold/load arms, the register, the read-tap copy, the mux arm.</summary>
-    private void EmitRegisterBits()
+    /// <summary>The register-loop wires of every bit slice — the shortest, least flexible hops.</summary>
+    private void WireSlices()
     {
         for (int i = 0; i < _bitCount; i++)
         {
-            Emit(RamGateFactory.NandShape, H(i), HoldColumn, $"H{i}", $"hold arm of bit D{i}: H = NAND(R{i}, EN)");
-            Emit(RamGateFactory.NandShape, Le(i), LoadColumn, $"LE{i}", $"load arm of bit D{i}: LE = NAND(D{i}, IW)");
-            Emit(RamGateFactory.NandShape, Reg(i), RegColumn, $"REG{i}", $"register of bit D{i}: REG = NAND(H, LE)", isRegister: true);
-            Emit(RamGateFactory.CopyShape, Cp(i), TapColumn, $"CP{i}", $"read tap of stored bit D{i}: one arm the hold feedback, one the read mux");
-            Emit(RamGateFactory.NandShape, M(i), MuxArmColumn, $"M{i}", $"read-mux arm of bit D{i}: M = NAND(stored bit, select)");
             _factory.Wire(H(i), "Y", Reg(i), "A");
             _factory.Wire(Le(i), "Y", Reg(i), "B");
             _factory.Wire(Reg(i), "Y", Cp(i), "A");
@@ -119,17 +141,54 @@ internal sealed class RamWordCellBuilder
         }
     }
 
-    private void Emit(string shape, string name, int column, string role, string description, bool isRegister = false)
+    /// <summary>The tree leaf wires: the pair copies onto their arm gates, select included.</summary>
+    private void WireTreeLeaves()
     {
-        _factory.Emit(shape, name, column, description, isRegister: isRegister);
-        _gateRoles.Add(role, name);
+        for (int pair = 0; pair < _bitCount / 2; pair++)
+        {
+            string holdLeaf = $"CPEB0_{pair + 1}";
+            _factory.Wire(holdLeaf, "Y1", H(2 * pair), "B");
+            _factory.Wire(holdLeaf, "Y2", H(2 * pair + 1), "B");
+            string loadLeaf = $"CPI0_{pair + 1}";
+            _factory.Wire(loadLeaf, "Y1", Le(2 * pair), "B");
+            _factory.Wire(loadLeaf, "Y2", Le(2 * pair + 1), "B");
+            string selectLeaf = $"CSEL0_{pair + 1}";
+            _factory.Wire(selectLeaf, "Y1", M(2 * pair), "B");
+            _factory.Wire(selectLeaf, "Y2", M(2 * pair + 1), "B");
+        }
     }
 
-    /// <summary>Records the copy gates a distribution tree emitted under their role keys.</summary>
-    private void TrackCopies(string prefix, int count)
+    /// <summary>The tree trunk wires: sources onto the root copies, root copies onto the pair copies.</summary>
+    private void WireTreeTrunks()
     {
-        for (int k = 0; k < count; k++)
-            _gateRoles.Add($"{prefix}_{k}", $"{prefix}0_{k}");
+        _factory.Wire("EN0", "Y", "CPEA0", "A");
+        _factory.Wire("CPEA0", "Y1", "IW0", "A");
+        _factory.Wire("CPEA0", "Y2", "CPEB0_0", "A");
+        _factory.Wire("IW0", "Y", "CPI0_0", "A");
+        _factory.Wire("CPEB0_0", "Y1", "CPEB0_1", "A");
+        _factory.Wire("CPEB0_0", "Y2", "CPEB0_2", "A");
+        _factory.Wire("CPI0_0", "Y1", "CPI0_1", "A");
+        _factory.Wire("CPI0_0", "Y2", "CPI0_2", "A");
+    }
+
+    /// <summary>
+    /// The select trunks, routed last: the short forward hop onto EN.B, the two verticals
+    /// down the mux column, and the one cell-spanning wire (root → CSEL0_0) very last, so
+    /// the contention repair sacrifices it — the wire with the whole highway row to detour
+    /// through — rather than a local hop.
+    /// </summary>
+    private void WireSelectTrunks()
+    {
+        _factory.Wire("CSEL0R", "Y1", "EN0", "B");
+        _factory.Wire("CSEL0_0", "Y1", "CSEL0_1", "A");
+        _factory.Wire("CSEL0_0", "Y2", "CSEL0_2", "A");
+        _factory.Wire("CSEL0R", "Y2", "CSEL0_0", "A");
+    }
+
+    private void Emit(string shape, string name, int column, string role, string description, int? row = null, bool isRegister = false)
+    {
+        _factory.Emit(shape, name, column, row, description, isRegister: isRegister);
+        _gateRoles.Add(role, name);
     }
 
     private Dictionary<string, (string Role, string Pin)> BuildPorts()

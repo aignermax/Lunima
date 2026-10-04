@@ -38,6 +38,20 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
         _output = output;
     }
 
+    /// <summary>
+    /// The word-cell floorplan budget (issue #1400): the blocked intra-cell wires of the
+    /// routed cell, replicated into every instance. The re-floorplan (channel row per bit
+    /// slice, hand-placed tree copies, wires emitted in route-priority order) brought the
+    /// count from 17 of 44 down to 9 in the five iterations the issue budgets; the ≤3
+    /// target was not reached — the remaining blocks are contention-repair stamps on
+    /// forced crossings (the load-tree trunks, the leaf down-hops and the one
+    /// cell-spanning select wire), not gate obstacles. The pin guards against regressions.
+    /// </summary>
+    [Fact]
+    public void WordCell_BlockedIntraCellWires_WithinFloorplanBudget() =>
+        _cell.BlockedCount.ShouldBeLessThanOrEqualTo(9,
+            "the re-floorplanned word cell (issue #1400) routes with at most 9 blocked intra-cell wires (was 17)");
+
     [Fact]
     public Task Ram2Words4Bits_Hierarchical_AssemblyBehaviorAndRoute_Measured() =>
         MeasureAsync(words: 2, expectedGates: 71, expectedTopLevelWires: 9, expectedTopLevelGroups: 7);
@@ -194,6 +208,9 @@ public sealed class RamWordCellFixture : IAsyncLifetime
     /// <summary>The cell route measurement line for the spike report.</summary>
     public string RouteReport { get; private set; } = "";
 
+    /// <summary>The routed cell's blocked-fallback wire count — the number every instance replicates.</summary>
+    public int BlockedCount { get; private set; }
+
     /// <summary>Builds, loads and routes the word cell once, then freezes the template.</summary>
     public async Task InitializeAsync()
     {
@@ -238,6 +255,7 @@ public sealed class RamWordCellFixture : IAsyncLifetime
             int blocked = canvas.Connections.Count(c => c.Connection.IsBlockedFallback);
             timedOut.ShouldBeFalse($"the word cell must route within {timeout.TotalSeconds:F0}s — it is frozen into the template");
             unrouted.ShouldBe(0, "every intra-cell wire must carry a route before the template is frozen");
+            BlockedCount = blocked;
             RouteReport = $"cellRoute={watch.Elapsed.TotalSeconds:F1}s cellBlocked={blocked} cellBound={timeout.TotalSeconds:F0}s";
             Template = RamWordCellTemplate.Extract(canvas, Design);
         }
