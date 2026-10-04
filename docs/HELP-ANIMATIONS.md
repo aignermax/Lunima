@@ -66,6 +66,15 @@ End while a dot traces the cos² output fringe point by point. Knob and dot shar
 axis, so "slider value → point on the curve" is read directly; the trace grows with the
 sweep and the last frame keeps the finished fringe visible.
 
+`HillClimbAnimation` (Optimization help, #1362): a marker takes scripted hill-climb
+steps on a 1-D objective curve, mirroring `CircuitOptimizer` — uphill steps are kept
+(the green best-so-far halo moves up), a non-improving step flashes red, bounces back
+and the step-size bracket under the curve shrinks (reset on improvement, decay on
+rejection, like the optimizer). Accepted/rejected is derived from the curve function,
+never scripted, so the scene cannot contradict itself; the taller unvisited peak makes
+the "local best" caveat visible. `FrameAt(progress)` returns the deterministic frame
+state for tests.
+
 ## Rules
 
 - One animation per flyout; keep text sections to ≤3 short sentences (enforced by
