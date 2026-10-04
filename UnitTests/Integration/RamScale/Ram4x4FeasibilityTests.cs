@@ -75,7 +75,7 @@ public class Ram4x4FeasibilityTests
             canvas.Components.Count.ShouldBe(design.GateCount, "every generated gate group must load");
             canvas.Connections.Count.ShouldBe(design.WireCount, "every generated wire must load");
 
-            var route = await MeasureFullRoute(canvas, fileOps, label);
+            var route = await MeasureFullRoute(canvas, fileOps, label, Report);
             var network = await MeasureAssembly(canvas, label);
             AssertNetworkShape(network, design, words, bits);
             AssertStoreReadHold(network, design, words, bits);
@@ -93,10 +93,12 @@ public class Ram4x4FeasibilityTests
     /// <summary>
     /// Times the loader's post-load pass — a full route of every wire, since the generated
     /// file ships no cached geometry — bounded by the route timeout. A timeout cancels the
-    /// pass and is reported as the measurement, not a failure.
+    /// pass and is reported as the measurement, not a failure. Shared with the
+    /// hierarchical spike (#1366), which re-measures the same pass on the inter-cell
+    /// wires only.
     /// </summary>
-    private async Task<string> MeasureFullRoute(
-        DesignCanvasViewModel canvas, FileOperationsViewModel fileOps, string label)
+    internal static async Task<string> MeasureFullRoute(
+        DesignCanvasViewModel canvas, FileOperationsViewModel fileOps, string label, Action<string> report)
     {
         var timeout = RouteTimeout;
         var watch = Stopwatch.StartNew();
@@ -115,7 +117,7 @@ public class Ram4x4FeasibilityTests
             }
             catch (TimeoutException)
             {
-                Report($"[ram-spike] {label}: route pass did not observe cancellation within 2 min");
+                report($"[ram-spike] {label}: route pass did not observe cancellation within 2 min");
             }
         }
         watch.Stop();
@@ -147,7 +149,7 @@ public class Ram4x4FeasibilityTests
     }
 
     /// <summary>The assembled network must expose the merged input signals, the read taps and one register per stored bit.</summary>
-    private static void AssertNetworkShape(LogicNetworkEvaluator network, RamScaleDesign design, int words, int bits)
+    internal static void AssertNetworkShape(LogicNetworkEvaluator network, RamScaleDesign design, int words, int bits)
     {
         network.InputPinNames.ShouldBe(
             design.AddressSignals.Concat(new[] { RamScaleDesign.LoadSignal }).Concat(design.DataSignals).ToArray(),
@@ -163,7 +165,7 @@ public class Ram4x4FeasibilityTests
     /// distinct pattern per word (isolation: only the addressed word commits), sweep all 16
     /// values through word 0, then hold across further clock steps with LOAD low.
     /// </summary>
-    private static void AssertStoreReadHold(LogicNetworkEvaluator network, RamScaleDesign design, int words, int bits)
+    internal static void AssertStoreReadHold(LogicNetworkEvaluator network, RamScaleDesign design, int words, int bits)
     {
         for (int address = 0; address < words; address++)
         {
@@ -202,7 +204,7 @@ public class Ram4x4FeasibilityTests
     }
 
     /// <summary>Reads the word at the address: LOAD low, one evaluate, the read bus R as a decimal.</summary>
-    private static int ReadWord(LogicNetworkEvaluator network, RamScaleDesign design, int address)
+    internal static int ReadWord(LogicNetworkEvaluator network, RamScaleDesign design, int address)
     {
         var read = network.Evaluate(InputBits(design, address, load: false, data: 0));
         int value = 0;
@@ -213,7 +215,7 @@ public class Ram4x4FeasibilityTests
     }
 
     /// <summary>The network input bits for one address/LOAD/data triple — one bit per signal (#1025).</summary>
-    private static Dictionary<string, bool> InputBits(RamScaleDesign design, int address, bool load, int data)
+    internal static Dictionary<string, bool> InputBits(RamScaleDesign design, int address, bool load, int data)
     {
         var bits = new Dictionary<string, bool>();
         for (int b = 0; b < design.AddressSignals.Count; b++)
@@ -224,13 +226,13 @@ public class Ram4x4FeasibilityTests
         return bits;
     }
 
-    private static TimeSpan RouteTimeout =>
+    internal static TimeSpan RouteTimeout =>
         double.TryParse(Environment.GetEnvironmentVariable(RouteTimeoutVariable), out double seconds) && seconds > 0
             ? TimeSpan.FromSeconds(seconds)
             : TimeSpan.FromSeconds(DefaultRouteTimeoutSeconds);
 
     /// <summary>Mirrors <c>ChipSizeViewModel.ApplyToCanvas</c>: chip bounds plus a chip-sized routing grid.</summary>
-    private static void ApplyChipSize(DesignCanvasViewModel canvas, double widthUm, double heightUm)
+    internal static void ApplyChipSize(DesignCanvasViewModel canvas, double widthUm, double heightUm)
     {
         if (widthUm <= 0 || heightUm <= 0)
             return;
@@ -241,7 +243,7 @@ public class Ram4x4FeasibilityTests
         canvas.InitializeAStarRouting(0, 0, widthUm, heightUm);
     }
 
-    private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas)
+    internal static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas)
     {
         var fileOps = new FileOperationsViewModel(
             canvas,
