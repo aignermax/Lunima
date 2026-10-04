@@ -147,16 +147,65 @@ public partial class WaveguideConnectionManager
 
         bool completed = RouteTouched(touched, grid, attemptTokens.Token);
 
+        int crossingsAfter = CountCrossingsInvolving(touched, all);
         bool accept = completed
             && !cancellationToken.IsCancellationRequested
             && touched.All(c => c.IsPathValid)
             && touched.Count(c => c.IsBlockedFallback) < blockedBefore
-            && CountCrossingsInvolving(touched, all) <= crossingsBefore;
-        if (accept)
-            return true;
+            && crossingsAfter <= crossingsBefore;
+        if (!accept)
+        {
+            RestoreRoutes(touched, saved, grid);
+            return false;
+        }
 
-        RestoreRoutes(touched, saved, grid);
-        return false;
+        // Router honesty: the re-routes cleared every touched stamp, so an accepted
+        // attempt that left its crossing in place (a non-planar pair the router cannot
+        // untangle) would render as a clean route. Re-stamp the crossing side exactly
+        // like MarkUnresolvedSiblingCrossings does. A repair that strictly reduced the
+        // crossing count behaves as before.
+        if (crossingsAfter == crossingsBefore)
+            RestampRemainingCrossings(touched, all);
+        return true;
+    }
+
+    /// <summary>
+    /// Re-applies the blocked-fallback stamp to the re-routable side of every crossing
+    /// pair that involves a touched connection — the same verdict
+    /// MarkUnresolvedSiblingCrossings would give, restricted to the geometry this
+    /// attempt re-routed.
+    /// </summary>
+    private static void RestampRemainingCrossings(
+        List<WaveguideConnection> touched, List<WaveguideConnection> all)
+    {
+        // Each unordered pair is judged once: when both sides were touched, the second
+        // visit would flip PickReroutableSide's preference and stamp BOTH wires.
+        var judged = new HashSet<(Guid, Guid)>();
+        foreach (var connection in touched)
+        {
+            if (connection.RoutedPath == null || !connection.IsPathValid)
+                continue;
+            foreach (var other in all)
+            {
+                if (ReferenceEquals(other, connection)
+                    || other.RoutedPath == null
+                    || !other.IsPathValid)
+                    continue;
+                var pair = connection.Id.CompareTo(other.Id) < 0
+                    ? (connection.Id, other.Id)
+                    : (other.Id, connection.Id);
+                if (!judged.Add(pair))
+                    continue;
+                if (!PathIntersectionDetector.Crosses(connection.RoutedPath, other.RoutedPath))
+                    continue;
+                var target = PickReroutableSide(connection, other);
+                if (target != null)
+                {
+                    target.RoutedPath!.IsBlockedFallback = true;
+                    target.RoutedPath.FailureReason = RoutingFailureReason.Contention;
+                }
+            }
+        }
     }
 
     /// <summary>

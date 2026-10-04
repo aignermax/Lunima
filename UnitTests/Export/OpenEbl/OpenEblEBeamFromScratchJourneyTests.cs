@@ -36,15 +36,15 @@ namespace UnitTests.Export.OpenEbl;
 /// </para>
 /// <para>
 /// PINNED DEFECT (the journey's finding): the cross-connected arms are a non-planar
-/// two-wire crossover, and the router leaves the second arm CROSSING the first — the
-/// contention repair clears the scan's blocked-fallback stamp while keeping the
-/// crossing. Since issue #1380 DRC-lite reports the pair as a waveguide-crossing
-/// error (detection only); the exported GDS still has exactly one SiEPIC verification
-/// error ("Overlapping component" where the two arm waveguide cells intersect near
-/// (267, 36) µm). The test pins that single error with its category; every other
+/// two-wire crossover, and the router leaves the second arm CROSSING the first. Since
+/// the router-honesty fix (#1381) the crossing arm keeps its blocked-fallback stamp, so
+/// the canvas and DRC-lite report it. The exported GDS still has exactly one SiEPIC
+/// verification error ("Overlapping component" where the two arm waveguide cells
+/// intersect near (267, 36) µm) — the stamp reports the crossing, it does not remove
+/// the geometry. The test pins that single error with its category; every other
 /// journey step — routing, fringes, submission check, opt_in labels, die size,
-/// save/load — is asserted green. When the router fix lands (the sibling of #1380),
-/// the arms no longer cross and both pins flip to 0.
+/// save/load — is asserted green. When the router learns to untangle the pair, this
+/// test must flip to 0/0.
 /// </para>
 /// <para>
 /// Gating: needs a Python with nazca + klayout + siepic_ebeam_pdk + SiEPIC (installed
@@ -73,7 +73,7 @@ public class OpenEblEBeamFromScratchJourneyTests
             .Where(t => t.PdkSource == EBeamFromScratchMziDesign.EBeamPdkName).ToList();
         var canvas = await EBeamFromScratchMziDesign.BuildRoutedAsync(templates);
 
-        // ── 4. Every connection routed for real; DRC-lite clean ──
+        // ── 4. Every connection routed for real; DRC-lite reports only the crossing ──
         AssertFullyRouted(canvas);
         // Fully qualified: CAP_Core.Analysis is a sibling feature namespace the Export
         // slice may not import (VerticalSliceConventionTests).
@@ -85,34 +85,33 @@ public class OpenEblEBeamFromScratchJourneyTests
             .ToList();
         var drcIssues = validator.Validate(
             canvas.ConnectionManager.Connections, components, externalPortPins);
-        var crossingIssues = drcIssues
-            .Where(i => i.Type == CAP_Core.Analysis.DesignIssueType.WaveguideCrossing).ToList();
-        crossingIssues.Count.ShouldBeGreaterThanOrEqualTo(1,
-            "pinned defect #1363: DRC-lite must now report the cross-connected arms as a " +
-            "waveguide crossing (issue #1380) — 0 issues here means the detection regressed");
-        crossingIssues.ShouldContain(i =>
-                i.Description.Contains("mzi_splitter") && i.Description.Contains("mzi_combiner"),
-            "the crossing issue must name both crossed arm connections");
-        drcIssues.Where(i => i.Type != CAP_Core.Analysis.DesignIssueType.WaveguideCrossing)
-            .ShouldBeEmpty("apart from the pinned arm crossing, DRC-lite must report zero issues " +
-                "on the student-built MZI");
+        var blockedIssue = drcIssues.ShouldHaveSingleItem(
+            "DRC-lite must report the crossing arm's blocked fallback — and nothing else");
+        blockedIssue.Description.ShouldContain("no free lane");
         validator.ValidateComponentBounds(components,
                 EBeamFromScratchMziDesign.ChipWidthMicrometers,
                 EBeamFromScratchMziDesign.ChipHeightMicrometers)
             .ShouldBeEmpty("every component must sit inside the 605 x 410 µm floorplan");
 
-        // The pinned defect, canvas level: the two arms cross — no blocked fallback,
-        // and DRC-lite reports it (asserted above, #1380). When the router fix lands,
-        // the arms no longer cross and this test flips to 0 crossings / 0 errors.
+        // The pinned defect, canvas level: the two arms cross, and since #1381 the
+        // crossing arm KEEPS its blocked-fallback stamp — the crossing is reported on
+        // the canvas instead of rendering as a clean route.
         var upperArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 2");
         var lowerArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 3");
         PathIntersectionDetector.Crosses(upperArm.RoutedPath!, lowerArm.RoutedPath!)
             .ShouldBeTrue("pinned defect #1363: the router leaves the cross-connected arms overlapping");
+        var stampedArms = new[] { upperArm, lowerArm }.Where(c => c.IsBlockedFallback).ToList();
+        stampedArms.Count.ShouldBe(1,
+            "router honesty (#1381): the crossing arm must keep its blocked-fallback stamp");
 
         // ── 5. Coherent fringes against the routed ΔL and the PDK group index ──
         var outputPin = MziFringeAnalysis.FindPin(
             MziFringeAnalysis.FindComponent(canvas, "gc_out"), "port 2");
-        double deltaL = MziFringeAnalysis.MeasureArmLengthDifference(canvas);
+        // Since #1381 the stamped crossing arm is the LONG one (the repair routes it
+        // first and the clean arm takes the direct lane), so the meander is port 2 —
+        // the fringe physics only needs |ΔL|.
+        double deltaL = Math.Abs(
+            upperArm.PathLengthMicrometers - lowerArm.PathLengthMicrometers);
         deltaL.ShouldBeGreaterThanOrEqualTo(MinArmLengthDifferenceMicrometers,
             "the cross-connected arms must force the router into an unequal-arm layout");
 
@@ -173,11 +172,16 @@ public class OpenEblEBeamFromScratchJourneyTests
             var c = connVm.Connection;
             c.RoutedPath.ShouldNotBeNull(
                 $"{c.StartPin?.ParentComponent.Identifier}.{c.StartPin?.Name} must be routed");
-            c.IsBlockedFallback.ShouldBeFalse(
-                $"{c.StartPin?.ParentComponent.Identifier}.{c.StartPin?.Name} fell back to a blocked route");
             c.IsPathValid.ShouldBeTrue(
                 $"{c.StartPin?.ParentComponent.Identifier}.{c.StartPin?.Name} has invalid route geometry");
         }
+        // Router honesty (#1381): exactly one connection may carry the blocked-fallback
+        // stamp — the crossing MZI arm. Every other route must be clean.
+        var blocked = canvas.Connections.Where(c => c.Connection.IsBlockedFallback).ToList();
+        var blockedNames = string.Join(", ",
+            blocked.Select(c => $"{c.Connection.StartPin?.ParentComponent.Identifier}.{c.Connection.StartPin?.Name}"));
+        blocked.Count.ShouldBe(1, $"only the crossing arm may be blocked, found: {blockedNames}");
+        blocked[0].Connection.StartPin?.ParentComponent.Identifier.ShouldBe("mzi_splitter");
     }
 
     private static void AssertCheckReport(OpenEblCheckReport report)
