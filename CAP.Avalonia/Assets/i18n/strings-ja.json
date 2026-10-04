@@ -1647,6 +1647,8 @@
   "LogicPanelFanOutHelp.ExamplesBody": "対処法は2つ: 分岐後に増幅するか、駆動段を複製して各負荷に専用の導波路を持たせるかです。付属の加算器は XOR 段を複製しています — その繰り返しは無駄ではなく、物理的な正直さです。",
   "LogicPanelFanOutHelp.AnimationCaption": "模式図であり、電磁界シミュレーションではありません: 分岐のたびにパワーは半分になり、1/4 の分岐は閾値を下回ります。",
   "LogicPanel.GateDelay": "{0:0.0} ps",
+  "LogicPanel.CellGroup.HeaderGates": "{0} — ゲート {1}",
+  "LogicPanel.CellGroup.HeaderGatesRegisters": "{0} — レジスタ {1}、ゲート {2}",
   "LogicPanel.CriticalPath": "クリティカルパス: {1} ゲートで {0:0.0} ps",
   "LogicPanelTimingHelp.Title": "なぜ光に時間がかかるの?",
   "LogicPanelTimingHelp.Intro": "各ゲートには伝播遅延、つまり光がそのゲートを通過するのにかかる時間が表示されます。クリティカルパスは、ネットワーク入力から出力までの最も遅いゲートの連鎖です。",

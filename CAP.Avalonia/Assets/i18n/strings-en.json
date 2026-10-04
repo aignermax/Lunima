@@ -1647,6 +1647,8 @@
   "LogicPanelFanOutHelp.ExamplesBody": "Two fixes: amplify after the split, or duplicate the driving stage so every load gets its own waveguide. The shipped adders duplicate their XOR stages — the repetition you see is physical honesty, not waste.",
   "LogicPanelFanOutHelp.AnimationCaption": "Schematic, not a field simulation: each split halves the power — the quarter-power branches fall below the gate threshold.",
   "LogicPanel.GateDelay": "{0:0.0} ps",
+  "LogicPanel.CellGroup.HeaderGates": "{0} — {1} gates",
+  "LogicPanel.CellGroup.HeaderGatesRegisters": "{0} — {1} registers, {2} gates",
   "LogicPanel.CriticalPath": "Critical path: {0:0.0} ps over {1} gates",
   "LogicPanelTimingHelp.Title": "Why does light take time?",
   "LogicPanelTimingHelp.Intro": "Every gate shows its propagation delay — the time light needs to cross it. The critical path is the slowest chain of gates from a network input to an output.",
