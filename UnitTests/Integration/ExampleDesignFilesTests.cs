@@ -63,9 +63,12 @@ public class ExampleDesignFilesTests
             var declaredInternalPaths = 0;
             if (doc.RootElement.TryGetProperty("Groups", out var groups))
             {
-                declaredGroups = groups.GetArrayLength();
                 foreach (var group in groups.EnumerateArray())
                 {
+                    // Hierarchical examples (issue #1389): nested group entries load inside
+                    // their parent, so only the top-level groups become canvas components.
+                    if (!group.GetProperty("GroupDto").TryGetProperty("ParentGroupIdGuid", out _))
+                        declaredGroups++;
                     declaredGroupChildren += group.GetProperty("ChildComponents").GetArrayLength();
                     declaredInternalPaths += group.GetProperty("GroupDto").GetProperty("InternalPaths").GetArrayLength();
                 }
