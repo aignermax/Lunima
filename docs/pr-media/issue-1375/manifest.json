@@ -1,0 +1,18 @@
+[
+  {
+    "file": "01-preflight-errors-en.png",
+    "caption": "Pre-flight errors: a blocked connection holds the external check \u2014 fix list plus the \u0027Check anyway\u0027 escape hatch, no result yet."
+  },
+  {
+    "file": "02-preflight-errors-de.png",
+    "caption": "Pre-flight errors: a blocked connection holds the external check \u2014 fix list plus the \u0027Check anyway\u0027 escape hatch, no result yet."
+  },
+  {
+    "file": "03-preflight-warnings-en.png",
+    "caption": "Pre-flight warnings only: the external check ran straight through, the warning stays visible above the green result."
+  },
+  {
+    "file": "04-preflight-warnings-de.png",
+    "caption": "Pre-flight warnings only: the external check ran straight through, the warning stays visible above the green result."
+  }
+]

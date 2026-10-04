@@ -91,6 +91,15 @@ public partial class OpenEblCheckViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<OpenEblCheckErrorItemViewModel> _errors = new();
 
+    [ObservableProperty]
+    private ObservableCollection<OpenEblPreflightIssueViewModel> _preflightIssues = new();
+
+    [ObservableProperty]
+    private bool _hasPreflightErrors;
+
+    [ObservableProperty]
+    private bool _hasPreflightWarnings;
+
     /// <summary>Initializes a new instance of <see cref="OpenEblCheckViewModel"/>.</summary>
     public OpenEblCheckViewModel(
         DesignCanvasViewModel canvas,
@@ -130,12 +139,22 @@ public partial class OpenEblCheckViewModel : ObservableObject
             DesignName = currentDesignName;
         ReproposeFileName();
         ResetResult();
+        ClearPreflight();
         StatusText = string.Empty;
     }
 
     /// <summary>Exports the design to a temp GDS and runs the openEBL checks on it.</summary>
     [RelayCommand]
-    private async Task ExportAndCheckAsync()
+    private Task ExportAndCheckAsync() => RunExportAndCheckAsync(skipPreflight: false);
+
+    /// <summary>
+    /// Runs the external check despite pre-flight errors (issue #1375 — no hard block; the
+    /// student decides). The pre-flight list stays visible above the external result.
+    /// </summary>
+    [RelayCommand]
+    private Task CheckAnywayAsync() => RunExportAndCheckAsync(skipPreflight: true);
+
+    private async Task RunExportAndCheckAsync(bool skipPreflight)
     {
         if (IsChecking)
             return;
@@ -152,11 +171,14 @@ public partial class OpenEblCheckViewModel : ObservableObject
         }
 
         IsChecking = true;
-        ResetResult();
         _runCts = new CancellationTokenSource();
         var cancellationToken = _runCts.Token;
         try
         {
+            if (!skipPreflight && !await RunPreflightAsync())
+                return;   // pre-flight errors hold the run until "Check anyway"
+
+            ResetResult();
             StatusText = Translate("OpenEblCheck.Exporting");
             var gdsPath = await ExportGdsAsync(stem, cancellationToken);
             if (gdsPath == null)
@@ -281,6 +303,33 @@ public partial class OpenEblCheckViewModel : ObservableObject
         };
         OnPropertyChanged(nameof(SubmissionOutcomeText));
         OnPropertyChanged(nameof(VerificationOutcomeText));
+    }
+
+    /// <summary>
+    /// Lunima-side pre-flight (issue #1375): runs the <see cref="OpenEblPreflightChecker"/> on
+    /// the canvas connections before the external check. Errors hold the run (the "Check
+    /// anyway" command bypasses); warnings only let it through and stay visible above the
+    /// external result. Returns false when errors were found and the caller must not export yet.
+    /// </summary>
+    private async Task<bool> RunPreflightAsync()
+    {
+        StatusText = Translate("OpenEblCheck.PreflightRunning");
+        var snapshot = _canvas.ConnectionManager.Connections.ToList();
+        var findings = await Task.Run(() => OpenEblPreflightChecker.Collect(snapshot));
+        StatusText = string.Empty;
+
+        PreflightIssues = new ObservableCollection<OpenEblPreflightIssueViewModel>(
+            findings.Select(finding => new OpenEblPreflightIssueViewModel(finding.Message, finding.IsError)));
+        HasPreflightErrors = findings.Any(finding => finding.IsError);
+        HasPreflightWarnings = findings.Any(finding => !finding.IsError);
+        return !HasPreflightErrors;
+    }
+
+    private void ClearPreflight()
+    {
+        PreflightIssues.Clear();
+        HasPreflightErrors = false;
+        HasPreflightWarnings = false;
     }
 
     private void ResetResult()
