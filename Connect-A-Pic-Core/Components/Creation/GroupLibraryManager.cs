@@ -208,7 +208,10 @@ public class GroupLibraryManager
 
     /// <summary>
     /// Sets human-readable display names on child components using sequential numbering.
-    /// Component Identifiers remain as GUIDs for persistence stability.
+    /// Component Identifiers remain as GUIDs for persistence stability. A child group
+    /// carrying a truth-table pin assignment is a logic gate: its name is the gate's id
+    /// inside the instance's hierarchical path, so instancing keeps the user's gate name
+    /// — renaming it to SubGroup_n would also strip the name from the Logic panel.
     /// </summary>
     private void RenameComponentsWithSequentialNames(ComponentGroup group)
     {
@@ -217,7 +220,10 @@ public class GroupLibraryManager
         {
             if (child is ComponentGroup childGroup)
             {
-                childGroup.GroupName = $"SubGroup_{componentIndex++}";
+                if (childGroup.TruthTablePinAssignment == null)
+                {
+                    childGroup.GroupName = $"SubGroup_{componentIndex++}";
+                }
                 RenameComponentsWithSequentialNames(childGroup);
             }
             else

@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Controls.Help.WaveguideCrossingHelpFlyout"
+             MaxWidth="380">
+
+    <!-- Content of the (?) flyout next to waveguide-crossing findings in the Design
+         Checks tab (#1391): a looping two-scene animation (bare X leaks into the
+         crossing arm; a crossing component passes the pulse straight through) plus
+         three short plain-language sentences. Opened via a HelpFlyoutButton, which
+         supplies the title. -->
+
+    <StackPanel Spacing="8">
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <ha:WaveguideCrossingHelpAnimation IsHitTestVisible="False"/>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*">
+            <TextBlock Grid.Column="0" Text="{loc:Localize DesignChecks.CrossingHelp.BareXCaption}"
+                       FontSize="9" Foreground="Gray" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{loc:Localize DesignChecks.CrossingHelp.ComponentCaption}"
+                       FontSize="9" Foreground="Gray" HorizontalAlignment="Center"/>
+        </Grid>
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize DesignChecks.CrossingHelp.Body1}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize DesignChecks.CrossingHelp.Body2}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize DesignChecks.CrossingHelp.Body3}"/>
+    </StackPanel>
+
+</UserControl>

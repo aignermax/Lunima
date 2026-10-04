@@ -59,7 +59,10 @@ public static class GroupTemplateSerializer
             PhysicalY = group.PhysicalY,
             WidthMicrometers = group.WidthMicrometers,
             HeightMicrometers = group.HeightMicrometers,
-            Rotation = (int)group.Rotation90CounterClock
+            Rotation = (int)group.Rotation90CounterClock,
+            // A prefabbed gate cell must stay a gate: without the roles, instances
+            // placed after an app restart lose their logic identity silently.
+            TruthTablePinAssignment = group.TruthTablePinAssignment?.Copy()
         };
 
         // Serialize child components inline
@@ -106,7 +109,10 @@ public static class GroupTemplateSerializer
             PhysicalX = dto.PhysicalX,
             PhysicalY = dto.PhysicalY,
             WidthMicrometers = dto.WidthMicrometers,
-            HeightMicrometers = dto.HeightMicrometers
+            HeightMicrometers = dto.HeightMicrometers,
+            // Copied, not shared: the lists are mutable, so a template and its later
+            // edits must not alias the deserialized assignment.
+            TruthTablePinAssignment = dto.TruthTablePinAssignment?.Copy()
         };
 
         // Deserialize child components
@@ -383,6 +389,11 @@ public static class GroupTemplateSerializer
     {
         int startIdx = path.StartPin is null ? -1 : children.IndexOf(path.StartPin.ParentComponent);
         int endIdx = path.EndPin is null ? -1 : children.IndexOf(path.EndPin.ParentComponent);
+        // Endpoint pins of a hierarchical cell sit on components nested inside child
+        // groups — a flat child index cannot reach them, so the index path through
+        // the group tree travels along (null for direct children and pin-less paths).
+        var startPath = path.StartPin is null ? null : FindChildPath(children, path.StartPin.ParentComponent);
+        var endPath = path.EndPin is null ? null : FindChildPath(children, path.EndPin.ParentComponent);
 
         var segments = path.Path.Segments.Select(seg =>
         {
@@ -418,8 +429,10 @@ public static class GroupTemplateSerializer
         {
             StartChildIndex = startIdx,
             StartPinName = path.StartPin?.Name ?? "",
+            StartChildPath = startPath,
             EndChildIndex = endIdx,
             EndPinName = path.EndPin?.Name ?? "",
+            EndChildPath = endPath,
             IsBlockedFallback = path.Path.IsBlockedFallback,
             IsInvalidGeometry = path.Path.IsInvalidGeometry,
             IsPlaceholderGeometry = path.Path.IsPlaceholderGeometry,
@@ -445,16 +458,14 @@ public static class GroupTemplateSerializer
     {
         PhysicalPin? startPin = null;
         PhysicalPin? endPin = null;
-        bool pinLess = dto.StartChildIndex < 0 && dto.EndChildIndex < 0;
+        bool pinLess = dto.StartChildIndex < 0 && dto.EndChildIndex < 0
+            && dto.StartChildPath == null && dto.EndChildPath == null;
         if (!pinLess)
         {
-            if (dto.StartChildIndex < 0 || dto.StartChildIndex >= children.Count)
+            var startComp = ResolveChild(children, dto.StartChildIndex, dto.StartChildPath);
+            var endComp = ResolveChild(children, dto.EndChildIndex, dto.EndChildPath);
+            if (startComp == null || endComp == null)
                 return null;
-            if (dto.EndChildIndex < 0 || dto.EndChildIndex >= children.Count)
-                return null;
-
-            var startComp = children[dto.StartChildIndex];
-            var endComp = children[dto.EndChildIndex];
 
             startPin = startComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.StartPinName);
             endPin = endComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.EndPinName);
@@ -536,6 +547,51 @@ public static class GroupTemplateSerializer
     }
 
     /// <summary>
+    /// Finds the index path to a descendant component through the group tree
+    /// (e.g. [1, 0] = first child of the second child group), or null when the
+    /// component is not among the descendants.
+    /// </summary>
+    private static List<int>? FindChildPath(IList<Component> children, Component target)
+    {
+        for (var i = 0; i < children.Count; i++)
+        {
+            if (ReferenceEquals(children[i], target))
+                return new List<int> { i };
+            if (children[i] is ComponentGroup childGroup
+                && FindChildPath(childGroup.ChildComponents, target) is { } subPath)
+            {
+                subPath.Insert(0, i);
+                return subPath;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves the referenced endpoint component: by the child-index path when the
+    /// DTO carries one (nested references), else by the flat direct-child index.
+    /// </summary>
+    private static Component? ResolveChild(
+        IList<Component> children, int childIndex, List<int>? childPath)
+    {
+        if (childPath is { Count: > 0 })
+        {
+            Component? current = null;
+            var level = children;
+            foreach (var index in childPath)
+            {
+                if (index < 0 || index >= level.Count)
+                    return null;
+                current = level[index];
+                if (current is ComponentGroup group)
+                    level = group.ChildComponents;
+            }
+            return current;
+        }
+        return childIndex >= 0 && childIndex < children.Count ? children[childIndex] : null;
+    }
+
+    /// <summary>
     /// Serializes a group pin, referencing internal component by child index.
     /// </summary>
     private static ExternalPinDto SerializeGroupPin(
@@ -543,11 +599,15 @@ public static class GroupTemplateSerializer
         List<Component> children)
     {
         int childIdx = children.IndexOf(pin.InternalPin.ParentComponent);
+        // A cell port bound to a pin inside a nested gate group needs the index path
+        // through the group tree — the flat child index alone cannot reach it.
+        var childPath = FindChildPath(children, pin.InternalPin.ParentComponent);
 
         return new ExternalPinDto
         {
             Name = pin.Name,
             ChildIndex = childIdx,
+            ChildPath = childPath,
             InternalPinName = pin.InternalPin.Name,
             RelativeX = pin.RelativeX,
             RelativeY = pin.RelativeY,
@@ -556,16 +616,17 @@ public static class GroupTemplateSerializer
     }
 
     /// <summary>
-    /// Deserializes a group pin, resolving internal component by child index.
+    /// Deserializes a group pin, resolving the internal component by its child-index
+    /// path when present (nested references), else by the flat child index.
     /// </summary>
     private static GroupPin? DeserializeGroupPin(
         ExternalPinDto dto,
         List<Component> children)
     {
-        if (dto.ChildIndex < 0 || dto.ChildIndex >= children.Count)
+        var internalComp = ResolveChild(children, dto.ChildIndex, dto.ChildPath);
+        if (internalComp == null)
             return null;
 
-        var internalComp = children[dto.ChildIndex];
         var internalPin = internalComp.PhysicalPins.FirstOrDefault(
             p => p.Name == dto.InternalPinName);
 
@@ -600,6 +661,16 @@ public class GroupTemplateDto
     public double WidthMicrometers { get; set; }
     public double HeightMicrometers { get; set; }
     public int Rotation { get; set; }
+
+    /// <summary>
+    /// Pin-role assignment when the group is a logic gate (or a gate cell whose nested
+    /// gates carry their own assignments). Null for plain groups and for templates
+    /// written before gate roles persisted into the library.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
+
     public List<ChildComponentDto> Children { get; set; } = new();
     public List<FrozenPathDto> InternalPaths { get; set; } = new();
     public List<ExternalPinDto> ExternalPins { get; set; } = new();
@@ -779,6 +850,19 @@ public class FrozenPathDto
     public string StartPinName { get; set; } = "";
     public int EndChildIndex { get; set; }
     public string EndPinName { get; set; } = "";
+
+    /// <summary>
+    /// Index path to the start endpoint's component through nested child groups
+    /// (e.g. [2, 0] = Children[2].ChildComponents[0]). Null in templates that predate
+    /// nested references — the flat <see cref="StartChildIndex"/> is the fallback.
+    /// </summary>
+    public List<int>? StartChildPath { get; set; }
+
+    /// <summary>
+    /// Index path to the end endpoint's component through nested child groups.
+    /// Null in old templates — <see cref="EndChildIndex"/> is the fallback.
+    /// </summary>
+    public List<int>? EndChildPath { get; set; }
     public bool IsBlockedFallback { get; set; }
     public bool IsInvalidGeometry { get; set; }
 
@@ -860,6 +944,14 @@ public class ExternalPinDto
 {
     public string Name { get; set; } = "";
     public int ChildIndex { get; set; }
+
+    /// <summary>
+    /// Index path to the internal pin's component through nested child groups
+    /// (e.g. [1, 0] = Children[1].ChildComponents[0]). Null in templates that predate
+    /// nested references — the flat <see cref="ChildIndex"/> is the fallback.
+    /// </summary>
+    public List<int>? ChildPath { get; set; }
+
     public string InternalPinName { get; set; } = "";
     public double RelativeX { get; set; }
     public double RelativeY { get; set; }

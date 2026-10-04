@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CAP_Core.Analysis;
 using CAP_Core.Components;
 using CAP_Core.Components.ComponentHelpers;
@@ -36,6 +37,13 @@ public partial class DesignValidationViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isCurrentIssueAlignable;
+
+    /// <summary>
+    /// True when the findings list contains at least one waveguide crossing — the (?)
+    /// help button next to the findings (issue #1391) is only offered then.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasWaveguideCrossingIssue;
 
     /// <summary>
     /// The list of design issues found during the last validation run.
@@ -172,6 +180,7 @@ public partial class DesignValidationViewModel : ObservableObject
         Issues.Clear();
         CurrentIndex = -1;
         IsCurrentIssueAlignable = false;
+        HasWaveguideCrossingIssue = false;
         HighlightConnection?.Invoke(null);
     }
 
@@ -185,6 +194,7 @@ public partial class DesignValidationViewModel : ObservableObject
             Issues.Add(issue);
 
         HasIssues = Issues.Count > 0;
+        HasWaveguideCrossingIssue = Issues.Any(i => i.Type == DesignIssueType.WaveguideCrossing);
         StatusText = Issues.Count == 0
             ? "No issues found"
             : $"{Issues.Count} issue(s) found";
