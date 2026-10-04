@@ -5,6 +5,7 @@
              xmlns:oxy="using:OxyPlot.Avalonia"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             xmlns:ws="using:CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum"
              x:Class="CAP.Avalonia.Views.Panels.WavelengthSpectrumPanel"
              x:DataType="vm:MainViewModel">
 
@@ -136,6 +137,19 @@
             <oxy:PlotView x:Name="SpectrumPlot"
                           Model="{Binding BottomPanel.Analysis.Spectrum.PlotModel}" Background="Transparent"/>
         </Border>
+
+        <!-- FSR readout per simulated curve (#1382): one line per curve with ≥ 2
+             fringes, labelled like the plot legend. Blue = simulated (the measured
+             overlay's result line above stays green). -->
+        <ItemsControl Margin="0,2,0,0"
+                      ItemsSource="{Binding BottomPanel.Analysis.Spectrum.FsrReadouts}"
+                      IsVisible="{Binding BottomPanel.Analysis.Spectrum.HasFsrReadouts}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="ws:FsrReadoutLine">
+                    <TextBlock Text="{Binding Text}" Foreground="#9fc5e8" FontSize="10" TextWrapping="Wrap"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </StackPanel>
 
 </UserControl>
