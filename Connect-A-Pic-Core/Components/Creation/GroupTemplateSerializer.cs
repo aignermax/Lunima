@@ -59,7 +59,8 @@ public static class GroupTemplateSerializer
             PhysicalY = group.PhysicalY,
             WidthMicrometers = group.WidthMicrometers,
             HeightMicrometers = group.HeightMicrometers,
-            Rotation = (int)group.Rotation90CounterClock
+            Rotation = (int)group.Rotation90CounterClock,
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         };
 
         // Serialize child components inline
@@ -106,7 +107,8 @@ public static class GroupTemplateSerializer
             PhysicalX = dto.PhysicalX,
             PhysicalY = dto.PhysicalY,
             WidthMicrometers = dto.WidthMicrometers,
-            HeightMicrometers = dto.HeightMicrometers
+            HeightMicrometers = dto.HeightMicrometers,
+            TruthTablePinAssignment = dto.TruthTablePinAssignment
         };
 
         // Deserialize child components
@@ -603,6 +605,15 @@ public class GroupTemplateDto
     public List<ChildComponentDto> Children { get; set; } = new();
     public List<FrozenPathDto> InternalPaths { get; set; } = new();
     public List<ExternalPinDto> ExternalPins { get; set; } = new();
+
+    /// <summary>
+    /// Logic-gate pin-role assignment from the Truth Table panel, carried with the
+    /// same JSON shape as the .lun design file so a prefab keeps its logic roles.
+    /// Null/absent in templates saved before this field existed — loads unchanged.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
 }
 
 /// <summary>
