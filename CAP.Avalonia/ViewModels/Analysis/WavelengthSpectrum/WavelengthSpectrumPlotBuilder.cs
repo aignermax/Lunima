@@ -124,7 +124,9 @@ internal static class WavelengthSpectrumPlotBuilder
         };
         model.Legends.Add(new Legend
         {
-            LegendPosition = LegendPosition.RightTop,
+            // Outside the plot area so the legend never covers curve data.
+            LegendPosition = LegendPosition.RightMiddle,
+            LegendPlacement = LegendPlacement.Outside,
             LegendTextColor = PlotForeground,
             LegendBackground = OxyColor.FromAColor(160, OxyColors.Black),
             LegendBorder = PlotAxisline,

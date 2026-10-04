@@ -44,6 +44,15 @@ public class WavelengthSpectrumPlotBuilderTests
     }
 
     [Fact]
+    public void CreateEmptyPlotModel_PlacesLegendOutsidePlotArea()
+    {
+        var legend = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel().Legends.ShouldHaveSingleItem();
+
+        legend.LegendPlacement.ShouldBe(OxyPlot.Legends.LegendPlacement.Outside,
+            "the legend must never cover curve data (#1374)");
+    }
+
+    [Fact]
     public void BuildPlotModel_MarksDesignWavelength_WhenInsideSweepRange()
     {
         var model = WavelengthSpectrumPlotBuilder.BuildPlotModel(
