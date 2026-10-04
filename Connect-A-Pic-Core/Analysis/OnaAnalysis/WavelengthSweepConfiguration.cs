@@ -5,8 +5,10 @@ namespace CAP_Core.Analysis.OnaAnalysis
     /// </summary>
     public class WavelengthSweepConfiguration
     {
-        /// <summary>Maximum allowed step count to prevent runaway sweeps.</summary>
-        public const int MaxStepCount = 500;
+        /// <summary>Maximum allowed step count to prevent runaway sweeps. High enough to
+        /// resolve MZI fringes and narrow ring resonances across a full 100 nm window
+        /// (the openEBL from-scratch journey sweeps 1500–1600 nm with 1001 steps).</summary>
+        public const int MaxStepCount = 5000;
 
         /// <summary>Start wavelength in nanometres (must be positive).</summary>
         public int StartNm { get; }
