@@ -40,14 +40,22 @@ public sealed record GateRoleAssignment(
     bool IsRegister = false);
 
 /// <summary>
-/// One top-level gate group on the canvas together with its logic-level model and
-/// its role assignment — the unit of input a <see cref="LogicNetworkBuilder"/>
-/// derives a network from.
+/// One gate group on the canvas together with its logic-level model and its role
+/// assignment — the unit of input a <see cref="LogicNetworkBuilder"/> derives a
+/// network from.
 /// </summary>
-/// <param name="Group">The placed gate group; its name becomes the network-local gate id.</param>
+/// <param name="Group">The placed gate group.</param>
 /// <param name="Model">The evaluable logic model extracted from the group.</param>
 /// <param name="Roles">The pin roles matching the extraction the model came from.</param>
+/// <param name="GateId">
+/// The network-local gate id when it differs from the plain group name: a gate nested
+/// inside plain wrapper groups (a cell instance) is identified by the hierarchical path
+/// <c>&lt;topGroup&gt;/&lt;…&gt;/&lt;gateGroup&gt;</c> so two instances of one cell keep
+/// distinct gate identities without mutating <c>GroupName</c>. Null for a top-level
+/// gate — its id stays the plain <c>GroupName</c>.
+/// </param>
 public sealed record LogicGateInstance(
     ComponentGroup Group,
     LogicGateModel Model,
-    GateRoleAssignment Roles);
+    GateRoleAssignment Roles,
+    string? GateId = null);

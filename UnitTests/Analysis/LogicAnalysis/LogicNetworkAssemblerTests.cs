@@ -134,13 +134,15 @@ public class LogicNetworkAssemblerTests
 
         var network = await Assemble(new Component[] { cell }, Array.Empty<WaveguideConnection>());
 
-        network.Gates.Keys.ShouldBe(new[] { "OR1", "OR2" },
-            "gates nested inside a plain group join the network like top-level ones");
-        network.InputPinNames.ShouldBe(new[] { "OR1.a", "OR1.b", "OR2.b" },
-            "the frozen path drives OR2.a, so it is no network input");
-        var outputs = network.Evaluate(Bits(("OR1.a", a), ("OR1.b", b), ("OR2.b", c)));
-        outputs["OR2.y"].ShouldBe(a || b || c,
-            $"the frozen intra-cell path wires OR1.y into OR2.a for a={a}, b={b}, c={c}");
+        network.Gates.Keys.ShouldBe(new[] { "CELL/OR1", "CELL/OR2" },
+            "a nested gate's id is the path of enclosing group names, so two instances " +
+            "of one cell keep distinct gate identities");
+        network.InputPinNames.ShouldBe(new[] { "CELL/OR1.a", "CELL/OR1.b", "CELL/OR2.b" },
+            "the frozen path drives CELL/OR2.a, so it is no network input");
+        var outputs = network.Evaluate(
+            Bits(("CELL/OR1.a", a), ("CELL/OR1.b", b), ("CELL/OR2.b", c)));
+        outputs["CELL/OR2.y"].ShouldBe(a || b || c,
+            $"the frozen intra-cell path wires CELL/OR1.y into CELL/OR2.a for a={a}, b={b}, c={c}");
     }
 
     [Fact]
@@ -157,8 +159,8 @@ public class LogicNetworkAssemblerTests
 
         var network = await Assemble(new Component[] { cell }, Array.Empty<WaveguideConnection>());
 
-        network.Gates.Keys.ShouldBe(new[] { "OR1" });
-        network.InputPinNames.ShouldBe(new[] { "OR1.a", "OR1.b" },
+        network.Gates.Keys.ShouldBe(new[] { "CELL/OR1" });
+        network.InputPinNames.ShouldBe(new[] { "CELL/OR1.a", "CELL/OR1.b" },
             "the pin-less outline wires nothing — both gate inputs stay network inputs");
     }
 
@@ -182,12 +184,12 @@ public class LogicNetworkAssemblerTests
 
         var network = await Assemble(new Component[] { cell }, Array.Empty<WaveguideConnection>());
 
-        network.Gates.Keys.ShouldBe(new[] { "MZ" });
-        network.InputPinNames.ShouldBe(new[] { "MZ.in" },
+        network.Gates.Keys.ShouldBe(new[] { "CELL/MZ" });
+        network.InputPinNames.ShouldBe(new[] { "CELL/MZ.in" },
             "the gate's internal arm paths wire nothing — its input is the network input");
-        network.Evaluate(Bits(("MZ.in", true)))["MZ.bright"]
+        network.Evaluate(Bits(("CELL/MZ.in", true)))["CELL/MZ.bright"]
             .ShouldBeTrue("the MZI gate evaluates through its internal arms");
-        network.Evaluate(Bits(("MZ.in", false)))["MZ.bright"].ShouldBeFalse();
+        network.Evaluate(Bits(("CELL/MZ.in", false)))["CELL/MZ.bright"].ShouldBeFalse();
     }
 
     [Fact]
