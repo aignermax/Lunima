@@ -57,6 +57,11 @@ public class LogicExamplesLayoutTests
             {
                 if (IsStraightStub(parts[i].Part) && IsStraightStub(parts[j].Part))
                     continue;
+                // Hierarchical designs (issue #1389): a cell's recursion lists the nested
+                // gate groups and their leaf parts together — a group contains its own
+                // children by construction, so that pair is not an overlap.
+                if (ContainsRecursively(parts[i].Part, parts[j].Part) || ContainsRecursively(parts[j].Part, parts[i].Part))
+                    continue;
                 parts[i].Box.Shrunk(PinPitchOverlapToleranceMicrometers).Intersects(parts[j].Box).ShouldBeFalse(
                     $"'{exampleFileName}': inside gate '{group.GroupName}' part '{parts[i].Part.Identifier}' {parts[i].Box} " +
                     $"overlaps part '{parts[j].Part.Identifier}' {parts[j].Box}");
@@ -66,6 +71,11 @@ public class LogicExamplesLayoutTests
 
     private static bool IsStraightStub(Component part) =>
         (part.HumanReadableName ?? part.Name).Contains("Straight Waveguide", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when <paramref name="ancestor"/> is a group whose recursive children include <paramref name="part"/>.</summary>
+    private static bool ContainsRecursively(Component ancestor, Component part) =>
+        ancestor is ComponentGroup group
+        && group.GetAllComponentsRecursive().Any(c => ReferenceEquals(c, part));
 
     /// <summary>
     /// The chip size the file declares. The headless load path leaves applying it to the

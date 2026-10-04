@@ -75,6 +75,12 @@ never scripted, so the scene cannot contradict itself; the taller unvisited peak
 the "local best" caveat visible. `FrameAt(progress)` returns the deterministic frame
 state for tests.
 
+`WaveguideCrossingHelpAnimation` (crossing-finding help, #1391): two mini scenes in
+lockstep — a bare X junction and the same junction with a crossing component. The pulse
+approaches both at once; at the bare X it dims by the leaked fraction while a leak pulse
+peels off into the crossing arm, through the component it continues straight at full
+brightness. The last frame holds the leaked end state.
+
 ## Rules
 
 - One animation per flyout; keep text sections to ≤3 short sentences (enforced by

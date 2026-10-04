@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:help="using:CAP.Avalonia.Controls.Help"
              xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.DesignChecksPanel"
@@ -50,9 +51,22 @@
                 Command="{Binding RunDesignChecksCommand}"
                 HorizontalAlignment="Left" Padding="12,4" Margin="0,5,0,5"
                 Background="#5d3d3d"/>
-        <TextBlock Text="{Binding RightPanel.DesignValidation.StatusText}"
-                   Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                   IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding RightPanel.DesignValidation.StatusText}"
+                       Foreground="Gray" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                       IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <!-- (?) help for crossing findings (#1391): why a plain X junction fails and
+                 how a Crossing 4-Port fixes it. Only offered while a waveguide crossing
+                 is among the findings. -->
+            <controls:HelpFlyoutButton x:Name="CrossingHelpButton" Grid.Column="1"
+                                       Title="{loc:Localize DesignChecks.CrossingHelp.Title}"
+                                       IsVisible="{Binding RightPanel.DesignValidation.HasWaveguideCrossingIssue}"
+                                       VerticalAlignment="Top" Margin="6,0,0,0">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <help:WaveguideCrossingHelpFlyout/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </Grid>
         <StackPanel Orientation="Horizontal" Margin="0,5,0,5"
                     IsVisible="{Binding RightPanel.DesignValidation.HasIssues}">
             <Button Content="{loc:Localize DesignChecks.Prev}"
