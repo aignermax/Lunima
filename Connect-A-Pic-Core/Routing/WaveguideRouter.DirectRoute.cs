@@ -51,8 +51,11 @@ public partial class WaveguideRouter
         var candidate = InterconnectRouting.DirectRouteFirstPolicy.TryBuildWithStyle(
             startPin, endPin, bendRadius, out var directStyle,
             isElectrical ? null : AllowedBendRadii);
-        if (candidate == null
-            || !candidate.IsValid
+        if (candidate == null)
+            return null;
+
+        candidate = AxisAlignPinEnds(candidate, startPin, endPin);
+        if (!candidate.IsValid
             || PathIntersectionDetector.HasSelfIntersection(candidate)
             || IsDirectCandidateBlockedByComponents(candidate.Segments, startPin, endPin, bendRadius)
             || DirectCandidateConflictsWithSibling(candidate, startPin, endPin, bendRadius))
@@ -151,6 +154,72 @@ public partial class WaveguideRouter
         }
         return false;
     }
+
+    /// <summary>Length (µm) of the axis-aligned stubs a degenerate single-diagonal direct
+    /// route gets at both pins.</summary>
+    private const double PinEndStubMicrometers = 1.0;
+
+    /// <summary>Angular tolerance (degrees) for "this end segment already runs along the pin axis".
+    /// Tighter than the tilt whose sin()×half-width end-cap poke reaches one export dbu.</summary>
+    private const double PinAxisToleranceDegrees = 0.05;
+
+    /// <summary>
+    /// A styled candidate between facing pins with a sub-bend-radius lateral offset degrades
+    /// to a single diagonal straight — the only straight that joins the pins — and its end
+    /// segments then leave/arrive off-axis. On export the tilted end cap pokes a rounding
+    /// sliver past the partner component's DevRec plane, which the SiEPIC verification
+    /// counts as an overlapping component. Give such a degenerate route a short axis-aligned
+    /// stub at each misaligned end; multi-segment styled paths already leave and arrive
+    /// along the pin axes and are returned unchanged.
+    /// </summary>
+    private static RoutedPath AxisAlignPinEnds(RoutedPath candidate, PhysicalPin startPin, PhysicalPin endPin)
+    {
+        if (candidate.Segments.Count != 1 || candidate.Segments[0] is not StraightSegment)
+            return candidate;
+
+        double startAngle = startPin.GetAbsoluteAngle();
+        double arrivalAngle = AngleUtilities.NormalizeAngle(endPin.GetAbsoluteAngle() + 180.0);
+        var (startX, startY) = startPin.GetAbsolutePosition();
+        var (endX, endY) = endPin.GetAbsolutePosition();
+
+        bool startAligned = IsAxisParallel(startX, startY, endX, endY, startAngle);
+        bool endAligned = IsAxisParallel(startX, startY, endX, endY, arrivalAngle);
+        if (startAligned && endAligned)
+            return candidate;
+
+        double dx = endX - startX;
+        double dy = endY - startY;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        double stub = Math.Min(PinEndStubMicrometers, length / 4.0);
+
+        var points = new List<(double X, double Y)> { (startX, startY) };
+        if (!startAligned)
+            points.Add((startX + stub * CosDegrees(startAngle), startY + stub * SinDegrees(startAngle)));
+        if (!endAligned)
+            points.Add((endX - stub * CosDegrees(arrivalAngle), endY - stub * SinDegrees(arrivalAngle)));
+        points.Add((endX, endY));
+
+        var aligned = new RoutedPath();
+        for (int i = 0; i + 1 < points.Count; i++)
+        {
+            aligned.Segments.Add(new StraightSegment(
+                points[i].X, points[i].Y, points[i + 1].X, points[i + 1].Y,
+                SegmentAngleDegrees(points[i], points[i + 1])));
+        }
+        return aligned;
+    }
+
+    /// <summary>True when the segment from (x1,y1) to (x2,y2) runs along the given axis.</summary>
+    private static bool IsAxisParallel(double x1, double y1, double x2, double y2, double axisAngleDegrees) =>
+        Math.Abs(AngleUtilities.NormalizeAngle(SegmentAngleDegrees((x1, y1), (x2, y2)) - axisAngleDegrees))
+        <= PinAxisToleranceDegrees;
+
+    private static double SegmentAngleDegrees((double X, double Y) from, (double X, double Y) to) =>
+        Math.Atan2(to.Y - from.Y, to.X - from.X) * 180.0 / Math.PI;
+
+    private static double CosDegrees(double angleDegrees) => Math.Cos(angleDegrees * Math.PI / 180.0);
+
+    private static double SinDegrees(double angleDegrees) => Math.Sin(angleDegrees * Math.PI / 180.0);
 
     /// <summary>True when the registered segments run between the same two pin positions
     /// (either orientation) — i.e. they are this connection's own previous route.</summary>

@@ -8156,16 +8156,16 @@
       "category": "Termination",
       "nazcaFunction": "ebeam_terminator_te1550",
       "nazcaParameters": "",
-      "widthMicrometers": 10,
-      "heightMicrometers": 5,
-      "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 2.5,
+      "widthMicrometers": 10.901,
+      "heightMicrometers": 1.5,
+      "nazcaOriginOffsetX": 0.453,
+      "nazcaOriginOffsetY": 0.75,
       "pins": [
         {
           "name": "port 1",
-          "offsetXMicrometers": 0,
-          "offsetYMicrometers": 2.5,
-          "angleDegrees": 180
+          "offsetXMicrometers": 10.901,
+          "offsetYMicrometers": 0.75,
+          "angleDegrees": 0
         }
       ],
       "sMatrix": {
