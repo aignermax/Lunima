@@ -1,0 +1,6 @@
+[
+  {
+    "file": "word-cell.png",
+    "caption": "One word cell (CELL0) of the re-baked \u0027Logic Gate RAM 4x4\u0027 example (issue #1425, coarse-retry router of #1423): 8 of the 44 intra-cell wires remain on the blocked fallback, down from 9 \u2014 compare docs/pr-media/issue-1400/word-cell-after.png. The RAM 2x4 re-bake did not ship (its total stayed 21), so the improved cell is shown from the 4x4."
+  }
+]
