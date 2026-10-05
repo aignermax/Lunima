@@ -21,6 +21,51 @@ public partial class WaveguideRouter
     public int CoarseRetryCellSizeFactor { get; set; } = 4;
 
     /// <summary>
+    /// Total node expansions the coarse-grid retries inside the most recent
+    /// <see cref="Route"/> call burned — summed over both the factor-4 and the
+    /// factor-8 escalation attempts and their lateral-tolerance retries. Diagnostic
+    /// surface: lets the perf-guard test measure what the retry
+    /// actually costs per blocked wire.
+    /// </summary>
+    public long LastRouteCoarseNodesExpanded { get; private set; }
+
+    /// <summary>
+    /// Coarse-retry budget as a multiple of <see cref="Phase2MaxNodes"/>.
+    /// A single <see cref="Route"/> call may burn at most this many × Phase2MaxNodes
+    /// node expansions across all its coarse-retry attempts (factor-4 strict+tolerant
+    /// plus the factor-8 escalation strict+tolerant, possibly repeated at the
+    /// connection radius when the process floor fails). Bounds the worst-case cost
+    /// one blocked wire adds to a re-route: the measurement on the word-cell
+    /// contention scene showed a happy-path retry needs ~9× (269k expansions at
+    /// 30k phase-2 budget), so 16× leaves comfortable headroom while capping a
+    /// flooded sealed-pin retry 20× below the uncapped worst case of
+    /// (16+16+64+64)×2 radii = 320×.
+    /// </summary>
+    public int CoarseRetryBudgetMultiplier { get; set; } = 16;
+
+    /// <summary>
+    /// Effective cap on the total node expansions a single <see cref="Route"/> call may
+    /// burn across all its coarse-retry attempts — <see cref="CoarseRetryBudgetMultiplier"/>
+    /// × <see cref="Phase2MaxNodes"/>.
+    /// </summary>
+    private int MaxCoarseRetryNodesPerWire =>
+        (int)Math.Min(int.MaxValue, (long)CoarseRetryBudgetMultiplier * Phase2MaxNodes);
+
+    /// <summary>
+    /// Fires when the router is about to enter the coarse-grid retry for a wire.
+    /// Diagnostic hook: lets tests cancel during the retry to verify
+    /// the bounded-exit guarantee.
+    /// </summary>
+    internal Action? OnCoarseRetryStarted { get; set; }
+
+    /// <summary>
+    /// Fires at the end of every <see cref="Route"/> call with the total coarse-retry
+    /// node expansions that wire burned (0 when the retry never ran). Diagnostic hook:
+    /// lets tests log per-wire retry cost across a full manager pass.
+    /// </summary>
+    internal Action<long>? OnRouteCoarseExpansionsRecorded { get; set; }
+
+    /// <summary>
     /// Runs a single A* attempt on a coarse copy of <see cref="PathfindingGrid"/> with the
     /// full <see cref="Phase2MaxNodes"/> budget, escalating to twice
     /// <see cref="CoarseRetryCellSizeFactor"/> when the first coarse grid still floods the
@@ -39,6 +84,8 @@ public partial class WaveguideRouter
         if (PathfindingGrid == null || CoarseRetryCellSizeFactor <= 1) return null;
         if (cancellationToken.IsCancellationRequested) return null;
 
+        OnCoarseRetryStarted?.Invoke();
+
         var (path, provedNoPath) = TryRouteCoarseAStarAtFactor(
             CoarseRetryCellSizeFactor, bendRadius,
             startX, startY, startAngle, endX, endY, endInputAngle,
@@ -50,14 +97,25 @@ public partial class WaveguideRouter
             // re-flood the same plane for nothing.
             return path;
         }
+        // Skip the escalation once the per-wire budget is spent — a factor-8 flood on
+        // top of an exhausted factor-4 search only multiplies the blocked wire's cost.
+        if (LastRouteCoarseNodesExpanded >= MaxCoarseRetryNodesPerWire) return null;
         return TryRouteCoarseAStarAtFactor(CoarseRetryCellSizeFactor * 2, bendRadius,
             startX, startY, startAngle, endX, endY, endInputAngle,
             startPin, endPin, cancellationToken).Path;
     }
 
-    /// <summary>The coarse attempt's node budget: <see cref="Phase2MaxNodes"/> times factor².</summary>
-    private int CoarseBudget(int factor) =>
-        (int)Math.Min(int.MaxValue, (long)Phase2MaxNodes * factor * factor);
+    /// <summary>
+    /// The coarse attempt's node budget: <see cref="Phase2MaxNodes"/> times factor²,
+    /// clamped so the running total across the wire's retries stays under
+    /// <see cref="MaxCoarseRetryNodesPerWire"/>.
+    /// </summary>
+    private int CoarseBudget(int factor)
+    {
+        long factorSquared = (long)Phase2MaxNodes * factor * factor;
+        long remaining = MaxCoarseRetryNodesPerWire - LastRouteCoarseNodesExpanded;
+        return (int)Math.Min(int.MaxValue, Math.Min(factorSquared, Math.Max(0, remaining)));
+    }
 
     /// <summary>
     /// One coarse-grid A* attempt at a specific cell-size factor. <c>ProvedNoPath</c> is
@@ -108,6 +166,7 @@ public partial class WaveguideRouter
         };
         var gridPath = astar.FindPath(gridStartX, gridStartY, startDir,
                                       gridEndX, gridEndY, endDir, cancellationToken);
+        LastRouteCoarseNodesExpanded += astar.LastSearchNodesExpanded;
 
         // Same lateral-tolerance retry as the fine attempt: coarse cells quantize the
         // pin's entry axis, so an exact on-axis arrival can be impossible even when a
@@ -117,14 +176,19 @@ public partial class WaveguideRouter
         bool provedNoPath = astar.LastSearchProvedNoPath && !astar.LastSearchReachedGoalVicinity;
         if (gridPath == null && !provedNoPath && !cancellationToken.IsCancellationRequested)
         {
+            // Re-derive the budget AFTER the strict run: the per-wire cap
+            // is shared between the two, so the retry only gets
+            // what the strict attempt left unspent.
+            int tolerantBudget = CoarseBudget(factor);
             var tolerantRetry = new AStarPathfinder.AStarPathfinder(coarseGrid, costCalculator)
             {
-                MaxNodesExpanded = coarseBudget,
+                MaxNodesExpanded = tolerantBudget,
                 AllowLateralGoalTolerance = true,
                 UseDiagonals = UseDiagonalRouting
             };
             gridPath = tolerantRetry.FindPath(gridStartX, gridStartY, startDir,
                                               gridEndX, gridEndY, endDir, cancellationToken);
+            LastRouteCoarseNodesExpanded += tolerantRetry.LastSearchNodesExpanded;
             provedNoPath = tolerantRetry.LastSearchProvedNoPath;
         }
         if (gridPath == null || gridPath.Count < 2)
