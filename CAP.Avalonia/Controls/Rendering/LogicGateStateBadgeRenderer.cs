@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.ViewModels.Canvas;
-using CAP_Core.Components.Core;
 using System.Globalization;
 
 namespace CAP.Avalonia.Controls.Rendering;
@@ -16,6 +15,9 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// the gate input chips (<c>A0 = 1</c>, issue #1051) and, symmetric to them, the
 /// named output taps (<c>S0 = 1</c>, issue #1067); unnamed pins keep the plain
 /// square 0/1 chip exactly.
+/// Gates nested inside hierarchical cell instances badge exactly like top-level ones
+/// (issue #1398): the groups resolve through the network's hierarchical gate ids
+/// (<c>CELL0/REG00</c>) and each chip sits on the nested group's own absolute bounds.
 /// The chips only ever sit on top of the group — the
 /// group itself is never repainted — and they vanish with the network (rebuild, cancel,
 /// design edit, load), driven entirely by <see cref="LogicGateStateOverlay"/>.
@@ -44,27 +46,42 @@ internal static class LogicGateStateBadgeRenderer
     /// <param name="rc">The render context carrying the canvas ViewModel with the badge states.</param>
     public static void Render(DrawingContext context, CanvasRenderContext rc)
     {
-        var badges = rc.ViewModel.LogicGateStates.Badges;
+        foreach (var (badges, groupBounds) in ComputePlacements(rc.ViewModel))
+        {
+            for (var i = 0; i < badges.Count; i++)
+            {
+                DrawBadge(context, groupBounds, i, badges[i]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The badge set of one frame (test seam, InternalsVisibleTo UnitTests — issue
+    /// #1398): one entry per gate group carrying badges, resolved through the network's
+    /// hierarchical gate ids so gates nested inside cell instances appear with their
+    /// own absolute group bounds. Top-level gates keep their plain group name, so a
+    /// flat design computes exactly the set the pre-hierarchical renderer drew.
+    /// </summary>
+    /// <param name="canvas">The canvas ViewModel with the badge states and the design.</param>
+    internal static IReadOnlyList<(IReadOnlyList<LogicGateBadgeViewModel> Badges, Rect GroupBounds)>
+        ComputePlacements(DesignCanvasViewModel canvas)
+    {
+        var placements = new List<(IReadOnlyList<LogicGateBadgeViewModel>, Rect)>();
+        var badges = canvas.LogicGateStates.Badges;
         if (badges.Count == 0)
-            return;
+            return placements;
 
         var badgesByGroup = badges
             .GroupBy(badge => badge.GroupName)
-            .ToDictionary(group => group.Key, group => group.ToList());
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<LogicGateBadgeViewModel>)group.ToList());
 
-        foreach (var comp in rc.ViewModel.Components)
+        foreach (var (gateId, group) in canvas.LogicGateStates.GateGroupsById(canvas.Components))
         {
-            if (comp.Component is not ComponentGroup group)
+            if (!badgesByGroup.TryGetValue(gateId, out var groupBadges))
                 continue;
-            if (!badgesByGroup.TryGetValue(group.GroupName, out var groupBadges))
-                continue;
-
-            var bounds = ComponentGroupRenderer.CalculateGroupBounds(group);
-            for (var i = 0; i < groupBadges.Count; i++)
-            {
-                DrawBadge(context, bounds, i, groupBadges[i]);
-            }
+            placements.Add((groupBadges, ComponentGroupRenderer.CalculateGroupBounds(group)));
         }
+        return placements;
     }
 
     /// <summary>Draws one chip: dark backing, thin border, centered bit — named badges
