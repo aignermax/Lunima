@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 
@@ -19,6 +20,13 @@ public partial class LogicPanelViewModel
     public ObservableCollection<LogicOutputRowViewModel> OutputRows { get; } = new();
 
     /// <summary>
+    /// True when the assembled network contains at least one cell-instance group
+    /// (#1411) — controls the (?) flyout that explains what a cell instance is.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasCellGroups;
+
+    /// <summary>
     /// Rebuilds both row collections from the current flat lists — call after
     /// <see cref="Inputs"/> and <see cref="Outputs"/> were refilled.
     /// </summary>
@@ -34,6 +42,7 @@ public partial class LogicPanelViewModel
         foreach (var row in CellGrouping.GroupByCell(
                      SignalBusGrouping.GroupOutputs(Outputs), RegisterGatesByCell()))
             OutputRows.Add(row);
+        HasCellGroups = OutputRows.OfType<LogicCellGroupViewModel>().Any();
     }
 
     /// <summary>The register gate ids per top-level cell instance, for the cell-group headers.</summary>

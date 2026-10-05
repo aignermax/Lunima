@@ -82,6 +82,24 @@ public class LogicPanelCellGroupTests : IClassFixture<LogicPanelCellGroupTests.L
                 "the flat example keeps the identical plain-row list as before, order included");
     }
 
+    [Fact]
+    public async Task BuildNetwork_Ram2x4_HasCellGroupsIsTrue()
+    {
+        var vm = await BuildPanel(_fixture.RamCanvas);
+
+        vm.HasCellGroups.ShouldBeTrue(
+            "the (?) cell-instance help must appear when the network has cell groups (#1411)");
+    }
+
+    [Fact]
+    public async Task BuildNetwork_FlatAdder_HasCellGroupsIsFalse()
+    {
+        var vm = await BuildPanel(_fixture.AdderCanvas);
+
+        vm.HasCellGroups.ShouldBeFalse(
+            "a flat design has no cell instances — the (?) cell-instance help stays hidden (#1411)");
+    }
+
     /// <summary>Builds the panel VM over a fixture canvas and assembles its network.</summary>
     private static async Task<LogicPanelViewModel> BuildPanel(DesignCanvasViewModel canvas)
     {

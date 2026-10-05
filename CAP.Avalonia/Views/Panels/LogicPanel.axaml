@@ -142,7 +142,20 @@
                 </ItemsControl.DataTemplates>
             </ItemsControl>
 
-            <TextBlock Text="{loc:Localize LogicPanel.Outputs}" Foreground="Gray" FontSize="10" Margin="0,8,0,2"/>
+            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,2">
+                <TextBlock Text="{loc:Localize LogicPanel.Outputs}" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
+                <!-- What is a cell instance? (#1411): one template, stamped N times,
+                     each copy keeping its own registers — shown only when the built
+                     network actually contains cell groups. -->
+                <controls:HelpFlyoutButton Grid.Column="1"
+                                           Title="{loc:Localize LogicPanelCellHelp.Title}"
+                                           VerticalAlignment="Center" Margin="4,-4,0,0"
+                                           IsVisible="{Binding RightPanel.Logic.HasCellGroups}">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:LogicCellInstanceHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
+            </Grid>
             <ItemsControl ItemsSource="{Binding RightPanel.Logic.OutputRows}">
                 <ItemsControl.DataTemplates>
                     <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">

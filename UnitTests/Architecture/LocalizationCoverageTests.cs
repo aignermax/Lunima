@@ -44,6 +44,10 @@ public class LocalizationCoverageTests
         // Pin-role name from the gate examples / Truth Table panel — a technical token
         // that must match the persisted pin names, so it is deliberately not translated.
         "BIAS",
+        // Cell-instance gate ids (#1411 help diagram) — technical tokens that must match
+        // the ids shown in the Logic panel rows and canvas badges, so they are
+        // deliberately not translated.
+        "CELL0", "CELL1", "CELL0/REG00",
     };
 
     /// <summary>Read-only code snippets shown as examples are source, not UI copy — never localized.</summary>
