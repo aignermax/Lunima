@@ -47,9 +47,10 @@ public class ExampleFrozenBlockedPathTests
         // wires frozen with the flag (re-baked in #1419 after the extraction path learned
         // to carry the flag — before, the file shipped 383 frozen paths with zero flags).
         ["Logic Gate RAM 2x4.lun"] = 21,
-        // 44 blocked top-level wires + 4 cell instances × 9 blocked intra-cell wires
-        // frozen with the flag (same re-bake).
-        ["Logic Gate RAM 4x4.lun"] = 80,
+        // 45 blocked top-level wires + 4 cell instances × 8 blocked intra-cell wires
+        // frozen with the flag (re-baked in #1425 with the coarse-retry router of #1423:
+        // the cell dropped 9 → 8, the top level rose 44 → 45 — the total still drops).
+        ["Logic Gate RAM 4x4.lun"] = 77,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
     };
 

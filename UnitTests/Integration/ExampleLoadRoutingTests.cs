@@ -38,7 +38,10 @@ public class ExampleLoadRoutingTests
         // Top-level inter-cell wires only; each word-cell instance freezes 9 more blocked
         // intra-cell wires (counted in ExampleFrozenBlockedPathTests.KnownBlockedPathCounts).
         ["Logic Gate RAM 2x4.lun"] = 3,
-        ["Logic Gate RAM 4x4.lun"] = 44,
+        // Re-baked in #1425 with the coarse-retry router (#1423): one more blocked
+        // top-level wire than before, but the frozen cell count drops 9 → 8, so the
+        // file's total falls 80 → 77 (see ExampleFrozenBlockedPathTests).
+        ["Logic Gate RAM 4x4.lun"] = 45,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
     };
 
