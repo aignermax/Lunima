@@ -54,6 +54,22 @@ public class AStarPathfinder
     /// <summary>Fired once when the search expands its <see cref="EscalationThresholdNodes"/>-th node.</summary>
     public Action? OnEscalationThresholdReached { get; set; }
 
+    /// <summary>
+    /// True when the last <see cref="FindPath"/> returned null because the open set emptied
+    /// — a proof that no goal-reaching path exists in the reachable region — rather than
+    /// because the node budget cut the search short or cancellation stopped it. Lets a
+    /// caller skip follow-up searches that cannot succeed.
+    /// </summary>
+    public bool LastSearchProvedNoPath { get; private set; }
+
+    /// <summary>
+    /// True when the last <see cref="FindPath"/> dequeued at least one node that would
+    /// satisfy the goal test with <see cref="AllowLateralGoalTolerance"/> enabled. When
+    /// <see cref="LastSearchProvedNoPath"/> is also true, every reachable state was
+    /// expanded, so a lateral-tolerance retry cannot succeed either and may be skipped.
+    /// </summary>
+    public bool LastSearchReachedGoalVicinity { get; private set; }
+
     public AStarPathfinder(PathfindingGrid grid, RoutingCostCalculator costCalculator)
     {
         _grid = grid;
@@ -87,6 +103,8 @@ public class AStarPathfinder
                                       int endX, int endY, GridDirection endDirection,
                                       CancellationToken cancellationToken = default)
     {
+        LastSearchProvedNoPath = false;
+        LastSearchReachedGoalVicinity = false;
         var openSet = new PriorityQueue<AStarNode, double>(initialCapacity: 4096);
         var visited = new Dictionary<long, AStarNode>(capacity: 4096);
         var neighborBuffer = new List<AStarNode>(8);
@@ -116,7 +134,10 @@ public class AStarPathfinder
         {
             // Check cancellation periodically to remain responsive
             if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)
+            {
+                LastSearchProvedNoPath = false;
                 return null;
+            }
 
             var current = openSet.Dequeue();
             nodesExpanded++;
@@ -126,6 +147,7 @@ public class AStarPathfinder
             // Check if we reached the goal
             if (IsGoalReached(current, endX, endY, endDirection))
             {
+                LastSearchReachedGoalVicinity = true;
                 var path = ReconstructPath(current);
 
                 // A waveguide cannot cross itself (no optical model for that): discard
@@ -145,6 +167,11 @@ public class AStarPathfinder
                 }
                 continue;
             }
+            if (!AllowLateralGoalTolerance && !LastSearchReachedGoalVicinity
+                && IsGoalReached(current, endX, endY, endDirection, GoalTolerance))
+            {
+                LastSearchReachedGoalVicinity = true;
+            }
 
             // Expand neighbors
             CollectNeighbors(current, endX, endY, endDirection, visited, neighborBuffer);
@@ -157,6 +184,7 @@ public class AStarPathfinder
 
         // No path found: hitting the budget with frontier left is a cut-short
         // search; an empty open set is a proof that no path exists.
+        LastSearchProvedNoPath = openSet.Count == 0;
         return null;
     }
 
@@ -184,7 +212,11 @@ public class AStarPathfinder
     /// <see cref="AllowLateralGoalTolerance"/> small lateral offsets are also
     /// accepted and the path smoother snaps the approach onto the axis.
     /// </summary>
-    private bool IsGoalReached(AStarNode node, int endX, int endY, GridDirection endDirection)
+    private bool IsGoalReached(AStarNode node, int endX, int endY, GridDirection endDirection) =>
+        IsGoalReached(node, endX, endY, endDirection, AllowLateralGoalTolerance ? GoalTolerance : 0);
+
+    /// <summary>Goal test with a caller-chosen lateral tolerance (cells); see the overload.</summary>
+    private bool IsGoalReached(AStarNode node, int endX, int endY, GridDirection endDirection, int maxCross)
     {
         if (node.Direction != endDirection)
             return false;
@@ -199,7 +231,6 @@ public class AStarPathfinder
         // Perpendicular offset from the entry axis: exactly zero in strict
         // mode, within GoalTolerance in the lateral-tolerance retry.
         int cross = dx * uy - dy * ux;
-        int maxCross = AllowLateralGoalTolerance ? GoalTolerance : 0;
         if (Math.Abs(cross) > maxCross)
             return false;
 
