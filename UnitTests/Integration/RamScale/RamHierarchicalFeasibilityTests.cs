@@ -49,9 +49,13 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
     /// cell-spanning select wire), not gate obstacles. The pin guards against regressions.
     /// </summary>
     [Fact]
-    public void WordCell_BlockedIntraCellWires_WithinFloorplanBudget() =>
-        _cell.BlockedCount.ShouldBeLessThanOrEqualTo(9,
-            "the re-floorplanned word cell (issue #1400) routes with at most 9 blocked intra-cell wires (was 17)");
+    public void WordCell_BlockedIntraCellWires_WithinFloorplanBudget()
+    {
+        _cell.BlockedCount.ShouldBeGreaterThan(0,
+            "a zero count means the shipped example lost the blocked flags again — the pin must never pass vacuously");
+        _cell.BlockedCount.ShouldBe(9,
+            "the re-floorplanned word cell (issue #1400) routes with exactly 9 blocked intra-cell wires (was 17)");
+    }
 
     [Fact]
     public Task Ram2Words4Bits_Hierarchical_AssemblyBehaviorAndRoute_Measured() =>
