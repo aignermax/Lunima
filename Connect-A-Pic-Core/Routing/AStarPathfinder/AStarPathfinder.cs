@@ -71,8 +71,8 @@ public class AStarPathfinder
     public bool LastSearchReachedGoalVicinity { get; private set; }
 
     /// <summary>
-    /// Node expansions the last <see cref="FindPath"/> performed. Diagnostic surface
-    /// (issue #1426): lets callers measure what a coarse retry actually costs per
+    /// Node expansions the last <see cref="FindPath"/> performed. Diagnostic surface:
+    /// lets callers measure what a coarse retry actually costs per
     /// blocked wire, without re-running the search.
     /// </summary>
     public int LastSearchNodesExpanded { get; private set; }

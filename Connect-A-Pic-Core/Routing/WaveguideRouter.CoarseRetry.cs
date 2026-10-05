@@ -24,13 +24,13 @@ public partial class WaveguideRouter
     /// Total node expansions the coarse-grid retries inside the most recent
     /// <see cref="Route"/> call burned — summed over both the factor-4 and the
     /// factor-8 escalation attempts and their lateral-tolerance retries. Diagnostic
-    /// surface (issue #1426): lets the perf-guard test measure what the retry
+    /// surface: lets the perf-guard test measure what the retry
     /// actually costs per blocked wire.
     /// </summary>
     public long LastRouteCoarseNodesExpanded { get; private set; }
 
     /// <summary>
-    /// Coarse-retry budget as a multiple of <see cref="Phase2MaxNodes"/> (issue #1426).
+    /// Coarse-retry budget as a multiple of <see cref="Phase2MaxNodes"/>.
     /// A single <see cref="Route"/> call may burn at most this many × Phase2MaxNodes
     /// node expansions across all its coarse-retry attempts (factor-4 strict+tolerant
     /// plus the factor-8 escalation strict+tolerant, possibly repeated at the
@@ -53,15 +53,15 @@ public partial class WaveguideRouter
 
     /// <summary>
     /// Fires when the router is about to enter the coarse-grid retry for a wire.
-    /// Diagnostic hook (issue #1426): lets tests cancel during the retry to verify
+    /// Diagnostic hook: lets tests cancel during the retry to verify
     /// the bounded-exit guarantee.
     /// </summary>
     internal Action? OnCoarseRetryStarted { get; set; }
 
     /// <summary>
     /// Fires at the end of every <see cref="Route"/> call with the total coarse-retry
-    /// node expansions that wire burned (0 when the retry never ran). Diagnostic hook
-    /// (issue #1426): lets tests log per-wire retry cost across a full manager pass.
+    /// node expansions that wire burned (0 when the retry never ran). Diagnostic hook:
+    /// lets tests log per-wire retry cost across a full manager pass.
     /// </summary>
     internal Action<long>? OnRouteCoarseExpansionsRecorded { get; set; }
 
@@ -108,7 +108,7 @@ public partial class WaveguideRouter
     /// <summary>
     /// The coarse attempt's node budget: <see cref="Phase2MaxNodes"/> times factor²,
     /// clamped so the running total across the wire's retries stays under
-    /// <see cref="MaxCoarseRetryNodesPerWire"/> (issue #1426).
+    /// <see cref="MaxCoarseRetryNodesPerWire"/>.
     /// </summary>
     private int CoarseBudget(int factor)
     {
@@ -177,7 +177,7 @@ public partial class WaveguideRouter
         if (gridPath == null && !provedNoPath && !cancellationToken.IsCancellationRequested)
         {
             // Re-derive the budget AFTER the strict run: the per-wire cap
-            // (issue #1426) is shared between the two, so the retry only gets
+            // is shared between the two, so the retry only gets
             // what the strict attempt left unspent.
             int tolerantBudget = CoarseBudget(factor);
             var tolerantRetry = new AStarPathfinder.AStarPathfinder(coarseGrid, costCalculator)
