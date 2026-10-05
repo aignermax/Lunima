@@ -25,8 +25,12 @@ public class IsaPlaygroundPhotonicNotTests : IClassFixture<LogicGateNot4BitExamp
     private readonly LogicGateNot4BitExampleTests.Not4BitFixture _fixture;
 
     /// <summary>Attaches the shared NOT-4-bit fixture (assembles the network once).</summary>
-    public IsaPlaygroundPhotonicNotTests(LogicGateNot4BitExampleTests.Not4BitFixture fixture) =>
+    public IsaPlaygroundPhotonicNotTests(LogicGateNot4BitExampleTests.Not4BitFixture fixture)
+    {
         _fixture = fixture;
+        // The hint assertions match English example names; pin English over the machine's UI culture.
+        LocalizationService.Instance.SetLanguage("en");
+    }
 
     [Fact]
     public void NotNetwork_EnablesToggle_WithNotLabelAndNotHeader()
