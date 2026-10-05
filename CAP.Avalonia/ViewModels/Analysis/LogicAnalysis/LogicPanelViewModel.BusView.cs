@@ -29,8 +29,31 @@ public partial class LogicPanelViewModel
         OutputRows.Clear();
         foreach (var row in SignalBusGrouping.GroupInputs(Inputs))
             InputRows.Add(row);
-        foreach (var row in SignalBusGrouping.GroupOutputs(Outputs))
+        // Cell collapse (#1399): gates nested inside a cell instance fold under one
+        // collapsed header per cell; named outputs, buses and top-level gates stay flat.
+        foreach (var row in CellGrouping.GroupByCell(
+                     SignalBusGrouping.GroupOutputs(Outputs), RegisterGatesByCell()))
             OutputRows.Add(row);
+    }
+
+    /// <summary>The register gate ids per top-level cell instance, for the cell-group headers.</summary>
+    private IReadOnlyDictionary<string, IReadOnlySet<string>> RegisterGatesByCell()
+    {
+        var result = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal);
+        if (_network == null)
+            return result;
+        foreach (var gateId in _network.RegisterState.Keys.Select(pin => pin.GateId).Distinct())
+        {
+            if (!CellGrouping.TryCellPrefix(gateId, out var prefix))
+                continue;
+            if (!result.TryGetValue(prefix, out var gates))
+            {
+                gates = new HashSet<string>(StringComparer.Ordinal);
+                result[prefix] = gates;
+            }
+            ((HashSet<string>)gates).Add(gateId);
+        }
+        return result;
     }
 
     /// <summary>Unsubscribes every bus row from its members before the rows go away.</summary>

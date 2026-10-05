@@ -1667,6 +1667,8 @@
   "LogicPanelFanOutHelp.ExamplesBody": "Zwei Lösungen: nach dem Splitter verstärken oder die treibende Stufe duplizieren, damit jede Last einen eigenen Wellenleiter bekommt. Die mitgelieferten Addierer duplizieren ihre XOR-Stufen — die Wiederholung ist physikalische Ehrlichkeit, kein Verschnitt.",
   "LogicPanelFanOutHelp.AnimationCaption": "Schematisch, keine Feldsimulation: jede Teilung halbiert die Leistung — die Viertel-Zweige fallen unter die Schaltschwelle.",
   "LogicPanel.GateDelay": "{0:0.0} ps",
+  "LogicPanel.CellGroup.HeaderGates": "{0} — {1} Gatter",
+  "LogicPanel.CellGroup.HeaderGatesRegisters": "{0} — {1} Register, {2} Gatter",
   "LogicPanel.CriticalPath": "Kritischer Pfad: {0:0.0} ps über {1} Gatter",
   "LogicPanelTimingHelp.Title": "Warum braucht Licht Zeit?",
   "LogicPanelTimingHelp.Intro": "Jedes Gatter zeigt seine Ausbreitungsverzögerung — die Zeit, die das Licht braucht, um es zu durchlaufen. Der kritische Pfad ist die langsamste Gatterkette von einem Netzwerkeingang zu einem Ausgang.",

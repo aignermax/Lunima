@@ -1667,6 +1667,8 @@
   "LogicPanelFanOutHelp.ExamplesBody": "两种做法:分束后放大,或复制驱动级让每个负载都有自己的波导。附带的加法器复制了 XOR 级——这种重复不是浪费,而是物理上的诚实。",
   "LogicPanelFanOutHelp.AnimationCaption": "这是示意图,而非电磁场仿真:每次分束功率减半,四分之一功率的分支会低于门的阈值。",
   "LogicPanel.GateDelay": "{0:0.0} ps",
+  "LogicPanel.CellGroup.HeaderGates": "{0} — {1} 个门",
+  "LogicPanel.CellGroup.HeaderGatesRegisters": "{0} — {1} 个寄存器，{2} 个门",
   "LogicPanel.CriticalPath": "关键路径:{0:0.0} ps,共 {1} 个门",
   "LogicPanelTimingHelp.Title": "为什么光也需要时间?",
   "LogicPanelTimingHelp.Intro": "每个门都会显示其传播延迟，即光穿过该门所需的时间。关键路径是从网络输入到输出之间最慢的门链。",

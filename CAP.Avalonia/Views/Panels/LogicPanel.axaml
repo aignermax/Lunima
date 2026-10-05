@@ -177,6 +177,40 @@
                             </ItemsControl>
                         </StackPanel>
                     </DataTemplate>
+                    <!-- Cell collapse (#1399): the gate outputs nested inside one cell
+                         instance fold under a collapsed header (CELL0 — 4 registers,
+                         31 gates); expanding shows the rows with the cell prefix
+                         stripped, so the column stays narrow. -->
+                    <DataTemplate x:DataType="bus:LogicCellGroupViewModel">
+                        <StackPanel Margin="0,1">
+                            <Button Command="{Binding ToggleExpandedCommand}"
+                                    Background="Transparent" Padding="2,0"
+                                    HorizontalContentAlignment="Left" HorizontalAlignment="Stretch">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding ChevronText}" FontFamily="Consolas" FontSize="11"
+                                               Foreground="#cfe0ff" Width="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="11"
+                                               FontWeight="SemiBold" Foreground="#cfe0ff" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <ItemsControl ItemsSource="{Binding Members}" Margin="14,0,0,0"
+                                          IsVisible="{Binding IsExpanded}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <TextBlock Text="{Binding DisplayName}" Foreground="LightGray" FontSize="11" Width="96" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
+                                                       Foreground="LightGreen" IsVisible="{Binding IsOne}"/>
+                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
+                                                       Foreground="Gray" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                            <TextBlock Text="{Binding DelayText}" Foreground="Gray" FontSize="10"
+                                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
                 </ItemsControl.DataTemplates>
             </ItemsControl>
 

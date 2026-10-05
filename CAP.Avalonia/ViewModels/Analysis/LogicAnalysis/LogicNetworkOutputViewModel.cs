@@ -15,6 +15,7 @@ public partial class LogicNetworkOutputViewModel : LogicOutputRowViewModel
     public LogicNetworkOutputViewModel(string pinName)
     {
         PinName = pinName;
+        DisplayName = pinName;
     }
 
     /// <summary>
@@ -22,6 +23,13 @@ public partial class LogicNetworkOutputViewModel : LogicOutputRowViewModel
     /// else the raw <c>&lt;gate&gt;.&lt;pin&gt;</c> id.
     /// </summary>
     public string PinName { get; }
+
+    /// <summary>
+    /// The name shown in the Outputs list — the full tap name at top level, the
+    /// cell-prefix-stripped form (<c>REG10.Y</c>) inside a collapsed cell group (#1399).
+    /// </summary>
+    [ObservableProperty]
+    private string _displayName = "";
 
     /// <summary>The tapped gate output pin in raw <c>&lt;gate&gt;.&lt;pin&gt;</c> form (tooltip).</summary>
     [ObservableProperty]

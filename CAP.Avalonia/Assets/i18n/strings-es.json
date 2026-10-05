@@ -1667,6 +1667,8 @@
   "LogicPanelFanOutHelp.ExamplesBody": "Dos soluciones: amplificar tras la división o duplicar la etapa conductora para que cada carga tenga su propia guía. Los sumadores incluidos duplican sus etapas XOR — la repetición es honestidad física, no desperdicio.",
   "LogicPanelFanOutHelp.AnimationCaption": "Esquemático, no una simulación de campo: cada división reduce la potencia a la mitad — las ramas de un cuarto caen bajo el umbral.",
   "LogicPanel.GateDelay": "{0:0.0} ps",
+  "LogicPanel.CellGroup.HeaderGates": "{0} — {1} puertas",
+  "LogicPanel.CellGroup.HeaderGatesRegisters": "{0} — {1} registros, {2} puertas",
   "LogicPanel.CriticalPath": "Ruta crítica: {0:0.0} ps en {1} puertas",
   "LogicPanelTimingHelp.Title": "¿Por qué la luz tarda?",
   "LogicPanelTimingHelp.Intro": "Cada puerta muestra su retardo de propagación: el tiempo que la luz necesita para cruzarla. La ruta crítica es la cadena de puertas más lenta desde una entrada de la red hasta una salida.",
