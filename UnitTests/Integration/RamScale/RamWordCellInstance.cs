@@ -124,6 +124,7 @@ public sealed partial class RamWordCellTemplate
         {
             ["PathId"] = Guid.NewGuid().ToString(),
             ["Segments"] = segments,
+            ["IsBlockedFallback"] = path.IsBlockedFallback,
             ["IsRouteFrozen"] = true,
             ["ConnectionType"] = "Auto",
             ["WidthMicrometers"] = 0.5,

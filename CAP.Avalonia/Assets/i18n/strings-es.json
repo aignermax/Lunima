@@ -281,6 +281,7 @@
   "DesignChecks.BlockedPath": "Ruta bloqueada: {0} a {1}",
   "DesignChecks.BlockedPath.Contention": "Ruta bloqueada: {0} a {1} — sin carril libre; otras guías de onda ocupan el corredor",
   "DesignChecks.BlockedPath.EndpointBlocked": "Ruta bloqueada: {0} a {1} — un pin está encerrado por la huella de un componente; mueva el componente (reenrutar no lo soluciona)",
+  "DesignChecks.BlockedPath.InGroup": "Ruta bloqueada en el grupo '{0}': {1} a {2}",
   "DesignChecks.ChipletInterfaceGapLoss": "Los acopladores de borde en '{0}' / '{1}' están a {2:F2} µm de distancia — solo el hueco entre facetas cuesta {3:F2} dB (máx. {4} dB)",
   "DesignChecks.ChipletInterfaceLateralOffset": "Los acopladores de borde en '{0}' / '{1}' tienen un desplazamiento lateral de {2:F2} µm (máx. {3} µm)",
   "DesignChecks.ChipletInterfaceNotFacing": "Los acopladores de borde en '{0}' / '{1}' no se enfrentan ({2:F1}° fuera del eje)",
