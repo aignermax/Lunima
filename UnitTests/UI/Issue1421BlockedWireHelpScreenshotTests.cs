@@ -91,14 +91,10 @@ public class Issue1421BlockedWireHelpScreenshotTests
             Dispatcher.UIThread.RunJobs();
 
             // The HelpFlyoutButton staggers its sections in (Task.Delay + opacity
-            // transitions): give the delays real time, then tick the render clock.
-            await Task.Delay(600);
-            for (int i = 0; i < 30; i++)
-            {
-                Dispatcher.UIThread.RunJobs();
-                AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-                await Task.Delay(10);
-            }
+            // transitions): wait until the entrance has actually finished instead of
+            // guessing a duration — the reveal is real-time, so a fixed wait flakes
+            // under CI load or when a section is added to the flyout.
+            await WaitForFlyoutRevealedAsync(help);
             Dispatcher.UIThread.RunJobs();
 
             var animations = window.GetVisualDescendants()
@@ -106,6 +102,12 @@ public class Issue1421BlockedWireHelpScreenshotTests
             animations.ShouldNotBeEmpty("the flyout must contain the Blocked wires animation");
             foreach (var animation in animations)
                 animation.AutoPlay = false;
+
+            // The flyout caps at 460 px and scrolls: make the captures independent of
+            // how many sections sit above "Blocked wires" by scrolling it into view.
+            foreach (var animation in animations)
+                animation.BringIntoView();
+            PumpRenderLoop();
 
             const string caption =
                 "Design Checks help, \"Blocked wires\": left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens.";
@@ -143,6 +145,38 @@ public class Issue1421BlockedWireHelpScreenshotTests
         {
             window.Close();
             Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    /// <summary>
+    /// Waits until the (?) flyout's staggered entrance has fully revealed every section.
+    /// Polls the real opacity of the HelpContent panel's children (the stagger targets):
+    /// first until the entrance has started hiding them, then until all are opaque again.
+    /// Falls through after 15 s — the capture's blank-frame guard reports what is missing.
+    /// </summary>
+    private static async Task WaitForFlyoutRevealedAsync(HelpFlyoutButton help)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
+        var entranceStarted = false;
+        while (DateTime.UtcNow < deadline)
+        {
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+
+            if (help.HelpContent is Panel panel)
+            {
+                var children = panel.Children.OfType<Control>().ToList();
+                if (children.Count > 0 && children.All(c => c.Opacity >= 0.999))
+                {
+                    if (entranceStarted)
+                        return;
+                }
+                else
+                {
+                    entranceStarted = true;
+                }
+            }
+            await Task.Delay(20);
         }
     }
 
