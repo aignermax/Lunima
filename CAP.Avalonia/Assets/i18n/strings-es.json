@@ -311,6 +311,8 @@
   "DesignChecks.WaveguideCrossing": "Cruce de guías de onda: {0} cruza {1} — no hay componente de cruce en la intersección; el diseño exportado no superará las comprobaciones de solapamiento",
   "DesignChecksHelp.BendBody": "En una curva demasiado cerrada, la luz guiada ya no puede seguir la guía de ondas y radia hacia el material circundante. El radio mínimo del proceso activo mantiene despreciable esta pérdida por curvatura.",
   "DesignChecksHelp.BendTitle": "Radio de curvatura mínimo",
+  "DesignChecksHelp.BlockedBody": "Un pin sellado por la huella de un componente no se puede enrutar — mueve el componente. O el corredor está lleno de guías de ondas paralelas: no hay carril libre, sepáralas para hacer hueco.",
+  "DesignChecksHelp.BlockedTitle": "Pistas bloqueadas",
   "DesignChecksHelp.ChipletBody": "La luz sale de la faceta de un chiplet como un haz gaussiano que se ensancha. Si la faceta opuesta está retrasada o desplazada lateralmente, solo una parte del haz entra en su modo. Los Design Checks avisan cuando la pérdida supera el presupuesto del enlace.",
   "DesignChecksHelp.ChipletTitle": "Enlaces entre chiplets",
   "DesignChecksHelp.Intro": "Estas comprobaciones son una versión ligera de la verificación de reglas de diseño (DRC) que una fundición ejecuta antes de la fabricación. Cada regla existe porque, de lo contrario, un efecto físico arruinaría tu circuito.",
