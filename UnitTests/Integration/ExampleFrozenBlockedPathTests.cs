@@ -51,6 +51,9 @@ public class ExampleFrozenBlockedPathTests
         // save → load) is proven by FrozenBlockedPathCheckerTests.SerializerRoundTrip;
         // the extraction path now carries the flag for future re-authoring.
         ["Logic Gate RAM 2x4.lun"] = 3,
+        // Top-level only (22 of them sealed by a component footprint); the word-cell
+        // template it was baked from predates the flag-carrying extraction.
+        ["Logic Gate RAM 4x4.lun"] = 43,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
     };
 
