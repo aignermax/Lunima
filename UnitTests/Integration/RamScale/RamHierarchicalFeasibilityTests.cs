@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json.Nodes;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Core;
@@ -187,17 +188,21 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
 }
 
 /// <summary>
-/// The one-time half of the hierarchical spike: builds the word cell, loads it, routes
-/// its intra-cell wires once, and freezes the routed result into the instancing
-/// <see cref="RamWordCellTemplate"/> both facts share. The cell must route fully — an
-/// unrouted wire would freeze into the template — so the bound is generous and a timeout
-/// fails loudly instead of degrading to a partial measurement.
+/// The one-time half of the hierarchical spike: the frozen instancing
+/// <see cref="RamWordCellTemplate"/> both facts share. Default runs lift the pre-routed
+/// cell from the shipped <c>examples/Logic Gate RAM 2x4.lun</c> (its <c>CELL0</c> group
+/// is exactly the routed + frozen cell since #1405), so no routing runs at all (#1409 —
+/// the live re-route timed out on loaded CI runners). Setting
+/// <c>CAP_RAM_SPIKE_REROUTE=1</c> restores the spike's measurement mode: the cell is
+/// loaded, routed once (bound <c>CAP_RAM_SPIKE_CELL_TIMEOUT_S</c>, default 300 s — the
+/// cell must route fully or there is no template) and the routed result frozen.
 /// </summary>
 public sealed class RamWordCellFixture : IAsyncLifetime
 {
     private const int BitCount = 4;
     private const double DefaultCellRouteTimeoutSeconds = 300;
     private const string CellRouteTimeoutVariable = "CAP_RAM_SPIKE_CELL_TIMEOUT_S";
+    private const string RerouteVariable = "CAP_RAM_SPIKE_REROUTE";
 
     /// <summary>The built (unrouted) word-cell design — census and roles.</summary>
     public RamWordCellDesign Design { get; private set; } = null!;
@@ -208,16 +213,33 @@ public sealed class RamWordCellFixture : IAsyncLifetime
     /// <summary>The cell route measurement line for the spike report.</summary>
     public string RouteReport { get; private set; } = "";
 
-    /// <summary>The routed cell's blocked-fallback wire count — the number every instance replicates.</summary>
+    /// <summary>The cell's blocked-fallback wire count — the number every instance replicates.</summary>
     public int BlockedCount { get; private set; }
 
-    /// <summary>Builds, loads and routes the word cell once, then freezes the template.</summary>
+    /// <summary>Freezes the word-cell template — from the shipped example by default, live-routed on demand.</summary>
     public async Task InitializeAsync()
     {
         Design = RamWordCellBuilder.Build(BitCount);
         Design.GateCount.ShouldBe(33, "the word-cell gate census is pinned");
         Design.WireCount.ShouldBe(44, "the intra-cell wire census is pinned");
 
+        if (Environment.GetEnvironmentVariable(RerouteVariable) == "1")
+        {
+            await RouteCellLive();
+            return;
+        }
+
+        var examplePath = Path.Combine(
+            ExampleDesignFilesTests.ExamplesDirectory(), Ram2x4ExampleAuthoringTests.ExampleFileName);
+        var document = JsonNode.Parse(await File.ReadAllTextAsync(examplePath))!.AsObject();
+        Template = RamWordCellTemplate.FromExample(document, "CELL0", Design);
+        BlockedCount = Template.BlockedFallbackCount;
+        RouteReport = $"cellTemplate=shipped-example cellBlocked={BlockedCount}";
+    }
+
+    /// <summary>Loads and routes the word cell once, then freezes the routed template.</summary>
+    private async Task RouteCellLive()
+    {
         var tempPath = Design.WriteToTempFile();
         try
         {

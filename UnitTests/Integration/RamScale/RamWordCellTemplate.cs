@@ -26,7 +26,8 @@ public sealed partial class RamWordCellTemplate
         IReadOnlyList<(string Role, JsonObject Entry)> gates,
         IReadOnlyList<TemplatePath> paths,
         IReadOnlyDictionary<string, TemplatePort> ports,
-        double originX, double originY, double width, double height)
+        double originX, double originY, double width, double height,
+        int blockedFallbackCount = 0)
     {
         _gates = gates;
         _paths = paths;
@@ -35,7 +36,11 @@ public sealed partial class RamWordCellTemplate
         OriginY = originY;
         Width = width;
         Height = height;
+        BlockedFallbackCount = blockedFallbackCount;
     }
+
+    /// <summary>The frozen intra-cell paths' blocked-fallback count — the number every instance replicates.</summary>
+    public int BlockedFallbackCount { get; }
 
     /// <summary>Leftmost gate X of the cell in template coordinates.</summary>
     public double OriginX { get; }
@@ -75,7 +80,8 @@ public sealed partial class RamWordCellTemplate
         double height = gates.Max(g => g.Entry["GroupDto"]!["PhysicalY"]!.GetValue<double>()) - originY
             + RamGateFactory.RowPitch;
         var ports = cell.Ports.ToDictionary(kv => kv.Key, kv => ToTemplatePort(kv.Value, gates, originX, originY));
-        return new RamWordCellTemplate(gates, paths, ports, originX, originY, width, height);
+        int blockedCount = canvas.Connections.Count(c => c.Connection.IsBlockedFallback);
+        return new RamWordCellTemplate(gates, paths, ports, originX, originY, width, height, blockedCount);
     }
 
     private static JsonObject FindExternalPin(JsonObject gateEntry, string pinName) =>
