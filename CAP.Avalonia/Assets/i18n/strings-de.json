@@ -281,6 +281,7 @@
   "DesignChecks.BlockedPath": "Blockierter Pfad: {0} nach {1}",
   "DesignChecks.BlockedPath.Contention": "Blockierter Pfad: {0} nach {1} — keine freie Spur; andere Wellenleiter belegen den Korridor",
   "DesignChecks.BlockedPath.EndpointBlocked": "Blockierter Pfad: {0} nach {1} — ein Pin ist von einer Komponentenfläche eingeschlossen; verschieben Sie die Komponente (Neurouten hilft hier nicht)",
+  "DesignChecks.BlockedPath.InGroup": "Blockierter Pfad in Gruppe '{0}': {1} nach {2}",
   "DesignChecks.ChipletInterfaceGapLoss": "Kantenkoppler auf '{0}' / '{1}' stehen {2:F2} µm auseinander — allein der Facettenspalt kostet {3:F2} dB (max. {4} dB)",
   "DesignChecks.ChipletInterfaceLateralOffset": "Kantenkoppler auf '{0}' / '{1}' sind seitlich um {2:F2} µm versetzt (max. {3} µm)",
   "DesignChecks.ChipletInterfaceNotFacing": "Kantenkoppler auf '{0}' / '{1}' stehen sich nicht gegenüber ({2:F1}° von der Achse abweichend)",

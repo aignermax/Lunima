@@ -281,6 +281,7 @@
   "DesignChecks.BlockedPath": "Blocked path: {0} to {1}",
   "DesignChecks.BlockedPath.Contention": "Blocked path: {0} to {1} — no free lane; other waveguides occupy the corridor",
   "DesignChecks.BlockedPath.EndpointBlocked": "Blocked path: {0} to {1} — a pin is sealed in by a component footprint; move the component (re-routing cannot fix this)",
+  "DesignChecks.BlockedPath.InGroup": "Blocked path in group '{0}': {1} to {2}",
   "DesignChecks.ChipletInterfaceGapLoss": "Edge couplers on '{0}' / '{1}' stand {2:F2} µm apart — the facet gap alone costs {3:F2} dB (max {4} dB)",
   "DesignChecks.ChipletInterfaceLateralOffset": "Edge couplers on '{0}' / '{1}' are laterally offset by {2:F2} µm (max {3} µm)",
   "DesignChecks.ChipletInterfaceNotFacing": "Edge couplers on '{0}' / '{1}' do not face each other ({2:F1}° off axis)",

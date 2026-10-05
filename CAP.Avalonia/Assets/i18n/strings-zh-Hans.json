@@ -281,6 +281,7 @@
   "DesignChecks.BlockedPath": "路径被阻塞：{0} 到 {1}",
   "DesignChecks.BlockedPath.Contention": "路径被阻塞：{0} 到 {1} — 没有空闲通道；其他波导占用了走廊",
   "DesignChecks.BlockedPath.EndpointBlocked": "路径被阻塞：{0} 到 {1} — 引脚被组件轮廓封住；请移动该组件（重新布线无法解决）",
+  "DesignChecks.BlockedPath.InGroup": "组 '{0}' 内的路径被阻塞：{1} 到 {2}",
   "DesignChecks.ChipletInterfaceGapLoss": "'{0}' / '{1}' 上的边缘耦合器相距 {2:F2} µm — 仅端面间隙就造成 {3:F2} dB 损耗（最大 {4} dB）",
   "DesignChecks.ChipletInterfaceLateralOffset": "'{0}' / '{1}' 上的边缘耦合器横向偏移 {2:F2} µm（最大 {3} µm）",
   "DesignChecks.ChipletInterfaceNotFacing": "'{0}' / '{1}' 上的边缘耦合器未正对（偏离轴 {2:F1}°）",
