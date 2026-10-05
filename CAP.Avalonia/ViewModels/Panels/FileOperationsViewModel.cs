@@ -1094,6 +1094,36 @@ public partial class FileOperationsViewModel : ObservableObject
                     groupCount = LoadGroups(designData.Groups);
                 }
 
+                // Restore chip size BEFORE the connections: each restored blocked wire is
+                // classified against the pathfinding grid (the .lun format persists the
+                // blocked flag but not the reason), and the small startup grid would clamp
+                // out-of-range pins into its blocked border column and misreport ordinary
+                // contention as a footprint-sealed endpoint.
+                bool hasWidth = designData.ChipWidthMicrometers.HasValue;
+                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
+                if (hasWidth && hasHeight)
+                {
+                    if (ApplyChipSizeAfterLoad != null)
+                    {
+                        ApplyChipSizeAfterLoad.Invoke(
+                            designData.ChipWidthMicrometers!.Value,
+                            designData.ChipHeightMicrometers!.Value);
+                    }
+                    else
+                    {
+                        _canvas.InitializeAStarRouting(
+                            0, 0,
+                            designData.ChipWidthMicrometers!.Value,
+                            designData.ChipHeightMicrometers!.Value);
+                    }
+                }
+                else if (hasWidth || hasHeight)
+                {
+                    _errorConsole?.LogWarning(
+                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
+                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
+                }
+
                 // Load connections (index-based references to _canvas.Components)
                 foreach (var connData in designData.Connections)
                 {
@@ -1129,24 +1159,6 @@ public partial class FileOperationsViewModel : ObservableObject
                 foreach (var conn in _canvas.Connections)
                 {
                     conn.NotifyPathChanged();
-                }
-
-                // Restore chip size if saved. The two fields are written together by Save(), so
-                // a half-present pair indicates a truncated/edited file — warn the user via the
-                // error console rather than silently applying half the chip size.
-                bool hasWidth  = designData.ChipWidthMicrometers.HasValue;
-                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
-                if (hasWidth && hasHeight)
-                {
-                    ApplyChipSizeAfterLoad?.Invoke(
-                        designData.ChipWidthMicrometers!.Value,
-                        designData.ChipHeightMicrometers!.Value);
-                }
-                else if (hasWidth || hasHeight)
-                {
-                    _errorConsole?.LogWarning(
-                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
-                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
                 }
 
                 // Restore the designated analysis-output coupler (#754); files without

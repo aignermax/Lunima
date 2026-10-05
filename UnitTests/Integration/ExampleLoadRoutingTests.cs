@@ -35,8 +35,10 @@ public class ExampleLoadRoutingTests
         ["Logic Gate Full Adder.lun"] = 2,
         ["Logic Gate PC 2-bit.lun"] = 12,
         ["Logic Gate RAM 2x2.lun"] = 18,
+        // Top-level inter-cell wires only; each word-cell instance freezes 9 more blocked
+        // intra-cell wires (counted in ExampleFrozenBlockedPathTests.KnownBlockedPathCounts).
         ["Logic Gate RAM 2x4.lun"] = 3,
-        ["Logic Gate RAM 4x4.lun"] = 43,
+        ["Logic Gate RAM 4x4.lun"] = 44,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
     };
 
