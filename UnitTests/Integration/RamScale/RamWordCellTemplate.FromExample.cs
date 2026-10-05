@@ -59,7 +59,8 @@ public sealed partial class RamWordCellTemplate
     {
         var (startRole, startPin) = EndpointRole(path, "Start", gateEntries, nameToRole);
         var (endRole, endPin) = EndpointRole(path, "End", gateEntries, nameToRole);
-        return new TemplatePath(startRole, startPin, endRole, endPin, path["Segments"]!.DeepClone().AsArray());
+        return new TemplatePath(startRole, startPin, endRole, endPin, path["Segments"]!.DeepClone().AsArray(),
+            path["IsBlockedFallback"]?.GetValue<bool>() == true);
     }
 
     /// <summary>Resolves one frozen-path endpoint to its gate role and external pin name.</summary>
