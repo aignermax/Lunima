@@ -17,6 +17,15 @@ internal sealed partial class RamGateFactory
     /// free row of <paramref name="column"/> — arc centers shift with their endpoints.
     /// </summary>
     public string Emit(string shape, string name, int column, string description,
+        Dictionary<string, string>? outputSignals = null, bool isRegister = false) =>
+        Emit(shape, name, column, null, description, outputSignals, isRegister);
+
+    /// <summary>
+    /// Emits one gate at an explicit grid row instead of the column's next free row (the
+    /// word-cell floorplan of issue #1400 leaves channel rows empty on purpose). The
+    /// column's auto-row counter advances past the taken row.
+    /// </summary>
+    public string Emit(string shape, string name, int column, int? row, string description,
         Dictionary<string, string>? outputSignals = null, bool isRegister = false)
     {
         var template = _templates[shape];
@@ -37,10 +46,10 @@ internal sealed partial class RamGateFactory
         groupDto["ChildComponentIds"] = new JsonArray(groupDto["ChildComponentIds"]!.AsArray()
             .Select(id => (JsonNode)idMap[id!.GetValue<string>()]).ToArray());
 
-        int row = _nextRowPerColumn.GetValueOrDefault(column);
-        _nextRowPerColumn[column] = row + 1;
+        int rowValue = row ?? _nextRowPerColumn.GetValueOrDefault(column);
+        _nextRowPerColumn[column] = Math.Max(_nextRowPerColumn.GetValueOrDefault(column), rowValue + 1);
         double canvasX = OriginX + column * PitchX;
-        double canvasY = OriginY + row * PitchY;
+        double canvasY = OriginY + rowValue * PitchY;
         double dx = canvasX - template["CanvasX"]!.GetValue<double>();
         double dy = canvasY - template["CanvasY"]!.GetValue<double>();
 
