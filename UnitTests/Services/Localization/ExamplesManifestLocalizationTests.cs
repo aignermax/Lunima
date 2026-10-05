@@ -153,6 +153,27 @@ public class ExamplesManifestLocalizationTests
     }
 
     [Fact]
+    public void CuratedLadder_ListsTheRam4x4_BetweenTheRam2x4AndTheCounter()
+    {
+        var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()
+            .Where(example => example.DescriptionKey != null)
+            .ToList();
+
+        var ram2x4Index = ladder.FindIndex(example => example.Name == "Logic Gate RAM 2x4");
+        ram2x4Index.ShouldBeGreaterThanOrEqualTo(0, "the 2x4 hierarchical RAM rung must stay curated");
+
+        var ram4x4Index = ladder.FindIndex(example => example.Name == "Logic Gate RAM 4x4");
+        ram4x4Index.ShouldBeGreaterThan(ram2x4Index,
+            "the ISA-sized 4x4 RAM grows the 2x4 to the full data memory — it is the rung after the RAM 2x4");
+        ladder[ram4x4Index].Level.ShouldBe("Sequential");
+        ladder[ram4x4Index].DescriptionKey.ShouldBe("Examples.Ram4x4.Description");
+
+        var counterIndex = ladder.FindIndex(example => example.Name == "Logic Gate Counter 2-bit");
+        counterIndex.ShouldBeGreaterThan(ram4x4Index,
+            "the 2-bit counter builds on the full data memory — it stays the rung after the RAM 4x4");
+    }
+
+    [Fact]
     public void CuratedLadder_ListsTheCounter2Bit_AfterTheSrLatch()
     {
         var ladder = new CAP.Avalonia.Services.ExampleDesignsService().GetExamples()

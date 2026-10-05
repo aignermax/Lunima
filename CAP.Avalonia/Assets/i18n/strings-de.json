@@ -399,6 +399,7 @@
   "Examples.Register2bit.Description": "Ein 2-Bit-Register: Setze D1D0, pulsiere LOAD und drücke Step — das Wort wird gespeichert und gehalten, solange LOAD auf 0 bleibt.",
   "Examples.Ram2x2.Description": "Ein 2x2-Bit-RAM: ADDR wählt, welches der beiden Wörter speichert und antwortet — der Kern jedes Speichers.",
   "Examples.Ram2x4.Description": "Ein 2x4-Bit-RAM aus zwei instanziierten Wortzellen: A wählt, welches Wort speichert und antwortet.",
+  "Examples.Ram4x4.Description": "Ein 4x4-Bit-RAM aus vier instanziierten Wortzellen: A0/A1 wählen, welches Wort speichert und antwortet — der Datenspeicher der ISA.",
   "Examples.Counter2bit.Description": "Ein 2-Bit-Zähler: Drücke Step und sieh zu, wie C1C0 0, 1, 2, 3 zählt — die Schaltung läuft.",
   "Examples.Pc2bit.Description": "Ein 2-Bit-Programmzähler: LOAD=0 zählt pro Step hoch, LOAD=1 lädt L1L0 — der NAND2TETRIS-PC.",
   "Examples.AndGate.Description": "Kombiniere zwei NAND-Gatter zu einem AND-Gatter.",

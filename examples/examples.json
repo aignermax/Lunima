@@ -20,7 +20,8 @@
     { "file": "Logic Gate Register 2-bit.lun", "rank": 97, "level": "Sequential", "descriptionKey": "Examples.Register2bit.Description" },
     { "file": "Logic Gate RAM 2x2.lun", "rank": 98, "level": "Sequential", "descriptionKey": "Examples.Ram2x2.Description" },
     { "file": "Logic Gate RAM 2x4.lun", "rank": 99, "level": "Sequential", "descriptionKey": "Examples.Ram2x4.Description" },
-    { "file": "Logic Gate Counter 2-bit.lun", "rank": 100, "level": "Sequential", "descriptionKey": "Examples.Counter2bit.Description" },
+    { "file": "Logic Gate RAM 4x4.lun", "rank": 100, "level": "Sequential", "descriptionKey": "Examples.Ram4x4.Description" },
+    { "file": "Logic Gate Counter 2-bit.lun", "rank": 101, "level": "Sequential", "descriptionKey": "Examples.Counter2bit.Description" },
     { "file": "Logic Gate PC 2-bit.lun", "rank": 105, "level": "Datapath", "descriptionKey": "Examples.Pc2bit.Description" },
     { "file": "Two Chiplets - Edge-Coupler Link.lun", "rank": 110, "level": "Systems", "descriptionKey": "Examples.TwoChiplets.Description" }
   ]
