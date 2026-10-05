@@ -309,26 +309,11 @@ public partial class DesignValidationViewModel : ObservableObject
         OnPropertyChanged(nameof(NavigationText));
 
         var issue = Issues[index];
-        StatusText = FormatIssueMessage(issue);
+        StatusText = Services.DesignIssueFormatter.Format(issue);
         IsCurrentIssueAlignable = issue.Connection != null && IsChipletInterfaceIssue(issue.Type);
 
         HighlightConnection?.Invoke(issue.Connection);
         NavigateToPosition?.Invoke(issue.X, issue.Y);
-    }
-
-    /// <summary>
-    /// Renders an issue's display text: the translated string-table message when the
-    /// issue carries a localization key, otherwise the core-provided English description.
-    /// </summary>
-    private static string FormatIssueMessage(DesignIssue issue)
-    {
-        if (issue.LocalizationKey is not { } key)
-            return issue.Description;
-
-        var template = Services.Localization.LocalizationService.Instance.Translate(key);
-        return issue.LocalizationArgs is { Count: > 0 } args
-            ? string.Format(template, args as object[] ?? args.ToArray())
-            : template;
     }
 
     /// <summary>True for every finding of the cross-chiplet edge-coupler rule (#1219/#1238).</summary>

@@ -253,7 +253,14 @@ public class WaveguideOverlapDetector
     {
         var connection = a.Connection ?? b.Connection;
         var description = $"Overlapping paths: {a.Label} ↔ {b.Label}";
-        return new DesignIssue(DesignIssueType.OverlappingPaths, connection, point.X, point.Y, description);
+        return new DesignIssue(
+            DesignIssueType.OverlappingPaths,
+            connection,
+            point.X,
+            point.Y,
+            description,
+            localizationKey: "DesignChecks.OverlappingPaths",
+            localizationArgs: new object[] { a.Label, b.Label });
     }
 
     /// <summary>
