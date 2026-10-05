@@ -34,6 +34,11 @@
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
                                    Text="{loc:Localize DesignChecksHelp.PinsBody}"/>
 
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.BlockedTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                                   Text="{loc:Localize DesignChecksHelp.BlockedBody}"/>
+                        <ha:BlockedWireHelpAnimation Width="336" Height="96" IsHitTestVisible="False"/>
+
                         <TextBlock Text="{loc:Localize DesignChecksHelp.ChipletTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
                                    Text="{loc:Localize DesignChecksHelp.ChipletBody}"/>
