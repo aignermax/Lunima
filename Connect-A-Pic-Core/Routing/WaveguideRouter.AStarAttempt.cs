@@ -11,6 +11,15 @@ namespace CAP_Core.Routing;
 public partial class WaveguideRouter
 {
     /// <summary>
+    /// The reachability verdict of the most recent <see cref="TryRouteAStar"/> call. When
+    /// false, the whole-grid flood proved no path to the goal region can exist on the fine
+    /// grid (pin corridors already cleared) — the coarse-grid retry is then futile too:
+    /// its blocked set is a superset of the fine grid's, and a route through the coarser
+    /// corridor quantization would not survive the fine-grid collision validation anyway.
+    /// </summary>
+    private bool _lastFineAttemptGoalReachable;
+
+    /// <summary>
     /// Attempts to route using A* pathfinding with obstacle avoidance at the given
     /// bend radius. The cost model (minimum straight run before turns) and the path smoother
     /// are synced to that radius, so the grid path leaves room for the arcs that will be built.
@@ -99,6 +108,7 @@ public partial class WaveguideRouter
                 || PathfindingGrid.CanReachGoalDirected(
                     gridStartX, gridStartY, gridEndX, gridEndY,
                     AStarPathfinder.AStarPathfinder.DefaultGoalTolerance, UseDiagonalRouting);
+            _lastFineAttemptGoalReachable = goalReachable;
 
             if (_hierarchicalPathfinder != null && UseHierarchicalPathfinding)
             {
