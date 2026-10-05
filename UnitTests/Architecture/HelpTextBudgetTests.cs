@@ -41,88 +41,17 @@ public class HelpTextBudgetTests
     /// <summary>
     /// Keys of flyouts not yet migrated to the short-sections-plus-animation pattern —
     /// currently the help flyouts that only exist on the dev-ki lineage (Logic panel,
-    /// Truth Table, PDK, Registry download, Laser source) — written before this budget
+    /// Registry download) — written before this budget
     /// existed and migrated in follow-ups. Adding an entry is a deliberate, review-visible
     /// act; remove it once the flyout is migrated.
     /// </summary>
     private static readonly HashSet<string> ExemptNotYetMigrated = new(StringComparer.Ordinal)
     {
-        // Logic panel flyouts (dev-ki lineage, not yet migrated)
-        "LogicPanelHelp.BusBody",
-        "LogicPanelHelp.BusTitle",
-        "LogicPanelHelp.InputsBody",
-        "LogicPanelHelp.InputsTitle",
-        "LogicPanelHelp.Intro",
-        "LogicPanelHelp.RegisterBody",
-        "LogicPanelHelp.RegisterTitle",
-        "LogicPanelHelp.RestorationBody",
-        "LogicPanelHelp.RestorationTitle",
-        "LogicPanelHelp.RunResetBody",
-        "LogicPanelHelp.RunResetTitle",
-        "LogicPanelFanOutHelp.ExamplesBody",
-        "LogicPanelFanOutHelp.ExamplesTitle",
-        "LogicPanelFanOutHelp.Intro",
-        "LogicPanelFanOutHelp.PhysicsBody",
-        "LogicPanelFanOutHelp.PhysicsTitle",
-        "LogicPanelTimelineHelp.ClockBody",
-        "LogicPanelTimelineHelp.ClockTitle",
-        "LogicPanelTimelineHelp.Intro",
-        "LogicPanelTimelineHelp.OrderBody",
-        "LogicPanelTimelineHelp.OrderTitle",
-        "LogicPanelTimelineHelp.PhysicsBody",
-        "LogicPanelTimelineHelp.PhysicsTitle",
-        "LogicPanelTimelineHelp.PlaybackBody",
-        "LogicPanelTimelineHelp.ReplayBody",
-        "LogicPanelTimelineHelp.ReplayTitle",
-        "LogicPanelTimelineHelp.WaveformBody",
-        "LogicPanelTimelineHelp.WaveformTitle",
-        "LogicPanelTimingHelp.ClockBody",
-        "LogicPanelTimingHelp.ClockTitle",
-        "LogicPanelTimingHelp.PhysicsBody",
-        "LogicPanelTimingHelp.PhysicsTitle",
-
-        // Truth Table panel flyout (dev-ki lineage, not yet migrated)
-        "TruthTableHelp.BiasBody",
-        "TruthTableHelp.BiasTitle",
-        "TruthTableHelp.InterferenceBody",
-        "TruthTableHelp.InterferenceTitle",
-        "TruthTableHelp.Intro",
-        "TruthTableHelp.SignalsBody",
-        "TruthTableHelp.SignalsTitle",
-        "TruthTableHelp.SimulationBody",
-        "TruthTableHelp.SimulationTitle",
-        "TruthTableHelp.ThresholdBody",
-        "TruthTableHelp.ThresholdTitle",
-
-        // PDK help flyout in the toolbar (dev-ki lineage, not yet migrated)
-        "PdkHelp.DiagramNote",
-        "PdkHelp.DiagramProcessA",
-        "PdkHelp.DiagramProcessB",
-        "PdkHelp.Intro",
-        "PdkHelp.NoMixBody",
-        "PdkHelp.NoMixTitle",
-        "PdkHelp.ProcessBody",
-        "PdkHelp.ProcessTitle",
-        "PdkHelp.WhatIsBody",
-        "PdkHelp.WhatIsTitle",
+        // Logic panel flyouts (dev-ki lineage) — the timeline and timing flyouts were
+        // migrated in #1206, the fan-out flyout in #1216; none remain exempt.
 
         // Registry browser download help (dev-ki lineage, not yet migrated)
         "Registry.DownloadHelpContent",
-
-        // Laser source help in the properties panel (dev-ki lineage, not yet migrated)
-        "LaserHelp.CanvasBody",
-        "LaserHelp.CanvasTitle",
-        "LaserHelp.CwBody",
-        "LaserHelp.CwTitle",
-        "LaserHelp.DiagramOff",
-        "LaserHelp.DiagramOn",
-        "LaserHelp.DiagramRamp",
-        "LaserHelp.DiagramRampNote",
-        "LaserHelp.DiagramStrong",
-        "LaserHelp.DiagramWeak",
-        "LaserHelp.Intro",
-        "LaserHelp.WavelengthPowerBody",
-        "LaserHelp.WavelengthPowerTitle",
     };
 
     [Fact]

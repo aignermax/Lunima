@@ -33,13 +33,53 @@ otherwise describe a curve in words (laser line shape, RIN noise trace, MZI frin
     MarkerBrush="#FFD54F" PingPong="True" IsHitTestVisible="False"/>
 ```
 
-## Bespoke overlays (EyeStackAnimation, LayerStackAnimation)
+## Bespoke overlays (EyeStackAnimation, LayerStackAnimation, CarryRippleAnimation, ChipletLinkCouplingAnimation, LengthMatchArrivalAnimation, MonteCarloScatterAnimation)
 
 Panel-specific compositions (eye-diagram stacking, process layer stack) that live in the
 same folder but are not primitives — they draw in their flyout's fixed coordinate space and
 are placed as transparent overlays over the flyout's static diagram. They take no content
 properties beyond the base `Progress`/`AutoPlay`/`LoopDuration`; add a new one only when no
 combination of the primitives above expresses the concept.
+
+`ChipletLinkCouplingAnimation` (Design Checks help, #1247) is the exception that proves the
+rule: it is a self-contained scene (two facets, a widening Gaussian beam, a spillover spot)
+placed as regular flyout content, and its η readout is computed with the real
+`ChipletEdgeCouplerCoupling.PowerCouplingForOffset`/`PowerCouplingForGap` at 1550 nm —
+never hard-coded — so the help can never drift from the simulation. New help numbers that
+mirror simulation physics must call the core functions the same way.
+
+`LengthMatchArrivalAnimation` (Length Matching help, #1256) follows the same rule: two
+pulses leave a splitter, the longer arm's pulse arrives late (phase slip), then the short
+arm grows a meander and a second pair arrives together. Its ΔL / Δt readout is the real
+group-delay relation Δt = ΔL·n_g/c with the core's `GateDelayCalculator.DefaultGroupIndex`
+and `SpeedOfLightMicrometersPerPicosecond` (the constants `WireDelayCalculator` applies to
+routed wires), and the drawing conserves length — the grown meander is exactly as long as
+the detour arm it matches.
+
+`MonteCarloScatterAnimation` (Monte Carlo help, #1344) is another self-contained scene:
+a waveguide cross-section whose width wobbles, a transmission dip that shifts with it,
+and dots dropping into a histogram that builds a bell shape. The dot landing bins come
+from a fixed-seed generator, so every loop (and every screenshot) is identical.
+
+`SweepSliderFringeAnimation` (Sweep help, #1352): a slider knob travels from Start to
+End while a dot traces the cos² output fringe point by point. Knob and dot share one x
+axis, so "slider value → point on the curve" is read directly; the trace grows with the
+sweep and the last frame keeps the finished fringe visible.
+
+`HillClimbAnimation` (Optimization help, #1362): a marker takes scripted hill-climb
+steps on a 1-D objective curve, mirroring `CircuitOptimizer` — uphill steps are kept
+(the green best-so-far halo moves up), a non-improving step flashes red, bounces back
+and the step-size bracket under the curve shrinks (reset on improvement, decay on
+rejection, like the optimizer). Accepted/rejected is derived from the curve function,
+never scripted, so the scene cannot contradict itself; the taller unvisited peak makes
+the "local best" caveat visible. `FrameAt(progress)` returns the deterministic frame
+state for tests.
+
+`WaveguideCrossingHelpAnimation` (crossing-finding help, #1391): two mini scenes in
+lockstep — a bare X junction and the same junction with a crossing component. The pulse
+approaches both at once; at the bare X it dims by the leaked fraction while a leak pulse
+peels off into the crossing arm, through the component it continues straight at full
+brightness. The last frame holds the leaked end state.
 
 ## Rules
 

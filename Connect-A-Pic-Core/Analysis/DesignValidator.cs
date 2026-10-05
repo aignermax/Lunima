@@ -1,7 +1,7 @@
 using System.Globalization;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
-using CAP_Core.Components.Process;
+using CAP_Core.Routing;
 using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Analysis;
@@ -9,14 +9,20 @@ namespace CAP_Core.Analysis;
 /// <summary>
 /// Validates waveguide connections in a design and reports issues
 /// such as invalid geometry (bend radius violations), blocked paths,
-/// and overlapping waveguides including frozen group paths.
+/// connection×connection waveguide crossings, and overlapping waveguides
+/// including frozen group paths.
 /// </summary>
 public class DesignValidator
 {
     private readonly WaveguideOverlapDetector _overlapDetector = new();
+    private readonly ConnectionCrossingDetector _crossingDetector = new();
     private readonly WaveguideSpacingDetector _spacingDetector = new();
     private readonly WaveguideMinWidthChecker _minWidthChecker = new();
     private readonly PerConnectionDrcChecker _perConnectionDrcChecker = new();
+    private readonly ChipletInterfaceChecker _chipletInterfaceChecker = new();
+    private readonly ComponentPdkCompatibilityChecker _pdkCompatibilityChecker = new();
+    private readonly ComponentFootprintOverlapChecker _footprintOverlapChecker = new();
+    private readonly FrozenBlockedPathChecker _frozenBlockedPathChecker = new();
 
     /// <summary>
     /// Validates all provided waveguide connections and returns any issues found.
@@ -36,14 +42,19 @@ public class DesignValidator
             CheckConnection(connection, issues);
         }
 
+        issues.AddRange(_crossingDetector.DetectCrossings(connectionList));
+
         return issues;
     }
 
     /// <summary>
     /// Validates waveguide connections and detects overlaps with frozen paths in ComponentGroups.
+    /// Also reports frozen group paths (recursively, nested groups included) whose routed
+    /// geometry is a blocked fallback — those carry <see cref="Routing.RoutedPath.IsBlockedFallback"/>
+    /// but have no live connection for the connection-level check to see.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
-    /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
+    /// <param name="groups">ComponentGroups whose frozen internal paths are checked.</param>
     /// <returns>A list of all design issues found, empty if the design is valid.</returns>
     public List<DesignIssue> Validate(
         IEnumerable<WaveguideConnection> connections,
@@ -55,6 +66,7 @@ public class DesignValidator
         var connectionList = connections.ToList();
         var issues = Validate(connectionList);
         issues.AddRange(_overlapDetector.DetectOverlaps(connectionList, groups));
+        issues.AddRange(_frozenBlockedPathChecker.Check(groups));
         return issues;
     }
 
@@ -85,9 +97,10 @@ public class DesignValidator
     /// Validates waveguide connections and checks every optical pin on the provided
     /// components for a waveguide connection. Pins listed in <paramref name="externalPortPins"/>
     /// are treated as external ports and are not reported as unconnected.
+    /// Also flags top-level placed items whose footprints physically overlap.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
-    /// <param name="components">All placed components whose optical pins are checked.</param>
+    /// <param name="components">All placed components whose optical pins and footprints are checked.</param>
     /// <param name="externalPortPins">Pins that are external ports and should be skipped. Optional.</param>
     /// <returns>A list of all design issues found, empty if the design is valid.</returns>
     public List<DesignIssue> Validate(
@@ -101,6 +114,7 @@ public class DesignValidator
         var connectionList = connections.ToList();
         var issues = Validate(connectionList);
         issues.AddRange(ValidateUnconnectedPins(components, connectionList, externalPortPins));
+        issues.AddRange(_footprintOverlapChecker.DetectOverlaps(components));
         return issues;
     }
 
@@ -108,11 +122,13 @@ public class DesignValidator
     /// Validates waveguide connections, detects overlaps with frozen paths, and checks
     /// every optical pin on the provided components for a waveguide connection.
     /// Pins listed in <paramref name="externalPortPins"/> are treated as external ports
-    /// and are not reported as unconnected.
+    /// and are not reported as unconnected. Also flags top-level placed items
+    /// (components and groups, one footprint per group) whose placed, rotation-aware
+    /// footprint rectangles physically overlap.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
-    /// <param name="components">All placed components whose optical pins are checked.</param>
+    /// <param name="components">All placed components whose optical pins and footprints are checked.</param>
     /// <param name="externalPortPins">Pins that are external ports and should be skipped. Optional.</param>
     /// <returns>A list of all design issues found, empty if the design is valid.</returns>
     public List<DesignIssue> Validate(
@@ -128,22 +144,28 @@ public class DesignValidator
         var connectionList = connections.ToList();
         var issues = Validate(connectionList, groups);
         issues.AddRange(ValidateUnconnectedPins(components, connectionList, externalPortPins));
+        issues.AddRange(_footprintOverlapChecker.DetectOverlaps(components));
         return issues;
     }
 
     /// <summary>
     /// Full DRC-lite aggregation: validates waveguide connections, detects overlaps with
     /// frozen paths, checks every optical pin on the provided components for a connection,
+    /// flags top-level components/groups whose footprints physically overlap,
     /// (when <paramref name="minWaveguideSpacingMicrometers"/> &gt; 0) checks edge-to-edge
     /// waveguide spacing against the process minimum, and (when
     /// <paramref name="minWaveguideWidthRules"/> are provided) flags waveguides narrower
-    /// than the fabrication minimum of their cross-section. Each rule contributes its
-    /// findings exactly once.
+    /// than the fabrication minimum of their cross-section, and flags cross-chiplet
+    /// edge-coupler links whose facets do not face each other, are laterally offset,
+    /// sit off the chiplet edge, or stand too far apart (facet-gap divergence loss,
+    /// issues #1219/#1238 — chiplet membership resolves from the pins' parent groups,
+    /// so the checker needs no extra input). Each rule contributes its findings once.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
     /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
     /// <param name="components">All placed components whose optical pins are checked.</param>
     /// <param name="externalPortPins">Pins that are external ports and should be skipped.</param>
+    /// <param name="wavelengthNm">Simulation wavelength the chiplet facet-gap loss is evaluated at.</param>
     /// <param name="minWaveguideSpacingMicrometers">
     /// Minimum required edge-to-edge spacing; ≤0 disables the spacing check. When a
     /// per-connection provider is wired this value still governs frozen group paths,
@@ -171,6 +193,7 @@ public class DesignValidator
         IEnumerable<ComponentGroup> groups,
         IEnumerable<Component> components,
         IEnumerable<PhysicalPin>? externalPortPins,
+        double wavelengthNm,
         double minWaveguideSpacingMicrometers = 0,
         IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
         Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null)
@@ -181,6 +204,7 @@ public class DesignValidator
 
         var connectionList = connections.ToList();
         var issues = Validate(connectionList, groups, components, externalPortPins);
+        issues.AddRange(_chipletInterfaceChecker.Check(connectionList, wavelengthNm));
 
         if (connectionDrcRuleProvider is not null)
         {
@@ -243,7 +267,9 @@ public class DesignValidator
                     y,
                     string.Create(
                         CultureInfo.InvariantCulture,
-                        $"Unconnected pin: {FormatPinName(pin)} at ({x}, {y})")));
+                        $"Unconnected pin: {FormatPinName(pin)} at ({x}, {y})"),
+                    localizationKey: "DesignChecks.UnconnectedPin",
+                    localizationArgs: new object[] { FormatPinName(pin), x, y }));
             }
         }
 
@@ -258,56 +284,68 @@ public class DesignValidator
         List<DesignIssue> issues)
     {
         var (midX, midY) = CalculateMidpoint(connection);
+        var startName = FormatPinName(connection.StartPin);
+        var endName = FormatPinName(connection.EndPin);
+
+        void Add(DesignIssueType type, string description, string localizationKey) =>
+            issues.Add(new DesignIssue(
+                type, connection, midX, midY, description,
+                localizationKey: localizationKey,
+                localizationArgs: new object[] { startName, endName }));
 
         if (connection.RoutedPath?.IsInvalidGeometry == true)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.InvalidGeometry,
-                connection,
-                midX,
-                midY,
-                $"Bend radius violation: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.InvalidGeometry,
+                $"Bend radius violation: {startName} to {endName}",
+                "DesignChecks.InvalidGeometry");
 
         if (connection.IsBlockedFallback)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.BlockedPath,
-                connection,
-                midX,
-                midY,
-                $"Blocked path: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.BlockedPath,
+                FormatBlockedPathMessage(connection, startName, endName),
+                BlockedPathLocalizationKey(connection));
 
         if (connection.RoutedPath?.ViolatesProcessMinBendRadius == true)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.BendRadiusBelowProcessMinimum,
-                connection,
-                midX,
-                midY,
-                $"Bend radius below process minimum: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.BendRadiusBelowProcessMinimum,
+                $"Bend radius below process minimum: {startName} to {endName}",
+                "DesignChecks.BendRadiusBelowProcessMinimum");
 
         if (connection.RoutedPath?.PassesThroughComponent == true)
-        {
-            var startName = FormatPinName(connection.StartPin);
-            var endName = FormatPinName(connection.EndPin);
-            issues.Add(new DesignIssue(
-                DesignIssueType.StyledRouteThroughComponent,
-                connection,
-                midX,
-                midY,
-                $"Styled route passes through a component: {startName} to {endName}"));
-        }
+            Add(DesignIssueType.StyledRouteThroughComponent,
+                $"Styled route passes through a component: {startName} to {endName}",
+                "DesignChecks.StyledRouteThroughComponent");
 
         CheckPinMismatch(connection, issues);
+    }
+
+    /// <summary>
+    /// Builds the blocked-path message from the router's failure classification: a pin
+    /// sealed in by a component footprint needs the component moved (re-routing cannot
+    /// help), while contention between wires may be fixed by re-routing or reordering.
+    /// </summary>
+    private static string FormatBlockedPathMessage(
+        WaveguideConnection connection, string startName, string endName)
+    {
+        return connection.FailureReason switch
+        {
+            RoutingFailureReason.EndpointBlocked =>
+                $"Blocked path: {startName} to {endName} — a pin is sealed in by a component footprint; move the component (re-routing cannot fix this)",
+            RoutingFailureReason.Contention =>
+                $"Blocked path: {startName} to {endName} — no free lane; other waveguides occupy the corridor",
+            _ => $"Blocked path: {startName} to {endName}",
+        };
+    }
+
+    /// <summary>
+    /// Localization key for the blocked-path wording matching
+    /// <see cref="FormatBlockedPathMessage"/>'s failure-reason classification.
+    /// </summary>
+    private static string BlockedPathLocalizationKey(WaveguideConnection connection)
+    {
+        return connection.FailureReason switch
+        {
+            RoutingFailureReason.EndpointBlocked => "DesignChecks.BlockedPath.EndpointBlocked",
+            RoutingFailureReason.Contention => "DesignChecks.BlockedPath.Contention",
+            _ => "DesignChecks.BlockedPath",
+        };
     }
 
     /// <summary>
@@ -336,7 +374,9 @@ public class DesignValidator
                 midY,
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Pin width mismatch: {startName} ({startWidth.Value} µm) vs {endName} ({endWidth.Value} µm)")));
+                    $"Pin width mismatch: {startName} ({startWidth.Value} µm) vs {endName} ({endWidth.Value} µm)"),
+                localizationKey: "DesignChecks.PinWidthMismatch",
+                localizationArgs: new object[] { startName, startWidth.Value, endName, endWidth.Value }));
         }
 
         var startLayer = connection.StartPin.Layer;
@@ -350,7 +390,9 @@ public class DesignValidator
                 connection,
                 midX,
                 midY,
-                $"Pin layer mismatch: {startName} (layer {startLayer.Value}) vs {endName} (layer {endLayer.Value})"));
+                $"Pin layer mismatch: {startName} (layer {startLayer.Value}) vs {endName} (layer {endLayer.Value})",
+                localizationKey: "DesignChecks.PinLayerMismatch",
+                localizationArgs: new object[] { startName, startLayer.Value, endName, endLayer.Value }));
         }
     }
 
@@ -412,7 +454,9 @@ public class DesignValidator
                 // unit format. Without this, de-DE / fr-FR machines render '5,0'.
                 description: string.Create(
                     CultureInfo.InvariantCulture,
-                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)")));
+                    $"'{name}' is outside chip bounds ({wMm:F1} × {hMm:F1} mm)"),
+                localizationKey: "DesignChecks.OutOfBounds",
+                localizationArgs: new object[] { name, wMm, hMm }));
         }
 
         return issues;
@@ -420,30 +464,8 @@ public class DesignValidator
 
     /// <summary>
     /// Checks whether any placed components belong to a PDK that no longer matches the design's
-    /// active fabrication process (issue #570 follow-up, LC-T4): after a process edit diverges a
-    /// PDK from the design's locked process, placing NEW components from that PDK is blocked
-    /// (see <c>SingleProcessPolicy.CheckPlacement</c>), but components already on the canvas are
-    /// deliberately kept — this surfaces them for manual review instead of silently leaving a
-    /// manufacturability problem invisible. Uses the same exemption rule as the placement guard
-    /// (<see cref="SingleProcessPolicy.IsExempt"/>) so built-in and process-agnostic components
-    /// are never flagged.
+    /// active fabrication process. Delegates to <see cref="ComponentPdkCompatibilityChecker"/>.
     /// </summary>
-    /// <param name="components">All placed components to check.</param>
-    /// <param name="pdkSourceByComponent">
-    /// Each component's resolved PDK source name (or null for built-in/unresolved components,
-    /// which are exempt). Resolution is a caller concern — this method only judges names.
-    /// </param>
-    /// <param name="processAgnosticPdkNames">PDK names exempt from process enforcement (tool libraries).</param>
-    /// <param name="enabledPdkNames">
-    /// PDK names currently allowed: under an active process lock the lock-derived member set;
-    /// without one (Playground/no selection) all loaded PDK names — a component only gets flagged
-    /// there when its PDK isn't loaded at all (e.g. trash-deleted while its instances were kept).
-    /// </param>
-    /// <param name="processLockActive">
-    /// Whether a real (non-Playground) fabrication process is active. Only selects the issue
-    /// wording: a process-mismatch message would be wrong when no process exists to mismatch.
-    /// </param>
-    /// <returns>One issue per conflicted component, empty when every component's PDK is exempt or enabled.</returns>
     public List<DesignIssue> ValidateComponentPdkCompatibility(
         IEnumerable<Component> components,
         IReadOnlyDictionary<Component, string?> pdkSourceByComponent,
@@ -451,35 +473,9 @@ public class DesignValidator
         IReadOnlyCollection<string> enabledPdkNames,
         bool processLockActive = true)
     {
-        ArgumentNullException.ThrowIfNull(components);
-        ArgumentNullException.ThrowIfNull(pdkSourceByComponent);
-        ArgumentNullException.ThrowIfNull(processAgnosticPdkNames);
-        ArgumentNullException.ThrowIfNull(enabledPdkNames);
-
-        var enabled = new HashSet<string>(enabledPdkNames, StringComparer.OrdinalIgnoreCase);
-        var issues = new List<DesignIssue>();
-
-        foreach (var component in components)
-        {
-            pdkSourceByComponent.TryGetValue(component, out var pdkSource);
-            if (SingleProcessPolicy.IsExempt(pdkSource, processAgnosticPdkNames)) continue;
-            if (enabled.Contains(pdkSource!)) continue;
-
-            double centerX = component.PhysicalX + component.WidthMicrometers / 2;
-            double centerY = component.PhysicalY + component.HeightMicrometers / 2;
-            string name = component.HumanReadableName ?? component.Identifier;
-
-            issues.Add(new DesignIssue(
-                DesignIssueType.PdkProcessMismatch,
-                connection: null,
-                x: centerX,
-                y: centerY,
-                description: processLockActive
-                    ? $"'{name}' belongs to '{pdkSource}', which no longer matches the active process."
-                    : $"'{name}' belongs to '{pdkSource}', which is not loaded (the PDK may have been deleted or moved)."));
-        }
-
-        return issues;
+        return _pdkCompatibilityChecker.Check(
+            components, pdkSourceByComponent,
+            processAgnosticPdkNames, enabledPdkNames, processLockActive);
     }
 
     /// <summary>

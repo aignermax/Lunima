@@ -23,6 +23,13 @@ public class TruthTableViewModelCollisionHintTests
     private readonly Dictionary<string, ComponentGroup> _groups = new();
     private DesignCanvasViewModel _canvas = null!;
 
+    // The hints quote names with locale-specific marks („S“ in de), so the
+    // assertions on 'S' pin the English text instead of the machine's UI culture.
+    public TruthTableViewModelCollisionHintTests()
+    {
+        CAP.Avalonia.Services.Localization.LocalizationService.Instance.SetLanguage("en");
+    }
+
     [Fact]
     public void InputName_EqualToOtherGateOutputSignal_ShowsCrossRoleHint()
     {

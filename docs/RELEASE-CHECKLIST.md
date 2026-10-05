@@ -22,6 +22,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
+- [ ] Home guided tours: first steps (place → connect → simulate), "Watch it compute" (Counter), and "Run a program on your chip" (4-bit adder → ISA playground → photonic multiply) each start from the Home card and advance only on the real user actions. `(auto: TutorialViewModelTests, WatchComputeTourViewModelTests, RunProgramTourViewModelTests)`
 - [ ] Golden-design regression gate — every example in `UnitTests/Regression/golden/manifest.json` loads, re-routes, passes DRC-lite, and matches its pinned simulation reference. `(auto: GoldenDesignTests)`
 - [ ] Create a new project → an empty canvas with the chosen process / playground is shown. `(auto: FileOperationsProjectLifecycleTests)`
 - [ ] Reopen the last project on startup → previous file opens automatically if preference is enabled. `(auto: HomeReopenLastProjectTests)`
@@ -104,6 +105,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] ONA wavelength sweep panel measures transmission across a wavelength range. `(auto: OnaAnalysis/OnaAnalyzerSimulationTests)`
 - [ ] Wavelength spectrum panel plots transmission curves. `(auto: WavelengthSpectrum/WavelengthSpectrumViewModelTests)`
+- [ ] Spectrum tab "Coherent interference" toggle: EBeam MZI sweep shows fringes (FSR = λ²/(n_g·ΔL)) when on, none when off; the flag round-trips through .lun save/load; (?) help shows the ΔL→fringes animation. `(auto: Integration/EBeamMziSpectrumToggleTests, Persistence/CoherentPropagationPhasePersistenceTests)`
 - [ ] Time-domain / transient analysis panel plots signals over time. `(auto: TimeDomainSimulation/TimeDomainSimulatorTests)`
 - [ ] Eye diagram panel opens and renders eye metrics / BER. `(auto: EyeDiagram/EyeDiagramBuilderTests, BerEstimatorTests)`
 - [ ] Monte Carlo panel runs fabrication-variance sweeps. `(auto: MonteCarloAnalysis/MonteCarloRunnerTests)`
@@ -154,6 +156,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Export guards warn when the design contains broken routes or missing PDKs. `(auto: Export/GdsExportGuardTests, Export/NazcaExportSkipsBrokenConnectionsTests)`
 - [ ] Foundry environment selection resolves a working Python/Nazca interpreter. `(auto: Export/GdsExportEnvironmentSelectionTests, Export/ProcessLaunchFactoryTests)`
 - [ ] PDK resolution check validates all Nazca functions resolve for export. `(auto: Export/PdkResolution/PdkFunctionResolutionServiceTests)`
+- [ ] Export → "Check for openEBL…" exports the design to GDS and reports pass/fail per check (submission + verification) with typed errors; a missing Python toolchain shows the pip hint with a copy button. `(auto: Export/OpenEbl/OpenEblCheckViewModelTests, Export/OpenEbl/OpenEblSubmissionCheckerTests)`
+- [ ] openEBL check against a real toolchain passes on a valid EBeam design and fails on an oversized die. `(manual)`
 
 ## 14. Layers & geometry
 
@@ -183,7 +187,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Routing diagnostics panel highlights blocked paths and detours. `(manual)`
 - [ ] GDS coordinate comparison view loads two coordinate JSON exports side by side. `(manual)`
 - [ ] Help flyouts for transient and eye workflows appear on first use. `(manual)`
+- [ ] Monte Carlo tab (?) help explains fabrication variance and yield; the scatter/histogram animation loops. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
+- [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
+- [ ] ISA playground Run auto-steps count-to-5 to "halted after N steps" with ACC = 5; Stop mid-run freezes PC and re-enables Step. `(manual)`
+- [ ] ISA playground "Compute ADD on the photonic chip" toggle: disabled with a hint before a build; after building the 4-bit adder example in the Logic tab it runs count-to-5 to ACC = 5 and the status names the photonic adder. `(manual)`
+- [ ] ISA playground photonic ADD: each ADD step shows operands and result in binary with the light-travel time in ps (e.g. `0001 + 0001 = 0010`); the header names the photonic adder while the toggle is on, the golden model otherwise. `(manual)`
 
 ## 18. Cross-platform sanity
 

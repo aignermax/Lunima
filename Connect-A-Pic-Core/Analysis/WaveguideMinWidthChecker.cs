@@ -104,21 +104,35 @@ public class WaveguideMinWidthChecker
 
         var (startX, startY) = connection.StartPin.GetAbsolutePosition();
         var (endX, endY) = connection.EndPin.GetAbsolutePosition();
-        string sourceSuffix = string.IsNullOrWhiteSpace(rule.DrcSource)
-            ? string.Empty
-            : $"; source: {rule.DrcSource}";
+        bool hasSource = !string.IsNullOrWhiteSpace(rule.DrcSource);
+        string sourceSuffix = hasSource ? $"; source: {rule.DrcSource}" : string.Empty;
         string description = string.Create(
             CultureInfo.InvariantCulture,
             $"Waveguide width below minimum: {FormatPinName(connection.StartPin)} → {FormatPinName(connection.EndPin)} "
             + $"(width {effectiveWidth:F2} µm, minimum {rule.MinWidthMicrometers:F2} µm, "
             + $"cross-section {rule.XsectionName}{sourceSuffix})");
 
+        var localizationArgs = new List<object>
+        {
+            FormatPinName(connection.StartPin),
+            FormatPinName(connection.EndPin),
+            effectiveWidth,
+            rule.MinWidthMicrometers,
+            rule.XsectionName,
+        };
+        if (hasSource)
+            localizationArgs.Add(rule.DrcSource!);
+
         return new DesignIssue(
             DesignIssueType.WaveguideBelowMinWidth,
             connection,
             (startX + endX) / 2,
             (startY + endY) / 2,
-            description);
+            description,
+            localizationKey: hasSource
+                ? "DesignChecks.WaveguideBelowMinWidth.WithSource"
+                : "DesignChecks.WaveguideBelowMinWidth",
+            localizationArgs: localizationArgs);
     }
 
     /// <summary>

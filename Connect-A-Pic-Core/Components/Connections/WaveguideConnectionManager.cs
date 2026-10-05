@@ -59,6 +59,19 @@ public partial class WaveguideConnectionManager
     public double DefaultPropagationLossDbPerCm { get; set; } = 0.5;
 
     /// <summary>
+    /// Opt-in coherent propagation-phase mode for top-level routed waveguide
+    /// connections (issue #1319). When true, the S-matrix transfer of every optical
+    /// routed connection carries the propagation phase exp(-i·2π·n_eff(λ)·L/λ) on top
+    /// of the loss-only amplitude, so routed-path length differences (e.g. an MZI arm
+    /// meander) produce interference. Default false: every existing design, golden
+    /// file and logic truth table is unaffected. Frozen paths inside ComponentGroups
+    /// are deliberately not phase-aware yet. This flag is the future anchor for a UI
+    /// toggle and .lun persistence; it lives here because this manager is shared by
+    /// the canvas and every simulation grid built from it.
+    /// </summary>
+    public bool EnableCoherentPropagationPhase { get; set; } = false;
+
+    /// <summary>
     /// Default bend loss applied to new connections (dB per 90° bend).
     /// </summary>
     public double DefaultBendLossDbPer90Deg { get; set; } = 0.05;
@@ -111,7 +124,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
         lock (_connectionsSync)
         {
@@ -140,10 +154,15 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
 
         connection.RestoreCachedPath(cachedPath);
+        // The .lun format persists the blocked flag but not the reason — classify the
+        // restored blocked fallback so the design checks can say why the wire is blocked.
+        if (cachedPath.IsBlockedFallback && cachedPath.FailureReason == RoutingFailureReason.None)
+            cachedPath.FailureReason = _router.ClassifyRestoredBlockedFallback(startPin, endPin);
         lock (_connectionsSync)
         {
             Connections.Add(connection);
@@ -164,6 +183,26 @@ public partial class WaveguideConnectionManager
     }
 
     /// <summary>
+    /// Resolves the waveguide dispersion model a new connection between the two pins
+    /// inherits: the PDK dispersion stamped on an endpoint's component
+    /// (<see cref="Core.Component.WaveguideDispersion"/>). The start pin wins when both
+    /// endpoints carry a model (mixed-PDK playground designs); null when neither PDK
+    /// declares a dispersion block, keeping the documented fallback behaviour.
+    /// Electrical connections are metal traces — the optical waveguide dispersion
+    /// model does not apply to them.
+    /// </summary>
+    private static CAP_Core.LightCalculation.MaterialDispersion.IDispersionModel? ResolveWaveguideDispersion(
+        PhysicalPin startPin, PhysicalPin endPin)
+    {
+        bool isElectrical = startPin?.MatterType == MatterType.Electricity ||
+                            endPin?.MatterType == MatterType.Electricity;
+        if (isElectrical)
+            return null;
+        return startPin?.ParentComponent?.WaveguideDispersion
+            ?? endPin?.ParentComponent?.WaveguideDispersion;
+    }
+
+    /// <summary>
     /// Adds a connection without triggering route calculation.
     /// Used for async routing: add connection first, then route asynchronously.
     /// </summary>
@@ -174,7 +213,8 @@ public partial class WaveguideConnectionManager
             StartPin = startPin,
             EndPin = endPin,
             PropagationLossDbPerCm = DefaultPropagationLossDbPerCm,
-            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg
+            BendLossDbPer90Deg = DefaultBendLossDbPer90Deg,
+            DispersionModel = ResolveWaveguideDispersion(startPin, endPin)
         };
         lock (_connectionsSync)
         {
@@ -324,6 +364,13 @@ public partial class WaveguideConnectionManager
     public int MaxRoutingAttempts { get; set; } = 6;
 
     /// <summary>
+    /// Number of full-ordering route attempts the last <see cref="RecalculateAllTransmissions"/>
+    /// pass ran (1 = the first ordering was enough, or every failure was endpoint-blocked so
+    /// further orderings were provably pointless). Diagnostic hook for tests and telemetry.
+    /// </summary>
+    public int LastOrderingAttemptCount { get; private set; }
+
+    /// <summary>
     /// Invoked on the routing thread when a connection escalates to Phase 2 (complex route).
     /// Wire this to update a UI progress indicator.
     /// </summary>
@@ -340,16 +387,19 @@ public partial class WaveguideConnectionManager
         Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
+        var totalWatch = System.Diagnostics.Stopwatch.StartNew();
+        var timings = new RoutingPassTimingsBuilder();
+
         // Re-evaluate existing crossings first: when a net endpoint moved, the
         // crossing is dissolved so its originals are routed from scratch below and
         // the insertion pass re-inserts a crossing only if it is still beneficial.
         if (CrossingInsertion != null && !_isCrossingPassRunning)
         {
-            CrossingInsertion.DissolveStaleRecords(this, _router);
+            timings.CrossingDissolution = MeasurePass(() => CrossingInsertion.DissolveStaleRecords(this, _router));
         }
 
-        RouteAllConnections(progressCallback, cancellationToken);
-        RunCrossingInsertionPass(cancellationToken);
+        RouteAllConnections(timings, progressCallback, cancellationToken);
+        timings.CrossingInsertion = MeasurePass(() => RunCrossingInsertionPass(cancellationToken));
 
         if (UseSequentialRouting && _router.PathfindingGrid != null &&
             !cancellationToken.IsCancellationRequested)
@@ -358,11 +408,21 @@ public partial class WaveguideConnectionManager
             // bends to the gentlest radius the remaining free space permits, then flag any
             // crossing that even the collapse could not keep clear (there should be none). The
             // crossing scan must not run on a half-collapsed state if cancellation interrupted it.
-            CollapseAutoRoutePinLeads(cancellationToken);
-            UpsizeAutoRouteBendRadii(cancellationToken);
+            timings.PinLeadCollapse = MeasurePass(() => CollapseAutoRoutePinLeads(cancellationToken));
+            timings.BendUpsizing = MeasurePass(() => UpsizeAutoRouteBendRadii(cancellationToken));
             if (!cancellationToken.IsCancellationRequested)
-                MarkUnresolvedSiblingCrossings();
+                timings.CrossingScan = MeasurePass(MarkUnresolvedSiblingCrossings);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                timings.ContentionRepair = MeasurePass(() => RepairContentionBlockedWires(cancellationToken));
+                timings.ContentionRepairAttempts = LastContentionRepairAttemptCount;
+                timings.ContentionRepairAccepts = LastContentionRepairAcceptCount;
+            }
         }
+
+        totalWatch.Stop();
+        LastRoutingPassTimings = timings.Build(
+            totalWatch.Elapsed, LastOrderingAttemptCount, cancellationToken.IsCancellationRequested);
     }
 
     /// <summary>
@@ -387,9 +447,11 @@ public partial class WaveguideConnectionManager
 
     /// <summary>
     /// Routes all connections (incremental first, then full re-route with ordering
-    /// strategies) without running the crossing-insertion pass.
+    /// strategies) without running the crossing-insertion pass. Records the initial-pass
+    /// and ordering-cascade wall-clock into <paramref name="timings"/>.
     /// </summary>
     private void RouteAllConnections(
+        RoutingPassTimingsBuilder timings,
         Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
@@ -400,57 +462,40 @@ public partial class WaveguideConnectionManager
 
         if (UseSequentialRouting && router.PathfindingGrid != null)
         {
+            LastOrderingAttemptCount = 0;
+            LastOrderingEarlyStopped = false;
+
             // Phase 1: Incremental routing — keep valid routes, only re-route broken ones
-            var result = TryRouteIncremental(router, progressCallback, cancellationToken);
+            var initialWatch = System.Diagnostics.Stopwatch.StartNew();
+            var incremental = TryRouteIncremental(router, progressCallback, cancellationToken);
+            timings.InitialPass = initialWatch.Elapsed;
             if (cancellationToken.IsCancellationRequested) return;
 
-            if (result.allValid)
+            if (incremental.allValid)
                 return;
 
-            // Phase 2: Incremental routing failed for some connections.
-            // Fall back to full re-route with ordering strategies.
-            // Snapshots: this runs on the routing thread while UI commands may mutate the list.
-            result = TryRouteInOrder(SnapshotConnections(), router, progressCallback, cancellationToken);
-            if (cancellationToken.IsCancellationRequested) return;
-            if (result.allValid) return;
-
-            var bestOrder = SnapshotConnections();
-            int bestFailedCount = result.failedCount;
-
-            var orderings = GenerateOrderings(SnapshotConnections(), MaxRoutingAttempts - 1);
-            foreach (var ordering in orderings)
+            var cascadeWatch = System.Diagnostics.Stopwatch.StartNew();
+            try
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                result = TryRouteInOrder(ordering, router, progressCallback, cancellationToken);
-
-                if (result.allValid)
-                {
-                    ReorderConnections(ordering);
-                    return;
-                }
-
-                if (result.failedCount < bestFailedCount)
-                {
-                    bestFailedCount = result.failedCount;
-                    bestOrder = ordering;
-                }
+                RouteWithOrderingCascade(router, progressCallback, cancellationToken);
             }
-
-            if (!cancellationToken.IsCancellationRequested)
+            finally
             {
-                ReorderConnections(bestOrder);
-                TryRouteInOrder(bestOrder, router, progressCallback, cancellationToken);
+                timings.OrderingCascade = cascadeWatch.Elapsed;
+                timings.OrderingEarlyStopped = LastOrderingEarlyStopped;
             }
         }
         else
         {
             // Simple routing without collision avoidance. Snapshot: see _connectionsSync.
+            var simpleWatch = System.Diagnostics.Stopwatch.StartNew();
             foreach (var connection in SnapshotConnections())
             {
-                if (cancellationToken.IsCancellationRequested) return;
+                if (cancellationToken.IsCancellationRequested) break;
                 connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
                 progressCallback?.Invoke();
             }
+            timings.InitialPass = simpleWatch.Elapsed;
         }
     }
 
@@ -564,6 +609,14 @@ public partial class WaveguideConnectionManager
     /// </summary>
     private static bool IsRouteStillValid(WaveguideConnection connection, WaveguideRouter router)
     {
+        // A cross-chiplet facet link couples free-space between chiplet edges: its
+        // transmission is the ChipletEdgeCouplerCoupling offset × gap model evaluated
+        // from live pin positions, not waveguide geometry. Re-routing it as a waveguide
+        // would draw a wire through free space and double-count the misalignment loss,
+        // so the abutment route is kept no matter how the chiplets move.
+        if (connection.IsCrossChipletFacetLink)
+            return true;
+
         // Frozen paths with matching endpoints are always kept as-is: manual bend edits
         // must survive re-routing. RecalculateTransmission handles the unfreeze case.
         if (connection.IsRouteFrozen && connection.FrozenPathStillMatchesPins())
@@ -604,7 +657,7 @@ public partial class WaveguideConnectionManager
     /// <summary>
     /// Tries to route all connections in the given order (full re-route).
     /// </summary>
-    private (bool allValid, int failedCount) TryRouteInOrder(
+    private (bool allValid, int failedCount, List<WaveguideConnection> failedConnections) TryRouteInOrder(
         List<WaveguideConnection> orderedConnections,
         WaveguideRouter router,
         Action? progressCallback = null,
@@ -614,13 +667,14 @@ public partial class WaveguideConnectionManager
         router.PathfindingGrid!.ClearAllWaveguideObstacles();
 
         int failedCount = 0;
+        var failedConnections = new List<WaveguideConnection>();
         var routedSoFar = new List<WaveguideConnection>();
 
         // Route each connection sequentially
         foreach (var connection in orderedConnections)
         {
             if (cancellationToken.IsCancellationRequested)
-                return (false, failedCount);
+                return (false, failedCount, failedConnections);
 
             connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             RefreshStyledObstacleCollision(connection, router);
@@ -645,17 +699,27 @@ public partial class WaveguideConnectionManager
                 if (connection.IsBlockedFallback || CrossesAnyRoutedSibling(connection, routedSoFar))
                 {
                     failedCount++;
+                    failedConnections.Add(connection);
                 }
                 routedSoFar.Add(connection);
             }
             else
             {
                 failedCount++;
+                failedConnections.Add(connection);
             }
         }
 
-        return (failedCount == 0, failedCount);
+        return (failedCount == 0, failedCount, failedConnections);
     }
+
+    /// <summary>
+    /// True when every failed connection of an attempt is endpoint-blocked: its start or
+    /// end pin is sealed in by a component footprint, so no wire ordering can free it.
+    /// </summary>
+    private static bool AllFailuresEndpointBlocked(List<WaveguideConnection> failedConnections) =>
+        failedConnections.Count > 0 &&
+        failedConnections.All(c => c.FailureReason == RoutingFailureReason.EndpointBlocked);
 
     /// <summary>
     /// True when the connection's routed geometry properly crosses any already-routed
@@ -796,7 +860,18 @@ public partial class WaveguideConnectionManager
     /// Connections are bidirectional: light can flow in either direction through a waveguide.
     /// Physical pins without linked logical pins are skipped (they don't participate in light simulation).
     /// </summary>
-    public Dictionary<(Guid PinIdInflow, Guid PinIdOutflow), Complex> GetConnectionTransfers()
+    /// <param name="transmissionFactor">
+    /// Optional per-connection multiplier applied to each connection's transmission
+    /// (e.g. the cross-chiplet edge-coupler mode-overlap loss, issue #1228). Null keeps
+    /// the raw transmission coefficients.
+    /// </param>
+    /// <param name="wavelengthNm">
+    /// Wavelength in nm at which the system matrix is being built. Only used when
+    /// <see cref="EnableCoherentPropagationPhase"/> is on, to evaluate n_eff(λ).
+    /// </param>
+    public Dictionary<(Guid PinIdInflow, Guid PinIdOutflow), Complex> GetConnectionTransfers(
+        Func<WaveguideConnection, double>? transmissionFactor = null,
+        double wavelengthNm = 1550.0)
     {
         // Snapshot under the lock: the crossing pass may swap connections
         // structurally on the routing thread while the S-matrix is being built.
@@ -810,16 +885,26 @@ public partial class WaveguideConnectionManager
                 continue;
             }
 
+            // Metal traces and cross-chiplet free-space facet links are not routed
+            // optical waveguides — the waveguide phase model does not apply to them.
+            var coefficient = EnableCoherentPropagationPhase && !conn.IsElectrical && !conn.IsCrossChipletFacetLink
+                ? conn.GetCoherentTransmission(wavelengthNm)
+                : conn.TransmissionCoefficient;
+            if (transmissionFactor != null)
+            {
+                coefficient *= transmissionFactor(conn);
+            }
+
             // Forward: light flows from StartPin OutFlow to EndPin InFlow
             var startPinOutFlow = conn.StartPin.LogicalPin.IDOutFlow;
             var endPinInFlow = conn.EndPin.LogicalPin.IDInFlow;
-            transfers[(startPinOutFlow, endPinInFlow)] = conn.TransmissionCoefficient;
+            transfers[(startPinOutFlow, endPinInFlow)] = coefficient;
 
             // Reverse: light flows from EndPin OutFlow to StartPin InFlow
             // Waveguide connections are inherently bidirectional
             var endPinOutFlow = conn.EndPin.LogicalPin.IDOutFlow;
             var startPinInFlow = conn.StartPin.LogicalPin.IDInFlow;
-            transfers[(endPinOutFlow, startPinInFlow)] = conn.TransmissionCoefficient;
+            transfers[(endPinOutFlow, startPinInFlow)] = coefficient;
         }
         return transfers;
     }

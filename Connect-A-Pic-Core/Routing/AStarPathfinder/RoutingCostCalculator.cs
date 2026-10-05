@@ -199,8 +199,37 @@ public class RoutingCostCalculator
             return proximityRatio * ProximityCostMultiplier;
         }
 
-        // Fallback: brute-force scan (O(N²) where N = search radius)
-        return CalculateProximityCostBruteForce(grid, x, y);
+        // Fallback: brute-force scan (O(N²) where N = search radius), memoized per
+        // cell — the A* search probes the same cell from many direction/run states,
+        // and the value only depends on the current waveguide occupancy.
+        return CalculateProximityCostMemoized(grid, x, y);
+    }
+
+    // Memo of the brute-force proximity cost per cell, valid while the grid's
+    // WaveguideVersion is unchanged. The scan is exact, so a cached value is
+    // bit-identical to a fresh scan for the same occupancy — only the recomputation
+    // is skipped. double (not float) storage keeps the cost values bit-exact.
+    private double[,]? _proximityCache;
+    private int[,]? _proximityCacheVersion;
+    private PathfindingGrid? _proximityCacheGrid;
+
+    private double CalculateProximityCostMemoized(PathfindingGrid grid, int x, int y)
+    {
+        if (_proximityCacheGrid != grid || _proximityCache == null || _proximityCacheVersion == null
+            || _proximityCache.GetLength(0) != grid.Width || _proximityCache.GetLength(1) != grid.Height)
+        {
+            _proximityCache = new double[grid.Width, grid.Height];
+            _proximityCacheVersion = new int[grid.Width, grid.Height];
+            _proximityCacheGrid = grid;
+        }
+
+        if (_proximityCacheVersion[x, y] == grid.WaveguideVersion)
+            return _proximityCache[x, y];
+
+        double value = CalculateProximityCostBruteForce(grid, x, y);
+        _proximityCache[x, y] = value;
+        _proximityCacheVersion[x, y] = grid.WaveguideVersion;
+        return value;
     }
 
     /// <summary>

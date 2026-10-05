@@ -244,7 +244,9 @@ public class WaveguideSpacingDetector
             connection,
             closestPoint.X,
             closestPoint.Y,
-            description);
+            description,
+            localizationKey: "DesignChecks.WaveguideSpacingViolation",
+            localizationArgs: new object[] { a.PathLabel, b.PathLabel, edgeDistance, minSpacing });
     }
 
     private static string FormatConnectionLabel(WaveguideConnection connection)

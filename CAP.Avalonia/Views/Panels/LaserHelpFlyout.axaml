@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.LaserHelpFlyout">
+
+    <!-- Help of the laser/light-source editor in the properties panel (#1220, #1196
+         pattern): short sections (text budget, all five locales) plus one looping
+         "light enters the circuit" diagram — the laser dot switches on (rays appear),
+         a light pulse (the LightPulseAlongPath primitive) travels a short waveguide
+         into a splitter, the two branches glow with the power-ramp colors (strong /
+         weak, the bespoke LaserInputGlowAnimation overlay), and the unlit coupler on
+         the far side stays the gray "off (output)" dot. Schematic, not a field
+         simulation. Hosted as the HelpContent of the editor's HelpFlyoutButton, which
+         supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                   Text="{loc:Localize LaserHelp.Intro}"/>
+
+        <!-- light enters the circuit: laser on → pulse into a splitter → strong/weak
+             branches glow → the far coupler stays an unlit output. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="110">
+                    <!-- Animated pulses, declared first so tracks and pulses slide
+                         *under* the splitter box: the input pulse visibly enters the
+                         splitter and the two split pulses emerge from it. -->
+                    <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="40,55 170,55"
+                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            WindowStart="0.15" WindowEnd="0.5" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="240,45 336,50"
+                                            PulseBrush="#FF6450" PulseDiameter="10"
+                                            WindowStart="0.55" WindowEnd="0.9" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="240,65 336,60"
+                                            PulseBrush="#00B4B4" PulseDiameter="8"
+                                            WindowStart="0.55" WindowEnd="0.9" IsHitTestVisible="False"/>
+                    <!-- Laser source: gray dot at rest; the overlay lights it up with rays. -->
+                    <Ellipse Canvas.Left="16" Canvas.Top="46" Width="18" Height="18" Fill="#9E9E9E"/>
+                    <TextBlock Canvas.Left="2" Canvas.Top="68" Text="{loc:Localize LaserHelp.DiagramOn}"
+                               FontSize="9" Foreground="Gray"/>
+                    <!-- The splitter -->
+                    <Border Canvas.Left="170" Canvas.Top="28" Width="70" Height="54"
+                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Text="{loc:Localize LaserHelp.DiagramSplitter}" FontSize="9" Foreground="LightGray"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <!-- Branch labels (power-ramp colors) -->
+                    <TextBlock Canvas.Left="272" Canvas.Top="24" Text="{loc:Localize LaserHelp.DiagramStrong}"
+                               FontSize="9" Foreground="#FF6450"/>
+                    <TextBlock Canvas.Left="272" Canvas.Top="82" Text="{loc:Localize LaserHelp.DiagramWeak}"
+                               FontSize="9" Foreground="#00B4B4"/>
+                    <!-- Unlit coupler on the far side: gray, crossed out — an output. -->
+                    <Ellipse Canvas.Left="336" Canvas.Top="46" Width="18" Height="18" Fill="#9E9E9E"/>
+                    <Line StartPoint="338,62" EndPoint="352,48" Stroke="#DCDCDC" StrokeThickness="1.5"/>
+                    <TextBlock Canvas.Left="306" Canvas.Top="68" Text="{loc:Localize LaserHelp.DiagramOff}"
+                               FontSize="9" Foreground="Gray"/>
+                    <!-- laser switches on + branch glows -->
+                    <ha:LaserInputGlowAnimation Width="368" Height="110" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Text="{loc:Localize LaserHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize LaserHelp.WavelengthPowerTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LaserHelp.WavelengthPowerBody}"/>
+
+        <TextBlock Text="{loc:Localize LaserHelp.CwTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LaserHelp.CwBody}"/>
+
+        <TextBlock Text="{loc:Localize LaserHelp.CanvasTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize LaserHelp.CanvasBody}"/>
+    </StackPanel>
+
+</UserControl>

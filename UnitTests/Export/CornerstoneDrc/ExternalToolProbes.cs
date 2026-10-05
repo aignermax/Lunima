@@ -14,12 +14,20 @@ internal static class ExternalToolProbes
     private const int ProbeTimeoutMs = 30_000;
     private const int RunTimeoutMs = 300_000;
 
+    // The tool environment cannot change mid-run, so each probe spawns its
+    // subprocesses once per test process and shares the result with every caller.
+    private static readonly Lazy<Task<string?>> CachedPython = new(FindPythonUncachedAsync);
+    private static readonly Lazy<Task<string?>> CachedKlayout = new(FindKlayoutUncachedAsync);
+    private static readonly Lazy<Task<string?>> CachedCspdkPython = new(FindCspdkPythonUncachedAsync);
+
     /// <summary>
     /// First Python interpreter answering <c>--version</c> ("python" before "python3",
     /// same order as the nazca-gated tests). Null when none is on PATH; a Windows
     /// Store-alias stub fails the probe naturally (non-zero exit, no output).
     /// </summary>
-    public static async Task<string?> FindPythonAsync()
+    public static Task<string?> FindPythonAsync() => CachedPython.Value;
+
+    private static async Task<string?> FindPythonUncachedAsync()
     {
         foreach (var candidate in new[] { "python", "python3" })
         {
@@ -34,7 +42,9 @@ internal static class ExternalToolProbes
     /// KLayout executable for batch DRC: <c>$KLAYOUT</c> first (explicit override),
     /// then <c>klayout</c> / <c>klayout_app</c> on PATH. Null when none answers <c>-v</c>.
     /// </summary>
-    public static async Task<string?> FindKlayoutAsync()
+    public static Task<string?> FindKlayoutAsync() => CachedKlayout.Value;
+
+    private static async Task<string?> FindKlayoutUncachedAsync()
     {
         var fromEnv = Environment.GetEnvironmentVariable("KLAYOUT");
         if (!string.IsNullOrWhiteSpace(fromEnv))
@@ -58,7 +68,9 @@ internal static class ExternalToolProbes
     /// ground-truth venv (same candidates as the gdsfactory script-execution tests, but the
     /// import probe itself decides — no site-packages layout guessing).
     /// </summary>
-    public static async Task<string?> FindCspdkPythonAsync()
+    public static Task<string?> FindCspdkPythonAsync() => CachedCspdkPython.Value;
+
+    private static async Task<string?> FindCspdkPythonUncachedAsync()
     {
         var candidates = new List<string>();
         var fromEnv = Environment.GetEnvironmentVariable("CSPDK_PYTHON");

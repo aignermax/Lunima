@@ -50,9 +50,43 @@ Examples: [`examples/isa/count-to-5.asm`](../examples/isa/count-to-5.asm) and
 
 - `ADD` → shipped example **Logic Gate 4-Bit Adder** (ripple-carry; `Cin = 0`, `Cout`
   dropped gives exactly the mod-16 wrap above).
-- `AND` → the NAND + NOT datapath of **Logic Gate ALU 1-bit** (one bit slice; scale to 4 bit).
-  Note: that example selects AND/OR — `OR` is not an ISA instruction.
-- `NOT` → **Logic Gate NOT-NAND** (one bit slice; scale to 4 bit).
+- `AND` → shipped example **Logic Gate AND 4-bit** (four AND-from-NAND slices,
+  `A0–A3` & `B0–B3` → `Y0–Y3`; the single-slice **Logic Gate AND-from-NAND** is the
+  gate it scales, and the NAND + NOT datapath of **Logic Gate ALU 1-bit** is the same
+  cascade with an OR sibling — `OR` is not an ISA instruction).
+- `NOT` → shipped example **Logic Gate NOT 4-bit** (four NOT-NAND slices, `A0–A3` →
+  `Y0–Y3`; the single-slice **Logic Gate NOT-NAND** is the gate it scales).
+- `AND` + `NOT` from the same operands → shipped example **Logic Gate Logic Unit
+  4-bit** (four AND-from-NAND + four NOT-NAND slices, shared `A0–A3` plus `B0–B3` →
+  `Y0–Y3` / `N0–N3`; the first step from single-op chips to a real ALU).
+- `JZ` (the zero flag) → shipped example **Logic Gate Zero Detect 4-bit** (three OR
+  slices in a tree feeding one NOT slice: `Z = NOT(A0 OR A1 OR A2 OR A3)`, so `Z = 1`
+  exactly when the accumulator is zero). `IsaEmulator` asks an optional
+  `IIsaZeroFlag` for the branch decision — default the golden `ACC == 0`, or
+  `PhotonicZeroFlag` over that example's assembled network.
 - `PC` (increment, load for jumps) → shipped example **Logic Gate PC 2-bit** (scale to 4 bit).
 - Data RAM (`LOAD`/`STORE` path) → shipped example **RAM 2x2** (4 words × 4 bit).
 - The shipped **Logic Gate Register 2-bit** is the template for the accumulator.
+
+## Photonic ALU signal maps
+
+`PhotonicAdderAlu`, `PhotonicNotAlu` and `PhotonicAndAlu` each take an optional
+`IsaAluSignalMap` (operand names + result names, LSB first, plus an optional
+carry-in for the adder). The defaults are the shipped example names above, so a
+single-operation design needs nothing extra. The map exists so that **one chip can
+expose several ISA operations without a name collision** — the blocker for the
+combined logic unit.
+
+**Combined logic-unit convention** (`IsaAluSignalMap.CombinedLogicUnitNot`): both
+operations share the operand bits `A0–A3` (AND additionally reads `B0–B3`); AND
+keeps the default result taps `Y0–Y3`, NOT reads its own taps `N0–N3`:
+
+| Operation | Operand inputs | Result taps |
+|-----------|----------------|-------------|
+| AND | `A0–A3`, `B0–B3` | `Y0–Y3` |
+| NOT | `A0–A3` (shared) | `N0–N3` |
+
+A network built to this convention passes
+`PhotonicAndAlu.Accepts(network)` (default map) and
+`PhotonicNotAlu.Accepts(network, IsaAluSignalMap.CombinedLogicUnitNot)`, so a
+`CompositeIsaAlu` over that one network computes both operations photonically.

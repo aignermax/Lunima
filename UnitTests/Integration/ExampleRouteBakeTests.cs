@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CAP.Avalonia.Commands;
@@ -9,7 +10,9 @@ using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
 using CAP_Core;
+using CAP_Core.Components.Connections;
 using CAP_Core.Export;
+using CAP_Core.Routing;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -103,6 +106,13 @@ public class ExampleRouteBakeTests
         await canvas.RecalculateRoutesAsync();
         watch.Stop();
 
+        var blocked = canvas.Connections.Count(c => c.Connection.IsBlockedFallback);
+        var endpoint = canvas.Connections.Count(c => c.Connection.FailureReason == RoutingFailureReason.EndpointBlocked);
+        var contention = canvas.Connections.Count(c => c.Connection.FailureReason == RoutingFailureReason.Contention);
+        ReportProgress(FormatCensusLine(exampleFileName, blocked, endpoint, contention, blocked - endpoint - contention));
+        if (canvas.ConnectionManager.LastRoutingPassTimings is { } passTimings)
+            ReportProgress(FormatPassTimingsLine(exampleFileName, passTimings));
+
         await fileOps.SaveDesignCommand.ExecuteAsync(null);
 
         var (verifyCanvas, verifyOps) = CreateCanvasAndFileOperations(prep);
@@ -177,6 +187,41 @@ public class ExampleRouteBakeTests
         // Never invoked (CurrentFilePath is set by the load), but SaveDesign requires it non-null.
         fileOps.FileDialogService = new Mock<IFileDialogService>().Object;
         return fileOps;
+    }
+
+    /// <summary>
+    /// Formats the per-example blocked-wire census line (issue #1249): how many of the
+    /// blocked wires are endpoint-blocked (sealed pin — no ordering retry can help) vs.
+    /// contention (other wires in the way) vs. unclassified. The mix decides the next
+    /// router slice.
+    /// </summary>
+    internal static string FormatCensusLine(string exampleFileName, int blocked, int endpoint, int contention, int unclassified) =>
+        $"[bake] {exampleFileName}: blocked={blocked} (endpoint={endpoint}, contention={contention}, unclassified={unclassified})";
+
+    /// <summary>
+    /// Formats the per-pass wall-clock breakdown of the example's full re-route: where the
+    /// total routing time went (initial pass, ordering cascade with attempt count, crossing
+    /// insertion, pin-lead collapse, bend upsizing, crossing scan, contention repair with
+    /// attempts/accepts). Formatted invariant — this is a machine-parseable census line.
+    /// </summary>
+    internal static string FormatPassTimingsLine(string exampleFileName, RoutingPassTimings timings)
+    {
+        static string Seconds(TimeSpan duration) =>
+            duration.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture);
+
+        return $"[bake] {exampleFileName}: passes total={Seconds(timings.Total)}s ("
+            + $"initial={Seconds(timings.InitialPass)}s, "
+            + $"ordering-cascade={Seconds(timings.OrderingCascade)}s/{timings.OrderingAttempts} attempts, "
+            + $"crossing-dissolve={Seconds(timings.CrossingDissolution)}s, "
+            + $"crossing-insert={Seconds(timings.CrossingInsertion)}s, "
+            + $"pin-lead-collapse={Seconds(timings.PinLeadCollapse)}s, "
+            + $"bend-upsize={Seconds(timings.BendUpsizing)}s, "
+            + $"crossing-scan={Seconds(timings.CrossingScan)}s, "
+            + $"contention-repair={Seconds(timings.ContentionRepair)}s"
+            + $"/{timings.ContentionRepairAttempts} attempts"
+            + $"/{timings.ContentionRepairAccepts} accepts)"
+            + (timings.OrderingEarlyStopped ? " [early-stop]" : "")
+            + (timings.WasCancelled ? " [cancelled]" : "");
     }
 
     private static void ReportProgress(string line)

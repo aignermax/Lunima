@@ -29,7 +29,7 @@ public class WavelengthSweeperTests
         var matrix = new SMatrix(pins, sliders);
 
         var mockBuilder = new Mock<ISystemMatrixBuilder>();
-        mockBuilder.Setup(b => b.GetSystemSMatrix(It.IsAny<int>())).Returns(matrix);
+        mockBuilder.Setup(b => b.GetSystemSMatrix(It.IsAny<double>())).Returns(matrix);
         return mockBuilder;
     }
 
@@ -111,9 +111,9 @@ public class WavelengthSweeperTests
 
         var result = await sweeper.RunSweepAsync(config, grid);
 
-        result.DataPoints[0].WavelengthNm.ShouldBe(1500);
-        result.DataPoints[1].WavelengthNm.ShouldBe(1550);
-        result.DataPoints[2].WavelengthNm.ShouldBe(1600);
+        result.DataPoints[0].WavelengthNm.ShouldBe(1500.0);
+        result.DataPoints[1].WavelengthNm.ShouldBe(1550.0);
+        result.DataPoints[2].WavelengthNm.ShouldBe(1600.0);
     }
 
     [Fact]
@@ -126,9 +126,27 @@ public class WavelengthSweeperTests
 
         await sweeper.RunSweepAsync(config, grid);
 
-        mockBuilder.Verify(b => b.GetSystemSMatrix(1500), Times.Once);
-        mockBuilder.Verify(b => b.GetSystemSMatrix(1550), Times.Once);
-        mockBuilder.Verify(b => b.GetSystemSMatrix(1600), Times.Once);
+        mockBuilder.Verify(b => b.GetSystemSMatrix(1500.0), Times.Once);
+        mockBuilder.Verify(b => b.GetSystemSMatrix(1550.0), Times.Once);
+        mockBuilder.Verify(b => b.GetSystemSMatrix(1600.0), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunSweepAsync_SubNmGrid_QueriesBuilderAtEveryExactWavelength()
+    {
+        var mockBuilder = CreateMockBuilder();
+        var sweeper = new WavelengthSweeper(mockBuilder.Object, CreateMockPortManager().Object);
+        var config = new WavelengthSweepConfiguration(1540, 1560, 400);
+        var grid = CreateMinimalGridManager();
+
+        var result = await sweeper.RunSweepAsync(config, grid);
+
+        var expected = config.GenerateWavelengthValues();
+        result.DataPoints.Count.ShouldBe(400);
+        result.GetWavelengthValues().ShouldBe(expected);
+        foreach (double wl in expected)
+            mockBuilder.Verify(b => b.GetSystemSMatrix(wl), Times.Once,
+                $"the sweep must evaluate the system at the exact sub-nm wavelength {wl} nm");
     }
 
     [Fact]
@@ -140,7 +158,7 @@ public class WavelengthSweeperTests
         var matrix = new SMatrix(new List<Guid> { pin }, sliders);
 
         var mockBuilder = new Mock<ISystemMatrixBuilder>();
-        mockBuilder.Setup(b => b.GetSystemSMatrix(It.IsAny<int>()))
+        mockBuilder.Setup(b => b.GetSystemSMatrix(It.IsAny<double>()))
             .Returns(() =>
             {
                 callCount++;
@@ -153,7 +171,7 @@ public class WavelengthSweeperTests
         var grid = CreateMinimalGridManager();
 
         // Cancel after 3 calls
-        mockBuilder.Setup(b => b.GetSystemSMatrix(It.IsAny<int>()))
+        mockBuilder.Setup(b => b.GetSystemSMatrix(It.IsAny<double>()))
             .Returns(() =>
             {
                 callCount++;

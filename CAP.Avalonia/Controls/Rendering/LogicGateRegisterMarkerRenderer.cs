@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using CAP.Avalonia.Services.Localization;
+using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Core;
 using System.Globalization;
 
@@ -18,6 +19,10 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// (issue #1098) live: the toggle writes the flag and requests a canvas repaint.
 /// Combinational groups, ungrouped components, and imported black-box cells without
 /// the flag get no marker.
+/// Registers nested inside hierarchical cell instances mark exactly like top-level
+/// ones (issue #1398): the groups resolve through the same gate-id map the badge
+/// renderer uses, so the RAM's eight nested register bits carry their "R" chips on
+/// their own absolute bounds.
 /// </summary>
 internal static class LogicGateRegisterMarkerRenderer
 {
@@ -51,15 +56,32 @@ internal static class LogicGateRegisterMarkerRenderer
     /// <param name="rc">The render context carrying the canvas ViewModel with the components.</param>
     public static void Render(DrawingContext context, CanvasRenderContext rc)
     {
-        foreach (var comp in rc.ViewModel.Components)
+        foreach (var (_, groupBounds) in ComputeMarkers(rc.ViewModel))
         {
-            if (comp.Component is not ComponentGroup group)
-                continue;
+            DrawMarker(context, groupBounds);
+        }
+    }
+
+    /// <summary>
+    /// The marker set of one frame (test seam, InternalsVisibleTo UnitTests — issue
+    /// #1398): one entry per register-designated gate group, resolved through the
+    /// network's hierarchical gate ids so registers nested inside cell instances appear
+    /// with their own absolute group bounds. Reads the persisted
+    /// <see cref="TruthTablePinAssignment.IsRegister"/> flag live, so the Truth Table
+    /// panel's Register toggle shows and hides the chip without a map rebuild.
+    /// </summary>
+    /// <param name="canvas">The canvas ViewModel with the design.</param>
+    internal static IReadOnlyList<(string GateId, Rect GroupBounds)> ComputeMarkers(
+        DesignCanvasViewModel canvas)
+    {
+        var markers = new List<(string, Rect)>();
+        foreach (var (gateId, group) in canvas.LogicGateStates.GateGroupsById(canvas.Components))
+        {
             if (group.TruthTablePinAssignment?.IsRegister != true)
                 continue;
-
-            DrawMarker(context, ComponentGroupRenderer.CalculateGroupBounds(group));
+            markers.Add((gateId, ComponentGroupRenderer.CalculateGroupBounds(group)));
         }
+        return markers;
     }
 
     /// <summary>Draws one chip at the group's top-left corner: dark backing, thin border, centered "R".</summary>

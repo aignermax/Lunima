@@ -52,7 +52,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
             var dataPoints = new List<WavelengthDataPoint>(wavelengths.Length);
             List<Guid>? monitoredPinIds = null;
 
-            foreach (int wl in wavelengths)
+            foreach (double wl in wavelengths)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

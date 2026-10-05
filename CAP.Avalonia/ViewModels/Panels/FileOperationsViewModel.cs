@@ -188,6 +188,13 @@ public partial class FileOperationsViewModel : ObservableObject
     public Action<double, double>? ApplyChipSizeAfterLoad { get; set; }
 
     /// <summary>
+    /// Callback fired after a load restored the coherent interference mode, so
+    /// views holding a toggle bound to that mode can re-sync (the canvas and
+    /// its connection manager survive loads, so their Configure is not re-run).
+    /// </summary>
+    public Action? CoherentModeRestoredAfterLoad { get; set; }
+
+    /// <summary>
     /// File dialog service for showing open/save dialogs.
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
@@ -489,6 +496,11 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.AnalysisOutputCoupler = _canvas.AnalysisOutput.CouplerId is Guid outputId
                 ? componentsList.FirstOrDefault(c => c.Component.Id == outputId)?.Component.Identifier
                 : null;
+            // Coherent interference mode (#1333): only stored when on — off is the
+            // default, so old files without the field round-trip identically.
+            designData.CoherentPropagationPhase = _canvas.ConnectionManager.EnableCoherentPropagationPhase
+                ? true
+                : null;
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -678,8 +690,10 @@ public partial class FileOperationsViewModel : ObservableObject
             // Only top-level groups act as chiplets (issue #938); a nested group's
             // process scope is its top-level parent's.
             ProcessBinding = group.ParentGroup == null ? ResolveGroupBindingForSave(group) : null,
-            // Same top-level-only rule for the Truth Table pin roles (issue #981).
-            TruthTablePinAssignment = group.ParentGroup == null ? group.TruthTablePinAssignment : null
+            // Truth Table pin roles persist on every group: a gate nested inside a
+            // cell instance must keep its assignment or hierarchical designs lose
+            // their gates on save.
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         });
     }
 
@@ -727,7 +741,9 @@ public partial class FileOperationsViewModel : ObservableObject
             GroupDto = groupDto,
             ChildComponents = childDataList,
             CanvasX = group.PhysicalX,
-            CanvasY = group.PhysicalY
+            CanvasY = group.PhysicalY,
+            // A nested gate keeps its Truth Table pin roles like a top-level one.
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         });
     }
 
@@ -804,6 +820,14 @@ public partial class FileOperationsViewModel : ObservableObject
         var vm = _canvas.Components.FirstOrDefault(c => c.Component == component);
         if (vm?.TemplateName != null)
             return vm.TemplateName;
+
+        // Grouped children have no canvas VM: trust the template stamp the instance
+        // was created/loaded with — NazcaFunctionName is not unique across a PDK
+        // (demo PDK grating and edge couplers both map to "demo.io"), so guessing
+        // by it silently re-parents the component onto the wrong template.
+        if (!string.IsNullOrEmpty(component.TemplateName)
+            && _componentLibrary.Any(t => t.Name == component.TemplateName))
+            return component.TemplateName;
 
         // Match by NazcaFunctionName against the component library
         var nazcaFunc = component.NazcaFunctionName;
@@ -1088,6 +1112,12 @@ public partial class FileOperationsViewModel : ObservableObject
                     }
                 }
 
+                // Restore the coherent interference mode (#1333) before post-load
+                // routing recalculates transmissions; missing field (old files) = off.
+                _canvas.ConnectionManager.EnableCoherentPropagationPhase =
+                    designData.CoherentPropagationPhase == true;
+                CoherentModeRestoredAfterLoad?.Invoke();
+
                 ReportPinCalibrationMigrations();
                 StartPostLoadRouting();
 
@@ -1321,6 +1351,11 @@ public partial class FileOperationsViewModel : ObservableObject
         // Clear the canvas
         ClearCanvas();
 
+        // The coherent interference mode is per design: a fresh project must not
+        // inherit it from the previously loaded one (and later save it as its own).
+        _canvas.ConnectionManager.EnableCoherentPropagationPhase = false;
+        CoherentModeRestoredAfterLoad?.Invoke();
+
         CurrentFilePath = null;
         _loadedMetadata = null;
         HasUnsavedChanges = false;
@@ -1535,13 +1570,15 @@ public partial class FileOperationsViewModel : ObservableObject
             }
             nameFallback[group.Identifier] = group;
 
+            // Truth Table pin roles: restore as persisted on every group — a gate
+            // nested inside a cell instance keeps its roles; the panel silently
+            // skips pin names that no longer match a real external pin.
+            group.TruthTablePinAssignment = groupData.TruthTablePinAssignment;
+
             // Only add top-level groups (groups without a parent) to the canvas
             if (groupData.GroupDto.ParentGroupId == null)
             {
                 group.ProcessBinding = RestoreGroupBinding(groupData);
-                // Truth Table pin roles (issue #981): restore as persisted — the panel
-                // silently skips pin names that no longer match a real external pin.
-                group.TruthTablePinAssignment = groupData.TruthTablePinAssignment;
                 var groupVm = _canvas.AddComponent(group);
                 groupVm.X = groupData.CanvasX;
                 groupVm.Y = groupData.CanvasY;
@@ -1987,7 +2024,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 var nazcaCode = _nazcaExporter.Export(
                     _canvas, metalSpec: MetalRoutingSpecProvider?.Invoke(),
                     skippedConnections: skippedConnectionsList, unresolvedCrossings: unresolvedCrossingsList,
-                    library: _componentLibrary, exportWarnings: exportWarningsList);
+                    library: _componentLibrary, exportWarnings: exportWarningsList,
+                    designName: CurrentFilePath != null ? Path.GetFileNameWithoutExtension(CurrentFilePath) : null);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
 
                 // Raw-code components whose geometry source vanished (a deleted .gds) exported

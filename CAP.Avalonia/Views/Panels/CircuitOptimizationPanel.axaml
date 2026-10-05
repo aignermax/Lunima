@@ -3,6 +3,8 @@
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:opt="using:CAP.Avalonia.ViewModels.Analysis.CircuitOptimization"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
              x:Class="CAP.Avalonia.Views.Panels.CircuitOptimizationPanel"
              x:DataType="vm:MainViewModel">
 
@@ -45,6 +47,15 @@
                         Command="{Binding BottomPanel.Analysis.Optimization.CancelOptimizationCommand}"
                         Background="#5d3d3d"
                         IsVisible="{Binding BottomPanel.Analysis.Optimization.IsOptimizing}"/>
+                <!-- Plain-language help (#1362): how the seeded hill-climb works, what
+                     Budget and Seed mean, and why the result is a local best. Same
+                     reusable "?" control as the other analysis tabs. -->
+                <controls:HelpFlyoutButton Title="{loc:Localize OptimizeHelp.Title}"
+                                           VerticalAlignment="Center">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:OptimizationHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
             </StackPanel>
 
             <TextBlock Text="{Binding BottomPanel.Analysis.Optimization.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,3"

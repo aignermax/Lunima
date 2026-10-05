@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -24,9 +25,11 @@ namespace CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 public partial class LogicPanelViewModel : ObservableObject
 {
     private readonly LogicNetworkAssembler _assembler = new();
+    private readonly BuiltLogicNetworkProvider? _builtNetworkProvider;
     private DesignCanvasViewModel? _canvas;
     private CancellationTokenSource? _buildCts;
     private LogicNetworkEvaluator? _network;
+    private bool _isApplyingDrivenInputs;
 
     /// <summary>True while the network is being assembled (spinner + Cancel button).</summary>
     [ObservableProperty]
@@ -129,6 +132,7 @@ public partial class LogicPanelViewModel : ObservableObject
         ShowRegisterStates(network);
 
         HasNetwork = true;
+        _builtNetworkProvider?.Publish(network);
         ReEvaluate();
     }
 
@@ -137,9 +141,11 @@ public partial class LogicPanelViewModel : ObservableObject
     {
         _network = null;
         HasNetwork = false;
+        _builtNetworkProvider?.Clear();
         _canvas?.LogicGateStates.Clear();
         HasFanOutWarnings = false;
         CriticalPathText = "";
+        HasCellGroups = false;
         ClearTimeline();
         ClearRegisterStates();
         DetachBusRows();
@@ -155,8 +161,36 @@ public partial class LogicPanelViewModel : ObservableObject
     /// <summary>A toggled input re-evaluates the whole network synchronously.</summary>
     private void OnInputPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(LogicNetworkInputViewModel.IsOn))
+        if (e.PropertyName == nameof(LogicNetworkInputViewModel.IsOn) && !_isApplyingDrivenInputs)
             ReEvaluate();
+    }
+
+    /// <summary>
+    /// The ISA playground drove operand bits into the network (issue #1240): mirror
+    /// them onto the matching input toggles exactly as if the user had clicked them,
+    /// so the live evaluation refreshes gate outputs, canvas 0/1 badges and the named
+    /// output chips. The per-toggle re-evaluation is suppressed and runs once at the
+    /// end — nine toggles would otherwise re-walk the 344-gate adder nine times.
+    /// </summary>
+    private void OnInputsDriven(IReadOnlyDictionary<string, bool> bits)
+    {
+        if (_network == null)
+            return;
+        _isApplyingDrivenInputs = true;
+        try
+        {
+            foreach (var input in Inputs)
+            {
+                if (bits.TryGetValue(input.PinName, out var bit))
+                    input.IsOn = bit;
+            }
+        }
+        finally
+        {
+            _isApplyingDrivenInputs = false;
+        }
+
+        ReEvaluate();
     }
 
     private void ReEvaluate()

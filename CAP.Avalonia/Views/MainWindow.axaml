@@ -5,6 +5,7 @@
         xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
         xmlns:creation="using:CAP_Core.Components.Creation"
         xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
         xmlns:views="using:CAP.Avalonia.Views"
         xmlns:behaviors="using:CAP.Avalonia.Behaviors"
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
@@ -101,7 +102,7 @@
                 </Button>
 
                 <!-- Simulation — icon-only (play triangle), next to Fit per field feedback -->
-                <Button Command="{Binding RunSimulationCommand}"
+                <Button x:Name="RunSimulationButton" Command="{Binding RunSimulationCommand}"
                         Width="36" Margin="2" Background="#3d5d3d"
                         ToolTip.Tip="{loc:Localize Toolbar.RunSimulationTip}">
                     <PathIcon Data="M4.5,2.5 L13.5,8 L4.5,13.5 Z"
@@ -225,6 +226,31 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Button>
+                                <!-- openEBL submission check (#1361): exports the design to GDS and runs
+                                     the official openEBL submission + verification checks on it.
+                                     Lives in the Export menu because checking precedes tapeout export. -->
+                                <Button HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#4d3d5d"
+                                        Click="CheckOpenEblMenuItem_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.CheckOpenEblTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🧪" FontSize="15"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEbl}"
+                                                       Foreground="White"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEblDescription}"
+                                                       Foreground="#aaaaaa"
+                                                       FontSize="9"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="180"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
@@ -233,7 +259,8 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Tools -->
-                <Button MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
+                <Button x:Name="ToolsMenuButton"
+                        MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
                         ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
                     <Button.Content>
                         <TextBlock Text="{loc:Localize Toolbar.ToolsButton}"/>
@@ -313,6 +340,22 @@
                                     </StackPanel>
                                 </Button>
 
+                                <!-- ISA playground (#1194): write & step through 4-bit assembly
+                                     programs against the golden-model machine. -->
+                                <Button x:Name="IsaPlaygroundToolButton"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#3d3d5d"
+                                        Click="OpenIsaPlayground_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.IsaPlaygroundTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🧮" FontSize="15" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{loc:Localize Toolbar.IsaPlayground}"
+                                                   Foreground="White" FontSize="12"/>
+                                    </StackPanel>
+                                </Button>
+
                                 <!-- Unlock All (components & connections) — replaces the former
                                      "Lock Elements" properties-panel section (issue: drop that
                                      section, keep the unlock-all function reachable here). -->
@@ -384,11 +427,18 @@
                 </controls:HelpFlyoutButton>
                 <!-- Grid (not StackPanel) so a long status text is ellipsized by its column
                      instead of pushing the hints under the badge (#1162). -->
-                <Grid ColumnDefinitions="Auto,*">
+                <Grid ColumnDefinitions="Auto,Auto,*">
                     <TextBlock Grid.Column="0" Text="{Binding StatusText}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
-                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0"
+                    <!-- Stop for a full re-route (#1278): visible only while routing runs,
+                         cancels the pass; already-routed wires keep their routes. -->
+                    <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
+                            Command="{Binding Canvas.StopRoutingCommand}"
+                            IsVisible="{Binding Canvas.IsRouting}"
+                            VerticalAlignment="Center" Margin="6,0,0,0" FontSize="11"
+                            ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="20,0,0,0"
                                Foreground="Gray" TextTrimming="CharacterEllipsis"
                                Text="{Binding CanvasInteraction.ModeShortcutHints}"/>
                 </Grid>
@@ -516,6 +566,7 @@
                             <!-- User Groups (no label: this is the default/first list) -->
                             <ListBox x:Name="UserGroupsListBox"
                                      Classes="compactList"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
                                      SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
@@ -592,6 +643,7 @@
                                        IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
                             <ListBox x:Name="PdkGroupsListBox"
                                      Classes="compactList"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
                                      SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
@@ -718,8 +770,10 @@
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
-                        <ListBox ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                        <ListBox x:Name="ComponentLibraryList"
+                                 ItemsSource="{Binding LeftPanel.FilteredTemplates}"
                                  Classes="compactList"
+                                 behaviors:LibraryDragBehavior.IsEnabled="True"
                                  SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
                                  Background="Transparent" Foreground="White"
                                  Margin="5,0"
@@ -835,53 +889,13 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="{loc:Localize LeftPanel.PdkMgmt}" VerticalAlignment="Center"
                                        FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis"/>
-                            <!-- Plain-language help (#907): what a PDK is, what its process
-                                 defines (layers, bend radius, spacing), and why components from
-                                 different processes can't mix in one design. -->
+                            <!-- Plain-language help (#907, migrated in #1229): what a PDK is, what its
+                                 process defines (layers, bend radius, spacing), and why a component only
+                                 seats on a chiplet of its own process. -->
                             <controls:HelpFlyoutButton Grid.Column="1" Margin="6,0,0,0" Title="{loc:Localize PdkHelp.Title}"
                                                        VerticalAlignment="Center">
                                 <controls:HelpFlyoutButton.HelpContent>
-                                    <StackPanel Spacing="8" MaxWidth="400">
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                                   Text="{loc:Localize PdkHelp.Intro}"/>
-
-                                        <!-- Diagram: two layer stacks with different materials —
-                                             components only exist within their own process. -->
-                                        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                                CornerRadius="4" Padding="4">
-                                            <Canvas Width="360" Height="96">
-                                                <!-- Process A stack (green core). -->
-                                                <Rectangle Canvas.Left="30" Canvas.Top="18" Width="120" Height="10" Fill="#3F51B5"/>
-                                                <Rectangle Canvas.Left="30" Canvas.Top="28" Width="120" Height="8" Fill="#4CAF50"/>
-                                                <Rectangle Canvas.Left="30" Canvas.Top="36" Width="120" Height="12" Fill="#666666"/>
-                                                <TextBlock Canvas.Left="30" Canvas.Top="54"
-                                                           Text="{loc:Localize PdkHelp.DiagramProcessA}" FontSize="9" Foreground="Gray"/>
-                                                <!-- No-mix marker between the stacks. -->
-                                                <TextBlock Canvas.Left="168" Canvas.Top="24" Text="✗" FontSize="16"
-                                                           FontWeight="Bold" Foreground="#FF8A65"/>
-                                                <!-- Process B stack (orange core, different layers). -->
-                                                <Rectangle Canvas.Left="210" Canvas.Top="14" Width="120" Height="12" Fill="#7E57C2"/>
-                                                <Rectangle Canvas.Left="210" Canvas.Top="26" Width="120" Height="8" Fill="#FF9800"/>
-                                                <Rectangle Canvas.Left="210" Canvas.Top="34" Width="120" Height="12" Fill="#555555"/>
-                                                <TextBlock Canvas.Left="210" Canvas.Top="54"
-                                                           Text="{loc:Localize PdkHelp.DiagramProcessB}" FontSize="9" Foreground="Gray"/>
-                                                <TextBlock Canvas.Left="30" Canvas.Top="74" Width="300" TextWrapping="Wrap"
-                                                           Text="{loc:Localize PdkHelp.DiagramNote}" FontSize="9" Foreground="#888888"/>
-                                            </Canvas>
-                                        </Border>
-
-                                        <TextBlock Text="{loc:Localize PdkHelp.WhatIsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                                   Text="{loc:Localize PdkHelp.WhatIsBody}"/>
-
-                                        <TextBlock Text="{loc:Localize PdkHelp.ProcessTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                                   Text="{loc:Localize PdkHelp.ProcessBody}"/>
-
-                                        <TextBlock Text="{loc:Localize PdkHelp.NoMixTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                                   Text="{loc:Localize PdkHelp.NoMixBody}"/>
-                                    </StackPanel>
+                                    <panels:PdkHelpFlyout/>
                                 </controls:HelpFlyoutButton.HelpContent>
                             </controls:HelpFlyoutButton>
                         </Grid>
@@ -1167,19 +1181,43 @@
         </DockPanel>
     </DockPanel>
 
-    <!-- First-steps tutorial overlay (#1080): bottom-centre card, non-modal so the
-         canvas stays interactive while the tour watches the user's actions -->
-    <Border IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
-            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28">
-        <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
-    </Border>
+    <!-- First-steps tutorial overlay (#1080, anchored #1167): the card docks to the
+         control the current step acts on — spotlight, arrow, card beside it;
+         non-modal so the canvas stays interactive -->
+    <tour:TourAnchorOverlay IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
+                                TargetName="{Binding Tutorial.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
 
-    <!-- "Watch it compute" tour overlay (#1143): same non-modal bottom-centre card,
-         watching the Logic panel while the Counter example runs -->
-    <Border IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
-            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28">
-        <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
-    </Border>
+    <!-- "Watch it compute" tour overlay (#1143, anchored #1167): same anchored
+         spotlight, watching the Logic panel while the Counter example runs -->
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding WatchTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <!-- "Run a program on your chip" tour overlay (#1267): hosts the card for
+         the steps that anchor in this window (Logic Build, Tools menu); the
+         playground steps are hosted by the overlay in IsaPlaygroundWindow -->
+    <tour:TourAnchorOverlay IsVisible="{Binding RunProgramTour.ShowCardInMainWindow, FallbackValue=False}"
+                                TargetName="{Binding RunProgramTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <!-- "Connect two chiplets" tour overlay (#1288): every step anchors in this
+         window — canvas, toolbar Run button, Design Checks tab of the dock -->
+    <tour:TourAnchorOverlay IsVisible="{Binding ConnectChipletsTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding ConnectChipletsTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:ConnectChipletsTourPanel DataContext="{Binding ConnectChipletsTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
 
     <!-- Home screen overlay: compact centered card over the dimmed editor,
          shown until a project is opened/created; reopenable via the Home button -->

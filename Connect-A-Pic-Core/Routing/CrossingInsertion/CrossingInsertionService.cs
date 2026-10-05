@@ -326,6 +326,9 @@ public class CrossingInsertionService
     }
 
     /// <summary>True when the connection is a sub-connection of any active crossing.</summary>
-    private bool IsCrossingSubConnection(WaveguideConnection connection) =>
+    public bool IsSubConnection(WaveguideConnection connection) =>
         _registry.IsSubConnection(connection);
+
+    private bool IsCrossingSubConnection(WaveguideConnection connection) =>
+        IsSubConnection(connection);
 }

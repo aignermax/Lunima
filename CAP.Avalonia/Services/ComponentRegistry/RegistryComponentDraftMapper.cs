@@ -23,6 +23,13 @@ public static class RegistryComponentDraftMapper
     /// <summary>Library category registry-downloaded components are grouped under.</summary>
     public const string RegistryCategory = "Registry";
 
+    /// <summary>
+    /// Start of the <see cref="PdkSMatrixDraft.SourceNote"/> of every registry
+    /// download — the stable identity a re-download is matched against (the
+    /// display name is NOT unique across registry entries).
+    /// </summary>
+    public static string RegistryIdPrefix(string registryId) => $"Registry: {registryId} (";
+
     // Visual layout convention of the synthesized pin arrangement (µm).
     private const double ComponentWidthUm = 20.0;
     private const double VerticalPitchUm = 5.0;
@@ -62,6 +69,8 @@ public static class RegistryComponentDraftMapper
                 $"Registry artifact '{artifact.File}' of '{manifest.Id}' has no S-parameter trace " +
                 "between declared ports — refusing to adopt it (no synthetic placeholder S-matrix is created).");
         }
+
+        RejectSubNanometerGrid(manifest, artifact, spectrum);
 
         return new PdkComponentDraft
         {
@@ -179,9 +188,36 @@ public static class RegistryComponentDraftMapper
         if (!string.IsNullOrEmpty(provenance.Fab))
             parts.Add($"fab {provenance.Fab}");
 
-        return $"Registry: {manifest.Id} ({string.Join(", ", parts)})" +
+        return $"{RegistryIdPrefix(manifest.Id)}{string.Join(", ", parts)})" +
             (string.IsNullOrEmpty(manifest.License) ? "" : $" — license {manifest.License}");
     }
+
+    /// <summary>
+    /// The PDK format keys wavelength samples on INTEGER nanometers, so a grid
+    /// finer than 1 nm would round several samples onto the same key and the
+    /// later ones would silently overwrite the earlier. Reject the draft
+    /// instead — never drop measured samples without telling the user.
+    /// </summary>
+    private static void RejectSubNanometerGrid(
+        ComponentManifest manifest, ArtifactRef artifact, SParameterSpectrum spectrum)
+    {
+        var firstSamplePerNm = new Dictionary<int, double>();
+        foreach (var wavelengthUm in spectrum.WavelengthUm)
+        {
+            var nm = ToNm(wavelengthUm);
+            if (firstSamplePerNm.TryGetValue(nm, out var collidingUm))
+            {
+                throw new InvalidDataException(
+                    $"Registry artifact '{artifact.File}' of '{manifest.Id}': wavelength grid finer than 1 nm " +
+                    $"is not supported — {FormatUm(collidingUm)} µm and {FormatUm(wavelengthUm)} µm both round " +
+                    $"to {nm} nm. Resample to a grid of at least 1 nm before publishing.");
+            }
+            firstSamplePerNm[nm] = wavelengthUm;
+        }
+    }
+
+    private static string FormatUm(double wavelengthUm) =>
+        wavelengthUm.ToString("0.####", CultureInfo.InvariantCulture);
 
     private static int ToNm(double wavelengthUm) =>
         (int)Math.Round(wavelengthUm * UmToNm, MidpointRounding.AwayFromZero);

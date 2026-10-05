@@ -35,6 +35,12 @@ public class LogicGateAndFromNandExampleTests
     private const double ExtinguishedPower = 0.0;
     private const double SingleInputPower = 1.0 / 6.0;
     private const double BothInputsPower = 1.0 / 3.0;
+    // Without BIAS2 the NAND stage's output passes the inverter coupler directly; those
+    // rows carry the group's internal waveguide loss (frozen paths keep their bend
+    // loss), and the loss imbalance limits the dark row's extinction.
+    private const double NoBias2RestingPower = 0.3257457403186036;
+    private const double NoBias2SingleInputPower = 0.16289470876629053;
+    private const double NoBias2ExtinguishedPower = 4.3677213977668926E-05;
     private const int WavelengthNm = 1550;
 
     private static readonly string[] InputsAb = { "A", "B" };
@@ -99,10 +105,10 @@ public class LogicGateAndFromNandExampleTests
         // Without BIAS2 the second stage is a transparent coupler: the weakened NAND
         // levels just pass through (× 2/3), so the cascade reads NOR, not AND — the
         // second bias is what turns the passing level into an inversion.
-        AssertRow(table, 0, expectedBit: true, expectedPower: BothInputsPower);
-        AssertRow(table, 1, expectedBit: false, expectedPower: SingleInputPower);
-        AssertRow(table, 2, expectedBit: false, expectedPower: SingleInputPower);
-        AssertRow(table, 3, expectedBit: false, expectedPower: ExtinguishedPower);
+        AssertRow(table, 0, expectedBit: true, expectedPower: NoBias2RestingPower);
+        AssertRow(table, 1, expectedBit: false, expectedPower: NoBias2SingleInputPower);
+        AssertRow(table, 2, expectedBit: false, expectedPower: NoBias2SingleInputPower);
+        AssertRow(table, 3, expectedBit: false, expectedPower: NoBias2ExtinguishedPower);
     }
 
     /// <summary>

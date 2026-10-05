@@ -207,7 +207,8 @@ public partial class LeftPanelViewModel : ObservableObject
                 foreach (var pdkComp in pdk.Components)
                 {
                     var template = ConvertPdkComponentToTemplate(
-                        pdkComp, pdk.Name, pdk.NazcaModuleName, pdk.GdsFactoryRoutingCrossSection, pdk.Process);
+                        pdkComp, pdk.Name, pdk.NazcaModuleName, pdk.GdsFactoryRoutingCrossSection, pdk.Process,
+                        pdk.MaterialDispersion);
                     template.IsCustom = false;
                     AllTemplates.Add(template);
                     componentCount++;
@@ -426,7 +427,8 @@ public partial class LeftPanelViewModel : ObservableObject
             int addedCount = 0;
             foreach (var pdkComp in pdk.Components)
             {
-                var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName, process: pdk.Process);
+                var template = ConvertPdkComponentToTemplate(pdkComp, pdk.Name, pdk.NazcaModuleName, process: pdk.Process,
+                    pdkMaterialDispersion: pdk.MaterialDispersion);
                 template.IsCustom = true;
                 AllTemplates.Add(template);
                 if (!Categories.Contains(template.Category))
@@ -452,7 +454,8 @@ public partial class LeftPanelViewModel : ObservableObject
     private static ComponentTemplate ConvertPdkComponentToTemplate(
         PdkComponentDraft pdkComp, string pdkName, string? nazcaModuleName,
         string? gdsFactoryRoutingCrossSection = null,
-        CAP_DataAccess.Components.ComponentDraftMapper.DTOs.ProcessDefinition? process = null)
+        CAP_DataAccess.Components.ComponentDraftMapper.DTOs.ProcessDefinition? process = null,
+        CAP_DataAccess.Components.ComponentDraftMapper.DTOs.MaterialDispersionDraft? pdkMaterialDispersion = null)
         => PdkTemplateConverter.ConvertToTemplate(
-            pdkComp, pdkName, nazcaModuleName, gdsFactoryRoutingCrossSection, process);
+            pdkComp, pdkName, nazcaModuleName, gdsFactoryRoutingCrossSection, process, pdkMaterialDispersion);
 }

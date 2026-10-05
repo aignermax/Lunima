@@ -189,6 +189,9 @@ public partial class DesignCanvasViewModel : ObservableObject
             OnPropertyChanged(nameof(IsInGroupEditMode));
         };
         PinHighlight.HighlightChanged += () => OnPropertyChanged(nameof(HighlightedPin));
+        // Gate-group map (issue #1398): membership moves with top-level add/remove
+        // (group, ungroup, load) — drop the render cache so the next frame re-walks.
+        Components.CollectionChanged += (_, _) => LogicGateStates.InvalidateGateGroupMap();
         Simulation.ShowPowerFlowChanged += (value, forceNotify) =>
         {
             if (forceNotify && ShowPowerFlow == value)
@@ -289,6 +292,11 @@ public partial class DesignCanvasViewModel : ObservableObject
     [RelayCommand] public void ExitToRoot() => Groups.ExitToRoot();
     [RelayCommand] public void NavigateToBreadcrumbLevel(ComponentGroup? group)
         => Groups.NavigateToBreadcrumbLevel(group);
+
+    // ── Routing delegation ────────────────────────────────────────────────
+
+    /// <summary>Cancels the running routing pass (status-bar Stop button).</summary>
+    [RelayCommand] public void StopRouting() => Routing.CancelRouting();
 
     // ── Pin highlight delegation ──────────────────────────────────────────
 

@@ -26,8 +26,15 @@
 
         <!-- Status Bar -->
         <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
-            <TextBlock Text="{Binding StatusText}"
-                       VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+            <Grid ColumnDefinitions="Auto,Auto,*">
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                           VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+                <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
+                        Command="{Binding Canvas.StopRoutingCommand}"
+                        IsVisible="{Binding Canvas.IsRouting}"
+                        VerticalAlignment="Center" Margin="6,0,0,0" FontSize="11"
+                        ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
+            </Grid>
         </Border>
 
         <!-- Main Canvas -->

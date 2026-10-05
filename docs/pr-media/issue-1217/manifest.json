@@ -1,0 +1,6 @@
+[
+  {
+    "file": "01-mmi-to-dc-visible-route.png",
+    "caption": "Issue #1161 journey on dev-ki: Connect mode, 2x2 MMI (x=600) right upper port click-connected to the Broadband DC TE 1550 (x=1100) left upper port. A visible waveguide spans the ~250\u00B5m gap and the selected connection\u0027s label reads ~251\u00B5m \u2014 the invisible 5\u00B5m self-connection on the DC is not reproducible."
+  }
+]

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CAP_Core.Analysis;
 using CAP_Core.Components;
+using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -30,6 +32,20 @@ public partial class DesignValidationViewModel : ObservableObject
     private bool _hasIssues;
 
     /// <summary>
+    /// True when the currently navigated issue is a cross-chiplet edge-coupler finding
+    /// with a connection — the "Align chiplet" one-click fix (issue #1248) applies to it.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isCurrentIssueAlignable;
+
+    /// <summary>
+    /// True when the findings list contains at least one waveguide crossing — the (?)
+    /// help button next to the findings (issue #1391) is only offered then.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasWaveguideCrossingIssue;
+
+    /// <summary>
     /// The list of design issues found during the last validation run.
     /// </summary>
     public ObservableCollection<DesignIssue> Issues { get; } = new();
@@ -46,6 +62,14 @@ public partial class DesignValidationViewModel : ObservableObject
     /// Set by MainViewModel. Parameter: the connection to highlight.
     /// </summary>
     public Action<WaveguideConnection?>? HighlightConnection { get; set; }
+
+    /// <summary>
+    /// Callback that performs the "Align chiplet" one-click fix for a connection
+    /// (issue #1248). Set by MainViewModel. Returns null on success — the callback
+    /// re-runs the checks itself — or the localized refusal reason to show in the
+    /// status text.
+    /// </summary>
+    public Func<WaveguideConnection, Task<string?>>? AlignChipletHandler { get; set; }
 
     /// <summary>
     /// Gets a display string for the current navigation position.
@@ -82,6 +106,8 @@ public partial class DesignValidationViewModel : ObservableObject
     /// per-chiplet limits on a multi-process canvas and PDK rules even in Playground —
     /// instead of the design-wide values above. Optional.
     /// </param>
+    /// <param name="wavelengthNm">Simulation wavelength for the chiplet facet-gap loss
+    /// warning; null falls back to the standard design wavelength (1550 nm). Optional.</param>
     public void RunValidation(
         IEnumerable<WaveguideConnection> connections,
         IEnumerable<ComponentGroup>? groups = null,
@@ -95,7 +121,8 @@ public partial class DesignValidationViewModel : ObservableObject
         IEnumerable<PhysicalPin>? externalPortPins = null,
         double minWaveguideSpacingMicrometers = 0,
         IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
-        Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null)
+        Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null,
+        double? wavelengthNm = null)
     {
         var request = new DesignValidationRequest(
             connections, groups, allComponents,
@@ -103,7 +130,7 @@ public partial class DesignValidationViewModel : ObservableObject
             pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
             processLockActive, externalPortPins,
             minWaveguideSpacingMicrometers, minWaveguideWidthRules,
-            connectionDrcRuleProvider);
+            connectionDrcRuleProvider, wavelengthNm);
         BeginValidation();
         CommitIssues(ComputeIssues(request));
     }
@@ -129,6 +156,7 @@ public partial class DesignValidationViewModel : ObservableObject
         double minWaveguideSpacingMicrometers = 0,
         IReadOnlyList<WaveguideMinWidthRule>? minWaveguideWidthRules = null,
         Func<WaveguideConnection, ConnectionDrcRules?>? connectionDrcRuleProvider = null,
+        double? wavelengthNm = null,
         CancellationToken cancellationToken = default)
     {
         var request = new DesignValidationRequest(
@@ -137,7 +165,7 @@ public partial class DesignValidationViewModel : ObservableObject
             pdkSourceByComponent, processAgnosticPdkNames, enabledPdkNames,
             processLockActive, externalPortPins,
             minWaveguideSpacingMicrometers, minWaveguideWidthRules,
-            connectionDrcRuleProvider);
+            connectionDrcRuleProvider, wavelengthNm);
         BeginValidation();
         var issues = await Task.Run(() => ComputeIssues(request), cancellationToken);
         CommitIssues(issues);
@@ -151,6 +179,8 @@ public partial class DesignValidationViewModel : ObservableObject
     {
         Issues.Clear();
         CurrentIndex = -1;
+        IsCurrentIssueAlignable = false;
+        HasWaveguideCrossingIssue = false;
         HighlightConnection?.Invoke(null);
     }
 
@@ -164,6 +194,7 @@ public partial class DesignValidationViewModel : ObservableObject
             Issues.Add(issue);
 
         HasIssues = Issues.Count > 0;
+        HasWaveguideCrossingIssue = Issues.Any(i => i.Type == DesignIssueType.WaveguideCrossing);
         StatusText = Issues.Count == 0
             ? "No issues found"
             : $"{Issues.Count} issue(s) found";
@@ -192,6 +223,7 @@ public partial class DesignValidationViewModel : ObservableObject
             request.Groups ?? Array.Empty<ComponentGroup>(),
             request.AllComponents ?? Array.Empty<Component>(),
             request.ExternalPortPins,
+            request.WavelengthNm ?? StandardWaveLengths.RedNM,
             request.MinWaveguideSpacingMicrometers,
             request.MinWaveguideWidthRules,
             request.ConnectionDrcRuleProvider));
@@ -235,7 +267,8 @@ public partial class DesignValidationViewModel : ObservableObject
         IEnumerable<PhysicalPin>? ExternalPortPins,
         double MinWaveguideSpacingMicrometers,
         IReadOnlyList<WaveguideMinWidthRule>? MinWaveguideWidthRules,
-        Func<WaveguideConnection, ConnectionDrcRules?>? ConnectionDrcRuleProvider);
+        Func<WaveguideConnection, ConnectionDrcRules?>? ConnectionDrcRuleProvider,
+        double? WavelengthNm);
 
     /// <summary>
     /// Navigates to the next issue in the list (wraps around).
@@ -276,9 +309,37 @@ public partial class DesignValidationViewModel : ObservableObject
         OnPropertyChanged(nameof(NavigationText));
 
         var issue = Issues[index];
-        StatusText = issue.Description;
+        StatusText = Services.DesignIssueFormatter.Format(issue);
+        IsCurrentIssueAlignable = issue.Connection != null && IsChipletInterfaceIssue(issue.Type);
 
         HighlightConnection?.Invoke(issue.Connection);
         NavigateToPosition?.Invoke(issue.X, issue.Y);
+    }
+
+    /// <summary>True for every finding of the cross-chiplet edge-coupler rule (#1219/#1238).</summary>
+    private static bool IsChipletInterfaceIssue(DesignIssueType type) =>
+        type is DesignIssueType.ChipletInterfaceNotFacing
+            or DesignIssueType.ChipletInterfaceLateralOffset
+            or DesignIssueType.ChipletInterfaceOffEdge
+            or DesignIssueType.ChipletInterfaceGapLoss;
+
+    /// <summary>
+    /// One-click fix (issue #1248): snaps the current chiplet-interface issue's end
+    /// chiplet into butt-coupling through the undoable group move, then re-runs the
+    /// checks. Refusals land in the status text.
+    /// </summary>
+    [RelayCommand]
+    private async Task AlignChiplet()
+    {
+        if (CurrentIndex < 0 || CurrentIndex >= Issues.Count) return;
+
+        var issue = Issues[CurrentIndex];
+        if (issue.Connection == null || AlignChipletHandler == null) return;
+
+        var refusal = await AlignChipletHandler(issue.Connection);
+        if (refusal != null)
+        {
+            StatusText = refusal;
+        }
     }
 }

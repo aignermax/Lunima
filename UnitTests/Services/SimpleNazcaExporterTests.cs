@@ -300,6 +300,9 @@ public class SimpleNazcaExporterTests
         // Both children of the inner group should be exported
         result.ShouldContain("comp_0 =");
         result.ShouldContain("comp_1 =");
+        // The nested group NODE itself is not a physical cell: it must not be
+        // placed (its leaves already are) — no demofab heuristic box for it.
+        result.ShouldNotContain($"# {inner.Identifier}");
     }
 
     private static ComponentGroup CreateTestGroupWithTwoChildren()

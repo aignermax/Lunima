@@ -1,6 +1,7 @@
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Routing;
 using Shouldly;
 using Xunit;
 
@@ -115,6 +116,82 @@ public class LogicNetworkAssemblerTests
         error.Message.ShouldContain("OR2.y");
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task AssembleAsync_GatesNestedInsidePlainCell_WireThroughFrozenInternalPaths(
+        bool a, bool b, bool c)
+    {
+        // The hierarchical-cell shape: two gates nested in a role-less cell group,
+        // their only wire the cell's frozen internal path — no canvas connection.
+        var cell = CellWithNestedOrGates();
+
+        var network = await Assemble(new Component[] { cell }, Array.Empty<WaveguideConnection>());
+
+        network.Gates.Keys.ShouldBe(new[] { "CELL/OR1", "CELL/OR2" },
+            "a nested gate's id is the path of enclosing group names, so two instances " +
+            "of one cell keep distinct gate identities");
+        network.InputPinNames.ShouldBe(new[] { "CELL/OR1.a", "CELL/OR1.b", "CELL/OR2.b" },
+            "the frozen path drives CELL/OR2.a, so it is no network input");
+        var outputs = network.Evaluate(
+            Bits(("CELL/OR1.a", a), ("CELL/OR1.b", b), ("CELL/OR2.b", c)));
+        outputs["CELL/OR2.y"].ShouldBe(a || b || c,
+            $"the frozen intra-cell path wires CELL/OR1.y into CELL/OR2.a for a={a}, b={b}, c={c}");
+    }
+
+    [Fact]
+    public async Task AssembleAsync_PinlessFrozenPathInPlainGroup_IsIgnored()
+    {
+        // GDS-imported route outlines carry no endpoint pins; they render and move
+        // with the group but must never become network edges.
+        var gate = OrGate("OR1");
+        var cell = new ComponentGroup("CELL");
+        cell.AddChild(gate);
+        var outline = new RoutedPath();
+        outline.Segments.Add(new StraightSegment(0, 0, 10, 0, 0));
+        cell.AddInternalPath(new FrozenWaveguidePath { Path = outline });
+
+        var network = await Assemble(new Component[] { cell }, Array.Empty<WaveguideConnection>());
+
+        network.Gates.Keys.ShouldBe(new[] { "CELL/OR1" });
+        network.InputPinNames.ShouldBe(new[] { "CELL/OR1.a", "CELL/OR1.b" },
+            "the pin-less outline wires nothing — both gate inputs stay network inputs");
+    }
+
+    [Fact]
+    public async Task AssembleAsync_GateGroupsOwnInternalPaths_DoNotBecomeNetworkEdges()
+    {
+        // The balanced-MZI gate carries four frozen internal paths (its arms): they
+        // are the gate's extracted behaviour, never network edges — nested in a
+        // plain cell the gate assembles with its input as the only network input.
+        var gate = LogicGateFixtureFactory.CreateBalancedMziGroup();
+        gate.GroupName = "MZ";
+        gate.TruthTablePinAssignment = new TruthTablePinAssignment
+        {
+            InputPinNames = new List<string> { "in" },
+            OutputPinNames = new List<string> { "bright" },
+            BiasPinNames = new List<string>(),
+            Threshold = OrThreshold,
+        };
+        var cell = new ComponentGroup("CELL");
+        cell.AddChild(gate);
+
+        var network = await Assemble(new Component[] { cell }, Array.Empty<WaveguideConnection>());
+
+        network.Gates.Keys.ShouldBe(new[] { "CELL/MZ" });
+        network.InputPinNames.ShouldBe(new[] { "CELL/MZ.in" },
+            "the gate's internal arm paths wire nothing — its input is the network input");
+        network.Evaluate(Bits(("CELL/MZ.in", true)))["CELL/MZ.bright"]
+            .ShouldBeTrue("the MZI gate evaluates through its internal arms");
+        network.Evaluate(Bits(("CELL/MZ.in", false)))["CELL/MZ.bright"].ShouldBeFalse();
+    }
+
     [Fact]
     public async Task AssembleAsync_NullComponents_Throws()
     {
@@ -160,6 +237,34 @@ public class LogicNetworkAssemblerTests
     private static WaveguideConnection Connect(
         ComponentGroup from, string fromPin, ComponentGroup to, string toPin) =>
         new() { StartPin = Pin(from, fromPin), EndPin = Pin(to, toPin) };
+
+    /// <summary>
+    /// The hierarchical-cell shape: two OR gates nested inside a role-less cell
+    /// group, OR1.y → OR2.a frozen into the cell's internal paths — the way a
+    /// routed-once, then instanced cell loads.
+    /// </summary>
+    private static ComponentGroup CellWithNestedOrGates()
+    {
+        var first = OrGate("OR1");
+        var second = OrGate("OR2");
+        var cell = new ComponentGroup("CELL");
+        cell.AddChild(first);
+        cell.AddChild(second);
+        cell.AddInternalPath(FrozenPath(InternalPin(first, "y"), InternalPin(second, "a")));
+        return cell;
+    }
+
+    /// <summary>Freezes a straight path between two internal pins, as grouping a routed wire does.</summary>
+    private static FrozenWaveguidePath FrozenPath(PhysicalPin from, PhysicalPin to)
+    {
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(0, 0, 10, 0, 0));
+        return new FrozenWaveguidePath { Path = path, StartPin = from, EndPin = to };
+    }
+
+    /// <summary>The internal component pin behind one of a group's external pins.</summary>
+    private static PhysicalPin InternalPin(ComponentGroup group, string name) =>
+        group.ExternalPins.Single(p => p.Name == name).InternalPin!;
 
     /// <summary>Looks up a group's connectable external pin.</summary>
     private static PhysicalPin Pin(ComponentGroup group, string name) =>

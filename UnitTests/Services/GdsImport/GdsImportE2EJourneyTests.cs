@@ -67,13 +67,13 @@ public class GdsImportE2EJourneyTests : IDisposable
         children1.Count(c => c.HumanReadableName == GdsE2EJourneyHarness.OutlierDc).ShouldBe(1);
 
         // ── Step 3: pin + auto-connect census (3 pairs routed, 0 unroutable) ──
-        children1.SelectMany(c => c.PhysicalPins).Count().ShouldBe(10,
-            "step 3: pin census — 3 couplers × 1 + Y-branch × 3 + Broadband DC × 4");
+        children1.SelectMany(c => c.PhysicalPins).Count().ShouldBe(13,
+            "step 3: pin census — 3 couplers × 2 (waveguide + fiber side) + Y-branch × 3 + Broadband DC × 4");
         report1.AutoConnectedCount.ShouldBe(3,
             "step 3: coupler→Y-branch plus the two Y-arm→coupler pairs auto-connect");
         report1.AutoConnectFailedCount.ShouldBe(0, "step 3: zero unroutable pairs");
-        report1.AutoConnectUnpairedPinCount.ShouldBe(4,
-            "step 3: the far-away Broadband DC's four pins stay unpaired");
+        report1.AutoConnectUnpairedPinCount.ShouldBe(7,
+            "step 3: the far-away Broadband DC's four pins and the three off-chip fiber pins stay unpaired");
         var pinned1 = group1.InternalPaths.Where(p => p.StartPin is not null).ToList();
         pinned1.Count.ShouldBe(3, "step 3: the auto-connected routes freeze into the group");
         var outlier1 = children1.Single(c => c.HumanReadableName == GdsE2EJourneyHarness.OutlierDc);
@@ -85,7 +85,7 @@ public class GdsImportE2EJourneyTests : IDisposable
         var simulation = await new SimulationService().RunAsync(canvas1);
         simulation.Success.ShouldBeTrue($"step 4: simulation must run — {simulation.ErrorMessage}");
         simulation.LightSourceCount.ShouldBe(1,
-            "step 4: only the input coupler injects; the two output couplers listen");
+            "step 4: only the input coupler injects (on its fiber pin only); the two output couplers listen");
         foreach (var outputPin in OutputCouplerPins(children1))
         {
             ArrivingAmplitudeAt(simulation, outputPin).ShouldBeGreaterThan(NoiseFloorAmplitude,
@@ -139,8 +139,8 @@ public class GdsImportE2EJourneyTests : IDisposable
         report3.AutoConnectedCount.ShouldBe(0,
             "step 6: route derivation already restored all three wires — auto-connect has nothing left");
         report3.AutoConnectFailedCount.ShouldBe(0, "step 6: zero unroutable pairs in generation 3");
-        report3.AutoConnectUnpairedPinCount.ShouldBe(4,
-            "step 6: the Broadband DC's four pins stay unpaired in generation 3 too");
+        report3.AutoConnectUnpairedPinCount.ShouldBe(7,
+            "step 6: the Broadband DC's four pins and the three fiber pins stay unpaired in generation 3 too");
         var group3 = canvas3.Components.ShouldHaveSingleItem().Component.ShouldBeOfType<ComponentGroup>();
         var children3 = group3.GetAllComponentsRecursive().ToList();
         AssertSameTopology(canvas1, canvas3);

@@ -1,0 +1,14 @@
+[
+  {
+    "file": "ram2x4-cell-groups-collapsed-en.png",
+    "caption": "The Logic tab after the write/read demo (en): the two word-cell instances collapse under one header each (CELL0 \u2014 4 registers, \u2026 gates); the named read bus Q and the register readout stay on top, always visible (issue #1399)."
+  },
+  {
+    "file": "ram2x4-cell-groups-collapsed-de.png",
+    "caption": "The Logic tab after the write/read demo (de): the two word-cell instances collapse under one header each (CELL0 \u2014 4 registers, \u2026 gates); the named read bus Q and the register readout stay on top, always visible (issue #1399)."
+  },
+  {
+    "file": "ram2x4-cell0-expanded-en.png",
+    "caption": "The Logic tab with CELL0 expanded (en): the cell\u0027s gate rows show with the prefix stripped (REG00.Y, not CELL0/REG00.Y), so the column stays narrow."
+  }
+]

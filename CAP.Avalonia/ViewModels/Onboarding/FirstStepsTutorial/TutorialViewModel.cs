@@ -40,9 +40,9 @@ public partial class TutorialViewModel : ObservableObject
         _canvas = canvas;
         Steps = new List<TutorialStep>
         {
-            new("Tutorial.Step1Title", "Tutorial.Step1Body", () => _canvas.Components.Count > 0),
-            new("Tutorial.Step2Title", "Tutorial.Step2Body", () => _canvas.Connections.Count > 0),
-            new("Tutorial.Step3Title", "Tutorial.Step3Body", () => _canvas.ShowPowerFlow),
+            new("Tutorial.Step1Title", "Tutorial.Step1Body", () => _canvas.Components.Count > 0, "ComponentLibraryList"),
+            new("Tutorial.Step2Title", "Tutorial.Step2Body", () => _canvas.Connections.Count > 0, "DesignCanvasControl"),
+            new("Tutorial.Step3Title", "Tutorial.Step3Body", () => _canvas.ShowPowerFlow, "RunSimulationButton"),
         };
     }
 
@@ -57,6 +57,9 @@ public partial class TutorialViewModel : ObservableObject
 
     /// <summary>Localized body text of the current step.</summary>
     public string CurrentBody => LocalizationService.Instance.Translate(CurrentStep.BodyKey);
+
+    /// <summary><c>x:Name</c> of the control the current step spotlights, or null for a floating card.</summary>
+    public string? CurrentTargetName => CurrentStep.TargetName;
 
     /// <summary>Localized position label, e.g. "Step 2/3".</summary>
     public string ProgressText => string.Format(
@@ -137,6 +140,7 @@ public partial class TutorialViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentStep));
         OnPropertyChanged(nameof(CurrentTitle));
         OnPropertyChanged(nameof(CurrentBody));
+        OnPropertyChanged(nameof(CurrentTargetName));
         OnPropertyChanged(nameof(ProgressText));
     }
 }

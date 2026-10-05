@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.LengthMatchingPanel"
              x:DataType="vm:MainViewModel">
@@ -22,12 +23,19 @@
                     <StackPanel Spacing="8" MaxWidth="400">
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
                                    Text="{loc:Localize Routing.LengthMatch.Help.Intro}"/>
+
+                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.ArrivalTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize Routing.LengthMatch.Help.Phase}"/>
+                                   Text="{loc:Localize Routing.LengthMatch.Help.ArrivalBody}"/>
+                        <ha:LengthMatchArrivalAnimation Width="336" Height="96" IsHitTestVisible="False"/>
+
+                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.PhaseTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize Routing.LengthMatch.Help.Mzi}"/>
+                                   Text="{loc:Localize Routing.LengthMatch.Help.PhaseBody}"/>
+
+                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.MeanderTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                   Text="{loc:Localize Routing.LengthMatch.Help.Delta}"/>
+                                   Text="{loc:Localize Routing.LengthMatch.Help.MeanderBody}"/>
                     </StackPanel>
                 </controls:HelpFlyoutButton.HelpContent>
             </controls:HelpFlyoutButton>

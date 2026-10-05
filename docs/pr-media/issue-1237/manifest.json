@@ -1,0 +1,14 @@
+[
+  {
+    "file": "carry-ripple-1-first.png",
+    "caption": "ISA playground help, \u0022Why light adds\u0022: for 0111 \u002B 0001 a light pulse ripples the carry through the four full adders FA0\u2013FA3; each hop is more light path, so the time bar grows \u2014 that is the picosecond number in the status line. (first frame \u2014 pulse not yet entered, sum 0000)"
+  },
+  {
+    "file": "carry-ripple-2-mid.png",
+    "caption": "ISA playground help, \u0022Why light adds\u0022: for 0111 \u002B 0001 a light pulse ripples the carry through the four full adders FA0\u2013FA3; each hop is more light path, so the time bar grows \u2014 that is the picosecond number in the status line. (mid loop \u2014 the carry is inside FA2)"
+  },
+  {
+    "file": "carry-ripple-3-last.png",
+    "caption": "ISA playground help, \u0022Why light adds\u0022: for 0111 \u002B 0001 a light pulse ripples the carry through the four full adders FA0\u2013FA3; each hop is more light path, so the time bar grows \u2014 that is the picosecond number in the status line. (last frame \u2014 sum flipped to 1000, time bar full)"
+  }
+]

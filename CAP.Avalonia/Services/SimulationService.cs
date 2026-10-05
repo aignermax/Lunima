@@ -99,13 +99,14 @@ public class SimulationService
             // Ensure ComponentGroups have computed S-Matrices before simulation
             if (compVm.Component is ComponentGroup group)
             {
-                group.EnsureSMatrixComputed();
+                group.EnsureSMatrixComputed(connectionManager.EnableCoherentPropagationPhase);
             }
             tileManager.AddComponent(compVm.Component);
         }
 
         var portManager = new PhysicalExternalPortManager();
-        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager);
+        var wiredPins = CollectWiredPins(componentViewModels, connectionManager.Connections);
+        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager, wiredPins);
 
         if (sourceConfigs.Count == 0)
             return (sourceConfigs, null, new Dictionary<Guid, Complex>(), new List<int>());
@@ -153,8 +154,68 @@ public class SimulationService
     /// </summary>
     internal List<SourceConfigInfo> ConfigureLightSources(
         DesignCanvasViewModel canvas,
-        PhysicalExternalPortManager portManager) =>
-        ConfigureLightSources(canvas.Components.ToList(), portManager);
+        PhysicalExternalPortManager portManager)
+    {
+        var componentViewModels = canvas.Components.ToList();
+        var wiredPins = CollectWiredPins(componentViewModels, canvas.ConnectionManager.Connections);
+        return ConfigureLightSources(componentViewModels, portManager, wiredPins);
+    }
+
+    /// <summary>
+    /// Collects every physical pin that has a waveguide connection — either a
+    /// canvas-level connection or a frozen internal path inside a (nested) group.
+    /// </summary>
+    private static HashSet<PhysicalPin> CollectWiredPins(
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
+        IReadOnlyList<WaveguideConnection> connections)
+    {
+        var wiredPins = new HashSet<PhysicalPin>();
+        foreach (var connection in connections)
+        {
+            if (connection.StartPin != null) wiredPins.Add(connection.StartPin);
+            if (connection.EndPin != null) wiredPins.Add(connection.EndPin);
+        }
+        foreach (var compVm in componentViewModels)
+        {
+            if (compVm.Component is ComponentGroup group)
+                CollectGroupWiredPins(group, wiredPins);
+        }
+        return wiredPins;
+    }
+
+    private static void CollectGroupWiredPins(ComponentGroup group, HashSet<PhysicalPin> wiredPins)
+    {
+        foreach (var path in group.InternalPaths)
+        {
+            if (path.StartPin != null) wiredPins.Add(path.StartPin);
+            if (path.EndPin != null) wiredPins.Add(path.EndPin);
+        }
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+                CollectGroupWiredPins(childGroup, wiredPins);
+        }
+    }
+
+    /// <summary>
+    /// Picks the pins a light-source component injects on. Couplers with more
+    /// than one optical pin (e.g. the two-pin SiEPIC grating coupler with a
+    /// fiber-side and a waveguide-side pin) inject only on the off-chip pins —
+    /// the optical pins without a waveguide connection. Injecting on the
+    /// connected pin as well would feed power through that pin's reflection
+    /// matrix entry on top of the real fiber-to-waveguide transfer and
+    /// double-count the source. Single-pin couplers keep the legacy behaviour;
+    /// a multi-pin coupler with every pin wired falls back to all pins so a
+    /// source is never silently dropped.
+    /// </summary>
+    internal static List<PhysicalPin> SelectInjectionPins(
+        IReadOnlyList<PhysicalPin> lightPins, ISet<PhysicalPin> wiredPins)
+    {
+        if (lightPins.Count <= 1)
+            return lightPins.ToList();
+        var offChipPins = lightPins.Where(p => !wiredPins.Contains(p)).ToList();
+        return offChipPins.Count > 0 ? offChipPins : lightPins.ToList();
+    }
 
     /// <summary>
     /// Snapshot-based overload used by the off-thread simulation path (issue #1150):
@@ -162,7 +223,8 @@ public class SimulationService
     /// </summary>
     internal static List<SourceConfigInfo> ConfigureLightSources(
         IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
-        PhysicalExternalPortManager portManager)
+        PhysicalExternalPortManager portManager,
+        ISet<PhysicalPin> wiredPins)
     {
         var configs = new List<SourceConfigInfo>();
 
@@ -215,11 +277,12 @@ public class SimulationService
             var samples = spectrum.GetSamples();
             var sampleWavelengths = samples.Select(s => s.WavelengthNm).ToList();
 
-            foreach (var pin in component.PhysicalPins)
-            {
-                if (pin.LogicalPin?.MatterType != MatterType.Light)
-                    continue;
+            var lightPins = component.PhysicalPins
+                .Where(p => p.LogicalPin?.MatterType == MatterType.Light)
+                .ToList();
 
+            foreach (var pin in SelectInjectionPins(lightPins, wiredPins))
+            {
                 foreach (var sample in samples)
                 {
                     // The center sample keeps the legacy name; side samples are suffixed.

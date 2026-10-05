@@ -22,7 +22,9 @@ namespace UnitTests.Integration;
 /// shifted 135° against the combined A·B beam — cancels it in the recombination
 /// coupler exactly when both inputs are on (raw power 0). Enumerate only A at
 /// threshold 0.375 for NOT (resting 0.5 bright, single-input 0.25 dark), enumerate
-/// A and B at threshold 0.125 for NAND: raw powers 0.5 / 0.25 / 0.25 / 0.0.
+/// A and B at threshold 0.125 for NAND: raw powers 0.5 / 0.25 / 0.25 / 0.0 — ideal
+/// values; the raw-power constants below carry the group's internal waveguide loss
+/// (frozen paths keep their bend loss), which also limits the dark row's extinction.
 /// </summary>
 public class LogicGateNotNandExampleTests
 {
@@ -31,8 +33,10 @@ public class LogicGateNotNandExampleTests
     private const double PowerTolerance = 1e-6;
     private const double NotThreshold = 0.375;
     private const double NandThreshold = 0.125;
-    private const double RestingPower = 0.5;
-    private const double SingleInputPower = 0.25;
+    private const double RestingPower = 0.4886186104779054;
+    private const double SingleInputPower = 0.2443420631494358;
+    private const double ExtinguishedPower = 6.551582096650341E-05;
+    private const double NoBiasPassThroughPower = 0.25;
     private const int WavelengthNm = 1550;
 
     private static readonly string[] InputA = { "A" };
@@ -80,7 +84,7 @@ public class LogicGateNotNandExampleTests
         AssertRow(table, 0, expectedBit: true, expectedPower: RestingPower);
         AssertRow(table, 1, expectedBit: true, expectedPower: SingleInputPower);
         AssertRow(table, 2, expectedBit: true, expectedPower: SingleInputPower);
-        AssertRow(table, 3, expectedBit: false, expectedPower: 0.0);
+        AssertRow(table, 3, expectedBit: false, expectedPower: ExtinguishedPower);
     }
 
     [Fact]
@@ -94,7 +98,7 @@ public class LogicGateNotNandExampleTests
         // Without the reference light the signal just passes — bright when A is on,
         // dark when A is off; an inversion needs the bias to take light away.
         AssertRow(table, 0, expectedBit: false, expectedPower: 0.0);
-        AssertRow(table, 1, expectedBit: false, expectedPower: SingleInputPower);
+        AssertRow(table, 1, expectedBit: false, expectedPower: NoBiasPassThroughPower);
     }
 
     [Fact]
@@ -107,8 +111,8 @@ public class LogicGateNotNandExampleTests
         vm.OutputHeaders.ShouldBe(Outputs);
         vm.BiasSummaryText.ShouldContain("BIAS"); // the bias assignment shows on the result table
         vm.Rows.Count.ShouldBe(2);
-        AssertPanelRow(vm, "0", expectedBit: true, expectedPowerText: "0.50");
-        AssertPanelRow(vm, "1", expectedBit: false, expectedPowerText: "0.25");
+        AssertPanelRow(vm, "0", expectedBit: true, expectedPowerText: "0.49");
+        AssertPanelRow(vm, "1", expectedBit: false, expectedPowerText: "0.24");
     }
 
     [Fact]
@@ -119,9 +123,9 @@ public class LogicGateNotNandExampleTests
         vm.HasResult.ShouldBeTrue();
         vm.BiasSummaryText.ShouldContain("BIAS");
         vm.Rows.Count.ShouldBe(4);
-        AssertPanelRow(vm, "0 0", expectedBit: true, expectedPowerText: "0.50");
-        AssertPanelRow(vm, "1 0", expectedBit: true, expectedPowerText: "0.25");
-        AssertPanelRow(vm, "0 1", expectedBit: true, expectedPowerText: "0.25");
+        AssertPanelRow(vm, "0 0", expectedBit: true, expectedPowerText: "0.49");
+        AssertPanelRow(vm, "1 0", expectedBit: true, expectedPowerText: "0.24");
+        AssertPanelRow(vm, "0 1", expectedBit: true, expectedPowerText: "0.24");
         AssertPanelRow(vm, "1 1", expectedBit: false, expectedPowerText: "0.00");
     }
 

@@ -1,0 +1,22 @@
+[
+  {
+    "file": "monte-carlo-tab-en.png",
+    "caption": "Monte Carlo tab (en): the new (?) help button sits at the end of the parameter row, right of Run/Cancel."
+  },
+  {
+    "file": "flyout-en-early.png",
+    "caption": "Monte Carlo help (en): the waveguide width wobbles, the transmission dip shifts, the first virtual chips drop into the histogram."
+  },
+  {
+    "file": "flyout-en-full.png",
+    "caption": "Monte Carlo help (en): all virtual chips have landed \u2014 the histogram shows the bell-shaped spread that sets the yield."
+  },
+  {
+    "file": "flyout-de-early.png",
+    "caption": "Monte Carlo help (de): the waveguide width wobbles, the transmission dip shifts, the first virtual chips drop into the histogram."
+  },
+  {
+    "file": "flyout-de-full.png",
+    "caption": "Monte Carlo help (de): all virtual chips have landed \u2014 the histogram shows the bell-shaped spread that sets the yield."
+  }
+]

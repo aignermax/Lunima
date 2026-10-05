@@ -25,8 +25,7 @@
                        FontSize="12" Foreground="Gray"
                        HorizontalAlignment="Center" Margin="0,2,0,18"/>
 
-            <!-- Primary actions: file actions on the first row, the guided tours on the
-                 second — four buttons never fit the fixed-width card in every language. -->
+            <!-- Primary actions: file actions on the first row. -->
             <StackPanel Spacing="10" Margin="0,0,0,18">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
                     <Button Command="{Binding NewProjectCommand}"
@@ -46,24 +45,39 @@
                         </StackPanel>
                     </Button>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                    <Button Command="{Binding LearnTutorialCommand}"
-                            Background="#3d5d3d" Foreground="White" Padding="14,7"
-                            ToolTip.Tip="{loc:Localize Home.LearnTutorialTip}">
-                        <StackPanel Orientation="Horizontal" Spacing="7">
-                            <TextBlock Text="🎓" FontSize="13"/>
-                            <TextBlock Text="{loc:Localize Home.LearnTutorial}" FontWeight="SemiBold" FontSize="13"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding WatchComputeTourCommand}"
-                            Background="#3d5d3d" Foreground="White" Padding="14,7"
-                            ToolTip.Tip="{loc:Localize Home.WatchComputeTourTip}">
-                        <StackPanel Orientation="Horizontal" Spacing="7">
-                            <TextBlock Text="⏱" FontSize="13"/>
-                            <TextBlock Text="{loc:Localize Home.WatchComputeTour}" FontWeight="SemiBold" FontSize="13"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+            </StackPanel>
+
+            <!-- Learn Lunima: the guided tours as one numbered list in learning
+                 order, each row a full-width clickable entry with its one-line
+                 description. Data-driven from the VM's TourEntries list. -->
+            <StackPanel Margin="0,0,0,18">
+                <TextBlock Text="{loc:Localize Home.LearnTutorial}"
+                           FontSize="13" FontWeight="SemiBold" Foreground="White"
+                           Margin="0,0,0,4"/>
+                <ItemsControl ItemsSource="{Binding TourEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="home:HomeTourEntry">
+                            <Button Command="{Binding Command}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Background="#3d5d3d" Foreground="White"
+                                    Padding="10,5" Margin="0,0,0,4" FontSize="11"
+                                    ToolTip.Tip="{Binding Tip}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding Number, StringFormat={}{0}.}"
+                                               FontSize="11" Foreground="#b8d4b8" Width="16"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Icon}" FontSize="11" VerticalAlignment="Center"/>
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="10" Foreground="#c8c8c8"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
 
             <!-- Shipped example designs in learning-path order (curated manifest

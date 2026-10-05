@@ -282,7 +282,7 @@ public sealed partial class GdsPlacementExecutor
             grouper.Add(
                 issue.Type.ToString(),
                 string.Create(CultureInfo.InvariantCulture,
-                    $"{issue.Type} at ({issue.X:0.#}, {issue.Y:0.#}) µm — {issue.Description}"));
+                    $"{issue.Type} at ({issue.X:0.#}, {issue.Y:0.#}) µm — {DesignIssueFormatter.Format(issue)}"));
         }
         grouper.FlushInto(report.ValidationWarnings);
     }

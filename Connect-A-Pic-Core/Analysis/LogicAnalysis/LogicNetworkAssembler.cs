@@ -5,13 +5,20 @@ namespace CAP_Core.Analysis.LogicAnalysis;
 
 /// <summary>
 /// Assembles an evaluable <see cref="LogicNetworkEvaluator"/> straight from a loaded
-/// design — no hand-built <see cref="LogicGateInstance"/>s: every top-level group
-/// carrying a persisted <see cref="TruthTablePinAssignment"/> is a logic gate, its
+/// design — no hand-built <see cref="LogicGateInstance"/>s: every group carrying a
+/// persisted <see cref="TruthTablePinAssignment"/> is a logic gate, its
 /// <see cref="LogicGateModel"/> is re-extracted with exactly the persisted pin roles
 /// and threshold, and the design's own connections wire the gates (the canvas stays
 /// the source of truth, see <see cref="LogicNetworkBuilder"/>). Groups without a
-/// persisted assignment are not gates and are simply ignored; a design with no gate
-/// group at all is reported as a readable error instead of yielding an empty network.
+/// persisted assignment are not gates: the assembler descends into them, so a gate
+/// nested inside a hierarchical cell instance joins the network like a top-level one
+/// — identified by its hierarchical path <c>&lt;topGroup&gt;/&lt;…&gt;/&lt;gateGroup&gt;</c>,
+/// so two instances of one cell template keep distinct gate identities — and each
+/// pin-bound frozen internal path of such a plain group
+/// becomes a virtual connection — the intra-cell wiring of a hierarchical design is
+/// frozen into the cell, never live on the canvas. A gate group's own internal paths
+/// are its extracted behaviour, never network edges. A design with no gate group at
+/// all is reported as a readable error instead of yielding an empty network.
 /// Identical groups are extracted per instance — the extraction is the source of the
 /// model, and caching would only ever save simulation runs, never change the result.
 /// </summary>
@@ -33,16 +40,18 @@ public sealed class LogicNetworkAssembler
     }
 
     /// <summary>
-    /// Builds the logic network of a loaded design: collects the top-level gate groups
-    /// (those with a persisted <see cref="TruthTablePinAssignment"/>), re-extracts each
-    /// gate's model with the persisted roles and threshold, and lets the
-    /// <see cref="LogicNetworkBuilder"/> derive the wiring from
-    /// <paramref name="connections"/>. Extraction and builder errors pass through
+    /// Builds the logic network of a loaded design: collects the gate groups (every
+    /// group with a persisted <see cref="TruthTablePinAssignment"/>, nested ones
+    /// included), re-extracts each gate's model with the persisted roles and
+    /// threshold, and lets the <see cref="LogicNetworkBuilder"/> derive the wiring
+    /// from <paramref name="connections"/> plus the frozen internal paths of the
+    /// plain groups the gates nest in. Extraction and builder errors pass through
     /// unchanged — their messages name the offending pins.
     /// </summary>
     /// <param name="components">
     /// The design's top-level components. Non-group components and groups without a
-    /// persisted assignment take no part in the network.
+    /// persisted assignment are no gates themselves, but a plain group's subtree and
+    /// frozen internal paths take part.
     /// </param>
     /// <param name="connections">
     /// The design's waveguide connections. Only connections joining external pins of
@@ -64,30 +73,78 @@ public sealed class LogicNetworkAssembler
         if (components == null) throw new ArgumentNullException(nameof(components));
         if (connections == null) throw new ArgumentNullException(nameof(connections));
 
-        var gateGroups = components
-            .OfType<ComponentGroup>()
-            .Where(group => group.TruthTablePinAssignment != null)
-            .ToList();
+        var gateGroups = new List<(ComponentGroup Group, string GateId)>();
+        var internalWires = new List<WaveguideConnection>();
+        CollectGates(components, ancestorPath: null, gateGroups, internalWires);
         if (gateGroups.Count == 0)
         {
             throw new InvalidOperationException(
-                "The design contains no logic gate: no top-level group carries a persisted " +
+                "The design contains no logic gate: no group carries a persisted " +
                 "truth-table pin assignment. Extract a group's truth table in the Truth Table " +
                 "panel to turn the group into a gate.");
         }
 
         var gates = new List<LogicGateInstance>(gateGroups.Count);
-        foreach (var group in gateGroups)
+        foreach (var (group, gateId) in gateGroups)
         {
-            gates.Add(await ExtractGateAsync(group, wavelengthNm, cancellationToken));
+            gates.Add(await ExtractGateAsync(group, gateId, wavelengthNm, cancellationToken));
         }
 
-        return _builder.Build(gates, connections, wavelengthNm);
+        var allConnections = internalWires.Count == 0
+            ? connections
+            : connections.Concat(internalWires).ToList();
+        return _builder.Build(gates, allConnections, wavelengthNm);
+    }
+
+    /// <summary>
+    /// Collects the gates of one design level, descending into every group without a
+    /// persisted assignment: a hierarchical design nests its gates inside plain
+    /// cell-instance groups, and a cell's frozen internal paths carry the intra-cell
+    /// wiring physically, so each pin-bound path becomes a virtual connection — the
+    /// builder resolves its endpoint pins through the gate groups' external pins
+    /// exactly like a canvas connection. A group WITH a persisted assignment is a
+    /// gate: its subtree and internal paths are its own extracted behaviour.
+    /// A nested gate's id is the hierarchical path <c>&lt;topGroup&gt;/&lt;…&gt;/&lt;gateGroup&gt;</c>
+    /// built from the enclosing wrapper names, so two instances of one cell template
+    /// keep distinct gate identities (both contain a gate of the same name) without
+    /// mutating any <c>GroupName</c>; a top-level gate keeps its plain group name.
+    /// </summary>
+    private static void CollectGates(
+        IEnumerable<Component> components,
+        string? ancestorPath,
+        ICollection<(ComponentGroup Group, string GateId)> gates,
+        ICollection<WaveguideConnection> internalWires)
+    {
+        foreach (var group in components.OfType<ComponentGroup>())
+        {
+            var groupPath = ancestorPath == null ? group.GroupName : $"{ancestorPath}/{group.GroupName}";
+            if (group.TruthTablePinAssignment != null)
+            {
+                gates.Add((group, groupPath));
+                continue;
+            }
+            foreach (var frozenPath in group.InternalPaths)
+            {
+                if (frozenPath.StartPin != null && frozenPath.EndPin != null)
+                {
+                    internalWires.Add(ToVirtualConnection(frozenPath));
+                }
+            }
+            CollectGates(group.ChildComponents, groupPath, gates, internalWires);
+        }
+    }
+
+    /// <summary>Wraps one frozen group-internal path as a connection between its endpoint pins.</summary>
+    private static WaveguideConnection ToVirtualConnection(FrozenWaveguidePath path)
+    {
+        var connection = new WaveguideConnection { StartPin = path.StartPin!, EndPin = path.EndPin! };
+        connection.RestoreCachedPath(path.Path);
+        return connection;
     }
 
     /// <summary>Re-extracts one gate group's model with exactly its persisted roles and threshold.</summary>
     private async Task<LogicGateInstance> ExtractGateAsync(
-        ComponentGroup group, int wavelengthNm, CancellationToken cancellationToken)
+        ComponentGroup group, string gateId, int wavelengthNm, CancellationToken cancellationToken)
     {
         var persisted = group.TruthTablePinAssignment!;
         var roles = new GateRoleAssignment(
@@ -106,6 +163,6 @@ public sealed class LogicNetworkAssembler
             roles.PowerThreshold,
             wavelengthNm,
             cancellationToken);
-        return new LogicGateInstance(group, LogicGateModel.FromTruthTable(table), roles);
+        return new LogicGateInstance(group, LogicGateModel.FromTruthTable(table), roles, gateId);
     }
 }

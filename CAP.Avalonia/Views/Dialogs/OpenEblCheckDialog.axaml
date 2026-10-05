@@ -1,0 +1,231 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CAP.Avalonia.ViewModels.Export.OpenEbl"
+        xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        x:Class="CAP.Avalonia.Views.Dialogs.OpenEblCheckDialog"
+        x:DataType="vm:OpenEblCheckViewModel"
+        Title="{loc:Localize OpenEblCheck.WindowTitle}"
+        Width="540" Height="620"
+        MinWidth="420" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="#1e1e1e"
+        Foreground="White">
+
+    <DockPanel Margin="16,10" LastChildFill="True">
+
+        <!-- Buttons — always visible at the bottom -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="{loc:Localize OpenEblCheck.ExportAndCheck}"
+                    Command="{Binding ExportAndCheckCommand}"
+                    Background="#3d5d4d" Padding="12,4"
+                    IsEnabled="{Binding !IsChecking}"/>
+            <Button Content="{loc:Localize OpenEblCheck.Preflight.CheckAnyway}"
+                    Command="{Binding CheckAnywayCommand}"
+                    Background="#5d523d" Padding="12,4"
+                    IsVisible="{Binding HasPreflightErrors}"
+                    IsEnabled="{Binding !IsChecking}"/>
+            <Button Content="{loc:Localize Common.Cancel}"
+                    Command="{Binding CancelCommand}"
+                    Background="#5d3d3d"
+                    IsVisible="{Binding IsChecking}"/>
+            <Button Content="{loc:Localize Common.Close}" MinWidth="70" Click="OnCloseClicked"/>
+        </StackPanel>
+
+        <!-- Busy state + transient status line -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                    Margin="0,8,0,0" IsVisible="{Binding IsChecking}">
+            <ProgressBar IsIndeterminate="True" Width="120" Height="4" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding StatusText}" Foreground="LightSkyBlue" FontSize="11"
+                       VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="8">
+
+                <!-- Heading + help -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{loc:Localize OpenEblCheck.Heading}" FontSize="15"
+                               FontWeight="SemiBold" Foreground="LightGreen"
+                               VerticalAlignment="Center"/>
+                    <controls:HelpFlyoutButton Grid.Column="1"
+                                               Title="{loc:Localize OpenEblCheck.Help.Title}"
+                                               Margin="8,0,0,0" VerticalAlignment="Center">
+                        <controls:HelpFlyoutButton.HelpContent>
+                            <StackPanel Spacing="8" MaxWidth="380">
+                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                                           Text="{loc:Localize OpenEblCheck.Help.Line1}"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                                           Text="{loc:Localize OpenEblCheck.Help.Line2}"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                                           Text="{loc:Localize OpenEblCheck.Help.Line3}"/>
+                            </StackPanel>
+                        </controls:HelpFlyoutButton.HelpContent>
+                    </controls:HelpFlyoutButton>
+                </Grid>
+                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                           Text="{loc:Localize OpenEblCheck.Description}"/>
+
+                <!-- Inputs -->
+                <Grid ColumnDefinitions="Auto,*">
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,10,0">
+                        <TextBlock VerticalAlignment="Center" Height="28"
+                                   Foreground="#bbbbbb" FontSize="11"
+                                   Text="{loc:Localize OpenEblCheck.Username}"/>
+                        <TextBlock VerticalAlignment="Center" Height="28"
+                                   Foreground="#bbbbbb" FontSize="11"
+                                   Text="{loc:Localize OpenEblCheck.DesignName}"/>
+                        <TextBlock VerticalAlignment="Center" Height="28"
+                                   Foreground="#bbbbbb" FontSize="11"
+                                   Text="{loc:Localize OpenEblCheck.FileName}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6">
+                        <TextBox Text="{Binding Username}" FontSize="12" Padding="6,3"/>
+                        <TextBox Text="{Binding DesignName}" FontSize="12" Padding="6,3"/>
+                        <TextBox Text="{Binding FileName}" FontSize="12" Padding="6,3"
+                                 FontFamily="Monospace"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Lunima pre-flight findings (issue #1375): shown above the external result;
+                     errors hold the run until "Check anyway", warnings only annotate it -->
+                <Border Background="#242424" CornerRadius="4" Padding="10"
+                        IsVisible="{Binding PreflightIssues.Count}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{loc:Localize OpenEblCheck.Preflight.ErrorsHeading}"
+                                   Foreground="#ff8888" FontSize="11" FontWeight="SemiBold"
+                                   IsVisible="{Binding HasPreflightErrors}"/>
+                        <TextBlock Text="{loc:Localize OpenEblCheck.Preflight.WarningsHeading}"
+                                   Foreground="#e8c872" FontSize="11" FontWeight="SemiBold"
+                                   IsVisible="{Binding !HasPreflightErrors}"/>
+                        <ItemsControl ItemsSource="{Binding PreflightIssues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:OpenEblPreflightIssueViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" Margin="0,1">
+                                        <Border Grid.Column="0" Background="#5d3d3d"
+                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,0"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding IsError}">
+                                            <TextBlock Text="{Binding SeverityLabel}"
+                                                       Foreground="#ffc9c9" FontSize="10"/>
+                                        </Border>
+                                        <Border Grid.Column="0" Background="#5d523d"
+                                                CornerRadius="3" Padding="6,1" Margin="0,0,6,0"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding !IsError}">
+                                            <TextBlock Text="{Binding SeverityLabel}"
+                                                       Foreground="#e8c872" FontSize="10"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Message}"
+                                                   Foreground="#dddddd" FontSize="11"
+                                                   TextWrapping="Wrap"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Result -->
+                <Border Background="#242424" CornerRadius="4" Padding="10"
+                        IsVisible="{Binding HasResult}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding Headline}" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{Binding HeadlineColor}" TextWrapping="Wrap"/>
+
+                        <!-- Per-check outcomes -->
+                        <StackPanel Spacing="3" IsVisible="{Binding ShowCheckOutcomes}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{loc:Localize OpenEblCheck.SubmissionChecks}"
+                                           Foreground="#bbbbbb" FontSize="11" MinWidth="150"/>
+                                <TextBlock Text="✓" Foreground="#7ee787" FontSize="11"
+                                           IsVisible="{Binding SubmissionPassed}"/>
+                                <TextBlock Text="{loc:Localize OpenEblCheck.Passed}"
+                                           Foreground="#7ee787" FontSize="11"
+                                           IsVisible="{Binding SubmissionPassed}"/>
+                                <TextBlock Text="✗" Foreground="#ff8888" FontSize="11"
+                                           IsVisible="{Binding !SubmissionPassed}"/>
+                                <TextBlock Text="{loc:Localize OpenEblCheck.Failed}"
+                                           Foreground="#ff8888" FontSize="11"
+                                           IsVisible="{Binding !SubmissionPassed}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{loc:Localize OpenEblCheck.Verification}"
+                                           Foreground="#bbbbbb" FontSize="11" MinWidth="150"/>
+                                <TextBlock Text="✓" Foreground="#7ee787" FontSize="11"
+                                           IsVisible="{Binding VerificationPassed}"/>
+                                <TextBlock Text="{loc:Localize OpenEblCheck.Passed}"
+                                           Foreground="#7ee787" FontSize="11"
+                                           IsVisible="{Binding VerificationPassed}"/>
+                                <TextBlock Text="✗" Foreground="#ff8888" FontSize="11"
+                                           IsVisible="{Binding !VerificationPassed}"/>
+                                <TextBlock Text="{loc:Localize OpenEblCheck.Failed}"
+                                           Foreground="#ff8888" FontSize="11"
+                                           IsVisible="{Binding !VerificationPassed}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding DieSizeText}" Foreground="#aaaaaa"
+                                       FontSize="11"
+                                       IsVisible="{Binding DieSizeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+
+                        <!-- Toolchain missing: pip hint + copy button -->
+                        <Border Background="#2a2a20" CornerRadius="4" Padding="8"
+                                IsVisible="{Binding IsToolchainMissing}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding ToolchainMessage}" Foreground="#e8c872"
+                                           FontSize="11" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding PipInstallCommand}" Foreground="White"
+                                               FontSize="11" FontFamily="Monospace"
+                                               VerticalAlignment="Center"/>
+                                    <Button Content="{loc:Localize OpenEblCheck.CopyPipHint}"
+                                            Command="{Binding CopyPipHintCommand}"
+                                            FontSize="11" Padding="8,2" Background="#3d3d3d"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Detail message (export failure / crash) -->
+                        <TextBlock Text="{Binding DetailMessage}" Foreground="#ff9999" FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding DetailMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                        <!-- Typed error list -->
+                        <StackPanel Spacing="4"
+                                    IsVisible="{Binding Errors.Count}">
+                            <TextBlock Text="{loc:Localize OpenEblCheck.ErrorsHeading}"
+                                       Foreground="#bbbbbb" FontSize="11" FontWeight="SemiBold"/>
+                            <ItemsControl ItemsSource="{Binding Errors}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:OpenEblCheckErrorItemViewModel">
+                                        <Grid ColumnDefinitions="Auto,*" Margin="0,1">
+                                            <Border Grid.Column="0" Background="#3d3d5d"
+                                                    CornerRadius="3" Padding="6,1" Margin="0,0,6,0"
+                                                    VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding CategoryLabel}"
+                                                           Foreground="#cfe0ff" FontSize="10"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding Message}" Foreground="#dddddd"
+                                                           FontSize="11" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Location}" Foreground="#aaaaaa"
+                                                           FontSize="10" FontFamily="Monospace"
+                                                           IsVisible="{Binding HasLocation}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding GdsPathText}" Foreground="Gray" FontSize="10"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding GdsPathText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.MonteCarloHelpFlyout">
+
+    <!-- Help of the Monte Carlo tab (#1344, #1152 pattern): two short sections
+         (text budget, all five locales) plus one looping scene — the waveguide
+         width wobbles (fabrication variance), the transmission dip shifts with
+         it, and dots drop into a histogram that builds a bell shape (many virtual
+         chips → yield). Hosted as the HelpContent of the panel's HelpFlyoutButton,
+         which supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock Text="{loc:Localize MonteCarloHelp.ScatterTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize MonteCarloHelp.ScatterBody}"/>
+
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <ha:MonteCarloScatterAnimation Width="368" Height="150" IsHitTestVisible="False"/>
+                <TextBlock Text="{loc:Localize MonteCarloHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize MonteCarloHelp.YieldTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize MonteCarloHelp.YieldBody}"/>
+
+    </StackPanel>
+
+</UserControl>

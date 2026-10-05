@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
 using CAP_Core.Analysis.OnaAnalysis;
 using CAP_Core.Analysis.WavelengthSpectrum;
 using CAP_Core.LightCalculation;
@@ -27,8 +29,29 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private PlotModel _plotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
 
+    /// <summary>
+    /// Coherent interference mode (#1333): routed waveguides carry their propagation
+    /// phase exp(-i·2π·n_eff(λ)·L/λ), so arm-length differences show as fringes.
+    /// Mirrors <see cref="CAP_Core.Components.Connections.WaveguideConnectionManager.EnableCoherentPropagationPhase"/>
+    /// on the configured canvas.
+    /// </summary>
+    [ObservableProperty] private bool _isCoherentInterference;
+
     /// <summary>True once a completed sweep is available (enables the plot and auto-refresh).</summary>
     [ObservableProperty] private bool _hasResult;
+
+    /// <summary>Measured-spectrum overlay (#1335): CSV load + FSR/n_g extraction drawn on the same plot.</summary>
+    public MeasuredSpectrumOverlayViewModel Overlay { get; }
+
+    /// <summary>
+    /// FSR readout lines under the plot (#1382) — one per simulated curve with
+    /// at least two fringes, so a ring's FSR can be checked against
+    /// FSR = λ²/(n_g·L) without reading it off the axis by eye.
+    /// </summary>
+    public ObservableCollection<FsrReadoutLine> FsrReadouts { get; } = new();
+
+    /// <summary>True when at least one curve produced an FSR readout line.</summary>
+    [ObservableProperty] private bool _hasFsrReadouts;
 
     /// <summary>Debounce used by the auto-refresh; tests set this to zero.</summary>
     internal TimeSpan AutoRefreshDelay { get; set; } = DefaultAutoRefreshDelay;
@@ -39,14 +62,24 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     private readonly CAP_Core.ErrorConsoleService? _errorConsole;
     private readonly SemaphoreSlim _sweepGate = new(1, 1);
     private DesignCanvasViewModel? _canvas;
+    private bool _suppressToggleRefresh;
     private CancellationTokenSource? _sweepCts;
     private CancellationTokenSource? _debounceCts;
+
+    // Last rendered sweep, kept so the measured-spectrum overlay can be drawn
+    // on top without re-running the simulation.
+    private IReadOnlyList<TransmissionCurve>? _lastCurves;
+    private IReadOnlyDictionary<Guid, string>? _lastPinNames;
+    private string? _lastInputLabel;
+    private double _lastDesignWavelengthNm;
 
     /// <summary>Initializes a new instance of <see cref="WavelengthSpectrumViewModel"/>.</summary>
     /// <param name="errorConsole">Optional service for error logging.</param>
     public WavelengthSpectrumViewModel(CAP_Core.ErrorConsoleService? errorConsole = null)
     {
         _errorConsole = errorConsole;
+        Overlay = new MeasuredSpectrumOverlayViewModel(errorConsole);
+        Overlay.OverlayChanged += (_, _) => RedrawPlotWithOverlay();
     }
 
     /// <summary>Configures the panel with the current canvas context.</summary>
@@ -56,7 +89,15 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
         _canvas = canvas;
         StatusText = "";
         HasResult = false;
+        _lastCurves = null;
+        _lastPinNames = null;
+        _lastInputLabel = null;
+        FsrReadouts.Clear();
+        HasFsrReadouts = false;
         PlotModel = WavelengthSpectrumPlotBuilder.CreateEmptyPlotModel();
+        // Sync the toggle from the canvas (e.g. a .lun just loaded with the flag on)
+        // without triggering a refresh: HasResult is already false here.
+        IsCoherentInterference = canvas?.ConnectionManager.EnableCoherentPropagationPhase ?? false;
     }
 
     /// <summary>Runs the wavelength sweep and updates the transmission plot.</summary>
@@ -70,6 +111,33 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
     partial void OnStartNmChanged(int value) => ScheduleAutoRefresh();
     partial void OnEndNmChanged(int value) => ScheduleAutoRefresh();
     partial void OnStepCountChanged(int value) => ScheduleAutoRefresh();
+
+    partial void OnIsCoherentInterferenceChanged(bool value)
+    {
+        if (_canvas != null)
+            _canvas.ConnectionManager.EnableCoherentPropagationPhase = value;
+        if (!_suppressToggleRefresh)
+            ScheduleAutoRefresh();
+    }
+
+    /// <summary>
+    /// Re-syncs the toggle from the canvas flag after a .lun load restored it
+    /// (the canvas instance survives loads, so Configure is not re-run). Never
+    /// schedules a sweep — loading a design must not kick off a simulation.
+    /// </summary>
+    public void SyncCoherentToggleFromCanvas()
+    {
+        if (_canvas == null) return;
+        _suppressToggleRefresh = true;
+        try
+        {
+            IsCoherentInterference = _canvas.ConnectionManager.EnableCoherentPropagationPhase;
+        }
+        finally
+        {
+            _suppressToggleRefresh = false;
+        }
+    }
 
     /// <summary>
     /// Re-runs the sweep automatically after a parameter change — but only once
@@ -152,10 +220,12 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
             _errorConsole?.LogWarning(warning);
 
         var curves = TransmissionSpectrumBuilder.Build(result, circuit.OutputCouplerPinIds);
-        PlotModel = WavelengthSpectrumPlotBuilder.BuildPlotModel(
-            curves,
-            pinId => circuit.PinNames.TryGetValue(pinId, out var name) ? name : null,
-            circuit.DesignWavelengthNm);
+        _lastCurves = curves;
+        _lastPinNames = circuit.PinNames;
+        _lastInputLabel = circuit.InputLabel;
+        _lastDesignWavelengthNm = circuit.DesignWavelengthNm;
+        RedrawPlotWithOverlay();
+        UpdateFsrReadouts(curves, circuit.PinNames, circuit.InputLabel);
         HasResult = true;
 
         StatusText = curves.All(c => c.IsAtNoiseFloor)
@@ -163,6 +233,59 @@ public partial class WavelengthSpectrumViewModel : ObservableObject
             : string.Format(
                 LocalizationService.Instance.Translate("Analysis.Spectrum.Complete"),
                 result.DataPoints.Count);
+    }
+
+    /// <summary>
+    /// Rebuilds the plot from the last sweep plus the current measured-spectrum
+    /// overlay (if any). No-op when no sweep has been rendered yet — the overlay
+    /// is only meaningful on top of a simulated curve.
+    /// </summary>
+    private void RedrawPlotWithOverlay()
+    {
+        if (_lastCurves == null || _lastPinNames == null) return;
+        var pinNames = _lastPinNames;
+        var inputLabel = _lastInputLabel;
+        PlotModel = WavelengthSpectrumPlotBuilder.BuildPlotModel(
+            _lastCurves,
+            pinId => pinNames.TryGetValue(pinId, out var name)
+                ? SpectrumLegendLabelBuilder.ComposeCurveLabel(inputLabel, name)
+                : null,
+            _lastDesignWavelengthNm,
+            Overlay.Spectrum);
+    }
+
+    /// <summary>
+    /// Rebuilds the FSR readout lines from a finished sweep (#1382). Labels match
+    /// the plot legend so each line is attributable to its curve; curves without
+    /// at least two fringes are skipped silently. Internal so tests can drive it
+    /// with synthetic curves instead of a full simulation.
+    /// </summary>
+    internal void UpdateFsrReadouts(
+        IReadOnlyList<TransmissionCurve> curves,
+        IReadOnlyDictionary<Guid, string> pinNames,
+        string? inputLabel)
+    {
+        FsrReadouts.Clear();
+        var i18n = LocalizationService.Instance;
+        foreach (var curve in curves)
+        {
+            var fsr = CurveFsrAnalyzer.Analyze(curve);
+            if (fsr == null) continue;
+
+            string outputLabel = pinNames.TryGetValue(curve.PinId, out var name)
+                ? name
+                : curve.PinId.ToString("N")[..8];
+            string label = SpectrumLegendLabelBuilder.ComposeCurveLabel(inputLabel, outputLabel);
+            string fsrText = fsr.MeanFsrNm.ToString("0.0", CultureInfo.InvariantCulture);
+            string key = fsr.ExtremumKind == SpectrumExtremumKind.Peaks
+                ? "Spectrum.Fsr.ReadoutPeaks"
+                : "Spectrum.Fsr.ReadoutDips";
+            string text = string.Format(
+                CultureInfo.InvariantCulture, i18n.Translate(key), label, fsrText, fsr.ExtremumCount);
+            FsrReadouts.Add(new FsrReadoutLine(
+                label, fsr.MeanFsrNm, fsr.ExtremumCount, fsr.ExtremumKind, text));
+        }
+        HasFsrReadouts = FsrReadouts.Count > 0;
     }
 
     private bool TryCreateConfiguration(out WavelengthSweepConfiguration? config)

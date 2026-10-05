@@ -215,7 +215,7 @@ public partial class WaveguideRouter
     /// <summary>
     /// Routes a waveguide between two pins. With <see cref="PreferDirectStyledRoutes"/> (the
     /// default) the DIRECT styled geometry is tried first and A* only runs when obstacles
-    /// actually block the styled path (issue #860). The A* attempt itself is two-phase.
+    /// actually block the styled path (issue #860).
     /// The first attempt honors the process bend-radius floor
     /// (<see cref="ResolveProcessFloorFor"/> — per-connection when
     /// <see cref="ConnectionProcessFloorProvider"/> is wired, else the canvas-wide
@@ -287,8 +287,47 @@ public partial class WaveguideRouter
             }
         }
 
-        return RouteManhattanFallback(startX, startY, startAngle, endX, endY, endInputAngle,
-                                      connectionRadius, effectiveRadius, floorRaisesRadius);
+        var fallbackPath = RouteManhattanFallback(startX, startY, startAngle, endX, endY, endInputAngle,
+                                                  connectionRadius, effectiveRadius, floorRaisesRadius);
+        if (fallbackPath.IsBlockedFallback)
+        {
+            fallbackPath.FailureReason = ClassifyBlockedFallback(startPin, endPin, effectiveRadius);
+        }
+        return fallbackPath;
+    }
+
+    /// <summary>
+    /// Classifies an existing blocked fallback whose reason was never recorded — a cached
+    /// route restored from a saved design (the .lun format persists the blocked flag but
+    /// not the reason). Same verdict <see cref="Route"/> stamps on a freshly routed
+    /// blocked fallback.
+    /// </summary>
+    public RoutingFailureReason ClassifyRestoredBlockedFallback(PhysicalPin startPin, PhysicalPin endPin)
+    {
+        double corridorRadius = Math.Max(MinBendRadiusMicrometers, ResolveProcessFloorFor(startPin, endPin));
+        return ClassifyBlockedFallback(startPin, endPin, corridorRadius);
+    }
+
+    /// <summary>
+    /// Classifies why a blocked fallback could not be routed. A pin whose escape channel
+    /// (the corridor <see cref="TryRouteAStar"/> punches through component geometry —
+    /// length 3×radius, width radius) is sealed by a FOREIGN component body can never be
+    /// reached, no matter how the remaining wires are ordered:
+    /// <see cref="RoutingFailureReason.EndpointBlocked"/>. Everything else is
+    /// <see cref="RoutingFailureReason.Contention"/>, which ordering retries may fix.
+    /// </summary>
+    private RoutingFailureReason ClassifyBlockedFallback(
+        PhysicalPin startPin, PhysicalPin endPin, double corridorRadius)
+    {
+        var grid = PathfindingGrid;
+        if (grid == null)
+            return RoutingFailureReason.Contention;
+
+        double corridorLength = corridorRadius * 3;
+        return grid.IsPinEscapeSealedByForeignBody(startPin, corridorLength, corridorRadius) ||
+               grid.IsPinEscapeSealedByForeignBody(endPin, corridorLength, corridorRadius)
+            ? RoutingFailureReason.EndpointBlocked
+            : RoutingFailureReason.Contention;
     }
 
     /// <summary>

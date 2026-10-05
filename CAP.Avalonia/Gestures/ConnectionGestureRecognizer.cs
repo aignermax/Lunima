@@ -39,7 +39,12 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
         if (mainVm?.CanvasInteraction.CurrentMode != InteractionMode.Connect) return false;
         if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return false;
 
-        var pin = canvas.HighlightedPin?.Pin ?? DesignCanvasHitTesting.HitTestPin(canvasPoint, canvas, _getZoom());
+        // The press position is authoritative: the hover highlight can be stale when no
+        // pointer-move refreshes it before the press (touch / long-press), and would
+        // otherwise hijack the drag start onto a pin of a different component far from
+        // the actual press.
+        var pin = DesignCanvasHitTesting.HitTestPin(canvasPoint, canvas, _getZoom())
+                  ?? canvas.HighlightedPin?.Pin;
         if (pin != null)
         {
             _state.ConnectionDragStartPin = pin;
@@ -117,7 +122,11 @@ public class ConnectionGestureRecognizer : IGestureRecognizer
         if (_state.ConnectionDragStartPin == null) return;
 
         var startPin = _state.ConnectionDragStartPin;
-        var targetPin = canvas.HighlightedPin?.Pin;
+        // Same staleness guard as at press time: commit to the pin at the last known
+        // pointer position of this drag, not to whatever the hover highlight last
+        // touched — the two diverge when no move event refreshes the highlight.
+        var targetPin = DesignCanvasHitTesting.HitTestPin(_state.ConnectionDragCurrentPoint, canvas, _getZoom())
+                        ?? canvas.HighlightedPin?.Pin;
         bool isValidTarget = targetPin != null && targetPin != startPin;
 
         if (isValidTarget && !PinKindHelper.AreKindsCompatible(startPin, targetPin!))

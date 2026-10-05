@@ -25,8 +25,8 @@ internal sealed class MonteCarloSpectrumSampler
     private readonly Dictionary<Guid, string> _pinNames;
     private Guid? _selectedPinId;
 
-    /// <summary>Wavelength values (nm) of every curve index.</summary>
-    public int[] Wavelengths { get; }
+    /// <summary>Wavelength values (nm, sub-nm resolution) of every curve index.</summary>
+    public double[] Wavelengths { get; }
 
     /// <summary>Readable name of the evaluated output pin (available after the first run).</summary>
     public string SelectedPinName =>

@@ -58,6 +58,13 @@ public class FrozenWaveguidePath : ICloneable
     public double PropagationLossDbPerCm { get; set; } = 0.5;
 
     /// <summary>
+    /// Loss per 90-degree bend in dB, captured from the original connection so the
+    /// frozen path keeps the connection's bend loss. Default matches the
+    /// WaveguideConnection default (0.05 dB per 90° bend).
+    /// </summary>
+    public double BendLossDbPer90Deg { get; set; } = 0.05;
+
+    /// <summary>
     /// Dispersion model of the original connection's waveguide (group index and loss vs.
     /// wavelength), captured from the live connection when the group was formed. Null when
     /// the source waveguide carried none — and after a .lun round-trip, since the model is
@@ -116,6 +123,7 @@ public class FrozenWaveguidePath : ICloneable
         WidthMicrometers = connection.WidthMicrometers;
         IsRouteFrozen = connection.IsRouteFrozen;
         PropagationLossDbPerCm = connection.PropagationLossDbPerCm;
+        BendLossDbPer90Deg = connection.BendLossDbPer90Deg;
         DispersionModel = connection.DispersionModel;
         BendRadiusOverrides.Clear();
         foreach (var (bendIndex, radius) in connection.BendRadiusOverrides)
@@ -141,6 +149,7 @@ public class FrozenWaveguidePath : ICloneable
         connection.WidthMicrometers = WidthMicrometers;
         connection.IsRouteFrozen = IsRouteFrozen;
         connection.PropagationLossDbPerCm = PropagationLossDbPerCm;
+        connection.BendLossDbPer90Deg = BendLossDbPer90Deg;
         connection.DispersionModel = DispersionModel;
         connection.BendRadiusOverrides.Clear();
         foreach (var (bendIndex, radius) in BendRadiusOverrides)
@@ -165,6 +174,7 @@ public class FrozenWaveguidePath : ICloneable
         WidthMicrometers = source.WidthMicrometers;
         IsRouteFrozen = source.IsRouteFrozen;
         PropagationLossDbPerCm = source.PropagationLossDbPerCm;
+        BendLossDbPer90Deg = source.BendLossDbPer90Deg;
         DispersionModel = source.DispersionModel;
         BendRadiusOverrides.Clear();
         foreach (var (bendIndex, radius) in source.BendRadiusOverrides)
@@ -175,9 +185,14 @@ public class FrozenWaveguidePath : ICloneable
     }
 
     /// <summary>
-    /// Amplitude transmission coefficient accounting for propagation loss.
+    /// Amplitude transmission coefficient accounting for propagation and bend loss —
+    /// the same loss model WaveguideConnection applies, so freezing a connection does
+    /// not silently drop its bend loss. Smooth polyline styles (SBend/Cobra) contain
+    /// no bend segments: their bend loss stays approximated as pure propagation loss
+    /// over the sampled curve length, exactly like the connection does.
     /// Returns Complex.One when no path is available (conservative, no loss assumed).
-    /// Formula: amplitude = 10^(-loss_dB / 20), where loss_dB = PropagationLossDbPerCm * length_cm.
+    /// Formula: amplitude = 10^(-loss_dB / 20), where
+    /// loss_dB = PropagationLossDbPerCm * length_cm + equivalent_90deg_bends * BendLossDbPer90Deg.
     /// </summary>
     public Complex TransmissionCoefficient
     {
@@ -188,10 +203,47 @@ public class FrozenWaveguidePath : ICloneable
 
             double lengthMicrometers = Path.TotalLengthMicrometers;
             double lengthCm = lengthMicrometers / 10_000.0;
-            double lossDb = PropagationLossDbPerCm * lengthCm;
+            double lossDb = PropagationLossDbPerCm * lengthCm
+                + Path.TotalEquivalent90DegreeBends * BendLossDbPer90Deg;
             double amplitude = Math.Pow(10.0, -lossDb / 20.0);
             return new Complex(amplitude, 0);
         }
+    }
+
+    /// <summary>
+    /// Effective refractive index at the given wavelength: from the captured
+    /// <see cref="DispersionModel"/> when present, otherwise from the PDK dispersion
+    /// stamped on an endpoint pin's component (start pin wins, exactly like a freshly
+    /// routed connection resolves it — and the state every frozen path is in after a
+    /// .lun round-trip, which does not persist the captured model), otherwise
+    /// <see cref="WaveguideConnection.DefaultEffectiveIndex"/>.
+    /// </summary>
+    /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+    public double GetEffectiveIndex(double wavelengthNm)
+    {
+        var dispersion = DispersionModel
+            ?? StartPin?.ParentComponent?.WaveguideDispersion
+            ?? EndPin?.ParentComponent?.WaveguideDispersion;
+        return dispersion?.NEffAt(wavelengthNm) ?? WaveguideConnection.DefaultEffectiveIndex;
+    }
+
+    /// <summary>
+    /// Loss-only <see cref="TransmissionCoefficient"/> multiplied by the coherent
+    /// propagation phase exp(-i·2π·n_eff(λ)·L/λ) accumulated along the frozen path —
+    /// the same coefficient a routed connection carries in coherent mode, so grouping
+    /// a circuit does not change its interference. The magnitude is unchanged;
+    /// only the phase carries the optical path length.
+    /// </summary>
+    /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+    public Complex GetCoherentTransmission(double wavelengthNm)
+    {
+        if (Path?.Segments == null || Path.Segments.Count == 0)
+            return Complex.One;
+
+        double wavelengthMicrometers = wavelengthNm / 1000.0;
+        double phaseRadians = -2.0 * Math.PI * GetEffectiveIndex(wavelengthNm)
+            * Path.TotalLengthMicrometers / wavelengthMicrometers;
+        return TransmissionCoefficient * Complex.Exp(new Complex(0, phaseRadians));
     }
 
     /// <summary>

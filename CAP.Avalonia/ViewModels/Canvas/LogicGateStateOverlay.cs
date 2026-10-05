@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CAP_Core.Components.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CAP.Avalonia.ViewModels.Canvas;
@@ -17,16 +18,35 @@ namespace CAP.Avalonia.ViewModels.Canvas;
 /// </summary>
 public sealed class LogicGateStateOverlay
 {
+    private Dictionary<string, ComponentGroup>? _gateGroupsById;
+
     /// <summary>The current badge per gate output pin, empty while no network is shown.</summary>
     public ObservableCollection<LogicGateBadgeViewModel> Badges { get; } = new();
 
     /// <summary>Raised after every badge mutation (rebuild or clear) so the canvas repaints.</summary>
     public event EventHandler? StatesChanged;
 
+    /// <summary>
+    /// The gate-id → gate-group map of the canvas's design (issue #1398): every group
+    /// carrying a persisted pin assignment, nested gates of hierarchical cell instances
+    /// keyed by their network path (<c>CELL0/REG00</c>). Built once and reused across
+    /// frames — badge and marker rendering must not re-walk the design per frame; the
+    /// cache drops on every badge mutation and on every top-level component change
+    /// (wired by <see cref="DesignCanvasViewModel"/>), the moments membership can move.
+    /// </summary>
+    /// <param name="topLevel">The canvas's top-level components.</param>
+    public IReadOnlyDictionary<string, ComponentGroup> GateGroupsById(
+        ObservableCollection<ComponentViewModel> topLevel)
+        => _gateGroupsById ??= LogicGateGroupLocator.BuildMap(topLevel);
+
+    /// <summary>Drops the cached gate-group map — the next read re-walks the design.</summary>
+    internal void InvalidateGateGroupMap() => _gateGroupsById = null;
+
     /// <summary>Replaces all badges with one freshly evaluated state per chip.</summary>
     /// <param name="states">One entry per gate output pin, plus one per named input pin of the evaluated network.</param>
     public void ShowStates(IEnumerable<LogicGateBadgeState> states)
     {
+        InvalidateGateGroupMap();
         Badges.Clear();
         foreach (var state in states)
         {
@@ -38,6 +58,7 @@ public sealed class LogicGateStateOverlay
     /// <summary>Removes every badge — the network behind them is gone.</summary>
     public void Clear()
     {
+        InvalidateGateGroupMap();
         if (Badges.Count == 0)
             return;
         Badges.Clear();

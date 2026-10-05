@@ -22,7 +22,7 @@ public class GoldenComparerTests
 
     private static GoldenGateResult Run(double[] values) => new()
     {
-        WavelengthsNm = new[] { 1500, 1600 },
+        WavelengthsNm = new[] { 1500.0, 1600.0 },
         Transmission = { ["out.pin"] = values }
     };
 
@@ -31,7 +31,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["out.pin"] = new[] { 0.5, 0.4 } }
         };
 
@@ -43,7 +43,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["out.pin"] = new[] { 0.5, 0.4 } }
         };
 
@@ -59,7 +59,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1510, 1610 },
+            WavelengthsNm = new[] { 1510.0, 1610.0 },
             Transmission = { ["out.pin"] = new[] { 0.5, 0.4 } }
         };
 
@@ -74,7 +74,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["other.pin"] = new[] { 0.5, 0.4 } }
         };
 
@@ -87,7 +87,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["out.pin"] = new[] { 0.5, 0.4 } },
             TruthTable = { new GoldenTruthRow
             {
@@ -111,7 +111,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["out.pin"] = new[] { 0.5, 0.4 } },
             TruthTable = { new GoldenTruthRow { WavelengthNm = 1550 } }
         };
@@ -126,7 +126,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["out.pin"] = new[] { 0.0, 0.0 } }
         };
 
@@ -139,7 +139,7 @@ public class GoldenComparerTests
     {
         var reference = new GoldenReference
         {
-            WavelengthsNm = new[] { 1500, 1600 },
+            WavelengthsNm = new[] { 1500.0, 1600.0 },
             Transmission = { ["out.pin"] = new[] { 0.0, 0.0 } }
         };
 
