@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.LogicCellInstanceHelpFlyout">
+
+    <!-- Cell-instance help of the Logic tab (#1411, #1152 pattern): three short
+         sentences (text budget, all five locales) plus one looping "one template,
+         stamped twice" diagram — a translucent copy of the template slides onto the
+         CELL0 slot, then onto the CELL1 slot, then one register bit lights up in
+         CELL0 only while CELL1 stays dark: independent state per instance. The
+         stamp ghosts and the lit bit are the bespoke CellInstanceStampAnimation
+         overlay. Hosted as the HelpContent of the HelpFlyoutButton next to the
+         Outputs label (shown only when the network contains cell groups), which
+         supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                   Text="{loc:Localize LogicPanelCellHelp.Body}"/>
+
+        <!-- one template, stamped twice; the lit bit lives in CELL0 only. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="120">
+                    <!-- the reusable template -->
+                    <TextBlock Canvas.Left="14" Canvas.Top="16" Text="{loc:Localize LogicPanelCellHelp.DiagramTemplate}"
+                               FontSize="9" Foreground="Gray"/>
+                    <Rectangle Canvas.Left="14" Canvas.Top="34" Width="96" Height="52"
+                               Fill="#1d1d2d" Stroke="#8d8dbd" StrokeThickness="1"
+                               RadiusX="4" RadiusY="4" StrokeDashArray="4,3"/>
+                    <Rectangle Canvas.Left="24" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
+                    <Rectangle Canvas.Left="44" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
+                    <Rectangle Canvas.Left="64" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
+                    <Rectangle Canvas.Left="84" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
+                    <!-- stamping arrow: template → instances -->
+                    <Line StartPoint="114,60" EndPoint="168,60" Stroke="#909090" StrokeThickness="2"/>
+                    <Polyline Points="160,54 170,60 160,66" Stroke="#909090" StrokeThickness="2"/>
+                    <!-- instance CELL0 -->
+                    <Border Canvas.Left="176" Canvas.Top="8" Width="120" Height="46"
+                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                    <TextBlock Canvas.Left="182" Canvas.Top="12" Text="CELL0" FontSize="9"
+                               FontFamily="Consolas" Foreground="#cfe0ff"/>
+                    <Rectangle Canvas.Left="196" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <Rectangle Canvas.Left="216" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <Rectangle Canvas.Left="236" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <Rectangle Canvas.Left="256" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <TextBlock Canvas.Left="302" Canvas.Top="30" Text="CELL0/REG00" FontSize="9"
+                               FontFamily="Consolas" Foreground="Gray"/>
+                    <!-- instance CELL1 -->
+                    <Border Canvas.Left="176" Canvas.Top="66" Width="120" Height="46"
+                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                    <TextBlock Canvas.Left="182" Canvas.Top="70" Text="CELL1" FontSize="9"
+                               FontFamily="Consolas" Foreground="#cfe0ff"/>
+                    <Rectangle Canvas.Left="196" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <Rectangle Canvas.Left="216" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <Rectangle Canvas.Left="236" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <Rectangle Canvas.Left="256" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                    <!-- animated stamp ghosts + the lit CELL0 bit -->
+                    <ha:CellInstanceStampAnimation Width="368" Height="120" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Text="{loc:Localize LogicPanelCellHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+</UserControl>

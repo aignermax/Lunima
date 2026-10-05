@@ -145,6 +145,7 @@ public partial class LogicPanelViewModel : ObservableObject
         _canvas?.LogicGateStates.Clear();
         HasFanOutWarnings = false;
         CriticalPathText = "";
+        HasCellGroups = false;
         ClearTimeline();
         ClearRegisterStates();
         DetachBusRows();

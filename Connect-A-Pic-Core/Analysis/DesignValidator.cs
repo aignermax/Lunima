@@ -22,6 +22,7 @@ public class DesignValidator
     private readonly ChipletInterfaceChecker _chipletInterfaceChecker = new();
     private readonly ComponentPdkCompatibilityChecker _pdkCompatibilityChecker = new();
     private readonly ComponentFootprintOverlapChecker _footprintOverlapChecker = new();
+    private readonly FrozenBlockedPathChecker _frozenBlockedPathChecker = new();
 
     /// <summary>
     /// Validates all provided waveguide connections and returns any issues found.
@@ -48,9 +49,12 @@ public class DesignValidator
 
     /// <summary>
     /// Validates waveguide connections and detects overlaps with frozen paths in ComponentGroups.
+    /// Also reports frozen group paths (recursively, nested groups included) whose routed
+    /// geometry is a blocked fallback — those carry <see cref="Routing.RoutedPath.IsBlockedFallback"/>
+    /// but have no live connection for the connection-level check to see.
     /// </summary>
     /// <param name="connections">Regular waveguide connections to validate.</param>
-    /// <param name="groups">ComponentGroups whose frozen internal paths are checked for overlap.</param>
+    /// <param name="groups">ComponentGroups whose frozen internal paths are checked.</param>
     /// <returns>A list of all design issues found, empty if the design is valid.</returns>
     public List<DesignIssue> Validate(
         IEnumerable<WaveguideConnection> connections,
@@ -62,6 +66,7 @@ public class DesignValidator
         var connectionList = connections.ToList();
         var issues = Validate(connectionList);
         issues.AddRange(_overlapDetector.DetectOverlaps(connectionList, groups));
+        issues.AddRange(_frozenBlockedPathChecker.Check(groups));
         return issues;
     }
 

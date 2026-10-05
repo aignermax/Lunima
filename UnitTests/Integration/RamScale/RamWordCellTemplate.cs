@@ -90,7 +90,8 @@ public sealed partial class RamWordCellTemplate
     {
         var (startRole, startPin) = EndpointRole(connection.StartPin, canvasGates, nameToRole);
         var (endRole, endPin) = EndpointRole(connection.EndPin, canvasGates, nameToRole);
-        return new TemplatePath(startRole, startPin, endRole, endPin, SegmentsToJson(connection.RoutedPath!));
+        return new TemplatePath(startRole, startPin, endRole, endPin, SegmentsToJson(connection.RoutedPath!),
+            connection.RoutedPath!.IsBlockedFallback);
     }
 
     /// <summary>Maps a live connection endpoint pin back to its gate role and external pin name.</summary>
@@ -156,7 +157,7 @@ public sealed partial class RamWordCellTemplate
         gateEntry["GroupDto"]!["ExternalPins"]!.AsArray()
             .Max(p => p![property]!.GetValue<double>());
 
-    private sealed record TemplatePath(string StartRole, string StartPin, string EndRole, string EndPin, JsonArray Segments);
+    private sealed record TemplatePath(string StartRole, string StartPin, string EndRole, string EndPin, JsonArray Segments, bool IsBlockedFallback);
 
     private sealed record TemplatePort(string Role, string Pin, double RelativeX, double RelativeY, double AngleDegrees);
 }
