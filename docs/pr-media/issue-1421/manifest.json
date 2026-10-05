@@ -1,0 +1,26 @@
+[
+  {
+    "file": "blocked-wires-en-1-approach.png",
+    "caption": "Design Checks help, \u0022Blocked wires\u0022: left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens. (approach \u2014 both pulses still on their way)"
+  },
+  {
+    "file": "blocked-wires-en-2-fix.png",
+    "caption": "Design Checks help, \u0022Blocked wires\u0022: left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens. (fix-in-progress \u2014 the component slides away, the neighbours spread)"
+  },
+  {
+    "file": "blocked-wires-en-3-freed.png",
+    "caption": "Design Checks help, \u0022Blocked wires\u0022: left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens. (freed \u2014 fresh pulses cross both routes end to end)"
+  },
+  {
+    "file": "blocked-wires-de-1-approach.png",
+    "caption": "Design Checks help, \u0022Blocked wires\u0022: left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens. (approach \u2014 both pulses still on their way)"
+  },
+  {
+    "file": "blocked-wires-de-2-fix.png",
+    "caption": "Design Checks help, \u0022Blocked wires\u0022: left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens. (fix-in-progress \u2014 the component slides away, the neighbours spread)"
+  },
+  {
+    "file": "blocked-wires-de-3-freed.png",
+    "caption": "Design Checks help, \u0022Blocked wires\u0022: left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens. (freed \u2014 fresh pulses cross both routes end to end)"
+  }
+]

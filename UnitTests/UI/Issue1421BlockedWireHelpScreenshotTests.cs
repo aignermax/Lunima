@@ -17,53 +17,66 @@ using Xunit;
 namespace UnitTests.UI;
 
 /// <summary>
-/// Visual documentation for the #1247 "Chiplet links" section of the Design Checks help:
-/// opens the panel's (?) flyout headless and captures its Gaussian-beam animation at the
-/// three showcase phases — butt-coupled (<c>Progress</c> = 0: facets touch, η = 100 %),
-/// facet gap (0.5: the beam has widened across the grown gap, facet B still on axis) and
-/// gap + lateral offset (1: facet B additionally shifted sideways, lowest η). The readout
-/// is computed with the real core coupling functions (pinned in
-/// <see cref="ChipletLinkCouplingAnimationTests"/>), never hard-coded. Scrubbing
+/// Visual documentation for the #1421 "Blocked wires" section of the Design Checks help:
+/// opens the panel's (?) flyout headless and captures the two-vignette animation
+/// (sealed pin → move the component; no free lane → make room) at the three showcase
+/// phases — approach, fix-in-progress, freed — in English and German. The mid frame must
+/// differ from the first (proof the animation animates). Scrubbing
 /// <see cref="HelpAnimationBase.Progress"/> with <c>AutoPlay</c> off makes every frame
-/// deterministic. The gap frame must differ from the first (proof the gap actually grows);
-/// PNGs + manifest.json land in <c>docs/pr-media/issue-1247/</c> for PR review embedding.
-/// Same pattern as <see cref="Issue1237CarryRippleScreenshotTests"/>.
+/// deterministic. PNGs + manifest.json land in <c>docs/pr-media/issue-1421/</c> for PR
+/// review embedding. Same pattern as <see cref="Issue1247ChipletLinkHelpScreenshotTests"/>.
 /// </summary>
 [Trait("Category", "UiScreenshots")]
 [Collection("LocalizationSingleton")]
-public class Issue1247ChipletLinkHelpScreenshotTests
+public class Issue1421BlockedWireHelpScreenshotTests
 {
+    private const int WindowWidth = 480;
+    private const int WindowHeight = 760;
     private const int MinDistinctSampledColors = 10;
     private const int SampleGridSize = 64;
 
-    /// <summary>One manifest row: PNG file name plus its one-sentence caption.</summary>
     private sealed record ManifestEntry(string File, string Caption);
 
-    /// <summary>Captures butt-coupled / gap / gap+offset frames of the flyout section.</summary>
+    /// <summary>Captures approach / fix / freed frames of the flyout section in en and de.</summary>
     [AvaloniaFact]
-    public async Task CaptureChipletLinkAnimation()
+    public async Task CaptureBlockedWireHelpFlyout()
     {
-        var dir = ResolveOutputDirectory();
+        var dir = ScreenshotArtifacts.ResolvePrMediaDirectory("issue-1421");
         Directory.CreateDirectory(dir);
         foreach (var stale in Directory.GetFiles(dir, "*.png"))
             File.Delete(stale);
 
         var manifest = new List<ManifestEntry>();
-        const string caption =
-            "Design Checks help, \"Chiplet links\": light leaves facet A as a widening Gaussian beam — a facet gap lets it diverge, a lateral offset lets it miss facet B's mode; the readout is the real simulated coupling η at 1550 nm.";
-
-        // Pin the locale: the localization singleton is process-global, so a
-        // previously run test may have left another language active — and text
-        // length (hence the needed window height) depends on it.
         var previousLanguage = LocalizationService.Instance.ActiveLanguageCode;
-        LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
+        try
+        {
+            await CaptureInLanguage(SupportedLanguage.English.Code, "en", compareMidToFirst: true, dir, manifest);
+            await CaptureInLanguage(SupportedLanguage.German.Code, "de", compareMidToFirst: false, dir, manifest);
+        }
+        finally
+        {
+            LocalizationService.Instance.SetLanguage(previousLanguage);
+        }
+
+        ScreenshotArtifacts.WriteText(Path.Combine(dir, "manifest.json"),
+            JsonSerializer.Serialize(manifest,
+                new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        manifest.Count.ShouldBe(6);
+    }
+
+    /// <summary>Opens the (?) flyout in one language and captures the three showcase frames.</summary>
+    private static async Task CaptureInLanguage(
+        string languageCode, string fileTag, bool compareMidToFirst, string dir, List<ManifestEntry> manifest)
+    {
+        LocalizationService.Instance.SetLanguage(languageCode);
 
         var vm = MainViewModelTestHelper.CreateMainViewModel();
         var panel = new DesignChecksPanel { DataContext = vm };
         var window = new Window
         {
-            Width = 520,
-            Height = 700,
+            Width = WindowWidth,
+            Height = WindowHeight,
+            Background = new Avalonia.Media.SolidColorBrush(0xFF1E1E1E),
             Content = panel,
         };
         window.Show();
@@ -85,54 +98,54 @@ public class Issue1247ChipletLinkHelpScreenshotTests
             Dispatcher.UIThread.RunJobs();
 
             var animations = window.GetVisualDescendants()
-                .OfType<ChipletLinkCouplingAnimation>().ToList();
-            animations.ShouldNotBeEmpty("the flyout must contain the Chiplet links animation");
+                .OfType<BlockedWireHelpAnimation>().ToList();
+            animations.ShouldNotBeEmpty("the flyout must contain the Blocked wires animation");
             foreach (var animation in animations)
                 animation.AutoPlay = false;
 
-            // The flyout caps at 460 px and scrolls: sections added above "Chiplet
-            // links" push it below the fold, where every capture would look identical.
-            // Scroll the animation into the visible region before capturing.
+            // The flyout caps at 460 px and scrolls: make the captures independent of
+            // how many sections sit above "Blocked wires" by scrolling it into view.
             foreach (var animation in animations)
                 animation.BringIntoView();
             PumpRenderLoop();
 
-            SetProgress(animations, ChipletLinkCouplingAnimation.ShowcasePhases[0]);
-            var first = Capture(window, dir, "chiplet-link-1-butt-coupled.png",
-                caption + " (butt-coupled — facets touch, η = 100 %)", manifest);
+            const string caption =
+                "Design Checks help, \"Blocked wires\": left, a pulse sealed in by a component footprint stalls and turns red until the component slides away; right, a corridor full of parallel waveguides shows the dashed red blocked fallback until the neighbours spread apart and a lane opens.";
 
-            SetProgress(animations, ChipletLinkCouplingAnimation.ShowcasePhases[1]);
-            var mid = Capture(window, dir, "chiplet-link-2-facet-gap.png",
-                caption + " (facet gap — the beam has diverged across the gap)", manifest);
+            var first = CaptureAtProgress(window, animations, dir, $"blocked-wires-{fileTag}-1-approach.png",
+                caption + " (approach — both pulses still on their way)", manifest,
+                BlockedWireHelpAnimation.ShowcasePhases[0]);
 
-            SetProgress(animations, ChipletLinkCouplingAnimation.ShowcasePhases[2]);
-            using (Capture(window, dir, "chiplet-link-3-gap-and-offset.png",
-                caption + " (gap + lateral offset — facet B is shifted sideways, lowest η)", manifest))
+            var mid = CaptureAtProgress(window, animations, dir, $"blocked-wires-{fileTag}-2-fix.png",
+                caption + " (fix-in-progress — the component slides away, the neighbours spread)", manifest,
+                BlockedWireHelpAnimation.ShowcasePhases[1]);
+
+            using (CaptureAtProgress(window, animations, dir, $"blocked-wires-{fileTag}-3-freed.png",
+                caption + " (freed — fresh pulses cross both routes end to end)", manifest,
+                BlockedWireHelpAnimation.ShowcasePhases[2]))
             {
             }
 
-            using (first)
-            using (mid)
+            if (compareMidToFirst)
             {
-                CountDifferingPixels(first, mid).ShouldBeGreaterThan(0,
-                    "gap frame must differ from the butt-coupled frame — the animation is not animating");
+                using (first)
+                using (mid)
+                {
+                    CountDifferingPixels(first, mid).ShouldBeGreaterThan(0,
+                        "mid frame must differ from the first — the animation is not animating");
+                }
+            }
+            else
+            {
+                first.Dispose();
+                mid.Dispose();
             }
         }
         finally
         {
             window.Close();
             Dispatcher.UIThread.RunJobs();
-            LocalizationService.Instance.SetLanguage(previousLanguage);
         }
-
-        ScreenshotArtifacts.WriteText(
-            Path.Combine(dir, "manifest.json"),
-            JsonSerializer.Serialize(manifest, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            }));
-        manifest.Count.ShouldBe(3);
     }
 
     /// <summary>
@@ -167,11 +180,14 @@ public class Issue1247ChipletLinkHelpScreenshotTests
         }
     }
 
-    private static void SetProgress(IEnumerable<HelpAnimationBase> animations, double progress)
+    /// <summary>Scrubs all animations to one loop position and captures the frame.</summary>
+    private static WriteableBitmap CaptureAtProgress(
+        Window window, IEnumerable<HelpAnimationBase> animations,
+        string dir, string filename, string caption, List<ManifestEntry> manifest, double progress)
     {
         foreach (var animation in animations)
             animation.Progress = progress;
-        PumpRenderLoop();
+        return Capture(window, dir, filename, caption, manifest);
     }
 
     /// <summary>Captures the window to a PNG, fails on a near-blank frame, records the caption.</summary>
@@ -201,15 +217,25 @@ public class Issue1247ChipletLinkHelpScreenshotTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    /// <summary>Samples a grid of pixels and counts distinct ARGB values (blank-frame guard).</summary>
-    private static int CountDistinctSampledColors(WriteableBitmap bitmap) =>
-        SamplePixels(bitmap).ToHashSet().Count;
+    private static int CountDistinctSampledColors(WriteableBitmap bitmap)
+    {
+        using var fb = bitmap.Lock();
+        int width = fb.Size.Width;
+        int height = fb.Size.Height;
+        if (width <= 0 || height <= 0) return 0;
 
-    /// <summary>
-    /// Counts pixels that differ between two same-sized frames. Full-frame (not the
-    /// sample grid): the beam and the spillover spot are only a few pixels wide, so a
-    /// coarse sampling grid can miss them entirely.
-    /// </summary>
+        int stepX = Math.Max(1, width / SampleGridSize);
+        int stepY = Math.Max(1, height / SampleGridSize);
+        var colors = new HashSet<int>();
+        for (int y = 0; y < height; y += stepY)
+        {
+            var rowAddr = fb.Address + y * fb.RowBytes;
+            for (int x = 0; x < width; x += stepX)
+                colors.Add(Marshal.ReadInt32(rowAddr, x * 4));
+        }
+        return colors.Count;
+    }
+
     private static int CountDifferingPixels(WriteableBitmap a, WriteableBitmap b)
     {
         using var fa = a.Lock();
@@ -222,36 +248,9 @@ public class Issue1247ChipletLinkHelpScreenshotTests
             var rowA = fa.Address + y * fa.RowBytes;
             var rowB = fb.Address + y * fb.RowBytes;
             for (int x = 0; x < fa.Size.Width; x++)
-            {
                 if (Marshal.ReadInt32(rowA, x * 4) != Marshal.ReadInt32(rowB, x * 4))
                     differing++;
-            }
         }
         return differing;
     }
-
-    /// <summary>Reads a deterministic grid of ARGB pixels in scan order.</summary>
-    private static List<int> SamplePixels(WriteableBitmap bitmap)
-    {
-        using var fb = bitmap.Lock();
-        int width = fb.Size.Width;
-        int height = fb.Size.Height;
-        var pixels = new List<int>();
-        if (width <= 0 || height <= 0)
-            return pixels;
-
-        int stepX = Math.Max(1, width / SampleGridSize);
-        int stepY = Math.Max(1, height / SampleGridSize);
-        for (int y = 0; y < height; y += stepY)
-        {
-            var rowAddr = fb.Address + y * fb.RowBytes;
-            for (int x = 0; x < width; x += stepX)
-                pixels.Add(Marshal.ReadInt32(rowAddr, x * 4));
-        }
-        return pixels;
-    }
-
-    /// <summary>Repo-root <c>docs/pr-media/issue-1247</c> — only with <c>CAP_UPDATE_PR_MEDIA=1</c>; otherwise a temp dir.</summary>
-    private static string ResolveOutputDirectory() =>
-        ScreenshotArtifacts.ResolvePrMediaDirectory("issue-1247");
 }

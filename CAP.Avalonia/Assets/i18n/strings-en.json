@@ -311,6 +311,8 @@
   "DesignChecks.WaveguideCrossing": "Waveguide crossing: {0} crosses {1} — no crossing component at the intersection; the exported layout will fail overlap checks",
   "DesignChecksHelp.BendBody": "In a bend that is too tight, the guided light can no longer follow the waveguide and radiates into the surrounding material. The minimum radius of the active process keeps this bend loss negligible.",
   "DesignChecksHelp.BendTitle": "Minimum bend radius",
+  "DesignChecksHelp.BlockedBody": "A pin sealed in by a component footprint cannot be routed out — move the component. Or the corridor is full of parallel waveguides: no free lane, so spread them to make room.",
+  "DesignChecksHelp.BlockedTitle": "Blocked wires",
   "DesignChecksHelp.ChipletBody": "Light leaves a chiplet facet as a widening Gaussian beam. If the facing facet stands back or sits shifted sideways, only part of the beam lands in its mode. Design Checks warn once the lost light exceeds the link budget.",
   "DesignChecksHelp.ChipletTitle": "Chiplet links",
   "DesignChecksHelp.Intro": "These checks are a light version of the design rule check (DRC) that a foundry runs before fabrication. Each rule exists because a physical effect would otherwise spoil your circuit.",
