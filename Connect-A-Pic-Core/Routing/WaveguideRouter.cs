@@ -235,6 +235,20 @@ public partial class WaveguideRouter
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin,
                              CancellationToken cancellationToken = default)
     {
+        LastRouteCoarseNodesExpanded = 0;
+        try
+        {
+            return RouteCore(startPin, endPin, cancellationToken);
+        }
+        finally
+        {
+            OnRouteCoarseExpansionsRecorded?.Invoke(LastRouteCoarseNodesExpanded);
+        }
+    }
+
+    private RoutedPath RouteCore(PhysicalPin startPin, PhysicalPin endPin,
+                                  CancellationToken cancellationToken)
+    {
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
         double startAngle = startPin.GetAbsoluteAngle();

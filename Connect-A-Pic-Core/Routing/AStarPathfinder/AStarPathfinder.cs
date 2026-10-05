@@ -70,6 +70,13 @@ public class AStarPathfinder
     /// </summary>
     public bool LastSearchReachedGoalVicinity { get; private set; }
 
+    /// <summary>
+    /// Node expansions the last <see cref="FindPath"/> performed. Diagnostic surface
+    /// (issue #1426): lets callers measure what a coarse retry actually costs per
+    /// blocked wire, without re-running the search.
+    /// </summary>
+    public int LastSearchNodesExpanded { get; private set; }
+
     public AStarPathfinder(PathfindingGrid grid, RoutingCostCalculator costCalculator)
     {
         _grid = grid;
@@ -105,6 +112,7 @@ public class AStarPathfinder
     {
         LastSearchProvedNoPath = false;
         LastSearchReachedGoalVicinity = false;
+        LastSearchNodesExpanded = 0;
         var openSet = new PriorityQueue<AStarNode, double>(initialCapacity: 4096);
         var visited = new Dictionary<long, AStarNode>(capacity: 4096);
         var neighborBuffer = new List<AStarNode>(8);
@@ -136,6 +144,7 @@ public class AStarPathfinder
             if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)
             {
                 LastSearchProvedNoPath = false;
+                LastSearchNodesExpanded = nodesExpanded;
                 return null;
             }
 
@@ -154,7 +163,10 @@ public class AStarPathfinder
                 // looping arrivals — e.g. a full 360° circle at the start pin — and keep
                 // searching for a loop-free alternative.
                 if (!PathLoopDetector.IsSelfIntersecting(path))
+                {
+                    LastSearchNodesExpanded = nodesExpanded;
                     return path;
+                }
 
                 // Forget this looping arrival's grid state, otherwise its (cheaper) entry
                 // stays in the visited map and rejects a later, more expensive but loop-free
@@ -185,6 +197,7 @@ public class AStarPathfinder
         // No path found: hitting the budget with frontier left is a cut-short
         // search; an empty open set is a proof that no path exists.
         LastSearchProvedNoPath = openSet.Count == 0;
+        LastSearchNodesExpanded = nodesExpanded;
         return null;
     }
 

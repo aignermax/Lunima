@@ -153,12 +153,25 @@ public class ContentionRepairDetourReproTests
         public required PhysicalPin TrunkStart { get; init; }
         public required PhysicalPin TrunkEnd { get; init; }
 
-        public static SelectTrunkScene Build()
+        public static SelectTrunkScene Build() => Build(sealTrunkEnd: false);
+
+        /// <summary>
+        /// The trunk scene with the trunk's END pin buried inside its gate body
+        /// (issue #1426): the pin corridor punches only 3·radius into a body, so a
+        /// pin 160 µm deep has no physical route — every detour (highway or inter-row)
+        /// fails and the wire ends blocked. The perf-guard measurement uses this
+        /// variant to time the retry's wasted cost on a genuinely unroutable wire.
+        /// </summary>
+        public static SelectTrunkScene BuildSealedTrunk() => Build(sealTrunkEnd: true);
+
+        private static SelectTrunkScene Build(bool sealTrunkEnd)
         {
             // Gates at RamWordCellBuilder coordinates, each with the pins the wires need
             // (registered on the component so the rasterizer carves their escape corridors).
             var csel0R = Gate(400, 500, (320, 26, 0));
-            var csel0_0 = Gate(13600, 1700, (0, 24, 180));
+            var csel0_0 = sealTrunkEnd
+                ? Gate(13600, 1700, (160, 24, 180))
+                : Gate(13600, 1700, (0, 24, 180));
             var en0 = Gate(1600, 500);
             var cpea0 = Gate(4000, 500);
             var iw0 = Gate(5200, 500);
