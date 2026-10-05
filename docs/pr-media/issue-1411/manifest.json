@@ -1,0 +1,26 @@
+[
+  {
+    "file": "cellhelp-en-1-first.png",
+    "caption": "Cell-instance help: one template, stamped twice \u2014 the lit bit exists only in CELL0, every instance keeps its own state. (first frame \u2014 template only)"
+  },
+  {
+    "file": "cellhelp-en-2-mid.png",
+    "caption": "Cell-instance help: one template, stamped twice \u2014 the lit bit exists only in CELL0, every instance keeps its own state. (mid loop \u2014 the second stamp slides onto CELL1)"
+  },
+  {
+    "file": "cellhelp-en-3-last.png",
+    "caption": "Cell-instance help: one template, stamped twice \u2014 the lit bit exists only in CELL0, every instance keeps its own state. (last frame \u2014 bit lit in CELL0 only)"
+  },
+  {
+    "file": "cellhelp-de-1-first.png",
+    "caption": "Zellinstanz-Hilfe: eine Vorlage, zweimal gestempelt \u2014 das Bit leuchtet nur in CELL0, jede Instanz hat eigenen Zustand. (first frame \u2014 template only)"
+  },
+  {
+    "file": "cellhelp-de-2-mid.png",
+    "caption": "Zellinstanz-Hilfe: eine Vorlage, zweimal gestempelt \u2014 das Bit leuchtet nur in CELL0, jede Instanz hat eigenen Zustand. (mid loop \u2014 the second stamp slides onto CELL1)"
+  },
+  {
+    "file": "cellhelp-de-3-last.png",
+    "caption": "Zellinstanz-Hilfe: eine Vorlage, zweimal gestempelt \u2014 das Bit leuchtet nur in CELL0, jede Instanz hat eigenen Zustand. (last frame \u2014 bit lit in CELL0 only)"
+  }
+]
