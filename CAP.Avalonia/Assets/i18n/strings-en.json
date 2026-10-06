@@ -1675,6 +1675,8 @@
   "LogicPanel.FanOutWarning.SplitLine": "Ideal 1×{0} split: {1:0.###} → {2:0.###} per branch (−{3:0.00} dB)",
   "LogicPanel.FanOutWarning.BranchStillOne": "✓ '{0}' would still read a 1 (threshold {1:0.###})",
   "LogicPanel.FanOutWarning.BranchWouldFail": "✗ '{0}' would NOT read a 1 (threshold {1:0.###})",
+  "LogicPanel.FanOutWarning.LinkLine": "Gate output '{0}' crosses the lossy chiplet link {1}.",
+  "LogicPanel.FanOutWarning.LinkSplitLine": "Link coupling: {0:0.###} × link factor → {1:0.###} delivered (−{2:0.00} dB)",
   "LogicPanelFanOutHelp.Title": "Why warn about fan-out?",
   "LogicPanelFanOutHelp.Intro": "The logic layer hands every driven input the full ideal level — but light does not multiply. One waveguide can only be split, and splitting divides the power. The network above would not work as drawn in real photonics.",
   "LogicPanelFanOutHelp.PhysicsTitle": "Splitting costs power",

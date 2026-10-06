@@ -334,11 +334,16 @@ public sealed partial class LogicNetworkBuilder
         var models = new Dictionary<string, LogicGateModel>();
         var delays = new Dictionary<string, double>();
         var wireDelays = new Dictionary<LogicWireEdge, double>();
+        var wireLinkLosses = new Dictionary<LogicWireEdge, LogicWireLinkLoss>();
 
         foreach (var (load, path) in edgeConnections)
         {
-            wireDelays[new LogicWireEdge(drivers[load], load)] = path.Sum(
+            var edge = new LogicWireEdge(drivers[load], load);
+            wireDelays[edge] = path.Sum(
                 segment => _wireDelayCalculator.CalculatePicoseconds(segment, wavelengthNm));
+            var linkLoss = WireLinkLossCalculator.ForPath(path, wavelengthNm);
+            if (linkLoss != null)
+                wireLinkLosses[edge] = linkLoss;
         }
 
         foreach (var context in contexts)
@@ -365,7 +370,7 @@ public sealed partial class LogicNetworkBuilder
             .Select(context => context.GateId)
             .ToList();
         return new LogicNetworkEvaluator(
-            networkInputs, models, wiring, outputTaps, delays, wireDelays, registerGateIds);
+            networkInputs, models, wiring, outputTaps, delays, wireDelays, registerGateIds, wireLinkLosses);
     }
 
     /// <summary>

@@ -1675,6 +1675,8 @@
   "LogicPanel.FanOutWarning.SplitLine": "理想 1×{0} 分配: {1:0.###} → 分岐あたり {2:0.###} (−{3:0.00} dB)",
   "LogicPanel.FanOutWarning.BranchStillOne": "✓ '{0}' は 1 として読み取れます (閾値 {1:0.###})",
   "LogicPanel.FanOutWarning.BranchWouldFail": "✗ '{0}' は 1 として読み取れません (閾値 {1:0.###})",
+  "LogicPanel.FanOutWarning.LinkLine": "ゲート出力 '{0}' が損失のあるチップレット間リンク {1} を通過しています。",
+  "LogicPanel.FanOutWarning.LinkSplitLine": "リンク結合: {0:0.###} × リンク係数 → {1:0.###} に到達 (−{2:0.00} dB)",
   "LogicPanelFanOutHelp.Title": "なぜファンアウトを警告するのか?",
   "LogicPanelFanOutHelp.Intro": "ロジック層は駆動されるすべての入力に完全な理想レベルを渡しますが、光は増えません。導波路は分岐させるしかなく、分岐するとパワーが分配されます。上のネットワークは実際のフォトニクスではこのままでは動作しません。",
   "LogicPanelFanOutHelp.PhysicsTitle": "分岐はパワーを失う",

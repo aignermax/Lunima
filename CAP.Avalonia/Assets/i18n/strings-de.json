@@ -1675,6 +1675,8 @@
   "LogicPanel.FanOutWarning.SplitLine": "Ideale 1×{0}-Teilung: {1:0.###} → {2:0.###} pro Zweig (−{3:0.00} dB)",
   "LogicPanel.FanOutWarning.BranchStillOne": "✓ '{0}' würde weiterhin eine 1 lesen (Schwelle {1:0.###})",
   "LogicPanel.FanOutWarning.BranchWouldFail": "✗ '{0}' würde KEINE 1 mehr lesen (Schwelle {1:0.###})",
+  "LogicPanel.FanOutWarning.LinkLine": "Gate-Ausgang '{0}' quert die verlustbehaftete Chiplet-Verbindung {1}.",
+  "LogicPanel.FanOutWarning.LinkSplitLine": "Verbindungskopplung: {0:0.###} × Kopplungsfaktor → {1:0.###} geliefert (−{2:0.00} dB)",
   "LogicPanelFanOutHelp.Title": "Warum vor Fan-out warnen?",
   "LogicPanelFanOutHelp.Intro": "Die Logikebene gibt jedem getriebenen Eingang den vollen idealen Pegel — aber Licht vermehrt sich nicht. Ein Wellenleiter kann nur aufgespalten werden, und jede Aufspaltung teilt die Leistung. Das Netzwerk oben würde in realer Photonik so nicht funktionieren.",
   "LogicPanelFanOutHelp.PhysicsTitle": "Aufspalten kostet Leistung",

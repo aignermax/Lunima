@@ -20,19 +20,34 @@ public partial class LogicFanOutWarningViewModel : ObservableObject
     public LogicFanOutWarningViewModel(LogicFanOutWarning warning)
     {
         Warning = warning;
-        var lineKey = warning.IsNetworkInputSignal
-            ? "LogicPanel.FanOutWarning.InputLine"
-            : "LogicPanel.FanOutWarning.GateLine";
-        WarningText = string.Format(
-            Translate(lineKey),
-            warning.DriverDisplayName,
-            warning.LoadCount);
-        SplitLine = string.Format(
-            Translate("LogicPanel.FanOutWarning.SplitLine"),
-            warning.LoadCount,
-            warning.Levels.DriverPowerOne,
-            warning.Levels.BranchPower,
-            warning.Levels.SplitLossDb);
+        if (warning.LinkDisplayName != null)
+        {
+            WarningText = string.Format(
+                Translate("LogicPanel.FanOutWarning.LinkLine"),
+                warning.DriverDisplayName,
+                warning.LinkDisplayName);
+            SplitLine = string.Format(
+                Translate("LogicPanel.FanOutWarning.LinkSplitLine"),
+                warning.Levels.DriverPowerOne,
+                warning.Levels.BranchPower,
+                warning.Levels.SplitLossDb);
+        }
+        else
+        {
+            var lineKey = warning.IsNetworkInputSignal
+                ? "LogicPanel.FanOutWarning.InputLine"
+                : "LogicPanel.FanOutWarning.GateLine";
+            WarningText = string.Format(
+                Translate(lineKey),
+                warning.DriverDisplayName,
+                warning.LoadCount);
+            SplitLine = string.Format(
+                Translate("LogicPanel.FanOutWarning.SplitLine"),
+                warning.LoadCount,
+                warning.Levels.DriverPowerOne,
+                warning.Levels.BranchPower,
+                warning.Levels.SplitLossDb);
+        }
         VerdictLines = warning.Levels.Branches.Select(branch => string.Format(
                 Translate(branch.ReadsAsOne
                     ? "LogicPanel.FanOutWarning.BranchStillOne"
