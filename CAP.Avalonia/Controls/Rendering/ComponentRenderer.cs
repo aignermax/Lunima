@@ -202,7 +202,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
                 child.WidthMicrometers, child.HeightMicrometers,
                 child.RotationDegrees, childOutlines, isDimmed, rc.Zoom,
                 child.UnrotatedWidthMicrometers, child.UnrotatedHeightMicrometers,
-                rc.LayerVisibility);
+                rc.LayerVisibility, child.IsMirroredHorizontally);
         }
         else
         {

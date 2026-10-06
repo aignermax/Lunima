@@ -635,7 +635,8 @@ public class SimpleNazcaExporter
         // on 'org' explicitly makes .put() place the cell origin at the
         // computed (x, y) — which IS the contract Lunima's calibration
         // and export math both assume.
-        sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
+        var flip = placement.Flip ? ", flip=True" : "";
+        sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot}{flip})  # {comp.Identifier}");
 
         // External ports of the design get a top-cell label on the port-label layer,
         // so re-imports and label-based tools find the circuit's interface (#808).

@@ -262,7 +262,7 @@ public class GdsHierarchyImporterTests
     }
 
     [Fact]
-    public async Task Explode_ReflectedInstance_WarnsAndReconstructionUsesReflectedTransform()
+    public async Task Explode_ReflectedInstance_ReconstructionUsesReflectedTransform()
     {
         // Asymmetric pin: "in" at cell GDS (0, 3). Mirrored about the cell's X
         // axis it lands at GDS (0, −3); the top bbox becomes (0,−4)-(10,0), so
@@ -280,8 +280,8 @@ public class GdsHierarchyImporterTests
 
         var instance = result.Instances.ShouldHaveSingleItem();
         instance.Reflected.ShouldBeTrue();
-        result.Warnings.ShouldContain(w => w.Contains("mirrored") && w.Contains("unreflected"));
-        result.Infos.ShouldBeEmpty("transform caveats stay warnings — nothing informational here");
+        result.Warnings.ShouldNotContain(w => w.Contains("mirrored"),
+            "mirrored instances are placed mirrored — nothing to warn about");
 
         var flattener = new GdsCellFlattener(library);
         var projected = GdsInstancePinProjector.ProjectPins(

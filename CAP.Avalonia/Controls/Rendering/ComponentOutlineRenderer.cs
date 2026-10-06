@@ -61,7 +61,7 @@ internal sealed class ComponentOutlineRenderer
         Draw(context, comp.X, comp.Y, comp.Width, comp.Height,
             comp.Component.RotationDegrees, outlines, isDimmed, zoom,
             comp.Component.UnrotatedWidthMicrometers, comp.Component.UnrotatedHeightMicrometers,
-            layerVisibility);
+            layerVisibility, comp.Component.IsMirroredHorizontally);
 
     /// <summary>
     /// Pose-based overload for callers that have no <see cref="ComponentViewModel"/>:
@@ -78,10 +78,13 @@ internal sealed class ComponentOutlineRenderer
     /// <param name="layerVisibility">Per-design layer view filter (issue #858):
     /// polygons on hidden layers are skipped, faded layers draw with reduced
     /// opacity. Null renders every layer fully visible.</param>
+    /// <param name="mirrored">True for a mirrored component (GDS STRANS reflection): the
+    /// outline is reflected across the horizontal centreline of its unrotated frame before
+    /// it is rotated — the same mirror the component's pins carry.</param>
     public void Draw(DrawingContext context, double x, double y, double width, double height,
         double rotationDegrees, IReadOnlyList<OutlinePolygon> outlines, bool isDimmed, double zoom,
         double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
-        GdsLayerVisibilityState? layerVisibility = null)
+        GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false)
     {
         var geometries = _geometryCache.GetValue(outlines, BuildGeometries);
 
@@ -89,7 +92,8 @@ internal sealed class ComponentOutlineRenderer
         double centerY = y + height / 2.0;
         var destRect = GdsPolygonRenderer.GetUnrotatedDestRect(
             x, y, width, height, rotationDegrees, recordedUnrotatedWidth, recordedUnrotatedHeight);
-        var transform = Matrix.CreateTranslation(destRect.X, destRect.Y)
+        var transform = LocalMirror(mirrored, destRect.Height)
+                      * Matrix.CreateTranslation(destRect.X, destRect.Y)
                       * GdsPolygonRenderer.BuildRotationMatrix(rotationDegrees, centerX, centerY);
 
         using (context.PushTransform(transform))
@@ -138,15 +142,24 @@ internal sealed class ComponentOutlineRenderer
         double compX, double compY,
         double compWidth, double compHeight,
         double rotationDegrees,
-        double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0)
+        double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
+        bool mirrored = false)
     {
         var destRect = GdsPolygonRenderer.GetUnrotatedDestRect(
             compX, compY, compWidth, compHeight, rotationDegrees,
             recordedUnrotatedWidth, recordedUnrotatedHeight);
         var rotation = GdsPolygonRenderer.BuildRotationMatrix(
             rotationDegrees, compX + compWidth / 2.0, compY + compHeight / 2.0);
-        return new Point(destRect.X + point.X, destRect.Y + point.Y).Transform(rotation);
+        double localY = mirrored ? destRect.Height - point.Y : point.Y;
+        return new Point(destRect.X + point.X, destRect.Y + localY).Transform(rotation);
     }
+
+    /// <summary>
+    /// Reflection across the horizontal centreline of an unrotated frame of the given
+    /// height (y → height − y), or identity when not mirrored.
+    /// </summary>
+    private static Matrix LocalMirror(bool mirrored, double height) =>
+        mirrored ? new Matrix(1, 0, 0, -1, 0, height) : Matrix.Identity;
 
     /// <summary>
     /// World-space points of one outline polygon for the given component pose.
@@ -158,13 +171,14 @@ internal sealed class ComponentOutlineRenderer
         double compX, double compY,
         double compWidth, double compHeight,
         double rotationDegrees,
-        double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0)
+        double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
+        bool mirrored = false)
     {
         var points = new Point[polygon.Points.Count];
         for (int i = 0; i < polygon.Points.Count; i++)
             points[i] = TransformOutlinePoint(
                 polygon.Points[i], compX, compY, compWidth, compHeight, rotationDegrees,
-                recordedUnrotatedWidth, recordedUnrotatedHeight);
+                recordedUnrotatedWidth, recordedUnrotatedHeight, mirrored);
         return points;
     }
 
