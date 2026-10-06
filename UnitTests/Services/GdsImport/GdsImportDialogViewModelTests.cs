@@ -161,7 +161,9 @@ public class GdsImportDialogViewModelTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var service = _host.CreateService();
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        return (new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole), canvas, _host);
+        // Most scenarios here inspect the grouped import; the flat default has its own tests.
+        return (new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole)
+            { GroupImportRequested = true }, canvas, _host);
     }
 
     /// <summary>
@@ -183,7 +185,7 @@ public class GdsImportDialogViewModelTests : IDisposable
             return Array.Empty<ComponentTemplate>();
         });
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        vm = new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole);
+        vm = new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole) { GroupImportRequested = true };
         return (vm, canvas);
     }
 
@@ -427,12 +429,35 @@ public class GdsImportDialogViewModelTests : IDisposable
     }
 
     [Fact]
-    public void RerouteConnectionsRequested_IsTrueByDefault()
+    public void NewDialog_KeepsDrawnRoutesFrozenAndImportFlat_ByDefault()
     {
-        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()));
+        var vm = new GdsImportDialogViewModel(
+            WriteGds(TwoWaveguideLibrary()), _host.CreateService(), new GdsPlacementExecutor(
+                new DesignCanvasViewModel(), null, () => Array.Empty<ComponentTemplate>()));
 
-        vm.RerouteConnectionsRequested.ShouldBeTrue(
-            "detected connections should come back as real Lunima routing by default");
+        vm.RerouteConnectionsRequested.ShouldBeFalse(
+            "a finished layout must import exactly as drawn — re-routing is opt-in");
+        vm.GroupImportRequested.ShouldBeFalse(
+            "a flat import keeps every component and waveguide individually editable");
+    }
+
+    [Fact]
+    public async Task ImportAsync_DefaultOptions_KeepTheRouteFrozenOnAFlatCanvas()
+    {
+        var (vm, canvas, _) = CreateDialog(WriteGds(TwoWaveguideLibraryBridgedByRoute()));
+        vm.GroupImportRequested = false;
+        vm.RerouteConnectionsRequested = false;
+        await vm.StartAnalysisAsync();
+
+        await vm.ImportCommand.ExecuteAsync(null);
+
+        vm.HasError.ShouldBeFalse(vm.ErrorText);
+        canvas.Components.Count.ShouldBe(2, "no group wraps the two placed cells");
+        var connection = canvas.Connections.ShouldHaveSingleItem().Connection;
+        connection.IsRouteFrozen.ShouldBeTrue("the drawn route is kept, not re-routed");
+        connection.AsDrawnGeometry.ShouldNotBeNull("the drawn polygon is rendered and exported verbatim");
+        connection.RoutedPath!.Segments.ShouldHaveSingleItem()
+            .ShouldBeOfType<CAP_Core.Routing.StraightSegment>("the stripe is fitted as one straight centerline");
     }
 
     // ── Connection reconstruction ────────────────────────────────────────────

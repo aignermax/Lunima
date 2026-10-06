@@ -28,6 +28,14 @@ public sealed class CanvasFrozenPathRenderer : ICanvasRenderer
             if (RenderCulling.GetFrozenPathBounds(pathVm.Path) is { } bounds && !cullRect.Intersects(bounds))
                 continue;
 
+            if (pathVm.Path.AsDrawnGeometry is { } asDrawn)
+            {
+                // Drawn polygons replace the traced line; selection still highlights the path.
+                AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility);
+                if (!pathVm.IsSelected)
+                    continue;
+            }
+
             // Canvas-level paths never carry simulated power (pin-less ⇒ not simulated),
             // so no power-flow result is passed; the layer-visibility filter still applies.
             ComponentGroupRenderer.RenderFrozenWaveguidePath(

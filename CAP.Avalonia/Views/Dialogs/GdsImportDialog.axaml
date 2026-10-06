@@ -326,6 +326,12 @@
                           ToolTip.Tip="{loc:Localize GdsImport.RerouteConnectionsTip}"
                           Foreground="White" FontSize="11" VerticalAlignment="Center"/>
 
+                <!-- Keep the import flat (default) or wrap it in one group -->
+                <CheckBox IsChecked="{Binding GroupImportRequested}"
+                          Content="{loc:Localize GdsImport.GroupImport}"
+                          ToolTip.Tip="{loc:Localize GdsImport.GroupImportTip}"
+                          Foreground="White" FontSize="11" VerticalAlignment="Center"/>
+
                 <!-- Auto-connect all remaining facing pins after placement (opt-in, issue #880) -->
                 <CheckBox IsChecked="{Binding AutoConnectAllPinsRequested}"
                           Content="{loc:Localize GdsImport.AutoConnectAllPins}"

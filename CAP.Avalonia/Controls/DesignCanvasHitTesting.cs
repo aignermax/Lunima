@@ -15,6 +15,17 @@ public class DesignCanvasHitTesting
     private const double PinHitRadius = 15.0;
     private const double ConnectionHitTolerance = 10.0;
 
+    /// <summary>Screen distance (px) within which a waveguide still counts as hit.</summary>
+    private const double ConnectionHitTolerancePx = 6.0;
+
+    /// <summary>
+    /// The waveguide hit tolerance in µm: at least <see cref="ConnectionHitTolerance"/>, and
+    /// <see cref="ConnectionHitTolerancePx"/> screen pixels at the current zoom — zoomed out,
+    /// 10 µm is a fraction of a pixel and no waveguide could be clicked.
+    /// </summary>
+    private static double ConnectionToleranceFor(DesignCanvasViewModel vm) =>
+        Math.Max(ConnectionHitTolerance, ConnectionHitTolerancePx / Math.Max(vm.ViewZoom, 1e-6));
+
     /// <summary>
     /// Checks if a point is within a component group's label bounds.
     /// Returns the group if the label is hit, null otherwise.
@@ -95,8 +106,8 @@ public class DesignCanvasHitTesting
     }
 
     /// <summary>
-    /// Finds the component at the given canvas point (topmost first).
-    /// For ComponentGroups, checks if the point is within the group's bounding box.
+    /// Finds the component at the given canvas point (topmost first), skipping background
+    /// components. For ComponentGroups, checks if the point is within the group's bounding box.
     /// In group edit mode, only tests child components of the current edit group.
     /// </summary>
     public static ComponentViewModel? HitTestComponent(Point canvasPoint, DesignCanvasViewModel? vm)
@@ -109,10 +120,14 @@ public class DesignCanvasHitTesting
             return HitTestGroupChildren(canvasPoint, vm.CurrentEditGroup, vm);
         }
 
-        // Normal mode: test all top-level components
+        // Normal mode: test all top-level components. Background geometry (die frames,
+        // logos) is never picked up here: its box spans what lies on top of it, and a
+        // press there must reach the waveguide under the cursor or start a box selection.
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
+            if (!comp.Component.IsRoutingObstacle)
+                continue;
 
             // For ComponentGroups, check the group's calculated bounds
             if (comp.Component is ComponentGroup group)
@@ -126,7 +141,7 @@ public class DesignCanvasHitTesting
             else
             {
                 var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
-                if (rect.Contains(canvasPoint))
+                if (rect.Contains(canvasPoint) && OutlineHitTester.Hits(comp.Component, canvasPoint, OutlineHitTester.ToleranceAt(vm.ViewZoom)))
                 {
                     return comp;
                 }
@@ -326,7 +341,7 @@ public class DesignCanvasHitTesting
         if (vm == null) return null;
 
         WaveguideConnectionViewModel? closest = null;
-        double closestDistance = ConnectionHitTolerance;
+        double closestDistance = ConnectionToleranceFor(vm);
         foreach (var conn in vm.Connections)
         {
             double distance = DistanceToConnectionPath(conn, canvasPoint.X, canvasPoint.Y);
@@ -351,7 +366,7 @@ public class DesignCanvasHitTesting
         if (vm == null) return null;
 
         CanvasFrozenPathViewModel? closest = null;
-        double closestDistance = ConnectionHitTolerance;
+        double closestDistance = ConnectionToleranceFor(vm);
         foreach (var pathVm in vm.CanvasFrozenPaths)
         {
             var segments = pathVm.Path.Path?.Segments;

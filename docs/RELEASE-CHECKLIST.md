@@ -140,6 +140,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 
 - [ ] Import a GDS layout via the library panel `GDS` button → pins appear on the imported cell. `(auto: Services/GdsImport/GdsImportServiceTests)`
 - [ ] GDS import dialog previews the cell hierarchy and lets the user pick placement. `(auto: Services/GdsImport/GdsImportDialogViewModelTests)`
+- [ ] Importing a finished layout with the dialog defaults keeps every route frozen and exactly as drawn (core + cladding polygons, mirrored cells mirrored), flat on the canvas; save/reopen keeps it frozen. `(auto: Integration/GdsLosslessFrozenImportTests)`
+- [ ] Selecting one imported waveguide → "Re-route selected" re-routes only that waveguide; Ctrl+Z brings the drawn route back. `(auto: Integration/GdsLosslessFrozenImportTests)`
+- [ ] Exporting an untouched import writes the drawn polygons verbatim and mirrored cells with `flip=True`. `(auto: Integration/GdsLosslessFrozenImportTests)`
 - [ ] Imported components are linked to the design scope (saved in `.lun`). `(auto: Services/GdsImport/DesignScopedGdsComponentServiceTests)`
 - [ ] Import a PDK JSON and register its components. `(auto: ViewModels/PdkImport/PdkImportWizardViewModelTests)`
 - [ ] Round-trip: export a layout, import it back, and compare geometry. `(auto: Services/GdsImport/GdsRoundTripImportTests)`

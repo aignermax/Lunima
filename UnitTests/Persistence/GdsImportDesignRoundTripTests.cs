@@ -142,32 +142,30 @@ public class GdsImportDesignRoundTripTests : IDisposable
         await LoadFromFile(CreateFileOperations(loadCanvas, loadHost, out _), savePath);
 
         var group = loadCanvas.Components.ShouldHaveSingleItem().Component.ShouldBeOfType<ComponentGroup>();
-        group.InternalPaths.Count.ShouldBe(2, "the frozen abutment connection plus the imported route outline");
+        group.InternalPaths.Count.ShouldBe(2, "the frozen abutment connection plus the imported route stub");
 
-        // The route outline round-tripped with exact coordinates and no pins.
+        // The route stub round-tripped as its fitted centerline, without pins, and with
+        // the exact drawn polygon.
         var routePath = group.InternalPaths.Single(p => p.StartPin is null);
         routePath.EndPin.ShouldBeNull("imported route geometry is pin-less on BOTH ends");
-        routePath.Path.Segments.Select(s => (s.StartPoint.X, s.StartPoint.Y, s.EndPoint.X, s.EndPoint.Y))
-            .ShouldBe(new[]
-            {
-                (10.0, 3.75, 12.0, 3.75),
-                (12.0, 3.75, 12.0, 3.25),
-                (12.0, 3.25, 10.0, 3.25),
-                (10.0, 3.25, 10.0, 3.75),
-            });
+        var centerline = routePath.Path.Segments.ShouldHaveSingleItem();
+        new[] { centerline.StartPoint, centerline.EndPoint }.OrderBy(p => p.X)
+            .ShouldBe(new[] { (10.0, 3.5), (12.0, 3.5) });
+        var drawn = routePath.AsDrawnGeometry.ShouldNotBeNull("the drawn polygon survives the .lun round trip");
+        drawn.Polygons.ShouldHaveSingleItem().Points
+            .Select(p => (p.X, p.Y)).ShouldContain((10.0, 3.75));
 
         // The source polygon's (layer, datatype) rode along the whole way: import →
         // frozen path → .lun → reload (the fixture's route stub sits on (1, 0)).
         routePath.Layer.ShouldBe(1);
         routePath.DataType.ShouldBe(0);
 
-        // …and the reloaded design exports the outline back on its OWN layer, not
-        // the process default — as ONE verbatim polygon (the path holds the polygon's
-        // outline ring, not a centerline — per-edge waveguides would double the lines
-        // on every re-import, see GdsReexportIdempotencyTests).
+        // …and the reloaded design exports the drawn polygon back on its OWN layer, not
+        // the process default — as ONE verbatim polygon, never as waveguides re-derived
+        // from the centerline (see GdsReexportIdempotencyTests).
         var script = new SimpleNazcaExporter().Export(loadCanvas, library: loadHost.Templates.ToList());
         script.ShouldContain(
-            "nd.Polygon(points=[(10.00,-3.75),(12.00,-3.75),(12.00,-3.25),(10.00,-3.25)], layer=(1, 0)).put(0, 0)");
+            "nd.Polygon(points=[(10,-3.75),(12,-3.75),(12,-3.25),(10,-3.25)], layer=(1, 0)).put(0, 0)");
 
         // The pinned abutment connection survived the same round-trip unchanged.
         var abutment = group.InternalPaths.Single(p => p.StartPin is not null);

@@ -140,19 +140,22 @@ public sealed record GdsHierarchyImportOptions
 
     /// <summary>
     /// Ramer-Douglas-Peucker tolerance in micrometers for simplifying draft
-    /// outline polygons. Default: 0.05 µm.
+    /// outline polygons. Default: 0 — only exactly collinear vertices go, so an
+    /// import keeps its geometry losslessly (arc vertices of a large-radius bend
+    /// sit well within 0.1 µm of their chord and would otherwise be cut).
     /// </summary>
-    public double OutlineSimplificationToleranceUm { get; init; } = 0.05;
+    public double OutlineSimplificationToleranceUm { get; init; } = 0.0;
 
     /// <summary>
     /// Maximum total outline points kept per cell draft. When simplification at
     /// the configured tolerance exceeds this, the tolerance is raised
     /// adaptively; as a last resort the smallest-area polygons are dropped
-    /// (with a warning). Default: 9500 — outline geometry is built once per
-    /// template and drawn from a cached Skia geometry, so detail is cheap; the
-    /// cap only guards degenerate multi-million-point cells.
+    /// (with a warning). Default: 1,000,000 — outline geometry is built once per
+    /// template and drawn from a cached geometry with a per-polygon level-of-detail
+    /// cull, so detail is cheap; the cap only guards pathological cells. A
+    /// production chip's top cell carries a few hundred thousand points.
     /// </summary>
-    public int MaxOutlinePointsPerCell { get; init; } = 9500;
+    public int MaxOutlinePointsPerCell { get; init; } = 1_000_000;
 
     /// <summary>
     /// Resolves a GDS cell name to an existing PDK component. Called with the

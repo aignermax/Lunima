@@ -80,9 +80,13 @@ public class GdsImportSourceLayerTests : IDisposable
         frozen.Layer.ShouldBeNull("a mixed-layer source is ambiguous — the process default applies");
         frozen.DataType.ShouldBeNull();
 
+        // The drawn polygons travel with the frozen route and export verbatim, each on
+        // its own original layer — no single tag is forced onto the whole network.
+        frozen.AsDrawnGeometry.ShouldNotBeNull().Polygons.Select(p => p.Layer).Distinct().OrderBy(l => l)
+            .ShouldBe(new[] { 1, 3 });
         var script = new SimpleNazcaExporter().Export(canvas);
-        script.ShouldNotContain("layer=(3, 0)");
-        script.ShouldNotContain("layer=(1, 0)");
+        script.ShouldContain("layer=(3, 0)");
+        script.ShouldContain("layer=(1, 0)");
     }
 
     // ── Harness (mirrors GdsImportDesignRoundTripTests) ──────────────────────

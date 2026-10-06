@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.GdsImport.FrozenRoutes;
 using System.Globalization;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis;
@@ -89,14 +90,26 @@ public sealed partial class GdsPlacementExecutor
             WaveguideConnectionViewModel? connectionVm;
             // Re-routing sends route-derived pairs to the live router; abutment
             // straights keep their frozen geometry in both modes.
-            var cachedRoute = ShouldLiveRoute(connection, reroute, rerouteImportedConnections)
+            var liveRoute = ShouldLiveRoute(connection, reroute, rerouteImportedConnections);
+            var centerline = liveRoute ? null : TryBuildCenterline(connection, startPin, endPin, originOffset);
+            var cachedRoute = liveRoute
                 ? null
-                : TryBuildCachedRoute(connection, startPin, endPin, originOffset);
+                : centerline?.Path ?? TryBuildCachedRoute(connection, startPin, endPin, originOffset);
             if (cachedRoute is not null)
             {
                 connectionVm = _canvas.ConnectPinsWithCachedRoute(startPin, endPin, cachedRoute);
                 if (connectionVm is not null)
                 {
+                    if (centerline is not null)
+                    {
+                        connectionVm.Connection.WidthMicrometers = centerline.WidthMicrometers;
+                        _centerlineRoutes.Add((connectionVm.Connection, centerline, connection.SourcePolygons));
+                        report.CenterlineRouteCount++;
+                    }
+                    else if (connection.IsRouteDerived)
+                    {
+                        _tracedRoutes.Add((connectionVm.Connection, connection.SourcePolygons));
+                    }
                     // Hardcoded like a .lun-loaded cached route: frozen, so no
                     // later routing pass replaces the imported geometry (an
                     // endpoint move unfreezes and re-routes, as for any frozen route).
@@ -196,6 +209,24 @@ public sealed partial class GdsPlacementExecutor
             "— the imported route geometry was kept as frozen paths instead.",
             routeDerived, MaxReroutedConnections));
         return false;
+    }
+
+    /// <summary>
+    /// The drawn route's real centerline (straights and arcs fitted to its polygons),
+    /// or null for abutments, polygon-less plans, and polygons that are not clean
+    /// waveguide ribbons — those keep the traced-outline fallback.
+    /// </summary>
+    private static GdsCenterlineRoute? TryBuildCenterline(
+        GdsConnectionInstruction connection,
+        PhysicalPin startPin,
+        PhysicalPin endPin,
+        (double X, double Y) originOffset)
+    {
+        if (!connection.IsRouteDerived || connection.SourcePolygons.Count == 0)
+            return null;
+        return GdsCenterlineRouteBuilder.TryBuild(
+            connection.SourcePolygons, startPin.GetAbsolutePosition(), endPin.GetAbsolutePosition(),
+            originOffset.X, originOffset.Y);
     }
 
     /// <summary>

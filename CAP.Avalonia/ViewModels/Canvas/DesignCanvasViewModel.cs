@@ -112,6 +112,13 @@ public partial class DesignCanvasViewModel : ObservableObject
     }
 
     [ObservableProperty] private double _panX;
+
+    /// <summary>
+    /// The zoom the canvas was last drawn at (screen px per µm), mirrored here by the view
+    /// each frame so hit tests can use a tolerance in screen pixels: a fixed world
+    /// tolerance shrinks below a pixel when zoomed out.
+    /// </summary>
+    public double ViewZoom { get; set; } = 1.0;
     [ObservableProperty] private double _panY;
     [ObservableProperty] private bool _isRouting;
     [ObservableProperty] private string _routingStatusText = "";

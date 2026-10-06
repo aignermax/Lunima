@@ -151,23 +151,8 @@ public static class PathIntersectionDetector
     /// bounding boxes are rejected first and no distances are computed. Touching
     /// endpoints do not count as crossings (only proper intersections do).
     /// </summary>
-    public static bool Crosses(RoutedPath first, RoutedPath second)
-    {
-        var a = SamplePolyline(first);
-        var b = SamplePolyline(second);
-        if (a.Count < 2 || b.Count < 2 || !BoundsOverlap(a, b))
-            return false;
-
-        for (int i = 0; i < a.Count - 1; i++)
-        {
-            for (int j = 0; j < b.Count - 1; j++)
-            {
-                if (SegmentsIntersect(a[i], a[i + 1], b[j], b[j + 1]))
-                    return true;
-            }
-        }
-        return false;
-    }
+    public static bool Crosses(RoutedPath first, RoutedPath second) =>
+        SampledPolyline.From(first).Crosses(SampledPolyline.From(second));
 
     /// <summary>True when the axis-aligned bounding boxes of the two polylines overlap,
     /// inflated by the given margin.</summary>
@@ -231,7 +216,7 @@ public static class PathIntersectionDetector
     /// Joints closer than <see cref="JointToleranceMicrometers"/> are merged so
     /// touching segment ends never read as intersections.
     /// </summary>
-    private static List<(double X, double Y)> SamplePolyline(RoutedPath path)
+    internal static List<(double X, double Y)> SamplePolyline(RoutedPath path)
     {
         var points = new List<(double X, double Y)>();
         foreach (var segment in path.Segments)
@@ -273,7 +258,7 @@ public static class PathIntersectionDetector
     /// Exact 2D segment intersection (proper crossings and overlaps). Shared joints
     /// were merged during sampling, so any remaining touch is a genuine intersection.
     /// </summary>
-    private static bool SegmentsIntersect(
+    internal static bool SegmentsIntersect(
         (double X, double Y) p1, (double X, double Y) p2,
         (double X, double Y) q1, (double X, double Y) q2)
     {

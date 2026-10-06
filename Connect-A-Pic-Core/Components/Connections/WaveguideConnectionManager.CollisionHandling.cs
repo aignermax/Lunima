@@ -27,11 +27,17 @@ public partial class WaveguideConnectionManager
     /// component body inside the corridor still unfreezes.
     /// Styled routes (Type != Auto) are never unfrozen here — their shape is forced and a
     /// collision is surfaced via <see cref="RoutedPath.PassesThroughComponent"/> instead.
+    /// Imported routes that still carry their drawn polygons
+    /// (<see cref="WaveguideConnection.AsDrawnGeometry"/>) are never unfrozen either: in a
+    /// finished layout the drawn route IS the design, and its tapers routinely overlap the
+    /// cells they connect. Only the user unfreezes such a route; overlaps go to the design checks.
     /// </summary>
     /// <returns>True when the connection was unfrozen and must be re-routed.</returns>
     private static bool TryUnfreezeCollidedAutoRoute(WaveguideConnection connection, WaveguideRouter router)
     {
         if (connection.Type != WaveguideType.Auto || !connection.IsRouteFrozen)
+            return false;
+        if (connection.AsDrawnGeometry is not null)
             return false;
         if (!connection.FrozenPathStillMatchesPins())
             return false; // Endpoint moved: RecalculateTransmission already unfreezes.
