@@ -26,10 +26,14 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// both operations. The zero-detect network (A0–A3 in, Z out) is no ALU, so with
 /// the toggle on it instead moves the machine's one branch decision onto light:
 /// every <c>JZ</c> asks a <see cref="PhotonicZeroFlag"/> whether the accumulator is
-/// zero (issue #1322), and toggle label and header name the zero flag. The toggle
-/// is enabled while the built network is accepted by any ALU or the zero flag;
-/// otherwise a hint points at the shipped examples (4-bit adder, NOT 4-bit, AND
-/// 4-bit, Logic Unit 4-bit, Zero Detect 4-bit). Toggling recreates the machine at
+/// zero (issue #1322), and toggle label and header name the zero flag. The RAM 4x4
+/// network (A0/A1, LOAD, D0–D3 in, Q0–Q3 out) moves the machine's data memory onto
+/// light (issue #1446): every STORE clocks a photonic register through
+/// <see cref="PhotonicDataMemory"/> and every RAM-operand read taps Q0–Q3, and the
+/// RAM readout carries an "on light" chip while it does. The toggle
+/// is enabled while the built network is accepted by any ALU, the zero flag or the
+/// data memory; otherwise a hint points at the shipped examples (4-bit adder, NOT
+/// 4-bit, AND 4-bit, Logic Unit 4-bit, Zero Detect 4-bit, RAM 4x4). Toggling recreates the machine at
 /// power-on state, and every photonic operation leaves a status line with operands and result
 /// in binary plus the gate count (photonic ADDs also name the light-travel time of
 /// that addition, <see cref="PhotonicAdderAlu.LastAddTrace"/>, issue #1227).
@@ -64,6 +68,12 @@ public partial class IsaPlaygroundViewModel
     private bool _isPhotonicZeroFlagAvailable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAnyPhotonicAvailable))]
+    [NotifyPropertyChangedFor(nameof(IsPhotonicToggleEnabled))]
+    [NotifyPropertyChangedFor(nameof(PhotonicToggleLabel))]
+    private bool _isPhotonicDataMemoryAvailable;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HeaderTitle))]
     private bool _usePhotonicAdder;
 
@@ -75,6 +85,7 @@ public partial class IsaPlaygroundViewModel
     private PhotonicNotAlu? _photonicNotAlu;
     private PhotonicAndAlu? _photonicAndAlu;
     private PhotonicZeroFlag? _photonicZeroFlag;
+    private PhotonicDataMemory? _photonicDataMemory;
 
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic ADD ALU while the toggle is on.</summary>
     internal PhotonicAdderAlu? PhotonicAlu => _photonicAlu;
@@ -88,14 +99,52 @@ public partial class IsaPlaygroundViewModel
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic zero flag while the toggle is on.</summary>
     internal PhotonicZeroFlag? ZeroFlag => _photonicZeroFlag;
 
+    /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic data memory while the toggle is on.</summary>
+    internal PhotonicDataMemory? DataMemory => _photonicDataMemory;
+
+    /// <summary>
+    /// The "what runs on light" row (issue #1456): one chip per machine unit —
+    /// ALU, Z (zero flag), RAM, ACC, PC — green while that unit is computed by the
+    /// photonic network, grey while it is simulated electronically. ACC and PC are
+    /// always electronic for now; ALU counts as on light when any photonic ALU
+    /// half (adder, NOT or AND) is active.
+    /// </summary>
+    public IReadOnlyList<IsaUnitChipViewModel> UnitChips { get; } = new IsaUnitChipViewModel[]
+    {
+        new("ALU"),
+        new("Z"),
+        new("RAM"),
+        new("ACC"),
+        new("PC"),
+    };
+
+    /// <summary>
+    /// Reflects the freshly created emulator's photonic parts onto the unit chips;
+    /// called by <see cref="CreateEmulator"/> on every machine (re)creation, so the
+    /// row always names what actually computes — toggle off means all electronic.
+    /// </summary>
+    private void UpdateUnitChips()
+    {
+        UnitChips[0].IsOnLight = _photonicAlu is not null || _photonicNotAlu is not null || _photonicAndAlu is not null;
+        UnitChips[1].IsOnLight = _photonicZeroFlag is not null;
+        UnitChips[2].IsOnLight = _photonicDataMemory is not null;
+    }
+
     /// <summary>
     /// True while the built network can run at least one operation on the photonic
-    /// chip — the adder signals, the NOT signals, the AND signals or the zero-flag
-    /// signals (A0–A3 in, Z out).
+    /// chip — the adder signals, the NOT signals, the AND signals, the zero-flag
+    /// signals (A0–A3 in, Z out) or the RAM 4x4 signals (A0/A1, LOAD, D0–D3 in,
+    /// Q0–Q3 out) that let the program's data memory live on light (issue #1446).
     /// </summary>
     public bool IsAnyPhotonicAvailable =>
         IsPhotonicAddAvailable || IsPhotonicNotAvailable || IsPhotonicAndAvailable
-        || IsPhotonicZeroFlagAvailable;
+        || IsPhotonicZeroFlagAvailable || IsPhotonicDataMemoryAvailable;
+
+    /// <summary>
+    /// True while the emulator's data RAM lives on the photonic RAM 4x4 network —
+    /// drives the "on light" chip next to the RAM readout (issue #1446).
+    /// </summary>
+    public bool IsPhotonicDataMemoryActive => _photonicDataMemory is not null;
 
     /// <summary>
     /// The toggle can be flipped while an accepted network is available and the
@@ -115,7 +164,8 @@ public partial class IsaPlaygroundViewModel
     /// </summary>
     public string PhotonicToggleLabel =>
         Translate(IsPhotonicAddAvailable
-                || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable && !IsPhotonicZeroFlagAvailable)
+                || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable && !IsPhotonicZeroFlagAvailable
+                    && !IsPhotonicDataMemoryAvailable)
             ? "IsaPlayground.PhotonicAdderToggle"
             : IsPhotonicZeroFlagAvailable && !IsPhotonicAndAvailable && !IsPhotonicNotAvailable
                 ? "IsaPlayground.PhotonicZeroFlagToggle"
@@ -123,7 +173,9 @@ public partial class IsaPlaygroundViewModel
                     ? "IsaPlayground.PhotonicAndNotToggle"
                     : IsPhotonicAndAvailable
                         ? "IsaPlayground.PhotonicAndToggle"
-                        : "IsaPlayground.PhotonicNotToggle");
+                        : IsPhotonicNotAvailable
+                            ? "IsaPlayground.PhotonicNotToggle"
+                            : "IsaPlayground.PhotonicDataMemoryToggle");
 
     /// <summary>
     /// The header title, naming the ALU the machine actually uses so the window
@@ -140,7 +192,9 @@ public partial class IsaPlaygroundViewModel
                         ? "IsaPlayground.TitlePhotonicAnd"
                         : _photonicNotAlu is not null
                             ? "IsaPlayground.TitlePhotonicNot"
-                            : "IsaPlayground.TitlePhotonicZeroFlag")
+                            : _photonicDataMemory is not null
+                                ? "IsaPlayground.TitlePhotonicDataMemory"
+                                : "IsaPlayground.TitlePhotonicZeroFlag")
             : "IsaPlayground.Title");
 
     /// <summary>Flipping the toggle resets the machine to power-on state with the chosen ALU.</summary>
@@ -188,6 +242,7 @@ public partial class IsaPlaygroundViewModel
             (PhotonicNotAlu.Accepts(network) && !IsPhotonicAndAvailable)
             || PhotonicNotAlu.Accepts(network, IsaAluSignalMap.CombinedLogicUnitNot);
         IsPhotonicZeroFlagAvailable = PhotonicZeroFlag.Accepts(network);
+        IsPhotonicDataMemoryAvailable = PhotonicDataMemory.Accepts(network);
     }
 
     /// <summary>
@@ -210,18 +265,26 @@ public partial class IsaPlaygroundViewModel
             _photonicAndAlu = PhotonicAndAlu.Accepts(network) ? new PhotonicAndAlu(network) : null;
             _photonicNotAlu = CreatePhotonicNotAlu(network);
             _photonicZeroFlag = PhotonicZeroFlag.Accepts(network) ? new PhotonicZeroFlag(network) : null;
+            _photonicDataMemory = PhotonicDataMemory.Accepts(network) ? new PhotonicDataMemory(network) : null;
             var golden = new GoldenIsaAlu();
-            return new IsaEmulator(_assembledWords, new CompositeIsaAlu(
+            var emulator = new IsaEmulator(_assembledWords, new CompositeIsaAlu(
                 _photonicAlu ?? (IIsaAlu)golden,
                 _photonicNotAlu ?? (IIsaAlu)golden,
                 _photonicAndAlu ?? (IIsaAlu)golden),
-                _photonicZeroFlag);
+                _photonicZeroFlag,
+                _photonicDataMemory);
+            OnPropertyChanged(nameof(IsPhotonicDataMemoryActive));
+            UpdateUnitChips();
+            return emulator;
         }
 
         _photonicAlu = null;
         _photonicNotAlu = null;
         _photonicAndAlu = null;
         _photonicZeroFlag = null;
+        _photonicDataMemory = null;
+        OnPropertyChanged(nameof(IsPhotonicDataMemoryActive));
+        UpdateUnitChips();
         return new IsaEmulator(_assembledWords);
     }
 

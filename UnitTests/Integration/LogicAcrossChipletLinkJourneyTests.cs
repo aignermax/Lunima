@@ -1,0 +1,324 @@
+using System.Collections.ObjectModel;
+using System.Numerics;
+using CAP.Avalonia.Commands;
+using CAP.Avalonia.Services;
+using CAP.Avalonia.ViewModels.Canvas;
+using CAP.Avalonia.ViewModels.Diagnostics;
+using CAP.Avalonia.ViewModels.Export;
+using CAP.Avalonia.ViewModels.Library;
+using CAP.Avalonia.ViewModels.Panels;
+using CAP_Core.Analysis;
+using CAP_Core.Analysis.LogicAnalysis;
+using CAP_Core.Components.Core;
+using Moq;
+using Shouldly;
+using UnitTests.Helpers;
+using Xunit;
+
+namespace UnitTests.Integration;
+
+/// <summary>
+/// Issue #1430 (rung 4×6): a logic signal crossing a chiplet edge-coupler link.
+/// Chiplet A carries the shipped NOT gate, chiplet B the shipped AND gate, and the
+/// NOT output is wired to chiplet A's edge-coupler facet while the AND input A is
+/// wired to chiplet B's facet — so the signal physically crosses the same link the
+/// shipped <c>Two Chiplets - Edge-Coupler Link.lun</c> uses. Issue #1437 taught the
+/// <see cref="LogicNetworkAssembler"/> to follow the pass-through optics across the
+/// link, so the receiving AND input keeps the NOT output as its driver, and issue
+/// #1445 charges the link's coupling loss in the level report, so a misaligned link
+/// flags the degraded 1 at the logic layer.
+/// </summary>
+public class LogicAcrossChipletLinkJourneyTests
+{
+    private const int WavelengthNm = LogicAcrossChipletLinkJourneyDesign.WavelengthNm;
+    private const double Tolerance = 1e-6;
+    private const double AxialShiftMicrometers = 10.0;
+    private const double LateralShiftMicrometers = 2.0;
+    private const string NotInput = LogicAcrossChipletLinkJourneyDesign.NotGateId + ".A";
+    private const string NotOutput = LogicAcrossChipletLinkJourneyDesign.NotGateId + ".Y";
+    private const string AndInput = LogicAcrossChipletLinkJourneyDesign.AndGateId + ".A";
+    private const string AndOutput = LogicAcrossChipletLinkJourneyDesign.AndGateId + ".Y";
+
+    /// <summary>
+    /// The step-2 assertion of the journey, pinned as the minimal repro: the network
+    /// must assemble across the link (NOT.Y drives AND.A, so Y = NOT A AND B).
+    /// </summary>
+    [Fact]
+    public async Task AssembledNetwork_CrossesTheLink_TruthTableIsNotAAndB()
+    {
+        var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
+        var network = await AssembleAsync(design.Canvas);
+
+        network.InputPinNames.ShouldBe(new[] { NotInput, "B" }, ignoreOrder: true,
+            "AND.A is driven by NOT.Y across the link; only the NOT input and AND.B stay network inputs");
+        foreach (var a in new[] { false, true })
+        foreach (var b in new[] { false, true })
+        {
+            network.Evaluate(Bits((NotInput, a), ("B", b)))[AndOutput]
+                .ShouldBe(!a && b, $"Y = NOT A AND B for A={a}, B={b}");
+        }
+    }
+
+    /// <summary>
+    /// Pins the fixed behaviour behind the repro: the assembler follows the link —
+    /// AND.A is driven by NOT.Y and never degenerates into a network input, while
+    /// the NOT output stays readable as a tap.
+    /// </summary>
+    [Fact]
+    public async Task Assembler_CrossChipletLink_KeepsTheNotOutputAsTheDriver()
+    {
+        var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
+        var network = await AssembleAsync(design.Canvas);
+
+        network.InputPinNames.ShouldBe(new[] { NotInput, "B" }, ignoreOrder: true,
+            "the AND input fed through the link is driven, so only NOT.A and B stay network inputs");
+        foreach (var notA in new[] { false, true })
+        {
+            network.Evaluate(Bits((NotInput, notA), ("B", true)))[NotOutput]
+                .ShouldBe(!notA, "the NOT output crossing the link stays readable as a tap");
+        }
+    }
+
+    /// <summary>
+    /// Steps 3+4: the physics is honest — misaligning chiplet B by the #1257 offset
+    /// drops the power arriving at the AND input below its gate threshold, and
+    /// Design Checks flag the link. Since #1445 the logic layer's level report
+    /// charges the same link coupling: re-assembling over the misaligned canvas
+    /// flags the degraded 1 with a level warning that names the link, while the
+    /// aligned assembly stays warning-free and the evaluation stays idealized.
+    /// </summary>
+    [Fact]
+    public async Task MisalignedLink_ArrivalPowerFallsBelowGateThreshold_LevelWarningNamesTheLink()
+    {
+        var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
+        var commandManager = new CommandManager();
+        var alignedNetwork = await AssembleAsync(design.Canvas);
+        double aligned = ArrivalPowerAtAndInput(design, alignedNetwork);
+        aligned.ShouldBeGreaterThanOrEqualTo(LogicAcrossChipletLinkJourneyDesign.AndThreshold,
+            "aligned, the NOT 1-level must reach the AND input above its threshold");
+        alignedNetwork.FanOutWarnings.ShouldBeEmpty(
+            "an aligned link couples perfectly — nothing to flag at the logic layer");
+
+        await MisalignChipletB(design, commandManager);
+
+        double eta = ChipletEdgeCouplerCoupling.PowerCouplingForOffset(LateralShiftMicrometers)
+            * ChipletEdgeCouplerCoupling.PowerCouplingForGap(AxialShiftMicrometers, WavelengthNm);
+        ChipletEdgeCouplerCoupling.FieldFactor(design.Link, WavelengthNm)
+            .ShouldBe(Math.Sqrt(eta), Tolerance, "the link's field factor follows the facet physics");
+        double misaligned = ArrivalPowerAtAndInput(design, alignedNetwork);
+        misaligned.ShouldBe(aligned * eta, Tolerance,
+            "the arrival power drops by exactly the link's coupling loss");
+        misaligned.ShouldBeLessThan(LogicAcrossChipletLinkJourneyDesign.AndThreshold,
+            "misaligned, the 1-level no longer reaches the AND threshold");
+
+        var validation = CreateValidation(design.Canvas, commandManager);
+        RunChecks(validation, design);
+        validation.Issues.ShouldContain(i => i.Type.ToString().StartsWith("ChipletInterface"),
+            "Design Checks flag the lossy link");
+
+        var network = await AssembleAsync(design.Canvas);
+        network.Evaluate(Bits((NotInput, false), ("B", true)))[AndOutput]
+            .ShouldBeTrue("the level warning stays advisory — the idealized logic layer still reads a 1");
+        var warning = network.FanOutWarnings.ShouldHaveSingleItem(
+            "the link loss is now charged in the level report, flagging the degraded 1");
+        warning.LinkDisplayName.ShouldBe("'Chiplet A' / 'Chiplet B'");
+        warning.LoadNames.ShouldBe(new[] { AndInput });
+        warning.Levels.DriverPowerOne.ShouldBe(WeakestNotOnePower(network), Tolerance);
+        warning.Levels.BranchPower.ShouldBe(WeakestNotOnePower(network) * eta, Tolerance,
+            "delivered level = gate 1-level × link coupling factor");
+        warning.Levels.Branches[0].ReadsAsOne.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Step 5: the one-click Align chiplet fix restores the link level and clears
+    /// the chiplet-interface findings.
+    /// </summary>
+    [Fact]
+    public async Task AlignChiplet_RestoresTheLinkLevel_AndClearsDesignChecks()
+    {
+        var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
+        var commandManager = new CommandManager();
+        var network = await AssembleAsync(design.Canvas);
+        double aligned = ArrivalPowerAtAndInput(design, network);
+        var validation = CreateValidation(design.Canvas, commandManager);
+
+        await MisalignChipletB(design, commandManager);
+        RunChecks(validation, design);
+        NavigateToChipletIssue(validation);
+        validation.IsCurrentIssueAlignable.ShouldBeTrue(
+            "the chiplet-interface finding must offer the Align chiplet fix");
+
+        await validation.AlignChipletCommand.ExecuteAsync(null);
+        await design.Canvas.RecalculateRoutesAsync();
+
+        ChipletEdgeCouplerCoupling.FieldFactor(design.Link, WavelengthNm)
+            .ShouldBe(1.0, Tolerance, "the aligned link couples perfectly again");
+        ArrivalPowerAtAndInput(design, network).ShouldBe(aligned, Tolerance,
+            "the alignment restores the arrival level exactly");
+        validation.Issues.ShouldNotContain(i => i.Type.ToString().StartsWith("ChipletInterface"),
+            "the alignment clears the chiplet-interface findings");
+        (await AssembleAsync(design.Canvas)).FanOutWarnings.ShouldBeEmpty(
+            "the re-aligned link couples perfectly, so the level warning clears too");
+    }
+
+    /// <summary>Step 6: the composed design survives a real save/load and re-assembles identically.</summary>
+    [Fact]
+    public async Task SaveLoad_RebuildsIdenticalNetwork()
+    {
+        var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
+        var network = await AssembleAsync(design.Canvas);
+        // MoveGroup does not update the canvas VM positions the save path serializes.
+        foreach (var componentVm in design.Canvas.Components)
+        {
+            componentVm.X = componentVm.Component.PhysicalX;
+            componentVm.Y = componentVm.Component.PhysicalY;
+        }
+        var tempFile = Path.Combine(Path.GetTempPath(), $"logic_chiplet_link_{Guid.NewGuid():N}.cappro");
+        try
+        {
+            await SaveToFile(CreateFileOperations(design.Canvas), tempFile);
+            var loadCanvas = new DesignCanvasViewModel();
+            await LoadFromFile(CreateFileOperations(loadCanvas), tempFile);
+            await loadCanvas.RecalculateRoutesAsync();
+
+            var reloaded = await AssembleAsync(loadCanvas);
+            reloaded.InputPinNames.ShouldBe(network.InputPinNames, ignoreOrder: true);
+            reloaded.OutputPinNames.ShouldBe(network.OutputPinNames, ignoreOrder: true);
+            foreach (var notA in new[] { false, true })
+            foreach (var b in new[] { false, true })
+            {
+                var bits = Bits((NotInput, notA), ("B", b));
+                reloaded.Evaluate(bits).ShouldBe(network.Evaluate(bits),
+                    $"truth table identical after save/load for {NotInput}={notA}, B={b}");
+            }
+            WeakestNotOnePower(reloaded).ShouldBe(WeakestNotOnePower(network), Tolerance,
+                "the NOT gate's 1-level is identical after save/load");
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>Runs the production assembler over the canvas's components and connections.</summary>
+    private static Task<LogicNetworkEvaluator> AssembleAsync(DesignCanvasViewModel canvas) =>
+        new LogicNetworkAssembler().AssembleAsync(
+            canvas.Components.Select(vm => vm.Component).ToList(),
+            canvas.ConnectionManager.Connections,
+            WavelengthNm);
+
+    /// <summary>
+    /// The normalized power physically arriving at the AND input A when the NOT
+    /// drives a 1: the gate's weakest 1-level attenuated by the frozen facet wiring
+    /// of both chiplets and the link's facet coupling factor.
+    /// </summary>
+    private static double ArrivalPowerAtAndInput(
+        LogicAcrossChipletLinkJourneyDesign design, LogicNetworkEvaluator network)
+    {
+        double wireField = WireField(design.ChipletA) * WireField(design.ChipletB);
+        double linkField = ChipletEdgeCouplerCoupling.FieldFactor(design.Link, WavelengthNm);
+        double field = Math.Sqrt(WeakestNotOnePower(network)) * wireField * linkField;
+        return field * field;
+    }
+
+    /// <summary>The NOT gate's weakest 1-level power, straight from its assembled table.</summary>
+    private static double WeakestNotOnePower(LogicNetworkEvaluator network) =>
+        network.Gates[LogicAcrossChipletLinkJourneyDesign.NotGateId].TruthTable.Rows
+            .Where(row => row.Outputs["Y"].IsOne)
+            .Min(row => row.Outputs["Y"].Power);
+
+    /// <summary>Field transmission of a chiplet's frozen internal wiring.</summary>
+    private static double WireField(ComponentGroup chiplet) =>
+        chiplet.InternalPaths.Aggregate(1.0, (acc, p) => acc * p.TransmissionCoefficient.Magnitude);
+
+    /// <summary>Misaligns chiplet B through the canvas move path (+10 µm axial, +2 µm lateral).</summary>
+    private static async Task MisalignChipletB(
+        LogicAcrossChipletLinkJourneyDesign design, CommandManager commandManager)
+    {
+        var chipletBVm = design.Canvas.Components.Single(vm => vm.Component == design.ChipletB);
+        design.Canvas.BeginDragComponent(chipletBVm);
+        design.Canvas.MoveComponent(chipletBVm, AxialShiftMicrometers, LateralShiftMicrometers);
+        commandManager.ExecuteCommand(new GroupMoveCommand(
+            design.Canvas, new[] { chipletBVm }, AxialShiftMicrometers, LateralShiftMicrometers));
+        design.Canvas.EndDragComponent(chipletBVm);
+        await design.Canvas.RecalculateRoutesAsync();
+    }
+
+    /// <summary>Design Checks panel wired like MainViewModel: align, then re-run the checks.</summary>
+    private static DesignValidationViewModel CreateValidation(
+        DesignCanvasViewModel canvas, CommandManager commandManager)
+    {
+        var validation = new DesignValidationViewModel();
+        var alignmentService = new ChipletAlignmentService(canvas, commandManager);
+        validation.AlignChipletHandler = connection =>
+        {
+            var refusal = alignmentService.TryAlign(connection, WavelengthNm);
+            if (refusal != null) return Task.FromResult<string?>(refusal.ToString());
+            RunChecks(validation, canvas);
+            return Task.FromResult<string?>(null);
+        };
+        return validation;
+    }
+
+    private static void RunChecks(
+        DesignValidationViewModel validation, LogicAcrossChipletLinkJourneyDesign design) =>
+        RunChecks(validation, design.Canvas);
+
+    private static void RunChecks(DesignValidationViewModel validation, DesignCanvasViewModel canvas)
+    {
+        var groups = canvas.Components.Select(vm => vm.Component).OfType<ComponentGroup>().ToArray();
+        validation.RunValidation(
+            canvas.ConnectionManager.Connections,
+            groups: groups,
+            allComponents: canvas.Components.Select(vm => vm.Component),
+            externalPortPins: groups.SelectMany(g => g.PhysicalPins),
+            wavelengthNm: WavelengthNm);
+    }
+
+    /// <summary>Steps the issue navigation onto the first chiplet-interface finding.</summary>
+    private static void NavigateToChipletIssue(DesignValidationViewModel validation)
+    {
+        for (int i = 0; i < validation.Issues.Count; i++)
+        {
+            if (validation.Issues[validation.CurrentIndex].Type.ToString().StartsWith("ChipletInterface"))
+                return;
+            validation.NextIssueCommand.Execute(null);
+        }
+        throw new ShouldAssertException("no chiplet-interface issue found to navigate to");
+    }
+
+    private static FileOperationsViewModel CreateFileOperations(DesignCanvasViewModel canvas) =>
+        new(
+            canvas,
+            new CommandManager(),
+            new SimpleNazcaExporter(),
+            new CAP_Core.Export.SaxExporter(),
+            new ObservableCollection<ComponentTemplate>(TestPdkLoader.LoadAllTemplates()),
+            new GdsExportViewModel(new CAP_Core.Export.GdsExportService()),
+            new PhotonTorchExportViewModel(new CAP_Core.Export.PhotonTorchExporter(), canvas),
+            null!);
+
+    private static async Task SaveToFile(FileOperationsViewModel vm, string filePath)
+    {
+        var dialog = new Mock<IFileDialogService>();
+        dialog.Setup(f => f.ShowSaveFileDialogAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(filePath);
+        vm.FileDialogService = dialog.Object;
+        await vm.SaveDesignAsCommand.ExecuteAsync(null);
+        File.Exists(filePath).ShouldBeTrue("the design file must be created during save");
+    }
+
+    private static async Task LoadFromFile(FileOperationsViewModel vm, string filePath)
+    {
+        var dialog = new Mock<IFileDialogService>();
+        dialog.Setup(f => f.ShowOpenFileDialogAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(filePath);
+        vm.FileDialogService = dialog.Object;
+        await vm.LoadDesignCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>Builds an input-bit dictionary from (name, bit) pairs.</summary>
+    private static Dictionary<string, bool> Bits(params (string Name, bool Bit)[] bits) =>
+        bits.ToDictionary(pair => pair.Name, pair => pair.Bit);
+}

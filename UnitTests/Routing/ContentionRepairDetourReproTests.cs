@@ -12,24 +12,24 @@ using Xunit;
 namespace UnitTests.Routing;
 
 /// <summary>
-/// Detection repro for issue #1412: the RAM word cell (issue #1400 floorplan) stamps the
-/// cell-spanning select trunk CSEL0R.Y2 → CSEL0_0.A blocked — a degraded straight that
-/// crosses five routed siblings — although the word cell's row 0 is an empty highway the
-/// trunk could detour through. This fixture rebuilds that trunk's geometry with plain
-/// box components at the coordinates <c>RamWordCellBuilder</c> emits (column pitch 1200,
-/// row pitch 400, origin (400,100), gate bodies 320×60), routes it through the real
-/// <see cref="WaveguideConnectionManager"/> pipeline, pins today's behaviour (the trunk
-/// ends <see cref="RoutedPath.IsBlockedFallback"/> with
-/// <see cref="RoutingFailureReason.Contention"/>), and proves a hand-constructed detour
-/// through the empty highway row is collision-free on the routing grid — the router
-/// declines a detour that exists.
+/// Inverted repro for issue #1412 (fix verified per issue #1418): the RAM word cell (issue
+/// #1400 floorplan) used to stamp the cell-spanning select trunk CSEL0R.Y2 → CSEL0_0.A
+/// blocked — a degraded straight crossing five routed siblings — although the word cell's
+/// row 0 is an empty highway the trunk could detour through. This fixture rebuilds that
+/// trunk's geometry with plain box components at the coordinates <c>RamWordCellBuilder</c>
+/// emits (column pitch 1200, row pitch 400, origin (400,100), gate bodies 320×60), routes
+/// it through the real <see cref="WaveguideConnectionManager"/> pipeline, and pins the
+/// fixed behaviour: the trunk routes WITHOUT <see cref="RoutedPath.IsBlockedFallback"/>
+/// and crosses no routed sibling, while a hand-constructed detour through the empty
+/// highway row remains collision-free on the routing grid.
 /// <para>
-/// The A* node budgets are scaled down from the defaults so the repro meets its 10 s
-/// budget. The failure mode under test is identical at the default budgets (verified
-/// during the investigation): the flat search floods the huge free region between the
-/// gate rows and exhausts its node budget before it ever reaches the empty highway row,
-/// so the wire degrades to the blocked straight — the budgets only decide how long the
-/// flood takes, not whether the detour is found.
+/// The A* node budgets are scaled down from the defaults so the test meets its time
+/// budget. The failure mode this fixture pinned was budget-independent: the flat search
+/// flooded the huge free region between the gate rows and exhausted its node budget
+/// before it ever reached the empty highway row. The fix (issue #1418) retries the A* on
+/// a coarser grid before degrading to the blocked fallback — factor² fewer cells let the
+/// same budget reach the highway, and the coarse result is only accepted after smoothing
+/// and a collision check on the fine grid.
 /// </para>
 /// </summary>
 public class ContentionRepairDetourReproTests
@@ -44,29 +44,41 @@ public class ContentionRepairDetourReproTests
     private static readonly TimeSpan UnboundedRepairBudget = TimeSpan.FromMinutes(5);
 
     [Fact]
-    public void SelectTrunk_FreeHighwayDetourExists_RouterStillStampsBlocked()
+    public void SelectTrunk_FreeHighwayDetourExists_RouterFindsDetour()
     {
         var scene = SelectTrunkScene.Build();
 
         scene.Manager.RecalculateAllTransmissions();
 
-        // Pin today's behavior: the trunk is stamped blocked as contention although a
-        // collision-free detour through the empty highway row exists on the grid.
-        scene.Trunk.IsBlockedFallback.ShouldBeTrue(
-            "today the trunk is stamped blocked although a free detour lane exists (issue #1412)");
-        scene.Trunk.FailureReason.ShouldBe(RoutingFailureReason.Contention);
+        // Pin the fixed behavior (issue #1418): the trunk detours instead of degrading to
+        // the blocked straight — the coarse-grid retry reaches the empty highway row the
+        // flooded fine search never did.
+        scene.Trunk.IsBlockedFallback.ShouldBeFalse(
+            "the trunk must detour through the free highway lane, not degrade to a blocked straight " +
+            "(issue #1412, fixed via #1418)");
+        scene.Trunk.FailureReason.ShouldBe(RoutingFailureReason.None);
+        scene.Trunk.RoutedPath.ShouldNotBeNull();
         foreach (var sibling in scene.Siblings)
         {
             sibling.IsBlockedFallback.ShouldBeFalse(
-                "the short sibling hops route cleanly — only the cell-spanning trunk fails");
+                "the short sibling hops route cleanly — only the cell-spanning trunk was at risk");
         }
-        scene.Manager.LastContentionRepairAttemptCount.ShouldBeGreaterThanOrEqualTo(1,
-            "the repair pass must attempt the trunk — the repro pins that it cannot detour");
+
+        // The routed trunk must not cross any routed sibling — the same crossing check
+        // the detection half of this fixture applied to the hand-built detour.
+        foreach (var sibling in scene.Siblings)
+        {
+            if (sibling.RoutedPath == null || !sibling.IsPathValid)
+                continue;
+            PathIntersectionDetector.Crosses(scene.Trunk.RoutedPath, sibling.RoutedPath).ShouldBeFalse(
+                "the routed trunk must not cross any routed sibling");
+        }
 
         // The hand-constructed detour through the empty highway row: east out of the start
         // pin, north into row 0, across the cell on the highway, south onto the target pin.
-        // The trunk's own registered obstacle is lifted first — the repair would rip it up
-        // before re-routing, so the detour must clear every OTHER obstacle only.
+        // The trunk's own registered obstacle is lifted first — the detour must clear
+        // every OTHER obstacle only. This keeps the detour's existence pinned so the test
+        // above can never silently pass on an empty scene.
         var detour = SelectTrunkScene.BuildHighwayDetour(scene);
         var grid = scene.Router.PathfindingGrid!;
         grid.RemoveWaveguideObstacle(scene.Trunk.Id);
@@ -132,7 +144,7 @@ public class ContentionRepairDetourReproTests
     /// lining the corridor. Wire order mirrors <c>RamWordCellBuilder</c>: the short hops
     /// first, the cell-spanning trunk last.
     /// </summary>
-    private sealed class SelectTrunkScene
+    internal sealed class SelectTrunkScene
     {
         public required WaveguideRouter Router { get; init; }
         public required WaveguideConnectionManager Manager { get; init; }
@@ -141,12 +153,25 @@ public class ContentionRepairDetourReproTests
         public required PhysicalPin TrunkStart { get; init; }
         public required PhysicalPin TrunkEnd { get; init; }
 
-        public static SelectTrunkScene Build()
+        public static SelectTrunkScene Build() => Build(sealTrunkEnd: false);
+
+        /// <summary>
+        /// The trunk scene with the trunk's END pin buried inside its gate body
+        /// (issue #1426): the pin corridor punches only 3·radius into a body, so a
+        /// pin 160 µm deep has no physical route — every detour (highway or inter-row)
+        /// fails and the wire ends blocked. The perf-guard measurement uses this
+        /// variant to time the retry's wasted cost on a genuinely unroutable wire.
+        /// </summary>
+        public static SelectTrunkScene BuildSealedTrunk() => Build(sealTrunkEnd: true);
+
+        private static SelectTrunkScene Build(bool sealTrunkEnd)
         {
             // Gates at RamWordCellBuilder coordinates, each with the pins the wires need
             // (registered on the component so the rasterizer carves their escape corridors).
             var csel0R = Gate(400, 500, (320, 26, 0));
-            var csel0_0 = Gate(13600, 1700, (0, 24, 180));
+            var csel0_0 = sealTrunkEnd
+                ? Gate(13600, 1700, (160, 24, 180))
+                : Gate(13600, 1700, (0, 24, 180));
             var en0 = Gate(1600, 500);
             var cpea0 = Gate(4000, 500);
             var iw0 = Gate(5200, 500);

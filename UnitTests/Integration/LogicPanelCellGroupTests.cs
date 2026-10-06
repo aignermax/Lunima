@@ -16,6 +16,7 @@ namespace UnitTests.Integration;
 /// stripped. The flat <c>Logic Gate 4-Bit Adder.lun</c> keeps the exact row list it had
 /// before — no cell groups, same order.
 /// </summary>
+[Collection("LocalizationSingleton")]
 public class LogicPanelCellGroupTests : IClassFixture<LogicPanelCellGroupTests.LoadedExamples>
 {
     private const int MaxTopLevelRows = 15;
@@ -23,7 +24,12 @@ public class LogicPanelCellGroupTests : IClassFixture<LogicPanelCellGroupTests.L
     private readonly LoadedExamples _fixture;
 
     /// <summary>Attaches the shared loaded examples.</summary>
-    public LogicPanelCellGroupTests(LoadedExamples fixture) => _fixture = fixture;
+    public LogicPanelCellGroupTests(LoadedExamples fixture)
+    {
+        _fixture = fixture;
+        // The cell header text is asserted in English; pin it over the machine's UI culture.
+        CAP.Avalonia.Services.Localization.LocalizationService.Instance.SetLanguage("en");
+    }
 
     [Fact]
     public async Task BuildNetwork_Ram2x4_CollapsesNestedGateRowsUnderOneHeaderPerCell()

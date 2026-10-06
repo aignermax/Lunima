@@ -21,11 +21,10 @@ namespace UnitTests.Integration;
 /// The count is pinned per shipped example: the RAM 2x4 ships three blocked top-level
 /// inter-cell wires (pinned in <c>ExampleLoadRoutingTests.KnownBlockedWires</c>) plus the
 /// blocked intra-cell wires frozen inside its two word-cell instances — DRC-lite used to
-/// see only the top-level three. The shipped file currently has no flagged frozen paths
-/// (the spike's template extraction dropped the flag — see the RAM 2x4 entry below), so
-/// the pinned counts equal the top-level numbers until the examples are re-authored; any
-/// count ABOVE the top-level number then is the finding this issue surfaces. Counts may
-/// only change when the layout or the router changes on purpose. Routes are never edited.
+/// see only the top-level three. The RAM examples were re-authored in #1419 so the frozen
+/// intra-cell blocked wires carry the flag, and the pinned RAM counts include the frozen
+/// split (see the entries below). Counts may only change when the layout or the router
+/// changes on purpose. Routes are never edited.
 /// </summary>
 public class ExampleFrozenBlockedPathTests
 {
@@ -44,16 +43,14 @@ public class ExampleFrozenBlockedPathTests
         ["Logic Gate Full Adder.lun"] = 2,
         ["Logic Gate PC 2-bit.lun"] = 12,
         ["Logic Gate RAM 2x2.lun"] = 18,
-        // Measured 3, not the expected 3 + 2×9 = 21: the shipped file carries 383 frozen
-        // paths but ZERO IsBlockedFallback flags — the spike's template extraction
-        // (RamWordCellTemplate) dropped the flag when freezing the word cell, so the
-        // blocked intra-cell wires were baked unflagged. The plumbing (freeze → DTO →
-        // save → load) is proven by FrozenBlockedPathCheckerTests.SerializerRoundTrip;
-        // the extraction path now carries the flag for future re-authoring.
-        ["Logic Gate RAM 2x4.lun"] = 3,
-        // Top-level only (22 of them sealed by a component footprint); the word-cell
-        // template it was baked from predates the flag-carrying extraction.
-        ["Logic Gate RAM 4x4.lun"] = 43,
+        // 3 blocked top-level inter-cell wires + 2 cell instances × 9 blocked intra-cell
+        // wires frozen with the flag (re-baked in #1419 after the extraction path learned
+        // to carry the flag — before, the file shipped 383 frozen paths with zero flags).
+        ["Logic Gate RAM 2x4.lun"] = 21,
+        // 45 blocked top-level wires + 4 cell instances × 8 blocked intra-cell wires
+        // frozen with the flag (re-baked in #1425 with the coarse-retry router of #1423:
+        // the cell dropped 9 → 8, the top level rose 44 → 45 — the total still drops).
+        ["Logic Gate RAM 4x4.lun"] = 77,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
     };
 

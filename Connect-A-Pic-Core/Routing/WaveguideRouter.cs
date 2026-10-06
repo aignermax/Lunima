@@ -235,6 +235,20 @@ public partial class WaveguideRouter
     public RoutedPath Route(PhysicalPin startPin, PhysicalPin endPin,
                              CancellationToken cancellationToken = default)
     {
+        LastRouteCoarseNodesExpanded = 0;
+        try
+        {
+            return RouteCore(startPin, endPin, cancellationToken);
+        }
+        finally
+        {
+            OnRouteCoarseExpansionsRecorded?.Invoke(LastRouteCoarseNodesExpanded);
+        }
+    }
+
+    private RoutedPath RouteCore(PhysicalPin startPin, PhysicalPin endPin,
+                                  CancellationToken cancellationToken)
+    {
         var (startX, startY) = startPin.GetAbsolutePosition();
         var (endX, endY) = endPin.GetAbsolutePosition();
         double startAngle = startPin.GetAbsoluteAngle();
@@ -283,6 +297,34 @@ public partial class WaveguideRouter
                 {
                     astarPath.ViolatesProcessMinBendRadius = true;
                     return astarPath;
+                }
+            }
+        }
+
+        // Coarse-grid retry (issue #1418): the fine A* can flood the huge free plane
+        // between component rows and exhaust its budget before reaching an empty detour
+        // lane. One retry per radius on a coarser grid (factor²-scaled budget) reaches
+        // the lane; the result is only accepted after a collision check on the fine grid.
+        // Skipped when the fine attempt's flood proved the goal region unreachable —
+        // the coarser (strictly more blocked) grid cannot find a validatable route then.
+        if (_lastFineAttemptGoalReachable)
+        {
+            var coarsePath = TryRouteCoarseAStar(effectiveRadius, startX, startY, startAngle,
+                                                 endX, endY, endInputAngle, startPin, endPin,
+                                                 cancellationToken);
+            if (coarsePath != null)
+            {
+                return coarsePath;
+            }
+            if (floorRaisesRadius)
+            {
+                coarsePath = TryRouteCoarseAStar(connectionRadius, startX, startY, startAngle,
+                                                 endX, endY, endInputAngle, startPin, endPin,
+                                                 cancellationToken);
+                if (coarsePath != null)
+                {
+                    coarsePath.ViolatesProcessMinBendRadius = true;
+                    return coarsePath;
                 }
             }
         }

@@ -27,8 +27,12 @@ public class IsaPlaygroundPhotonicAndTests : IClassFixture<LogicGateAnd4BitExamp
     private readonly LogicGateAnd4BitExampleTests.And4BitFixture _fixture;
 
     /// <summary>Attaches the shared AND-4-bit fixture (assembles the network once).</summary>
-    public IsaPlaygroundPhotonicAndTests(LogicGateAnd4BitExampleTests.And4BitFixture fixture) =>
+    public IsaPlaygroundPhotonicAndTests(LogicGateAnd4BitExampleTests.And4BitFixture fixture)
+    {
         _fixture = fixture;
+        // The hint assertions match English example names; pin English over the machine's UI culture.
+        LocalizationService.Instance.SetLanguage("en");
+    }
 
     [Fact]
     public void AndNetwork_EnablesToggle_WithAndLabelAndAndHeader()

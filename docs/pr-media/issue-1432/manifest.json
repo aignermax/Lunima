@@ -1,0 +1,26 @@
+[
+  {
+    "file": "en-01-laser-early.png",
+    "caption": "ONA help flyout (en) at animation phase 0.10: the laser marker is off-resonance \u2014 the small ring stays dim."
+  },
+  {
+    "file": "en-02-on-resonance.png",
+    "caption": "ONA help flyout (en) at animation phase 0.55: the laser marker sits on the middle resonance \u2014 the small ring next to the plot is lit."
+  },
+  {
+    "file": "en-03-sweep-end.png",
+    "caption": "ONA help flyout (en) at animation phase 0.95: the laser marker is off-resonance \u2014 the small ring stays dim."
+  },
+  {
+    "file": "de-01-laser-early.png",
+    "caption": "ONA help flyout (de) at animation phase 0.10: the laser marker is off-resonance \u2014 the small ring stays dim."
+  },
+  {
+    "file": "de-02-on-resonance.png",
+    "caption": "ONA help flyout (de) at animation phase 0.55: the laser marker sits on the middle resonance \u2014 the small ring next to the plot is lit."
+  },
+  {
+    "file": "de-03-sweep-end.png",
+    "caption": "ONA help flyout (de) at animation phase 0.95: the laser marker is off-resonance \u2014 the small ring stays dim."
+  }
+]

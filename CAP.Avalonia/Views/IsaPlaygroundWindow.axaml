@@ -111,13 +111,64 @@
                                FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{loc:Localize IsaPlayground.RamLabel}"
                                Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RamText}"
-                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
+                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="{Binding RamText}"
+                                   FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
+                        <Border Background="#3d5d3d" CornerRadius="3" Padding="5,1" Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsPhotonicDataMemoryActive}">
+                            <TextBlock Text="{loc:Localize IsaPlayground.RamOnLightChip}"
+                                       Foreground="#7ec87e" FontSize="9" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="{loc:Localize IsaPlayground.StatusLabel}"
                                Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MachineStatusText}"
                                FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
                 </Grid>
+
+                <!-- "What runs on light" row (#1456): one chip per machine unit —
+                     green while the photonic network computes it, grey while it is
+                     simulated electronically. The (?) flyout explains the colors. -->
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,2">
+                    <ItemsControl ItemsSource="{Binding UnitChips}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="4"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="isa:IsaUnitChipViewModel">
+                                <Border Classes="unitchip" Classes.onlight="{Binding IsOnLight}"
+                                        CornerRadius="3" Padding="6,1">
+                                    <Border.Styles>
+                                        <Style Selector="Border.unitchip">
+                                            <Setter Property="Background" Value="#3d3d3d"/>
+                                        </Style>
+                                        <Style Selector="Border.unitchip TextBlock">
+                                            <Setter Property="Foreground" Value="#9a9a9a"/>
+                                        </Style>
+                                        <Style Selector="Border.unitchip.onlight">
+                                            <Setter Property="Background" Value="#3d5d3d"/>
+                                        </Style>
+                                        <Style Selector="Border.unitchip.onlight TextBlock">
+                                            <Setter Property="Foreground" Value="#7ec87e"/>
+                                        </Style>
+                                    </Border.Styles>
+                                    <TextBlock Text="{Binding UnitName}"
+                                               FontSize="9" FontWeight="SemiBold"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ctrl:HelpFlyoutButton VerticalAlignment="Center"
+                                           Title="{loc:Localize IsaPlayground.UnitChipsTitle}">
+                        <ctrl:HelpFlyoutButton.HelpContent>
+                            <TextBlock Text="{loc:Localize IsaPlayground.UnitChipsHint}"
+                                       TextWrapping="Wrap" MaxWidth="280"/>
+                        </ctrl:HelpFlyoutButton.HelpContent>
+                    </ctrl:HelpFlyoutButton>
+                </StackPanel>
 
                 <TextBlock Text="{Binding ErrorText}" Foreground="#ff6b6b" FontSize="11"
                            TextWrapping="Wrap"

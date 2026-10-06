@@ -1,0 +1,6 @@
+[
+  {
+    "file": "ram4x4-overview.png",
+    "caption": "The re-baked \u0027Logic Gate RAM 4x4\u0027 example (issue #1419): the blocked intra-cell wires of the four word-cell instances are frozen with their flag, and the design checks report honest contention reasons instead of the startup-grid artifact that masqueraded as footprint-sealed pins."
+  }
+]
