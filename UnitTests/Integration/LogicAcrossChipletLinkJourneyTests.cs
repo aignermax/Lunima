@@ -24,9 +24,9 @@ namespace UnitTests.Integration;
 /// wired to chiplet B's facet — so the signal physically crosses the same link the
 /// shipped <c>Two Chiplets - Edge-Coupler Link.lun</c> uses. Issue #1437 taught the
 /// <see cref="LogicNetworkAssembler"/> to follow the pass-through optics across the
-/// link, so the receiving AND input keeps the NOT output as its driver. Still open
-/// (its own follow-up): no level report carries the link's coupling loss, so a
-/// misaligned link never flags at the logic layer.
+/// link, so the receiving AND input keeps the NOT output as its driver, and issue
+/// #1445 charges the link's coupling loss in the level report, so a misaligned link
+/// flags the degraded 1 at the logic layer.
 /// </summary>
 public class LogicAcrossChipletLinkJourneyTests
 {
@@ -36,6 +36,7 @@ public class LogicAcrossChipletLinkJourneyTests
     private const double LateralShiftMicrometers = 2.0;
     private const string NotInput = LogicAcrossChipletLinkJourneyDesign.NotGateId + ".A";
     private const string NotOutput = LogicAcrossChipletLinkJourneyDesign.NotGateId + ".Y";
+    private const string AndInput = LogicAcrossChipletLinkJourneyDesign.AndGateId + ".A";
     private const string AndOutput = LogicAcrossChipletLinkJourneyDesign.AndGateId + ".Y";
 
     /// <summary>
@@ -81,18 +82,22 @@ public class LogicAcrossChipletLinkJourneyTests
     /// <summary>
     /// Steps 3+4: the physics is honest — misaligning chiplet B by the #1257 offset
     /// drops the power arriving at the AND input below its gate threshold, and
-    /// Design Checks flag the link — but the logic layer has no level report for the
-    /// crossing signal, so nothing flags the degraded 1 there.
+    /// Design Checks flag the link. Since #1445 the logic layer's level report
+    /// charges the same link coupling: re-assembling over the misaligned canvas
+    /// flags the degraded 1 with a level warning that names the link, while the
+    /// aligned assembly stays warning-free and the evaluation stays idealized.
     /// </summary>
     [Fact]
-    public async Task MisalignedLink_ArrivalPowerFallsBelowGateThreshold_LogicLayerNeverSeesIt()
+    public async Task MisalignedLink_ArrivalPowerFallsBelowGateThreshold_LevelWarningNamesTheLink()
     {
         var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
         var commandManager = new CommandManager();
-        var network = await AssembleAsync(design.Canvas);
-        double aligned = ArrivalPowerAtAndInput(design, network);
+        var alignedNetwork = await AssembleAsync(design.Canvas);
+        double aligned = ArrivalPowerAtAndInput(design, alignedNetwork);
         aligned.ShouldBeGreaterThanOrEqualTo(LogicAcrossChipletLinkJourneyDesign.AndThreshold,
             "aligned, the NOT 1-level must reach the AND input above its threshold");
+        alignedNetwork.FanOutWarnings.ShouldBeEmpty(
+            "an aligned link couples perfectly — nothing to flag at the logic layer");
 
         await MisalignChipletB(design, commandManager);
 
@@ -100,7 +105,7 @@ public class LogicAcrossChipletLinkJourneyTests
             * ChipletEdgeCouplerCoupling.PowerCouplingForGap(AxialShiftMicrometers, WavelengthNm);
         ChipletEdgeCouplerCoupling.FieldFactor(design.Link, WavelengthNm)
             .ShouldBe(Math.Sqrt(eta), Tolerance, "the link's field factor follows the facet physics");
-        double misaligned = ArrivalPowerAtAndInput(design, network);
+        double misaligned = ArrivalPowerAtAndInput(design, alignedNetwork);
         misaligned.ShouldBe(aligned * eta, Tolerance,
             "the arrival power drops by exactly the link's coupling loss");
         misaligned.ShouldBeLessThan(LogicAcrossChipletLinkJourneyDesign.AndThreshold,
@@ -111,11 +116,17 @@ public class LogicAcrossChipletLinkJourneyTests
         validation.Issues.ShouldContain(i => i.Type.ToString().StartsWith("ChipletInterface"),
             "Design Checks flag the lossy link");
 
+        var network = await AssembleAsync(design.Canvas);
         network.Evaluate(Bits((NotInput, false), ("B", true)))[AndOutput]
-            .ShouldBeTrue("the idealized logic layer still reads a 1 — " +
-                "no level report carries the link loss (its own follow-up issue)");
-        network.FanOutWarnings.ShouldBeEmpty(
-            "no level report carries the link loss, so nothing flags the degraded 1");
+            .ShouldBeTrue("the level warning stays advisory — the idealized logic layer still reads a 1");
+        var warning = network.FanOutWarnings.ShouldHaveSingleItem(
+            "the link loss is now charged in the level report, flagging the degraded 1");
+        warning.LinkDisplayName.ShouldBe("'Chiplet A' / 'Chiplet B'");
+        warning.LoadNames.ShouldBe(new[] { AndInput });
+        warning.Levels.DriverPowerOne.ShouldBe(WeakestNotOnePower(network), Tolerance);
+        warning.Levels.BranchPower.ShouldBe(WeakestNotOnePower(network) * eta, Tolerance,
+            "delivered level = gate 1-level × link coupling factor");
+        warning.Levels.Branches[0].ReadsAsOne.ShouldBeFalse();
     }
 
     /// <summary>
@@ -146,6 +157,8 @@ public class LogicAcrossChipletLinkJourneyTests
             "the alignment restores the arrival level exactly");
         validation.Issues.ShouldNotContain(i => i.Type.ToString().StartsWith("ChipletInterface"),
             "the alignment clears the chiplet-interface findings");
+        (await AssembleAsync(design.Canvas)).FanOutWarnings.ShouldBeEmpty(
+            "the re-aligned link couples perfectly, so the level warning clears too");
     }
 
     /// <summary>Step 6: the composed design survives a real save/load and re-assembles identically.</summary>

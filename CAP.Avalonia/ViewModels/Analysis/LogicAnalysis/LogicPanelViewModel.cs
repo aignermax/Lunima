@@ -64,6 +64,10 @@ public partial class LogicPanelViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasFanOutWarnings;
 
+    /// <summary>True when at least one warning is a genuine fan-out split (shows the splitter note).</summary>
+    [ObservableProperty]
+    private bool _hasSplitFanOutWarnings;
+
     /// <summary>
     /// Critical-path summary line ("critical path: X ps over N gates") — the slowest
     /// gate chain limits how fast the network can clock.
@@ -124,6 +128,7 @@ public partial class LogicPanelViewModel : ObservableObject
             FanOutWarnings.Add(new LogicFanOutWarningViewModel(warning));
         }
         HasFanOutWarnings = FanOutWarnings.Count > 0;
+        HasSplitFanOutWarnings = FanOutWarnings.Any(w => !w.IsLinkWarning);
         CriticalPathText = string.Format(
             Translate("LogicPanel.CriticalPath"),
             network.CriticalPathDelayPicoseconds,
@@ -144,6 +149,7 @@ public partial class LogicPanelViewModel : ObservableObject
         _builtNetworkProvider?.Clear();
         _canvas?.LogicGateStates.Clear();
         HasFanOutWarnings = false;
+        HasSplitFanOutWarnings = false;
         CriticalPathText = "";
         HasCellGroups = false;
         ClearTimeline();

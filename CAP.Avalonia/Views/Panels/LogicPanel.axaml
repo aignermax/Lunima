@@ -98,11 +98,14 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <TextBlock Text="{Binding LinkNote}" IsVisible="{Binding IsLinkWarning}"
+                                           Foreground="#a89040" FontSize="10" TextWrapping="Wrap" FontStyle="Italic"/>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.PhysicsNote}"
+                           IsVisible="{Binding RightPanel.Logic.HasSplitFanOutWarnings}"
                            Foreground="#a89040" FontSize="10" TextWrapping="Wrap" FontStyle="Italic"/>
             </StackPanel>
         </Border>

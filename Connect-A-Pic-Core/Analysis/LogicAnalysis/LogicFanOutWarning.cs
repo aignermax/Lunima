@@ -9,6 +9,8 @@ namespace CAP_Core.Analysis.LogicAnalysis;
 /// halves the power), so a real photonic implementation needs splitters plus level
 /// restoration (amplification or a duplicated stage). The warning is non-blocking:
 /// the idealized logic result stays available, and the network evaluates unchanged.
+/// The same record also carries the degraded-link level warning of issue #1445 (see
+/// <paramref name="LinkDisplayName"/>) — one level-warning type, one UI surface.
 /// </summary>
 /// <param name="DriverDisplayName">
 /// The driver as shown to the user: <c>&lt;gate&gt;.&lt;pin&gt;</c> for a gate
@@ -31,9 +33,17 @@ namespace CAP_Core.Analysis.LogicAnalysis;
 /// reach that gate's power threshold and read as a logic 1. Advisory only — the
 /// idealized logic result stays unchanged.
 /// </param>
+/// <param name="LinkDisplayName">
+/// Set instead of a fan-out site when the warning flags a point-to-point wire whose
+/// delivered 1-level was degraded below the receiving gate's threshold by a chiplet
+/// edge-coupler link (issue #1445) — the link named in the
+/// <c>'Chiplet A' / 'Chiplet B'</c> form the Design Checks findings use. Null for
+/// genuine fan-out warnings.
+/// </param>
 public sealed record LogicFanOutWarning(
     string DriverDisplayName,
     bool IsNetworkInputSignal,
     int LoadCount,
     IReadOnlyList<string> LoadNames,
-    FanOutLevelReport Levels);
+    FanOutLevelReport Levels,
+    string? LinkDisplayName = null);

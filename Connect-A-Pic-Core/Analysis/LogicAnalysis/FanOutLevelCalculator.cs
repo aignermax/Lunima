@@ -67,6 +67,32 @@ public sealed class FanOutLevelCalculator
     public FanOutLevelReport ForNetworkInput(IReadOnlyList<LogicPinRef> loads) =>
         Build(NetworkInputPowerOne, loads);
 
+    /// <summary>
+    /// Builds the level report for one point-to-point wire degraded by a chiplet
+    /// edge-coupler link (issue #1445): no splitter — the single branch simply
+    /// carries the driver's 1-level attenuated by the link's power coupling factor.
+    /// <paramref name="powerCoupling"/> comes from the same Gaussian mode-overlap
+    /// model the S-matrix charges (<see cref="ChipletEdgeCouplerCoupling"/>).
+    /// </summary>
+    /// <param name="driver">The driving gate output pin.</param>
+    /// <param name="load">The one receiving gate input at the far end of the link.</param>
+    /// <param name="powerCoupling">The link's power coupling factor in [0, 1].</param>
+    public FanOutLevelReport ForLinkLoss(LogicPinRef driver, LogicPinRef load, double powerCoupling)
+    {
+        if (powerCoupling is < 0.0 or > 1.0)
+            throw new ArgumentOutOfRangeException(nameof(powerCoupling), powerCoupling,
+                "A link coupling factor is a power fraction in [0, 1].");
+
+        double driverPowerOne = WeakestOnePower(driver);
+        double delivered = driverPowerOne * powerCoupling;
+        double lossDb = powerCoupling > 0.0
+            ? -PowerToDbFactor * Math.Log10(powerCoupling)
+            : double.PositiveInfinity;
+        double threshold = ReceivingThreshold(load);
+        var branch = new FanOutBranchLevel(FormatPin(load), threshold, delivered >= threshold);
+        return new FanOutLevelReport(driverPowerOne, delivered, lossDb, new[] { branch });
+    }
+
     /// <summary>Per-branch power after an ideal 1×N split: P/N, no excess loss.</summary>
     public static double BranchPower(double driverPower, int loadCount)
     {

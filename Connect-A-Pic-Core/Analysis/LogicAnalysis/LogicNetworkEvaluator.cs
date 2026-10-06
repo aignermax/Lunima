@@ -21,6 +21,7 @@ public sealed partial class LogicNetworkEvaluator
     private readonly IReadOnlyDictionary<LogicPinRef, LogicNetDriver> _inputWiring;
     private readonly IReadOnlyDictionary<string, LogicPinRef> _outputTaps;
     private readonly IReadOnlyList<string> _evaluationOrder;
+    private readonly IReadOnlyDictionary<LogicWireEdge, LogicWireLinkLoss>? _wireLinkLosses;
 
     /// <summary>
     /// Assembles and validates a logic network.
@@ -46,6 +47,13 @@ public sealed partial class LogicNetworkEvaluator
     /// their outputs hold the last committed value during <see cref="Evaluate"/> and
     /// advance only on <see cref="Step"/>. Feedback cycles through them are legal.
     /// </param>
+    /// <param name="wireLinkLosses">
+    /// Optional chiplet edge-coupler link loss per inter-gate wire (see
+    /// <see cref="WireLinkLossCalculator"/>), keyed by the (driver output → load
+    /// input) edge. A wire whose delivered 1-level falls below the receiving gate's
+    /// threshold surfaces a level warning naming the link; evaluation itself stays
+    /// idealized. Edges without an entry cross no lossy link.
+    /// </param>
     /// <exception cref="ArgumentException">
     /// A gate, pin, or network input is unknown; a gate input is left undriven; or the
     /// wiring is otherwise inconsistent. The message names the offending element.
@@ -60,12 +68,14 @@ public sealed partial class LogicNetworkEvaluator
         IReadOnlyDictionary<string, LogicPinRef> outputTaps,
         IReadOnlyDictionary<string, double>? gateDelays = null,
         IReadOnlyDictionary<LogicWireEdge, double>? wireDelays = null,
-        IReadOnlyCollection<string>? registerGateIds = null)
+        IReadOnlyCollection<string>? registerGateIds = null,
+        IReadOnlyDictionary<LogicWireEdge, LogicWireLinkLoss>? wireLinkLosses = null)
     {
         InputPinNames = inputPinNames ?? throw new ArgumentNullException(nameof(inputPinNames));
         Gates = gates ?? throw new ArgumentNullException(nameof(gates));
         _inputWiring = inputWiring ?? throw new ArgumentNullException(nameof(inputWiring));
         _outputTaps = outputTaps ?? throw new ArgumentNullException(nameof(outputTaps));
+        _wireLinkLosses = wireLinkLosses;
 
         ValidateNetworkInputs();
         ValidateGates();
