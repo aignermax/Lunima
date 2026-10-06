@@ -848,8 +848,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// <summary>
     /// Synchronizes the PhysicalPins collection with ExternalPins.
     /// This allows the simulation framework to connect to the group's external pins.
+    /// Idempotent (rebuilds from ExternalPins every call), so callers that only need
+    /// the pins materialized — e.g. deserializers resolving a parent group's exposed
+    /// pin into this nested group before any S-matrix was computed — may call it
+    /// directly without waiting for <see cref="ComputeSMatrix"/>.
     /// </summary>
-    private void SyncPhysicalPinsFromExternalPins()
+    public void SyncPhysicalPinsFromExternalPins()
     {
         PhysicalPins.Clear();
 

@@ -194,6 +194,26 @@ public static class ComponentGroupSerializer
     }
 
     /// <summary>
+    /// Finds a physical pin by name on a component. A nested group's
+    /// <see cref="Component.PhysicalPins"/> only exist after an S-matrix/pin sync,
+    /// which does not run during load — so when the component is a
+    /// <see cref="ComponentGroup"/> whose pins are not materialized yet, they are
+    /// rebuilt from its already-restored <see cref="ComponentGroup.ExternalPins"/>
+    /// (child groups deserialize before their parents) and the lookup retried.
+    /// </summary>
+    private static PhysicalPin? FindPhysicalPin(Component component, string pinName)
+    {
+        var pin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
+        if (pin == null && component is ComponentGroup group)
+        {
+            group.SyncPhysicalPinsFromExternalPins();
+            pin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
+        }
+
+        return pin;
+    }
+
+    /// <summary>
     /// Serializes a pin-less canvas-level frozen path (issue #856) — same DTO shape
     /// as group-internal frozen paths, so .lun files stay uniform.
     /// </summary>
@@ -277,8 +297,8 @@ public static class ComponentGroupSerializer
             var startComp = ResolveComponent(dto.StartComponentGuid, dto.StartComponentId, guidLookup, nameLookup);
             var endComp = ResolveComponent(dto.EndComponentGuid, dto.EndComponentId, guidLookup, nameLookup);
 
-            startPin = startComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.StartPinName);
-            endPin = endComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.EndPinName);
+            startPin = FindPhysicalPin(startComp, dto.StartPinName);
+            endPin = FindPhysicalPin(endComp, dto.EndPinName);
 
             if (startPin == null)
             {
@@ -450,7 +470,7 @@ public static class ComponentGroupSerializer
         var internalComp = ResolveComponent(
             dto.InternalComponentGuid, dto.InternalComponentId, guidLookup, nameLookup);
 
-        var internalPin = internalComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.InternalPinName);
+        var internalPin = FindPhysicalPin(internalComp, dto.InternalPinName);
         if (internalPin == null)
         {
             throw new InvalidOperationException(

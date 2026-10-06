@@ -1723,5 +1723,6 @@
   "Spectrum.Measured.ClearTip": "Remove the measured-spectrum overlay",
   "Spectrum.Measured.HelpTitle": "Measured spectrum overlay",
   "Spectrum.Measured.HelpBody": "Overlay a measured spectrum (CSV with wavelength + power columns) on the simulated one. FSR is the fringe spacing; for a MZI with arm imbalance ΔL the group index is n_g = λ²/(FSR·ΔL).",
-  "DesignChecks.WaveguideSpacingViolation": "Waveguides too close: {0} ↔ {1} (distance {2:F2} µm, minimum {3:F2} µm)"
+  "DesignChecks.WaveguideSpacingViolation": "Waveguides too close: {0} ↔ {1} (distance {2:F2} µm, minimum {3:F2} µm)",
+  "Load.GroupsFailedToRestore": "Warning: {0} group(s) could not be restored — the rest of the design was loaded; the file may be corrupted or was edited externally."
 }

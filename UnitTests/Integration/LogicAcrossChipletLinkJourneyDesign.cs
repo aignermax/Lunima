@@ -86,7 +86,6 @@ public sealed class LogicAcrossChipletLinkJourneyDesign
         canvas.AddComponent(edgeA, edgeTemplate.Name, edgeTemplate.PdkSource);
         Wire(canvas, notY, Pin(edgeA, "waveguide"));
         var chipletA = Group(canvas, ChipletAName, notGate, edgeA);
-        PruneNestedGroupPins(chipletA);
 
         // Chiplet B, far away: an unrotated edge coupler (facet on its left edge)
         // feeding the shipped AND-from-NAND group at its A input.
@@ -100,7 +99,6 @@ public sealed class LogicAcrossChipletLinkJourneyDesign
         canvas.AddComponent(andGate, null, null);
         Wire(canvas, Pin(edgeB, "waveguide"), andA);
         var chipletB = Group(canvas, ChipletBName, edgeB, andGate);
-        PruneNestedGroupPins(chipletB);
 
         // Align chiplet B so the facets coincide exactly, then route the link.
         var aFiber = ChipletEdgeCouplerJourneyDesign.ExposedPin(chipletA, "a_ec_fiber");
@@ -219,26 +217,6 @@ public sealed class LogicAcrossChipletLinkJourneyDesign
             from, to, MultiProcessChipletJourneyDesign.StraightPath(from, to));
         connection.ShouldNotBeNull($"route {from.Name} -> {to.Name} must be created");
         connection!.Connection.IsRouteFrozen = true;
-    }
-
-    /// <summary>
-    /// Drops the chiplet-exposed pins that point at the nested gate group: grouping
-    /// auto-exposes every free child pin, but the save format cannot restore an
-    /// exposed pin whose internal reference is a child GROUP's pin (the restore
-    /// looks it up in the child group's <c>PhysicalPins</c>, which only exists after
-    /// an S-matrix sync — the load fails with "Internal pin not found"). The gate
-    /// pins stay fully available on the gate groups themselves, which is all the
-    /// assembler and the wiring need; the chiplet level only keeps the facet pins.
-    /// </summary>
-    private static void PruneNestedGroupPins(ComponentGroup chiplet)
-    {
-        var nested = chiplet.ExternalPins
-            .Where(p => p.InternalPin?.ParentComponent is ComponentGroup)
-            .ToList();
-        foreach (var pin in nested)
-        {
-            chiplet.ExternalPins.Remove(pin);
-        }
     }
 
     /// <summary>Groups the given components (Ctrl+G equivalent) and returns the group.</summary>

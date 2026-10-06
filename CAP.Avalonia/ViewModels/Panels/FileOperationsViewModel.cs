@@ -76,6 +76,14 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly List<string> _displacedConnectionsDuringLoad = new();
 
     /// <summary>
+    /// Groups whose reconstruction failed during the current load (corrupted or
+    /// externally edited pin/component references). A failing group must not take
+    /// the whole design down with it: the rest of the file loads and the failures
+    /// are reported once afterwards (status count + error-console detail).
+    /// </summary>
+    private readonly List<string> _failedGroupsDuringLoad = new();
+
+    /// <summary>
     /// Background routing pass the last load started for connections that arrived without
     /// geometry; already completed when every connection came with a usable route.
     /// </summary>
@@ -1060,6 +1068,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 _commandManager.ClearHistory();
                 _pinCalibrationMigratedComponents.Clear();
                 _displacedConnectionsDuringLoad.Clear();
+                _failedGroupsDuringLoad.Clear();
 
                 // Design-scoped imported components (#830): restore the sets embedded
                 // in this .lun (replacing the previous design's) and migrate any legacy
@@ -1278,6 +1287,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 }
                 UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
                 ReportDisplacedConnections();
+                ReportFailedGroups();
                 _commandManager.NotifyStateChanged();
 
                 // Rebuild hierarchy tree after loading
@@ -1570,9 +1580,20 @@ public partial class FileOperationsViewModel : ObservableObject
 
         foreach (var groupData in orderedGroups)
         {
-            // Reconstruct the group using Guid-based lookup with name fallback
-            var group = ComponentGroupSerializer.FromDto(
-                groupData.GroupDto, guidLookup, nameFallback);
+            // Reconstruct the group using Guid-based lookup with name fallback.
+            // A corrupted group (dangling pin/component references) must not abort
+            // the load into an empty canvas — skip it, keep loading, report afterwards.
+            ComponentGroup group;
+            try
+            {
+                group = ComponentGroupSerializer.FromDto(
+                    groupData.GroupDto, guidLookup, nameFallback);
+            }
+            catch (Exception ex)
+            {
+                _failedGroupsDuringLoad.Add($"'{groupData.GroupDto.GroupName}': {ex.Message}");
+                continue;
+            }
 
             // Index the group itself so nested parents can find it
             if (groupData.GroupDto.IdGuid != null
@@ -1599,7 +1620,7 @@ public partial class FileOperationsViewModel : ObservableObject
             }
         }
 
-        return orderedGroups.Count;
+        return orderedGroups.Count - _failedGroupsDuringLoad.Count;
     }
 
     /// <summary>
@@ -1905,6 +1926,29 @@ public partial class FileOperationsViewModel : ObservableObject
             + "(the file may have been produced by a newer version or edited externally): "
             + string.Join("; ", _displacedConnectionsDuringLoad));
         _displacedConnectionsDuringLoad.Clear();
+    }
+
+    /// <summary>
+    /// Surfaces groups that failed to reconstruct during the load (corrupted or
+    /// externally edited references): the status bar carries the localized count and
+    /// the error console names each group with the failure reason. Clean files
+    /// report nothing.
+    /// </summary>
+    private void ReportFailedGroups()
+    {
+        if (_failedGroupsDuringLoad.Count == 0)
+            return;
+
+        var count = _failedGroupsDuringLoad.Count;
+        UpdateStatus?.Invoke(string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            Services.Localization.LocalizationService.Instance.Translate("Load.GroupsFailedToRestore"),
+            count));
+        _errorConsole?.LogWarning(
+            $"{count} group(s) could not be restored while loading "
+            + "(the file may be corrupted or was edited externally): "
+            + string.Join("; ", _failedGroupsDuringLoad));
+        _failedGroupsDuringLoad.Clear();
     }
 
     /// <summary>
