@@ -22,7 +22,7 @@ jobs:
   nunit_tests:
     name: 🔍 xUnit Tests
     runs-on: ubuntu-latest
-    # Safety net: a run takes ~8 min (setup, build, five ~3-min test shards).
+    # Safety net: a run takes ~10 min (setup, build, three ~4-min test shards).
     # Anything beyond 50 min is a hang.
     timeout-minutes: 50
 
@@ -88,18 +88,12 @@ jobs:
           sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
           openvaf --help > /dev/null
 
-      - name: 🔌 Install NGSpice + KLayout CLI (Verilog-A runtime, foundry-deck DRC tests)
+      - name: 🔌 Install NGSpice (for Verilog-A runtime simulation tests)
         run: |
           set -euo pipefail
-          # One apt round trip for both. The klayout pip wheel below ships only the
-          # Python module (klayout.db); the foundry-deck DRC tests probe a
-          # `klayout`/`klayout_app` executable ($KLAYOUT or PATH), so the runner needs
-          # the app itself. Ubuntu universe ships 0.28.x, which runs the vendored
-          # CORNERSTONE pre-DRC deck headless (-b) just fine.
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ngspice klayout
+          sudo apt-get install -y ngspice
           ngspice --version | head -1
-          klayout -v
 
       - name: 🎨 Install Nazca + KLayout + SiEPIC PDK (for PDK Offset Editor tests)
         run: |
@@ -117,6 +111,18 @@ jobs:
           # Upstream source: https://nazca-design.org/download/
           pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
           python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk, SiEPIC; print('PDK preview deps ok')"
+
+      - name: 🔬 Install KLayout CLI (for foundry-deck DRC tests)
+        run: |
+          set -euo pipefail
+          # The klayout pip wheel above ships only the Python module (klayout.db) —
+          # no executable on PATH. The foundry-deck DRC tests probe a `klayout`/
+          # `klayout_app` executable ($KLAYOUT or PATH), so the runner needs the
+          # app itself. Ubuntu universe ships 0.28.x, which runs the vendored
+          # CORNERSTONE pre-DRC deck headless (-b) just fine.
+          sudo apt-get update
+          sudo apt-get install -y klayout
+          klayout -v
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
@@ -136,8 +142,7 @@ jobs:
           # collection parallelization because the Avalonia headless app is a
           # process-wide singleton). Wall clock is cut by running disjoint,
           # complementary filter shards as separate processes in parallel — the
-          # union of the filters is the whole tier, so coverage is unchanged.
-          # Shards are balanced on measured durations (~3 min of tests each).
+          # union of the filters is the whole suite, so coverage is unchanged.
           dotnet build --no-restore
           mkdir -p TestResults
           run_shard() {
@@ -148,13 +153,15 @@ jobs:
               --logger "console;verbosity=minimal" \
               > "TestResults/${name}.log" 2>&1
           }
-          ui_or_integration='(FullyQualifiedName~UnitTests.UI.|FullyQualifiedName~UnitTests.Integration.)'
-          not_ui_nor_integration='FullyQualifiedName!~UnitTests.UI.&FullyQualifiedName!~UnitTests.Integration.'
-          run_shard fast-ui-integration "Category!=Slow&$ui_or_integration" &
-          run_shard fast-rest           "Category!=Slow&$not_ui_nor_integration" &
-          run_shard slow-ui-integration "Category=Slow&$ui_or_integration" &
-          run_shard slow-export         "Category=Slow&FullyQualifiedName~UnitTests.Export." &
-          run_shard slow-rest           "Category=Slow&$not_ui_nor_integration&FullyQualifiedName!~UnitTests.Export." &
+          # Three shards — one per runner core besides the build/OS. Five shards made every
+          # shard 3-4x slower (the four-core runner thrashed); three ran at ~test speed.
+          # Balanced by namespace on measured durations, ~4.3 min of tests each.
+          shard_a='FullyQualifiedName~UnitTests.Integration.|FullyQualifiedName~UnitTests.Components.|FullyQualifiedName~UnitTests.PdkOffset.'
+          shard_b='FullyQualifiedName~UnitTests.Export.|FullyQualifiedName~UnitTests.Routing.'
+          run_shard integration-components "$shard_a" &
+          run_shard export-routing         "$shard_b" &
+          run_shard everything-else \
+            "FullyQualifiedName!~UnitTests.Integration.&FullyQualifiedName!~UnitTests.Components.&FullyQualifiedName!~UnitTests.PdkOffset.&FullyQualifiedName!~UnitTests.Export.&FullyQualifiedName!~UnitTests.Routing." &
           status=0
           for pid in $(jobs -p); do wait "$pid" || status=1; done
           for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done
