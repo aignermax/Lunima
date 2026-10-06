@@ -1723,5 +1723,6 @@
   "Spectrum.Measured.ClearTip": "移除实测光谱叠加",
   "Spectrum.Measured.HelpTitle": "实测光谱叠加",
   "Spectrum.Measured.HelpBody": "将实测光谱（包含波长与功率列的 CSV）叠加到仿真光谱上。FSR 为条纹间距；对于臂长差为 ΔL 的 MZI，群折射率 n_g = λ²/(FSR·ΔL)。",
-  "DesignChecks.WaveguideSpacingViolation": "波导间距过近：{0} ↔ {1}（间距 {2:F2} µm，最小 {3:F2} µm）"
+  "DesignChecks.WaveguideSpacingViolation": "波导间距过近：{0} ↔ {1}（间距 {2:F2} µm，最小 {3:F2} µm）",
+  "Load.GroupsFailedToRestore": "警告：{0} 个组无法恢复——设计的其余部分已加载；文件可能已损坏或被外部编辑过。"
 }

@@ -1723,5 +1723,6 @@
   "Spectrum.Measured.ClearTip": "測定スペクトルのオーバーレイを削除",
   "Spectrum.Measured.HelpTitle": "測定スペクトルのオーバーレイ",
   "Spectrum.Measured.HelpBody": "測定スペクトル（波長とパワーの列を持つ CSV）をシミュレーション結果に重ねます。FSR はフリンジ間隔で、アーム不平衡 ΔL を持つ MZI では群屈折率は n_g = λ²/(FSR·ΔL) です。",
-  "DesignChecks.WaveguideSpacingViolation": "導波路が近すぎます: {0} ↔ {1}（間隔 {2:F2} µm、最小 {3:F2} µm）"
+  "DesignChecks.WaveguideSpacingViolation": "導波路が近すぎます: {0} ↔ {1}（間隔 {2:F2} µm、最小 {3:F2} µm）",
+  "Load.GroupsFailedToRestore": "警告：{0} 個のグループを復元できませんでした——残りのデザインは読み込まれました。ファイルが破損しているか、外部で編集された可能性があります。"
 }

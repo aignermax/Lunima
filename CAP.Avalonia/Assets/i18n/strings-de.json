@@ -1723,5 +1723,6 @@
   "Spectrum.Measured.ClearTip": "Messkurven-Overlay entfernen",
   "Spectrum.Measured.HelpTitle": "Messkurven-Overlay",
   "Spectrum.Measured.HelpBody": "Lege ein gemessenes Spektrum (CSV mit Wellenlängen- und Leistungsspalte) über die Simulation. FSR ist der Abstand der Interferenzminima; bei einem MZI mit Armlängendifferenz ΔL gilt n_g = λ²/(FSR·ΔL).",
-  "DesignChecks.WaveguideSpacingViolation": "Wellenleiter zu nah beieinander: {0} ↔ {1} (Abstand {2:F2} µm, Minimum {3:F2} µm)"
+  "DesignChecks.WaveguideSpacingViolation": "Wellenleiter zu nah beieinander: {0} ↔ {1} (Abstand {2:F2} µm, Minimum {3:F2} µm)",
+  "Load.GroupsFailedToRestore": "Warnung: {0} Gruppe(n) konnten nicht wiederhergestellt werden — der Rest des Designs wurde geladen; die Datei ist möglicherweise beschädigt oder wurde extern bearbeitet."
 }

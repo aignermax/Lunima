@@ -1723,5 +1723,6 @@
   "Spectrum.Measured.ClearTip": "Quitar la superposición del espectro medido",
   "Spectrum.Measured.HelpTitle": "Superposición de espectro medido",
   "Spectrum.Measured.HelpBody": "Superpone un espectro medido (CSV con columnas de longitud de onda y potencia) sobre el simulado. FSR es el espaciado de las franjas; para un MZI con desequilibrio ΔL, el índice de grupo es n_g = λ²/(FSR·ΔL).",
-  "DesignChecks.WaveguideSpacingViolation": "Guías de onda demasiado próximas: {0} ↔ {1} (distancia {2:F2} µm, mínimo {3:F2} µm)"
+  "DesignChecks.WaveguideSpacingViolation": "Guías de onda demasiado próximas: {0} ↔ {1} (distancia {2:F2} µm, mínimo {3:F2} µm)",
+  "Load.GroupsFailedToRestore": "Advertencia: no se pudieron restaurar {0} grupo(s); el resto del diseño se cargó. Es posible que el archivo esté dañado o se haya editado externamente."
 }
