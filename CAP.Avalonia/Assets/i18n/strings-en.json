@@ -420,6 +420,7 @@
   "Examples.RippleCarryAdder.Description": "Chain full adders into a 4-bit ripple-carry adder — 344 gates, one result.",
   "Examples.SrLatch.Description": "Two cross-coupled NAND registers remember one bit — your first memory circuit.",
   "Examples.TwoChiplets.Description": "Two chips, one light path: the link across the chip edge.",
+  "Examples.LogicAcrossTwoChiplets.Description": "Two chips, one truth table: a NOT on chiplet A drives an AND on chiplet B across the edge-coupler link — Y = NOT A AND B.",
   "ErrorConsole.ClearTip": "Clear console",
   "ErrorConsole.CopyAllTip": "Copy all entries to clipboard",
   "ErrorConsole.Title": "Error Console",

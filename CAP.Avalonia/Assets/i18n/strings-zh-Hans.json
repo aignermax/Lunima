@@ -420,6 +420,7 @@
   "Examples.RippleCarryAdder.Description": "把全加器串成 4 位行波进位加法器——344 个门,一个结果。",
   "Examples.SrLatch.Description": "两个交叉耦合的 NAND 寄存器记住一个比特——你的第一个存储电路。",
   "Examples.TwoChiplets.Description": "两颗芯片,一条光路:跨越芯片边缘的链路。",
+  "Examples.LogicAcrossTwoChiplets.Description": "两颗芯片,一张真值表:小芯片 A 上的 NOT 通过边缘耦合链路驱动小芯片 B 上的 AND — Y = NOT A AND B。",
   "ErrorConsole.ClearTip": "清空控制台",
   "ErrorConsole.CopyAllTip": "将所有条目复制到剪贴板",
   "ErrorConsole.Title": "错误控制台",

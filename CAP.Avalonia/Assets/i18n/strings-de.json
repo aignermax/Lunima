@@ -420,6 +420,7 @@
   "Examples.RippleCarryAdder.Description": "Reihe Volladdierer zu einem 4-Bit-Ripple-Carry-Addierer — 344 Gatter, ein Ergebnis.",
   "Examples.SrLatch.Description": "Zwei kreuzgekoppelte NAND-Register merken sich ein Bit — deine erste Speicherschaltung.",
   "Examples.TwoChiplets.Description": "Zwei Chips, ein Lichtpfad: die Verbindung über die Chipkante.",
+  "Examples.LogicAcrossTwoChiplets.Description": "Zwei Chips, eine Wahrheitstabelle: ein NOT auf Chiplet A treibt ein AND auf Chiplet B über die Edge-Coupler-Verbindung — Y = NOT A AND B.",
   "ErrorConsole.ClearTip": "Konsole leeren",
   "ErrorConsole.CopyAllTip": "Alle Einträge in die Zwischenablage kopieren",
   "ErrorConsole.Title": "Fehlerkonsole",
