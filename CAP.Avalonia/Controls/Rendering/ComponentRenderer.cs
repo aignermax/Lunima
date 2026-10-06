@@ -108,7 +108,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
             // rectangle body. No Nazca preview is fetched for it — the real imported
             // geometry is already on screen, and the synthesized import function name
             // would only spawn a doomed Python render per unique cell.
-            _outlineRenderer.Draw(context, comp, comp.Component.OutlinePolygons!, isDimmed, rc.Zoom, rc.LayerVisibility);
+            _outlineRenderer.Draw(context, comp, comp.Component.OutlinePolygons!, isDimmed, rc.Zoom, rc.LayerVisibility,
+                RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom));
             return;
         }
 

@@ -69,11 +69,11 @@ internal sealed class ComponentOutlineRenderer
     /// <param name="layerVisibility">Per-design layer view filter (issue #858);
     /// null renders every layer fully visible.</param>
     public void Draw(DrawingContext context, ComponentViewModel comp, IReadOnlyList<OutlinePolygon> outlines, bool isDimmed, double zoom,
-        GdsLayerVisibilityState? layerVisibility = null) =>
+        GdsLayerVisibilityState? layerVisibility = null, Rect? visibleWorld = null) =>
         Draw(context, comp.X, comp.Y, comp.Width, comp.Height,
             comp.Component.RotationDegrees, outlines, isDimmed, zoom,
             comp.Component.UnrotatedWidthMicrometers, comp.Component.UnrotatedHeightMicrometers,
-            layerVisibility, comp.Component.IsMirroredHorizontally);
+            layerVisibility, comp.Component.IsMirroredHorizontally, visibleWorld);
 
     /// <summary>
     /// Pose-based overload for callers that have no <see cref="ComponentViewModel"/>:
@@ -93,10 +93,13 @@ internal sealed class ComponentOutlineRenderer
     /// <param name="mirrored">True for a mirrored component (GDS STRANS reflection): the
     /// outline is reflected across the horizontal centreline of its unrotated frame before
     /// it is rotated — the same mirror the component's pins carry.</param>
+    /// <param name="visibleWorld">The visible world rectangle, or null to draw everything:
+    /// batches (tiled, see <see cref="OutlineGeometryBatcher"/>) entirely outside it are
+    /// skipped, so zooming into a corner of a huge cell no longer processes all of it.</param>
     public void Draw(DrawingContext context, double x, double y, double width, double height,
         double rotationDegrees, IReadOnlyList<OutlinePolygon> outlines, bool isDimmed, double zoom,
         double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
-        GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false)
+        GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false, Rect? visibleWorld = null)
     {
         var geometries = _geometryCache.GetValue(outlines, OutlineGeometryBatcher.Build);
 
@@ -108,8 +111,10 @@ internal sealed class ComponentOutlineRenderer
                       * Matrix.CreateTranslation(destRect.X, destRect.Y)
                       * GdsPolygonRenderer.BuildRotationMatrix(rotationDegrees, centerX, centerY);
 
+        var localVisible = visibleWorld is { } world ? ToLocal(world, transform) : null;
         using (context.PushTransform(transform))
-        using (context.PushOpacity(isDimmed ? 128.0 / 255.0 : 1.0))
+        // An opacity push renders into an offscreen layer: only pay for it when dimmed.
+        using (isDimmed ? context.PushOpacity(128.0 / 255.0) : (IDisposable?)null)
         {
             if (_rasterCache?.TryDraw(context, outlines, geometries, zoom, layerVisibility) == true)
             {
@@ -118,6 +123,9 @@ internal sealed class ComponentOutlineRenderer
             }
             foreach (var cached in geometries)
             {
+                if (localVisible is { } visible && !visible.Intersects(cached.Bounds))
+                    continue;
+
                 // Pure view filter (#858): a hidden layer draws nothing, a faded
                 // layer draws through an extra opacity push. Deliberately outside
                 // the LOD counters — hiding is a user choice, not a perf cull.
@@ -169,6 +177,19 @@ internal sealed class ComponentOutlineRenderer
             rotationDegrees, compX + compWidth / 2.0, compY + compHeight / 2.0);
         double localY = mirrored ? destRect.Height - point.Y : point.Y;
         return new Point(destRect.X + point.X, destRect.Y + localY).Transform(rotation);
+    }
+
+    /// <summary>The axis-aligned box of <paramref name="world"/> in the component's local frame.</summary>
+    private static Rect? ToLocal(Rect world, Matrix localToWorld)
+    {
+        if (!localToWorld.TryInvert(out var worldToLocal)) return null;
+        var a = world.TopLeft.Transform(worldToLocal);
+        var b = world.TopRight.Transform(worldToLocal);
+        var c = world.BottomLeft.Transform(worldToLocal);
+        var d = world.BottomRight.Transform(worldToLocal);
+        double minX = Math.Min(Math.Min(a.X, b.X), Math.Min(c.X, d.X)), maxX = Math.Max(Math.Max(a.X, b.X), Math.Max(c.X, d.X));
+        double minY = Math.Min(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)), maxY = Math.Max(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y));
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 
     /// <summary>

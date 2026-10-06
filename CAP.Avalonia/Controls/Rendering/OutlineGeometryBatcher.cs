@@ -20,12 +20,12 @@ internal static class OutlineGeometryBatcher
     /// </summary>
     public static OutlineBatch[] Build(IReadOnlyList<OutlinePolygon> outlines)
     {
-        var groups = new Dictionary<(int Layer, int DataType, int SizeClass), List<OutlinePolygon>>();
-        var order = new List<(int, int, int)>();
+        var groups = new Dictionary<(int Layer, int DataType, int SizeClass, long Tile), List<OutlinePolygon>>();
+        var order = new List<(int, int, int, long)>();
         foreach (var polygon in outlines)
         {
             if (polygon.Points.Count < 3) continue;
-            var key = (polygon.Layer, polygon.DataType, SizeClass(polygon));
+            var key = (polygon.Layer, polygon.DataType, SizeClass(polygon), Tile(polygon));
             if (!groups.TryGetValue(key, out var list))
             {
                 groups[key] = list = new List<OutlinePolygon>();
@@ -35,9 +35,22 @@ internal static class OutlineGeometryBatcher
         }
 
         return order
-            .OrderBy(k => order.FindIndex(o => o.Item1 == k.Item1 && o.Item2 == k.Item2))
+            .OrderBy(k => FirstIndexOfLayer(order, k.Item1, k.Item2))
             .Select(k => CreateBatch(k.Item1, k.Item2, groups[k]))
             .ToArray();
+    }
+
+    private static int FirstIndexOfLayer(List<(int, int, int, long)> order, int layer, int dataType) =>
+        order.FindIndex(o => o.Item1 == layer && o.Item2 == dataType);
+
+    /// <summary>Edge (um) of the spatial tiles batches are split into, so off-screen parts of a huge cell are skipped.</summary>
+    public const double TileUm = 500;
+
+    /// <summary>Tile of the polygon's first vertex, packed into one key.</summary>
+    private static long Tile(OutlinePolygon polygon)
+    {
+        long tx = (long)Math.Floor(polygon.Points[0].X / TileUm), ty = (long)Math.Floor(polygon.Points[0].Y / TileUm);
+        return (tx << 32) ^ (ty & 0xffffffffL);
     }
 
     private static OutlineBatch CreateBatch(int layer, int dataType, List<OutlinePolygon> polygons)

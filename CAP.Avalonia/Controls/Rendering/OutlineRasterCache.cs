@@ -19,7 +19,7 @@ namespace CAP.Avalonia.Controls.Rendering;
 internal sealed class OutlineRasterCache
 {
     /// <summary>Largest bitmap edge (px) the cache creates; beyond it vectors are drawn.</summary>
-    public const int MaxBitmapEdgePx = 4096;
+    public const int MaxBitmapEdgePx = 8192;
 
     /// <summary>Zoom from which on vectors are always drawn (sharp edges once polygons are large).</summary>
     public const double VectorFromZoom = 0.75;
@@ -76,7 +76,7 @@ internal sealed class OutlineRasterCache
             if (opacity <= 0) continue;
             // One device pixel wide: the 1 µm outline pen would be a sub-pixel hairline here.
             var pen = new Pen(batch.Outline.Brush, 1.0 / density);
-            using (ctx.PushOpacity(opacity))
+            using (opacity < 1.0 ? ctx.PushOpacity(opacity) : (IDisposable?)null)
                 ctx.DrawGeometry(batch.Fill, pen, batch.Geometry);
         }
         return bitmap;

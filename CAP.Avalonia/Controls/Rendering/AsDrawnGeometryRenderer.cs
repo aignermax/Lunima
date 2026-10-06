@@ -21,16 +21,18 @@ internal static class AsDrawnGeometryRenderer
     /// <param name="zoom">Canvas zoom for the per-polygon level-of-detail cull.</param>
     /// <param name="layerVisibility">Per-design layer view filter; null shows every layer.</param>
     /// <param name="isDimmed">True draws at half opacity (e.g. while power flow is shown).</param>
+    /// <param name="visibleWorld">Visible world rectangle; off-screen tiles are skipped.</param>
     public static void Draw(
         DrawingContext context,
         AsDrawnGeometry geometry,
         double zoom,
         GdsLayerVisibilityState? layerVisibility,
-        bool isDimmed = false)
+        bool isDimmed = false,
+        global::Avalonia.Rect? visibleWorld = null)
     {
         // Identity pose: an unrotated frame anchored at the world origin maps the
         // outline points 1:1 onto world coordinates (the size only matters for rotation).
         OutlineRenderer.Draw(context, 0, 0, 1, 1, 0,
-            geometry.Polygons, isDimmed, zoom, layerVisibility: layerVisibility);
+            geometry.Polygons, isDimmed, zoom, layerVisibility: layerVisibility, visibleWorld: visibleWorld);
     }
 }

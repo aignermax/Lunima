@@ -97,7 +97,8 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             // An untouched import draws exactly as drawn; the centerline only appears as
             // the selection/hover/power-flow highlight on top of the drawn polygons.
             bool showsPowerFlow = vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null;
-            AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, isDimmed: showsPowerFlow);
+            AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, isDimmed: showsPowerFlow,
+                visibleWorld: RenderCulling.ComputeViewportWorld(vm.PanX, vm.PanY, rc.Bounds, rc.Zoom));
             if (conn.IsSelected || isHovered || showsPowerFlow)
                 DrawPathSegments(context, pen, segments);
         }
