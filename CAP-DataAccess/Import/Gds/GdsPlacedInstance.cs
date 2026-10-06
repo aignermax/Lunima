@@ -57,11 +57,9 @@ public sealed record GdsPlacedInstance
     public double RotationDegrees { get; init; }
 
     /// <summary>
-    /// True when the GDS reference carries the STRANS mirror flag. The core
-    /// <c>Component</c> model has no mirroring support, so the instance's body is
-    /// placed unreflected (a warning is emitted); the placement layer mirrors the
-    /// placed component's pins onto the true reflected positions instead, so the
-    /// reconstructed connections anchor exactly where the placed pins are.
+    /// True when the GDS reference carries the STRANS mirror flag. The placement
+    /// layer mirrors the placed component (pins, drawn outline and export flip), so
+    /// the body and the reconstructed connections land exactly where the file has them.
     /// </summary>
     public bool Reflected { get; init; }
 }

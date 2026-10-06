@@ -43,6 +43,9 @@ public class ExampleLoadRoutingTests
         // file's total falls 80 → 77 (see ExampleFrozenBlockedPathTests).
         ["Logic Gate RAM 4x4.lun"] = 45,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
+        // Same 90 blocked top-level wires as the 4-bit adder — the RAM block's wires
+        // are frozen inside the RAM group (#1463), so the top level is the adder's alone.
+        ["Logic Gate ALU + RAM.lun"] = 90,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

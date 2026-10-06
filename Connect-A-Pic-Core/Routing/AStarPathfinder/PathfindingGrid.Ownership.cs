@@ -14,21 +14,13 @@ namespace CAP_Core.Routing.AStarPathfinder;
 /// </summary>
 public partial class PathfindingGrid
 {
-    /// <summary>How a component occupies a blocked cell.</summary>
-    private enum ComponentCellKind
-    {
-        /// <summary>Cell lies inside the component's physical body rectangle.</summary>
-        Body,
+    /// <summary>Side length (cells) of the buckets that index footprints by area.</summary>
+    private const int FootprintBucketCells = 64;
 
-        /// <summary>Cell lies in the padding band around the body (keep-out for spacing).</summary>
-        Padding,
-    }
-
-    /// <summary>One component's claim on a blocked cell.</summary>
-    private readonly record struct CellOwnership(Component Owner, ComponentCellKind Kind);
-
-    // Who blocks a cell (a cell can be claimed by several overlapping components).
-    private readonly Dictionary<(int x, int y), List<CellOwnership>> _cellOwners = new();
+    // Which footprints cover a bucket: an ownership query only scans the footprints of
+    // the bucket its cell falls into (a cell can be claimed by several overlapping components).
+    private readonly Dictionary<(int bx, int by), List<ComponentFootprint>> _footprintBuckets = new();
+    private readonly Dictionary<Component, ComponentFootprint> _footprints = new();
 
     // Rasterized pin-corridor cells per pin — the same geometry the obstacle rasterization
     // carves out of its own component's blocked cells.
@@ -40,43 +32,40 @@ public partial class PathfindingGrid
     private readonly object _ownershipLock = new();
 
     /// <summary>
-    /// Records the ownership of a component's freshly blocked cells and its pin corridors.
-    /// Called by the obstacle rasterization right after the cells were marked.
+    /// Records a component's freshly blocked footprint and its pin corridors. Called by the
+    /// obstacle rasterization right after the cells were marked.
     /// </summary>
     private void RegisterComponentOwnership(
-        Component component,
-        HashSet<(int x, int y)> bodyCells,
-        HashSet<(int x, int y)> paddingCells,
+        ComponentFootprint footprint,
         Dictionary<PhysicalPin, HashSet<(int x, int y)>> pinCorridors)
     {
         lock (_ownershipLock)
         {
-            foreach (var cell in bodyCells)
-                AddOwnership(cell, component, ComponentCellKind.Body);
-            foreach (var cell in paddingCells)
-                AddOwnership(cell, component, ComponentCellKind.Padding);
+            RemoveFootprint(footprint.Owner);
+            _footprints[footprint.Owner] = footprint;
+            foreach (var bucket in BucketsOf(footprint))
+            {
+                if (!_footprintBuckets.TryGetValue(bucket, out var list))
+                    _footprintBuckets[bucket] = list = new List<ComponentFootprint>();
+                list.Add(footprint);
+            }
 
             foreach (var (pin, cells) in pinCorridors)
                 _pinCorridorCells[pin] = cells;
-            _componentCorridorPins[component] = pinCorridors.Keys.ToList();
+            _componentCorridorPins[footprint.Owner] = pinCorridors.Keys.ToList();
         }
     }
 
     /// <summary>
-    /// Drops a component's ownership claims and pin corridors. The freed cells become free
-    /// in the cell grid at the same time, so their whole owner list is discarded — a claim
-    /// by an overlapping second component is re-registered when that component is next
-    /// (re)added, mirroring the cell-state semantics of obstacle removal.
+    /// Drops a component's ownership claim and pin corridors (its cells were just freed in
+    /// the cell grid). Overlapping components keep their own claims; a freed cell is no
+    /// longer blocked, so the predicates never consult claims on it.
     /// </summary>
     private void UnregisterComponentOwnership(Component component, IEnumerable<(int x, int y)>? freedCells)
     {
         lock (_ownershipLock)
         {
-            if (freedCells != null)
-            {
-                foreach (var cell in freedCells)
-                    _cellOwners.Remove(cell);
-            }
+            RemoveFootprint(component);
             if (_componentCorridorPins.Remove(component, out var pins))
             {
                 foreach (var pin in pins)
@@ -90,20 +79,52 @@ public partial class PathfindingGrid
     {
         lock (_ownershipLock)
         {
-            _cellOwners.Clear();
+            _footprintBuckets.Clear();
+            _footprints.Clear();
             _pinCorridorCells.Clear();
             _componentCorridorPins.Clear();
         }
     }
 
-    private void AddOwnership((int x, int y) cell, Component owner, ComponentCellKind kind)
+    private void RemoveFootprint(Component component)
     {
-        if (!_cellOwners.TryGetValue(cell, out var owners))
+        if (!_footprints.Remove(component, out var footprint)) return;
+        foreach (var bucket in BucketsOf(footprint))
         {
-            owners = new List<CellOwnership>();
-            _cellOwners[cell] = owners;
+            if (_footprintBuckets.TryGetValue(bucket, out var list))
+                list.Remove(footprint);
         }
-        owners.Add(new CellOwnership(owner, kind));
+    }
+
+    private static IEnumerable<(int bx, int by)> BucketsOf(ComponentFootprint footprint)
+    {
+        var (x1, y1, x2, y2) = footprint.Padded;
+        for (int bx = FloorDiv(x1); bx <= FloorDiv(x2); bx++)
+        for (int by = FloorDiv(y1); by <= FloorDiv(y2); by++)
+            yield return (bx, by);
+    }
+
+    private static int FloorDiv(int cell) => (int)Math.Floor(cell / (double)FootprintBucketCells);
+
+    /// <summary>
+    /// Scans the component claims on a cell: <paramref name="match"/> gets each owner and
+    /// whether the cell lies in its body; the scan stops at the first match. Must run under
+    /// <see cref="_ownershipLock"/>. <paramref name="claimed"/> reports whether anybody
+    /// claims the cell at all.
+    /// </summary>
+    /// <returns>True when a claim satisfied <paramref name="match"/>.</returns>
+    private bool AnyClaim(int gridX, int gridY, Func<Component, bool, bool> match, out bool claimed)
+    {
+        claimed = false;
+        if (!_footprintBuckets.TryGetValue((FloorDiv(gridX), FloorDiv(gridY)), out var list))
+            return false;
+        foreach (var footprint in list)
+        {
+            if (!footprint.Claims(gridX, gridY, out var isBody)) continue;
+            claimed = true;
+            if (match(footprint.Owner, isBody)) return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -165,9 +186,8 @@ public partial class PathfindingGrid
             return true;
         lock (_ownershipLock)
         {
-            if (!_cellOwners.TryGetValue((gridX, gridY), out var owners) || owners.Count == 0)
-                return true;
-            return owners.Any(owner => owner.Kind == ComponentCellKind.Body);
+            bool anyBody = AnyClaim(gridX, gridY, (_, isBody) => isBody, out var claimed);
+            return !claimed || anyBody;
         }
     }
 
@@ -231,10 +251,9 @@ public partial class PathfindingGrid
     {
         lock (_ownershipLock)
         {
-            if (!_cellOwners.TryGetValue((gridX, gridY), out var owners) || owners.Count == 0)
-                return true;
-            return owners.Any(owner =>
-                owner.Kind == ComponentCellKind.Body && owner.Owner != ownComponent);
+            bool foreignBody = AnyClaim(gridX, gridY,
+                (owner, isBody) => isBody && owner != ownComponent, out var claimed);
+            return !claimed || foreignBody;
         }
     }
 }

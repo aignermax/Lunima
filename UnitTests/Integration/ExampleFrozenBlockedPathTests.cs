@@ -52,6 +52,9 @@ public class ExampleFrozenBlockedPathTests
         // the cell dropped 9 → 8, the top level rose 44 → 45 — the total still drops).
         ["Logic Gate RAM 4x4.lun"] = 77,
         ["Logic Gate 4-Bit Adder.lun"] = 90,
+        // 90 blocked top-level adder wires + the RAM 4x4's 77 (45 inter-cell + 4 × 8
+        // intra-cell) frozen inside the wrapping RAM group (#1463).
+        ["Logic Gate ALU + RAM.lun"] = 167,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

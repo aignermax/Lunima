@@ -102,11 +102,10 @@ public partial class Component : ICloneable
     public object? ParentGroup { get; set; }
 
     /// <summary>
-    /// Whether this component blocks routing (default: true). The GDS import
-    /// clears it for geometry-only (pin-less) components — imported die
-    /// frames, logos and ground plates must never wall off the routing grid.
-    /// Runtime-only: not persisted in the .lun (v1; a reloaded pin-less
-    /// background component becomes an obstacle again until re-imported).
+    /// Whether this component blocks routing and takes part in placement collisions
+    /// (default: true). The GDS import clears it for background geometry — pin-less
+    /// cells and die frames enclosing other cells — which must never wall off the
+    /// routing grid or refuse moves. Persisted in the .lun as <c>IsBackground</c>.
     /// </summary>
     [JsonIgnore]
     public bool IsRoutingObstacle { get; set; } = true;
@@ -412,6 +411,7 @@ public partial class Component : ICloneable
         clonedComponent.PhysicalOffsetY = PhysicalOffsetY;
         clonedComponent.RotationDegrees = RotationDegrees;
         clonedComponent.IsMirroredHorizontally = IsMirroredHorizontally;
+        clonedComponent.IsRoutingObstacle = IsRoutingObstacle;
         clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
         clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
         // The module is part of the component's geometry identity (it picks the Nazca cell):

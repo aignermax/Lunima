@@ -1622,6 +1622,9 @@ public class ChildComponentData
     /// </summary>
     public bool? Mirrored { get; set; }
 
+    /// <summary>True for imported background geometry inside a group (see <c>ComponentData.IsBackground</c>).</summary>
+    public bool? IsBackground { get; set; }
+
     public double? SliderValue { get; set; }
 
     /// <summary>
@@ -1664,6 +1667,12 @@ public class ComponentData
     /// (GDS STRANS-reflected instance). Null in old files — no mirror.
     /// </summary>
     public bool? Mirrored { get; set; }
+
+    /// <summary>
+    /// True for imported background geometry (die frames, logos): no routing obstacle,
+    /// no placement collisions, lowest click priority. Null — a regular component.
+    /// </summary>
+    public bool? IsBackground { get; set; }
 
     public double? SliderValue { get; set; }
 
@@ -1789,6 +1798,12 @@ public class ConnectionData
 
     /// <summary>Accepted deviation (µm) from <see cref="TargetLengthMicrometers"/>; null = no length intent.</summary>
     public double? LengthToleranceMicrometers { get; set; }
+
+    /// <summary>
+    /// The exact polygons an imported, still untouched route was drawn with; null for
+    /// routed connections and in files that predate the field.
+    /// </summary>
+    public List<CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto>? AsDrawnPolygons { get; set; }
 }
 
 /// <summary>

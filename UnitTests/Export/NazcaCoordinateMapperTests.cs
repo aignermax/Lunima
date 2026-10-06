@@ -103,6 +103,36 @@ public class NazcaCoordinateMapperTests
         placement.RotationDegrees.ShouldBe(expectedRotation, Tolerance);
     }
 
+    // Mirrored (GDS STRANS): Nazca's flip mirrors the cell Y axis BEFORE the rotation, so
+    // the override bbox B = [-3, -1, 42, 10] becomes B' = [-3, -10, 42, 1] and is then
+    // rotated and re-anchored like any other bbox (box at (100, 50)):
+    //  r=0:   B' unchanged                                        -> minx'=-3,  maxy'=1 -> T=(103, -51)
+    //  r=-90: (x,y)->(y,-x): (-10,3) (-10,-42) (1,-42) (1,3)      -> minx'=-10, maxy'=3 -> T=(110, -53)
+    [Theory]
+    [InlineData(0, 103, -51, 0)]
+    [InlineData(1, 110, -53, -90)]
+    public void GetCellPlacement_MirroredComponent_FlipsBeforeRotating(
+        int rotationSteps, double expectedX, double expectedY, double expectedRotation)
+    {
+        var comp = CreateComponent(100, 50, w0: 45, h0: 11, rotationSteps: rotationSteps);
+        comp.IsMirroredHorizontally = true;
+
+        var placement = NazcaCoordinateMapper.GetCellPlacement(comp, (-3, 10));
+
+        placement.Flip.ShouldBeTrue();
+        placement.X.ShouldBe(expectedX, Tolerance);
+        placement.Y.ShouldBe(expectedY, Tolerance);
+        placement.RotationDegrees.ShouldBe(expectedRotation, Tolerance);
+    }
+
+    [Fact]
+    public void GetCellPlacement_UnmirroredComponent_DoesNotFlip()
+    {
+        var comp = CreateComponent(100, 50, w0: 45, h0: 11);
+
+        NazcaCoordinateMapper.GetCellPlacement(comp, (-3, 10)).Flip.ShouldBeFalse();
+    }
+
     [Fact]
     public void GetCellPlacement_LegacyFallback_AnchorsOrgAtBoxBottomLeft()
     {

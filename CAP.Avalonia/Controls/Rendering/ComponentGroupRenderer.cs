@@ -73,6 +73,7 @@ public static class ComponentGroupRenderer
     /// <c>null</c> filter always draw fully visible.</param>
     /// <param name="penOverride">Optional pen that wins over both the power-flow pen and
     /// the layer/default pen — used for the selection highlight of canvas-level paths.</param>
+    /// <param name="zoom">Canvas zoom, for the level-of-detail cull of drawn polygons.</param>
     public static void RenderFrozenWaveguidePath(
         DrawingContext context,
         FrozenWaveguidePath frozenPath,
@@ -80,10 +81,18 @@ public static class ComponentGroupRenderer
         double fadeThresholdDb = -40.0,
         Rect? cullRect = null,
         Services.GdsImport.LayerVisibility.GdsLayerVisibilityState? layerVisibility = null,
-        Pen? penOverride = null)
+        Pen? penOverride = null,
+        double zoom = 1.0)
     {
         if (frozenPath?.Path?.Segments == null || frozenPath.Path.Segments.Count == 0)
             return;
+
+        if (frozenPath.AsDrawnGeometry is { } asDrawn && penOverride == null && powerFlowResult == null)
+        {
+            // An untouched imported path draws exactly as drawn.
+            AsDrawnGeometryRenderer.Draw(context, asDrawn, zoom, layerVisibility);
+            return;
+        }
 
         double layerOpacity = frozenPath.Layer is int pathLayer && frozenPath.DataType is int pathDataType
             ? layerVisibility?.EffectiveOpacity(pathLayer, pathDataType) ?? 1.0

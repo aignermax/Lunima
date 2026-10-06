@@ -52,6 +52,31 @@ public class ComponentOutlineRendererTests
     }
 
     [Fact]
+    public void TransformOutlinePoint_Mirrored_ReflectsAcrossTheHorizontalCentreline()
+    {
+        // Same mirror the pins get (offset Y → H − Y in the unrotated frame).
+        var world = ComponentOutlineRenderer.TransformOutlinePoint(
+            new OutlinePoint(5, 3),
+            compX: 100, compY: 50, compWidth: 20, compHeight: 10, rotationDegrees: 0, mirrored: true);
+
+        world.X.ShouldBe(105.0, Tolerance);
+        world.Y.ShouldBe(57.0, Tolerance);
+    }
+
+    [Fact]
+    public void TransformOutlinePoint_MirroredThenRotated_MatchesPinMath()
+    {
+        // A pin at unrotated (20,0) mirrors to (20,10); one rotate maps (20,10) of the
+        // 20×10 box to offset (0,20) — absolute (100,70). The outline point must agree.
+        var world = ComponentOutlineRenderer.TransformOutlinePoint(
+            new OutlinePoint(20, 0),
+            compX: 100, compY: 50, compWidth: 10, compHeight: 20, rotationDegrees: 90, mirrored: true);
+
+        world.X.ShouldBe(100.0, Tolerance);
+        world.Y.ShouldBe(70.0, Tolerance);
+    }
+
+    [Fact]
     public void TransformOutlinePoint_90Degrees_MatchesPinRotationAroundCenter()
     {
         // Unrotated footprint 20×10 at (100,50); after one rotate the live dims are

@@ -53,14 +53,6 @@ internal static class GdsImportReporter
                     "so reconstructed connections stay on the true joints; gdsfactory layouts are " +
                     "usually Manhattan, so double-check the source intent.");
             }
-            if (signature.Reflected)
-            {
-                session.Warnings.Add(
-                    $"{subject} {isAre} mirrored (GDS STRANS); the core component model has no " +
-                    "mirror support, so the component body is placed unreflected (v1 limitation) — " +
-                    "its pins are mirrored onto the true reflected positions, keeping the " +
-                    "reconstructed connections exact.");
-            }
             if (Math.Abs(signature.Magnification - 1.0) > 1e-9)
             {
                 session.Warnings.Add(

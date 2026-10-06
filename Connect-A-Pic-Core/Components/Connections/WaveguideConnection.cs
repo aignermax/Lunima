@@ -10,7 +10,7 @@ namespace CAP_Core.Components.Connections
     /// Represents a waveguide routing connection between two physical pins.
     /// Automatically calculates transmission coefficient based on geometry and loss parameters.
     /// </summary>
-    public class WaveguideConnection
+    public partial class WaveguideConnection
     {
         /// <summary>Default waveguide width in micrometers (standard: 500 nm strip).</summary>
         public const double DefaultWidthMicrometers = 0.5;
@@ -243,10 +243,15 @@ namespace CAP_Core.Components.Connections
                 }
 
                 // An endpoint moved: unfreeze and discard manual bend and segment-shift edits.
+                MarkDrawnRouteDisplaced();
                 IsRouteFrozen = false;
                 BendRadiusOverrides.Clear();
                 StraightShiftOffsets.Clear();
             }
+
+            // A drawn route a move pushed aside snaps back once its pins are back in place.
+            if (Type == WaveguideType.Auto && TryRestoreDrawnRoute(wavelengthNm))
+                return;
 
             // Update router settings. The router owns the process floor: it first attempts
             // max(connection radius, process minimum) and degrades to the connection radius

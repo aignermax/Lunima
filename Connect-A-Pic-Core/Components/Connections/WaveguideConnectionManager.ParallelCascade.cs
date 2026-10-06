@@ -231,6 +231,10 @@ public partial class WaveguideConnectionManager
         CopyManualEdits(connection, clone);
         if (connection.RoutedPath != null)
             clone.RestoreCachedPath(connection.RoutedPath.DeepCopy());
+        // The drawn polygons exempt an imported route from collision unfreezing; the
+        // clone must make the same keep decision the live connection would.
+        if (connection.AsDrawnGeometry is { } asDrawn)
+            clone.AttachAsDrawnGeometry(asDrawn);
         return clone;
     }
 

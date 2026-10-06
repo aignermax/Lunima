@@ -635,7 +635,8 @@ public class SimpleNazcaExporter
         // on 'org' explicitly makes .put() place the cell origin at the
         // computed (x, y) — which IS the contract Lunima's calibration
         // and export math both assume.
-        sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot})  # {comp.Identifier}");
+        var flip = placement.Flip ? ", flip=True" : "";
+        sb.AppendLine($"        {varName} = {nazcaFunc}.put('org', {nazcaX}, {nazcaY}, {rot}{flip})  # {comp.Identifier}");
 
         // External ports of the design get a top-cell label on the port-label layer,
         // so re-imports and label-based tools find the circuit's interface (#808).
@@ -749,6 +750,13 @@ public class SimpleNazcaExporter
             // NOT skipped: it falls back to the pin-to-pin straight below, same as before.
             if (ExportableConnections.TryRecordSkip(conn.RoutedPath, conn.StartPin, conn.EndPin, skippedConnections))
                 continue;
+
+            // An untouched imported route writes back exactly the polygons it was read from.
+            if (conn.AsDrawnGeometry is { } asDrawn)
+            {
+                AsDrawnNazcaWriter.Append(sb, asDrawn);
+                continue;
+            }
 
             // Electrical connections are metal traces, not optical waveguides — emit them on
             // the process metal layer/width instead of the waveguide layer (issue #682). A
@@ -1007,6 +1015,13 @@ public class SimpleNazcaExporter
         SiepicWaveguideCellWriter? waveguideCells = null)
     {
         if (frozenPath == null) return;
+
+        // Imported geometry that still carries its drawn polygons exports them verbatim.
+        if (frozenPath.AsDrawnGeometry is { } asDrawn)
+        {
+            AsDrawnNazcaWriter.Append(sb, asDrawn);
+            return;
+        }
 
         // A PIN-LESS frozen path holds imported top-cell route geometry: the source
         // polygon's OUTLINE traced as a closed ring of straight segments
