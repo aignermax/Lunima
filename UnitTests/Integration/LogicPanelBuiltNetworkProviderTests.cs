@@ -41,13 +41,19 @@ public class LogicPanelBuiltNetworkProviderTests : IClassFixture<LogicPanelViewM
     [Fact]
     public async Task DesignEdit_AfterBuild_ClearsPublishedNetwork()
     {
+        // Own canvas: the raw RemoveAt edit must not mutilate the shared fixture —
+        // a wire left pointing into a removed gate is (correctly) rejected by the
+        // builder as an unresolvable path for the tests running after this one.
+        var path = System.IO.Path.Combine(
+            ExampleDesignFilesTests.ExamplesDirectory(), "Logic Gate Half Adder.lun");
+        var canvas = await LogicGateHalfAdderExampleTests.LoadCanvas(path);
         var provider = new BuiltLogicNetworkProvider();
         var vm = new LogicPanelViewModel(builtNetworkProvider: provider);
-        vm.Configure(_fixture.Canvas);
+        vm.Configure(canvas);
         await vm.BuildNetworkCommand.ExecuteAsync(null);
         provider.Network.ShouldNotBeNull();
 
-        _fixture.Canvas.Components.RemoveAt(0);
+        canvas.Components.RemoveAt(0);
 
         provider.Network.ShouldBeNull("a design edit invalidates the published network");
         vm.HasNetwork.ShouldBeFalse();
