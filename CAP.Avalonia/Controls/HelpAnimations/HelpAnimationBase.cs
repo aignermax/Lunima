@@ -6,7 +6,7 @@ using Avalonia.Threading;
 namespace CAP.Avalonia.Controls.HelpAnimations;
 
 /// <summary>
-/// Base class for the small looping diagrams inside (?) help flyouts.
+/// Base class for the small looping diagrams inside (?) help flyouts (#1152).
 /// The whole animation is a pure function of <see cref="Progress"/> (0 = first frame,
 /// 1 = last frame), which gives two modes from one code path: with
 /// <see cref="AutoPlay"/> = true (default) a lightweight dispatcher timer advances the

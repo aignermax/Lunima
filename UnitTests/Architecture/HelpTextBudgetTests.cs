@@ -10,7 +10,7 @@ using Xunit;
 namespace UnitTests.Architecture;
 
 /// <summary>
-/// Guards the help-flyout text budget (#1431): a (?) flyout explains with short sections
+/// Guards the help-flyout text budget (#1152): a (?) flyout explains with short sections
 /// plus an animation, so no section may grow back into a wall of text. "Help text" is any
 /// <c>{loc:Localize Key}</c> used inside a <c>*HelpFlyout.axaml</c> control or inside an
 /// inline <c>HelpFlyoutButton.HelpContent</c> block. Budget per key: ≤3 sentences in every
@@ -39,18 +39,19 @@ public class HelpTextBudgetTests
         @"[A-Za-z0-9µ'’_-]+", RegexOptions.Compiled);
 
     /// <summary>
-    /// Keys of flyouts written before this budget existed and not yet migrated to the
-    /// short-sections-plus-animation pattern. Adding an entry is a deliberate,
-    /// review-visible act; remove it once the flyout is shortened.
+    /// Keys of flyouts not yet migrated to the short-sections-plus-animation pattern —
+    /// currently the help flyouts that only exist on the dev-ki lineage (Logic panel,
+    /// Registry download) — written before this budget
+    /// existed and migrated in follow-ups. Adding an entry is a deliberate, review-visible
+    /// act; remove it once the flyout is migrated.
     /// </summary>
     private static readonly HashSet<string> ExemptNotYetMigrated = new(StringComparer.Ordinal)
     {
-        // Transient/Eye help flyouts (pre-budget) — over-long single sections.
-        "TransientHelp.PrbsBody",
-        "TransientHelp.ReadingBody",
-        "EyeHelp.RunBody1",
-        "EyeHelp.WhyBody",
-        "EyeHelp.ThresholdBody",
+        // Logic panel flyouts (dev-ki lineage) — the timeline and timing flyouts were
+        // migrated in #1206, the fan-out flyout in #1216; none remain exempt.
+
+        // Registry browser download help (dev-ki lineage, not yet migrated)
+        "Registry.DownloadHelpContent",
     };
 
     [Fact]
@@ -80,7 +81,7 @@ public class HelpTextBudgetTests
         violations.ShouldBeEmpty(
             "\nHelp-flyout sections exceed the text budget (≤3 sentences, ≤45 words):\n\n" +
             string.Join("\n", violations.Select(v => $"  ✗ {v}")) +
-            "\n\nShorten the section or let an animation carry the explanation.\n" +
+            "\n\nShorten the section or let an animation carry the explanation (docs/HELP-ANIMATIONS.md).\n" +
             "If the flyout is genuinely not migrated yet, add its keys to ExemptNotYetMigrated\n" +
             "and file a follow-up issue — but expect review pushback.");
     }
@@ -88,7 +89,7 @@ public class HelpTextBudgetTests
     /// <summary>
     /// All localize keys used as help-flyout text: everything inside a *HelpFlyout.axaml
     /// control (the convention for new flyouts) plus keys inside inline
-    /// HelpFlyoutButton.HelpContent blocks (the pre-existing convention).
+    /// HelpFlyoutButton.HelpContent blocks (the pre-#1152 convention).
     /// </summary>
     private static List<(string File, string Key)> CollectHelpTextKeys()
     {
