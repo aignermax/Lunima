@@ -421,7 +421,7 @@
   "Examples.SrLatch.Description": "Dos registros NAND acoplados en cruz recuerdan un bit: tu primer circuito de memoria.",
   "Examples.TwoChiplets.Description": "Dos chips, un camino de luz: el enlace a través del borde del chip.",
   "Examples.LogicAcrossTwoChiplets.Description": "Dos chips, una tabla de verdad: un NOT en el chiplet A controla un AND en el chiplet B a través del enlace de acoplador de borde — Y = NOT A AND B.",
-  "Examples.AluRamChip.Description": "El sumador de 4 bits y la RAM 4x4 lado a lado en un chip: la ALU suma sobre luz (A0-A3, B0-B3 → S0-S3) y la memoria de datos almacena sobre luz (RAM.A0/A1, RAM.LOAD, RAM.D0-D3 → RAM.Q0-Q3) — una red lógica, ambas unidades fotónicas.",
+  "Examples.AluRamChip.Description": "El sumador de 4 bits y la RAM 4x4 en un chip: la ALU suma con luz y la memoria de datos almacena con luz.",
   "ErrorConsole.ClearTip": "Limpiar la consola",
   "ErrorConsole.CopyAllTip": "Copiar todas las entradas al portapapeles",
   "ErrorConsole.Title": "Consola de errores",
