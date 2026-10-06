@@ -421,6 +421,7 @@
   "Examples.SrLatch.Description": "Dos registros NAND acoplados en cruz recuerdan un bit: tu primer circuito de memoria.",
   "Examples.TwoChiplets.Description": "Dos chips, un camino de luz: el enlace a través del borde del chip.",
   "Examples.LogicAcrossTwoChiplets.Description": "Dos chips, una tabla de verdad: un NOT en el chiplet A controla un AND en el chiplet B a través del enlace de acoplador de borde — Y = NOT A AND B.",
+  "Examples.AluRamChip.Description": "El sumador de 4 bits y la RAM 4x4 en un chip: la ALU suma con luz y la memoria de datos almacena con luz.",
   "ErrorConsole.ClearTip": "Limpiar la consola",
   "ErrorConsole.CopyAllTip": "Copiar todas las entradas al portapapeles",
   "ErrorConsole.Title": "Consola de errores",
