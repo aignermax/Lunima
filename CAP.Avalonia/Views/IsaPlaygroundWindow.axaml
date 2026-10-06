@@ -111,8 +111,16 @@
                                FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{loc:Localize IsaPlayground.RamLabel}"
                                Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RamText}"
-                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
+                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="{Binding RamText}"
+                                   FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
+                        <Border Background="#3d5d3d" CornerRadius="3" Padding="5,1" Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsPhotonicDataMemoryActive}">
+                            <TextBlock Text="{loc:Localize IsaPlayground.RamOnLightChip}"
+                                       Foreground="#7ec87e" FontSize="9" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="{loc:Localize IsaPlayground.StatusLabel}"
                                Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MachineStatusText}"

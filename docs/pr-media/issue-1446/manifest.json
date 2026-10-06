@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-photonic-ram-de.png",
+    "caption": "ISA-Playground mit aufgebautem RAM-4x4-Netzwerk und eingeschaltetem Photonic-Toggle, Multiply-3x4 bis HALT gelaufen: Der Titel nennt das photonische Daten-RAM und die RAM-Anzeige tr\u00E4gt den \u201Eauf Licht\u201C-Chip \u2014 der Speicher des Programms lebt im Licht."
+  },
+  {
+    "file": "isa-playground-photonic-ram-en.png",
+    "caption": "ISA playground with the RAM 4x4 network built and the photonic toggle on, multiply-3x4 run to HALT: the header names the photonic data RAM and the RAM readout carries the \u0027on light\u0027 chip \u2014 the program\u0027s memory lives in light."
+  }
+]
