@@ -1,0 +1,10 @@
+[
+  {
+    "file": "01-logic-link-warning-en.png",
+    "caption": "Logic panel on the misaligned two-chiplet journey design (English): the link warning names \u0027Chiplet A\u0027 / \u0027Chiplet B\u0027 and the level report shows the delivered 1-level after the link\u0027s coupling loss."
+  },
+  {
+    "file": "02-logic-link-warning-de.png",
+    "caption": "Same warning in German: LinkLine and LinkSplitLine resolve through the localization keys \u2014 the long link name stays unclipped."
+  }
+]

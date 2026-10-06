@@ -1676,7 +1676,7 @@
   "LogicPanel.FanOutWarning.BranchStillOne": "✓ '{0}' 仍可读出 1(阈值 {1:0.###})",
   "LogicPanel.FanOutWarning.BranchWouldFail": "✗ '{0}' 将无法读出 1(阈值 {1:0.###})",
   "LogicPanel.FanOutWarning.LinkLine": "门输出 '{0}' 穿越有损耗的芯片间连接 {1}。",
-  "LogicPanel.FanOutWarning.LinkSplitLine": "连接耦合：{0:0.###} × 耦合系数 → 传输递 {1:0.###}（−{2:0.00} dB）",
+  "LogicPanel.FanOutWarning.LinkSplitLine": "连接耦合：{0:0.###} × 耦合系数 → 送达 {1:0.###}（−{2:0.00} dB）",
   "LogicPanelFanOutHelp.Title": "为什么要警告扇出?",
   "LogicPanelFanOutHelp.Intro": "逻辑层为每个被驱动的输入提供完整的理想电平——但光不会增多。波导只能被分束,而分束会把功率分配到各分支。上面的网络在真实光子学中无法直接工作。",
   "LogicPanelFanOutHelp.PhysicsTitle": "分束会损耗功率",
