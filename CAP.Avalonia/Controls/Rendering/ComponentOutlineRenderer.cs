@@ -33,15 +33,27 @@ internal sealed class ComponentOutlineRenderer
     /// so geometry is built once per component type, never per frame; the weak
     /// table drops the entry when the template is unloaded.
     /// </summary>
-    private readonly ConditionalWeakTable<IReadOnlyList<OutlinePolygon>, CachedGeometry[]> _geometryCache = new();
+    private readonly ConditionalWeakTable<IReadOnlyList<OutlinePolygon>, OutlineBatch[]> _geometryCache = new();
 
-    /// <summary>Test seam (InternalsVisibleTo UnitTests): geometries actually issued to
-    /// <see cref="DrawingContext"/> since the last <see cref="ResetDrawCounters"/> — the
-    /// LOD perf guard asserts this against <see cref="CulledGeometryCount"/>.</summary>
+    private readonly OutlineRasterCache? _rasterCache;
+
+    /// <summary>Creates the renderer.</summary>
+    /// <param name="useRasterCache">
+    /// True (default) draws zoomed-out outlines from cached bitmaps (<see cref="OutlineRasterCache"/>);
+    /// false always draws vectors (tests that inspect the per-polygon level of detail).
+    /// </param>
+    public ComponentOutlineRenderer(bool useRasterCache = true)
+    {
+        _rasterCache = useRasterCache ? new OutlineRasterCache() : null;
+    }
+
+    /// <summary>Test seam (InternalsVisibleTo UnitTests): batched geometries actually issued
+    /// to <see cref="DrawingContext"/> since the last <see cref="ResetDrawCounters"/> (one per
+    /// layer and size class, see <see cref="OutlineGeometryBatcher"/>).</summary>
     internal long IssuedGeometryCount { get; private set; }
 
-    /// <summary>Test seam (InternalsVisibleTo UnitTests): geometries skipped by the
-    /// per-polygon LOD cull since the last <see cref="ResetDrawCounters"/>.</summary>
+    /// <summary>Test seam (InternalsVisibleTo UnitTests): polygons skipped by the LOD cull
+    /// since the last <see cref="ResetDrawCounters"/>.</summary>
     internal long CulledGeometryCount { get; private set; }
 
     /// <summary>Test seam (InternalsVisibleTo UnitTests): zeroes both draw counters.</summary>
@@ -86,7 +98,7 @@ internal sealed class ComponentOutlineRenderer
         double recordedUnrotatedWidth = 0, double recordedUnrotatedHeight = 0,
         GdsLayerVisibilityState? layerVisibility = null, bool mirrored = false)
     {
-        var geometries = _geometryCache.GetValue(outlines, BuildGeometries);
+        var geometries = _geometryCache.GetValue(outlines, OutlineGeometryBatcher.Build);
 
         double centerX = x + width / 2.0;
         double centerY = y + height / 2.0;
@@ -99,6 +111,11 @@ internal sealed class ComponentOutlineRenderer
         using (context.PushTransform(transform))
         using (context.PushOpacity(isDimmed ? 128.0 / 255.0 : 1.0))
         {
+            if (_rasterCache?.TryDraw(context, outlines, geometries, zoom, layerVisibility) == true)
+            {
+                IssuedGeometryCount++;
+                return;
+            }
             foreach (var cached in geometries)
             {
                 // Pure view filter (#858): a hidden layer draws nothing, a faded
@@ -108,13 +125,13 @@ internal sealed class ComponentOutlineRenderer
                 if (layerOpacity <= 0)
                     continue;
 
-                // The pushed transform is rigid, so the local-frame bbox × zoom is a
-                // conservative on-screen size: at full zoom-out on a huge import most
-                // polygons are sub-pixel specks whose DrawGeometry call costs far more
-                // than what they rasterize.
-                if (RenderCulling.IsBelowOutlineLodThreshold(cached.Bounds.Width, cached.Bounds.Height, zoom))
+                // The pushed transform is rigid, so a polygon's local extent × zoom is
+                // its on-screen size: at full zoom-out most polygons of a huge import
+                // are sub-pixel specks. A batch is skipped when even its largest
+                // member is below the threshold.
+                if (RenderCulling.IsBelowOutlineLodThreshold(cached.MaxPolygonExtent, cached.MaxPolygonExtent, zoom))
                 {
-                    CulledGeometryCount++;
+                    CulledGeometryCount += cached.PolygonCount;
                     continue;
                 }
                 IssuedGeometryCount++;
@@ -180,70 +197,5 @@ internal sealed class ComponentOutlineRenderer
                 polygon.Points[i], compX, compY, compWidth, compHeight, rotationDegrees,
                 recordedUnrotatedWidth, recordedUnrotatedHeight, mirrored);
         return points;
-    }
-
-    // One geometry per polygon (mirrors GdsPolygonRenderer): a single multi-figure
-    // geometry would punch EvenOdd holes where overlapping layers coincide. The
-    // local-frame bounding box rides along for the per-polygon LOD cull in Draw;
-    // the palette style is resolved here, once per polygon, never per frame.
-    private static CachedGeometry[] BuildGeometries(IReadOnlyList<OutlinePolygon> outlines)
-    {
-        var geometries = new List<CachedGeometry>(outlines.Count);
-        foreach (var polygon in outlines)
-        {
-            if (polygon.Points.Count < 2)
-                continue;
-
-            var geometry = new StreamGeometry();
-            using (var ctx = geometry.Open())
-            {
-                ctx.BeginFigure(new Point(polygon.Points[0].X, polygon.Points[0].Y), true);
-                for (int i = 1; i < polygon.Points.Count; i++)
-                    ctx.LineTo(new Point(polygon.Points[i].X, polygon.Points[i].Y));
-                ctx.EndFigure(true);
-            }
-            var (fill, outline) = OutlineLayerPalette.OutlineStyleFor(polygon.Layer, polygon.DataType);
-            geometries.Add(new CachedGeometry(geometry, ComputeLocalBounds(polygon), fill, outline,
-                polygon.Layer, polygon.DataType));
-        }
-        return geometries.ToArray();
-    }
-
-    private static Rect ComputeLocalBounds(OutlinePolygon polygon)
-    {
-        double minX = double.MaxValue, minY = double.MaxValue;
-        double maxX = double.MinValue, maxY = double.MinValue;
-        foreach (var point in polygon.Points)
-        {
-            minX = Math.Min(minX, point.X);
-            minY = Math.Min(minY, point.Y);
-            maxX = Math.Max(maxX, point.X);
-            maxY = Math.Max(maxY, point.Y);
-        }
-        return new Rect(minX, minY, maxX - minX, maxY - minY);
-    }
-
-    /// <summary>One cached polygon: its geometry, the local-frame bounding box the
-    /// per-polygon LOD cull scales by the current zoom, its per-layer style, and
-    /// its source (layer, datatype) for the per-layer view filter (#858).</summary>
-    private sealed class CachedGeometry
-    {
-        public CachedGeometry(StreamGeometry geometry, Rect bounds, IBrush fill, Pen outline,
-            int layer, int dataType)
-        {
-            Geometry = geometry;
-            Bounds = bounds;
-            Fill = fill;
-            Outline = outline;
-            Layer = layer;
-            DataType = dataType;
-        }
-
-        public StreamGeometry Geometry { get; }
-        public Rect Bounds { get; }
-        public IBrush Fill { get; }
-        public Pen Outline { get; }
-        public int Layer { get; }
-        public int DataType { get; }
     }
 }
