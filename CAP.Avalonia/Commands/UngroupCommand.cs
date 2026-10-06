@@ -115,6 +115,7 @@ public class UngroupCommand : IUndoableCommand
                 if (frozenPath.Path != null && frozenPath.Path.Segments.Count > 0)
                 {
                     connection.RestoreCachedPath(frozenPath.Path.DeepCopy());
+                    frozenPath.AttachAsDrawnTo(connection);
                 }
 
                 _canvas.ConnectionManager.AddExistingConnection(connection);

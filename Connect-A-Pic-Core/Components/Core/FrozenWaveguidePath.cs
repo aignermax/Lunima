@@ -45,6 +45,28 @@ public class FrozenWaveguidePath : ICloneable
     /// </summary>
     public int? DataType { get; set; }
 
+    private AsDrawnGeometry? _asDrawnGeometry;
+    private RouteShapeSignature? _asDrawnRoute;
+
+    /// <summary>
+    /// The exact polygons this geometry was drawn with in an imported layout (absolute
+    /// canvas coordinates), or null. Rendered and exported verbatim instead of the
+    /// centerline; moves with the path (<see cref="TranslateBy"/>) and travels with the
+    /// connection through grouping (<see cref="CaptureSettingsFrom"/>/<see cref="ApplySettingsTo"/>).
+    /// Setting binds the polygons to the CURRENT <see cref="Path"/> shape: any other change
+    /// of the path (a group rotation, a re-route in edit mode) hides them, so stale polygons
+    /// are never drawn or exported.
+    /// </summary>
+    public AsDrawnGeometry? AsDrawnGeometry
+    {
+        get => _asDrawnGeometry is not null && _asDrawnRoute is { } route && route.Matches(Path) ? _asDrawnGeometry : null;
+        set
+        {
+            _asDrawnGeometry = value;
+            _asDrawnRoute = value is null ? null : RouteShapeSignature.Of(Path);
+        }
+    }
+
     /// <summary>
     /// Unique identifier for this frozen path.
     /// </summary>
@@ -118,6 +140,7 @@ public class FrozenWaveguidePath : ICloneable
     {
         Layer = connection.SourceGdsLayer;
         DataType = connection.SourceGdsDataType;
+        AsDrawnGeometry = connection.AsDrawnGeometry;
         ConnectionType = connection.Type;
         BendRadiusMicrometers = connection.BendRadiusMicrometers;
         WidthMicrometers = connection.WidthMicrometers;
@@ -157,6 +180,19 @@ public class FrozenWaveguidePath : ICloneable
         connection.StraightShiftOffsets.Clear();
         foreach (var (straightIndex, offset) in StraightShiftOffsets)
             connection.StraightShiftOffsets[straightIndex] = offset;
+        AttachAsDrawnTo(connection);
+    }
+
+    /// <summary>
+    /// Hands the drawn polygons back to a live connection whose route is the restored
+    /// copy of <see cref="Path"/>. Call after the route is in place: the connection binds
+    /// the polygons to its CURRENT route instance (no-op while it has none).
+    /// </summary>
+    /// <param name="connection">The connection restored from this frozen path.</param>
+    public void AttachAsDrawnTo(WaveguideConnection connection)
+    {
+        if (AsDrawnGeometry is not null && connection.RoutedPath is not null)
+            connection.AttachAsDrawnGeometry(AsDrawnGeometry);
     }
 
     /// <summary>
@@ -169,6 +205,7 @@ public class FrozenWaveguidePath : ICloneable
     {
         Layer = source.Layer;
         DataType = source.DataType;
+        AsDrawnGeometry = source.AsDrawnGeometry;
         ConnectionType = source.ConnectionType;
         BendRadiusMicrometers = source.BendRadiusMicrometers;
         WidthMicrometers = source.WidthMicrometers;
@@ -253,6 +290,15 @@ public class FrozenWaveguidePath : ICloneable
     /// <param name="deltaX">X offset in micrometers.</param>
     /// <param name="deltaY">Y offset in micrometers.</param>
     public void TranslateBy(double deltaX, double deltaY)
+    {
+        var asDrawn = AsDrawnGeometry;
+        TranslateSegments(deltaX, deltaY);
+        // Re-bind after the segments moved: the polygons follow the path's new shape.
+        if (asDrawn is not null)
+            AsDrawnGeometry = asDrawn.Translated(deltaX, deltaY);
+    }
+
+    private void TranslateSegments(double deltaX, double deltaY)
     {
         if (Path?.Segments == null) return;
 

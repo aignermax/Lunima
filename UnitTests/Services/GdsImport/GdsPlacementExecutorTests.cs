@@ -1,3 +1,4 @@
+using CAP_Core.Routing;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services.GdsImport;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -602,7 +603,7 @@ public class GdsPlacementExecutorTests
     // ── Group naming ─────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ExecuteAsync_RouteDerivedConnection_UsesTracedCachedRoute()
+    public async Task ExecuteAsync_RouteDerivedConnection_UsesFittedCenterlineRoute()
     {
         var (canvas, _, executor) = CreateExecutor(WaveguideTemplate());
         var routingPasses = 0;
@@ -660,10 +661,13 @@ public class GdsPlacementExecutorTests
         path.Path.IsBlockedFallback.ShouldBeFalse();
         path.Path.Segments[0].StartPoint.ShouldBe((10.0, 2.0), "anchored at the placed start pin");
         path.Path.Segments[^1].EndPoint.ShouldBe((20.0, 2.0), "anchored at the placed end pin");
-        path.Path.Segments.Any(s =>
-            s.StartPoint.X == 10.0 && s.StartPoint.Y == 1.75
-            && s.EndPoint.X == 20.0 && s.EndPoint.Y == 1.75).ShouldBeTrue(
-            "the drawn stripe's outline is traced into the route");
+        var straight = path.Path.Segments.ShouldHaveSingleItem().ShouldBeOfType<StraightSegment>(
+            "the drawn stripe is fitted as one exact straight centerline, not its traced outline");
+        straight.LengthMicrometers.ShouldBe(10.0, 1e-9);
+        path.WidthMicrometers.ShouldBe(0.5, 1e-9, "the fitted stripe width becomes the waveguide width");
+        report.CenterlineRouteCount.ShouldBe(1);
+        var drawn = path.AsDrawnGeometry.ShouldNotBeNull("the drawn polygon rides along for exact rendering/export");
+        drawn.Polygons.ShouldHaveSingleItem().Points.Count.ShouldBe(5);
     }
 
     [Fact]
@@ -769,18 +773,15 @@ public class GdsPlacementExecutorTests
         report.Warnings.ShouldBeEmpty();
 
         var group = SingleGroupOn(canvas);
-        group.InternalPaths.Count.ShouldBe(2, "the frozen abutment connection plus the route outline");
+        group.InternalPaths.Count.ShouldBe(2, "the frozen abutment connection plus the route stub");
         var routePath = group.InternalPaths.Single(p => p.StartPin is null);
         routePath.EndPin.ShouldBeNull("imported route geometry is pin-less on BOTH ends");
-        routePath.Path.Segments.Count.ShouldBe(4, "the rectangle's four edges, first point repeated at the end");
-        routePath.Path.Segments.Select(s => (s.StartPoint.X, s.StartPoint.Y, s.EndPoint.X, s.EndPoint.Y))
-            .ShouldBe(new[]
-            {
-                (10.0, 2.25, 12.0, 2.25),
-                (12.0, 2.25, 12.0, 1.75),
-                (12.0, 1.75, 10.0, 1.75),
-                (10.0, 1.75, 10.0, 2.25),
-            });
+        var centerline = routePath.Path.Segments.ShouldHaveSingleItem().ShouldBeOfType<StraightSegment>(
+            "the 2×0.5 µm ribbon is fitted as its centerline");
+        new[] { centerline.StartPoint, centerline.EndPoint }.OrderBy(p => p.X)
+            .ShouldBe(new[] { (10.0, 2.0), (12.0, 2.0) });
+        routePath.WidthMicrometers.ShouldBe(0.5, 1e-9);
+        routePath.AsDrawnGeometry.ShouldNotBeNull().Polygons.ShouldHaveSingleItem().Layer.ShouldBe(1);
 
         // The frozen abutment connection is untouched by the imported geometry.
         var abutment = group.InternalPaths.Single(p => p.StartPin is not null);
@@ -788,7 +789,7 @@ public class GdsPlacementExecutorTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_RoutePolygonsWithoutGroup_ReportsDroppedGeometry()
+    public async Task ExecuteAsync_RoutePolygonsWithoutGroup_LandOnTheCanvas()
     {
         var (canvas, _, executor) = CreateExecutor(WaveguideTemplate());
         var plan = new GdsPlacementPlan
@@ -808,7 +809,9 @@ public class GdsPlacementExecutorTests
         var report = await executor.ExecuteAsync(plan);
 
         report.GroupCreated.ShouldBeFalse();
-        var warning = report.Warnings.ShouldHaveSingleItem();
-        warning.ShouldContain("no group was created to hold the frozen paths");
+        report.Warnings.ShouldBeEmpty("nothing is dropped any more");
+        var canvasPath = canvas.CanvasFrozenPaths.ShouldHaveSingleItem(
+            "with no group to hold it, the geometry becomes a canvas-level frozen path");
+        canvasPath.Path.AsDrawnGeometry.ShouldNotBeNull();
     }
 }

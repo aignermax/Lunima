@@ -237,29 +237,20 @@ public class GdsRoundTripImportTests : IDisposable
         // The routed waveguide connections are flattened into top-cell polygon
         // chains by nazca. The gcIn.waveguide → mmi.in chain spans exactly two
         // pins and restores as a real, re-routable connection (route-derived);
-        // the mmi.out2 → gcOut.waveguide chain entangles three pins (the
-        // rot180 gcOut's two heuristic edge pins + mmi.b1) into a junction
-        // network, which v1 deliberately leaves frozen with an info note.
-        var connection = outcome.Connections.ShouldHaveSingleItem();
-        connection.IsRouteDerived.ShouldBeTrue();
-        connection.IsElectrical.ShouldBeFalse();
-        // Endpoint order follows pin enumeration: A is the GC's waveguide-side
-        // heuristic pin, B the MMI's label pin a0 (the pin-layout disambiguation
-        // flipped the enumeration order — both physical pins are unchanged).
-        // The any-layer label fallback discovers the GC's fiber-side pin label
-        // (demofab's io pin text is not on a configured port layer): the label
-        // pin suppresses the fiber-side heuristic touch, so the surviving
-        // waveguide-side heuristic pin renumbered heur_2→heur_1. D1's simplifier
-        // fix (collapsed polygons are kept instead of silently dropped) restored
-        // one heuristic touch, moving the numbering back — same physical pin.
-        connection.A.PinName.ShouldBe("heur_2");
-        connection.B.PinName.ShouldBe("a0");
+        // the mmi.out2 → gcOut.waveguide chain also touches the rot180 gcOut's
+        // geometric edge guess, which gives way to the two marked pins (mmi.b1 and
+        // gcOut's arrow-marker pin) — so it restores as well.
+        outcome.Connections.Count.ShouldBe(2);
+        outcome.Connections.ShouldAllBe(c => c.IsRouteDerived && !c.IsElectrical);
+        // Endpoint order follows pin enumeration; heur_N names cover marker pins too.
+        var input = outcome.Connections.Single(c => c.B.PinName == "a0");
+        input.A.PinName.ShouldBe("heur_2");
+        var output = outcome.Connections.Single(c => c.A.PinName == "b1");
+        output.B.PinName.ShouldBe("heur_2");
+        output.B.InstanceIndex.ShouldNotBe(input.A.InstanceIndex, "each GC connects to its own MMI port");
         outcome.Warnings.ShouldBeEmpty("restored/frozen accounting is informational now");
-        outcome.Infos.ShouldContain(i => i.Contains("junction with 3 pins"));
-        outcome.Infos.ShouldContain(i => i.Contains("restored as 1 real connection(s)"));
-        outcome.Infos.ShouldContain(i => i.Contains("imported as frozen paths (not re-routable)"));
-        outcome.TopCellWaveguidePolygons.Count.ShouldBe(3,
-            "the junction network's polygons ride the group as frozen, non-re-routable paths");
+        outcome.Infos.ShouldContain(i => i.Contains("guessed edge pin(s)"));
+        outcome.Infos.ShouldContain(i => i.Contains("restored as 2 real connection(s)"));
 
         // The registered MMI template carries the demofab pin names.
         _host.Templates.ShouldContain(t => t.Name == "mmi1x2_sh");
@@ -272,14 +263,12 @@ public class GdsRoundTripImportTests : IDisposable
             .ExecuteAsync(GdsPlacementPlan.FromOutcome(outcome));
         report.SkippedPlacements.ShouldBeEmpty();
         report.PlacedCount.ShouldBe(3);
-        report.ConnectedCount.ShouldBe(1);
+        report.ConnectedCount.ShouldBe(2);
         // The executor wraps the import in one group — the canvas root holds that group.
         var group = canvas2.Components.ShouldHaveSingleItem().Component.ShouldBeOfType<ComponentGroup>();
         group.GetAllComponentsRecursive().Count().ShouldBe(3);
-        group.InternalPaths.ShouldContain(p => p.StartPin == null,
-            "the junction network's polygons ride the group as pin-less frozen paths");
         group.InternalPaths.ShouldContain(p => p.StartPin != null,
-            "the restored connection freezes into the group with its pins");
+            "the restored connections freeze into the group with their pins");
     }
 
     // ── Harness ───────────────────────────────────────────────────────────────

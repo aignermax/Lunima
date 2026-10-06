@@ -118,9 +118,9 @@ public static class ComponentPoseTransform
     /// its LOCAL (unrotated) frame: offset Y flips within the box, the angle maps
     /// θ → −θ (a down-pointing pin becomes up-pointing). This is the app-space
     /// effect of the GDS STRANS flag (reflection across the GDS x-axis) on pins.
-    /// Geometry (parts, outlines) is NOT mirrored: the core model has no mirror
-    /// support (v1 limitation). Toggles <see cref="Component.IsMirroredHorizontally"/>
-    /// so persistence can re-apply the mirror on load.
+    /// Toggles <see cref="Component.IsMirroredHorizontally"/>, which the canvas outline
+    /// renderer and the Nazca export (<c>flip=True</c>) apply to the component's
+    /// geometry, and which persistence re-applies on load.
     /// </summary>
     public static void MirrorPinsHorizontally(Component component)
     {

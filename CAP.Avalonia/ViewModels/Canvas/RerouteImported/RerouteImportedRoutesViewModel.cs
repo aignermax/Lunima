@@ -189,7 +189,8 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
                 {
                     Connection = t.Connection,
                     OldPath = t.Connection.RoutedPath!.DeepCopy(),
-                    OldIsFrozen = t.Connection.IsRouteFrozen
+                    OldIsFrozen = t.Connection.IsRouteFrozen,
+                    OldAsDrawn = t.Connection.AsDrawnGeometry,
                 }).ToList();
 
             var groupStates = groupTargets.Select(g =>
@@ -202,10 +203,13 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
                 }).ToList();
 
             // Canvas-level targets are mutated directly; the state command handles undo.
+            int kept = 0;
             if (canvasTargets.Count > 0)
             {
+                var drawn = SnapshotDrawnRoutes(canvasTargets);
                 new RerouteImportedRoutesCommand(_canvas, canvasTargets).Execute();
                 await _canvas.RecalculateRoutesAsync();
+                kept = KeepDrawnRouteWhereBlocked(drawn);
             }
 
             // Group-internal targets are routed inside a temporary group-edit sub-canvas.
@@ -233,8 +237,8 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
             var afterConnections = connectionStates.Select(s => s.Connection);
             var afterGroupPaths = groupStates.SelectMany(s => s.NewPaths);
             var after = RouteMetricsSnapshot.Capture(afterConnections, afterGroupPaths);
-            ResultText = FormatDelta(
-                canvasTargets.Count + groupTargets.Sum(g => g.Paths.Count), before, after);
+            ResultText = WithKeptNote(FormatDelta(
+                canvasTargets.Count + groupTargets.Sum(g => g.Paths.Count), before, after), kept);
         }
         finally
         {
@@ -266,31 +270,15 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         }
     }
 
-    private async Task RerouteAsync(IReadOnlyList<WaveguideConnectionViewModel> targets)
-    {
-        if (targets.Count == 0)
-            return;
-
-        IsRerouting = true;
-        try
-        {
-            var connections = targets.Select(t => t.Connection).ToList();
-            var before = RouteMetricsSnapshot.Capture(connections);
-
-            _commandManager.ExecuteCommand(new RerouteImportedRoutesCommand(_canvas, targets));
-            // Execute fires the pass asynchronously (undo/redo path); awaiting a second
-            // pass here supersedes it and yields a deterministic "after" state.
-            await _canvas.RecalculateRoutesAsync();
-
-            var after = RouteMetricsSnapshot.Capture(connections);
-            ResultText = FormatDelta(targets.Count, before, after);
-        }
-        finally
-        {
-            IsRerouting = false;
-            Refresh();
-        }
-    }
+    /// <summary>
+    /// Re-routes <paramref name="targets"/> through the same snapshot-based flow as
+    /// "re-route all": the undo step records the FINAL state (including routes kept drawn
+    /// because no free path existed), so redo reproduces exactly what the user saw.
+    /// </summary>
+    private Task RerouteAsync(IReadOnlyList<WaveguideConnectionViewModel> targets) =>
+        targets.Count == 0
+            ? Task.CompletedTask
+            : RerouteAllAsync(targets, Array.Empty<(ComponentGroup, List<FrozenWaveguidePath>)>());
 
     private static string FormatDelta(int count, RouteMetricsSnapshot before, RouteMetricsSnapshot after) =>
         string.Format(CultureInfo.CurrentCulture,

@@ -74,10 +74,9 @@ public class GdsReflectedInstancePlacementTests
         AssertPin(rot180, "south", 31, 15, 270);
 
         // Instance 4 — X-reflected (STRANS) at (60,0): T(x,y) = (x+60, −y);
-        // bbox (62,−7)–(72,−3) → app top-left (60,15). The core model cannot
-        // mirror, so the body is placed unreflected — but the pins must land on
-        // the TRUE reflected positions, or the reconstructed connections anchor
-        // at points where no pin is:
+        // bbox (62,−7)–(72,−3) → app top-left (60,15). The component is placed
+        // mirrored; its pins must land on the TRUE reflected positions, or the
+        // reconstructed connections anchor at points where no pin is:
         // west (2,6)→(62,−6)→app(60,18) 180°; east (12,4)→(72,−4)→app(70,16) 0°;
         // south (7,3)→(67,−3)→app(65,15), dir (0,−1)→(0,1)→270°.
         var reflected = SingleComponentAt(canvas, 60, 15);
@@ -98,20 +97,21 @@ public class GdsReflectedInstancePlacementTests
     }
 
     [Fact]
-    public async Task ReflectedInstances_CarryMirrorWarning_ButPinsAreExact()
+    public async Task ReflectedInstances_ArePlacedMirrored_WithoutWarnings()
     {
         var import = await ImportTransformBatteryAsync();
         var (canvas, executor) = CreateExecutor(TemplatesFromDrafts(import));
 
         var report = await executor.ExecuteAsync(PlanFrom(import));
 
-        // The two STRANS instances are covered by the importer's transform-aggregated
-        // mirror warnings (distinct signatures: angle 0 and angle 90)…
-        import.Warnings.Count(w => w.Contains("LEAF#3") || w.Contains("LEAF#4")).ShouldBe(2);
-        // …so the placement report adds NO per-instance mirror lines of its own.
-        report.Warnings.ShouldBeEmpty(
-            "the importer's signature-aggregated STRANS warning covers every mirrored " +
-            "instance's cell — per-instance placement notes would only re-flood the report");
+        // Mirrored instances are placed mirrored (pins, outline, export flip), so neither
+        // the importer nor the placement report has anything to warn about.
+        import.Warnings.ShouldNotContain(w => w.Contains("LEAF#3") || w.Contains("LEAF#4"));
+        report.Warnings.ShouldBeEmpty();
+        var group = canvas.Components.ShouldHaveSingleItem().Component
+            .ShouldBeOfType<CAP_Core.Components.Core.ComponentGroup>();
+        group.ChildComponents.Count(c => c.IsMirroredHorizontally).ShouldBe(2,
+            "both STRANS instances carry the mirror flag the renderer and exporter apply");
         // …and no connection was reconstructed (instances are far apart), so the
         // canvas must not invent any either.
         report.ConnectedCount.ShouldBe(0);

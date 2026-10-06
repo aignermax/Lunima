@@ -11,6 +11,15 @@ namespace CAP_DataAccess.Import.Gds;
 /// </summary>
 internal static class GdsOutlineSimplifier
 {
+    /// <summary>Tolerance multiplier per adaptive round.</summary>
+    private const double GrowthFactor = 4.0;
+
+    /// <summary>
+    /// First tolerance (µm) tried when the cap forces simplification of a lossless
+    /// (zero-tolerance) import: coarse enough to make progress, fine enough to be invisible.
+    /// </summary>
+    private const double FirstGrowthToleranceUm = 0.05;
+
     /// <summary>
     /// Simplifies app-space outline polygons. <paramref name="droppedPolygonCount"/>
     /// reports how many polygons were dropped to satisfy the cap (0 = none) and is
@@ -34,10 +43,10 @@ internal static class GdsOutlineSimplifier
         // out thousands of small polygons in a single step.
         var refined = new List<GdsOutlinePolygon>(polygons);
         RefineAll(polygons, refined, Math.Max(0, toleranceUm));
-        double grownTolerance = Math.Max(toleranceUm, 1e-6);
+        double grownTolerance = Math.Max(toleranceUm, FirstGrowthToleranceUm / GrowthFactor);
         for (int round = 0; round < 8 && TotalPoints(refined) > maxTotalPoints; round++)
         {
-            grownTolerance *= 4;
+            grownTolerance *= GrowthFactor;
             RefineAll(polygons, refined, grownTolerance);
         }
 

@@ -18,7 +18,24 @@ public class WaveguideOverlapDetector
         string Label,
         WaveguideConnection? Connection,
         double MidX,
-        double MidY);
+        double MidY)
+    {
+        /// <summary>Tight bounds per segment, computed once (pairs and segment pairs are pruned by them).</summary>
+        public (double MinX, double MinY, double MaxX, double MaxY)[] SegmentBounds { get; } =
+            Segments.Select(s => PathSegmentBounds.Of(s, BoundsSlackUm)).ToArray();
+
+        /// <summary>Union of <see cref="SegmentBounds"/>.</summary>
+        public (double MinX, double MinY, double MaxX, double MaxY) Bounds => _bounds ??= Union(SegmentBounds);
+
+        /// <summary>The connection's path sampled once for the crossing test, or null for frozen paths.</summary>
+        public SampledPolyline? Sampled => Connection?.RoutedPath is { } path ? _sampled ??= SampledPolyline.From(path) : null;
+
+        private (double, double, double, double)? _bounds;
+        private SampledPolyline? _sampled;
+    }
+
+    /// <summary>Slack (µm) on the pruning boxes so floating-point touches are never pruned.</summary>
+    private const double BoundsSlackUm = 1e-6;
 
     /// <summary>
     /// Detects all overlapping waveguide path pairs and returns a design issue for each.
@@ -49,9 +66,9 @@ public class WaveguideOverlapDetector
     /// </summary>
     private static bool IsProperConnectionCrossing(PathDescriptor a, PathDescriptor b)
     {
-        return a.Connection?.RoutedPath is { } pathA
-            && b.Connection?.RoutedPath is { } pathB
-            && PathIntersectionDetector.Crosses(pathA, pathB);
+        return a.Sampled is { } pathA
+            && b.Sampled is { } pathB
+            && pathA.Crosses(pathB);
     }
 
     /// <summary>
@@ -100,10 +117,13 @@ public class WaveguideOverlapDetector
         {
             for (int j = i + 1; j < paths.Count; j++)
             {
+                // Paths whose boxes do not meet can neither cross nor overlap.
+                if (!Overlaps(paths[i].Bounds, paths[j].Bounds))
+                    continue;
                 if (IsProperConnectionCrossing(paths[i], paths[j]))
                     continue;
 
-                var overlap = FindFirstOverlapPoint(paths[i].Segments, paths[j].Segments);
+                var overlap = FindFirstOverlapPoint(paths[i], paths[j]);
                 if (overlap.HasValue)
                 {
                     issues.Add(CreateOverlapIssue(paths[i], paths[j], overlap.Value));
@@ -118,21 +138,30 @@ public class WaveguideOverlapDetector
     /// Finds the first intersection point between two sets of path segments.
     /// Returns null if no overlap is found.
     /// </summary>
-    private static (double X, double Y)? FindFirstOverlapPoint(
-        List<PathSegment> segmentsA,
-        List<PathSegment> segmentsB)
+    private static (double X, double Y)? FindFirstOverlapPoint(PathDescriptor a, PathDescriptor b)
     {
-        foreach (var segA in segmentsA)
+        for (int i = 0; i < a.Segments.Count; i++)
         {
-            foreach (var segB in segmentsB)
+            if (!Overlaps(a.SegmentBounds[i], b.Bounds)) continue;
+            for (int j = 0; j < b.Segments.Count; j++)
             {
-                var point = CheckSegmentPairOverlap(segA, segB);
+                if (!Overlaps(a.SegmentBounds[i], b.SegmentBounds[j])) continue;
+                var point = CheckSegmentPairOverlap(a.Segments[i], b.Segments[j]);
                 if (point.HasValue)
                     return point;
             }
         }
         return null;
     }
+
+    private static bool Overlaps(
+        (double MinX, double MinY, double MaxX, double MaxY) a,
+        (double MinX, double MinY, double MaxX, double MaxY) b) =>
+        a.MinX <= b.MaxX && b.MinX <= a.MaxX && a.MinY <= b.MaxY && b.MinY <= a.MaxY;
+
+    private static (double MinX, double MinY, double MaxX, double MaxY) Union(
+        (double MinX, double MinY, double MaxX, double MaxY)[] boxes) =>
+        (boxes.Min(b => b.MinX), boxes.Min(b => b.MinY), boxes.Max(b => b.MaxX), boxes.Max(b => b.MaxY));
 
     /// <summary>
     /// Checks a pair of segments for overlap.

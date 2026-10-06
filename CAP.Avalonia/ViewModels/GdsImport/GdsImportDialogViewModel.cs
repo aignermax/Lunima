@@ -115,17 +115,25 @@ public partial class GdsImportDialogViewModel : ObservableObject
     private string _metalLayersText = DefaultMetalLayersText;
 
     /// <summary>
-    /// Recreate the detected connections with Lunima's own routing (default: on).
-    /// The flag flows into <see cref="GdsPlacementExecutor.ExecuteAsync"/>: the
-    /// route-derived connections become real router-generated waveguides/metal
-    /// traces instead of keeping the imported route geometry as frozen paths.
-    /// Real connectivity always comes from the GDS route structure — this option
-    /// only decides HOW the detected connections get their geometry. Very large
-    /// imports fall back to frozen geometry automatically
+    /// Recreate the detected connections with Lunima's own routing (default: off).
+    /// Off keeps every drawn route exactly as imported — a frozen centerline plus the
+    /// original polygons — because a finished layout must not change on import; single
+    /// waveguides can be unfrozen and re-routed afterwards. On hands the route-derived
+    /// connections to the router instead. Real connectivity always comes from the GDS
+    /// route structure — this option only decides HOW the connections get their
+    /// geometry. Very large imports keep the frozen geometry automatically
     /// (<see cref="GdsPlacementExecutor.MaxReroutedConnections"/>).
     /// </summary>
     [ObservableProperty]
-    private bool _rerouteConnectionsRequested = true;
+    private bool _rerouteConnectionsRequested;
+
+    /// <summary>
+    /// Wrap the import in one group named after the top cell (default: off). Off keeps
+    /// the import flat so every component and waveguide stays individually selectable,
+    /// movable and unfreezable.
+    /// </summary>
+    [ObservableProperty]
+    private bool _groupImportRequested;
 
     /// <summary>
     /// Auto-connect all pins after placement (default: off, issue #880). Every
@@ -354,7 +362,7 @@ public partial class GdsImportDialogViewModel : ObservableObject
             token.ThrowIfCancellationRequested();
             var plan = GdsPlacementPlan.FromOutcome(outcome);
             var report = await _placementExecutor.ExecuteAsync(
-                plan, progress, token, RerouteConnectionsRequested, AutoConnectAllPinsRequested);
+                plan, progress, token, RerouteConnectionsRequested, AutoConnectAllPinsRequested, GroupImportRequested);
 
             foreach (var warning in outcome.Warnings)
                 Warnings.Add(warning);

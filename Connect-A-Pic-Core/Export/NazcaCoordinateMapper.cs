@@ -10,7 +10,8 @@ namespace CAP_Core.Export;
 /// <param name="X">Nazca X coordinate where the cell origin is put.</param>
 /// <param name="Y">Nazca Y coordinate where the cell origin is put.</param>
 /// <param name="RotationDegrees">Put rotation, i.e. the negated app rotation (Nazca is Y-up).</param>
-public record CellPlacement(double X, double Y, double RotationDegrees);
+/// <param name="Flip">True for a mirrored component: the cell is put with <c>flip=True</c>.</param>
+public record CellPlacement(double X, double Y, double RotationDegrees, bool Flip = false);
 
 /// <summary>
 /// Single source of truth for all app→Nazca coordinate answers (issue #565).
@@ -38,12 +39,18 @@ public static class NazcaCoordinateMapper
     {
         var (w0, h0) = GetUnrotatedDimensions(comp);
         var bbox = GetUnrotatedCellBbox(comp, rawOverrideAnchor, w0, h0);
+        // A mirrored component (GDS STRANS reflection) is put with Nazca's flip, which
+        // mirrors the cell's Y axis BEFORE the rotation — the order the app applies its
+        // mirror in too. The re-anchoring below then works on the flipped bbox.
+        if (comp.IsMirroredHorizontally)
+            bbox = (bbox.XMin, -bbox.YMax, bbox.XMax, -bbox.YMin);
         double putRotation = NormalizeZero(-comp.RotationDegrees);
         var (minX, maxY) = GetRotatedBboxAnchor(bbox, putRotation);
         return new CellPlacement(
             NormalizeZero(comp.PhysicalX - minX),
             NormalizeZero(-comp.PhysicalY - maxY),
-            putRotation);
+            putRotation,
+            comp.IsMirroredHorizontally);
     }
 
     /// <summary>

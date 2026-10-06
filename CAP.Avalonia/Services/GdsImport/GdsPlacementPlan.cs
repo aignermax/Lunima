@@ -41,7 +41,7 @@ public sealed record GdsPlacementInstruction
     /// </summary>
     public double RotationDegrees { get; init; }
 
-    /// <summary>True when the GDS reference was mirrored; the core model cannot mirror geometry, so the component body is placed unreflected — its pins are mirrored onto the true reflected positions instead. The importer's transform-aggregated STRANS warning already covers every mirrored instance's cell, so the plan carries no per-instance mirror note.</summary>
+    /// <summary>True when the GDS reference was mirrored: the placed component is mirrored too (pins, drawn outline, and the export's <c>flip=True</c>).</summary>
     public bool Reflected { get; init; }
 
     /// <summary>User-presentable note for this instance (unregistered draft), or null.</summary>
