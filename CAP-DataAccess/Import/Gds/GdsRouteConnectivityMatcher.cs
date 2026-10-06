@@ -228,6 +228,10 @@ internal static partial class GdsRouteConnectivityMatcher
                     infos.Add(
                         $"Top-cell route between '{labelled[0].Pin.Name}' and '{labelled[1].Pin.Name}': " +
                         $"guessed edge pin(s) {dropped} on the same joint ignored.");
+                    // The guesses ARE this route's joint: consume them with it, or a later
+                    // stage would pair them again as free pins.
+                    foreach (var guess in touches.Where(t => t.Pin.IsGuessed))
+                        Consume(guess);
                     touches = labelled;
                 }
             }

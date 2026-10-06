@@ -143,13 +143,6 @@ public sealed partial class GdsPlacementExecutor
         }
 
         report.CachedRouteCount = frozenCached;
-        if (_tracedRoutes.Count > 0)
-        {
-            report.Warnings.Add(string.Format(CultureInfo.InvariantCulture,
-                "{0} imported route(s) are not clean waveguide ribbons and were kept as traced outlines " +
-                "— they render and export as drawn, but their simulated length and loss are approximate.",
-                _tracedRoutes.Count));
-        }
         report.ReroutedCount = awaitingRoute;
         if (frozenCached > 0)
         {
