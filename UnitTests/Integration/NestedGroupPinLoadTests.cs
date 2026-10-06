@@ -25,6 +25,7 @@ namespace UnitTests.Integration;
 /// external pins, and a group that still fails to restore is skipped with a load
 /// diagnostic instead of taking the whole design down.
 /// </summary>
+[Collection("LocalizationSingleton")]
 public class NestedGroupPinLoadTests
 {
     private const string ChipletName = "chiplet1438";
@@ -45,6 +46,7 @@ public class NestedGroupPinLoadTests
             var exposedPinName = chiplet.ExternalPins.Single(p => p.InternalPin == nestedPin).Name;
             await SaveToFile(saveVm, tempFile);
 
+            CAP.Avalonia.Services.Localization.LocalizationService.Instance.SetLanguage("en");
             var (loadVm, loadCanvas, errorConsole) = CreateSetup();
             await LoadFromFile(loadVm, tempFile);
 
@@ -85,6 +87,7 @@ public class NestedGroupPinLoadTests
             chipletData["GroupDto"]!["ExternalPins"]![0]!["InternalPinName"] = "no_such_pin";
             await File.WriteAllTextAsync(tempFile, root.ToJsonString());
 
+            CAP.Avalonia.Services.Localization.LocalizationService.Instance.SetLanguage("en");
             var (loadVm, loadCanvas, errorConsole) = CreateSetup();
             string? status = null;
             loadVm.UpdateStatus = s => status = s;
