@@ -1,4 +1,5 @@
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
 
 namespace CAP.Avalonia.Commands;
@@ -15,6 +16,7 @@ public sealed class RerouteImportedRoutesCommand : IUndoableCommand
     private readonly DesignCanvasViewModel _canvas;
     private readonly IReadOnlyList<WaveguideConnectionViewModel> _targets;
     private readonly Dictionary<WaveguideConnectionViewModel, RoutedPath> _frozenPaths = new();
+    private readonly Dictionary<WaveguideConnectionViewModel, AsDrawnGeometry> _asDrawn = new();
 
     /// <summary>Initializes the command for the given frozen imported connections.</summary>
     /// <param name="canvas">The design canvas hosting the connections.</param>
@@ -39,7 +41,11 @@ public sealed class RerouteImportedRoutesCommand : IUndoableCommand
             var connection = target.Connection;
             // Snapshot only on the first execution; redo reuses the original geometry.
             if (!_frozenPaths.ContainsKey(target) && connection.RoutedPath is { } path)
+            {
                 _frozenPaths[target] = path.DeepCopy();
+                if (connection.AsDrawnGeometry is { } asDrawn)
+                    _asDrawn[target] = asDrawn;
+            }
 
             connection.IsRouteFrozen = false;
             // Incremental routing keeps any route whose endpoints still match, so the
@@ -62,6 +68,8 @@ public sealed class RerouteImportedRoutesCommand : IUndoableCommand
             // restored live path with the stored snapshot.
             target.Connection.RestoreCachedPath(frozenPath.DeepCopy());
             target.Connection.IsRouteFrozen = true;
+            if (_asDrawn.TryGetValue(target, out var asDrawn))
+                target.Connection.AttachAsDrawnGeometry(asDrawn);
             target.NotifyPathChanged();
         }
 

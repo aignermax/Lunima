@@ -189,7 +189,8 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
                 {
                     Connection = t.Connection,
                     OldPath = t.Connection.RoutedPath!.DeepCopy(),
-                    OldIsFrozen = t.Connection.IsRouteFrozen
+                    OldIsFrozen = t.Connection.IsRouteFrozen,
+                    OldAsDrawn = t.Connection.AsDrawnGeometry,
                 }).ToList();
 
             var groupStates = groupTargets.Select(g =>
