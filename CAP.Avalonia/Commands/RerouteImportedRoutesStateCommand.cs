@@ -29,6 +29,9 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
         /// <summary>Freeze flag before the re-route.</summary>
         public required bool OldIsFrozen { get; set; }
 
+        /// <summary>Drawn polygons of the imported route before the re-route, or null.</summary>
+        public AsDrawnGeometry? OldAsDrawn { get; init; }
+
         /// <summary>Live geometry after the re-route.</summary>
         public RoutedPath NewPath { get; set; } = null!;
 
@@ -86,6 +89,10 @@ public sealed class RerouteImportedRoutesStateCommand : IUndoableCommand
             var frozen = useNew ? state.NewIsFrozen : state.OldIsFrozen;
             state.Connection.RestoreCachedPath(path.DeepCopy());
             state.Connection.IsRouteFrozen = frozen;
+            // The drawn polygons belong to the imported route only: rebind them to the
+            // restored copy on undo; the re-routed state shows the centerline.
+            if (!useNew && state.OldAsDrawn is { } asDrawn)
+                state.Connection.AttachAsDrawnGeometry(asDrawn);
         }
 
         foreach (var state in _groups)

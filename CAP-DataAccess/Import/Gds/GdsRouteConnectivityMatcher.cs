@@ -215,6 +215,27 @@ internal static partial class GdsRouteConnectivityMatcher
                     && pinTouches.Any(p => IsCoincident(p.Pin, t.Pin, toleranceUm)));
             }
 
+            // A guessed edge pin (no label, inferred from a waveguide reaching the cell
+            // edge) that shares a network with labelled pins is the same physical joint
+            // seen twice: when dropping the guesses leaves exactly the two labelled ends,
+            // the network is that honest 2-pin route, not a junction.
+            if (touches.Count > 2)
+            {
+                var labelled = touches.Where(t => !t.Pin.IsGuessed).ToList();
+                if (labelled.Count == 2)
+                {
+                    var dropped = string.Join(", ", touches.Where(t => t.Pin.IsGuessed).Select(t => $"'{t.Pin.Name}'"));
+                    infos.Add(
+                        $"Top-cell route between '{labelled[0].Pin.Name}' and '{labelled[1].Pin.Name}': " +
+                        $"guessed edge pin(s) {dropped} on the same joint ignored.");
+                    // The guesses ARE this route's joint: consume them with it, or a later
+                    // stage would pair them again as free pins.
+                    foreach (var guess in touches.Where(t => t.Pin.IsGuessed))
+                        Consume(guess);
+                    touches = labelled;
+                }
+            }
+
             if (touches.Count != 2)
             {
                 if (touches.Count > 2)

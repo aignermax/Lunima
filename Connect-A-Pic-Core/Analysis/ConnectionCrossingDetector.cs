@@ -33,6 +33,8 @@ public class ConnectionCrossingDetector
             .Where(c => c.RoutedPath?.Segments is { Count: > 0 } && !c.IsBlockedFallback)
             .ToList();
 
+        // Sampled once per path, not once per pair.
+        var sampled = routed.Select(c => SampledPolyline.From(c.RoutedPath!)).ToList();
         var issues = new List<DesignIssue>();
         for (int i = 0; i < routed.Count; i++)
         {
@@ -40,7 +42,7 @@ public class ConnectionCrossingDetector
             {
                 if (SharesEndpointPin(routed[i], routed[j]))
                     continue;
-                if (!PathIntersectionDetector.Crosses(routed[i].RoutedPath!, routed[j].RoutedPath!))
+                if (!sampled[i].Crosses(sampled[j]))
                     continue;
                 issues.Add(CreateCrossingIssue(routed[i], routed[j]));
             }

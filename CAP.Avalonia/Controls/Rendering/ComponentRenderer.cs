@@ -108,7 +108,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
             // rectangle body. No Nazca preview is fetched for it — the real imported
             // geometry is already on screen, and the synthesized import function name
             // would only spawn a doomed Python render per unique cell.
-            _outlineRenderer.Draw(context, comp, comp.Component.OutlinePolygons!, isDimmed, rc.Zoom, rc.LayerVisibility);
+            _outlineRenderer.Draw(context, comp, comp.Component.OutlinePolygons!, isDimmed, rc.Zoom, rc.LayerVisibility,
+                RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom));
             return;
         }
 
@@ -162,7 +163,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
             // is culled individually by its cached bounding box.
             if (RenderCulling.GetFrozenPathBounds(frozenPath) is { } pathBounds && !cullRect.Intersects(pathBounds))
                 continue;
-            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility);
+            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility, zoom: rc.Zoom);
         }
 
         if (!cullRect.Intersects(bounds))
@@ -202,7 +203,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
                 child.WidthMicrometers, child.HeightMicrometers,
                 child.RotationDegrees, childOutlines, isDimmed, rc.Zoom,
                 child.UnrotatedWidthMicrometers, child.UnrotatedHeightMicrometers,
-                rc.LayerVisibility);
+                rc.LayerVisibility, child.IsMirroredHorizontally);
         }
         else
         {

@@ -227,6 +227,13 @@ public class FrozenPathDto
     /// Null in old design files — loads empty.
     /// </summary>
     public Dictionary<int, double>? StraightShiftOffsets { get; set; }
+
+    /// <summary>
+    /// The exact polygons the geometry was drawn with in an imported layout (see
+    /// <see cref="CAP_Core.Components.Connections.AsDrawnGeometry"/>); null when the
+    /// path has none or the file predates the field.
+    /// </summary>
+    public List<AsDrawnPolygonDto>? AsDrawnPolygons { get; set; }
 }
 
 /// <summary>

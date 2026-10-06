@@ -1,0 +1,6 @@
+[
+  {"file": "01-dialog-defaults.png", "caption": "Import dialog defaults: routes stay as drawn (re-routing off) and the import stays flat (grouping off)."},
+  {"file": "02-imported-as-drawn.png", "caption": "The imported chip renders its original polygons — 2 µm core and 6 µm cladding ribbons, the mirrored device on the right."},
+  {"file": "03-selected-centerline.png", "caption": "Selecting the waveguide shows its fitted centerline (straights + two R = 40 µm bends) over the drawing; this is what simulation and A* use."},
+  {"file": "04-rerouted-selected-waveguide.png", "caption": "After 'Re-route selected' only this waveguide is routed by Lunima; the drawing disappears for it (Ctrl+Z restores it)."}
+]

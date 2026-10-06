@@ -55,7 +55,9 @@ public class GdsImportCancellationLifecycleTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var service = _host.CreateService();
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        return (new GdsImportDialogViewModel(gdsPath, service, executor, console), canvas, _host);
+        // The lifecycle scenarios were written against the grouped, re-routed import.
+        return (new GdsImportDialogViewModel(gdsPath, service, executor, console)
+            { GroupImportRequested = true, RerouteConnectionsRequested = true }, canvas, _host);
     }
 
     private static void AssertNoDisposedSourceError(ErrorConsoleService console, GdsImportDialogViewModel vm)
@@ -100,7 +102,8 @@ public class GdsImportCancellationLifecycleTests : IDisposable
             return _host.Templates.ToList();
         });
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        var vm = built = new GdsImportDialogViewModel(WriteGds(TwoWaveguideLibrary()), service, executor, console);
+        var vm = built = new GdsImportDialogViewModel(WriteGds(TwoWaveguideLibrary()), service, executor, console)
+            { GroupImportRequested = true, RerouteConnectionsRequested = true };
         await vm.StartAnalysisAsync();
 
         await vm.ImportCommand.ExecuteAsync(null);

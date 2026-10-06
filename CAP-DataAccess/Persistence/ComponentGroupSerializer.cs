@@ -255,7 +255,8 @@ public static class ComponentGroupSerializer
             PropagationLossDbPerCm = frozenPath.PropagationLossDbPerCm,
             BendLossDbPer90Deg = frozenPath.BendLossDbPer90Deg,
             BendRadiusOverrides = new Dictionary<int, double>(frozenPath.BendRadiusOverrides),
-            StraightShiftOffsets = new Dictionary<int, double>(frozenPath.StraightShiftOffsets)
+            StraightShiftOffsets = new Dictionary<int, double>(frozenPath.StraightShiftOffsets),
+            AsDrawnPolygons = AsDrawnPolygonDto.FromGeometry(frozenPath.AsDrawnGeometry),
         };
 
         // Serialize path segments
@@ -338,7 +339,8 @@ public static class ComponentGroupSerializer
             EndPin = endPin,
             // Null in files that predate layer persistence — stays null (no tag).
             Layer = dto.Layer,
-            DataType = dto.DataType
+            DataType = dto.DataType,
+            AsDrawnGeometry = AsDrawnPolygonDto.ToGeometry(dto.AsDrawnPolygons),
         };
         ApplyConnectionSettings(dto, frozenPath);
         return frozenPath;

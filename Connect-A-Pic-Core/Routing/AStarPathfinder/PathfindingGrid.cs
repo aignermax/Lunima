@@ -35,7 +35,7 @@ public partial class PathfindingGrid
     private byte[,] _cells;
 
     // Track which components own which cells (for selective invalidation)
-    private readonly Dictionary<Component, HashSet<(int x, int y)>> _componentCells = new();
+    private readonly Dictionary<Component, IEnumerable<(int x, int y)>> _componentCells = new();
     private readonly object _componentCellsLock = new();
 
     // Track waveguide path cells (keyed by connection ID)
@@ -315,29 +315,15 @@ public partial class PathfindingGrid
         var (bx2, by2) = PhysicalToGrid(component.PhysicalX + component.WidthMicrometers,
                                         component.PhysicalY + component.HeightMicrometers);
 
-        var cells = new HashSet<(int, int)>();
-        var bodyCells = new HashSet<(int x, int y)>();
-        var paddingCells = new HashSet<(int x, int y)>();
-        for (int gx = gx1; gx <= gx2; gx++)
-        {
-            for (int gy = gy1; gy <= gy2; gy++)
-            {
-                if (IsInBounds(gx, gy) && !pinCorridorCells.Contains((gx, gy)))
-                {
-                    _cells[gx, gy] = 1; // Blocked by obstacle
-                    cells.Add((gx, gy));
-                    if (gx >= bx1 && gx <= bx2 && gy >= by1 && gy <= by2)
-                        bodyCells.Add((gx, gy));
-                    else
-                        paddingCells.Add((gx, gy));
-                }
-            }
-        }
+        var footprint = new ComponentFootprint(
+            component, (gx1, gy1, gx2, gy2), (bx1, by1, bx2, by2), pinCorridorCells, Width, Height);
+        foreach (var (gx, gy) in footprint)
+            _cells[gx, gy] = 1; // Blocked by obstacle
         lock (_componentCellsLock)
         {
-            _componentCells[component] = cells;
+            _componentCells[component] = footprint;
         }
-        RegisterComponentOwnership(component, bodyCells, paddingCells, pinCorridors);
+        RegisterComponentOwnership(footprint, pinCorridors);
 
         // Mark pin reservation zones — soft penalty area around each pin.
         // Routes can pass through but A* prefers to avoid them.
@@ -365,7 +351,7 @@ public partial class PathfindingGrid
         }
 
         // Regular component obstacle removal
-        HashSet<(int x, int y)>? cells;
+        IEnumerable<(int x, int y)>? cells;
         lock (_componentCellsLock)
         {
             _componentCells.TryGetValue(component, out cells);
@@ -405,7 +391,7 @@ public partial class PathfindingGrid
             else
             {
                 // Remove obstacle for regular child component
-                HashSet<(int x, int y)>? cells;
+                IEnumerable<(int x, int y)>? cells;
                 lock (_componentCellsLock)
                 {
                     _componentCells.TryGetValue(child, out cells);
@@ -428,7 +414,7 @@ public partial class PathfindingGrid
         }
 
         // Remove the group's own cells (frozen paths marked with state=3)
-        HashSet<(int x, int y)>? groupCells;
+        IEnumerable<(int x, int y)>? groupCells;
         lock (_componentCellsLock)
         {
             _componentCells.TryGetValue(group, out groupCells);

@@ -67,7 +67,10 @@ public static class JointMoveRouteTranslator
 
         // Publish the finished copy through the single reference assignment so the UI
         // thread never observes half-translated segments (see ReplaceRoutedPath).
+        var asDrawn = connection.AsDrawnGeometry;
         connection.ReplaceRoutedPath(path.TranslatedCopy(startDx, startDy));
+        if (asDrawn is not null)
+            connection.AttachAsDrawnGeometry(asDrawn.Translated(startDx, startDy));
         return true;
     }
 

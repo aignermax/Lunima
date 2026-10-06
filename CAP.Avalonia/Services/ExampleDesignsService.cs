@@ -21,6 +21,12 @@ public record ExampleDesign(string Name, string FilePath, string? DescriptionKey
     /// </summary>
     public string Description =>
         DescriptionKey == null ? "" : LocalizationService.Instance.Translate(DescriptionKey);
+
+    /// <summary>Tile icon on the Home screen, chosen from the name (see <see cref="ExampleIcon"/>).</summary>
+    public string Icon => ExampleIcon.For(Name);
+
+    /// <summary>Tile caption on the Home screen (see <see cref="ExampleIcon.ShortName"/>).</summary>
+    public string ShortName => ExampleIcon.ShortName(Name);
 }
 
 /// <summary>

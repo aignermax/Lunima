@@ -159,8 +159,8 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         else
         {
             // Bare-nazca environment: the same outcome the forced-stub test pins.
-            group.ExternalPins.Count.ShouldBe(42,
-                "46 pins minus the four consumed by the two restored braids stay free");
+            group.ExternalPins.Count.ShouldBe(36,
+                "46 pins minus the ten consumed by the five restored connections stay free");
             AssertPlacementsMatchOriginals(export.Canvas, children, positionToleranceUm: 1.0);
             AssertEveryChildIsVisible(children, expectedPinsPerChild: null);
             AssertNetlistTopologyStub(export.Canvas, canvas2);
@@ -282,9 +282,9 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         outcome.Instances.Count.ShouldBe(7);
         outcome.Connections.ShouldAllBe(c => c.IsRouteDerived,
             "structural restoration only — nothing guessed");
-        outcome.Connections.Count.ShouldBe(2,
-            "the two MMI braids (a0↔a1 both directions) restore from their route polygons");
-        outcome.Infos.ShouldContain(i => i.Contains("restored as 2 real connection"),
+        outcome.Connections.Count.ShouldBe(5,
+            "the two MMI braids plus three ebeam chains whose two labelled ends outvote the stub heuristic pins");
+        outcome.Infos.ShouldContain(i => i.Contains("restored as 5 real connection"),
             "the geometry report moved to the info channel with the restored/frozen split");
 
         // Frozen mode, like the full-loop test: the netlist comparison must stay
@@ -296,14 +296,14 @@ public class GdsHighestLevelRoundTripTests : IDisposable
 
         report.PlacedCount.ShouldBe(7);
         report.SkippedPlacements.ShouldBeEmpty();
-        report.ConnectedCount.ShouldBe(2, "the two route-derived MMI braids");
+        report.ConnectedCount.ShouldBe(5, "the two MMI braids plus three labelled ebeam chains");
         report.ReroutedCount.ShouldBe(0, "frozen mode hands nothing to the live router");
         report.Warnings.ShouldBeEmpty();
         report.ValidationWarnings.ShouldBeEmpty(
             "the two braided cross-links keep their drawn geometry as frozen cached routes — " +
             "the same shape the original canvas shows (red-dashed detours in panel 01), loaded " +
             "verbatim instead of re-routed through the old A* degradation");
-        report.CachedRouteCount.ShouldBe(2,
+        report.CachedRouteCount.ShouldBe(5,
             "both braids load with their drawn geometry as hardcoded paths (issue #811)");
         report.GroupCreated.ShouldBeTrue();
 
@@ -311,8 +311,8 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         var children = group.GetAllComponentsRecursive().ToList();
         children.Count.ShouldBe(7);
 
-        group.ExternalPins.Count.ShouldBe(42,
-            "46 pins (28 labeled + 18 heuristic) minus the four consumed by the two restored braids stay free");
+        group.ExternalPins.Count.ShouldBe(36,
+            "46 pins (28 labeled + 18 heuristic) minus the ten consumed by the five restored connections stay free");
         AssertPlacementsMatchOriginals(export.Canvas, children, positionToleranceUm: 1.0);
         AssertEveryChildIsVisible(children, expectedPinsPerChild: null);
         AssertNetlistTopologyStub(export.Canvas, canvas2);
@@ -453,10 +453,13 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         {
             "mmi2x2_dp#0/a0 = mmi2x2_dp#1/a1",
             "mmi2x2_dp#0/a1 = mmi2x2_dp#1/a0",
-        }, ignoreOrder: true, customMessage: "the two MMI braids restore route-derived, pin-exact");
+            "ebeam_adiabatic_te1550#0/port 2 = ebeam_dc_halfring_straight#0/port 3",
+            "ebeam_bdc_te1550#0/port 1 = ebeam_crossing4#1/port 2",
+            "ebeam_crossing4#0/port 2 = ebeam_crossing4#1/port 1",
+        }, ignoreOrder: true, customMessage: "the MMI braids and the chains whose labelled ends outvote the stub heuristic pins restore pin-exact");
         importedTopology.Edges.ShouldBeSubsetOf(originalTopology.Edges,
             "every restored edge is a real edge of the original circuit — no spurious topology");
-        importedTopology.Ports.Count.ShouldBe(42, "46 pins minus the four occupied by the braids");
+        importedTopology.Ports.Count.ShouldBe(36, "46 pins minus the ten occupied by the five restored connections");
     }
 
     // ── Error-channel sanity ─────────────────────────────────────────────────
