@@ -3,6 +3,8 @@
         xmlns:vm="using:CAP.Avalonia.ViewModels.Analysis.OnaAnalysis"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         xmlns:oxy="using:OxyPlot.Avalonia"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:helpAnim="using:CAP.Avalonia.Controls.HelpAnimations"
         x:Class="CAP.Avalonia.Views.Dialogs.OnaAnalyzerWindow"
         x:DataType="vm:OnaSweepViewModel"
         Title="{Binding WindowTitle}"
@@ -27,9 +29,28 @@
                    Text="{Binding WindowTitle}"
                    FontWeight="SemiBold" FontSize="15"
                    Foreground="Cyan" Margin="0,0,0,4"/>
-        <TextBlock DockPanel.Dock="Top"
-                   Text="{loc:Localize Ona.Subtitle}"
-                   Foreground="Gray" FontSize="11" Margin="0,0,0,12"/>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,12">
+            <TextBlock Text="{loc:Localize Ona.Subtitle}"
+                       Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
+            <controls:HelpFlyoutButton Title="{loc:Localize Ona.HelpTitle}">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <StackPanel Spacing="8" MaxWidth="400">
+                        <TextBlock Text="{loc:Localize Ona.HelpSweepTitle}"
+                                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+                        <TextBlock Text="{loc:Localize Ona.HelpSweepBody}"
+                                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+                        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                                CornerRadius="4" Padding="2">
+                            <helpAnim:OnaSweepAnimation Width="360" Height="90"/>
+                        </Border>
+                        <TextBlock Text="{loc:Localize Ona.HelpDipsTitle}"
+                                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+                        <TextBlock Text="{loc:Localize Ona.HelpDipsBody}"
+                                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+                    </StackPanel>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+        </StackPanel>
 
         <!-- Bottom: Status + buttons -->
         <Border DockPanel.Dock="Bottom" Background="#161616" Padding="8" Margin="0,10,0,0">
