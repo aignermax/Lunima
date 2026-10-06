@@ -421,6 +421,7 @@
   "Examples.SrLatch.Description": "Two cross-coupled NAND registers remember one bit — your first memory circuit.",
   "Examples.TwoChiplets.Description": "Two chips, one light path: the link across the chip edge.",
   "Examples.LogicAcrossTwoChiplets.Description": "Two chips, one truth table: a NOT on chiplet A drives an AND on chiplet B across the edge-coupler link — Y = NOT A AND B.",
+  "Examples.AluRamChip.Description": "The 4-bit adder and the RAM 4x4 side by side on one chip: the ALU adds on light (A0-A3, B0-B3 → S0-S3) and the data memory stores on light (RAM.A0/A1, RAM.LOAD, RAM.D0-D3 → RAM.Q0-Q3) — one logic network, both units photonic.",
   "ErrorConsole.ClearTip": "Clear console",
   "ErrorConsole.CopyAllTip": "Copy all entries to clipboard",
   "ErrorConsole.Title": "Error Console",

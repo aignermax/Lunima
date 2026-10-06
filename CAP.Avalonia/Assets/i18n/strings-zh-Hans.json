@@ -421,6 +421,7 @@
   "Examples.SrLatch.Description": "两个交叉耦合的 NAND 寄存器记住一个比特——你的第一个存储电路。",
   "Examples.TwoChiplets.Description": "两颗芯片,一条光路:跨越芯片边缘的链路。",
   "Examples.LogicAcrossTwoChiplets.Description": "两颗芯片,一张真值表:小芯片 A 上的 NOT 通过边缘耦合链路驱动小芯片 B 上的 AND — Y = NOT A AND B。",
+  "Examples.AluRamChip.Description": "4 位加法器与 RAM 4x4 并排放在同一颗芯片上:ALU 在光上做加法(A0-A3、B0-B3 → S0-S3),数据存储器在光上存储(RAM.A0/A1、RAM.LOAD、RAM.D0-D3 → RAM.Q0-Q3)——同一逻辑网络,两个单元均为光子实现。",
   "ErrorConsole.ClearTip": "清空控制台",
   "ErrorConsole.CopyAllTip": "将所有条目复制到剪贴板",
   "ErrorConsole.Title": "错误控制台",

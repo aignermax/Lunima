@@ -421,6 +421,7 @@
   "Examples.SrLatch.Description": "Zwei kreuzgekoppelte NAND-Register merken sich ein Bit — deine erste Speicherschaltung.",
   "Examples.TwoChiplets.Description": "Zwei Chips, ein Lichtpfad: die Verbindung über die Chipkante.",
   "Examples.LogicAcrossTwoChiplets.Description": "Zwei Chips, eine Wahrheitstabelle: ein NOT auf Chiplet A treibt ein AND auf Chiplet B über die Edge-Coupler-Verbindung — Y = NOT A AND B.",
+  "Examples.AluRamChip.Description": "Der 4-Bit-Addierer und das RAM 4x4 nebeneinander auf einem Chip: Die ALU addiert auf Licht (A0-A3, B0-B3 → S0-S3) und der Datenspeicher speichert auf Licht (RAM.A0/A1, RAM.LOAD, RAM.D0-D3 → RAM.Q0-Q3) — ein Logiknetz, beide Einheiten photonisch.",
   "ErrorConsole.ClearTip": "Konsole leeren",
   "ErrorConsole.CopyAllTip": "Alle Einträge in die Zwischenablage kopieren",
   "ErrorConsole.Title": "Fehlerkonsole",

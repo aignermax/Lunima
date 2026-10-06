@@ -421,6 +421,7 @@
   "Examples.SrLatch.Description": "2つのNANDレジスタを交差結合して1ビットを記憶する — 初めてのメモリ回路。",
   "Examples.TwoChiplets.Description": "2つのチップ、1つの光路:チップエッジをまたぐリンク。",
   "Examples.LogicAcrossTwoChiplets.Description": "2つのチップ、1つの真理値表:チップレットAのNOTがエッジカプラーリンク越しにチップレットBのANDを駆動 — Y = NOT A AND B。",
+  "Examples.AluRamChip.Description": "4ビット加算器とRAM 4x4が1つのチップに並ぶ:ALUは光で加算(A0-A3、B0-B3 → S0-S3)し、データメモリは光で記憶(RAM.A0/A1、RAM.LOAD、RAM.D0-D3 → RAM.Q0-Q3) — 1つの論理ネットワーク、両ユニットともフォトニック。",
   "ErrorConsole.ClearTip": "コンソールをクリア",
   "ErrorConsole.CopyAllTip": "すべてのエントリをクリップボードにコピー",
   "ErrorConsole.Title": "エラーコンソール",
