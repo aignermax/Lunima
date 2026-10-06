@@ -637,6 +637,8 @@
   "IsaPlayground.AccBinaryLabel": "ACC（2進）",
   "IsaPlayground.RamLabel": "RAM",
   "IsaPlayground.RamOnLightChip": "光駆動",
+  "IsaPlayground.UnitChipsTitle": "光で動いている部分は？",
+  "IsaPlayground.UnitChipsHint": "緑の部分はあなたが組んだフォトニック回路が計算し、灰色の部分は電子的にシミュレーションされます。",
   "IsaPlayground.StatusLabel": "状態",
   "IsaPlayground.StatusRunning": "実行中",
   "IsaPlayground.StatusHalted": "停止",
