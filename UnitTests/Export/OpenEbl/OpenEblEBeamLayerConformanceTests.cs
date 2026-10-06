@@ -26,9 +26,10 @@ public class OpenEblEBeamLayerConformanceTests
         var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
         EBeamCanvasBuilder.AddSiepicParametricStraight(canvas);
 
-        // #1447: this test once failed order-dependently (layer 1003 in the script,
-        // i.e. the profile resolved to null). Assert the profile up front with a
-        // full state dump so any recurrence names the leaked input in the log.
+        // #1447: this test once failed order-dependently — not a profile leak but
+        // the bare "1003" substring assertion matching an instance name (see
+        // OpenEblEBeamExportIsolationTests). Keep the up-front profile check with
+        // a full state dump so a REAL profile leak would name the leaked input.
         SiepicEBeamExportProfile.Resolve(canvas)
             .ShouldNotBeNull(OpenEblEBeamLayerConformanceDiagnostics.Describe(canvas));
 
@@ -42,8 +43,13 @@ public class OpenEblEBeamLayerConformanceTests
         script.ShouldContain("nd.strt(length=127.00, width=0.5, layer=1)");
         // Nothing outside the EBeam layer table: no nazca default interconnect
         // layer, no demofab bb_body frame — pin labels stay on PinRec (1, 10).
-        script.ShouldNotContain("1111");
-        script.ShouldNotContain("1003");
+        // Match layer TOKENS, not bare digits: the process-wide instance counter
+        // writes names like "Grating Coupler TE 1550_1003" into the script
+        // (placement comments, port labels), so a bare ShouldNotContain("1003")
+        // failed order-dependently in integrated runs (#1447).
+        script.ShouldNotContain("layer=1111");
+        script.ShouldNotContain("(1111,");
+        script.ShouldNotContain("(1003,");
         script.ShouldContain("layer=(1, 10)");
     }
 
