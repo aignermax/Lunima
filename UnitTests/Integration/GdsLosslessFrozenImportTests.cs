@@ -92,6 +92,22 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
     }
 
     [Fact]
+    public async Task ZoomedOut_AWaveguideIsClickableWithinAFewScreenPixels()
+    {
+        var canvas = await ImportWithDialogDefaultsAsync();
+        var onRoute = CanvasPointOnFirstStraight(canvas);
+        var nearby = new global::Avalonia.Point(onRoute.X, onRoute.Y + 30); // 30 µm off the waveguide
+
+        canvas.ViewZoom = 1.0;
+        CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestConnection(nearby, canvas)
+            .ShouldBeNull("at 100 % zoom 30 µm are 30 px — clearly beside the waveguide");
+
+        canvas.ViewZoom = 0.1;
+        CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestConnection(nearby, canvas)
+            .ShouldNotBeNull("at 10 % zoom 30 µm are 3 px — a click there means the waveguide");
+    }
+
+    [Fact]
     public async Task SaveAndReload_KeepsTheFrozenRouteAndItsPolygons()
     {
         var canvas = await ImportWithDialogDefaultsAsync();

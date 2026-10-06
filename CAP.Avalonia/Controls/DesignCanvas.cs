@@ -157,6 +157,7 @@ public class DesignCanvas : Control
         base.Render(context);
         var vm = ViewModel;
         if (vm == null) return;
+        vm.ViewZoom = Zoom;
 
         var rc = new CanvasRenderContext
         {
