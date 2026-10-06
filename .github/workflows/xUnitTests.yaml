@@ -5,18 +5,28 @@ name: 🔍 xUnit Tests
 # had an open PR triggered BOTH events → the suite ran twice.
 on:
   push:
-    branches: [main]
+    branches: [main, dev-ki]
+    # Releases always get the FULL suite, including the Nightly tier.
+    tags: ['v*']
   pull_request:
+  # The full suite once a night, so slow measurement spikes still run regularly.
+  schedule:
+    - cron: '17 2 * * *'
   # On-demand baseline runs (e.g. on dev-ki) so a red PR check can be told
-  # apart from an already-red integration branch.
+  # apart from an already-red integration branch. Always the full suite.
   workflow_dispatch:
+
+# A newer push to the same PR supersedes the running check.
+concurrency:
+  group: xunit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   nunit_tests:
     name: 🔍 xUnit Tests
     runs-on: ubuntu-latest
-    # Safety net: the suite takes ~40 min serial; the sharded run below targets
-    # <= 35 min of wall clock. Anything beyond 50 min is a hang.
+    # Safety net: a PR run (fast tier) takes ~10 min, the full suite ~20 min.
+    # Anything beyond 50 min is a hang.
     timeout-minutes: 50
 
     env:
@@ -43,6 +53,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          # Wheels (torch above all) come from the cache instead of PyPI on every run.
+          cache: 'pip'
+          cache-dependency-path: .github/workflows/xUnitTests.yaml
 
       - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
         run: |
@@ -51,7 +64,10 @@ jobs:
           # scipy is a transitive dep of photontorch 0.4.1 but missing from its
           # published requirements — install it explicitly so `import photontorch`
           # doesn't fail with ModuleNotFoundError on a fresh runner.
-          pip install photontorch torch matplotlib scipy
+          # CPU-only torch: the default wheel drags in ~2 GB of CUDA libraries the
+          # runner never uses — installing it took over two minutes per run.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install photontorch matplotlib scipy
           # Verify the import works with the exact probe the test uses.
           python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
 
@@ -75,12 +91,18 @@ jobs:
           sudo install -m 755 /tmp/openvaf/openvaf /usr/local/bin/openvaf
           openvaf --help > /dev/null
 
-      - name: 🔌 Install NGSpice (for Verilog-A runtime simulation tests)
+      - name: 🔌 Install NGSpice + KLayout CLI (Verilog-A runtime, foundry-deck DRC tests)
         run: |
           set -euo pipefail
+          # One apt round trip for both. The klayout pip wheel below ships only the
+          # Python module (klayout.db); the foundry-deck DRC tests probe a
+          # `klayout`/`klayout_app` executable ($KLAYOUT or PATH), so the runner needs
+          # the app itself. Ubuntu universe ships 0.28.x, which runs the vendored
+          # CORNERSTONE pre-DRC deck headless (-b) just fine.
           sudo apt-get update
-          sudo apt-get install -y ngspice
+          sudo apt-get install -y --no-install-recommends ngspice klayout
           ngspice --version | head -1
+          klayout -v
 
       - name: 🎨 Install Nazca + KLayout + SiEPIC PDK (for PDK Offset Editor tests)
         run: |
@@ -99,18 +121,6 @@ jobs:
           pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
           python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk, SiEPIC; print('PDK preview deps ok')"
 
-      - name: 🔬 Install KLayout CLI (for foundry-deck DRC tests)
-        run: |
-          set -euo pipefail
-          # The klayout pip wheel above ships only the Python module (klayout.db) —
-          # no executable on PATH. The foundry-deck DRC tests probe a `klayout`/
-          # `klayout_app` executable ($KLAYOUT or PATH), so the runner needs the
-          # app itself. Ubuntu universe ships 0.28.x, which runs the vendored
-          # CORNERSTONE pre-DRC deck headless (-b) just fine.
-          sudo apt-get update
-          sudo apt-get install -y klayout
-          klayout -v
-
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
         env:
@@ -127,9 +137,14 @@ jobs:
           set -euo pipefail
           # The suite runs serially inside one process (xunit.runner.json disables
           # collection parallelization because the Avalonia headless app is a
-          # process-wide singleton). Wall clock is cut by running three disjoint,
-          # complementary filter shards as separate processes in parallel — union
-          # of the filters is the whole suite, so coverage is unchanged.
+          # process-wide singleton). Wall clock is cut by running disjoint,
+          # complementary filter shards as separate processes in parallel — the
+          # union of the filters is the whole tier, so coverage is unchanged.
+          # Shards are balanced on measured durations (~3–4 min of tests each).
+          #
+          # Tier=Nightly marks measurement spikes and probes (minutes of routing
+          # into a deliberate timeout, structure dumps): they are no regression
+          # check, so pull requests skip them; every other trigger runs them too.
           dotnet build --no-restore
           mkdir -p TestResults
           run_shard() {
@@ -140,12 +155,20 @@ jobs:
               --logger "console;verbosity=minimal" \
               > "TestResults/${name}.log" 2>&1
           }
-          run_shard shard-fast      'Category!=Slow' &
-          run_shard shard-slow-ui   'Category=Slow&FullyQualifiedName~UnitTests.UI' &
-          run_shard shard-slow-core 'Category=Slow&FullyQualifiedName!~UnitTests.UI' &
+          ui_or_integration='(FullyQualifiedName~UnitTests.UI.|FullyQualifiedName~UnitTests.Integration.)'
+          not_ui_nor_integration='FullyQualifiedName!~UnitTests.UI.&FullyQualifiedName!~UnitTests.Integration.'
+          regular='Tier!=Nightly'
+          run_shard fast-ui-integration "Category!=Slow&$regular&$ui_or_integration" &
+          run_shard fast-rest           "Category!=Slow&$regular&$not_ui_nor_integration" &
+          run_shard slow-ui-integration "Category=Slow&$regular&$ui_or_integration" &
+          run_shard slow-export         "Category=Slow&$regular&FullyQualifiedName~UnitTests.Export." &
+          run_shard slow-rest           "Category=Slow&$regular&$not_ui_nor_integration&FullyQualifiedName!~UnitTests.Export." &
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            run_shard nightly "Tier=Nightly" &
+          fi
           status=0
           for pid in $(jobs -p); do wait "$pid" || status=1; done
-          for log in TestResults/shard-*.log; do echo "===== $log ====="; cat "$log"; done
+          for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done
           exit $status
 
       - name: 📎 Upload TestResults (hang diagnostics)

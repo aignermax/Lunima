@@ -29,6 +29,8 @@ namespace UnitTests.Integration.RamScale;
 /// <c>docs/logic/RAM-4x4-FEASIBILITY.md</c>.
 /// </summary>
 [Trait("Category", "Slow")]
+// Measurement spike / probe, not a regression check: runs in the full (nightly/release) suite only.
+[Trait("Tier", "Nightly")]
 public class Ram4x4FeasibilityTests
 {
     /// <summary>

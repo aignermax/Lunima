@@ -43,6 +43,8 @@ namespace UnitTests.Services.GdsImport;
 /// </para>
 /// </summary>
 [Trait("Category", "Slow")]
+// Measurement spike / probe, not a regression check: runs in the full (nightly/release) suite only.
+[Trait("Tier", "Nightly")]
 public class GdsBondPadOffsetProbeTests : IDisposable
 {
     private readonly ITestOutputHelper _output;

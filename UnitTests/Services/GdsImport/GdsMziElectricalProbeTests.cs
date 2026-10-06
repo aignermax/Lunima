@@ -11,6 +11,8 @@ namespace UnitTests.Services.GdsImport;
 
 /// <summary>SCRATCH probe — dumps the MZI export/GDS structure + import outcome. Will be removed.</summary>
 [Trait("Category", "Slow")] // runs real Python/nazca subprocesses (184 s) — CI covers it, local default runs skip it
+// Measurement spike / probe, not a regression check: runs in the full (nightly/release) suite only.
+[Trait("Tier", "Nightly")]
 public class GdsMziElectricalProbeTests
 {
     private readonly ITestOutputHelper _output;

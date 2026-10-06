@@ -24,6 +24,8 @@ namespace UnitTests.Integration.RamScale;
 /// <c>docs/logic/RAM-HIERARCHICAL-SPIKE.md</c>.
 /// </summary>
 [Trait("Category", "Slow")]
+// Measurement spike / probe, not a regression check: runs in the full (nightly/release) suite only.
+[Trait("Tier", "Nightly")]
 public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
 {
     private const int BitCount = 4;
