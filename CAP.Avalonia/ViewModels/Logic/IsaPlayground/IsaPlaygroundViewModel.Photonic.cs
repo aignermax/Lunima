@@ -103,6 +103,34 @@ public partial class IsaPlaygroundViewModel
     internal PhotonicDataMemory? DataMemory => _photonicDataMemory;
 
     /// <summary>
+    /// The "what runs on light" row (issue #1456): one chip per machine unit —
+    /// ALU, Z (zero flag), RAM, ACC, PC — green while that unit is computed by the
+    /// photonic network, grey while it is simulated electronically. ACC and PC are
+    /// always electronic for now; ALU counts as on light when any photonic ALU
+    /// half (adder, NOT or AND) is active.
+    /// </summary>
+    public IReadOnlyList<IsaUnitChipViewModel> UnitChips { get; } = new IsaUnitChipViewModel[]
+    {
+        new("ALU"),
+        new("Z"),
+        new("RAM"),
+        new("ACC"),
+        new("PC"),
+    };
+
+    /// <summary>
+    /// Reflects the freshly created emulator's photonic parts onto the unit chips;
+    /// called by <see cref="CreateEmulator"/> on every machine (re)creation, so the
+    /// row always names what actually computes — toggle off means all electronic.
+    /// </summary>
+    private void UpdateUnitChips()
+    {
+        UnitChips[0].IsOnLight = _photonicAlu is not null || _photonicNotAlu is not null || _photonicAndAlu is not null;
+        UnitChips[1].IsOnLight = _photonicZeroFlag is not null;
+        UnitChips[2].IsOnLight = _photonicDataMemory is not null;
+    }
+
+    /// <summary>
     /// True while the built network can run at least one operation on the photonic
     /// chip — the adder signals, the NOT signals, the AND signals, the zero-flag
     /// signals (A0–A3 in, Z out) or the RAM 4x4 signals (A0/A1, LOAD, D0–D3 in,
@@ -246,6 +274,7 @@ public partial class IsaPlaygroundViewModel
                 _photonicZeroFlag,
                 _photonicDataMemory);
             OnPropertyChanged(nameof(IsPhotonicDataMemoryActive));
+            UpdateUnitChips();
             return emulator;
         }
 
@@ -255,6 +284,7 @@ public partial class IsaPlaygroundViewModel
         _photonicZeroFlag = null;
         _photonicDataMemory = null;
         OnPropertyChanged(nameof(IsPhotonicDataMemoryActive));
+        UpdateUnitChips();
         return new IsaEmulator(_assembledWords);
     }
 

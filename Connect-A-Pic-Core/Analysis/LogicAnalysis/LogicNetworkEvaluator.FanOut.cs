@@ -27,7 +27,39 @@ public sealed partial class LogicNetworkEvaluator
         var warnings = new List<LogicFanOutWarning>();
         warnings.AddRange(DetectGateOutputFanOut(levels));
         warnings.AddRange(DetectNetworkInputSignalFanOut(levels));
+        warnings.AddRange(DetectLinkDegradedBranches(levels));
         FanOutWarnings = warnings;
+    }
+
+    /// <summary>
+    /// One warning per point-to-point wire whose chiplet edge-coupler link drops the
+    /// delivered 1-level below the receiving gate's threshold (issue #1445): the
+    /// level report multiplies the driver's weakest 1-level by the link's coupling
+    /// factor — the same coupling model the S-matrix charges — so a misaligned
+    /// chiplet flags at the logic layer instead of showing a clean truth table. An
+    /// aligned link (factor 1) never enters the loss map and never warns.
+    /// </summary>
+    private IEnumerable<LogicFanOutWarning> DetectLinkDegradedBranches(FanOutLevelCalculator levels)
+    {
+        if (_wireLinkLosses == null)
+            yield break;
+        foreach (var (load, driver) in _inputWiring)
+        {
+            if (driver is not LogicNetDriver.GateOutput source)
+                continue;
+            if (!_wireLinkLosses.TryGetValue(new LogicWireEdge(source.Pin, load), out var loss))
+                continue;
+            var report = levels.ForLinkLoss(source.Pin, load, loss.PowerCoupling);
+            if (report.Branches[0].ReadsAsOne)
+                continue;
+            yield return new LogicFanOutWarning(
+                DriverDisplayName: FormatPin(source.Pin),
+                IsNetworkInputSignal: false,
+                LoadCount: 1,
+                LoadNames: new[] { FormatPin(load) },
+                Levels: report,
+                LinkDisplayName: loss.LinkDisplayName);
+        }
     }
 
     /// <summary>One warning per gate output pin wired to more than one gate input.</summary>
