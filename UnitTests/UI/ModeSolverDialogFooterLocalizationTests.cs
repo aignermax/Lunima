@@ -20,7 +20,7 @@ namespace UnitTests.UI;
 /// The footer buttons now use MinWidth + horizontal padding, so the desired width
 /// always covers the rendered text in every shipped language. Also captures
 /// headless screenshots of the Mode Solver footer (de, es, en) into
-/// <c>docs/pr-media/issue-1448/</c>.
+/// <c>docs/pr-media/issue-1448/</c> (with <c>CAP_UPDATE_PR_MEDIA=1</c>).
 /// </summary>
 [Collection("LocalizationSingleton")]
 public class ModeSolverDialogFooterLocalizationTests
@@ -121,16 +121,10 @@ public class ModeSolverDialogFooterLocalizationTests
             ScreenshotArtifacts.SavePng(bitmap!, path);
     }
 
-    /// <summary>Repo-root <c>docs/pr-media/issue-1448</c> (walks up from the test output for the .sln).</summary>
-    private static string ResolveOutputDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            if (dir.GetFiles("*.sln").Length > 0)
-                return Path.Combine(dir.FullName, "docs", "pr-media", "issue-1448");
-            dir = dir.Parent;
-        }
-        return Path.Combine(AppContext.BaseDirectory, "docs", "pr-media", "issue-1448");
-    }
+    /// <summary>
+    /// <c>docs/pr-media/issue-1448</c> only when <c>CAP_UPDATE_PR_MEDIA=1</c>; otherwise a temp
+    /// directory, so ordinary test runs never rewrite the committed PR images.
+    /// </summary>
+    private static string ResolveOutputDirectory() =>
+        ScreenshotArtifacts.ResolvePrMediaDirectory("issue-1448");
 }
