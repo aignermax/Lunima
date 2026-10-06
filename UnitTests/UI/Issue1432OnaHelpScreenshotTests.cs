@@ -20,7 +20,7 @@ namespace UnitTests.UI;
 /// <see cref="OnaAnalyzerWindow"/> hosts inside its <see cref="HelpFlyoutButton"/>,
 /// frozen at three animation phases (laser early / on a resonance / near the end) in
 /// English and in German. PNGs + manifest.json land in
-/// <c>docs/pr-media/issue-1432/</c> (or <c>UI_SHOT_DIR/issue-1432/</c> when set).
+/// <c>docs/pr-media/issue-1432/</c> (only with <c>CAP_UPDATE_PR_MEDIA=1</c>).
 /// </summary>
 [Trait("Category", "UiScreenshots")]
 [Collection("LocalizationSingleton")]
@@ -201,20 +201,10 @@ public class Issue1432OnaHelpScreenshotTests
         }
     }
 
-    /// <summary>Repo-root <c>docs/pr-media/issue-1432</c> (or <c>UI_SHOT_DIR/issue-1432</c>).</summary>
-    private static string ResolveOutputDirectory()
-    {
-        var envDir = Environment.GetEnvironmentVariable("UI_SHOT_DIR");
-        if (!string.IsNullOrEmpty(envDir))
-            return Path.Combine(envDir, "issue-1432");
-
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            if (dir.GetFiles("*.sln").Length > 0)
-                return Path.Combine(dir.FullName, "docs", "pr-media", "issue-1432");
-            dir = dir.Parent;
-        }
-        return Path.Combine(AppContext.BaseDirectory, "pr-media", "issue-1432");
-    }
+    /// <summary>
+    /// <c>docs/pr-media/issue-1432</c> when <c>CAP_UPDATE_PR_MEDIA=1</c>, otherwise a temp
+    /// directory — a plain test run must not rewrite the committed PR media.
+    /// </summary>
+    private static string ResolveOutputDirectory() =>
+        ScreenshotArtifacts.ResolvePrMediaDirectory("issue-1432");
 }
