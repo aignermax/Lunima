@@ -9,9 +9,9 @@ namespace CAP_Core.Logic.Isa
     public sealed class IsaEmulator
     {
         private readonly byte[] _program;
+        private readonly int[] _ram = new int[IsaMachine.RamWords];
         private readonly IIsaAlu _alu;
         private readonly IIsaZeroFlag _zeroFlag;
-        private readonly IIsaDataMemory _dataMemory;
 
         /// <summary>
         /// Creates a machine with the given program loaded into the ROM.
@@ -31,16 +31,8 @@ namespace CAP_Core.Logic.Isa
         /// <see cref="PhotonicZeroFlag"/> to decide every <c>JZ</c> on the photonic
         /// zero-detect network. No other instruction is affected.
         /// </param>
-        /// <param name="dataMemory">
-        /// The data memory <c>STORE</c> writes and the RAM operands of
-        /// <c>ADD</c>/<c>AND</c> read. Defaults to <see cref="GoldenIsaDataMemory"/>
-        /// (the C# array); pass <see cref="PhotonicDataMemory"/> to hold the four
-        /// data words in the photonic registers of the RAM 4x4 network. No other
-        /// instruction is affected.
-        /// </param>
         /// <exception cref="ArgumentException">The program is larger than the ROM.</exception>
-        public IsaEmulator(byte[] program, IIsaAlu? alu = null, IIsaZeroFlag? zeroFlag = null,
-            IIsaDataMemory? dataMemory = null)
+        public IsaEmulator(byte[] program, IIsaAlu? alu = null, IIsaZeroFlag? zeroFlag = null)
         {
             if (program.Length > IsaMachine.ProgramRomWords)
             {
@@ -53,7 +45,6 @@ namespace CAP_Core.Logic.Isa
             program.CopyTo(_program, 0);
             _alu = alu ?? new GoldenIsaAlu();
             _zeroFlag = zeroFlag ?? new GoldenIsaZeroFlag();
-            _dataMemory = dataMemory ?? new GoldenIsaDataMemory();
         }
 
         /// <summary>Address of the next instruction to execute (0–15).</summary>
@@ -62,13 +53,8 @@ namespace CAP_Core.Logic.Isa
         /// <summary>The accumulator, always in the range 0–15.</summary>
         public int Accumulator { get; private set; }
 
-        /// <summary>
-        /// The 4-word data RAM, read through the configured <see cref="IIsaDataMemory"/>
-        /// — for the photonic memory this consults the network, so the UI always shows
-        /// the words the light actually holds.
-        /// </summary>
-        public IReadOnlyList<int> Ram =>
-            Enumerable.Range(0, IsaMachine.RamWords).Select(_dataMemory.Read).ToArray();
+        /// <summary>The 4-word data RAM.</summary>
+        public IReadOnlyList<int> Ram => _ram;
 
         /// <summary>True once HALT has executed; further <see cref="Step"/> calls are no-ops.</summary>
         public bool IsHalted { get; private set; }
@@ -82,7 +68,7 @@ namespace CAP_Core.Logic.Isa
             ProgramCounter = 0;
             Accumulator = 0;
             IsHalted = false;
-            _dataMemory.Reset();
+            Array.Clear(_ram);
         }
 
         /// <summary>
@@ -119,7 +105,7 @@ namespace CAP_Core.Logic.Isa
                     Accumulator = _alu.Not(Accumulator);
                     break;
                 case IsaOpcode.Store:
-                    _dataMemory.Write(CheckedRamAddress(operand), Accumulator);
+                    _ram[CheckedRamAddress(operand)] = Accumulator;
                     break;
                 case IsaOpcode.Jmp:
                     nextPc = operand;
@@ -154,7 +140,7 @@ namespace CAP_Core.Logic.Isa
 
         private int ReadRam(int operand)
         {
-            return _dataMemory.Read(CheckedRamAddress(operand));
+            return _ram[CheckedRamAddress(operand)];
         }
 
         private static int CheckedRamAddress(int operand)
