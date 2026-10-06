@@ -1,0 +1,10 @@
+[
+  {
+    "file": "logic-across-two-chiplets-overview.png",
+    "caption": "The shipped \u0027Logic Gate Across Two Chiplets\u0027 example (issue #1455): chiplet A carries the NOT gate and an edge coupler, chiplet B the AND gate and an edge coupler, facets abutted across the chiplet boundary \u2014 the cross-chiplet link carries the NOT output to the AND\u0027s A input."
+  },
+  {
+    "file": "logic-across-two-chiplets-logic-panel-en.png",
+    "caption": "The Logic tab (en) of \u0027Logic Gate Across Two Chiplets\u0027 after Build: named toggles A=0 and B=1, the cross-chiplet intermediate NOT_A = 1 and the final output Y = 1 \u2014 the truth table of NOT(A) AND B evaluated across the link."
+  }
+]
