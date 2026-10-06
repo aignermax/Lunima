@@ -44,6 +44,15 @@ public class AnalysisDockViewModelTests
     }
 
     [Fact]
+    public void OpenLogic_ShowsDockOnLogicTab()
+    {
+        var vm = Make();
+        vm.OpenLogic();
+        vm.IsVisible.ShouldBeTrue();
+        vm.SelectedTabIndex.ShouldBe(8, "the Logic tab is appended after Netlist in AnalysisDockPanel.axaml");
+    }
+
+    [Fact]
     public void SetDockHeight_ClampsToMinAndMax()
     {
         var vm = Make();

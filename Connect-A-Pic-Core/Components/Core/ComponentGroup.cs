@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using CAP_Core.Components.Creation;
+using CAP_Core.Components.Process;
 using CAP_Core.LightCalculation;
 using CAP_Core.Routing;
 
@@ -78,6 +79,25 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     public bool IsPrefab { get; set; }
 
     /// <summary>
+    /// Optional process binding of this group as a chiplet (issue #935): the fabrication
+    /// process the group's contents belong to. Null = unbound — placement checks then
+    /// derive the scope live from the children (see
+    /// <see cref="GroupProcessPolicy.DeriveProcessBinding"/>). Persisted in .lun files
+    /// for top-level groups since issue #938.
+    /// </summary>
+    [JsonIgnore]
+    public ActiveProcessSelection? ProcessBinding { get; set; }
+
+    /// <summary>
+    /// Pin-role assignment the Truth Table panel last successfully extracted with for
+    /// this group (issue #981). Null while the panel never extracted the group — nothing
+    /// is persisted in that case, keeping the .lun format free of unused blocks.
+    /// Persisted in .lun files for top-level groups since issue #981.
+    /// </summary>
+    [JsonIgnore]
+    public TruthTablePinAssignment? TruthTablePinAssignment { get; set; }
+
+    /// <summary>
     /// Reference to parent group if this group is nested within another group.
     /// Null if this is a top-level group.
     /// </summary>
@@ -95,6 +115,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// Lazy-initialized S-Matrix builder for computing group S-Matrices.
     /// </summary>
     private ComponentGroupSMatrixBuilder? _sMatrixBuilder;
+
+    /// <summary>
+    /// The coherent-phase mode the cached S-Matrix was built with; a mode flip must
+    /// trigger a recompute instead of serving the previous mode's cached physics.
+    /// </summary>
+    private bool _sMatrixBuiltWithCoherentPhase;
 
     /// <summary>
     /// Offset from PhysicalX to the minimum X coordinate of child components.
@@ -576,6 +602,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
             WidthMicrometers = WidthMicrometers,
             HeightMicrometers = HeightMicrometers,
             Rotation90CounterClock = Rotation90CounterClock,
+            // A copy of a gate is a gate: the pin roles travel with the copy (copied,
+            // not shared — the assignment and its lists are mutable).
+            TruthTablePinAssignment = TruthTablePinAssignment?.Copy(),
+            // Immutable record — sharing the reference is safe.
+            ProcessBinding = ProcessBinding,
             // Immutable records — sharing the list is safe (same rule as Component.DeepCopy).
             OutlinePolygons = OutlinePolygons
         };
@@ -698,49 +729,16 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Creates a shallow clone of a Component with a new unique identifier.
+    /// Creates a deep clone of a Component with a new unique identifier.
+    /// Delegates to <see cref="Component.Clone"/> so every clone gets its own logical-pin
+    /// flow IDs and its own S-matrices — sharing them (as a shallow copy would) makes
+    /// copies of one group share simulation state instead of behaving as independent
+    /// instances.
     /// </summary>
     private Component CloneComponent(Component source)
     {
-        // Create new component with same S-matrix and structure
-        var cloned = new Component(
-            new Dictionary<int, SMatrix>(source.WaveLengthToSMatrixMap),
-            source.GetAllSliders().Select(s => new Slider(
-                Guid.NewGuid(),
-                s.Number,
-                s.Value,
-                s.MaxValue,
-                s.MinValue)).ToList(),
-            source.NazcaFunctionName,
-            source.NazcaFunctionParameters,
-            source.Parts,
-            source.TypeNumber,
-            $"{source.Identifier}_{Guid.NewGuid():N}",
-            source.Rotation90CounterClock,
-            source.PhysicalPins.Select(p => new PhysicalPin
-            {
-                Name = p.Name,
-                OffsetXMicrometers = p.OffsetXMicrometers,
-                OffsetYMicrometers = p.OffsetYMicrometers,
-                AngleDegrees = p.AngleDegrees,
-                LogicalPin = p.LogicalPin
-            }).ToList()
-        )
-        {
-            PhysicalX = source.PhysicalX,
-            PhysicalY = source.PhysicalY,
-            WidthMicrometers = source.WidthMicrometers,
-            HeightMicrometers = source.HeightMicrometers,
-            NazcaOriginOffsetX = source.NazcaOriginOffsetX,
-            NazcaOriginOffsetY = source.NazcaOriginOffsetY,
-            NazcaModuleName = source.NazcaModuleName,
-            // gdsfactory-backend marker must survive group copy/paste, else the clone
-            // exports as a stub and loses its PDK/process attribution (#570/#661 review).
-            GdsFactoryFunction = source.GdsFactoryFunction,
-            HumanReadableName = source.HumanReadableName, // Preserve human-readable name
-            IsLocked = false // Don't copy lock state
-        };
-
+        var cloned = (Component)source.Clone();
+        cloned.Identifier = $"{source.Identifier}_{Guid.NewGuid():N}";
         return cloned;
     }
 
@@ -753,7 +751,8 @@ public class ComponentGroup : Component, INotifyPropertyChanged
         {
             IsBlockedFallback = source.IsBlockedFallback,
             IsInvalidGeometry = source.IsInvalidGeometry,
-            IsPlaceholderGeometry = source.IsPlaceholderGeometry
+            IsPlaceholderGeometry = source.IsPlaceholderGeometry,
+            FailureReason = source.FailureReason
         };
 
         foreach (var segment in source.Segments)
@@ -818,7 +817,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// Computes or retrieves the S-Matrix for this group at all supported wavelengths.
     /// The S-Matrix is cached until the group structure changes.
     /// </summary>
-    public void ComputeSMatrix()
+    /// <param name="enableCoherentPropagationPhase">
+    /// When on, frozen internal paths carry the coherent propagation phase like routed
+    /// connections do; when off (default) they keep the loss-only real amplitude.
+    /// </param>
+    public void ComputeSMatrix(bool enableCoherentPropagationPhase = false)
     {
         // Early exit if group has no external pins (can't participate in simulation)
         if (ExternalPins.Count == 0)
@@ -826,9 +829,11 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
         // Lazy-initialize the builder
         _sMatrixBuilder ??= new ComponentGroupSMatrixBuilder();
+        _sMatrixBuilder.EnableCoherentPropagationPhase = enableCoherentPropagationPhase;
 
         // Build S-Matrices for all wavelengths
         var matrices = _sMatrixBuilder.BuildGroupSMatrixAllWavelengths(this);
+        _sMatrixBuiltWithCoherentPhase = enableCoherentPropagationPhase;
 
         if (matrices != null)
         {
@@ -843,8 +848,12 @@ public class ComponentGroup : Component, INotifyPropertyChanged
     /// <summary>
     /// Synchronizes the PhysicalPins collection with ExternalPins.
     /// This allows the simulation framework to connect to the group's external pins.
+    /// Idempotent (rebuilds from ExternalPins every call), so callers that only need
+    /// the pins materialized — e.g. deserializers resolving a parent group's exposed
+    /// pin into this nested group before any S-matrix was computed — may call it
+    /// directly without waiting for <see cref="ComputeSMatrix"/>.
     /// </summary>
-    private void SyncPhysicalPinsFromExternalPins()
+    public void SyncPhysicalPinsFromExternalPins()
     {
         PhysicalPins.Clear();
 
@@ -857,7 +866,9 @@ public class ComponentGroup : Component, INotifyPropertyChanged
                 OffsetXMicrometers = externalPin.RelativeX,
                 OffsetYMicrometers = externalPin.RelativeY,
                 AngleDegrees = externalPin.AngleDegrees,
-                LogicalPin = externalPin.InternalPin.LogicalPin
+                LogicalPin = externalPin.InternalPin.LogicalPin,
+                WaveguideWidthMicrometers = externalPin.InternalPin.WaveguideWidthMicrometers,
+                Layer = externalPin.InternalPin.Layer
             };
 
             PhysicalPins.Add(physicalPin);
@@ -866,13 +877,22 @@ public class ComponentGroup : Component, INotifyPropertyChanged
 
     /// <summary>
     /// Ensures the S-Matrix is computed and up-to-date.
-    /// Call this before using the group in simulation.
+    /// Call this before using the group in simulation. Recomputes when the cached
+    /// matrix was built with a different coherent-phase mode, so the cache never
+    /// silently serves the previous mode's physics after the toggle flips.
     /// </summary>
-    public void EnsureSMatrixComputed()
+    /// <param name="enableCoherentPropagationPhase">
+    /// The coherent propagation phase mode the cached matrix must reflect.
+    /// </param>
+    public void EnsureSMatrixComputed(bool enableCoherentPropagationPhase = false)
     {
-        if (WaveLengthToSMatrixMap.Count == 0 && ExternalPins.Count > 0)
+        if (ExternalPins.Count == 0)
+            return;
+
+        if (WaveLengthToSMatrixMap.Count == 0
+            || _sMatrixBuiltWithCoherentPhase != enableCoherentPropagationPhase)
         {
-            ComputeSMatrix();
+            ComputeSMatrix(enableCoherentPropagationPhase);
         }
     }
 }

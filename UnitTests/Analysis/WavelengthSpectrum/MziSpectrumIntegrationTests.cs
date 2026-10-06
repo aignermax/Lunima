@@ -31,14 +31,14 @@ public class MziSpectrumIntegrationTests
     private readonly Guid _outputPinId = Guid.NewGuid();
 
     /// <summary>Bar-port field amplitude of an ideal MZI at the given wavelength.</summary>
-    private static double MziAmplitude(int wavelengthNm) =>
+    private static double MziAmplitude(double wavelengthNm) =>
         Math.Cos(Math.PI * (wavelengthNm - StartNm) / FringePeriodNm);
 
     private Mock<ISystemMatrixBuilder> CreateMziBuilder()
     {
         var builder = new Mock<ISystemMatrixBuilder>();
-        builder.Setup(b => b.GetSystemSMatrix(It.IsAny<int>()))
-            .Returns<int>(wl =>
+        builder.Setup(b => b.GetSystemSMatrix(It.IsAny<double>()))
+            .Returns<double>(wl =>
             {
                 var matrix = new SMatrix(
                     new List<Guid> { _inputPinId, _outputPinId }, new List<(Guid, double)>());

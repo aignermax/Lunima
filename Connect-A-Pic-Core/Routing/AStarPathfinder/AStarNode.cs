@@ -47,6 +47,13 @@ public class AStarNode : IComparable<AStarNode>
     /// </summary>
     public int StraightRunLength { get; set; }
 
+    /// <summary>
+    /// Steps from the start node along this arrival's parent chain. Drives the
+    /// pin-escape enforcement (a route must run straight for the first cells).
+    /// Lives on the node so the search needs no parallel distance dictionary.
+    /// </summary>
+    public int DistanceFromStart { get; set; }
+
     public AStarNode(int x, int y, GridDirection direction)
     {
         X = x;

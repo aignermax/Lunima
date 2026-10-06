@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.ShortcutsHelpFlyout">
+
+    <!-- Full keyboard-shortcut reference (#1162): opened from the "?" button in the
+         status bar. The status bar itself only shows the hints relevant to the current
+         canvas mode; everything else lives here so the bar can never overflow. -->
+
+    <StackPanel MaxWidth="380" Spacing="6">
+        <TextBlock Text="{loc:Localize StatusBar.ShortcutModesTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock Text="{loc:Localize StatusBar.ShortcutModesBody}"
+                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+
+        <TextBlock Text="{loc:Localize StatusBar.ShortcutEditingTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock Text="{loc:Localize StatusBar.ShortcutEditingBody}"
+                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+
+        <TextBlock Text="{loc:Localize StatusBar.ShortcutViewTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock Text="{loc:Localize StatusBar.ShortcutViewBody}"
+                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+    </StackPanel>
+
+</UserControl>

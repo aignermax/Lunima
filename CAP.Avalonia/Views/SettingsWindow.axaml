@@ -58,8 +58,11 @@
         <Rectangle Grid.Column="1" Fill="#3d3d3d"/>
 
         <!-- Content area -->
-        <ScrollViewer Grid.Column="2" Padding="24,20" HorizontalScrollBarVisibility="Disabled">
-            <ContentControl Content="{Binding SelectedPage.ViewModel}">
+        <!-- Padding belongs on the content, not the ScrollViewer: ScrollContentPresenter
+             measures its child with the full viewport width without subtracting its own
+             Padding, so wrapping text would be laid out too wide and clip at the right edge. -->
+        <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Disabled">
+            <ContentControl Padding="24,20" Content="{Binding SelectedPage.ViewModel}">
                 <ContentControl.DataTemplates>
 
 
@@ -71,7 +74,7 @@
                                       IsChecked="{Binding GridSnap.IsEnabled}"
                                       Foreground="White"/>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="{loc:Localize Settings.GridSnap.GridSize}" Foreground="Gray" VerticalAlignment="Center" Width="80"/>
+                                <TextBlock Text="{loc:Localize Settings.GridSnap.GridSize}" Foreground="Gray" VerticalAlignment="Center" MinWidth="80" Margin="0,0,8,0"/>
                                 <NumericUpDown Value="{Binding GridSnap.GridSizeMicrometers}"
                                                Minimum="1" Maximum="1000" Increment="10"
                                                Width="130" FormatString="F0"/>

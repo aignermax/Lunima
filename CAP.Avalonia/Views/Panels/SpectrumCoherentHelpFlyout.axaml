@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.SpectrumCoherentHelpFlyout">
+
+    <!-- Help of the Spectrum tab coherent-interference toggle (#1333, #1152 pattern):
+         short sections (text budget, all five locales) plus one looping MZI diagram —
+         wavefronts travel both arms, the meander arm's stream lags (it is longer),
+         and as λ sweeps the output brightens and dims while a marker rides the fringe
+         curve (FSR = λ²/(n_g·ΔL)). Hosted as the HelpContent of the panel's
+         HelpFlyoutButton, which supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                   Text="{loc:Localize SpectrumCoherentHelp.Intro}"/>
+
+        <!-- ΔL → fringes: the longer arm delays its wave; the swept wavelength turns
+             that delay into a pulsing output. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="150">
+                    <!-- input + splitter -->
+                    <Line StartPoint="8,68" EndPoint="52,68" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Ellipse Canvas.Left="49" Canvas.Top="65" Width="6" Height="6" Fill="#8d8d8d"/>
+                    <Line StartPoint="52,68" EndPoint="76,44" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Line StartPoint="52,68" EndPoint="76,92" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <!-- arms: straight (short) vs meander (long) -->
+                    <Line StartPoint="76,44" EndPoint="244,44" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Polyline Stroke="#4d4d4d" StrokeThickness="2"
+                              Points="76,92 100,92 100,116 124,116 124,92 148,92 148,116 172,116 172,92 196,92 196,116 220,116 220,92 244,92"/>
+                    <!-- combiner + output -->
+                    <Line StartPoint="244,44" EndPoint="268,68" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Line StartPoint="244,92" EndPoint="268,68" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Ellipse Canvas.Left="265" Canvas.Top="65" Width="6" Height="6" Fill="#8d8d8d"/>
+                    <Line StartPoint="268,68" EndPoint="336,68" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <!-- labels (language-neutral symbols) -->
+                    <TextBlock Canvas.Left="145" Canvas.Top="62" Text="ΔL" FontSize="10" FontWeight="Bold" Foreground="#4FC3F7"/>
+                    <TextBlock Canvas.Left="4" Canvas.Top="132" Text="λ →" FontSize="9" Foreground="Gray"/>
+                    <!-- animated wavefronts, output glow, fringe curve + marker -->
+                    <ha:MziFringeAnimation Width="368" Height="150" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Text="{loc:Localize SpectrumCoherentHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize SpectrumCoherentHelp.FsrTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize SpectrumCoherentHelp.FsrBody}"/>
+    </StackPanel>
+
+</UserControl>

@@ -1,0 +1,22 @@
+[
+  {
+    "file": "optimization-tab-en.png",
+    "caption": "Optimization tab (en): the new (?) help button sits right of the Run button in the config column."
+  },
+  {
+    "file": "flyout-en-climbing.png",
+    "caption": "Optimization help (en): the marker travels uphill on the objective curve \u2014 the step bracket under the curve is still wide."
+  },
+  {
+    "file": "flyout-en-local-best.png",
+    "caption": "Optimization help (en): the climb rests on the local best (green) with a shrunk step after rejected probes \u2014 the taller unvisited peak shows the local-best caveat."
+  },
+  {
+    "file": "flyout-de-climbing.png",
+    "caption": "Optimization help (de): the marker travels uphill on the objective curve \u2014 the step bracket under the curve is still wide."
+  },
+  {
+    "file": "flyout-de-local-best.png",
+    "caption": "Optimization help (de): the climb rests on the local best (green) with a shrunk step after rejected probes \u2014 the taller unvisited peak shows the local-best caveat."
+  }
+]

@@ -18,6 +18,14 @@ namespace CAP_Core.Components.Connections
         /// <summary>Default bend radius in micrometers.</summary>
         public const double DefaultBendRadiusMicrometers = 10.0;
 
+        /// <summary>
+        /// Fallback effective refractive index used for the coherent propagation phase
+        /// when no <see cref="DispersionModel"/> is assigned. 2.45 is the typical n_eff of a
+        /// 220 nm SOI strip waveguide at 1550 nm and matches the <c>ConstantDispersion</c>
+        /// fallback used for PDKs without a materialDispersion block.
+        /// </summary>
+        public const double DefaultEffectiveIndex = 2.45;
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public PhysicalPin StartPin { get; set; }
         public PhysicalPin EndPin { get; set; }
@@ -115,6 +123,20 @@ namespace CAP_Core.Components.Connections
         public int? SourceGdsDataType { get; set; }
 
         /// <summary>
+        /// Optional target geometric length (µm) this connection's route was stretched to
+        /// with a meander (issue #1008). Null means no length intent — the route is whatever
+        /// the router produces. Set by the meander actuator together with a frozen route;
+        /// persisted in .lun files so the intent survives save/load.
+        /// </summary>
+        public double? TargetLengthMicrometers { get; set; }
+
+        /// <summary>
+        /// Accepted deviation (µm) from <see cref="TargetLengthMicrometers"/>.
+        /// Null when no target length is set.
+        /// </summary>
+        public double? LengthToleranceMicrometers { get; set; }
+
+        /// <summary>
         /// The actual routed path with all segments (straights and bends).
         /// Populated after calling RecalculateTransmission().
         /// </summary>
@@ -166,7 +188,10 @@ namespace CAP_Core.Components.Connections
 
             // The effective bend radius honors both the connection's own setting and the
             // fabrication process' minimum: the larger of the two governs the geometry.
-            double effectiveBendRadius = Math.Max(BendRadiusMicrometers, router.ProcessMinBendRadiusMicrometers);
+            // The floor is per-pin-pair: electrical pairs bend at the metal cross-section
+            // floor (issue #854), optical pairs at their endpoints' process floor when the
+            // router carries a provider (issue #937), else the canvas-wide floor.
+            double effectiveBendRadius = Math.Max(BendRadiusMicrometers, router.ResolveProcessFloorFor(StartPin, EndPin));
 
             if (Type != WaveguideType.Auto)
             {
@@ -296,6 +321,29 @@ namespace CAP_Core.Components.Connections
         }
 
         /// <summary>
+        /// Effective refractive index at the given wavelength: from <see cref="DispersionModel"/>
+        /// when assigned, otherwise <see cref="DefaultEffectiveIndex"/>.
+        /// </summary>
+        /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+        public double GetEffectiveIndex(double wavelengthNm) =>
+            DispersionModel?.NEffAt(wavelengthNm) ?? DefaultEffectiveIndex;
+
+        /// <summary>
+        /// Loss-only <see cref="TransmissionCoefficient"/> multiplied by the coherent
+        /// propagation phase exp(-i·2π·n_eff(λ)·L/λ) accumulated along the routed path,
+        /// with L = <see cref="PathLengthMicrometers"/>. The magnitude is unchanged;
+        /// only the phase carries the optical path length.
+        /// </summary>
+        /// <param name="wavelengthNm">Wavelength in nanometers.</param>
+        public Complex GetCoherentTransmission(double wavelengthNm)
+        {
+            double wavelengthMicrometers = wavelengthNm / 1000.0;
+            double phaseRadians = -2.0 * Math.PI * GetEffectiveIndex(wavelengthNm)
+                * PathLengthMicrometers / wavelengthMicrometers;
+            return TransmissionCoefficient * Complex.Exp(new Complex(0, phaseRadians));
+        }
+
+        /// <summary>
         /// Restores a previously cached routed path without invoking the router.
         /// Recalculates transmission loss from the provided path geometry.
         /// Used when loading designs with cached route data.
@@ -341,5 +389,25 @@ namespace CAP_Core.Components.Connections
         /// When true, the path should be displayed differently (e.g., red/dashed).
         /// </summary>
         public bool IsBlockedFallback => RoutedPath?.IsBlockedFallback ?? false;
+
+        /// <summary>
+        /// True when this connection is a cross-chiplet facet link: both endpoints are
+        /// edge-coupler facet pins on DIFFERENT top-level chiplet groups. Such a link couples
+        /// free space between two separate dies — its transmission comes from the
+        /// <see cref="Analysis.ChipletEdgeCouplerCoupling"/> offset × gap model, not from
+        /// waveguide geometry — so it is never re-routed when the chiplets move and must
+        /// never be exported as waveguide geometry.
+        /// </summary>
+        public bool IsCrossChipletFacetLink =>
+            Analysis.ChipletInterfaceChecker.TryGetFacet(StartPin, out var startFacet)
+            && Analysis.ChipletInterfaceChecker.TryGetFacet(EndPin, out var endFacet)
+            && !ReferenceEquals(startFacet.Chiplet, endFacet.Chiplet);
+
+        /// <summary>
+        /// Why the current route is blocked (a pin sealed in by a component footprint vs.
+        /// contention with other routed wires). <see cref="RoutingFailureReason.None"/>
+        /// when the connection routed cleanly or has no route yet.
+        /// </summary>
+        public RoutingFailureReason FailureReason => RoutedPath?.FailureReason ?? RoutingFailureReason.None;
     }
 }

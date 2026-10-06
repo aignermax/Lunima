@@ -1,0 +1,10 @@
+[
+  {
+    "file": "and4bit-overview.png",
+    "caption": "The shipped \u0027Logic Gate AND 4-bit\u0027 example (issue #1265): four AND-from-NAND slices AND0\u2013AND3 side by side \u2014 inputs A0\u2013A3 and B0\u2013B3, outputs Y0\u2013Y3, the ISA AND datapath. No wires join the slices; the operand bits arrive through persisted signal names."
+  },
+  {
+    "file": "and4bit-slice-closeup.png",
+    "caption": "Close-up of slice AND0: the shipped \u0027Logic Gate AND-from-NAND\u0027 gate (NAND stage feeding a second inverter stage with its own bias, threshold 0.25) \u2014 A0 and B0 in, Y0 out; the slices stand clear of each other \u2014 the DesignValidator reports no overlaps."
+  }
+]

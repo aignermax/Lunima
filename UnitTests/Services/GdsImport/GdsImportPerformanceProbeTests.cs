@@ -35,8 +35,12 @@ public class GdsImportPerformanceProbeTests : IDisposable
     private static int AbutmentPairs =>
         int.TryParse(Environment.GetEnvironmentVariable("GDS_PROBE_ABUTMENT"), out int v) ? v : 100;
 
-    /// <summary>Generous whole-flow budget: the pre-fix hang was minutes, the target is seconds.</summary>
-    private static readonly TimeSpan TotalBudget = TimeSpan.FromSeconds(60);
+    /// <summary>
+    /// Generous whole-flow budget: the pre-fix hang was minutes, the target is seconds.
+    /// The flow takes ~40 s locally but 60–82 s on shared CI runners, so the budget sits
+    /// well above runner variance while still catching a minutes-long hang.
+    /// </summary>
+    private static readonly TimeSpan TotalBudget = TimeSpan.FromSeconds(120);
 
     public GdsImportPerformanceProbeTests(ITestOutputHelper output) => _output = output;
 

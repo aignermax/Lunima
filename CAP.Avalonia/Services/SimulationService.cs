@@ -1,5 +1,6 @@
 using System.Numerics;
 using CAP_Core.Components;
+using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.ExternalPorts;
@@ -42,26 +43,75 @@ public class SimulationService
         if (!hasConnections)
             return SimulationResult.Empty("No connections");
 
-        var tileManager = new ComponentListTileManager();
-        foreach (var compVm in canvas.Components)
-        {
-            // Ensure ComponentGroups have computed S-Matrices before simulation
-            if (compVm.Component is ComponentGroup group)
-            {
-                group.EnsureSMatrixComputed();
-            }
-            tileManager.AddComponent(compVm.Component);
-        }
+        // Snapshot the observable collections on the caller's (UI) thread so the worker
+        // below never reads an ObservableCollection off-thread (issue #1150).
+        var componentViewModels = canvas.Components.ToList();
+        var connectionManager = canvas.ConnectionManager;
+        var connections = connectionManager.Connections.ToList();
+        var componentCount = canvas.Components.Count;
+        var connectionCount = canvas.Connections.Count;
 
-        var portManager = new PhysicalExternalPortManager();
-        var sourceConfigs = ConfigureLightSources(canvas, portManager);
+        // S-matrix computation, light-source setup, grid construction and the per-wavelength
+        // propagation all run off the UI thread — on a loaded logic-gate design the
+        // synchronous prefix of this block alone exceeds the 100 ms budget.
+        var (sourceConfigs, systemMatrix, allFieldResults, wavelengths) = await Task.Run(
+            () => ComputeSimulationAsync(componentViewModels, connectionManager, cancellationToken),
+            cancellationToken);
 
         if (sourceConfigs.Count == 0)
             return SimulationResult.Empty(
                 "No light sources found (place a Grating Coupler or Edge Coupler)");
 
-        var gridManager = GridManager.CreateForSimulation(
-            tileManager, canvas.ConnectionManager, portManager);
+        // UI-touching updates back on the caller's thread (the await above resumes on the
+        // captured synchronization context, so this is the UI thread when invoked from one).
+        var components = componentViewModels.Select(c => c.Component).ToList();
+        canvas.PowerFlowVisualizer.UpdateFromSimulation(connections, components, allFieldResults);
+        canvas.RefreshPowerFlowDisplay();
+
+        return new SimulationResult
+        {
+            Success = true,
+            FieldResults = allFieldResults,
+            WavelengthsUsed = wavelengths,
+            LightSourceCount = sourceConfigs.Count,
+            ComponentCount = componentCount,
+            ConnectionCount = connectionCount,
+            SourceConfigs = sourceConfigs,
+            SystemMatrix = systemMatrix
+        };
+    }
+
+    /// <summary>
+    /// The heavy half of <see cref="RunAsync"/>: computes group S-matrices, configures light
+    /// sources, builds the simulation grid, and propagates each wavelength. Runs on a worker
+    /// thread; the only canvas state it reads is the snapshot taken by the caller, so it is
+    /// safe to invoke inside <see cref="Task.Run"/>.
+    /// </summary>
+    private static async Task<(List<SourceConfigInfo> SourceConfigs, SMatrix? SystemMatrix,
+            Dictionary<Guid, Complex> AllFieldResults, List<int> Wavelengths)> ComputeSimulationAsync(
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
+        WaveguideConnectionManager connectionManager,
+        CancellationToken cancellationToken)
+    {
+        var tileManager = new ComponentListTileManager();
+        foreach (var compVm in componentViewModels)
+        {
+            // Ensure ComponentGroups have computed S-Matrices before simulation
+            if (compVm.Component is ComponentGroup group)
+            {
+                group.EnsureSMatrixComputed(connectionManager.EnableCoherentPropagationPhase);
+            }
+            tileManager.AddComponent(compVm.Component);
+        }
+
+        var portManager = new PhysicalExternalPortManager();
+        var wiredPins = CollectWiredPins(componentViewModels, connectionManager.Connections);
+        var sourceConfigs = ConfigureLightSources(componentViewModels, portManager, wiredPins);
+
+        if (sourceConfigs.Count == 0)
+            return (sourceConfigs, null, new Dictionary<Guid, Complex>(), new List<int>());
+
+        var gridManager = GridManager.CreateForSimulation(tileManager, connectionManager, portManager);
 
         // Run simulation for each distinct wavelength sample. Sources with a finite
         // linewidth (#819) contribute several weighted samples around their center.
@@ -94,23 +144,7 @@ public class SimulationService
             ? IncoherentFieldCombiner.Combine(perWavelengthFields)
             : MergeAllFieldResults(perWavelengthFields);
 
-        var components = canvas.Components.Select(c => c.Component).ToList();
-        canvas.PowerFlowVisualizer.UpdateFromSimulation(
-            canvas.ConnectionManager.Connections, components, allFieldResults);
-
-        canvas.RefreshPowerFlowDisplay();
-
-        return new SimulationResult
-        {
-            Success = true,
-            FieldResults = allFieldResults,
-            WavelengthsUsed = wavelengths,
-            LightSourceCount = sourceConfigs.Count,
-            ComponentCount = canvas.Components.Count,
-            ConnectionCount = canvas.Connections.Count,
-            SourceConfigs = sourceConfigs,
-            SystemMatrix = systemMatrix
-        };
+        return (sourceConfigs, systemMatrix, allFieldResults, wavelengths);
     }
 
     /// <summary>
@@ -122,19 +156,89 @@ public class SimulationService
         DesignCanvasViewModel canvas,
         PhysicalExternalPortManager portManager)
     {
+        var componentViewModels = canvas.Components.ToList();
+        var wiredPins = CollectWiredPins(componentViewModels, canvas.ConnectionManager.Connections);
+        return ConfigureLightSources(componentViewModels, portManager, wiredPins);
+    }
+
+    /// <summary>
+    /// Collects every physical pin that has a waveguide connection — either a
+    /// canvas-level connection or a frozen internal path inside a (nested) group.
+    /// </summary>
+    private static HashSet<PhysicalPin> CollectWiredPins(
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
+        IReadOnlyList<WaveguideConnection> connections)
+    {
+        var wiredPins = new HashSet<PhysicalPin>();
+        foreach (var connection in connections)
+        {
+            if (connection.StartPin != null) wiredPins.Add(connection.StartPin);
+            if (connection.EndPin != null) wiredPins.Add(connection.EndPin);
+        }
+        foreach (var compVm in componentViewModels)
+        {
+            if (compVm.Component is ComponentGroup group)
+                CollectGroupWiredPins(group, wiredPins);
+        }
+        return wiredPins;
+    }
+
+    private static void CollectGroupWiredPins(ComponentGroup group, HashSet<PhysicalPin> wiredPins)
+    {
+        foreach (var path in group.InternalPaths)
+        {
+            if (path.StartPin != null) wiredPins.Add(path.StartPin);
+            if (path.EndPin != null) wiredPins.Add(path.EndPin);
+        }
+        foreach (var child in group.ChildComponents)
+        {
+            if (child is ComponentGroup childGroup)
+                CollectGroupWiredPins(childGroup, wiredPins);
+        }
+    }
+
+    /// <summary>
+    /// Picks the pins a light-source component injects on. Couplers with more
+    /// than one optical pin (e.g. the two-pin SiEPIC grating coupler with a
+    /// fiber-side and a waveguide-side pin) inject only on the off-chip pins —
+    /// the optical pins without a waveguide connection. Injecting on the
+    /// connected pin as well would feed power through that pin's reflection
+    /// matrix entry on top of the real fiber-to-waveguide transfer and
+    /// double-count the source. Single-pin couplers keep the legacy behaviour;
+    /// a multi-pin coupler with every pin wired falls back to all pins so a
+    /// source is never silently dropped.
+    /// </summary>
+    internal static List<PhysicalPin> SelectInjectionPins(
+        IReadOnlyList<PhysicalPin> lightPins, ISet<PhysicalPin> wiredPins)
+    {
+        if (lightPins.Count <= 1)
+            return lightPins.ToList();
+        var offChipPins = lightPins.Where(p => !wiredPins.Contains(p)).ToList();
+        return offChipPins.Count > 0 ? offChipPins : lightPins.ToList();
+    }
+
+    /// <summary>
+    /// Snapshot-based overload used by the off-thread simulation path (issue #1150):
+    /// never touches an <see cref="System.Collections.ObjectModel.ObservableCollection{T}"/>.
+    /// </summary>
+    internal static List<SourceConfigInfo> ConfigureLightSources(
+        IReadOnlyList<ViewModels.Canvas.ComponentViewModel> componentViewModels,
+        PhysicalExternalPortManager portManager,
+        ISet<PhysicalPin> wiredPins)
+    {
         var configs = new List<SourceConfigInfo>();
 
         // Per-instance LaserConfig only exists on top-level ViewModels; components
         // inside groups fall back to the default (ideal red) source.
         var laserConfigs = new Dictionary<Component, LaserConfig>();
-        foreach (var compVm in canvas.Components)
+        foreach (var compVm in componentViewModels)
         {
             if (compVm.LaserConfig != null)
                 laserConfigs[compVm.Component] = compVm.LaserConfig;
         }
 
         // Collect all components, including those inside groups (recursively)
-        var allComponents = GetAllComponentsRecursively(canvas.Components);
+        var allComponents = GetAllComponentsRecursively(componentViewModels);
 
         foreach (var component in allComponents)
         {
@@ -173,11 +277,12 @@ public class SimulationService
             var samples = spectrum.GetSamples();
             var sampleWavelengths = samples.Select(s => s.WavelengthNm).ToList();
 
-            foreach (var pin in component.PhysicalPins)
-            {
-                if (pin.LogicalPin?.MatterType != MatterType.Light)
-                    continue;
+            var lightPins = component.PhysicalPins
+                .Where(p => p.LogicalPin?.MatterType == MatterType.Light)
+                .ToList();
 
+            foreach (var pin in SelectInjectionPins(lightPins, wiredPins))
+            {
                 foreach (var sample in samples)
                 {
                     // The center sample keeps the legacy name; side samples are suffixed.

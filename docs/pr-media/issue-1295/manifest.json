@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-logic-unit-after-photonic-not.png",
+    "caption": "ISA playground running \u0027Mask \u0026 invert\u0027 on the Logic Unit 4-bit chip, right after the NOT step: the status line shows the photonic NOT (1000 \u2192 0111) with the gate count \u2014 AND and NOT both ran on light on one chip."
+  },
+  {
+    "file": "isa-playground-logic-unit-toggle-both-ops.png",
+    "caption": "ISA playground with the Logic Unit 4-bit network built: the photonic toggle names both operations (\u0027Compute AND \u002B NOT on the photonic chip\u0027) and the header reads \u0027photonic AND \u002B NOT\u0027 \u2014 one chip computes two ISA instructions."
+  }
+]

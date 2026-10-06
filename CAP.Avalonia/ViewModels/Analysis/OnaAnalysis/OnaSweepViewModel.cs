@@ -318,7 +318,7 @@ public partial class OnaSweepViewModel : ObservableObject
                 Title = seriesTitle,
                 StrokeThickness = 1.5,
                 CanTrackerInterpolatePoints = true,
-                TrackerTextProvider = dp => $"{seriesTitle}\nλ = {dp.X:0} nm\nIL = {dp.Y:0.00} dB",
+                TrackerTextProvider = dp => $"{seriesTitle}\nλ = {dp.X:0.0##} nm\nIL = {dp.Y:0.00} dB",
             };
 
             for (int i = 0; i < wavelengths.Length; i++)

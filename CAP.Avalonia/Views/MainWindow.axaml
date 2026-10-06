@@ -5,6 +5,7 @@
         xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
         xmlns:creation="using:CAP_Core.Components.Creation"
         xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
         xmlns:views="using:CAP.Avalonia.Views"
         xmlns:behaviors="using:CAP.Avalonia.Behaviors"
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
@@ -101,7 +102,7 @@
                 </Button>
 
                 <!-- Simulation — icon-only (play triangle), next to Fit per field feedback -->
-                <Button Command="{Binding RunSimulationCommand}"
+                <Button x:Name="RunSimulationButton" Command="{Binding RunSimulationCommand}"
                         Width="36" Margin="2" Background="#3d5d3d"
                         ToolTip.Tip="{loc:Localize Toolbar.RunSimulationTip}">
                     <PathIcon Data="M4.5,2.5 L13.5,8 L4.5,13.5 Z"
@@ -198,6 +199,58 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <!-- Check design (DRC-lite): same command as the Design Checks
+                                     tab button; also opens the analysis dock on the Checks tab.
+                                     Lives in the Export menu because checking precedes tapeout export. -->
+                                <Separator Margin="0,6,0,2" Background="#3d3d3d"/>
+                                <Button HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#3d3d5d"
+                                        Command="{Binding RunDesignChecksCommand}"
+                                        Click="CheckDesignMenuItem_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.CheckDesignTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🔍" FontSize="15"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckDesign}"
+                                                       Foreground="White"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckDesignDescription}"
+                                                       Foreground="#aaaaaa"
+                                                       FontSize="9"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="180"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <!-- openEBL submission check (#1361): exports the design to GDS and runs
+                                     the official openEBL submission + verification checks on it.
+                                     Lives in the Export menu because checking precedes tapeout export. -->
+                                <Button HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#4d3d5d"
+                                        Click="CheckOpenEblMenuItem_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.CheckOpenEblTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🧪" FontSize="15"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEbl}"
+                                                       Foreground="White"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"/>
+                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEblDescription}"
+                                                       Foreground="#aaaaaa"
+                                                       FontSize="9"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="180"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
@@ -206,7 +259,8 @@
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Tools -->
-                <Button MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
+                <Button x:Name="ToolsMenuButton"
+                        MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
                         ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
                     <Button.Content>
                         <TextBlock Text="{loc:Localize Toolbar.ToolsButton}"/>
@@ -286,6 +340,22 @@
                                     </StackPanel>
                                 </Button>
 
+                                <!-- ISA playground (#1194): write & step through 4-bit assembly
+                                     programs against the golden-model machine. -->
+                                <Button x:Name="IsaPlaygroundToolButton"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Margin="0,2" Padding="10,3"
+                                        Background="#3d3d5d"
+                                        Click="OpenIsaPlayground_Click"
+                                        ToolTip.Tip="{loc:Localize Toolbar.IsaPlaygroundTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Text="🧮" FontSize="15" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{loc:Localize Toolbar.IsaPlayground}"
+                                                   Foreground="White" FontSize="12"/>
+                                    </StackPanel>
+                                </Button>
+
                                 <!-- Unlock All (components & connections) — replaces the former
                                      "Lock Elements" properties-panel section (issue: drop that
                                      section, keep the unlock-all function reachable here). -->
@@ -306,6 +376,13 @@
                     </Button.Flyout>
                 </Button>
 
+                <!-- AI Design Assistant — own tool window (formerly a right-sidebar section) -->
+                <Button Click="OpenAiAssistant_Click"
+                        Width="36" Margin="2" Background="#3d3d5d"
+                        ToolTip.Tip="{loc:Localize Toolbar.AiAssistantTip}">
+                    <TextBlock Text="🤖" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Button>
+
                 <Separator Width="1" Background="Gray" Margin="10,5"/>
 
                 <!-- Settings -->
@@ -322,8 +399,10 @@
                 <!-- Active process indicator (issue #570): persistent, low-clutter home in the
                      status bar (right) rather than the crowded top toolbar. Green = a real
                      process; amber = Playground (not manufacturable); "No process selected" until
-                     one is chosen via File → New. -->
+                     one is chosen via File → New. MinWidth reserves a fixed right-hand column
+                     so the badge can never slide over the shortcut hints (#1162). -->
                 <Border DockPanel.Dock="Right" x:Name="ActiveProcessIndicator"
+                        MinWidth="170"
                         Margin="6,3" Padding="8,1" CornerRadius="3" VerticalAlignment="Center"
                         Background="#2d4d2d" Classes.playground="{Binding IsPlayground}"
                         ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
@@ -333,14 +412,36 @@
                         </Style>
                     </Border.Styles>
                     <TextBlock Text="{Binding ActiveProcessLabel}"
+                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                                Foreground="White" FontSize="10" VerticalAlignment="Center"/>
                 </Border>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding StatusText}"
+                <!-- Full keyboard-shortcut reference (#1162): moved off the status bar into
+                     this (?) flyout — the bar itself shows only the hints relevant to the
+                     current canvas mode, which always fits. -->
+                <controls:HelpFlyoutButton DockPanel.Dock="Right" VerticalAlignment="Center"
+                                           Margin="0,0,2,0"
+                                           Title="{loc:Localize StatusBar.ShortcutsFlyoutTitle}">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:ShortcutsHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
+                <!-- Grid (not StackPanel) so a long status text is ellipsized by its column
+                     instead of pushing the hints under the badge (#1162). -->
+                <Grid ColumnDefinitions="Auto,Auto,*">
+                    <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                               TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
-                    <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Foreground="Gray"
-                               Text="{loc:Localize StatusBar.ShortcutHints}"/>
-                </StackPanel>
+                    <!-- Stop for a full re-route (#1278): visible only while routing runs,
+                         cancels the pass; already-routed wires keep their routes. -->
+                    <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
+                            Command="{Binding Canvas.StopRoutingCommand}"
+                            IsVisible="{Binding Canvas.IsRouting}"
+                            VerticalAlignment="Center" Margin="6,0,0,0" FontSize="11"
+                            ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="20,0,0,0"
+                               Foreground="Gray" TextTrimming="CharacterEllipsis"
+                               Text="{Binding CanvasInteraction.ModeShortcutHints}"/>
+                </Grid>
             </DockPanel>
         </Border>
 
@@ -465,6 +566,7 @@
                             <!-- User Groups (no label: this is the default/first list) -->
                             <ListBox x:Name="UserGroupsListBox"
                                      Classes="compactList"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
                                      SelectionChanged="OnUserGroupsSelectionChanged"
                                      Background="Transparent"
@@ -541,6 +643,7 @@
                                        IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
                             <ListBox x:Name="PdkGroupsListBox"
                                      Classes="compactList"
+                                     behaviors:LibraryDragBehavior.IsEnabled="True"
                                      ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
                                      SelectionChanged="OnPdkGroupsSelectionChanged"
                                      Background="Transparent"
@@ -647,12 +750,30 @@
                     <TextBlock DockPanel.Dock="Top" Text="{loc:Localize LeftPanel.PlaceHint}"
                                FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
 
+                    <!-- Online-registry link row under the local hits (#772): a subtle
+                         🌐 line — hit count once the registry index is loaded, neutral
+                         prompt before that — so it can never be mistaken for a placeable
+                         local template. Visible only while it has something to say. -->
+                    <Button DockPanel.Dock="Bottom" Click="OpenRegistrySearchHint_Click"
+                            IsVisible="{Binding LeftPanel.RegistrySearchHintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            Background="Transparent" BorderThickness="0" Padding="0" Margin="10,2"
+                            HorizontalContentAlignment="Left" Cursor="Hand"
+                            ToolTip.Tip="{loc:Localize Registry.SearchHintTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="🌐" FontSize="10" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding LeftPanel.RegistrySearchHintText}"
+                                       Foreground="#7a9ec9" FontSize="10" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <ScrollViewer x:Name="ComponentLibraryScroll"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
-                        <ListBox ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                        <ListBox x:Name="ComponentLibraryList"
+                                 ItemsSource="{Binding LeftPanel.FilteredTemplates}"
                                  Classes="compactList"
+                                 behaviors:LibraryDragBehavior.IsEnabled="True"
                                  SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
                                  Background="Transparent" Foreground="White"
                                  Margin="5,0"
@@ -765,8 +886,19 @@
                                 HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                                 Background="#3d3d3d" Foreground="#c9c9c9"
                                 ToolTip.Tip="{loc:Localize LeftPanel.EnableAllPdksTip}"/>
-                        <TextBlock Text="{loc:Localize LeftPanel.PdkMgmt}" VerticalAlignment="Center"
-                                   FontWeight="Bold" Foreground="White"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="{loc:Localize LeftPanel.PdkMgmt}" VerticalAlignment="Center"
+                                       FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                            <!-- Plain-language help (#907, migrated in #1229): what a PDK is, what its
+                                 process defines (layers, bend radius, spacing), and why a component only
+                                 seats on a chiplet of its own process. -->
+                            <controls:HelpFlyoutButton Grid.Column="1" Margin="6,0,0,0" Title="{loc:Localize PdkHelp.Title}"
+                                                       VerticalAlignment="Center">
+                                <controls:HelpFlyoutButton.HelpContent>
+                                    <panels:PdkHelpFlyout/>
+                                </controls:HelpFlyoutButton.HelpContent>
+                            </controls:HelpFlyoutButton>
+                        </Grid>
                     </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel Margin="5">
@@ -854,61 +986,25 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="10">
-                    <!-- Selection-driven properties: name, position, size and the
-                         per-component editors (ONA Analyzer sweep button, sliders,
-                         light-source config…) all live in this single panel. -->
+                    <!-- Selection properties ONLY: the sidebar shows what the current
+                         selection is and how to edit it. Whole-design tools live on
+                         their own surfaces (analysis dock tabs, AI Assistant window). -->
                     <panels:SelectedComponentPropertiesPanel/>
 
-                    <!-- Parameter Sweep (visible when component has slider) -->
-                    <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
-                        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-                        <TextBlock Text="{loc:Localize Sweep.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                            <TextBlock Text="{loc:Localize Sweep.Start}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding RightPanel.Sweep.StartValue}"
-                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                           Increment="10" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="{loc:Localize Sweep.End}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding RightPanel.Sweep.EndValue}"
-                                           Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
-                                           Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
-                                           Increment="10" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="{loc:Localize Sweep.Steps}" Foreground="Gray" VerticalAlignment="Center" Width="45"/>
-                            <NumericUpDown Value="{Binding RightPanel.Sweep.StepCount}"
-                                           Minimum="2" Maximum="100"
-                                           Increment="1" Width="130" FormatString="F0"/>
-                        </StackPanel>
-                        <Button Content="{loc:Localize Sweep.Run}" Command="{Binding RightPanel.Sweep.RunSweepCommand}"
-                                Width="120" Margin="0,5,0,5" Background="#3d5d3d"
-                                IsEnabled="{Binding RightPanel.Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
-                        <TextBlock Text="{Binding RightPanel.Sweep.StatusText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
-                                   IsVisible="{Binding RightPanel.Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                        <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
-                                      IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding RightPanel.Sweep.ResultText}" Foreground="LightGreen"
-                                       FontFamily="Consolas" FontSize="10" TextWrapping="NoWrap"/>
-                        </ScrollViewer>
-                        <Button Content="{loc:Localize Sweep.ExportCsv}" Command="{Binding RightPanel.Sweep.ExportCsvCommand}"
-                                Width="100" Margin="0,5,0,0" Background="#3d3d5d"
-                                IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    </StackPanel>
-
-                    <!-- Connection Routing (style, width/radius, freeze, per-bend radius — issue #574) -->
+                    <!-- Connection Routing (selected connection's routing style) -->
                     <panels:ConnectionRoutingPanel/>
 
-                    <!-- AI Design Assistant Panel -->
-                    <panels:AiAssistantPanel/>
+                    <!-- Length Matching (exact target length for one selected connection) -->
+                    <panels:LengthMatchingPanel/>
 
-                    <!-- Design Checks Panel -->
-                    <panels:DesignChecksPanel/>
+                    <!-- Imported Layers (per-layer show/hide + opacity for imported GDS, issue #858) -->
+                    <panels:GdsLayerVisibilityPanel/>
 
-                    <!-- Netlist Panel (gdsfactory YAML view/export, #687) -->
-                    <panels:NetlistPanel/>
+                    <!-- Re-route imported (frozen) routes -->
+                    <panels:RerouteImportedPanel/>
+
+                    <!-- Truth Table Panel (logic-gate behavior of the selected group) -->
+                    <panels:TruthTablePanel/>
 
                 </StackPanel>
                 </ScrollViewer>
@@ -1084,6 +1180,44 @@
             </Panel>
         </DockPanel>
     </DockPanel>
+
+    <!-- First-steps tutorial overlay (#1080, anchored #1167): the card docks to the
+         control the current step acts on — spotlight, arrow, card beside it;
+         non-modal so the canvas stays interactive -->
+    <tour:TourAnchorOverlay IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
+                                TargetName="{Binding Tutorial.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:FirstStepsTutorialPanel DataContext="{Binding Tutorial}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <!-- "Watch it compute" tour overlay (#1143, anchored #1167): same anchored
+         spotlight, watching the Logic panel while the Counter example runs -->
+    <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding WatchTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:WatchComputeTourPanel DataContext="{Binding WatchTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <!-- "Run a program on your chip" tour overlay (#1267): hosts the card for
+         the steps that anchor in this window (Logic Build, Tools menu); the
+         playground steps are hosted by the overlay in IsaPlaygroundWindow -->
+    <tour:TourAnchorOverlay IsVisible="{Binding RunProgramTour.ShowCardInMainWindow, FallbackValue=False}"
+                                TargetName="{Binding RunProgramTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:RunProgramTourPanel DataContext="{Binding RunProgramTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
+    <!-- "Connect two chiplets" tour overlay (#1288): every step anchors in this
+         window — canvas, toolbar Run button, Design Checks tab of the dock -->
+    <tour:TourAnchorOverlay IsVisible="{Binding ConnectChipletsTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding ConnectChipletsTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:ConnectChipletsTourPanel DataContext="{Binding ConnectChipletsTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
 
     <!-- Home screen overlay: compact centered card over the dimmed editor,
          shown until a project is opened/created; reopenable via the Home button -->

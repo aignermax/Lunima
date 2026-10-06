@@ -76,6 +76,13 @@
     <None Include="ComponentRegistry\RegistryClient\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="ComponentRegistry\RegistryClient\Fixtures\*.svg" CopyToOutputDirectory="PreserveNewest" />
     <None Include="TestData\*.lun" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Analysis\MeasuredSpectrum\Fixtures\*.csv" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Vendored openEBL check scripts in the same scripts/openebl/ layout the
+         published app ships, so packaging tests can treat the test output
+         directory as a proxy for the release build output. -->
+    <Content Include="..\scripts\openebl\*.py"
+             Link="scripts\openebl\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

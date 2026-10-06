@@ -251,6 +251,22 @@ public class UpdateViewModelTests
         vm.CurrentVersionText.ShouldStartWith("Current: v");
     }
 
+    /// <summary>Issue #1160: the version label must follow the active UI language.</summary>
+    [Fact]
+    public void CurrentVersionText_German_UsesLocalizedPrefix()
+    {
+        LocalizationService.Instance.SetLanguage(SupportedLanguage.German.Code);
+        try
+        {
+            var vm = CreateViewModel(OlderReleaseJson);
+            vm.CurrentVersionText.ShouldStartWith("Aktuell: v");
+        }
+        finally
+        {
+            LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
+        }
+    }
+
     [Fact]
     public async Task InstallUpdate_NoMsiAsset_ShowsErrorMessage()
     {

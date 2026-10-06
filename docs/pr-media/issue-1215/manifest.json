@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-photonic-toggle-disabled.png",
+    "caption": "ISA playground without a built logic network: the photonic-ADD toggle is disabled and the hint points at the 4-bit adder example."
+  },
+  {
+    "file": "isa-playground-photonic-toggle-on.png",
+    "caption": "ISA playground with \u0027Compute ADD on the photonic chip\u0027 on: count-to-5 mid-run, the status names the photonic adder and its gate count."
+  }
+]

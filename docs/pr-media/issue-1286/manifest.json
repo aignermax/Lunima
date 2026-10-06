@@ -1,0 +1,10 @@
+[
+  {
+    "file": "logicunit4bit-overview.png",
+    "caption": "The shipped \u0027Logic Gate Logic Unit 4-bit\u0027 example (issue #1286): one chip, two ISA operations from the same operands \u2014 AND slices AND0\u2013AND3 in the top row, NOT slices NOT0\u2013NOT3 below, one column per bit. Inputs A0\u2013A3 (shared by each bit\u0027s two slices) and B0\u2013B3, outputs Y0\u2013Y3 (A AND B) and N0\u2013N3 (NOT A). No wires join the slices; the operand bits arrive through persisted signal names."
+  },
+  {
+    "file": "logicunit4bit-bit-slice-closeup.png",
+    "caption": "Close-up of bit slice 0: AND0 (NAND stage feeding an inverter stage, threshold 0.25) above NOT0 (single-NAND inverter, threshold 0.375) \u2014 both read the shared operand bit A0; Y0 = A0 AND B0, N0 = NOT A0. The slices stand clear of each other \u2014 the DesignValidator reports no overlaps."
+  }
+]

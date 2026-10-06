@@ -1,0 +1,26 @@
+[
+  {
+    "file": "modesolver-help-en-1-narrow.png",
+    "caption": "Mode Solver help: a waveguide cross-section whose core widens and narrows; the mode profile tightens or spreads with it and the n_eff marker slides between the n_clad and n_core ticks. (narrow core \u2014 the mode spills into the cladding, n_eff near n_clad)"
+  },
+  {
+    "file": "modesolver-help-en-2-mid.png",
+    "caption": "Mode Solver help: a waveguide cross-section whose core widens and narrows; the mode profile tightens or spreads with it and the n_eff marker slides between the n_clad and n_core ticks. (mid-width core)"
+  },
+  {
+    "file": "modesolver-help-en-3-wide.png",
+    "caption": "Mode Solver help: a waveguide cross-section whose core widens and narrows; the mode profile tightens or spreads with it and the n_eff marker slides between the n_clad and n_core ticks. (wide core \u2014 the mode is tightly confined, n_eff near n_core)"
+  },
+  {
+    "file": "modesolver-help-de-1-narrow.png",
+    "caption": "Mode Solver help: a waveguide cross-section whose core widens and narrows; the mode profile tightens or spreads with it and the n_eff marker slides between the n_clad and n_core ticks. (narrow core \u2014 the mode spills into the cladding, n_eff near n_clad)"
+  },
+  {
+    "file": "modesolver-help-de-2-mid.png",
+    "caption": "Mode Solver help: a waveguide cross-section whose core widens and narrows; the mode profile tightens or spreads with it and the n_eff marker slides between the n_clad and n_core ticks. (mid-width core)"
+  },
+  {
+    "file": "modesolver-help-de-3-wide.png",
+    "caption": "Mode Solver help: a waveguide cross-section whose core widens and narrows; the mode profile tightens or spreads with it and the n_eff marker slides between the n_clad and n_core ticks. (wide core \u2014 the mode is tightly confined, n_eff near n_core)"
+  }
+]

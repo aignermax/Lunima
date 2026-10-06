@@ -18,12 +18,14 @@ namespace CAP.Avalonia.ViewModels.Analysis.WavelengthSpectrum;
 /// <param name="PinNames">Flow-id → human-readable pin label.</param>
 /// <param name="OutputCouplerPinIds">Light pins of couplers whose laser is off (the design outputs).</param>
 /// <param name="DesignWavelengthNm">Wavelength of the first enabled laser (fallback: 1550 nm).</param>
+/// <param name="InputLabel">Display name of the single active light source; null when zero or several are on.</param>
 internal sealed record SpectrumCircuit(
     GridManager GridManager,
     PhysicalExternalPortManager Ports,
     IReadOnlyDictionary<Guid, string> PinNames,
     HashSet<Guid> OutputCouplerPinIds,
-    int DesignWavelengthNm);
+    int DesignWavelengthNm,
+    string? InputLabel);
 
 /// <summary>
 /// Builds the simulation circuit for the spectrum tab from the current canvas.
@@ -51,12 +53,16 @@ internal static class SpectrumSweepCircuitFactory
         var gridManager = GridManager.CreateForSimulation(
             tileManager, canvas.ConnectionManager, portManager);
 
+        var displayNames = SpectrumLegendLabelBuilder.BuildDisplayNames(
+            SimulationService.GetAllComponentsRecursively(canvas.Components));
+
         return new SpectrumCircuit(
             gridManager,
             portManager,
-            BuildPinNameMap(canvas),
-            TransientCircuitFactory.CollectOutputCouplerPinIds(canvas),
-            designWavelengthNm);
+            SpectrumLegendLabelBuilder.BuildPinNameMap(displayNames),
+            CollectOutputCouplerPinIds(canvas),
+            designWavelengthNm,
+            ResolveSingleInputLabel(canvas, displayNames));
     }
 
     /// <summary>
@@ -89,26 +95,40 @@ internal static class SpectrumSweepCircuitFactory
     }
 
     /// <summary>
-    /// Maps every light-pin flow id on the canvas (groups included) to a
-    /// human-readable "Component.pin" label for legend and tracker text.
+    /// Light pins of couplers whose laser is off (the design outputs). Unlike
+    /// the Transient tab, only the in-flow id per pin is collected: both flow
+    /// directions of one pin share a label, so plotting both would double
+    /// every legend entry.
     /// </summary>
-    private static Dictionary<Guid, string> BuildPinNameMap(DesignCanvasViewModel canvas)
+    private static HashSet<Guid> CollectOutputCouplerPinIds(DesignCanvasViewModel canvas)
     {
-        var map = new Dictionary<Guid, string>();
-        foreach (var component in SimulationService.GetAllComponentsRecursively(canvas.Components))
+        var pinIds = new HashSet<Guid>();
+        foreach (var compVm in canvas.Components)
         {
-            var displayName = !string.IsNullOrEmpty(component.HumanReadableName)
-                ? component.HumanReadableName!
-                : component.Name;
-
-            foreach (var pin in component.PhysicalPins)
+            if (!compVm.IsLaserOff) continue;
+            foreach (var pin in compVm.Component.PhysicalPins)
             {
-                if (pin.LogicalPin == null) continue;
-                var pinLabel = $"{displayName}.{pin.Name}";
-                map[pin.LogicalPin.IDInFlow] = pinLabel;
-                map[pin.LogicalPin.IDOutFlow] = pinLabel;
+                if (pin.LogicalPin?.MatterType != MatterType.Light) continue;
+                pinIds.Add(pin.LogicalPin.IDInFlow);
             }
         }
-        return map;
+        return pinIds;
+    }
+
+    /// <summary>
+    /// Display name of the single laser-on coupler (the spectrum's input), or
+    /// null when zero or several lasers are on — a superposed transmission
+    /// cannot be attributed to one input.
+    /// </summary>
+    private static string? ResolveSingleInputLabel(
+        DesignCanvasViewModel canvas, IReadOnlyDictionary<Component, string> displayNames)
+    {
+        var active = canvas.Components
+            .Where(compVm => compVm.IsLightSource && !compVm.IsLaserOff)
+            .Select(compVm => compVm.Component)
+            .ToList();
+        return active.Count == 1 && displayNames.TryGetValue(active[0], out var label)
+            ? label
+            : null;
     }
 }

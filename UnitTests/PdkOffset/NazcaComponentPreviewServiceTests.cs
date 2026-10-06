@@ -18,11 +18,17 @@ public class NazcaComponentPreviewServiceTests
     public NazcaComponentPreviewServiceTests() =>
         LocalizationService.Instance.SetLanguage(SupportedLanguage.English.Code);
 
+    // The tool environment cannot change mid-run, so the probe spawns its
+    // subprocesses once per test process instead of once per calling test.
+    private static readonly Lazy<string?> CachedWorkingPython3 = new(FindWorkingPython3Uncached);
+
     /// <summary>
     /// Resolves a working Python 3 path by running a minimal subprocess validation.
     /// Returns null when Python is not available or cannot execute scripts.
     /// </summary>
-    private static string? FindWorkingPython3()
+    private static string? FindWorkingPython3() => CachedWorkingPython3.Value;
+
+    private static string? FindWorkingPython3Uncached()
     {
         // CI uses actions/setup-python, which installs into /opt/hostedtoolcache
         // rather than /usr/bin — let the workflow point us at the right binary

@@ -1,0 +1,14 @@
+[
+  {
+    "file": "ram4x4-overview.png",
+    "caption": "The shipped \u0027Logic Gate RAM 4x4\u0027 example (issue #1408): the ISA-sized hierarchical RAM \u2014 the 2-bit address decode, the LOAD/data copy trees and the read-MUX combines at top level, the four word-cell instances CELL0\u2013CELL3 routed once and frozen; only the inter-cell wires route at top level."
+  },
+  {
+    "file": "ram4x4-logic-panel-en.png",
+    "caption": "The Logic tab after the write/read demo (en): 3 was stored in word 0 and 12 in word 3 (one LOAD \u002B clock each), then LOAD went low \u2014 with A0=A1=1 the read bus Q shows 12; the sixteen register bits of the four instanced word cells are listed in the register readout."
+  },
+  {
+    "file": "ram4x4-logic-panel-de.png",
+    "caption": "The Logic tab after the write/read demo (de): 3 was stored in word 0 and 12 in word 3 (one LOAD \u002B clock each), then LOAD went low \u2014 with A0=A1=1 the read bus Q shows 12; the sixteen register bits of the four instanced word cells are listed in the register readout."
+  }
+]

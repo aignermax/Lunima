@@ -1,0 +1,10 @@
+[
+  {
+    "file": "zerodetect-overview.png",
+    "caption": "The shipped \u0027Logic Gate Zero Detect 4-bit\u0027 example (issue #1307): OR01 reads A0/A1 and OR23 reads A2/A3 (left column), ORALL combines the two partial ORs (middle), NOTZ inverts the result (right) \u2014 the flag tap Z is 1 exactly when A0\u2013A3 are all dark, the zero flag the ISA JZ branches on."
+  },
+  {
+    "file": "zerodetect-or-tree-closeup.png",
+    "caption": "Close-up of the OR tree: OR01 (top) and OR23 (bottom) are the shipped \u0027Logic Gate OR-AND\u0027 gate at its OR reading (threshold 0.25); the router carries their outputs into ORALL\u0027s A and B pins \u2014 no overlaps, no blocked wires."
+  }
+]

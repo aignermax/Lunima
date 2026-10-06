@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             xmlns:pdk="using:CAP.Avalonia.Controls.HelpAnimations.Pdk"
+             x:Class="CAP.Avalonia.Views.Panels.PdkHelpFlyout">
+
+    <!-- Help of the PDK management section in the left panel (#1229, #1152 pattern):
+         short sections (text budget, all five locales) plus one looping "a process
+         belongs to its chiplet" diagram — a process-A component (green) drops onto
+         chiplet A and its waveguide lights up (LightPulseAlongPath); a process-B
+         component (orange) tries chiplet A, is rejected with a small "✗" and a red
+         flash (the bespoke ChipletProcessAnimation overlay), bounces back and seats
+         on chiplet B, whose waveguide lights up at the end. Schematic, not a layout
+         tool. Hosted as the HelpContent of the section's HelpFlyoutButton, which
+         supplies the title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                   Text="{loc:Localize PdkHelp.Intro}"/>
+
+        <!-- a process belongs to its chiplet: A snaps onto chiplet A, B is rejected
+             there and lands on chiplet B; seated components let light flow. -->
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="124">
+                    <!-- Chiplet A (process A, green frame) with its component slot. -->
+                    <Border Canvas.Left="16" Canvas.Top="52" Width="140" Height="52"
+                            Background="#1a241a" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="4"/>
+                    <Rectangle Canvas.Left="60" Canvas.Top="66" Width="26" Height="26"
+                               Stroke="#4CAF50" StrokeThickness="1" StrokeDashArray="3,2" RadiusX="3" RadiusY="3"/>
+                    <TextBlock Canvas.Left="16" Canvas.Top="108" Text="{loc:Localize PdkHelp.DiagramChipletA}"
+                               FontSize="9" Foreground="Gray"/>
+                    <!-- Chiplet B (process B, orange frame) with its component slot. -->
+                    <Border Canvas.Left="212" Canvas.Top="52" Width="140" Height="52"
+                            Background="#2a221a" BorderBrush="#FF9800" BorderThickness="1" CornerRadius="4"/>
+                    <Rectangle Canvas.Left="256" Canvas.Top="66" Width="26" Height="26"
+                               Stroke="#FF9800" StrokeThickness="1" StrokeDashArray="3,2" RadiusX="3" RadiusY="3"/>
+                    <TextBlock Canvas.Left="212" Canvas.Top="108" Text="{loc:Localize PdkHelp.DiagramChipletB}"
+                               FontSize="9" Foreground="Gray"/>
+                    <!-- Waveguide pulses on the chiplet surfaces (over the chiplet
+                         backgrounds, under the moving components in the overlay):
+                         light only flows once the matching component sits on the
+                         chiplet. -->
+                    <ha:LightPulseAlongPath Width="368" Height="124" PathPoints="20,79 152,79"
+                                            PulseBrush="#FFF176" PulseDiameter="8"
+                                            WindowStart="0.34" WindowEnd="0.58" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="124" PathPoints="216,79 348,79"
+                                            PulseBrush="#FFF176" PulseDiameter="8"
+                                            WindowStart="0.9" WindowEnd="1.0" IsHitTestVisible="False"/>
+                    <!-- moving components, the rejection cross and the red flash -->
+                    <pdk:ChipletProcessAnimation Width="368" Height="124" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Text="{loc:Localize PdkHelp.AnimationCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{loc:Localize PdkHelp.WhatIsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize PdkHelp.WhatIsBody}"/>
+
+        <TextBlock Text="{loc:Localize PdkHelp.ProcessTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize PdkHelp.ProcessBody}"/>
+
+        <TextBlock Text="{loc:Localize PdkHelp.NoMixTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize PdkHelp.NoMixBody}"/>
+    </StackPanel>
+
+</UserControl>

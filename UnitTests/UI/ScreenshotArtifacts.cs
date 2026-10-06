@@ -14,6 +14,36 @@ namespace UnitTests.UI;
 internal static class ScreenshotArtifacts
 {
     /// <summary>
+    /// Set <c>CAP_UPDATE_PR_MEDIA=1</c> to refresh the published <c>docs/pr-media</c>
+    /// screenshots; ordinary test runs write to a temp directory instead.
+    /// </summary>
+    public const string UpdatePrMediaVariable = "CAP_UPDATE_PR_MEDIA";
+
+    /// <summary>
+    /// Resolves the repo-root <c>docs/pr-media/{folderName}</c> directory (walking up from
+    /// the test output for the .sln) — but only when the run opts into refreshing published
+    /// PR media via <c>CAP_UPDATE_PR_MEDIA=1</c>. Otherwise a temp directory is returned so
+    /// an ordinary test run still captures and validates frames but can never overwrite
+    /// media that other issues' docs embed (a plain suite run re-rendering them with local
+    /// fonts has silently reverted deliberate restores before).
+    /// </summary>
+    public static string ResolvePrMediaDirectory(string folderName)
+    {
+        if (Environment.GetEnvironmentVariable(UpdatePrMediaVariable) != "1")
+            return Path.Combine(Path.GetTempPath(), "cap-pr-media", folderName);
+
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (dir.GetFiles("*.sln").Length > 0)
+                return Path.Combine(dir.FullName, "docs", "pr-media", folderName);
+            dir = dir.Parent;
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "docs", "pr-media", folderName);
+    }
+
+    /// <summary>
     /// Saves <paramref name="bitmap"/> to <paramref name="path"/> atomically and
     /// returns the PNG bytes (read from the private temp file, so they can never
     /// reflect a concurrent writer's partial output).

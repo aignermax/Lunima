@@ -32,6 +32,7 @@ public static class ComponentGroupSerializer
             PhysicalX = group.PhysicalX,
             PhysicalY = group.PhysicalY,
             Rotation90CounterClock = (int)group.Rotation90CounterClock,
+            RotationDegrees = ComponentPoseTransform.GetNonCardinalRotationDegrees(group),
             ParentGroupId = group.ParentGroup?.Identifier,
             ParentGroupIdGuid = group.ParentGroup?.Id.ToString()
         };
@@ -122,6 +123,11 @@ public static class ComponentGroupSerializer
             OutlinePolygons = dto.BackgroundPolygons
         };
 
+        // The exact continuous angle (non-cardinal GDS placements) supersedes the
+        // discrete quarter-turn value the property setter above applied.
+        if (dto.RotationDegrees is double exactRotation)
+            ComponentPoseTransform.ApplyExactRotation(group, exactRotation);
+
         // Add child components - prefer Guid lookup, fall back to name lookup
         var useGuids = guidLookup != null && dto.ChildComponentGuids.Count == dto.ChildComponentIds.Count
                        && dto.ChildComponentGuids.Count > 0;
@@ -188,6 +194,41 @@ public static class ComponentGroupSerializer
     }
 
     /// <summary>
+    /// Finds a physical pin by name on a component. A nested group's
+    /// <see cref="Component.PhysicalPins"/> only exist after an S-matrix/pin sync,
+    /// which does not run during load — so when the component is a
+    /// <see cref="ComponentGroup"/> whose pins are not materialized yet, they are
+    /// rebuilt from its already-restored <see cref="ComponentGroup.ExternalPins"/>
+    /// (child groups deserialize before their parents) and the lookup retried.
+    /// </summary>
+    private static PhysicalPin? FindPhysicalPin(Component component, string pinName)
+    {
+        var pin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
+        if (pin == null && component is ComponentGroup group)
+        {
+            group.SyncPhysicalPinsFromExternalPins();
+            pin = component.PhysicalPins.FirstOrDefault(p => p.Name == pinName);
+        }
+
+        return pin;
+    }
+
+    /// <summary>
+    /// Serializes a pin-less canvas-level frozen path (issue #856) — same DTO shape
+    /// as group-internal frozen paths, so .lun files stay uniform.
+    /// </summary>
+    public static FrozenPathDto ToCanvasFrozenPathDto(FrozenWaveguidePath frozenPath)
+        => ToFrozenPathDto(frozenPath);
+
+    /// <summary>
+    /// Deserializes a pin-less canvas-level frozen path (issue #856). No component
+    /// lookups are needed because canvas-level paths never carry pin references;
+    /// a DTO that unexpectedly does fails loudly like a group-internal path would.
+    /// </summary>
+    public static FrozenWaveguidePath FromCanvasFrozenPathDto(FrozenPathDto dto)
+        => FromFrozenPathDto(dto, null, null);
+
+    /// <summary>
     /// Converts a FrozenWaveguidePath to a DTO. Pin-less paths (GDS-imported route
     /// outlines) serialize with empty component/pin references.
     /// </summary>
@@ -212,6 +253,7 @@ public static class ComponentGroupSerializer
             WidthMicrometers = frozenPath.WidthMicrometers,
             IsRouteFrozen = frozenPath.IsRouteFrozen,
             PropagationLossDbPerCm = frozenPath.PropagationLossDbPerCm,
+            BendLossDbPer90Deg = frozenPath.BendLossDbPer90Deg,
             BendRadiusOverrides = new Dictionary<int, double>(frozenPath.BendRadiusOverrides),
             StraightShiftOffsets = new Dictionary<int, double>(frozenPath.StraightShiftOffsets)
         };
@@ -255,8 +297,8 @@ public static class ComponentGroupSerializer
             var startComp = ResolveComponent(dto.StartComponentGuid, dto.StartComponentId, guidLookup, nameLookup);
             var endComp = ResolveComponent(dto.EndComponentGuid, dto.EndComponentId, guidLookup, nameLookup);
 
-            startPin = startComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.StartPinName);
-            endPin = endComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.EndPinName);
+            startPin = FindPhysicalPin(startComp, dto.StartPinName);
+            endPin = FindPhysicalPin(endComp, dto.EndPinName);
 
             if (startPin == null)
             {
@@ -321,6 +363,8 @@ public static class ComponentGroupSerializer
         frozenPath.IsRouteFrozen = dto.IsRouteFrozen;
         if (dto.PropagationLossDbPerCm is double loss)
             frozenPath.PropagationLossDbPerCm = loss;
+        if (dto.BendLossDbPer90Deg is double bendLoss)
+            frozenPath.BendLossDbPer90Deg = bendLoss;
         if (dto.BendRadiusOverrides != null)
         {
             foreach (var (bendIndex, radius) in dto.BendRadiusOverrides)
@@ -426,7 +470,7 @@ public static class ComponentGroupSerializer
         var internalComp = ResolveComponent(
             dto.InternalComponentGuid, dto.InternalComponentId, guidLookup, nameLookup);
 
-        var internalPin = internalComp.PhysicalPins.FirstOrDefault(p => p.Name == dto.InternalPinName);
+        var internalPin = FindPhysicalPin(internalComp, dto.InternalPinName);
         if (internalPin == null)
         {
             throw new InvalidOperationException(

@@ -190,6 +190,53 @@ public class UserPdkStoreTests : IDisposable
         store.ListCustomPdks().ShouldBeEmpty();
     }
 
+    // ── SaveComponentKeyed ───────────────────────────────────────────────────
+
+    [Fact]
+    public void SaveComponentKeyed_first_save_adds_without_backup()
+    {
+        var store = CreateStore();
+
+        var result = store.SaveComponentKeyed("Lib", Process("P"), Comp("A"), _ => false, "nazca", null);
+
+        result.Outcome.ShouldBe(KeyedComponentSaveOutcome.Added);
+        new PdkLoader().LoadFromFileForEditing(result.FilePath)
+            .Components.Select(c => c.Name).ShouldBe(new[] { "A" });
+        Directory.Exists(Path.Combine(_root, ".trash")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void SaveComponentKeyed_same_identity_replaces_and_backs_up_to_trash()
+    {
+        var store = CreateStore();
+        store.SaveComponentKeyed("Lib", Process("P"), Comp("A"), _ => false, "nazca", null);
+
+        // Same identity (predicate), even under a renamed display name.
+        var result = store.SaveComponentKeyed(
+            "Lib", Process("P"), Comp("Renamed"), c => c.Name == "A", "nazca", null);
+
+        result.Outcome.ShouldBe(KeyedComponentSaveOutcome.Replaced);
+        new PdkLoader().LoadFromFileForEditing(result.FilePath)
+            .Components.Select(c => c.Name).ShouldBe(new[] { "Renamed" });
+        var backup = Directory.GetFiles(Path.Combine(_root, ".trash"), "lib-*.json").ShouldHaveSingleItem();
+        new PdkLoader().LoadFromFileForEditing(backup)
+            .Components.Select(c => c.Name).ShouldBe(new[] { "A" });
+    }
+
+    [Fact]
+    public void SaveComponentKeyed_different_identity_same_name_is_a_clash_and_writes_nothing()
+    {
+        var store = CreateStore();
+        store.SaveComponentKeyed("Lib", Process("P"), Comp("A"), _ => false, "nazca", null);
+        var textBefore = File.ReadAllText(store.ResolveNamedPath("Lib"));
+
+        var result = store.SaveComponentKeyed("Lib", Process("P"), Comp("A"), _ => false, "nazca", null);
+
+        result.Outcome.ShouldBe(KeyedComponentSaveOutcome.NameClash);
+        File.ReadAllText(result.FilePath).ShouldBe(textBefore);
+        Directory.Exists(Path.Combine(_root, ".trash")).ShouldBeFalse();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

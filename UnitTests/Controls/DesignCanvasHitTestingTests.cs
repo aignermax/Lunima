@@ -107,6 +107,31 @@ public class DesignCanvasHitTestingTests
         result.ShouldBeSameAs(pin, "clicking exactly on the pin must still hit it regardless of the cap");
     }
 
+    [Fact]
+    public void HitTestPin_AtRenderedMarkerPositionsOfClosePitchPdkPins_ReturnsTheExactPin()
+    {
+        // Issue #1217 regression pin: the real SiEPIC 2x2 MMI (right ports 2.4 µm apart)
+        // and Broadband DC (left ports 4.7 µm apart) from finding #1161. Hit-testing at
+        // each rendered marker position (PinRenderer draws at GetAbsolutePosition) must
+        // resolve to exactly that pin — never the close-pitch neighbour, never a pin of
+        // the other component 466 µm away.
+        var vm = new DesignCanvasViewModel();
+        var templates = TestPdkLoader.LoadFromPdk("siepic-ebeam-pdk.json");
+        var mmi = CAP.Avalonia.ViewModels.Library.ComponentTemplates.CreateFromTemplate(
+            templates.Single(t => t.Name == "MMI 2x2 50/50 TE 1310"), 600, 200);
+        var dc = CAP.Avalonia.ViewModels.Library.ComponentTemplates.CreateFromTemplate(
+            templates.Single(t => t.Name == "Broadband DC TE 1550"), 1100, 200);
+        vm.AddComponent(mmi, "MMI");
+        vm.AddComponent(dc, "DC");
+
+        foreach (var pin in mmi.PhysicalPins.Concat(dc.PhysicalPins))
+        {
+            var (pinX, pinY) = pin.GetAbsolutePosition();
+            DesignCanvasHitTesting.HitTestPin(new Point(pinX, pinY), vm, zoom: 1.0)
+                .ShouldBeSameAs(pin, $"the marker of {pin.Name} must hit-test to itself");
+        }
+    }
+
     private static (DesignCanvasViewModel Vm, CAP_Core.Components.Core.PhysicalPin Pin, double PinX, double PinY)
         CreateComponentWithPin()
     {
@@ -164,6 +189,64 @@ public class DesignCanvasHitTestingTests
         var chordHit = DesignCanvasHitTesting.HitTestConnection(
             new Point((chordPoint.X + 0) / 2.0, (chordPoint.Y + 100) / 2.0), vm);
         chordHit.ShouldBeNull("the chord region is off the drawn curve and must stay unhit");
+    }
+
+    [Fact]
+    public void HitTestCanvasFrozenPath_ReturnsNull_WhenViewModelIsNull()
+    {
+        var result = DesignCanvasHitTesting.HitTestCanvasFrozenPath(new Point(0, 0), null);
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void HitTestCanvasFrozenPath_ReturnsNull_WhenNoPaths()
+    {
+        var vm = new DesignCanvasViewModel();
+        var result = DesignCanvasHitTesting.HitTestCanvasFrozenPath(new Point(50, 50), vm);
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void HitTestCanvasFrozenPath_HitsStraightSegmentWithinTolerance_MissesBeyond()
+    {
+        var (vm, pathVm) = CreateCanvasWithStraightFrozenPath();
+
+        DesignCanvasHitTesting.HitTestCanvasFrozenPath(new Point(50, 105), vm)
+            .ShouldBeSameAs(pathVm, "5 µm off the segment is inside the 10 µm tolerance");
+        DesignCanvasHitTesting.HitTestCanvasFrozenPath(new Point(50, 125), vm)
+            .ShouldBeNull("25 µm off the segment is outside the tolerance");
+    }
+
+    [Fact]
+    public void HitTestCanvasFrozenPath_PointOnLargeBendArc_HitsEvenFarFromTheChord()
+    {
+        // Same arc-accuracy guarantee as HitTestConnection: hover, click and delete
+        // share ONE hit test, so a frozen path's large bend must be hit on the curve.
+        var vm = new DesignCanvasViewModel();
+        var path = new CAP_Core.Routing.RoutedPath();
+        path.Segments.Add(new CAP_Core.Routing.BendSegment(0, 0, 100, 0, 90));
+        var pathVm = new CanvasFrozenPathViewModel(
+            new CAP_Core.Components.Core.FrozenWaveguidePath { Path = path });
+        vm.CanvasFrozenPaths.Add(pathVm);
+
+        var onArcA = new Point(70.71, 70.71);
+        var onArcB = new Point(70.71, -70.71);
+        var hit = DesignCanvasHitTesting.HitTestCanvasFrozenPath(onArcA, vm)
+            ?? DesignCanvasHitTesting.HitTestCanvasFrozenPath(onArcB, vm);
+
+        hit.ShouldBeSameAs(pathVm, "a point directly on a large bend's arc must hit the frozen path");
+    }
+
+    private static (DesignCanvasViewModel Vm, CanvasFrozenPathViewModel PathVm)
+        CreateCanvasWithStraightFrozenPath()
+    {
+        var vm = new DesignCanvasViewModel();
+        var path = new CAP_Core.Routing.RoutedPath();
+        path.Segments.Add(new CAP_Core.Routing.StraightSegment(0, 100, 100, 100, 0));
+        var pathVm = new CanvasFrozenPathViewModel(
+            new CAP_Core.Components.Core.FrozenWaveguidePath { Path = path });
+        vm.CanvasFrozenPaths.Add(pathVm);
+        return (vm, pathVm);
     }
 
     [Fact]

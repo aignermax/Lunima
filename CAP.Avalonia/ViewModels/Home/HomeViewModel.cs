@@ -60,6 +60,12 @@ public partial class HomeViewModel : ObservableObject
     /// <summary>Shipped example designs; empty when none are installed.</summary>
     public ObservableCollection<ExampleDesign> Examples { get; } = new();
 
+    /// <summary>
+    /// The "Learn Lunima" list: the guided tours in learning order. Data-driven
+    /// so the next tour is one more entry, not another hand-made button row.
+    /// </summary>
+    public ObservableCollection<HomeTourEntry> TourEntries { get; } = new();
+
     /// <summary>True when any shipped examples were found (shows the Examples section).</summary>
     [ObservableProperty]
     private bool _hasExamples;
@@ -82,6 +88,34 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public Func<string, Task<bool>>? OpenExampleRequested { get; set; }
 
+    /// <summary>
+    /// Callback to start the first-steps guided tour on a fresh design
+    /// (issue #1080). Wired by <see cref="MainViewModel"/>; creates the new
+    /// project and activates the tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? LearnTutorialRequested { get; set; }
+
+    /// <summary>
+    /// Callback to start the "Watch it compute" guided tour (issue #1143):
+    /// opens the shipped Counter example as an untitled copy and activates the
+    /// tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? WatchComputeTourRequested { get; set; }
+
+    /// <summary>
+    /// Callback to start the "Run a program on your chip" guided tour
+    /// (issue #1267): opens the shipped 4-bit adder example as an untitled copy
+    /// and activates the tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? RunProgramTourRequested { get; set; }
+
+    /// <summary>
+    /// Callback to start the "Connect two chiplets" guided tour (issue #1288):
+    /// opens the shipped Two-Chiplets edge-coupler example as an untitled copy
+    /// and activates the tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? ConnectChipletsTourRequested { get; set; }
+
     /// <summary>Initializes the Home screen and builds the recent-projects and examples lists.</summary>
     public HomeViewModel(
         RecentProjectsService recentProjectsService,
@@ -94,6 +128,29 @@ public partial class HomeViewModel : ObservableObject
         _reopenLastProjectOnStartup = preferences.GetReopenLastProjectOnStartup();
         RefreshRecentProjects();
         RefreshExamples();
+        RefreshTourEntries();
+    }
+
+    /// <summary>
+    /// Rebuilds the Learn-Lunima list. The entries re-resolve their localized
+    /// texts on rebuild, so — like the examples list — a language switched in
+    /// Settings since startup shows on the next <see cref="Show"/>.
+    /// </summary>
+    private void RefreshTourEntries()
+    {
+        TourEntries.Clear();
+        TourEntries.Add(new HomeTourEntry(1, "🎓",
+            "Home.Learn.FirstSteps", "Home.Learn.FirstStepsDescription",
+            "Home.LearnTutorialTip", LearnTutorialCommand));
+        TourEntries.Add(new HomeTourEntry(2, "⏱",
+            "Home.WatchComputeTour", "Home.Learn.WatchComputeDescription",
+            "Home.WatchComputeTourTip", WatchComputeTourCommand));
+        TourEntries.Add(new HomeTourEntry(3, "🧮",
+            "Home.RunProgramTour", "Home.Learn.RunProgramDescription",
+            "Home.RunProgramTourTip", RunProgramTourCommand));
+        TourEntries.Add(new HomeTourEntry(4, "🔗",
+            "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
+            "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
     }
 
     /// <summary>Rebuilds the shipped-examples list from disk.</summary>
@@ -137,11 +194,15 @@ public partial class HomeViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Shows the Home screen (toolbar Home button), refreshing the recent list first.
+    /// Shows the Home screen (toolbar Home button), refreshing the recent list
+    /// and the examples list first — the latter so descriptions follow a
+    /// language switched in Settings since startup.
     /// </summary>
     public void Show()
     {
         RefreshRecentProjects();
+        RefreshExamples();
+        RefreshTourEntries();
         IsHomeVisible = true;
     }
 
@@ -238,6 +299,34 @@ public partial class HomeViewModel : ObservableObject
     {
         if (IsHomeVisible)
             RefreshRecentProjects();
+    }
+
+    [RelayCommand]
+    private async Task LearnTutorial()
+    {
+        if (LearnTutorialRequested != null)
+            await LearnTutorialRequested();
+    }
+
+    [RelayCommand]
+    private async Task WatchComputeTour()
+    {
+        if (WatchComputeTourRequested != null)
+            await WatchComputeTourRequested();
+    }
+
+    [RelayCommand]
+    private async Task RunProgramTour()
+    {
+        if (RunProgramTourRequested != null)
+            await RunProgramTourRequested();
+    }
+
+    [RelayCommand]
+    private async Task ConnectChipletsTour()
+    {
+        if (ConnectChipletsTourRequested != null)
+            await ConnectChipletsTourRequested();
     }
 
     [RelayCommand]

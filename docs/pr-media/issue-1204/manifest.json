@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-halted.png",
+    "caption": "ISA playground after Run hit HALT: status shows \u0027halted after N steps\u0027, ACC = 5, button back to Run."
+  },
+  {
+    "file": "isa-playground-running.png",
+    "caption": "ISA playground running count-to-5: button toggled to Stop, PC/ACC/RAM advance every 400 ms tick, current line highlighted."
+  }
+]

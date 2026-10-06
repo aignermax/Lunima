@@ -76,6 +76,18 @@ internal static class ExportFeatureExtensions
 
         services.AddSingleton<SaxExporter>();
 
+        // openEBL submission checker (headless core service, #1355)
+        services.AddSingleton<CAP.Avalonia.Services.OpenEblCheck.OpenEblSubmissionChecker>();
+
+        // "Check for openEBL…" dialog (#1361) — singleton so a reopened dialog keeps the inputs.
+        services.AddSingleton<CAP.Avalonia.ViewModels.Export.OpenEbl.OpenEblCheckViewModel>(sp =>
+            new CAP.Avalonia.ViewModels.Export.OpenEbl.OpenEblCheckViewModel(
+                sp.GetRequiredService<CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel>(),
+                sp.GetRequiredService<SimpleNazcaExporter>(),
+                sp.GetRequiredService<GdsExportService>(),
+                sp.GetRequiredService<CAP.Avalonia.Services.OpenEblCheck.OpenEblSubmissionChecker>(),
+                sp.GetService<CAP_Core.ErrorConsoleService>()));
+
         // Netlist view/export (gdsfactory YAML, issue #687)
         services.AddSingleton<CAP.Avalonia.ViewModels.Export.Netlist.NetlistViewModel>();
 

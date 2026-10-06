@@ -109,10 +109,10 @@ public class Issue818MonteCarloScreenshotTests
     /// Deterministic stand-in for a spectrum Monte-Carlo run: a Gaussian dip around
     /// 1550 nm as the nominal IL curve plus seeded Gaussian scatter per run.
     /// </summary>
-    private static MonteCarloResult BuildSyntheticSpectrumResult(out int[] wavelengths)
+    private static MonteCarloResult BuildSyntheticSpectrumResult(out double[] wavelengths)
     {
-        int[] range = Enumerable.Range(0, StepCount)
-            .Select(i => StartNm + i * (EndNm - StartNm) / (StepCount - 1))
+        double[] range = Enumerable.Range(0, StepCount)
+            .Select(i => StartNm + i * (double)(EndNm - StartNm) / (StepCount - 1))
             .ToArray();
         double[] nominal = range
             .Select(wl => -3.0 - 2.0 * Math.Exp(-Math.Pow((wl - 1550.0) / 25.0, 2)))

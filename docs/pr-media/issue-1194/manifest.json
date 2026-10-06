@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-after-steps.png",
+    "caption": "ISA playground: count-to-5 after 6 steps \u2014 PC/ACC/RAM updated, current source line highlighted."
+  },
+  {
+    "file": "isa-playground-assembler-error.png",
+    "caption": "ISA playground: unknown mnemonic on line 2 \u2014 inline error, Step/Reset disabled."
+  }
+]
