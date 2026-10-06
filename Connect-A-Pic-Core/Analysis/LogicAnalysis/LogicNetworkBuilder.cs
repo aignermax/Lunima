@@ -146,7 +146,7 @@ public sealed partial class LogicNetworkBuilder
             var traced = TracePassThrough(contexts, adjacency, unresolvedPin, connection, resolved, path, out var failure);
             if (traced == null)
             {
-                if (resolved.Role == PinRole.Input)
+                if (failure != null && resolved.Role == PinRole.Input)
                     throw new ArgumentException(failure);
                 return;
             }
@@ -195,6 +195,10 @@ public sealed partial class LogicNetworkBuilder
             if (endpoint != null)
                 return endpoint;
             var exit = PassThroughExit(pin);
+            // A source sitting right at the gate pin (a laser or grating coupler feeding
+            // the input) is not a logic wire: the input stays a network input, as before.
+            if (exit == null && ReferenceEquals(pin, startPin))
+                return null;
             if (exit == null)
             {
                 failure = UnresolvableMessage(gateEnd, startPin,

@@ -100,6 +100,26 @@ public class LogicNetworkBuilderPassThroughTests
         network.Evaluate(Bits(("INV.A", false)))["INV.Y"].ShouldBeTrue();
     }
 
+    [Fact]
+    public void Build_InputWiredDirectlyToSinglePinSource_StaysANetworkInput()
+    {
+        // A laser / grating coupler feeding a gate input is not a logic wire:
+        // the input stays a network input instead of failing the build.
+        var inv = NotInstance("INV");
+        var source = TestComponentFactory.CreatePinlessComponent(0, 0);
+        var sourcePin = new PhysicalPin { Name = "out", ParentComponent = source };
+        source.PhysicalPins.Add(sourcePin);
+        var connections = new[]
+        {
+            Connect(sourcePin, Pin(inv.Group, "A")),
+        };
+
+        var network = new LogicNetworkBuilder().Build(new[] { inv }, connections);
+
+        network.InputPinNames.ShouldBe(new[] { "INV.A" });
+        network.Evaluate(Bits(("INV.A", true)))["INV.Y"].ShouldBeFalse();
+    }
+
     /// <summary>A NAND gate instance on a synthetic group exposing the example's pin interface.</summary>
     private static LogicGateInstance NandInstance(string groupName) =>
         new(
