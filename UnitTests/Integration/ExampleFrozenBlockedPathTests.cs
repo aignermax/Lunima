@@ -55,6 +55,9 @@ public class ExampleFrozenBlockedPathTests
         // 90 blocked top-level adder wires + the RAM 4x4's 77 (45 inter-cell + 4 × 8
         // intra-cell) frozen inside the wrapping RAM group (#1463).
         ["Logic Gate ALU + RAM.lun"] = 167,
+        // 167 as on ALU + RAM — the four Logic Gate Bit cells of the ACC register
+        // ship zero blocked wires, so their frozen intra-bit routes add none (#1470).
+        ["Logic Gate ALU + RAM + ACC.lun"] = 167,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>
