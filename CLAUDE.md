@@ -270,12 +270,7 @@ renders, Skia screenshot walkthroughs) carry `[Trait("Category", "Slow")]`. Neve
 unfiltered suite on a local desktop session — it can starve the display manager and crash
 the machine. `make test` and `.agent.toml` already exclude `Category!=Slow`; with
 `smart_test.py` set `SMART_TEST_EXCLUDE_CATEGORY=Slow` (the `safe_test.sh` wrapper does
-this + CPU throttling). CI runs all of them, so nothing loses coverage.
-
-**Nightly tier:** measurement spikes and probes (no regression assertion, minutes of
-runtime) carry `[Trait("Tier", "Nightly")]`. Pull-request CI skips them; pushes to
-`main`/`dev-ki`, `v*` release tags, the nightly schedule and manual runs execute the
-full suite. A test that guards behaviour must never be Nightly-only.
+this + CPU throttling). CI runs everything unfiltered, so nothing loses coverage.
 
 ---
 

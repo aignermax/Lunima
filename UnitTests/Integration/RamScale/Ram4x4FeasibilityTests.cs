@@ -22,15 +22,14 @@ namespace UnitTests.Integration.RamScale;
 /// time, a behavioural write/read-back check through the real assembled network, and the
 /// full-route wall-clock of the freshly generated design on the current router (the load
 /// routes every wire: the generated file carries no cached geometry, so the post-load pass
-/// IS a full route of the design). The route measurement is bounded by a 60-second timeout
-/// (<c>CAP_RAM_SPIKE_ROUTE_TIMEOUT_S</c> overrides it) — a timeout is itself a result and
-/// does not fail the test; the structural and behavioural assertions always hold. The 2×4
-/// variant gives the scaling slope. Numbers land in
+/// IS a full route of the design). The structural and behavioural assertions never depend
+/// on the routes, so by default the post-load pass is cancelled at once and the tests stay
+/// fast; set <c>CAP_RAM_SPIKE_MEASURE_ROUTE=1</c> to re-take the route measurement, bounded
+/// by <c>CAP_RAM_SPIKE_ROUTE_TIMEOUT_S</c> (default 60 s — a timeout is itself a result).
+/// The 2×4 variant gives the scaling slope. Numbers land in
 /// <c>docs/logic/RAM-4x4-FEASIBILITY.md</c>.
 /// </summary>
 [Trait("Category", "Slow")]
-// Measurement spike / probe, not a regression check: runs in the full (nightly/release) suite only.
-[Trait("Tier", "Nightly")]
 public class Ram4x4FeasibilityTests
 {
     /// <summary>
@@ -39,6 +38,8 @@ public class Ram4x4FeasibilityTests
     /// </summary>
     private const double DefaultRouteTimeoutSeconds = 60;
     private const string RouteTimeoutVariable = "CAP_RAM_SPIKE_ROUTE_TIMEOUT_S";
+    private const string MeasureRouteVariable = "CAP_RAM_SPIKE_MEASURE_ROUTE";
+    private static readonly TimeSpan CancellationGrace = TimeSpan.FromMinutes(2);
     private const int WavelengthNm = 1550;
 
     private readonly ITestOutputHelper _output;
@@ -47,11 +48,11 @@ public class Ram4x4FeasibilityTests
     public Ram4x4FeasibilityTests(ITestOutputHelper output) => _output = output;
 
     [Fact]
-    public Task Ram4Words4Bits_AssemblyBehaviorAndRoute_Measured() =>
+    public Task Ram4Words4Bits_AssemblyAndBehavior() =>
         MeasureAsync(words: 4, bits: 4, expectedGates: 183, expectedWires: 260);
 
     [Fact]
-    public Task Ram2Words4Bits_AssemblyBehaviorAndRoute_Measured() =>
+    public Task Ram2Words4Bits_AssemblyAndBehavior() =>
         MeasureAsync(words: 2, bits: 4, expectedGates: 71, expectedWires: 97);
 
     private async Task MeasureAsync(int words, int bits, int expectedGates, int expectedWires)
@@ -77,7 +78,7 @@ public class Ram4x4FeasibilityTests
             canvas.Components.Count.ShouldBe(design.GateCount, "every generated gate group must load");
             canvas.Connections.Count.ShouldBe(design.WireCount, "every generated wire must load");
 
-            var route = await MeasureFullRoute(canvas, fileOps, label, Report);
+            var route = await SettlePostLoadRouting(canvas, fileOps, label, Report);
             var network = await MeasureAssembly(canvas, label);
             AssertNetworkShape(network, design, words, bits);
             AssertStoreReadHold(network, design, words, bits);
@@ -90,6 +91,21 @@ public class Ram4x4FeasibilityTests
         {
             if (File.Exists(tempPath)) File.Delete(tempPath);
         }
+    }
+
+    /// <summary>
+    /// Settles the loader's post-load routing pass: measured when
+    /// <c>CAP_RAM_SPIKE_MEASURE_ROUTE=1</c>, otherwise cancelled at once — the logic under
+    /// test never depends on the routes, and a full route of the RAM costs minutes.
+    /// </summary>
+    internal static async Task<string> SettlePostLoadRouting(
+        DesignCanvasViewModel canvas, FileOperationsViewModel fileOps, string label, Action<string> report)
+    {
+        if (Environment.GetEnvironmentVariable(MeasureRouteVariable) == "1")
+            return await MeasureFullRoute(canvas, fileOps, label, report);
+        canvas.Routing.CancelRouting();
+        await fileOps.PostLoadRouting.WaitAsync(CancellationGrace);
+        return "route=skipped";
     }
 
     /// <summary>

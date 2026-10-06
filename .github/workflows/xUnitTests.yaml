@@ -5,15 +5,12 @@ name: 🔍 xUnit Tests
 # had an open PR triggered BOTH events → the suite ran twice.
 on:
   push:
-    branches: [main, dev-ki]
-    # Releases always get the FULL suite, including the Nightly tier.
+    branches: [main]
+    # Every release tag runs the suite on exactly the tagged commit.
     tags: ['v*']
   pull_request:
-  # The full suite once a night, so slow measurement spikes still run regularly.
-  schedule:
-    - cron: '17 2 * * *'
   # On-demand baseline runs (e.g. on dev-ki) so a red PR check can be told
-  # apart from an already-red integration branch. Always the full suite.
+  # apart from an already-red integration branch.
   workflow_dispatch:
 
 # A newer push to the same PR supersedes the running check.
@@ -25,7 +22,7 @@ jobs:
   nunit_tests:
     name: 🔍 xUnit Tests
     runs-on: ubuntu-latest
-    # Safety net: a PR run (fast tier) takes ~10 min, the full suite ~20 min.
+    # Safety net: a run takes ~8 min (setup, build, five ~3-min test shards).
     # Anything beyond 50 min is a hang.
     timeout-minutes: 50
 
@@ -140,11 +137,7 @@ jobs:
           # process-wide singleton). Wall clock is cut by running disjoint,
           # complementary filter shards as separate processes in parallel — the
           # union of the filters is the whole tier, so coverage is unchanged.
-          # Shards are balanced on measured durations (~3–4 min of tests each).
-          #
-          # Tier=Nightly marks measurement spikes and probes (minutes of routing
-          # into a deliberate timeout, structure dumps): they are no regression
-          # check, so pull requests skip them; every other trigger runs them too.
+          # Shards are balanced on measured durations (~3 min of tests each).
           dotnet build --no-restore
           mkdir -p TestResults
           run_shard() {
@@ -157,15 +150,11 @@ jobs:
           }
           ui_or_integration='(FullyQualifiedName~UnitTests.UI.|FullyQualifiedName~UnitTests.Integration.)'
           not_ui_nor_integration='FullyQualifiedName!~UnitTests.UI.&FullyQualifiedName!~UnitTests.Integration.'
-          regular='Tier!=Nightly'
-          run_shard fast-ui-integration "Category!=Slow&$regular&$ui_or_integration" &
-          run_shard fast-rest           "Category!=Slow&$regular&$not_ui_nor_integration" &
-          run_shard slow-ui-integration "Category=Slow&$regular&$ui_or_integration" &
-          run_shard slow-export         "Category=Slow&$regular&FullyQualifiedName~UnitTests.Export." &
-          run_shard slow-rest           "Category=Slow&$regular&$not_ui_nor_integration&FullyQualifiedName!~UnitTests.Export." &
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            run_shard nightly "Tier=Nightly" &
-          fi
+          run_shard fast-ui-integration "Category!=Slow&$ui_or_integration" &
+          run_shard fast-rest           "Category!=Slow&$not_ui_nor_integration" &
+          run_shard slow-ui-integration "Category=Slow&$ui_or_integration" &
+          run_shard slow-export         "Category=Slow&FullyQualifiedName~UnitTests.Export." &
+          run_shard slow-rest           "Category=Slow&$not_ui_nor_integration&FullyQualifiedName!~UnitTests.Export." &
           status=0
           for pid in $(jobs -p); do wait "$pid" || status=1; done
           for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done

@@ -53,8 +53,7 @@ public class GdsReexportIdempotencyTests : IDisposable
 
         // ── Generation 1: the exact round-trip arc (frozen placement — the
         // deterministic, router-independent mode the netlist comparisons use) ──
-        var export1 = await GdsHighestLevelRoundTripTests.ExportUserDesignAsync(
-            _root, "export1", stripSiepicUpgrade: false);
+        var export1 = await GdsHighestLevelRoundTripTests.ExportUserDesignAsync(stripSiepicUpgrade: false);
         var host1 = new GdsDesignScopeTestHost();
         _hosts.Add(host1);
         var outcome1 = await GdsHighestLevelRoundTripTests.ImportExplodeAsync(host1, export1.GdsPath);

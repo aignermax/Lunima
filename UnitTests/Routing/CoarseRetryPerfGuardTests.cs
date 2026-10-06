@@ -7,7 +7,7 @@ namespace UnitTests.Routing;
 
 /// <summary>
 /// Perf guard for the coarse-grid retry (issue #1426, follow-up to #1418/#1423). Pins
-/// two behaviours the measurement (<see cref="CoarseRetryCostMeasurementTests"/>) justified:
+/// two behaviours the coarse-retry cost measurement of issue #1426 justified:
 /// <list type="bullet">
 /// <item>A wire whose coarse retry fails (sealed end pin — no physical route) burns at
 /// most <see cref="WaveguideRouter.CoarseRetryBudgetMultiplier"/> ×

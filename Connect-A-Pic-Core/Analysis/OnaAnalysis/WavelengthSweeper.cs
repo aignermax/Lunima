@@ -62,7 +62,7 @@ namespace CAP_Core.Analysis.OnaAnalysis
 
                 int stepCount = SMatrix.DefaultMaxIterations;
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                var fields = await systemMatrix.CalcFieldAtPinsAfterStepsAsync(inputVector, stepCount, cts)
+                var fields = await systemMatrix.CalcFieldAtPinsAfterStepsAsync(inputVector, stepCount, cts).ConfigureAwait(false)
                     ?? new Dictionary<Guid, Complex>();
 
                 monitoredPinIds ??= fields.Keys.ToList();

@@ -48,15 +48,13 @@ namespace UnitTests.Services.GdsImport;
 /// </para>
 /// </summary>
 [Trait("Category", "Slow")]
-public class GdsMziElectricalRoundTripTests : IDisposable
+[Collection(GdsMziElectricalExportCollection.Name)]
+public class GdsMziElectricalRoundTripTests
 {
-    private readonly string _root =
-        Path.Combine(Path.GetTempPath(), "lunima-gds-mzi-elec-" + Guid.NewGuid().ToString("N"));
+    private readonly GdsMziElectricalExportFixture _export;
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_root)) Directory.Delete(_root, true);
-    }
+    /// <summary>Attaches the shared export.</summary>
+    public GdsMziElectricalRoundTripTests(GdsMziElectricalExportFixture export) => _export = export;
 
     // His design, keyed by instance name for the position/rotation congruence checks.
     private static readonly (string Instance, string Cell, double X, double Y, double Rot)[] Expected =
@@ -76,11 +74,10 @@ public class GdsMziElectricalRoundTripTests : IDisposable
     [SkippableFact]
     public async Task RoundTrip_MziWithElectricalConnections_ExplodeMode()
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        Skip.If(_export.Python == null, "No Python with nazca available — the round trip needs the real engine.");
 
         // ── 1. Build his design verbatim; every connection must be real geometry ──
-        var canvas = GdsMziElectricalFixture.BuildMziCanvas();
+        var canvas = _export.Canvas;
         canvas.Components.Count.ShouldBe(10);
         canvas.Connections.Count.ShouldBe(10);
         canvas.Connections.Count(c => c.Connection.IsElectrical).ShouldBe(4,
@@ -92,12 +89,9 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         }
 
         // ── 2. Export with the app's own exporter; nothing may be skipped ──
-        var skippedConnections = new List<string>();
-        var exportWarnings = new List<string>();
-        var script = new SimpleNazcaExporter().Export(
-            canvas, skippedConnections: skippedConnections, exportWarnings: exportWarnings);
-        skippedConnections.ShouldBeEmpty("all 10 routes are real, exportable geometry");
-        exportWarnings.ShouldBeEmpty();
+        var script = _export.Script;
+        _export.SkippedConnections.ShouldBeEmpty("all 10 routes are real, exportable geometry");
+        _export.ExportWarnings.ShouldBeEmpty();
 
         // The export carries everything the re-import needs:
         // — the bond-pad stub labels its electrical pin (purely electrical components
@@ -124,7 +118,7 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         CountLines(script, ".put('org',").ShouldBe(12,
             "the ten canvas components plus the two wrapper-internal demofab puts");
 
-        var (stubGds, upgradedGds) = await RunExportAsync(python, script);
+        var (stubGds, upgradedGds) = (_export.StubGds, _export.UpgradedGds);
 
         // ── 3. GDS structure sanity (our own reader): the evidence for where
         // the electrical connections live in the exported layout ──
@@ -166,12 +160,9 @@ public class GdsMziElectricalRoundTripTests : IDisposable
     [SkippableFact]
     public async Task RoundTrip_MziWithElectricalConnections_BlackBoxMode()
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        Skip.If(_export.Python == null, "No Python with nazca available — the round trip needs the real engine.");
 
-        var canvas = GdsMziElectricalFixture.BuildMziCanvas();
-        var script = new SimpleNazcaExporter().Export(canvas);
-        var (stubGds, upgradedGds) = await RunExportAsync(python, script);
+        var (stubGds, upgradedGds) = (_export.StubGds, _export.UpgradedGds);
 
         // Stub scenario: the black box exposes the FULL flattened pin set,
         // including the four pad labels of the stub cells.
@@ -408,47 +399,6 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         GdsImportOutcome Outcome,
         GdsPlacementReport Report,
         CAP.Avalonia.ViewModels.Library.ComponentTemplate Template);
-
-    /// <summary>
-    /// Runs the export script twice: normally (the klayout post-pass upgrades the
-    /// SiEPIC stub when the PDK is present) and forced-stub (klayout/siepic
-    /// imports poisoned — the upgrade block downgrades to keeping the stubs).
-    /// Returns (stubGds, upgradedGds-or-null-when-the-env-has-no-klayout).
-    /// </summary>
-    private async Task<(string StubGds, string? UpgradedGds)> RunExportAsync(string python, string script)
-    {
-        var exportDir = Path.Combine(_root, "export" + Guid.NewGuid().ToString("N")[..6]);
-        Directory.CreateDirectory(exportDir);
-        var scriptPath = Path.Combine(exportDir, "mzi.py");
-        await File.WriteAllTextAsync(scriptPath, script);
-
-        var run = await SiepicRealGeometryExportTests.RunPythonAsync(python, exportDir, scriptPath);
-        run.ExitCode.ShouldBe(0, $"nazca export script failed:\n{run.StdOut}\n{run.StdErr}");
-        var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
-        File.Exists(gdsPath).ShouldBeTrue($"script did not write {gdsPath}:\n{run.StdOut}");
-        bool upgraded = run.StdOut.Contains("SiEPIC cell(s) upgraded", StringComparison.Ordinal);
-        string? upgradedCopy = null;
-        if (upgraded)
-        {
-            upgradedCopy = Path.Combine(exportDir, "mzi_upgraded.gds");
-            File.Copy(gdsPath, upgradedCopy, overwrite: true);
-        }
-
-        var stubRunner = Path.Combine(exportDir, "mzi_stub.py");
-        await File.WriteAllTextAsync(stubRunner,
-            "import sys, runpy\n" +
-            "sys.modules['klayout'] = None\n" +
-            "sys.modules['klayout.db'] = None\n" +
-            "sys.modules['siepic_ebeam_pdk'] = None\n" +
-            $"sys.argv = [r'{scriptPath}']\n" +
-            $"runpy.run_path(r'{scriptPath}', run_name='__main__')\n");
-        var stubRun = await SiepicRealGeometryExportTests.RunPythonAsync(python, exportDir, stubRunner);
-        stubRun.ExitCode.ShouldBe(0, $"forced-stub run failed:\n{stubRun.StdOut}\n{stubRun.StdErr}");
-        var stubCopy = Path.Combine(exportDir, "mzi_stub.gds");
-        File.Move(gdsPath, stubCopy, overwrite: true);
-
-        return (stubCopy, upgradedCopy);
-    }
 
     private static async Task<ExplodeResult> ExplodeAsync(string gdsPath)
     {

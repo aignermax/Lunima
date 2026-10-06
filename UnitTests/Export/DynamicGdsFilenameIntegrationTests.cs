@@ -78,11 +78,13 @@ public class DynamicGdsFilenameIntegrationTests
         var tmpDir = Path.Combine(Path.GetTempPath(), $"cap_multifile_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tmpDir);
 
+        // Two names suffice to show each export writes its own GDS next to its script
+        // (a hardcoded output name would make the second overwrite the first); every
+        // further name only adds a real Nazca run.
         var testCases = new[]
         {
             ("chip_v1.py", "chip_v1.gds"),
             ("final_design.py", "final_design.gds"),
-            ("test.py", "test.gds")
         };
 
         try

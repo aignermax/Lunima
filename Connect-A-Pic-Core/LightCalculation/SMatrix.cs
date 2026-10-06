@@ -174,30 +174,15 @@ namespace CAP_Core.LightCalculation
             if (maxIterations < 1) return new Dictionary<Guid, Complex>();
 
             // Update SMat using non-linear connections that don't depend on the current field.
-            await RecomputeSMatNonLinearPartsAsync(inputVector, SkipOuterLoopFunctions: false);
+            await RecomputeSMatNonLinearPartsAsync(inputVector, SkipOuterLoopFunctions: false).ConfigureAwait(false);
             try
             {
-                var inputAfterSteps = SMat * inputVector + inputVector;
-                var converged = false;
-
-                for (int i = 1; i < maxIterations && !converged; i++)
-                {
-                    cancellation.Token.ThrowIfCancellationRequested();
-                    await Task.Run(async () =>
-                    {
-                        var previousField = inputAfterSteps;
-                        // Recalculate non-linear entries because the field vector has changed
-                        // (e.g. logic gates that switch based on optical power).
-                        await RecomputeSMatNonLinearPartsAsync(inputAfterSteps, SkipOuterLoopFunctions: true);
-                        inputAfterSteps = SMat * inputAfterSteps + inputVector;
-
-                        // Residual-based convergence: stop when the field change is negligible.
-                        double delta = (inputAfterSteps - previousField).L2Norm();
-                        converged = delta < convergenceEpsilon;
-                    }, cancellation.Token);
-                }
-
-                return ConvertToDictWithGuids(inputAfterSteps);
+                // The whole iteration runs as ONE background task: a task hop per iteration
+                // resumed on the caller's context (the UI dispatcher) after every step, so a
+                // slowly converging ring spent its time waiting on thread switches.
+                return await Task.Run(
+                    () => IterateToConvergenceAsync(inputVector, maxIterations, convergenceEpsilon, cancellation.Token),
+                    cancellation.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -279,6 +264,30 @@ namespace CAP_Core.LightCalculation
             snapshot.EvaluateParameterOnlyConnections();
             return snapshot;
         }
+        private async Task<Dictionary<Guid, Complex>> IterateToConvergenceAsync(
+            MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector,
+            int maxIterations,
+            double convergenceEpsilon,
+            CancellationToken token)
+        {
+            var inputAfterSteps = SMat * inputVector + inputVector;
+            var converged = false;
+            for (int i = 1; i < maxIterations && !converged; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                var previousField = inputAfterSteps;
+                // Recalculate non-linear entries because the field vector has changed
+                // (e.g. logic gates that switch based on optical power).
+                await RecomputeSMatNonLinearPartsAsync(inputAfterSteps, SkipOuterLoopFunctions: true).ConfigureAwait(false);
+                inputAfterSteps = SMat * inputAfterSteps + inputVector;
+
+                // Residual-based convergence: stop when the field change is negligible.
+                double delta = (inputAfterSteps - previousField).L2Norm();
+                converged = delta < convergenceEpsilon;
+            }
+            return ConvertToDictWithGuids(inputAfterSteps);
+        }
+
         private async Task RecomputeSMatNonLinearPartsAsync(MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector, bool SkipOuterLoopFunctions = true)
         {
             foreach (var connection in NonLinearConnections)
