@@ -174,15 +174,16 @@ namespace CAP_Core.LightCalculation
             if (maxIterations < 1) return new Dictionary<Guid, Complex>();
 
             // Update SMat using non-linear connections that don't depend on the current field.
-            await RecomputeSMatNonLinearPartsAsync(inputVector, SkipOuterLoopFunctions: false).ConfigureAwait(false);
+            await RecomputeSMatNonLinearPartsAsync(inputVector, SkipOuterLoopFunctions: false);
             try
             {
                 // The whole iteration runs as ONE background task: a task hop per iteration
                 // resumed on the caller's context (the UI dispatcher) after every step, so a
-                // slowly converging ring spent its time waiting on thread switches.
+                // slowly converging ring spent its time waiting on thread switches. The single
+                // await below still resumes on the caller's context, as callers expect.
                 return await Task.Run(
                     () => IterateToConvergenceAsync(inputVector, maxIterations, convergenceEpsilon, cancellation.Token),
-                    cancellation.Token).ConfigureAwait(false);
+                    cancellation.Token);
             }
             catch (OperationCanceledException)
             {

@@ -22,7 +22,7 @@ jobs:
   nunit_tests:
     name: 🔍 xUnit Tests
     runs-on: ubuntu-latest
-    # Safety net: a run takes ~10 min (setup, build, three ~4-min test shards).
+    # Safety net: a run takes ~12 min (setup, build, three test shards).
     # Anything beyond 50 min is a hang.
     timeout-minutes: 50
 
@@ -157,15 +157,15 @@ jobs:
               --logger "console;verbosity=minimal" \
               > "TestResults/${name}.log" 2>&1
           }
-          # Three shards — one per runner core besides the build/OS. Five shards made every
-          # shard 3-4x slower (the four-core runner thrashed); three ran at ~test speed.
-          # Balanced by namespace on measured durations, ~4.3 min of tests each.
-          shard_a='FullyQualifiedName~UnitTests.Integration.|FullyQualifiedName~UnitTests.Components.|FullyQualifiedName~UnitTests.PdkOffset.'
-          shard_b='FullyQualifiedName~UnitTests.Export.|FullyQualifiedName~UnitTests.Routing.'
-          run_shard integration-components "$shard_a" &
-          run_shard export-routing         "$shard_b" &
-          run_shard everything-else \
-            "FullyQualifiedName!~UnitTests.Integration.&FullyQualifiedName!~UnitTests.Components.&FullyQualifiedName!~UnitTests.PdkOffset.&FullyQualifiedName!~UnitTests.Export.&FullyQualifiedName!~UnitTests.Routing." &
+          # Shard by Category, the composition that has run reliably for months.
+          # Mixing slow UI test classes into other shards (by namespace, or five
+          # shards) deadlocked on the Linux runner: xUnit runs a collection inline
+          # on whichever thread finishes a class fixture, and Avalonia's headless
+          # test case blocks that thread — reproduced in a Linux container, not on
+          # Windows. The test fixes shrank the formerly 16-min slow-core shard to ~5.
+          run_shard fast      'Category!=Slow' &
+          run_shard slow-ui   'Category=Slow&FullyQualifiedName~UnitTests.UI.' &
+          run_shard slow-core 'Category=Slow&FullyQualifiedName!~UnitTests.UI.' &
           status=0
           for pid in $(jobs -p); do wait "$pid" || status=1; done
           for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done
