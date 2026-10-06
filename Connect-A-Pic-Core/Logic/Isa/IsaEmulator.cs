@@ -12,6 +12,7 @@ namespace CAP_Core.Logic.Isa
         private readonly IIsaDataMemory _dataMemory;
         private readonly IIsaAlu _alu;
         private readonly IIsaZeroFlag _zeroFlag;
+        private readonly IIsaAccumulator _accumulator;
 
         /// <summary>
         /// Creates a machine with the given program loaded into the ROM.
@@ -36,9 +37,14 @@ namespace CAP_Core.Logic.Isa
         /// their RAM operand from. Defaults to <see cref="GoldenIsaDataMemory"/>
         /// (the C# golden model). No other instruction is affected.
         /// </param>
+        /// <param name="accumulator">
+        /// The accumulator that every instruction reads and writes its working
+        /// value through. Defaults to <see cref="GoldenIsaAccumulator"/> (the C#
+        /// golden model). No other machine state is affected.
+        /// </param>
         /// <exception cref="ArgumentException">The program is larger than the ROM.</exception>
         public IsaEmulator(byte[] program, IIsaAlu? alu = null, IIsaZeroFlag? zeroFlag = null,
-            IIsaDataMemory? dataMemory = null)
+            IIsaDataMemory? dataMemory = null, IIsaAccumulator? accumulator = null)
         {
             if (program.Length > IsaMachine.ProgramRomWords)
             {
@@ -52,13 +58,14 @@ namespace CAP_Core.Logic.Isa
             _alu = alu ?? new GoldenIsaAlu();
             _zeroFlag = zeroFlag ?? new GoldenIsaZeroFlag();
             _dataMemory = dataMemory ?? new GoldenIsaDataMemory();
+            _accumulator = accumulator ?? new GoldenIsaAccumulator();
         }
 
         /// <summary>Address of the next instruction to execute (0–15).</summary>
         public int ProgramCounter { get; private set; }
 
-        /// <summary>The accumulator, always in the range 0–15.</summary>
-        public int Accumulator { get; private set; }
+        /// <summary>The accumulator, always in the range 0–15, read through the accumulator seam.</summary>
+        public int Accumulator => _accumulator.Read();
 
         /// <summary>The 4-word data RAM, read through the data memory.</summary>
         public IReadOnlyList<int> Ram =>
@@ -74,8 +81,8 @@ namespace CAP_Core.Logic.Isa
         public void Reset()
         {
             ProgramCounter = 0;
-            Accumulator = 0;
             IsHalted = false;
+            _accumulator.Reset();
             _dataMemory.Reset();
         }
 
@@ -101,25 +108,25 @@ namespace CAP_Core.Logic.Isa
             switch (instruction.Opcode)
             {
                 case IsaOpcode.Load:
-                    Accumulator = operand;
+                    _accumulator.Write(operand);
                     break;
                 case IsaOpcode.Add:
-                    Accumulator = _alu.Add(Accumulator, ReadRam(operand));
+                    _accumulator.Write(_alu.Add(_accumulator.Read(), ReadRam(operand)));
                     break;
                 case IsaOpcode.And:
-                    Accumulator = _alu.And(Accumulator, ReadRam(operand));
+                    _accumulator.Write(_alu.And(_accumulator.Read(), ReadRam(operand)));
                     break;
                 case IsaOpcode.Not:
-                    Accumulator = _alu.Not(Accumulator);
+                    _accumulator.Write(_alu.Not(_accumulator.Read()));
                     break;
                 case IsaOpcode.Store:
-                    _dataMemory.Write(CheckedRamAddress(operand), Accumulator);
+                    _dataMemory.Write(CheckedRamAddress(operand), _accumulator.Read());
                     break;
                 case IsaOpcode.Jmp:
                     nextPc = operand;
                     break;
                 case IsaOpcode.Jz:
-                    nextPc = _zeroFlag.IsZero(Accumulator) ? operand : nextPc;
+                    nextPc = _zeroFlag.IsZero(_accumulator.Read()) ? operand : nextPc;
                     break;
                 case IsaOpcode.Halt:
                     IsHalted = true;
