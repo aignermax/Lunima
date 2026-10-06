@@ -147,7 +147,11 @@ jobs:
           mkdir -p TestResults
           run_shard() {
             local name="$1" filter="$2"
+            # A test hanging past 5 min aborts its shard with the test's name in the log
+            # (instead of silently eating the 50-min job budget); no dump, to keep the
+            # artifact small.
             dotnet test --no-build --filter "$filter" \
+              --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
               --results-directory TestResults \
               --logger "trx;LogFileName=${name}.trx" \
               --logger "console;verbosity=minimal" \
