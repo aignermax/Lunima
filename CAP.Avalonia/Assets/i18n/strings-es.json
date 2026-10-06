@@ -636,6 +636,7 @@
   "IsaPlayground.AccBinaryLabel": "ACC (binario)",
   "IsaPlayground.RamLabel": "RAM",
   "IsaPlayground.RamOnLightChip": "en luz",
+  "IsaPlayground.UnitChipsHint": "Las partes verdes las calcula la red fotónica que construiste; las grises se simulan electrónicamente.",
   "IsaPlayground.StatusLabel": "Estado",
   "IsaPlayground.StatusRunning": "en ejecución",
   "IsaPlayground.StatusHalted": "DETENIDO",
