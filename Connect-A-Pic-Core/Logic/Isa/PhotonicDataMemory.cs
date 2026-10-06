@@ -10,6 +10,8 @@ namespace CAP_Core.Logic.Isa
     /// sixteen nested register bits). Every <c>STORE</c> drives the address and
     /// data inputs with LOAD high and runs one clock <see cref="LogicNetworkEvaluator.Step"/>;
     /// every RAM-operand read drives the address with LOAD low and reads the Q taps —
+    /// or the names of a custom <see cref="IsaDataMemorySignalMap"/>, so one chip can
+    /// expose the RAM next to an ALU without a name collision —
     /// so the program's memory lives in photonic registers and the traces can be
     /// compared against <see cref="GoldenIsaDataMemory"/> cycle by cycle. The network
     /// is validated at construction, so a design that does not expose the expected
@@ -20,58 +22,58 @@ namespace CAP_Core.Logic.Isa
         /// <summary>The load-enable name the shipped RAM 4x4 example exposes.</summary>
         public const string DefaultLoadSignal = "LOAD";
 
-        /// <summary>The address-bit count of the ISA RAM: four words need two bits (A0, A1).</summary>
-        private const int AddressBits = 2;
-
         private readonly LogicNetworkEvaluator _network;
-        private readonly string _loadSignal;
+        private readonly IsaDataMemorySignalMap _signalMap;
 
         /// <summary>The address bit names, LSB first (A0, A1).</summary>
-        public static IReadOnlyList<string> AddressBitNames { get; } =
-            Enumerable.Range(0, AddressBits).Select(bit => $"A{bit}").ToArray();
+        public static IReadOnlyList<string> AddressBitNames => IsaDataMemorySignalMap.Default.Address;
 
         /// <summary>The data-in bit names, LSB first (D0–D3).</summary>
-        public static IReadOnlyList<string> DataInBitNames { get; } =
-            Enumerable.Range(0, IsaMachine.DataBits).Select(bit => $"D{bit}").ToArray();
+        public static IReadOnlyList<string> DataInBitNames => IsaDataMemorySignalMap.Default.DataIn;
 
         /// <summary>The read-tap bit names, LSB first (Q0–Q3).</summary>
-        public static IReadOnlyList<string> DataOutBitNames { get; } =
-            Enumerable.Range(0, IsaMachine.DataBits).Select(bit => $"Q{bit}").ToArray();
+        public static IReadOnlyList<string> DataOutBitNames => IsaDataMemorySignalMap.Default.DataOut;
 
         /// <summary>
-        /// True when <paramref name="network"/> exposes every address bit A0–A1, the
-        /// load enable <paramref name="loadSignal"/>, every data-in bit D0–D3 and
-        /// every read tap Q0–Q3 — the check the constructor makes, without throwing,
-        /// so callers can decide up-front whether a built network can serve as the
+        /// True when <paramref name="network"/> exposes every signal of
+        /// <paramref name="signalMap"/> (default: the shipped names A0–A1, LOAD,
+        /// D0–D3 → Q0–Q3) — the check the constructor makes, without throwing, so
+        /// callers can decide up-front whether a built network can serve as the
         /// photonic data memory. Additional inputs/outputs are allowed: extra inputs
         /// are tied to 0 on every access.
         /// </summary>
-        public static bool Accepts(LogicNetworkEvaluator? network, string loadSignal = DefaultLoadSignal) =>
-            network != null
-            && RequiredInputNames(loadSignal).All(network.InputPinNames.Contains)
-            && DataOutBitNames.All(network.OutputPinNames.Contains);
+        public static bool Accepts(LogicNetworkEvaluator? network, IsaDataMemorySignalMap? signalMap = null)
+        {
+            var map = signalMap ?? IsaDataMemorySignalMap.Default;
+            return network != null
+                && map.AllInputs.All(network.InputPinNames.Contains)
+                && map.DataOut.All(network.OutputPinNames.Contains);
+        }
 
         /// <summary>
         /// Wraps an assembled RAM 4x4 network.
         /// </summary>
         /// <param name="network">
-        /// The logic network of the ISA-sized RAM. It must expose the input signals
-        /// A0, A1, <paramref name="loadSignal"/> and D0–D3, and the output taps Q0–Q3.
+        /// The logic network of the ISA-sized RAM. It must expose the input and
+        /// output signals named by <paramref name="signalMap"/>.
         /// </param>
-        /// <param name="loadSignal">
-        /// The name of the load-enable input; defaults to <see cref="DefaultLoadSignal"/>,
-        /// the name the shipped example uses.
+        /// <param name="signalMap">
+        /// The address/load/data signal names to drive and read; null uses the
+        /// shipped names A0–A1, LOAD, D0–D3 → Q0–Q3
+        /// (<see cref="IsaDataMemorySignalMap.Default"/>). Pass a prefixed map
+        /// (<see cref="IsaDataMemorySignalMap.WithPrefix"/>) when the network
+        /// exposes the RAM next to an ALU that reuses the plain names.
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="network"/> is null.</exception>
         /// <exception cref="ArgumentException">
         /// The network does not expose one of the expected signals; the message names
         /// the first missing signal.
         /// </exception>
-        public PhotonicDataMemory(LogicNetworkEvaluator network, string loadSignal = DefaultLoadSignal)
+        public PhotonicDataMemory(LogicNetworkEvaluator network, IsaDataMemorySignalMap? signalMap = null)
         {
             _network = network ?? throw new ArgumentNullException(nameof(network));
-            _loadSignal = loadSignal;
-            foreach (var signal in RequiredInputNames(loadSignal))
+            _signalMap = signalMap ?? IsaDataMemorySignalMap.Default;
+            foreach (var signal in _signalMap.AllInputs)
             {
                 if (!network.InputPinNames.Contains(signal))
                 {
@@ -82,7 +84,7 @@ namespace CAP_Core.Logic.Isa
                 }
             }
 
-            foreach (var tap in DataOutBitNames)
+            foreach (var tap in _signalMap.DataOut)
             {
                 if (!network.OutputPinNames.Contains(tap))
                 {
@@ -118,7 +120,7 @@ namespace CAP_Core.Logic.Isa
             int value = 0;
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                if (outputs[DataOutBitNames[bit]])
+                if (outputs[_signalMap.DataOut[bit]])
                 {
                     value |= 1 << bit;
                 }
@@ -134,17 +136,17 @@ namespace CAP_Core.Logic.Isa
             WriteCount++;
             var bits = AllInputsZero();
             DriveAddress(bits, checkedAddress);
-            bits[_loadSignal] = true;
+            bits[_signalMap.Load] = true;
             int masked = value & IsaMachine.MaxDataValue;
             for (var bit = 0; bit < IsaMachine.DataBits; bit++)
             {
-                bits[DataInBitNames[bit]] = ((masked >> bit) & 1) == 1;
+                bits[_signalMap.DataIn[bit]] = ((masked >> bit) & 1) == 1;
             }
 
             _network.Evaluate(bits);
             _network.Step();
 
-            bits[_loadSignal] = false;
+            bits[_signalMap.Load] = false;
             _network.Evaluate(bits);
         }
 
@@ -154,17 +156,14 @@ namespace CAP_Core.Logic.Isa
             _network.ResetRegisters();
         }
 
-        private static IEnumerable<string> RequiredInputNames(string loadSignal) =>
-            AddressBitNames.Concat(new[] { loadSignal }).Concat(DataInBitNames);
-
         private Dictionary<string, bool> AllInputsZero() =>
             _network.InputPinNames.ToDictionary(name => name, _ => false);
 
         private void DriveAddress(Dictionary<string, bool> bits, int address)
         {
-            for (var bit = 0; bit < AddressBits; bit++)
+            for (var bit = 0; bit < _signalMap.Address.Count; bit++)
             {
-                bits[AddressBitNames[bit]] = ((address >> bit) & 1) == 1;
+                bits[_signalMap.Address[bit]] = ((address >> bit) & 1) == 1;
             }
         }
 
