@@ -407,6 +407,7 @@ public partial class FileOperationsViewModel : ObservableObject
             }
 
             var componentsList = _canvas.Components.ToList();
+            var unresolvedConnectionPins = new List<string>();
             var designData = new DesignFileData
             {
                 // Only save non-group, non-child components in the main list
@@ -417,16 +418,24 @@ public partial class FileOperationsViewModel : ObservableObject
                     .ToList(),
                 Connections = _canvas.Connections.Select(c =>
                 {
-                    var (startIdx, startPinName) = ResolveConnectionEndpoint(componentsList, c.Connection.StartPin);
-                    var (endIdx, endPinName) = ResolveConnectionEndpoint(componentsList, c.Connection.EndPin);
+                    var (startIdx, startPinName, startId, startAncestor) =
+                        ResolveConnectionEndpointWithOwner(componentsList, c.Connection.StartPin);
+                    var (endIdx, endPinName, endId, endAncestor) =
+                        ResolveConnectionEndpointWithOwner(componentsList, c.Connection.EndPin);
+                    if (startId == null)
+                        unresolvedConnectionPins.Add(c.Connection.StartPin.Name);
+                    if (endId == null)
+                        unresolvedConnectionPins.Add(c.Connection.EndPin.Name);
                     return new ConnectionData
                     {
                         StartComponentIndex = startIdx,
                         StartPinName = startPinName,
                         EndComponentIndex = endIdx,
                         EndPinName = endPinName,
-                        StartComponentId = startIdx >= 0 ? componentsList[startIdx].Component.Identifier : null,
-                        EndComponentId = endIdx >= 0 ? componentsList[endIdx].Component.Identifier : null,
+                        StartComponentId = startId,
+                        EndComponentId = endId,
+                        StartAncestorGroupId = startAncestor,
+                        EndAncestorGroupId = endAncestor,
                         CachedSegments = c.Connection.RoutedPath != null
                             ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
                             : null,
@@ -519,7 +528,19 @@ public partial class FileOperationsViewModel : ObservableObject
             CurrentFilePath = filePath;
             HasUnsavedChanges = false;
             _recentProjects?.RecordProject(filePath);
-            UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
+            if (unresolvedConnectionPins.Count > 0)
+            {
+                // Never drop a wire silently: an endpoint that resolved to neither a
+                // canvas component nor any group member would vanish on reload.
+                var warning = $"{unresolvedConnectionPins.Count} connection endpoint(s) could not be resolved " +
+                              $"({string.Join(", ", unresolvedConnectionPins)}) and were not saved.";
+                _errorConsole?.LogWarning(warning);
+                UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)} — {warning}");
+            }
+            else
+            {
+                UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
+            }
         }
         catch (Exception ex)
         {
@@ -880,10 +901,37 @@ public partial class FileOperationsViewModel : ObservableObject
     internal static (int index, string pinName) ResolveConnectionEndpoint(
         List<ComponentViewModel> components, PhysicalPin pin)
     {
+        var (index, pinName, _, _) = ResolveConnectionEndpointWithOwner(components, pin);
+        return (index, pinName);
+    }
+
+    /// <summary>
+    /// Resolves which canvas component, pin name and stable identifiers to use when
+    /// serializing a connection endpoint. Handles regular components (direct match),
+    /// group external pins (via InternalPin lookup) and — at any nesting depth — pins of
+    /// components inside a group that are not exposed as an external pin: those persist
+    /// the owning child's identifier together with the identifier of the top-level
+    /// ancestor group, so the load path can resolve the endpoint inside that reconstructed
+    /// group instead of silently dropping the wire. The ancestor id is required because
+    /// child identifiers are only unique within one group, not across groups (two
+    /// instances of the same gate template share child identifiers), and because the
+    /// component index is not stable across save/load when a design mixes standalone
+    /// components and groups. A null component identifier means the endpoint could not
+    /// be resolved at all.
+    /// </summary>
+    /// <param name="components">All top-level components on the canvas.</param>
+    /// <param name="pin">The physical pin on the connection endpoint.</param>
+    /// <returns>
+    /// The component index, pin name, owning component identifier and — only for nested
+    /// endpoints — the top-level ancestor group identifier to store in ConnectionData.
+    /// </returns>
+    internal static (int index, string pinName, string? componentId, string? ancestorGroupId)
+        ResolveConnectionEndpointWithOwner(List<ComponentViewModel> components, PhysicalPin pin)
+    {
         // Direct match: pin belongs to a top-level canvas component
         int directIndex = components.FindIndex(c => c.Component == pin.ParentComponent);
         if (directIndex >= 0)
-            return (directIndex, pin.Name);
+            return (directIndex, pin.Name, components[directIndex].Component.Identifier, null);
 
         // Group match: pin is the InternalPin of a group's external pin
         for (int i = 0; i < components.Count; i++)
@@ -892,11 +940,41 @@ public partial class FileOperationsViewModel : ObservableObject
             {
                 var match = group.ExternalPins.FirstOrDefault(ep => ep.InternalPin == pin);
                 if (match != null)
-                    return (i, match.Name);
+                    return (i, match.Name, group.Identifier, null);
             }
         }
 
-        return (-1, pin.Name);
+        // Nested match: pin sits on a non-exposed pin of a component inside a group
+        for (int i = 0; i < components.Count; i++)
+        {
+            if (components[i].Component is ComponentGroup group)
+            {
+                var owner = FindPinOwnerRecursive(group, pin);
+                if (owner != null)
+                    return (i, pin.Name, owner.Identifier, group.Identifier);
+            }
+        }
+
+        return (-1, pin.Name, null, null);
+    }
+
+    /// <summary>
+    /// Recursively finds the child component (at any nesting depth) that owns the given pin.
+    /// </summary>
+    private static Component? FindPinOwnerRecursive(ComponentGroup group, PhysicalPin pin)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child == pin.ParentComponent || child.PhysicalPins.Contains(pin))
+                return child;
+            if (child is ComponentGroup nested)
+            {
+                var found = FindPinOwnerRecursive(nested, pin);
+                if (found != null)
+                    return found;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -1727,16 +1805,66 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Finds a canvas component by identifier string (preferred) or by index (fallback for old files).
+    /// The identifier lookup also searches group children at any nesting depth, because a saved
+    /// connection endpoint can reference a non-exposed pin of a component inside a group. For such
+    /// nested endpoints <paramref name="ancestorGroupId"/> names the top-level ancestor group and
+    /// scopes the search — child identifiers are only unique within one group, not across groups,
+    /// and the saved component index is not stable across save/load for mixed designs.
     /// Returns null if the component cannot be found.
     /// </summary>
-    private ComponentViewModel? ResolveComponentForLoad(string? componentId, int fallbackIndex)
+    private Component? ResolveComponentForLoad(string? componentId, int fallbackIndex, string? ancestorGroupId)
     {
         if (!string.IsNullOrEmpty(componentId))
-            return _canvas.Components.FirstOrDefault(c => c.Component.Identifier == componentId);
+        {
+            var topLevel = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == componentId);
+            if (topLevel != null)
+                return topLevel.Component;
+
+            // Nested endpoint: search inside the persisted top-level ancestor group first.
+            if (!string.IsNullOrEmpty(ancestorGroupId)
+                && _canvas.Components.FirstOrDefault(c => c.Component.Identifier == ancestorGroupId)
+                        ?.Component is ComponentGroup ancestor)
+            {
+                var scoped = FindComponentByIdentifierRecursive(ancestor, componentId);
+                if (scoped != null)
+                    return scoped;
+            }
+
+            // Unscoped fallback (ancestor missing or saved by an older format).
+            foreach (var vm in _canvas.Components)
+            {
+                if (vm.Component is ComponentGroup group)
+                {
+                    var nested = FindComponentByIdentifierRecursive(group, componentId);
+                    if (nested != null)
+                        return nested;
+                }
+            }
+            return null;
+        }
 
         if (fallbackIndex >= 0 && fallbackIndex < _canvas.Components.Count)
-            return _canvas.Components[fallbackIndex];
+            return _canvas.Components[fallbackIndex].Component;
 
+        return null;
+    }
+
+    /// <summary>
+    /// Recursively finds the child component with the given identifier inside a group.
+    /// </summary>
+    internal static Component? FindComponentByIdentifierRecursive(ComponentGroup group, string identifier)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child.Identifier == identifier)
+                return child;
+            if (child is ComponentGroup nested)
+            {
+                var found = FindComponentByIdentifierRecursive(nested, identifier);
+                if (found != null)
+                    return found;
+            }
+        }
         return null;
     }
 
@@ -1765,14 +1893,16 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     private void LoadConnectionFromData(ConnectionData connData)
     {
-        var startComp = ResolveComponentForLoad(connData.StartComponentId, connData.StartComponentIndex);
-        var endComp = ResolveComponentForLoad(connData.EndComponentId, connData.EndComponentIndex);
+        var startComp = ResolveComponentForLoad(
+            connData.StartComponentId, connData.StartComponentIndex, connData.StartAncestorGroupId);
+        var endComp = ResolveComponentForLoad(
+            connData.EndComponentId, connData.EndComponentIndex, connData.EndAncestorGroupId);
 
         if (startComp == null || endComp == null)
             return;
 
-        var startPin = ResolvePin(startComp.Component, connData.StartPinName);
-        var endPin = ResolvePin(endComp.Component, connData.EndPinName);
+        var startPin = ResolvePin(startComp, connData.StartPinName);
+        var endPin = ResolvePin(endComp, connData.EndPinName);
 
         if (startPin == null || endPin == null)
             return;
@@ -1790,8 +1920,8 @@ public partial class FileOperationsViewModel : ObservableObject
         if (cachedPath != null && cachedPath.IsValid)
         {
             var (startOk, endOk) = CachedRouteValidator.CheckPinDirections(startPin, endPin, cachedPath);
-            if (!startOk) _pinCalibrationMigratedComponents.Add(startComp.Component.Name);
-            if (!endOk) _pinCalibrationMigratedComponents.Add(endComp.Component.Name);
+            if (!startOk) _pinCalibrationMigratedComponents.Add(startComp.Name);
+            if (!endOk) _pinCalibrationMigratedComponents.Add(endComp.Name);
             pinCalibrationChanged = !startOk || !endOk;
             if (pinCalibrationChanged) cachedPath = null;
         }

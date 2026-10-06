@@ -1719,6 +1719,18 @@ public class ConnectionData
     /// </summary>
     public string? EndComponentId { get; set; }
 
+    /// <summary>
+    /// Identifier of the top-level group containing the start endpoint's component, set only
+    /// when the endpoint is a non-exposed pin of a component nested inside a group (#1444):
+    /// child identifiers are unique within one group but not across groups (two instances of
+    /// the same template share them), so the ancestor scopes the load-side search. Null for
+    /// top-level endpoints and in files that predate the field.
+    /// </summary>
+    public string? StartAncestorGroupId { get; set; }
+
+    /// <summary>Ancestor group identifier for the end endpoint — see <see cref="StartAncestorGroupId"/>.</summary>
+    public string? EndAncestorGroupId { get; set; }
+
     public List<PathSegmentData>? CachedSegments { get; set; }
     public bool? IsBlockedFallback { get; set; }
 
