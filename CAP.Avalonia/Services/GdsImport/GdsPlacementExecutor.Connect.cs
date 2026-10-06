@@ -106,6 +106,10 @@ public sealed partial class GdsPlacementExecutor
                         _centerlineRoutes.Add((connectionVm.Connection, centerline, connection.SourcePolygons));
                         report.CenterlineRouteCount++;
                     }
+                    else if (connection.IsRouteDerived)
+                    {
+                        _tracedRoutes.Add((connectionVm.Connection, connection.SourcePolygons));
+                    }
                     // Hardcoded like a .lun-loaded cached route: frozen, so no
                     // later routing pass replaces the imported geometry (an
                     // endpoint move unfreezes and re-routes, as for any frozen route).
@@ -139,6 +143,13 @@ public sealed partial class GdsPlacementExecutor
         }
 
         report.CachedRouteCount = frozenCached;
+        if (_tracedRoutes.Count > 0)
+        {
+            report.Warnings.Add(string.Format(CultureInfo.InvariantCulture,
+                "{0} imported route(s) are not clean waveguide ribbons and were kept as traced outlines " +
+                "— they render and export as drawn, but their simulated length and loss are approximate.",
+                _tracedRoutes.Count));
+        }
         report.ReroutedCount = awaitingRoute;
         if (frozenCached > 0)
         {
@@ -208,12 +219,6 @@ public sealed partial class GdsPlacementExecutor
     }
 
     /// <summary>
-    /// The recovered route for a connection whose geometry the import already
-    /// knows, or null when the batch routing pass must route it: route-derived
-    /// connections trace the polygons they were derived from (anchored at the
-    /// placed pins), coincident-pin abutments get the exact pin-to-pin straight.
-    /// </summary>
-    /// <summary>
     /// The drawn route's real centerline (straights and arcs fitted to its polygons),
     /// or null for abutments, polygon-less plans, and polygons that are not clean
     /// waveguide ribbons — those keep the traced-outline fallback.
@@ -231,6 +236,12 @@ public sealed partial class GdsPlacementExecutor
             originOffset.X, originOffset.Y);
     }
 
+    /// <summary>
+    /// The recovered route for a connection whose geometry the import already
+    /// knows, or null when the batch routing pass must route it: route-derived
+    /// connections trace the polygons they were derived from (anchored at the
+    /// placed pins), coincident-pin abutments get the exact pin-to-pin straight.
+    /// </summary>
     private static RoutedPath? TryBuildCachedRoute(
         GdsConnectionInstruction connection,
         PhysicalPin startPin,

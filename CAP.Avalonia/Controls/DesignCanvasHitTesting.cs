@@ -141,7 +141,7 @@ public class DesignCanvasHitTesting
             else
             {
                 var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
-                if (rect.Contains(canvasPoint) && OutlineHitTester.Hits(comp.Component, canvasPoint))
+                if (rect.Contains(canvasPoint) && OutlineHitTester.Hits(comp.Component, canvasPoint, OutlineHitTester.ToleranceAt(vm.ViewZoom)))
                 {
                     return comp;
                 }

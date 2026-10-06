@@ -45,13 +45,27 @@ public class FrozenWaveguidePath : ICloneable
     /// </summary>
     public int? DataType { get; set; }
 
+    private AsDrawnGeometry? _asDrawnGeometry;
+    private RouteShapeSignature? _asDrawnRoute;
+
     /// <summary>
     /// The exact polygons this geometry was drawn with in an imported layout (absolute
     /// canvas coordinates), or null. Rendered and exported verbatim instead of the
     /// centerline; moves with the path (<see cref="TranslateBy"/>) and travels with the
     /// connection through grouping (<see cref="CaptureSettingsFrom"/>/<see cref="ApplySettingsTo"/>).
+    /// Setting binds the polygons to the CURRENT <see cref="Path"/> shape: any other change
+    /// of the path (a group rotation, a re-route in edit mode) hides them, so stale polygons
+    /// are never drawn or exported.
     /// </summary>
-    public AsDrawnGeometry? AsDrawnGeometry { get; set; }
+    public AsDrawnGeometry? AsDrawnGeometry
+    {
+        get => _asDrawnGeometry is not null && _asDrawnRoute is { } route && route.Matches(Path) ? _asDrawnGeometry : null;
+        set
+        {
+            _asDrawnGeometry = value;
+            _asDrawnRoute = value is null ? null : RouteShapeSignature.Of(Path);
+        }
+    }
 
     /// <summary>
     /// Unique identifier for this frozen path.
@@ -277,7 +291,15 @@ public class FrozenWaveguidePath : ICloneable
     /// <param name="deltaY">Y offset in micrometers.</param>
     public void TranslateBy(double deltaX, double deltaY)
     {
-        AsDrawnGeometry = AsDrawnGeometry?.Translated(deltaX, deltaY);
+        var asDrawn = AsDrawnGeometry;
+        TranslateSegments(deltaX, deltaY);
+        // Re-bind after the segments moved: the polygons follow the path's new shape.
+        if (asDrawn is not null)
+            AsDrawnGeometry = asDrawn.Translated(deltaX, deltaY);
+    }
+
+    private void TranslateSegments(double deltaX, double deltaY)
+    {
         if (Path?.Segments == null) return;
 
         foreach (var segment in Path.Segments)

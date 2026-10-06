@@ -134,12 +134,13 @@ public sealed partial class GdsPlacementExecutor
         var templates = _templateProvider();
         PlacedCountSoFar = 0;
         _centerlineRoutes.Clear();
+        _tracedRoutes.Clear();
 
         // Computed BEFORE anything is placed: the canvas must still hold only the
         // pre-import content for the free-space rule.
         var originOffset = ComputeImportOriginOffset(plan);
         var placedViewModels = await PlaceAllAsync(plan, templates, report, progress, ct, originOffset);
-        MarkBackgroundComponents(plan, placedViewModels);
+        MarkBackgroundComponents(plan, placedViewModels, report);
         if (originOffset != (0.0, 0.0) && report.PlacedCount > 0)
         {
             // Only a placement that actually happened may claim the shift — a plan

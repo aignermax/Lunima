@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CAP.Avalonia.Controls.Rendering;
+using CAP.Avalonia.Services.GdsImport.LayerVisibility;
 using CAP_Core.Components.Core;
 using Shouldly;
 using Xunit;
@@ -28,21 +29,44 @@ public class OutlineRasterCacheTests
         .ToArray();
 
     [AvaloniaFact]
-    public void ZoomedOut_DrawsOneImageInsteadOfThePolygons_AndPaintsThem()
+    public void ZoomedOut_SecondFrameDrawsOneImageInsteadOfThePolygons_AndPaintsThem()
     {
         var renderer = new ComponentOutlineRenderer();
         const double zoom = 0.1;
-        using var bitmap = new RenderTargetBitmap(new PixelSize(500, 100));
-        using (var ctx = bitmap.CreateDrawingContext())
-        {
-            ctx.FillRectangle(Brushes.Black, new Rect(0, 0, 500, 100));
-            using (ctx.PushTransform(Matrix.CreateScale(zoom, zoom)))
-                renderer.Draw(ctx, 0, 0, 4000, 50, 0, ManyPolygons, false, zoom);
-        }
+        DrawZoomedOut(renderer, zoom, null);
+        renderer.IssuedGeometryCount.ShouldBeGreaterThan(1, "the first sighting draws vectors — no bitmap for one-off geometry");
+
+        renderer.ResetDrawCounters();
+        using var bitmap = DrawZoomedOut(renderer, zoom, null);
 
         renderer.IssuedGeometryCount.ShouldBe(1, "one cached image for the whole outline list");
         CountLitPixels(bitmap, new PixelRect(0, 0, 400, 5)).ShouldBeGreaterThan(100,
             "the cached image still paints the outlines");
+    }
+
+    [AvaloniaFact]
+    public void ZoomedOut_LayerVisibilityChange_DoesNotReuseTheOldBitmap()
+    {
+        var renderer = new ComponentOutlineRenderer();
+        var visibility = new GdsLayerVisibilityState();
+        DrawZoomedOut(renderer, 0.1, visibility).Dispose();
+        DrawZoomedOut(renderer, 0.1, visibility).Dispose();
+
+        visibility.Set(1, 0, isVisible: false, opacity: 1.0);
+        renderer.ResetDrawCounters();
+        using var hidden = DrawZoomedOut(renderer, 0.1, visibility);
+
+        CountLitPixels(hidden, new PixelRect(0, 0, 400, 5)).ShouldBe(0, "a hidden layer must not paint from a stale bitmap");
+    }
+
+    private static RenderTargetBitmap DrawZoomedOut(ComponentOutlineRenderer renderer, double zoom, GdsLayerVisibilityState? visibility)
+    {
+        var bitmap = new RenderTargetBitmap(new PixelSize(500, 100));
+        using var ctx = bitmap.CreateDrawingContext();
+        ctx.FillRectangle(Brushes.Black, new Rect(0, 0, 500, 100));
+        using (ctx.PushTransform(Matrix.CreateScale(zoom, zoom)))
+            renderer.Draw(ctx, 0, 0, 4000, 50, 0, ManyPolygons, false, zoom, layerVisibility: visibility);
+        return bitmap;
     }
 
     [AvaloniaFact]

@@ -223,7 +223,13 @@ internal static partial class GdsRouteConnectivityMatcher
             {
                 var labelled = touches.Where(t => !t.Pin.IsGuessed).ToList();
                 if (labelled.Count == 2)
+                {
+                    var dropped = string.Join(", ", touches.Where(t => t.Pin.IsGuessed).Select(t => $"'{t.Pin.Name}'"));
+                    infos.Add(
+                        $"Top-cell route between '{labelled[0].Pin.Name}' and '{labelled[1].Pin.Name}': " +
+                        $"guessed edge pin(s) {dropped} on the same joint ignored.");
                     touches = labelled;
+                }
             }
 
             if (touches.Count != 2)

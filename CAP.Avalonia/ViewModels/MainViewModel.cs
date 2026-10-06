@@ -1622,6 +1622,9 @@ public class ChildComponentData
     /// </summary>
     public bool? Mirrored { get; set; }
 
+    /// <summary>True for imported background geometry inside a group (see <c>ComponentData.IsBackground</c>).</summary>
+    public bool? IsBackground { get; set; }
+
     public double? SliderValue { get; set; }
 
     /// <summary>

@@ -154,6 +154,26 @@ public class RibbonCenterlineFitterTests
     }
 
     [Fact]
+    public void Fit_Taper_IsAPolylineBetweenTheCaps()
+    {
+        var taper = new List<(double X, double Y)> { (0, -0.5), (40, -1.5), (40, 1.5), (0, 0.5) };
+
+        var fit = RibbonCenterlineFitter.Fit(taper).ShouldNotBeNull();
+
+        fit.Kind.ShouldBe(RibbonFitKind.Polyline);
+        fit.Segments.Sum(s => s.LengthMicrometers).ShouldBe(40.0, 1e-6);
+    }
+
+    [Fact]
+    public void Fit_PolygonFarWiderThanItsCaps_IsNotARibbon()
+    {
+        // Two short end edges but a 10 µm wide body: a pad or splitter, not a waveguide.
+        var bulge = new List<(double X, double Y)> { (0, -0.5), (20, -5), (40, -0.5), (40, 0.5), (20, 5), (0, 0.5) };
+
+        RibbonCenterlineFitter.Fit(bulge).ShouldBeNull();
+    }
+
+    [Fact]
     public void Fit_Triangle_ReturnsNull()
     {
         RibbonCenterlineFitter.Fit(new List<(double X, double Y)> { (0, 0), (10, 0), (5, 5) }).ShouldBeNull();

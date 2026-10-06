@@ -270,35 +270,15 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         }
     }
 
-    private async Task RerouteAsync(IReadOnlyList<WaveguideConnectionViewModel> targets)
-    {
-        if (targets.Count == 0)
-            return;
-
-        IsRerouting = true;
-        try
-        {
-            var connections = targets.Select(t => t.Connection).ToList();
-            var before = RouteMetricsSnapshot.Capture(connections);
-            var drawn = SnapshotDrawnRoutes(targets);
-
-            _commandManager.ExecuteCommand(new RerouteImportedRoutesCommand(_canvas, targets));
-            // Execute fires the pass asynchronously (undo/redo path); awaiting a second
-            // pass here supersedes it and yields a deterministic "after" state.
-            await _canvas.RecalculateRoutesAsync();
-            int kept = KeepDrawnRouteWhereBlocked(drawn);
-            if (kept > 0)
-                await _canvas.RecalculateRoutesAsync();
-
-            var after = RouteMetricsSnapshot.Capture(connections);
-            ResultText = WithKeptNote(FormatDelta(targets.Count, before, after), kept);
-        }
-        finally
-        {
-            IsRerouting = false;
-            Refresh();
-        }
-    }
+    /// <summary>
+    /// Re-routes <paramref name="targets"/> through the same snapshot-based flow as
+    /// "re-route all": the undo step records the FINAL state (including routes kept drawn
+    /// because no free path existed), so redo reproduces exactly what the user saw.
+    /// </summary>
+    private Task RerouteAsync(IReadOnlyList<WaveguideConnectionViewModel> targets) =>
+        targets.Count == 0
+            ? Task.CompletedTask
+            : RerouteAllAsync(targets, Array.Empty<(ComponentGroup, List<FrozenWaveguidePath>)>());
 
     private static string FormatDelta(int count, RouteMetricsSnapshot before, RouteMetricsSnapshot after) =>
         string.Format(CultureInfo.CurrentCulture,

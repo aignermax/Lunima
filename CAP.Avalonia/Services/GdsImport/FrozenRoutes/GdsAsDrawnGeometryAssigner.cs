@@ -23,7 +23,10 @@ public sealed class GdsAsDrawnGeometryAssigner
     /// Largest bounding-box extent (µm) of a marker polygon (pin arrows, port marks
     /// that layout tools stamp at every piece end).
     /// </summary>
-    public const double MarkerMaxExtentUm = 5.0;
+    public const double MarkerMaxExtentUm = 2.5;
+
+    /// <summary>Most vertices a marker polygon has (pin arrows are 3–7-gons; vias and pads are not markers).</summary>
+    public const int MarkerMaxVertices = 12;
 
     /// <summary>How far (µm) a piece end may sit outside a marker's bounding box and still own it.</summary>
     public const double MarkerReachUm = 1.0;
@@ -113,6 +116,7 @@ public sealed class GdsAsDrawnGeometryAssigner
     /// </summary>
     private int FindMarkerOwner(OutlinePolygon polygon)
     {
+        if (polygon.Points.Count > MarkerMaxVertices + 1) return -1;
         double minX = polygon.Points.Min(p => p.X), maxX = polygon.Points.Max(p => p.X);
         double minY = polygon.Points.Min(p => p.Y), maxY = polygon.Points.Max(p => p.Y);
         if (maxX - minX > MarkerMaxExtentUm || maxY - minY > MarkerMaxExtentUm) return -1;

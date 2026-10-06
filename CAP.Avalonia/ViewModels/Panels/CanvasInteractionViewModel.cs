@@ -613,9 +613,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
             .Where(c => !c.Component.IsRoutingObstacle && Contains(c, x, y))
             .LastOrDefault();
 
-    private static bool Contains(ComponentViewModel c, double x, double y) =>
+    private bool Contains(ComponentViewModel c, double x, double y) =>
         x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height
-        && (!c.Component.IsRoutingObstacle || Controls.OutlineHitTester.Hits(c.Component, new global::Avalonia.Point(x, y)));
+        && (!c.Component.IsRoutingObstacle
+            || Controls.OutlineHitTester.Hits(c.Component, new global::Avalonia.Point(x, y),
+                Controls.OutlineHitTester.ToleranceAt(_canvas.ViewZoom)));
 
     private void SelectAt(double x, double y)
     {

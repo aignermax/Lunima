@@ -243,10 +243,15 @@ namespace CAP_Core.Components.Connections
                 }
 
                 // An endpoint moved: unfreeze and discard manual bend and segment-shift edits.
+                MarkDrawnRouteDisplaced();
                 IsRouteFrozen = false;
                 BendRadiusOverrides.Clear();
                 StraightShiftOffsets.Clear();
             }
+
+            // A drawn route a move pushed aside snaps back once its pins are back in place.
+            if (Type == WaveguideType.Auto && TryRestoreDrawnRoute(wavelengthNm))
+                return;
 
             // Update router settings. The router owns the process floor: it first attempts
             // max(connection radius, process minimum) and degrades to the connection radius

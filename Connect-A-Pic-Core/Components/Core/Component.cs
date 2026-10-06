@@ -411,6 +411,7 @@ public partial class Component : ICloneable
         clonedComponent.PhysicalOffsetY = PhysicalOffsetY;
         clonedComponent.RotationDegrees = RotationDegrees;
         clonedComponent.IsMirroredHorizontally = IsMirroredHorizontally;
+        clonedComponent.IsRoutingObstacle = IsRoutingObstacle;
         clonedComponent.NazcaOriginOffsetX = NazcaOriginOffsetX;
         clonedComponent.NazcaOriginOffsetY = NazcaOriginOffsetY;
         // The module is part of the component's geometry identity (it picks the Nazca cell):

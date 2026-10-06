@@ -807,6 +807,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 Rotation = (int)child.Rotation90CounterClock,
                 RotationDegrees = ComponentPoseTransform.GetNonCardinalRotationDegrees(child),
                 Mirrored = child.IsMirroredHorizontally ? true : null,
+                IsBackground = child.IsRoutingObstacle ? null : true,
                 SliderValue = child.GetAllSliders().Count > 0
                     ? child.GetSlider(0)?.Value : null,
                 SliderValues = SnapshotSliderValues(child),
@@ -1644,6 +1645,9 @@ public partial class FileOperationsViewModel : ObservableObject
                     child.HumanReadableName = childData.HumanReadableName;
 
                 RestorePose(child, childData.Mirrored, childData.Rotation, childData.RotationDegrees);
+                // Before the group registers its obstacles: background never blocks routing.
+                if (childData.IsBackground == true)
+                    child.IsRoutingObstacle = false;
 
                 // Restore slider values (all sliders; legacy single value as fallback)
                 RestoreSliderValues(child, childData.SliderValues, childData.SliderValue);
@@ -1978,8 +1982,13 @@ public partial class FileOperationsViewModel : ObservableObject
         {
             RestoreRoutingSettings(connVm.Connection, connData, keepFrozenGeometry: !pinCalibrationChanged);
             // Bound to the restored route: only a still-frozen, unedited route shows them.
-            if (CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto.ToGeometry(connData.AsDrawnPolygons) is { } asDrawn)
+            var asDrawn = CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto.ToGeometry(connData.AsDrawnPolygons, out int corrupt);
+            // A partial skin would silently miss pieces; the fitted centerline is the honest fallback.
+            if (asDrawn is not null && corrupt == 0)
                 connVm.Connection.AttachAsDrawnGeometry(asDrawn);
+            if (corrupt > 0)
+                _errorConsole?.LogWarning($"Connection {connVm.Connection.StartPin.ParentComponent.Identifier}.{connVm.Connection.StartPin.Name}: " +
+                    $"{corrupt} drawn polygon(s) in the file are damaged and were skipped — the route is drawn from its centerline instead.");
         }
     }
 

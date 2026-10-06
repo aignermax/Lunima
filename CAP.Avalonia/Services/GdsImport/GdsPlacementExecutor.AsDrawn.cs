@@ -22,6 +22,9 @@ public sealed partial class GdsPlacementExecutor
     /// <summary>Frozen centerline routes created by the current run, with their source polygons.</summary>
     private readonly List<(WaveguideConnection Connection, GdsCenterlineRoute Route, IReadOnlyList<GdsOutlinePolygon> Sources)> _centerlineRoutes = new();
 
+    /// <summary>Frozen routes of the current run that kept the traced-outline fallback, with their source polygons.</summary>
+    private readonly List<(WaveguideConnection Connection, IReadOnlyList<GdsOutlinePolygon> Sources)> _tracedRoutes = new();
+
     /// <summary>
     /// Assigns the drawn polygons: connection skins are attached in place; the returned
     /// leftover routing paths and background polygons (canvas coordinates) still need a
@@ -33,6 +36,8 @@ public sealed partial class GdsPlacementExecutor
         var assigner = new GdsAsDrawnGeometryAssigner();
         var connectionOwners = _centerlineRoutes
             .Select(r => (r.Connection, Owner: assigner.AddOwner(r.Route.Pieces, ToOutlines(r.Sources, originOffset))))
+            .Concat(_tracedRoutes.Select(r => (r.Connection,
+                Owner: assigner.AddOwner(Array.Empty<RibbonFit>(), ToOutlines(r.Sources, originOffset)))))
             .ToList();
         var leftovers = plan.TopCellWaveguidePolygons
             .Select(p => (Path: CreateLeftoverPath(p, originOffset, out var pieces), Pieces: pieces, Polygon: p))
@@ -56,8 +61,10 @@ public sealed partial class GdsPlacementExecutor
     /// </summary>
     private void AddCanvasFrozenPaths(List<FrozenWaveguidePath> leftovers, List<OutlinePolygon> background)
     {
-        foreach (var path in leftovers.Concat(background.Select(CreateBackgroundPath)))
-            _canvas.CanvasFrozenPaths.Add(new CanvasFrozenPathViewModel(path));
+        var paths = leftovers.Concat(background.Select(CreateBackgroundPath))
+            .Select(p => new CanvasFrozenPathViewModel(p)).ToList();
+        if (paths.Count > 0)
+            Execute(new Commands.AddCanvasFrozenPathsCommand(_canvas, paths));
     }
 
     /// <summary>

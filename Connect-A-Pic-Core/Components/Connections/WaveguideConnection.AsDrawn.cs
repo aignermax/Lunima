@@ -4,11 +4,19 @@ namespace CAP_Core.Components.Connections
 {
     public partial class WaveguideConnection
     {
-        /// <summary>Coordinate tolerance (µm) for "the route is still the imported one".</summary>
-        private const double AsDrawnRouteToleranceUm = 1e-6;
+        /// <summary>
+        /// The drawn polygons, the route shape they belong to and a copy of that imported
+        /// route — swapped as ONE reference.
+        /// </summary>
+        private sealed record AsDrawnBinding(AsDrawnGeometry Geometry, RouteShapeSignature? Route, RoutedPath? ImportedRoute);
 
-        private AsDrawnGeometry? _asDrawnGeometry;
-        private RouteSignature? _asDrawnRoute;
+        private AsDrawnBinding? _asDrawn;
+
+        /// <summary>
+        /// True after an endpoint move pushed the imported route aside; cleared when the
+        /// route snaps back or the polygons are re-attached. Explicit re-routes never set it.
+        /// </summary>
+        private bool _drawnRouteDisplacedByMove;
 
         /// <summary>
         /// The polygons this connection was drawn with in an imported layout, or null.
@@ -20,47 +28,64 @@ namespace CAP_Core.Components.Connections
         /// the drawn and exported geometry — there is no second copy to keep in sync.
         /// </summary>
         public AsDrawnGeometry? AsDrawnGeometry =>
-            _asDrawnGeometry is not null
+            _asDrawn is { } binding
             && IsRouteFrozen
             && !HasManualPathEdits
-            && _asDrawnRoute is { } bound
-            && bound.Matches(RoutedPath)
-                ? _asDrawnGeometry
+            && binding.Route is { } route
+            && route.Matches(RoutedPath)
+                ? binding.Geometry
                 : null;
 
         /// <summary>
         /// Binds imported polygons to the CURRENT <see cref="RoutedPath"/>. Call after
-        /// the cached route is in place (see <see cref="RestoreCachedPath"/>).
+        /// the cached route is in place (see <see cref="RestoreCachedPath"/>). The polygons
+        /// and their route binding are published together, so a concurrent reader never
+        /// pairs new polygons with an old route or vice versa.
         /// </summary>
         /// <param name="geometry">The polygons, absolute canvas coordinates.</param>
         public void AttachAsDrawnGeometry(AsDrawnGeometry geometry)
         {
             ArgumentNullException.ThrowIfNull(geometry);
-            _asDrawnGeometry = geometry;
-            _asDrawnRoute = RouteSignature.Of(RoutedPath);
+            _asDrawn = new AsDrawnBinding(geometry, RouteShapeSignature.Of(RoutedPath), RoutedPath?.DeepCopy());
+            _drawnRouteDisplacedByMove = false;
         }
 
         /// <summary>
-        /// Shape fingerprint of a route: segment count, end points and length. A copy of
-        /// the same route matches; a re-route, a translation or a different style does not.
+        /// Records that an endpoint move is about to unfreeze a route that still showed its
+        /// drawn polygons, so <see cref="TryRestoreDrawnRoute"/> can bring it back.
         /// </summary>
-        private readonly record struct RouteSignature(int Count, (double X, double Y) Start, (double X, double Y) End, double Length)
+        private void MarkDrawnRouteDisplaced()
         {
-            public static RouteSignature? Of(RoutedPath? path) =>
-                path is null || path.Segments.Count == 0
-                    ? null
-                    : new RouteSignature(path.Segments.Count, path.Segments[0].StartPoint,
-                        path.Segments[^1].EndPoint, path.TotalLengthMicrometers);
-
-            public bool Matches(RoutedPath? path) =>
-                Of(path) is { } other
-                && other.Count == Count
-                && Close(other.Start, Start)
-                && Close(other.End, End)
-                && Math.Abs(other.Length - Length) <= AsDrawnRouteToleranceUm * Count;
-
-            private static bool Close((double X, double Y) a, (double X, double Y) b) =>
-                Math.Abs(a.X - b.X) <= AsDrawnRouteToleranceUm && Math.Abs(a.Y - b.Y) <= AsDrawnRouteToleranceUm;
+            if (AsDrawnGeometry is not null)
+                _drawnRouteDisplacedByMove = true;
         }
+
+        /// <summary>
+        /// Puts the imported route back — frozen, with its drawn polygons — when a move had
+        /// displaced it and both pins are back exactly where the route ends (undo of the
+        /// move, or moving the component back). Returns true when it did.
+        /// </summary>
+        private bool TryRestoreDrawnRoute(double wavelengthNm)
+        {
+            if (!_drawnRouteDisplacedByMove || _asDrawn?.ImportedRoute is not { } imported
+                || imported.Segments.Count == 0 || StartPin == null || EndPin == null)
+                return false;
+            var (startX, startY) = StartPin.GetAbsolutePosition();
+            var (endX, endY) = EndPin.GetAbsolutePosition();
+            if (Distance(imported.Segments[0].StartPoint.X, imported.Segments[0].StartPoint.Y, startX, startY) > FrozenEndpointToleranceMicrometers
+                || Distance(imported.Segments[^1].EndPoint.X, imported.Segments[^1].EndPoint.Y, endX, endY) > FrozenEndpointToleranceMicrometers)
+                return false;
+            RoutedPath = imported.DeepCopy();
+            IsRouteFrozen = true;
+            _drawnRouteDisplacedByMove = false;
+            UpdateLossFromPath(wavelengthNm);
+            return true;
+        }
+
+        /// <summary>
+        /// The attached polygons regardless of whether they currently describe the route,
+        /// for undo snapshots that must restore them together with an earlier route.
+        /// </summary>
+        public AsDrawnGeometry? AttachedAsDrawnGeometry => _asDrawn?.Geometry;
     }
 }

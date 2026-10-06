@@ -37,14 +37,27 @@ public sealed class AsDrawnPolygonDto
     /// fewer than three vertices).
     /// </summary>
     /// <param name="dtos">The persisted polygons, or null.</param>
-    public static AsDrawnGeometry? ToGeometry(IReadOnlyList<AsDrawnPolygonDto>? dtos)
+    public static AsDrawnGeometry? ToGeometry(IReadOnlyList<AsDrawnPolygonDto>? dtos) => ToGeometry(dtos, out _);
+
+    /// <summary>
+    /// Like <see cref="ToGeometry(IReadOnlyList{AsDrawnPolygonDto}?)"/>, and reports how many
+    /// malformed entries were skipped so the loader can say the file is damaged.
+    /// </summary>
+    /// <param name="dtos">The persisted polygons, or null.</param>
+    /// <param name="skipped">Number of entries that could not be decoded.</param>
+    public static AsDrawnGeometry? ToGeometry(IReadOnlyList<AsDrawnPolygonDto>? dtos, out int skipped)
     {
+        skipped = 0;
         if (dtos is null) return null;
         var polygons = new List<OutlinePolygon>(dtos.Count);
         foreach (var dto in dtos)
         {
             var points = PolygonPointCodec.TryDecode(dto.Points);
-            if (points is null || points.Count < 3) continue;
+            if (points is null || points.Count < 3)
+            {
+                skipped++;
+                continue;
+            }
             polygons.Add(new OutlinePolygon { Layer = dto.Layer, DataType = dto.DataType, Points = points });
         }
         return polygons.Count == 0 ? null : new AsDrawnGeometry(polygons);

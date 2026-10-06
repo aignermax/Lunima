@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using CAP.Avalonia.Services.GdsImport.LayerVisibility;
 using CAP_Core.Components.Core;
 
@@ -14,31 +15,35 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// list once into a bitmap at a power-of-two pixel density at or above the current zoom
 /// and draws that bitmap afterwards — one image per component (or imported route) per
 /// frame. All instances of a template share their outline list and therefore one bitmap.
-/// Above <see cref="MaxBitmapEdgePx"/> (zoomed in) the caller draws vectors as before.
+/// Memory is bounded by a pixel budget with least-recently-used eviction; a list gets a
+/// bitmap only from its second request on, so geometry rebuilt every frame (a drag) never
+/// churns bitmaps. Zoomed in, or above <see cref="MaxBitmapEdgePx"/>, the caller draws vectors.
 /// </summary>
 internal sealed class OutlineRasterCache
 {
     /// <summary>Largest bitmap edge (px) the cache creates; beyond it vectors are drawn.</summary>
-    public const int MaxBitmapEdgePx = 8192;
+    public const int MaxBitmapEdgePx = 4096;
 
     /// <summary>Zoom from which on vectors are always drawn (sharp edges once polygons are large).</summary>
     public const double VectorFromZoom = 0.75;
 
-    /// <summary>Densities kept per outline list; older ones are dropped.</summary>
-    private const int MaxLevelsPerOutline = 2;
+    /// <summary>Pixels all bitmaps of one cache may hold together (×4 bytes).</summary>
+    public const long PixelBudget = 32L * 1024 * 1024;
+
+    /// <summary>Delay before an evicted bitmap is disposed: frames already recorded may still draw it.</summary>
+    private static readonly TimeSpan DisposeDelay = TimeSpan.FromSeconds(2);
 
     private readonly ConditionalWeakTable<IReadOnlyList<OutlinePolygon>, Entry> _entries = new();
+    private readonly LinkedList<Slot> _lru = new();
+    private long _pixels;
+    private bool _disabled;
 
     /// <summary>
     /// Draws the cached bitmap of <paramref name="batches"/> in the current (component-local)
-    /// transform, creating it when needed. Returns false when the zoom asks for vectors or
-    /// the bitmap would be too large — the caller then draws the batches itself.
+    /// transform, creating it when needed. Returns false when the caller must draw vectors:
+    /// the zoom asks for them, the bitmap would be too large, the list is seen for the first
+    /// time, or rasterizing failed.
     /// </summary>
-    /// <param name="context">Drawing context with the component-local transform pushed.</param>
-    /// <param name="outlines">The outline list (cache key, shared by all instances of a template).</param>
-    /// <param name="batches">The batched geometry of <paramref name="outlines"/>.</param>
-    /// <param name="zoom">Current canvas zoom (screen px per µm).</param>
-    /// <param name="layerVisibility">Layer view filter baked into the bitmap; part of the cache key.</param>
     public bool TryDraw(
         DrawingContext context,
         IReadOnlyList<OutlinePolygon> outlines,
@@ -46,7 +51,7 @@ internal sealed class OutlineRasterCache
         double zoom,
         GdsLayerVisibilityState? layerVisibility)
     {
-        if (batches.Length == 0 || zoom >= VectorFromZoom || zoom <= 0) return false;
+        if (_disabled || batches.Length == 0 || zoom >= VectorFromZoom || zoom <= 0) return false;
         var bounds = Union(batches);
         if (bounds.Width <= 0 || bounds.Height <= 0) return false;
 
@@ -56,12 +61,64 @@ internal sealed class OutlineRasterCache
         if (width > MaxBitmapEdgePx || height > MaxBitmapEdgePx) return false;
 
         var entry = _entries.GetValue(outlines, _ => new Entry());
-        var key = (density, VisibilityKey(batches, layerVisibility));
-        var bitmap = entry.Get(key) ?? entry.Put(key, Render(batches, bounds, density, width, height, layerVisibility));
-        context.DrawImage(bitmap, new Rect(0, 0, bitmap.PixelSize.Width, bitmap.PixelSize.Height),
+        var key = new SlotKey(density, VisibilityKey(batches, layerVisibility));
+        var slot = entry.Slots.Find(s => s.Key == key);
+        if (slot is null)
+        {
+            if (!entry.SeenKeys.Add(key)) slot = Create(entry, key, batches, bounds, density, width, height, layerVisibility);
+            if (slot is null) return false;
+        }
+        Touch(slot);
+        context.DrawImage(slot.Bitmap, new Rect(0, 0, slot.Bitmap.PixelSize.Width, slot.Bitmap.PixelSize.Height),
             new Rect(bounds.X, bounds.Y, width / density, height / density));
         return true;
     }
+
+    private Slot? Create(Entry entry, SlotKey key, OutlineBatch[] batches, Rect bounds, double density,
+        int width, int height, GdsLayerVisibilityState? layerVisibility)
+    {
+        RenderTargetBitmap bitmap;
+        try
+        {
+            bitmap = Render(batches, bounds, density, width, height, layerVisibility);
+        }
+        catch (Exception)
+        {
+            // Out of memory or no render surface: vectors still draw correctly, just slower.
+            _disabled = true;
+            return null;
+        }
+        var slot = new Slot(entry, key, bitmap, (long)width * height);
+        entry.Slots.Add(slot);
+        slot.Node = _lru.AddLast(slot);
+        _pixels += slot.Pixels;
+        EvictOverBudget();
+        return slot;
+    }
+
+    private void Touch(Slot slot)
+    {
+        if (slot.Node is null || slot.Node == _lru.Last) return;
+        _lru.Remove(slot.Node);
+        _lru.AddLast(slot.Node);
+    }
+
+    private void EvictOverBudget()
+    {
+        while (_pixels > PixelBudget && _lru.First is { } oldest && oldest != _lru.Last)
+        {
+            var slot = oldest.Value;
+            _lru.RemoveFirst();
+            slot.Owner.Slots.Remove(slot);
+            _pixels -= slot.Pixels;
+            DisposeLater(slot.Bitmap);
+        }
+    }
+
+    private static void DisposeLater(RenderTargetBitmap bitmap) =>
+        _ = Task.Delay(DisposeDelay).ContinueWith(
+            _ => Dispatcher.UIThread.Post(bitmap.Dispose, DispatcherPriority.Background),
+            TaskScheduler.Default);
 
     private static RenderTargetBitmap Render(
         OutlineBatch[] batches, Rect bounds, double density, int width, int height,
@@ -82,15 +139,12 @@ internal sealed class OutlineRasterCache
         return bitmap;
     }
 
-    /// <summary>Hash of the opacities the bitmap was rendered with, so a layer toggle re-renders it.</summary>
-    private static int VisibilityKey(OutlineBatch[] batches, GdsLayerVisibilityState? layerVisibility)
-    {
-        if (layerVisibility is null) return 0;
-        var hash = new HashCode();
-        foreach (var batch in batches)
-            hash.Add(layerVisibility.EffectiveOpacity(batch.Layer, batch.DataType));
-        return hash.ToHashCode();
-    }
+    /// <summary>The exact opacities the bitmap is rendered with, so any layer toggle re-renders it.</summary>
+    private static string VisibilityKey(OutlineBatch[] batches, GdsLayerVisibilityState? layerVisibility) =>
+        layerVisibility is null
+            ? ""
+            : string.Join(";", batches.Select(b => (b.Layer, b.DataType)).Distinct()
+                .Select(l => layerVisibility.EffectiveOpacity(l.Layer, l.DataType).ToString("R", System.Globalization.CultureInfo.InvariantCulture)));
 
     private static Rect Union(OutlineBatch[] batches)
     {
@@ -100,29 +154,29 @@ internal sealed class OutlineRasterCache
         return rect;
     }
 
-    /// <summary>The bitmaps of one outline list, most recently used last.</summary>
+    private readonly record struct SlotKey(double Density, string Visibility);
+
+    /// <summary>Bitmaps of one outline list plus the keys requested once (bitmap on the second request).</summary>
     private sealed class Entry
     {
-        private readonly List<((double Density, int Visibility) Key, RenderTargetBitmap Bitmap)> _levels = new();
+        public List<Slot> Slots { get; } = new();
+        public HashSet<SlotKey> SeenKeys { get; } = new();
+    }
 
-        public RenderTargetBitmap? Get((double, int) key)
+    private sealed class Slot
+    {
+        public Slot(Entry owner, SlotKey key, RenderTargetBitmap bitmap, long pixels)
         {
-            int index = _levels.FindIndex(l => l.Key == key);
-            if (index < 0) return null;
-            var hit = _levels[index];
-            _levels.RemoveAt(index);
-            _levels.Add(hit);
-            return hit.Bitmap;
+            Owner = owner;
+            Key = key;
+            Bitmap = bitmap;
+            Pixels = pixels;
         }
 
-        public RenderTargetBitmap Put((double, int) key, RenderTargetBitmap bitmap)
-        {
-            _levels.Add((key, bitmap));
-            // Evicted bitmaps are NOT disposed: an already recorded frame may still draw
-            // them on the compositor thread; the finalizer releases them safely.
-            while (_levels.Count > MaxLevelsPerOutline)
-                _levels.RemoveAt(0);
-            return bitmap;
-        }
+        public Entry Owner { get; }
+        public SlotKey Key { get; }
+        public RenderTargetBitmap Bitmap { get; }
+        public long Pixels { get; }
+        public LinkedListNode<Slot>? Node { get; set; }
     }
 }

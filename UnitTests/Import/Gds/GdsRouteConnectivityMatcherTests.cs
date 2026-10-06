@@ -77,7 +77,7 @@ public class GdsRouteConnectivityMatcherTests
 
         var pair = result.Pairs.ShouldHaveSingleItem("the guessed pin must not turn the route into a junction");
         new[] { pair.A.PinName, pair.B.PinName }.ShouldBe(new[] { "out", "in" }, ignoreOrder: true);
-        infos.ShouldBeEmpty();
+        infos.ShouldHaveSingleItem().ShouldContain("'heur_1'", customMessage: "the report says which guess was ignored");
     }
 
     [Fact]

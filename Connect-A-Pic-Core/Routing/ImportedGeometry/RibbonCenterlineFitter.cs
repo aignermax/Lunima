@@ -31,8 +31,16 @@ public static class RibbonCenterlineFitter
     private const double ArcEndToleranceUm = 0.2;
 
     /// <summary>
+    /// How far the local width of a polyline-fitted ribbon may fall below its narrower cap
+    /// or grow beyond its wider cap (factor). A taper stays between its caps; a splitter,
+    /// junction or pad that merely has two short edges does not.
+    /// </summary>
+    private const double MaxWidthDeviationFactor = 2.0;
+
+    /// <summary>
     /// Fits the centerline of <paramref name="outline"/>, or returns null when the
-    /// polygon is not a ribbon (no recognizable pair of end caps).
+    /// polygon is not a ribbon (no recognizable pair of end caps, or a width between the
+    /// sides that departs far from the caps).
     /// </summary>
     /// <param name="outline">Closed polygon outline (µm).</param>
     /// <param name="toleranceUm">Maximum deviation for an exact straight/arc fit.</param>
@@ -43,6 +51,22 @@ public static class RibbonCenterlineFitter
         return TryStraight(sides, toleranceUm)
             ?? TryArc(sides, toleranceUm)
             ?? Polyline(sides);
+    }
+
+    /// <summary>
+    /// True when the paired side samples stay roughly as far apart as the caps — the
+    /// polygon is one ribbon, so the midpoint chain is its centerline.
+    /// </summary>
+    private static bool HasRibbonWidth(List<(double X, double Y)> a, List<(double X, double Y)> b, RibbonSides sides)
+    {
+        double min = Math.Min(sides.CapStartLength, sides.CapEndLength) / MaxWidthDeviationFactor;
+        double max = Math.Max(sides.CapStartLength, sides.CapEndLength) * MaxWidthDeviationFactor;
+        for (int i = 0; i < a.Count; i++)
+        {
+            double width = RibbonSides.Distance(a[i], b[i]);
+            if (width < min || width > max) return false;
+        }
+        return true;
     }
 
     private static RibbonFit? TryStraight(RibbonSides sides, double tol)
@@ -117,11 +141,12 @@ public static class RibbonCenterlineFitter
         return toMiddle <= ccw ? ccw : ccw - 360.0;
     }
 
-    private static RibbonFit Polyline(RibbonSides sides)
+    private static RibbonFit? Polyline(RibbonSides sides)
     {
         int samples = Math.Max(MinPolylineSamples, Math.Max(sides.SideA.Count, sides.SideB.Count));
         var a = Resample(sides.SideA, samples);
         var b = Resample(sides.SideB, samples);
+        if (!HasRibbonWidth(a, b, sides)) return null;
         var segments = new List<PathSegment>();
         var previous = RibbonSides.Mid(a[0], b[0]);
         for (int i = 1; i < samples; i++)
