@@ -162,12 +162,7 @@ public class LogicAcrossChipletLinkJourneyTests
     }
 
     /// <summary>Step 6: the composed design survives a real save/load and re-assembles identically.</summary>
-    [Fact(Skip = "follow-up: the save format drops the intra-chiplet wires — a canvas connection " +
-        "into a non-exposed pin of a nested gate group serializes with component index -1 " +
-        "(FileOperationsViewModel.ResolveConnectionEndpoint), so the reloaded design loses " +
-        "gate→facet wiring and cannot re-assemble the cross-link network. Persistence fix " +
-        "is its own issue; the live-canvas assembly is pinned by " +
-        nameof(AssembledNetwork_CrossesTheLink_TruthTableIsNotAAndB) + ")")]
+    [Fact]
     public async Task SaveLoad_RebuildsIdenticalNetwork()
     {
         var design = await LogicAcrossChipletLinkJourneyDesign.BuildComposedAsync();
