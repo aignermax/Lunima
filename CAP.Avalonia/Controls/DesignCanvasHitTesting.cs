@@ -95,8 +95,8 @@ public class DesignCanvasHitTesting
     }
 
     /// <summary>
-    /// Finds the component at the given canvas point (topmost first).
-    /// For ComponentGroups, checks if the point is within the group's bounding box.
+    /// Finds the component at the given canvas point (topmost first), skipping background
+    /// components. For ComponentGroups, checks if the point is within the group's bounding box.
     /// In group edit mode, only tests child components of the current edit group.
     /// </summary>
     public static ComponentViewModel? HitTestComponent(Point canvasPoint, DesignCanvasViewModel? vm)
@@ -109,10 +109,14 @@ public class DesignCanvasHitTesting
             return HitTestGroupChildren(canvasPoint, vm.CurrentEditGroup, vm);
         }
 
-        // Normal mode: test all top-level components
+        // Normal mode: test all top-level components. Background geometry (die frames,
+        // logos) is never picked up here: its box spans what lies on top of it, and a
+        // press there must reach the waveguide under the cursor or start a box selection.
         for (int i = vm.Components.Count - 1; i >= 0; i--)
         {
             var comp = vm.Components[i];
+            if (!comp.Component.IsRoutingObstacle)
+                continue;
 
             // For ComponentGroups, check the group's calculated bounds
             if (comp.Component is ComponentGroup group)
@@ -126,7 +130,7 @@ public class DesignCanvasHitTesting
             else
             {
                 var rect = new Rect(comp.X, comp.Y, comp.Width, comp.Height);
-                if (rect.Contains(canvasPoint))
+                if (rect.Contains(canvasPoint) && OutlineHitTester.Hits(comp.Component, canvasPoint))
                 {
                     return comp;
                 }

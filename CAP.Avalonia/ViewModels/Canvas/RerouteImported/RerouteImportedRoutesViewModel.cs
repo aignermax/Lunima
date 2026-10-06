@@ -203,10 +203,13 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
                 }).ToList();
 
             // Canvas-level targets are mutated directly; the state command handles undo.
+            int kept = 0;
             if (canvasTargets.Count > 0)
             {
+                var drawn = SnapshotDrawnRoutes(canvasTargets);
                 new RerouteImportedRoutesCommand(_canvas, canvasTargets).Execute();
                 await _canvas.RecalculateRoutesAsync();
+                kept = KeepDrawnRouteWhereBlocked(drawn);
             }
 
             // Group-internal targets are routed inside a temporary group-edit sub-canvas.
@@ -234,8 +237,8 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
             var afterConnections = connectionStates.Select(s => s.Connection);
             var afterGroupPaths = groupStates.SelectMany(s => s.NewPaths);
             var after = RouteMetricsSnapshot.Capture(afterConnections, afterGroupPaths);
-            ResultText = FormatDelta(
-                canvasTargets.Count + groupTargets.Sum(g => g.Paths.Count), before, after);
+            ResultText = WithKeptNote(FormatDelta(
+                canvasTargets.Count + groupTargets.Sum(g => g.Paths.Count), before, after), kept);
         }
         finally
         {
@@ -277,14 +280,18 @@ public partial class RerouteImportedRoutesViewModel : ObservableObject
         {
             var connections = targets.Select(t => t.Connection).ToList();
             var before = RouteMetricsSnapshot.Capture(connections);
+            var drawn = SnapshotDrawnRoutes(targets);
 
             _commandManager.ExecuteCommand(new RerouteImportedRoutesCommand(_canvas, targets));
             // Execute fires the pass asynchronously (undo/redo path); awaiting a second
             // pass here supersedes it and yields a deterministic "after" state.
             await _canvas.RecalculateRoutesAsync();
+            int kept = KeepDrawnRouteWhereBlocked(drawn);
+            if (kept > 0)
+                await _canvas.RecalculateRoutesAsync();
 
             var after = RouteMetricsSnapshot.Capture(connections);
-            ResultText = FormatDelta(targets.Count, before, after);
+            ResultText = WithKeptNote(FormatDelta(targets.Count, before, after), kept);
         }
         finally
         {

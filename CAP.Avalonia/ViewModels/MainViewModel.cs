@@ -1665,6 +1665,12 @@ public class ComponentData
     /// </summary>
     public bool? Mirrored { get; set; }
 
+    /// <summary>
+    /// True for imported background geometry (die frames, logos): no routing obstacle,
+    /// no placement collisions, lowest click priority. Null — a regular component.
+    /// </summary>
+    public bool? IsBackground { get; set; }
+
     public double? SliderValue { get; set; }
 
     /// <summary>

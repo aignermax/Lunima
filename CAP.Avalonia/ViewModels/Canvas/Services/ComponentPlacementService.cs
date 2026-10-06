@@ -179,11 +179,16 @@ public class ComponentPlacementService
             x + width > ChipMaxX || y + height > ChipMaxY)
             return false;
 
+        // Background geometry (die frames, logos) never collides: it may move freely and
+        // nothing is refused for overlapping it.
+        if (excludeComponent?.Component.IsRoutingObstacle == false)
+            return true;
+
         var testRect = GapInflatedRect(x, y, width, height);
 
         foreach (var comp in _components)
         {
-            if (comp == excludeComponent) continue;
+            if (comp == excludeComponent || !comp.Component.IsRoutingObstacle) continue;
             if (IsDragging && excludeComponent is not null &&
                 IsPreDragOverlapPartner(excludeComponent.Component, comp.Component))
                 continue; // grandfathered: this pair already overlapped when the drag began.

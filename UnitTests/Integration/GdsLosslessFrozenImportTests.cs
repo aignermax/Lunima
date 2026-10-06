@@ -29,6 +29,14 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
+    /// <summary>A canvas point on the route's first straight, halfway along it.</summary>
+    private static global::Avalonia.Point CanvasPointOnFirstStraight(DesignCanvasViewModel canvas)
+    {
+        var first = canvas.Connections.Single().Connection.RoutedPath!.Segments[0];
+        return new global::Avalonia.Point(
+            (first.StartPoint.X + first.EndPoint.X) / 2, (first.StartPoint.Y + first.EndPoint.Y) / 2);
+    }
+
     private async Task<DesignCanvasViewModel> ImportWithDialogDefaultsAsync()
     {
         var canvas = new DesignCanvasViewModel();
@@ -46,7 +54,7 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
     {
         var canvas = await ImportWithDialogDefaultsAsync();
 
-        canvas.Components.Count.ShouldBe(2, "flat import: no group around the two devices");
+        canvas.Components.Count.ShouldBe(3, "flat import: frame and two devices, no group");
         var connection = canvas.Connections.ShouldHaveSingleItem().Connection;
         connection.IsRouteFrozen.ShouldBeTrue();
         var segments = connection.RoutedPath!.Segments;
@@ -69,6 +77,21 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
     }
 
     [Fact]
+    public async Task DieFrame_ImportsAsBackground_ThatNeitherBlocksRoutingNorCatchesClicks()
+    {
+        var canvas = await ImportWithDialogDefaultsAsync();
+
+        var frame = canvas.Components.Single(c => c.Width > 300).Component;
+        frame.PhysicalPins.ShouldNotBeEmpty("the waveguide stub at its edge gives the frame guessed pins");
+        frame.IsRoutingObstacle.ShouldBeFalse("a die frame enclosing the devices is background, not a device");
+
+        // A press on the route (inside the frame's box) must not pick up the frame — the
+        // waveguide under the cursor gets the click.
+        CAP.Avalonia.Controls.DesignCanvasHitTesting.HitTestComponent(CanvasPointOnFirstStraight(canvas), canvas)
+            .ShouldBeNull("background geometry is never picked up by the component hit test");
+    }
+
+    [Fact]
     public async Task SaveAndReload_KeepsTheFrozenRouteAndItsPolygons()
     {
         var canvas = await ImportWithDialogDefaultsAsync();
@@ -84,6 +107,8 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
         connection.IsRouteFrozen.ShouldBeTrue();
         connection.AsDrawnGeometry.ShouldNotBeNull().Polygons.Count.ShouldBe(10);
         reloaded.Components.Count(c => c.Component.IsMirroredHorizontally).ShouldBe(1);
+        reloaded.Components.Single(c => c.Width > 300).Component.IsRoutingObstacle
+            .ShouldBeFalse("the background flag is persisted in the .lun");
     }
 
     [Fact]
@@ -106,6 +131,35 @@ public sealed class GdsLosslessFrozenImportTests : IDisposable
         target.Connection.IsRouteFrozen.ShouldBeTrue();
         target.Connection.PathLengthMicrometers.ShouldBe(NazcaStyleChipFixture.RouteLengthUm, 0.01);
         target.Connection.AsDrawnGeometry.ShouldNotBeNull("undo brings the drawn polygons back with the route");
+    }
+
+    [Fact]
+    public async Task RerouteSelected_WithNoFreePath_KeepsTheDrawnRoute()
+    {
+        var canvas = await ImportWithDialogDefaultsAsync();
+        var target = canvas.Connections.Single();
+
+        // Wall the end device's input in: a component body right in front of the pin
+        // leaves the router nothing but a blocked fallback.
+        var (endX, endY) = target.Connection.EndPin.GetAbsolutePosition();
+        var wall = UnitTests.TestComponentFactory.CreateStraightWaveGuide();
+        wall.PhysicalX = endX - 120;
+        wall.PhysicalY = endY - 60;
+        wall.WidthMicrometers = 110;
+        wall.HeightMicrometers = 120;
+        canvas.AddComponent(wall, "wall", "test");
+
+        var reroute = new CAP.Avalonia.ViewModels.Canvas.RerouteImported.RerouteImportedRoutesViewModel(canvas, new CommandManager())
+        {
+            SelectedConnection = target,
+        };
+        await reroute.RerouteSelectedCommand.ExecuteAsync(null);
+
+        target.Connection.IsBlockedFallback.ShouldBeFalse("no dashed placeholder replaces the working drawn route");
+        target.Connection.IsRouteFrozen.ShouldBeTrue();
+        target.Connection.PathLengthMicrometers.ShouldBe(NazcaStyleChipFixture.RouteLengthUm, 0.01);
+        target.Connection.AsDrawnGeometry.ShouldNotBeNull();
+        reroute.ResultText.ShouldContain("1");
     }
 
     [Fact]

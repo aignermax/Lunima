@@ -1240,6 +1240,7 @@
   "Routing.Reroute.HandEditedKept": "{0} hand-edited route(s) kept unchanged",
   "Routing.Reroute.InGroups": "{0} frozen imported route(s) inside groups",
   "Routing.Reroute.Result": "Re-routed {0} route(s): length {1:F1} → {2:F1} µm, bends {3:F1} → {4:F1}",
+  "Routing.Reroute.KeptNoPath": "kept {0} drawn route(s): no free path through the surrounding layout",
   "Routing.Reroute.Selected": "Re-route Selected",
   "Routing.Reroute.Title": "Imported Routes:",
   "Routing.Status.ComplexPath": "Computing complex path…",

@@ -9,7 +9,7 @@ namespace UnitTests.Services.GdsImport;
 /// straight and every arc of the top-cell route is its own ribbon polygon, the route
 /// is drawn twice (2 µm core on (1,0), 6 µm cladding on (2,0)) with identical
 /// centerlines, and the far device is a MIRRORED (STRANS) instance of an asymmetric
-/// cell. Route: device A "out" (20, 5) → straight → R = 40 µm left bend → straight →
+/// cell, all inside a die-frame cell. Route: device A "out" (20, 5) → straight → R = 40 µm left bend → straight →
 /// R = 40 µm right bend → straight → device B "in" (300, 145); GDS coordinates, µm.
 /// </summary>
 internal static class NazcaStyleChipFixture
@@ -42,6 +42,7 @@ internal static class NazcaStyleChipFixture
         var writer = GdsTestWriter.Create()
             .StandardPrologue()
             .BeginCell("TOP")
+                .SRef("frame", 0, 0)
                 .SRef("dev", 0, 0)
                 .SRef("dev", 300_000, 150_000, reflected: true);
         foreach (var piece in Pieces())
@@ -58,6 +59,13 @@ internal static class NazcaStyleChipFixture
                 .Boundary(5, 0, (0, 6000), (4000, 6000), (0, 10000), (0, 6000))
                 .Text(1, 10, "in", 0, 5000)
                 .Text(1, 10, "out", 20000, 5000)
+            .EndCell()
+            // A die frame like production chips carry: an outline ring around everything
+            // plus a waveguide-layer stub reaching its edge, which the edge heuristic turns
+            // into guessed pins — the frame must still import as background.
+            .BeginCell("frame")
+                .Boundary(3, 0, (-20000, -20000), (340000, -20000), (340000, 180000), (-20000, 180000), (-20000, -20000))
+                .Boundary(1, 0, (-20000, 79000), (-10000, 79000), (-10000, 81000), (-20000, 81000), (-20000, 79000))
             .EndCell()
             .EndLibrary()
             .ToArray();

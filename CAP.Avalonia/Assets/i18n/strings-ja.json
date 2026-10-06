@@ -1240,6 +1240,7 @@
   "Routing.Reroute.HandEditedKept": "手動編集された経路 {0} 本は変更されません",
   "Routing.Reroute.InGroups": "グループ内の凍結されたインポート経路：{0} 本",
   "Routing.Reroute.Result": "{0} 本を再ルーティング：長さ {1:F1} → {2:F1} µm、曲げ {3:F1} → {4:F1}",
+  "Routing.Reroute.KeptNoPath": "描画済みルート {0} 本を保持：周囲のレイアウトに空き経路がありません",
   "Routing.Reroute.Selected": "選択を再ルーティング",
   "Routing.Reroute.Title": "インポート経路：",
   "Routing.Status.ComplexPath": "複雑なパスを計算中…",

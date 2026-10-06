@@ -139,6 +139,7 @@ public sealed partial class GdsPlacementExecutor
         // pre-import content for the free-space rule.
         var originOffset = ComputeImportOriginOffset(plan);
         var placedViewModels = await PlaceAllAsync(plan, templates, report, progress, ct, originOffset);
+        MarkBackgroundComponents(plan, placedViewModels);
         if (originOffset != (0.0, 0.0) && report.PlacedCount > 0)
         {
             // Only a placement that actually happened may claim the shift — a plan
@@ -256,17 +257,6 @@ public sealed partial class GdsPlacementExecutor
                     exactRotationDegrees: instruction.RotationDegrees,
                     mirrorPinsHorizontally: instruction.Reflected);
             Execute(command);
-
-            // Geometry-only import (die frame, logo, ground plate): pure
-            // background — as a routing obstacle it would wall off the grid.
-            // The flag keeps it out of group-obstacle recursion later; the
-            // explicit removal undoes the registration that placement did.
-            var createdComponent = command.CreatedViewModel.Component;
-            if (createdComponent.PhysicalPins.Count == 0)
-            {
-                createdComponent.IsRoutingObstacle = false;
-                _canvas.Router.RemoveComponentObstacle(createdComponent);
-            }
 
             placedViewModels.Add(command.CreatedViewModel);
             report.PlacedCount++;

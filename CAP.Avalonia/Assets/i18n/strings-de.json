@@ -1240,6 +1240,7 @@
   "Routing.Reroute.HandEditedKept": "{0} manuell bearbeitete Route(n) bleiben unverändert",
   "Routing.Reroute.InGroups": "{0} eingefrorene importierte Route(n) in Gruppen",
   "Routing.Reroute.Result": "{0} Route(n) neu geroutet: Länge {1:F1} → {2:F1} µm, Biegungen {3:F1} → {4:F1}",
+  "Routing.Reroute.KeptNoPath": "{0} gezeichnete Route(n) behalten: kein freier Weg durch das umgebende Layout",
   "Routing.Reroute.Selected": "Auswahl neu routen",
   "Routing.Reroute.Title": "Importierte Routen:",
   "Routing.Status.ComplexPath": "Komplexer Pfad wird berechnet…",

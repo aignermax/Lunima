@@ -596,11 +596,26 @@ public partial class CanvasInteractionViewModel : ObservableObject
         SelectAt(canvasX, canvasY);
     }
 
-    /// <summary>Returns the topmost component whose bounds contain the point, or null.</summary>
+    /// <summary>
+    /// Returns the topmost regular component whose bounds contain the point, or null.
+    /// Background geometry (die frames, logos) is skipped: its box covers whatever lies
+    /// on top of it, so it only wins when nothing else is under the cursor
+    /// (<see cref="BackgroundComponentAt"/>).
+    /// </summary>
     private ComponentViewModel? ComponentAt(double x, double y) =>
         _canvas.Components
-            .Where(c => x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height)
+            .Where(c => c.Component.IsRoutingObstacle && Contains(c, x, y))
             .LastOrDefault();
+
+    /// <summary>Returns the topmost background component whose bounds contain the point, or null.</summary>
+    private ComponentViewModel? BackgroundComponentAt(double x, double y) =>
+        _canvas.Components
+            .Where(c => !c.Component.IsRoutingObstacle && Contains(c, x, y))
+            .LastOrDefault();
+
+    private static bool Contains(ComponentViewModel c, double x, double y) =>
+        x >= c.X && x <= c.X + c.Width && y >= c.Y && y <= c.Y + c.Height
+        && (!c.Component.IsRoutingObstacle || Controls.OutlineHitTester.Hits(c.Component, new global::Avalonia.Point(x, y)));
 
     private void SelectAt(double x, double y)
     {
@@ -617,8 +632,12 @@ public partial class CanvasInteractionViewModel : ObservableObject
         // calls ClearSelection(), which would otherwise deselect a just-clicked batch member.
         _canvas.Selection.ClearConnectionSelection();
 
-        // Find component at position
+        // Find component at position (regular components first; background last, below).
         var component = ComponentAt(x, y);
+        var connectionHit = component is null ? FindConnectionAt(x, y) : null;
+        var frozenHit = component is null && connectionHit is null ? FindCanvasFrozenPathAt(x, y) : null;
+        if (component is null && connectionHit is null && frozenHit is null)
+            component = BackgroundComponentAt(x, y);
 
         if (component != null)
         {
@@ -631,7 +650,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
         }
         else
         {
-            var connection = FindConnectionAt(x, y);
+            var connection = connectionHit;
             if (connection != null)
             {
                 connection.IsSelected = true;
@@ -641,7 +660,7 @@ public partial class CanvasInteractionViewModel : ObservableObject
                 SelectedCanvasFrozenPath = null;
                 UpdateStatus?.Invoke($"Selected connection: {connection.PathLength:F1}µm, Loss: {connection.LossDb:F2}dB");
             }
-            else if (FindCanvasFrozenPathAt(x, y) is { } frozenPath)
+            else if (frozenHit is { } frozenPath)
             {
                 SelectedCanvasFrozenPath = frozenPath;
                 SelectedComponent = null;

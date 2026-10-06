@@ -567,6 +567,7 @@ public partial class FileOperationsViewModel : ObservableObject
             Rotation = (int)c.Component.Rotation90CounterClock,
             RotationDegrees = ComponentPoseTransform.GetNonCardinalRotationDegrees(c.Component),
             Mirrored = c.Component.IsMirroredHorizontally ? true : null,
+            IsBackground = c.Component.IsRoutingObstacle ? null : true,
             SliderValue = c.HasSliders ? c.SliderValue : null,
             SliderValues = SnapshotSliderValues(c.Component),
             LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
@@ -1561,6 +1562,9 @@ public partial class FileOperationsViewModel : ObservableObject
             component.HumanReadableName = compData.HumanReadableName;
 
         RestorePose(component, compData.Mirrored, compData.Rotation, compData.RotationDegrees);
+        // Before AddComponent: a background component must never register as an obstacle.
+        if (compData.IsBackground == true)
+            component.IsRoutingObstacle = false;
 
         var vm = _canvas.AddComponent(component, template.Name, template.PdkSource);
 
