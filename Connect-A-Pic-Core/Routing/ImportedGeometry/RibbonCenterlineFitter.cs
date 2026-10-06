@@ -20,6 +20,16 @@ public static class RibbonCenterlineFitter
     /// <summary>Minimum side samples used for the polyline fallback.</summary>
     private const int MinPolylineSamples = 8;
 
+    /// <summary>Fewest side points for which the end vertices are left out of the circle fit.</summary>
+    private const int MinPointsForInteriorFit = 5;
+
+    /// <summary>
+    /// How far (µm) a side's end vertex may sit off the circle fitted to its interior —
+    /// the discretization compensation of layout tools stays well below this; a clothoid
+    /// or taper deviates by far more.
+    /// </summary>
+    private const double ArcEndToleranceUm = 0.2;
+
     /// <summary>
     /// Fits the centerline of <paramref name="outline"/>, or returns null when the
     /// polygon is not a ribbon (no recognizable pair of end caps).
@@ -56,16 +66,20 @@ public static class RibbonCenterlineFitter
 
     private static RibbonFit? TryArc(RibbonSides sides, double tol)
     {
-        var circleA = CircleFit.Fit(sides.SideA);
-        var circleB = CircleFit.Fit(sides.SideB);
+        var circleA = CircleFit.Fit(InteriorOf(sides.SideA));
+        var circleB = CircleFit.Fit(InteriorOf(sides.SideB));
         if (circleA is not { } a || circleB is not { } b) return null;
         if (a.MaxResidual > tol || b.MaxResidual > tol) return null;
         if (Math.Abs(a.CenterX - b.CenterX) > tol || Math.Abs(a.CenterY - b.CenterY) > tol) return null;
 
         double cx = (a.CenterX + b.CenterX) / 2.0, cy = (a.CenterY + b.CenterY) / 2.0;
-        double radius = (a.Radius + b.Radius) / 2.0;
+        if (!EndsOnCircle(sides.SideA, cx, cy, a.Radius) || !EndsOnCircle(sides.SideB, cx, cy, b.Radius)) return null;
+
         var start = sides.CapStartMidpoint;
         var end = sides.CapEndMidpoint;
+        // The cap midpoints are where the neighbouring pieces attach: taking the radius
+        // from them makes the bend start and end exactly there.
+        double radius = (RibbonSides.Distance(start, (cx, cy)) + RibbonSides.Distance(end, (cx, cy))) / 2.0;
         double phiStart = Math.Atan2(start.Y - cy, start.X - cx) * 180.0 / Math.PI;
         double phiEnd = Math.Atan2(end.Y - cy, end.X - cx) * 180.0 / Math.PI;
         var middle = sides.SideA[sides.SideA.Count / 2];
@@ -74,8 +88,23 @@ public static class RibbonCenterlineFitter
 
         double tangent = PathSegmentReversal.NormalizeDegrees(phiStart + 90.0 * Math.Sign(sweep));
         var bend = new BendSegment(cx, cy, radius, tangent, sweep);
-        return new RibbonFit(new[] { bend }, Math.Abs(a.Radius - b.Radius), RibbonFitKind.Arc);
+        double width = (sides.CapStartLength + sides.CapEndLength) / 2.0;
+        return new RibbonFit(new[] { bend }, width, RibbonFitKind.Arc);
     }
+
+    /// <summary>
+    /// The side's points the circle is fitted to. Layout tools place the interior vertices
+    /// of a discretized arc on a slightly enlarged circle (so the polygon edges straddle
+    /// the true arc) but the end vertices on the true one; fitting all of them would mix
+    /// two radii. With too few interior points the whole side is used.
+    /// </summary>
+    private static IReadOnlyList<(double X, double Y)> InteriorOf(IReadOnlyList<(double X, double Y)> side) =>
+        side.Count >= MinPointsForInteriorFit ? side.Skip(1).Take(side.Count - 2).ToList() : side;
+
+    /// <summary>True when the side's two end vertices sit within <see cref="ArcEndToleranceUm"/> of the fitted circle.</summary>
+    private static bool EndsOnCircle(IReadOnlyList<(double X, double Y)> side, double cx, double cy, double radius) =>
+        Math.Abs(RibbonSides.Distance(side[0], (cx, cy)) - radius) <= ArcEndToleranceUm
+        && Math.Abs(RibbonSides.Distance(side[^1], (cx, cy)) - radius) <= ArcEndToleranceUm;
 
     /// <summary>
     /// The signed sweep from <paramref name="phiStart"/> to <paramref name="phiEnd"/>

@@ -4,10 +4,11 @@ using CAP_Core.Components.Core;
 namespace CAP_DataAccess.Persistence.DTOs;
 
 /// <summary>
-/// Persisted form of one <see cref="AsDrawnGeometry"/> polygon. The vertices are a
-/// flat <c>[x0, y0, x1, y1, …]</c> array (absolute canvas µm): an imported chip
-/// carries tens of thousands of polygons, and one JSON object per point would
-/// multiply the .lun size for no benefit.
+/// Persisted form of one <see cref="AsDrawnGeometry"/> polygon. An imported chip
+/// carries tens of thousands of polygons with hundreds of thousands of vertices, so
+/// the vertices are packed (<see cref="PolygonPointCodec"/>: nanometre integers,
+/// delta + zig-zag varint, Base64) instead of one JSON number — let alone one JSON
+/// object — per coordinate. Lossless on the 1 nm grid GDS layouts are drawn on.
 /// </summary>
 public sealed class AsDrawnPolygonDto
 {
@@ -17,8 +18,8 @@ public sealed class AsDrawnPolygonDto
     /// <summary>GDS datatype of the polygon.</summary>
     public int DataType { get; set; }
 
-    /// <summary>Interleaved vertex coordinates (x, y, x, y, …), closed ring.</summary>
-    public double[] Xy { get; set; } = Array.Empty<double>();
+    /// <summary>Packed vertex ring (absolute canvas coordinates), see <see cref="PolygonPointCodec"/>.</summary>
+    public string Points { get; set; } = "";
 
     /// <summary>Converts drawn geometry to DTOs; null in, null out.</summary>
     /// <param name="geometry">The geometry to persist, or null.</param>
@@ -27,13 +28,13 @@ public sealed class AsDrawnPolygonDto
         {
             Layer = p.Layer,
             DataType = p.DataType,
-            Xy = p.Points.SelectMany(pt => new[] { pt.X, pt.Y }).ToArray(),
+            Points = PolygonPointCodec.Encode(p.Points),
         }).ToList();
 
     /// <summary>
     /// Restores drawn geometry from DTOs. Returns null for a missing or empty list
-    /// (files that predate the field) and skips malformed entries with an odd
-    /// coordinate count or fewer than three vertices.
+    /// (files that predate the field) and skips malformed entries (undecodable or
+    /// fewer than three vertices).
     /// </summary>
     /// <param name="dtos">The persisted polygons, or null.</param>
     public static AsDrawnGeometry? ToGeometry(IReadOnlyList<AsDrawnPolygonDto>? dtos)
@@ -42,10 +43,8 @@ public sealed class AsDrawnPolygonDto
         var polygons = new List<OutlinePolygon>(dtos.Count);
         foreach (var dto in dtos)
         {
-            if (dto.Xy.Length % 2 != 0 || dto.Xy.Length < 6) continue;
-            var points = new OutlinePoint[dto.Xy.Length / 2];
-            for (int i = 0; i < points.Length; i++)
-                points[i] = new OutlinePoint(dto.Xy[2 * i], dto.Xy[2 * i + 1]);
+            var points = PolygonPointCodec.TryDecode(dto.Points);
+            if (points is null || points.Count < 3) continue;
             polygons.Add(new OutlinePolygon { Layer = dto.Layer, DataType = dto.DataType, Points = points });
         }
         return polygons.Count == 0 ? null : new AsDrawnGeometry(polygons);

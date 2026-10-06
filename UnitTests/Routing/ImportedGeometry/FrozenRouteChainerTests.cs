@@ -46,16 +46,31 @@ public class FrozenRouteChainerTests
     }
 
     [Fact]
-    public void Chain_SmallJointGap_IsBridgedWithStraight()
+    public void Chain_JointGapAboveContinuityTolerance_IsBridgedWithStraight()
     {
         var a = Fit(RibbonTestPolygons.Straight(0, 0, 100, 0, Width));
-        var b = Fit(RibbonTestPolygons.Straight(100.04, 0, 200, 0, Width));
+        var b = Fit(RibbonTestPolygons.Straight(100.5, 0, 200, 0, Width));
 
         var path = FrozenRouteChainer.Chain(new[] { a, b }, (0, 0), (200, 0)).ShouldNotBeNull();
 
         path.IsValid.ShouldBeTrue();
         path.Segments.Count.ShouldBe(3);
         path.TotalLengthMicrometers.ShouldBe(200, 1e-6);
+    }
+
+    [Fact]
+    public void Chain_NanometreJointOffset_AddsNoMicroSegment()
+    {
+        // Layout tools leave tens of nanometres between abutting pieces; a bridge there
+        // would be a micro-segment whose direction reads as the launch angle at a pin.
+        var a = Fit(RibbonTestPolygons.Straight(0, 0.04, 100, 0.04, Width));
+        var b = Fit(RibbonTestPolygons.Straight(100, 0, 200, 0, Width));
+
+        var path = FrozenRouteChainer.Chain(new[] { a, b }, (0, 0), (200, 0)).ShouldNotBeNull();
+
+        path.IsValid.ShouldBeTrue();
+        path.Segments.Count.ShouldBe(2);
+        path.Segments[0].StartAngleDegrees.ShouldBe(0, 1e-9);
     }
 
     [Fact]

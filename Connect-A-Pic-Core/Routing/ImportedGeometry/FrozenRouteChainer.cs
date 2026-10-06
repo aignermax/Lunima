@@ -16,8 +16,13 @@ public static class FrozenRouteChainer
     /// </summary>
     public const double DefaultMaxGapUm = 1.0;
 
-    /// <summary>Gaps at or below this (µm) are left as-is instead of getting a bridge straight.</summary>
-    private const double NegligibleGapUm = 1e-6;
+    /// <summary>
+    /// Gaps at or below this (µm) are left as-is instead of getting a bridge straight —
+    /// the continuity tolerance <see cref="RoutedPath.IsValid"/> accepts. A bridge across
+    /// a few tens of nanometres would be a micro-segment pointing in an arbitrary
+    /// direction, which reads as the route's launch angle at a pin.
+    /// </summary>
+    private const double NegligibleGapUm = 0.1;
 
     /// <summary>
     /// Builds the route, or returns null when the pieces cannot be chained into one

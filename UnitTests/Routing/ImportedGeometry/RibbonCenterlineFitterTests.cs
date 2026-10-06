@@ -90,6 +90,47 @@ public class RibbonCenterlineFitterTests
     }
 
     [Fact]
+    public void Fit_ArcWithCompensatedInteriorVertices_IsStillAnExactBend()
+    {
+        // Layout tools put a discretized arc's interior vertices on a slightly larger
+        // circle than its end vertices (measured on a production file: +25 nm inside,
+        // −38 nm at the caps for R = 250 µm). The fit must see one circle, not a polyline.
+        const double radius = 250, width = 2, interiorShift = 0.025, endShift = -0.038;
+        var outline = CompensatedArc(radius, width, interiorShift, endShift, samples: 31);
+
+        var fit = RibbonCenterlineFitter.Fit(outline).ShouldNotBeNull();
+
+        fit.Kind.ShouldBe(RibbonFitKind.Arc);
+        var bend = (BendSegment)fit.Segments.Single();
+        bend.Center.X.ShouldBe(0, 1e-3);
+        bend.Center.Y.ShouldBe(0, 1e-3);
+        bend.RadiusMicrometers.ShouldBe(radius + endShift, 1e-6, "the radius follows the exact cap midpoints");
+        Math.Abs(bend.SweepAngleDegrees).ShouldBe(90, 1e-6);
+        fit.WidthMicrometers.ShouldBe(width, 1e-9);
+    }
+
+    /// <summary>A 90° ribbon around the origin whose interior/end vertices are shifted radially.</summary>
+    private static List<(double X, double Y)> CompensatedArc(
+        double radius, double width, double interiorShift, double endShift, int samples)
+    {
+        List<(double X, double Y)> Side(double r)
+        {
+            var side = new List<(double X, double Y)>();
+            for (int i = 0; i < samples; i++)
+            {
+                double phi = Math.PI / 2 * i / (samples - 1);
+                double rr = r + (i == 0 || i == samples - 1 ? endShift : interiorShift);
+                side.Add((rr * Math.Cos(phi), rr * Math.Sin(phi)));
+            }
+            return side;
+        }
+        var outer = Side(radius + width / 2);
+        var inner = Side(radius - width / 2);
+        inner.Reverse();
+        return outer.Concat(inner).ToList();
+    }
+
+    [Fact]
     public void Fit_NonCircularCurve_FallsBackToPolylineThroughMidpoints()
     {
         // A clothoid-like curve: curvature grows linearly along the path.

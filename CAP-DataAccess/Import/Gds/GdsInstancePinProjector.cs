@@ -21,6 +21,14 @@ internal sealed record GdsAbsolutePin
     /// (kind unknown — see <see cref="DetectedPin.IsElectrical"/>).
     /// </summary>
     public bool? IsElectrical { get; init; }
+
+    /// <summary>
+    /// True for a pin the detector GUESSED from geometry alone (a waveguide reaching the
+    /// cell edge without a label, see <see cref="DetectedPinSource.EdgeHeuristic"/>).
+    /// Route matching lets such a pin give way when it would turn a labelled 2-pin
+    /// route into an ambiguous junction.
+    /// </summary>
+    public bool IsGuessed { get; init; }
 }
 
 /// <summary>
@@ -187,6 +195,7 @@ internal static class GdsInstancePinProjector
                 YUm = topBBox.MaxY - placed.Y,
                 AngleDegrees = Normalize360(Math.Atan2(-dirY, dirX) * 180.0 / Math.PI),
                 IsElectrical = pin.IsElectrical,
+                IsGuessed = pin.Source == DetectedPinSource.EdgeHeuristic,
             });
         }
         return result;

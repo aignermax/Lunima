@@ -62,6 +62,41 @@ public class GdsRouteConnectivityMatcherTests
             electrical);
 
     [Fact]
+    public void Match_GuessedPinOnALabelledRoute_GivesWay()
+    {
+        // The route bridges wgA.out → wgB.in; a guessed edge pin of wgA also sits on the
+        // bridge. Without the guess the network is the honest 2-pin route.
+        var pinsPerInstance = new IReadOnlyList<GdsAbsolutePin>[]
+        {
+            new[] { Pin("out", 10, 2), new GdsAbsolutePin { Name = "heur_1", XUm = 12, YUm = 2, IsGuessed = true } },
+            new[] { Pin("in", 15, 2) },
+        };
+        var infos = new List<string>();
+
+        var result = Match(new[] { Bridge() }, pinsPerInstance, infos: infos);
+
+        var pair = result.Pairs.ShouldHaveSingleItem("the guessed pin must not turn the route into a junction");
+        new[] { pair.A.PinName, pair.B.PinName }.ShouldBe(new[] { "out", "in" }, ignoreOrder: true);
+        infos.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Match_ThreeLabelledPinsOnOneNetwork_StaysAJunction()
+    {
+        var pinsPerInstance = new IReadOnlyList<GdsAbsolutePin>[]
+        {
+            new[] { Pin("out", 10, 2), Pin("tap", 12, 2) },
+            new[] { Pin("in", 15, 2) },
+        };
+        var infos = new List<string>();
+
+        var result = Match(new[] { Bridge() }, pinsPerInstance, infos: infos);
+
+        result.Pairs.ShouldBeEmpty("three labelled pins really are a junction");
+        infos.ShouldContain(i => i.Contains("junction with 3 pins"));
+    }
+
+    [Fact]
     public void Match_PolygonBridgingTwoInstancePins_BecomesRouteDerivedPair()
     {
         // wgA.out at (10, 2) sits on the bridge's left edge, wgB.in at (15, 2)
