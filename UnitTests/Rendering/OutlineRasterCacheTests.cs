@@ -53,7 +53,19 @@ public class OutlineRasterCacheTests
         using (var ctx = bitmap.CreateDrawingContext())
             renderer.Draw(ctx, 0, 0, 4000, 50, 0, ManyPolygons, false, zoom: 1.0);
 
-        renderer.IssuedGeometryCount.ShouldBe(1, "one batched vector draw for 400 same-size polygons");
+        renderer.IssuedGeometryCount.ShouldBe(8, "400 same-size polygons spanning 4 mm: one batched vector draw per 500 µm tile");
+    }
+
+    [AvaloniaFact]
+    public void ZoomedIn_OffScreenTilesAreSkipped()
+    {
+        var renderer = new ComponentOutlineRenderer();
+        using var bitmap = new RenderTargetBitmap(new PixelSize(200, 100));
+        using (var ctx = bitmap.CreateDrawingContext())
+            renderer.Draw(ctx, 0, 0, 4000, 50, 0, ManyPolygons, false, zoom: 1.0,
+                visibleWorld: new Rect(0, 0, 200, 100));
+
+        renderer.IssuedGeometryCount.ShouldBe(1, "only the tile under the 200 µm viewport is drawn");
     }
 
     private static int CountLitPixels(RenderTargetBitmap bitmap, PixelRect region)
