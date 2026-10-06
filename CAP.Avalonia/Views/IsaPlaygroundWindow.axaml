@@ -93,10 +93,12 @@
                          ScrollViewer.VerticalScrollBarVisibility="Auto"/>
             </DockPanel>
 
-            <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="4">
-                <TextBlock Text="{loc:Localize IsaPlayground.StateTitle}" Foreground="DeepSkyBlue"
-                           FontWeight="SemiBold" FontSize="13"/>
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,2,0,4">
+            <!-- DockPanel, not StackPanel: the trace must get a bounded height so it
+                 scrolls instead of painting over the button row. -->
+            <DockPanel Grid.Column="1" Margin="14,0,0,0" LastChildFill="True">
+                <TextBlock DockPanel.Dock="Top" Text="{loc:Localize IsaPlayground.StateTitle}" Foreground="DeepSkyBlue"
+                           FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,2,0,8">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Localize IsaPlayground.PcLabel}"
                                Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ProgramCounter}"
@@ -130,7 +132,7 @@
                 <!-- "What runs on light" row (#1456): one chip per machine unit —
                      green while the photonic network computes it, grey while it is
                      simulated electronically. The (?) flyout explains the colors. -->
-                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,2">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,2,0,6">
                     <ItemsControl ItemsSource="{Binding UnitChips}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -170,12 +172,12 @@
                     </ctrl:HelpFlyoutButton>
                 </StackPanel>
 
-                <TextBlock Text="{Binding ErrorText}" Foreground="#ff6b6b" FontSize="11"
-                           TextWrapping="Wrap"
+                <TextBlock DockPanel.Dock="Top" Text="{Binding ErrorText}" Foreground="#ff6b6b" FontSize="11"
+                           TextWrapping="Wrap" Margin="0,0,0,4"
                            IsVisible="{Binding ErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                <TextBlock Text="{loc:Localize IsaPlayground.TraceTitle}" Foreground="DeepSkyBlue"
-                           FontWeight="SemiBold" FontSize="13" Margin="0,6,0,2"/>
+                <TextBlock DockPanel.Dock="Top" Text="{loc:Localize IsaPlayground.TraceTitle}" Foreground="DeepSkyBlue"
+                           FontWeight="SemiBold" FontSize="13" Margin="0,6,0,6"/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding TraceLines}">
@@ -199,7 +201,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-            </StackPanel>
+            </DockPanel>
         </Grid>
     </DockPanel>
 
