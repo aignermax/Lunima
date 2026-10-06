@@ -26,6 +26,12 @@ public class OpenEblEBeamLayerConformanceTests
         var canvas = EBeamCanvasBuilder.CreateWithWaveguide();
         EBeamCanvasBuilder.AddSiepicParametricStraight(canvas);
 
+        // #1447: this test once failed order-dependently (layer 1003 in the script,
+        // i.e. the profile resolved to null). Assert the profile up front with a
+        // full state dump so any recurrence names the leaked input in the log.
+        SiepicEBeamExportProfile.Resolve(canvas)
+            .ShouldNotBeNull(OpenEblEBeamLayerConformanceDiagnostics.Describe(canvas));
+
         var script = new SimpleNazcaExporter().Export(canvas);
 
         // The global interconnect and every routed segment carry the EBeam process
