@@ -31,6 +31,7 @@ public partial class LogicFanOutWarningViewModel : ObservableObject
                 warning.Levels.DriverPowerOne,
                 warning.Levels.BranchPower,
                 warning.Levels.SplitLossDb);
+            LinkNote = Translate("LogicPanel.FanOutWarning.LinkNote");
         }
         else
         {
@@ -65,6 +66,12 @@ public partial class LogicFanOutWarningViewModel : ObservableObject
 
     /// <summary>The ideal-split arithmetic: 1×N split, driver power → per-branch power, loss in dB.</summary>
     public string SplitLine { get; }
+
+    /// <summary>Remedy note for a degraded chiplet link; empty for fan-out warnings.</summary>
+    public string LinkNote { get; } = "";
+
+    /// <summary>True when this entry flags a lossy chiplet link rather than a fan-out site.</summary>
+    public bool IsLinkWarning => Warning.LinkDisplayName != null;
 
     /// <summary>One verdict line per receiving input: would it still read a logic 1.</summary>
     public IReadOnlyList<string> VerdictLines { get; }
