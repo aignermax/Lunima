@@ -1789,6 +1789,12 @@ public class ConnectionData
 
     /// <summary>Accepted deviation (µm) from <see cref="TargetLengthMicrometers"/>; null = no length intent.</summary>
     public double? LengthToleranceMicrometers { get; set; }
+
+    /// <summary>
+    /// The exact polygons an imported, still untouched route was drawn with; null for
+    /// routed connections and in files that predate the field.
+    /// </summary>
+    public List<CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto>? AsDrawnPolygons { get; set; }
 }
 
 /// <summary>

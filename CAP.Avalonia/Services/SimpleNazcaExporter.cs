@@ -750,6 +750,13 @@ public class SimpleNazcaExporter
             if (ExportableConnections.TryRecordSkip(conn.RoutedPath, conn.StartPin, conn.EndPin, skippedConnections))
                 continue;
 
+            // An untouched imported route writes back exactly the polygons it was read from.
+            if (conn.AsDrawnGeometry is { } asDrawn)
+            {
+                AsDrawnNazcaWriter.Append(sb, asDrawn);
+                continue;
+            }
+
             // Electrical connections are metal traces, not optical waveguides — emit them on
             // the process metal layer/width instead of the waveguide layer (issue #682). A
             // connection is metal only when BOTH pins are electrical; a mixed optical+electrical
@@ -1007,6 +1014,13 @@ public class SimpleNazcaExporter
         SiepicWaveguideCellWriter? waveguideCells = null)
     {
         if (frozenPath == null) return;
+
+        // Imported geometry that still carries its drawn polygons exports them verbatim.
+        if (frozenPath.AsDrawnGeometry is { } asDrawn)
+        {
+            AsDrawnNazcaWriter.Append(sb, asDrawn);
+            return;
+        }
 
         // A PIN-LESS frozen path holds imported top-cell route geometry: the source
         // polygon's OUTLINE traced as a closed ring of straight segments

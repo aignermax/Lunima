@@ -50,7 +50,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             }
 
             IssuedConnectionCount++;
-            DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc.Zoom, rc.Labels, segments);
+            DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments);
         }
 
         if (vm.ShowPowerFlow && rc.InteractionState.HoveredConnection != null)
@@ -69,11 +69,18 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         double minY = Math.Min(conn.StartY, conn.EndY);
         var bounds = new Rect(minX, minY,
             Math.Max(conn.StartX, conn.EndX) - minX, Math.Max(conn.StartY, conn.EndY) - minY);
-        return segments.Count > 0 ? bounds.Union(RenderCulling.ComputeSegmentBounds(segments)) : bounds;
+        if (segments.Count > 0)
+            bounds = bounds.Union(RenderCulling.ComputeSegmentBounds(segments));
+        if (conn.Connection.AsDrawnGeometry is { } asDrawn)
+        {
+            var (minX2, minY2, maxX2, maxY2) = asDrawn.Bounds;
+            bounds = bounds.Union(new Rect(minX2, minY2, maxX2 - minX2, maxY2 - minY2));
+        }
+        return bounds;
     }
 
     private static void DrawWaveguideConnection(DrawingContext context, WaveguideConnectionViewModel conn,
-        DesignCanvasViewModel vm, bool isHovered, double zoom, DeferredLabelLayer labels,
+        DesignCanvasViewModel vm, bool isHovered, CanvasRenderContext rc,
         IReadOnlyList<CAP_Core.Routing.PathSegment> segments)
     {
         var pen = CreateWaveguidePen(conn, vm, isHovered);
@@ -85,8 +92,20 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             return;
         }
 
-        DrawPathSegments(context, pen, segments);
-        DrawConnectionOverlays(context, conn, vm, isHovered, zoom, labels);
+        if (conn.Connection.AsDrawnGeometry is { } asDrawn)
+        {
+            // An untouched import draws exactly as drawn; the centerline only appears as
+            // the selection/hover/power-flow highlight on top of the drawn polygons.
+            bool showsPowerFlow = vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null;
+            AsDrawnGeometryRenderer.Draw(context, asDrawn, rc.Zoom, rc.LayerVisibility, isDimmed: showsPowerFlow);
+            if (conn.IsSelected || isHovered || showsPowerFlow)
+                DrawPathSegments(context, pen, segments);
+        }
+        else
+        {
+            DrawPathSegments(context, pen, segments);
+        }
+        DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels);
     }
 
     /// <summary>

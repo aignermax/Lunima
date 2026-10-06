@@ -114,18 +114,26 @@ public sealed partial class GdsPlacementExecutor
     /// see <see cref="AutoConnectAllPinsAsync"/>. False (the default) leaves
     /// unconnected pins free for manual routing.
     /// </param>
+    /// <param name="groupImport">
+    /// True (the default) wraps the placed components in one group named after the top
+    /// cell, with the leftover routing geometry as frozen group paths. False keeps the
+    /// import flat: every component and connection stays individually selectable and
+    /// editable, and leftover/background geometry becomes canvas-level frozen paths.
+    /// </param>
     /// <returns>A report of what was placed, connected, and skipped.</returns>
     public async Task<GdsPlacementReport> ExecuteAsync(
         GdsPlacementPlan plan,
         IProgress<string>? progress = null,
         CancellationToken ct = default,
         bool rerouteImportedConnections = true,
-        bool autoConnectAllPins = false)
+        bool autoConnectAllPins = false,
+        bool groupImport = true)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var report = new GdsPlacementReport();
         var templates = _templateProvider();
         PlacedCountSoFar = 0;
+        _centerlineRoutes.Clear();
 
         // Computed BEFORE anything is placed: the canvas must still hold only the
         // pre-import content for the free-space rule.
@@ -149,7 +157,11 @@ public sealed partial class GdsPlacementExecutor
         if (autoConnectAllPins)
             createdConnections.AddRange(await AutoConnectAllPinsAsync(placedViewModels, report, progress, ct));
         ValidateCreatedConnections(createdConnections, report);
-        CreateGroup(plan, placedViewModels, report, progress, ct, originOffset);
+        var (leftovers, background) = AssignAsDrawnGeometry(plan, report, originOffset);
+        if (groupImport)
+            CreateGroup(plan, placedViewModels, report, progress, ct, leftovers, background);
+        else
+            AddCanvasFrozenPaths(leftovers, background);
         return report;
     }
 
@@ -274,14 +286,17 @@ public sealed partial class GdsPlacementExecutor
         GdsPlacementReport report,
         IProgress<string>? progress,
         CancellationToken ct,
-        (double X, double Y) originOffset)
+        List<CAP_Core.Components.Core.FrozenWaveguidePath> leftovers,
+        List<CAP_Core.Components.Core.OutlinePolygon> background)
     {
         ct.ThrowIfCancellationRequested();
         var groupCandidates = placedViewModels.OfType<ComponentViewModel>().ToList();
         if (groupCandidates.Count < 2)
         {
-            WarnOnDroppedRouteGeometry(plan, report);
-            return; // CreateGroupCommand needs ≥2 components; a lone component stays ungrouped.
+            // CreateGroupCommand needs ≥2 components; a lone component stays ungrouped and
+            // the leftover geometry lands on the canvas instead.
+            AddCanvasFrozenPaths(leftovers, background);
+            return;
         }
 
         progress?.Report($"Grouping {groupCandidates.Count} components as '{plan.GroupName}'…");
@@ -295,31 +310,21 @@ public sealed partial class GdsPlacementExecutor
 
         if (command.CreatedGroup is null)
         {
-            WarnOnDroppedRouteGeometry(plan, report);
-            return; // grouping was rejected (e.g. locked components) — components stay ungrouped.
+            // Grouping was rejected (e.g. locked components): components stay ungrouped.
+            AddCanvasFrozenPaths(leftovers, background);
+            return;
         }
 
         report.GroupCreated = true;
         report.GroupName = plan.GroupName;
-        report.FrozenRoutePathCount = plan.TopCellWaveguidePolygons.Count;
-
-        // The top cell's own routing geometry (waveguide-layer polygons) becomes
-        // pin-less frozen paths on the group: visible and persistent, but not
-        // re-routable. Polygons that bridged exactly two pins already became
-        // real connections upstream (route derivation) and are not in this list.
-        // The polygons are in plan space, so the import origin offset the
-        // placements already received must be applied here too — frozen paths
-        // hold absolute canvas coordinates.
-        var frozenProgress = StageProgress(progress, "Attaching frozen route paths");
-        for (var i = 0; i < plan.TopCellWaveguidePolygons.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            frozenProgress?.Report(i + 1, plan.TopCellWaveguidePolygons.Count);
-            command.CreatedGroup.AddInternalPath(
-                GdsFrozenRoutePathFactory.Create(plan.TopCellWaveguidePolygons[i], originOffset.X, originOffset.Y));
-        }
-
-        AttachBackgroundGeometry(plan, command.CreatedGroup, report, originOffset);
+        // Leftover top-cell routing geometry (junctions, unconnected stubs) becomes
+        // pin-less frozen paths on the group: visible, persistent and a routing obstacle,
+        // but not re-routable. Polygons that bridged exactly two pins already became
+        // real connections upstream. One batched add: AddInternalPath recomputes the
+        // group bounds over every path each call.
+        progress?.Report($"Attaching {leftovers.Count} frozen route path(s)…");
+        command.CreatedGroup.AddInternalPaths(leftovers);
+        AttachBackgroundGeometry(background, command.CreatedGroup);
     }
 
     /// <summary>
@@ -331,48 +336,20 @@ public sealed partial class GdsPlacementExecutor
     /// like any component's outline polygons.
     /// </summary>
     private static void AttachBackgroundGeometry(
-        GdsPlacementPlan plan,
-        CAP_Core.Components.Core.ComponentGroup group,
-        GdsPlacementReport report,
-        (double X, double Y) originOffset)
+        List<CAP_Core.Components.Core.OutlinePolygon> background,
+        CAP_Core.Components.Core.ComponentGroup group)
     {
-        if (plan.TopCellResidualPolygons.Count == 0)
+        if (background.Count == 0)
             return;
 
-        var offsetX = originOffset.X - group.PhysicalX;
-        var offsetY = originOffset.Y - group.PhysicalY;
-        group.OutlinePolygons = plan.TopCellResidualPolygons
-            .Select(p => new CAP_Core.Components.Core.OutlinePolygon
+        group.OutlinePolygons = background
+            .Select(p => p with
             {
-                Layer = p.Layer,
-                DataType = p.DataType,
                 Points = p.Points
-                    .Select(pt => new CAP_Core.Components.Core.OutlinePoint(pt.X + offsetX, pt.Y + offsetY))
+                    .Select(pt => new CAP_Core.Components.Core.OutlinePoint(pt.X - group.PhysicalX, pt.Y - group.PhysicalY))
                     .ToList(),
             })
             .ToList();
-        report.BackgroundPolygonCount = plan.TopCellResidualPolygons.Count;
-    }
-
-    /// <summary>
-    /// The import warning promises the top cell's routing and background geometry
-    /// comes back on the group — when no group was created there is nothing to
-    /// attach it to, and the geometry would vanish silently without this note.
-    /// </summary>
-    private static void WarnOnDroppedRouteGeometry(GdsPlacementPlan plan, GdsPlacementReport report)
-    {
-        if (plan.TopCellWaveguidePolygons.Count > 0)
-        {
-            report.Warnings.Add(
-                $"Top-cell routing geometry ({plan.TopCellWaveguidePolygons.Count} waveguide " +
-                "polygon(s)) was not imported: no group was created to hold the frozen paths.");
-        }
-        if (plan.TopCellResidualPolygons.Count > 0)
-        {
-            report.Warnings.Add(
-                $"Top-cell background geometry ({plan.TopCellResidualPolygons.Count} polygon(s)) " +
-                "was not imported: no group was created to hold it.");
-        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

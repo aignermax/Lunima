@@ -162,7 +162,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
             // is culled individually by its cached bounding box.
             if (RenderCulling.GetFrozenPathBounds(frozenPath) is { } pathBounds && !cullRect.Intersects(pathBounds))
                 continue;
-            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility);
+            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility, zoom: rc.Zoom);
         }
 
         if (!cullRect.Intersects(bounds))

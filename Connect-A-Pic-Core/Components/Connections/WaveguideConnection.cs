@@ -10,7 +10,7 @@ namespace CAP_Core.Components.Connections
     /// Represents a waveguide routing connection between two physical pins.
     /// Automatically calculates transmission coefficient based on geometry and loss parameters.
     /// </summary>
-    public class WaveguideConnection
+    public partial class WaveguideConnection
     {
         /// <summary>Default waveguide width in micrometers (standard: 500 nm strip).</summary>
         public const double DefaultWidthMicrometers = 0.5;

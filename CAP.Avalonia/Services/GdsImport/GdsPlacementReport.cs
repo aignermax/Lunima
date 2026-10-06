@@ -27,6 +27,13 @@ public sealed class GdsPlacementReport
     /// </summary>
     public int CachedRouteCount { get; internal set; }
 
+    /// <summary>
+    /// How many of the <see cref="CachedRouteCount"/> frozen routes carry a real
+    /// centerline (straights and arcs fitted to the drawn polygons) rather than the
+    /// traced polygon outline.
+    /// </summary>
+    public int CenterlineRouteCount { get; internal set; }
+
     /// <summary>Number of top-cell route polygons kept as frozen, non-re-routable paths on the group.</summary>
     public int FrozenRoutePathCount { get; internal set; }
 

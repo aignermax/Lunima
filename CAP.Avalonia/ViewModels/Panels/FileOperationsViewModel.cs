@@ -459,7 +459,8 @@ public partial class FileOperationsViewModel : ObservableObject
                         SourceGdsLayer = c.Connection.SourceGdsLayer,
                         SourceGdsDataType = c.Connection.SourceGdsDataType,
                         TargetLengthMicrometers = c.Connection.TargetLengthMicrometers,
-                        LengthToleranceMicrometers = c.Connection.LengthToleranceMicrometers
+                        LengthToleranceMicrometers = c.Connection.LengthToleranceMicrometers,
+                        AsDrawnPolygons = CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto.FromGeometry(c.Connection.AsDrawnGeometry),
                     };
                 }).ToList()
             };
@@ -1970,7 +1971,12 @@ public partial class FileOperationsViewModel : ObservableObject
 
         // Restore routing style / interconnect settings / freeze state (issue #574)
         if (connVm != null)
+        {
             RestoreRoutingSettings(connVm.Connection, connData, keepFrozenGeometry: !pinCalibrationChanged);
+            // Bound to the restored route: only a still-frozen, unedited route shows them.
+            if (CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto.ToGeometry(connData.AsDrawnPolygons) is { } asDrawn)
+                connVm.Connection.AttachAsDrawnGeometry(asDrawn);
+        }
     }
 
     /// <summary>

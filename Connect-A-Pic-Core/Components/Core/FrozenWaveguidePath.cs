@@ -46,6 +46,14 @@ public class FrozenWaveguidePath : ICloneable
     public int? DataType { get; set; }
 
     /// <summary>
+    /// The exact polygons this geometry was drawn with in an imported layout (absolute
+    /// canvas coordinates), or null. Rendered and exported verbatim instead of the
+    /// centerline; moves with the path (<see cref="TranslateBy"/>) and travels with the
+    /// connection through grouping (<see cref="CaptureSettingsFrom"/>/<see cref="ApplySettingsTo"/>).
+    /// </summary>
+    public AsDrawnGeometry? AsDrawnGeometry { get; set; }
+
+    /// <summary>
     /// Unique identifier for this frozen path.
     /// </summary>
     public Guid PathId { get; set; } = Guid.NewGuid();
@@ -118,6 +126,7 @@ public class FrozenWaveguidePath : ICloneable
     {
         Layer = connection.SourceGdsLayer;
         DataType = connection.SourceGdsDataType;
+        AsDrawnGeometry = connection.AsDrawnGeometry;
         ConnectionType = connection.Type;
         BendRadiusMicrometers = connection.BendRadiusMicrometers;
         WidthMicrometers = connection.WidthMicrometers;
@@ -157,6 +166,19 @@ public class FrozenWaveguidePath : ICloneable
         connection.StraightShiftOffsets.Clear();
         foreach (var (straightIndex, offset) in StraightShiftOffsets)
             connection.StraightShiftOffsets[straightIndex] = offset;
+        AttachAsDrawnTo(connection);
+    }
+
+    /// <summary>
+    /// Hands the drawn polygons back to a live connection whose route is the restored
+    /// copy of <see cref="Path"/>. Call after the route is in place: the connection binds
+    /// the polygons to its CURRENT route instance (no-op while it has none).
+    /// </summary>
+    /// <param name="connection">The connection restored from this frozen path.</param>
+    public void AttachAsDrawnTo(WaveguideConnection connection)
+    {
+        if (AsDrawnGeometry is not null && connection.RoutedPath is not null)
+            connection.AttachAsDrawnGeometry(AsDrawnGeometry);
     }
 
     /// <summary>
@@ -169,6 +191,7 @@ public class FrozenWaveguidePath : ICloneable
     {
         Layer = source.Layer;
         DataType = source.DataType;
+        AsDrawnGeometry = source.AsDrawnGeometry;
         ConnectionType = source.ConnectionType;
         BendRadiusMicrometers = source.BendRadiusMicrometers;
         WidthMicrometers = source.WidthMicrometers;
@@ -254,6 +277,7 @@ public class FrozenWaveguidePath : ICloneable
     /// <param name="deltaY">Y offset in micrometers.</param>
     public void TranslateBy(double deltaX, double deltaY)
     {
+        AsDrawnGeometry = AsDrawnGeometry?.Translated(deltaX, deltaY);
         if (Path?.Segments == null) return;
 
         foreach (var segment in Path.Segments)
