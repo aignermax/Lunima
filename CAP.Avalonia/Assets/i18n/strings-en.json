@@ -636,6 +636,7 @@
   "IsaPlayground.AccBinaryLabel": "ACC (binary)",
   "IsaPlayground.RamLabel": "RAM",
   "IsaPlayground.RamOnLightChip": "on light",
+  "IsaPlayground.UnitChipsTitle": "What runs on light?",
   "IsaPlayground.UnitChipsHint": "Green parts are computed by the photonic network you built; grey parts are simulated electronically.",
   "IsaPlayground.StatusLabel": "Status",
   "IsaPlayground.StatusRunning": "running",

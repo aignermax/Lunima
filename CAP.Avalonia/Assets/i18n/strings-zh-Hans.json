@@ -636,6 +636,7 @@
   "IsaPlayground.AccBinaryLabel": "ACC（二进制）",
   "IsaPlayground.RamLabel": "RAM",
   "IsaPlayground.RamOnLightChip": "光载",
+  "IsaPlayground.UnitChipsTitle": "哪些部分在光上运行？",
   "IsaPlayground.UnitChipsHint": "绿色部分由你搭建的光子网络计算；灰色部分以电子方式仿真。",
   "IsaPlayground.StatusLabel": "状态",
   "IsaPlayground.StatusRunning": "运行中",
