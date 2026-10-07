@@ -533,8 +533,25 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(bool Strip, string Python), Lazy<Task<ExportResult>>>
         ExportCache = new();
 
-    private static readonly string ExportCacheRoot =
-        Path.Combine(Path.GetTempPath(), "lunima-user-design-export-" + Guid.NewGuid().ToString("N"));
+    private static readonly string ExportCacheRoot = CreateExportCacheRoot();
+
+    /// <summary>The run-wide export directory, deleted when the test process exits.</summary>
+    private static string CreateExportCacheRoot()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lunima-user-design-export-" + Guid.NewGuid().ToString("N"));
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch (IOException)
+            {
+                // A locked file must not fail the test run's shutdown; the OS temp cleanup takes it.
+            }
+        };
+        return root;
+    }
 
     /// <summary>The interpreter for the scenario, or a skip when the machine has none.</summary>
     private static async Task<string?> FindExportPythonAsync(bool requireSiepicUpgradeStack)
