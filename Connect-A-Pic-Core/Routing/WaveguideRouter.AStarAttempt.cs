@@ -1,5 +1,6 @@
 using CAP_Core.Components.Core;
 using CAP_Core.Routing.AStarPathfinder;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP_Core.Routing;
 
@@ -92,6 +93,8 @@ public partial class WaveguideRouter
             CostCalculator.MinStraightRunCells = scaledStraightRun;
 
             List<AStarNode>? gridPath = null;
+            var crossingStep = CreateCrossingStep();
+            LastPlannedCrossings = Array.Empty<PlannedCrossing>();
 
             // The heuristic's distance metric must match the movement model.
             CostCalculator.UseDiagonals = UseDiagonalRouting;
@@ -104,7 +107,10 @@ public partial class WaveguideRouter
             // be skipped with the same null result they would have returned after burning
             // their full node budgets. The flood sees the same grid state the searches
             // would: the pin corridors above are already cleared.
+            // The flood treats every waveguide as a wall, so it cannot judge a search that
+            // may cross them — with crossings allowed, the search itself decides.
             bool goalReachable = _hierarchicalPathfinder != null && UseHierarchicalPathfinding
+                || crossingStep != null
                 || PathfindingGrid.CanReachGoalDirected(
                     gridStartX, gridStartY, gridEndX, gridEndY,
                     AStarPathfinder.AStarPathfinder.DefaultGoalTolerance, UseDiagonalRouting);
@@ -119,7 +125,7 @@ public partial class WaveguideRouter
             else if (goalReachable)
             {
                 gridPath = RunAStarPhases(gridStartX, gridStartY, startDir,
-                                          gridEndX, gridEndY, endDir, cancellationToken);
+                                          gridEndX, gridEndY, endDir, crossingStep, cancellationToken);
             }
 
             // Lateral-tolerance retry: the strict phases require an exact
@@ -134,7 +140,8 @@ public partial class WaveguideRouter
                 {
                     MaxNodesExpanded = Phase1MaxNodes,
                     AllowLateralGoalTolerance = true,
-                    UseDiagonals = UseDiagonalRouting
+                    UseDiagonals = UseDiagonalRouting,
+                    Crossings = crossingStep
                 };
                 gridPath = tolerantRetry.FindPath(gridStartX, gridStartY, startDir,
                                                   gridEndX, gridEndY, endDir, cancellationToken);
@@ -147,7 +154,8 @@ public partial class WaveguideRouter
                 CostCalculator.MinStraightRunCells = 2;
                 var retry = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
                 {
-                    UseDiagonals = UseDiagonalRouting
+                    UseDiagonals = UseDiagonalRouting,
+                    Crossings = crossingStep
                 };
                 var retryPath = retry.FindPath(gridStartX, gridStartY, startDir,
                                                gridEndX, gridEndY, endDir, cancellationToken);
@@ -161,7 +169,8 @@ public partial class WaveguideRouter
                 CostCalculator.MinStraightRunCells = 2;
                 var fallback = new AStarPathfinder.AStarPathfinder(PathfindingGrid, CostCalculator)
                 {
-                    UseDiagonals = UseDiagonalRouting
+                    UseDiagonals = UseDiagonalRouting,
+                    Crossings = crossingStep
                 };
                 gridPath = fallback.FindPath(gridStartX, gridStartY, startDir,
                                              gridEndX, gridEndY, endDir, cancellationToken);
@@ -179,6 +188,7 @@ public partial class WaveguideRouter
             path.Segments.AddRange(smoothedPath.Segments);
             path.IsInvalidGeometry = smoothedPath.IsInvalidGeometry;
             path.DebugGridPath = gridPath;
+            RecordPlannedCrossings(gridPath);
 
             // Success requires valid segments without geometry violations
             return path.Segments.Count > 0 && !path.IsInvalidGeometry;
@@ -206,6 +216,7 @@ public partial class WaveguideRouter
     private List<AStarNode>? RunAStarPhases(
         int gridStartX, int gridStartY, GridDirection startDir,
         int gridEndX, int gridEndY, GridDirection endDir,
+        CrossingStep? crossingStep,
         CancellationToken cancellationToken)
     {
         var search = new AStarPathfinder.AStarPathfinder(PathfindingGrid!, CostCalculator)
@@ -217,7 +228,8 @@ public partial class WaveguideRouter
             MaxNodesExpanded = Phase2MaxNodes,
             UseDiagonals = UseDiagonalRouting,
             EscalationThresholdNodes = Phase1MaxNodes,
-            OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke()
+            OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke(),
+            Crossings = crossingStep
         };
         return search.FindPath(gridStartX, gridStartY, startDir,
                                gridEndX, gridEndY, endDir, cancellationToken);

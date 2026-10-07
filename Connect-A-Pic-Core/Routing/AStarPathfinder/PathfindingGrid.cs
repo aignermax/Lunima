@@ -610,6 +610,7 @@ public partial class PathfindingGrid
             _waveguideCells.Clear();
             _waveguideEndpoints.Clear();
             _waveguideGeometry.Clear();
+            _waveguideHalfWidths.Clear();
         }
         lock (_pinZoneLock)
         {
@@ -695,6 +696,7 @@ public partial class PathfindingGrid
         {
             _waveguideCells[connectionId] = cells;
             _waveguideGeometry[connectionId] = segmentList;
+            _waveguideHalfWidths[connectionId] = halfWidth;
             _waveguideEndpoints[connectionId] = (
                 (segmentList[0].StartPoint.X, segmentList[0].StartPoint.Y),
                 (segmentList[^1].EndPoint.X, segmentList[^1].EndPoint.Y));
@@ -716,6 +718,7 @@ public partial class PathfindingGrid
             _waveguideCells.Remove(connectionId);
             _waveguideEndpoints.Remove(connectionId);
             _waveguideGeometry.Remove(connectionId);
+            _waveguideHalfWidths.Remove(connectionId);
         }
 
         foreach (var (gx, gy) in cells)
