@@ -20,6 +20,9 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
     /// <summary>Sentinel nazcaFunction of virtual analysis tools — never exported, skip.</summary>
     private const string AnalyzerSentinel = "__analyzer__";
 
+    /// <summary>Backend name of raw code that targets Nazca (absent means Nazca, the GDS-import default).</summary>
+    private const string NazcaRawCodeBackend = "nazca";
+
     private readonly PdkLoader _pdkLoader;
     private readonly PdkFunctionResolutionService _resolutionService;
     private readonly Func<string?> _pdkDirectoryResolver;
@@ -125,7 +128,11 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
         }
 
         var group = new PdkResolutionGroupViewModel { PdkName = draft.Name, FileName = fileName };
-        var components = draft.Components.Where(c => c.NazcaFunction != AnalyzerSentinel).ToList();
+        // Components with inline Nazca raw code export their own geometry and call no
+        // library function — there is nothing to resolve.
+        var components = draft.Components
+            .Where(c => c.NazcaFunction != AnalyzerSentinel && !HasInlineNazcaCode(c))
+            .ToList();
         if (components.Count == 0)
             return group;
 
@@ -211,4 +218,10 @@ public partial class PdkResolutionCheckViewModel : ObservableObject
         }
         return sb.ToString();
     }
+
+    /// <summary>True when the component carries inline Nazca raw code instead of a library function.</summary>
+    private static bool HasInlineNazcaCode(PdkComponentDraft component) =>
+        !string.IsNullOrWhiteSpace(component.RawCode)
+        && (string.IsNullOrWhiteSpace(component.RawCodeBackend)
+            || string.Equals(component.RawCodeBackend, NazcaRawCodeBackend, StringComparison.OrdinalIgnoreCase));
 }

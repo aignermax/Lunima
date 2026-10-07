@@ -809,6 +809,144 @@
           "pinKind": "Electrical"
         }
       ]
+    },
+    {
+      "name": "Waveguide Crossing",
+      "category": "Crossings",
+      "nazcaFunction": "demo_crossing",
+      "widthMicrometers": 20,
+      "heightMicrometers": 20,
+      "nazcaOriginOffsetX": 0,
+      "nazcaOriginOffsetY": 10,
+      "pins": [
+        {
+          "name": "port 1",
+          "offsetXMicrometers": 0,
+          "offsetYMicrometers": 10,
+          "angleDegrees": 180
+        },
+        {
+          "name": "port 2",
+          "offsetXMicrometers": 20,
+          "offsetYMicrometers": 10,
+          "angleDegrees": 0
+        },
+        {
+          "name": "port 3",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 0,
+          "angleDegrees": 270
+        },
+        {
+          "name": "port 4",
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 20,
+          "angleDegrees": 90
+        }
+      ],
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "port 1",
+            "toPin": "port 1",
+            "magnitude": 0.01,
+            "phaseDegrees": -180
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 2",
+            "magnitude": 0.978,
+            "phaseDegrees": 45
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 1",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 1",
+            "magnitude": 0.978,
+            "phaseDegrees": 45
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 2",
+            "magnitude": 0.01,
+            "phaseDegrees": -180
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 3",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 2",
+            "toPin": "port 4",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 3",
+            "magnitude": 0.01,
+            "phaseDegrees": -180
+          },
+          {
+            "fromPin": "port 3",
+            "toPin": "port 4",
+            "magnitude": 0.978,
+            "phaseDegrees": 45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 1",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 2",
+            "magnitude": 0.02,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 3",
+            "magnitude": 0.978,
+            "phaseDegrees": 45
+          },
+          {
+            "fromPin": "port 4",
+            "toPin": "port 4",
+            "magnitude": 0.01,
+            "phaseDegrees": -180
+          }
+        ]
+      },
+      "rawCode": "def component():\n    with nd.Cell(name=\u0027demo_crossing_body\u0027) as c:\n        demo.shallow.strt(length=20).put(0, 0, 0)\n        demo.shallow.strt(length=20).put(10, -10, 90)\n    return c\n",
+      "rawCodeBackend": "nazca"
     }
   ]
 }
