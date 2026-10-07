@@ -43,13 +43,19 @@ namespace UnitTests.Services.GdsImport;
 /// </para>
 /// </summary>
 [Trait("Category", "Slow")]
+[Collection(GdsMziElectricalExportCollection.Name)]
 public class GdsBondPadOffsetProbeTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
+    private readonly GdsMziElectricalExportFixture _export;
     private readonly string _root =
         Path.Combine(Path.GetTempPath(), "bondpad-probe-" + Guid.NewGuid().ToString("N"));
 
-    public GdsBondPadOffsetProbeTests(ITestOutputHelper output) => _output = output;
+    public GdsBondPadOffsetProbeTests(ITestOutputHelper output, GdsMziElectricalExportFixture export)
+    {
+        _output = output;
+        _export = export;
+    }
 
     public void Dispose()
     {
@@ -66,10 +72,9 @@ public class GdsBondPadOffsetProbeTests : IDisposable
     [SkippableFact]
     public async Task Probe_BondPadAlignment()
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "no nazca python");
+        Skip.If(_export.Python == null, "no nazca python");
 
-        var canvas = GdsMziElectricalFixture.BuildMziCanvas();
+        var canvas = _export.Canvas;
 
         // Expected truth from the app model (export's Y-flip applied: nazca = (x, -y)).
         var expected = new List<ExpectedPad>();
@@ -91,44 +96,15 @@ public class GdsBondPadOffsetProbeTests : IDisposable
         }
         expected.Count.ShouldBe(4);
 
-        var skipped = new List<string>();
-        var warnings = new List<string>();
-        var script = new SimpleNazcaExporter().Export(
-            canvas, skippedConnections: skipped, exportWarnings: warnings);
-        _output.WriteLine($"skipped=[{string.Join(";", skipped)}] warnings=[{string.Join(";", warnings)}]");
+        // The shared export: the same script, run normally (the klayout SiEPIC upgrade swaps
+        // stub boxes for real foundry geometry when klayout + siepic_ebeam_pdk are installed)
+        // and forced-stub (klayout/siepic imports poisoned).
+        _output.WriteLine($"skipped=[{string.Join(";", _export.SkippedConnections)}] warnings=[{string.Join(";", _export.ExportWarnings)}]");
+        _output.WriteLine($"normal run: upgraded={_export.UpgradedGds is not null}");
 
-        Directory.CreateDirectory(_root);
-        var scriptPath = Path.Combine(_root, "mzi.py");
-        await File.WriteAllTextAsync(scriptPath, script);
-
-        // Normal run — the klayout SiEPIC upgrade swaps stub boxes for real foundry
-        // geometry when klayout + siepic_ebeam_pdk are installed.
-        var run = await SiepicRealGeometryExportTests.RunPythonAsync(python, _root, scriptPath);
-        run.ExitCode.ShouldBe(0, $"nazca run failed: {run.StdErr}");
-        var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
-        File.Exists(gdsPath).ShouldBeTrue();
-        var upgraded = run.StdOut.Contains("SiEPIC cell(s) upgraded", StringComparison.Ordinal);
-        _output.WriteLine($"normal run: upgraded={upgraded}");
-        var upgradedCopy = Path.Combine(_root, "mzi_upgraded.gds");
-        File.Copy(gdsPath, upgradedCopy, overwrite: true);
-
-        // Forced STUB scenario: same script, klayout/siepic imports poisoned.
-        var stubRunner = Path.Combine(_root, "mzi_stub.py");
-        await File.WriteAllTextAsync(stubRunner,
-            "import sys, runpy\n" +
-            "sys.modules['klayout'] = None\n" +
-            "sys.modules['klayout.db'] = None\n" +
-            "sys.modules['siepic_ebeam_pdk'] = None\n" +
-            $"sys.argv = [r'{scriptPath}']\n" +
-            $"runpy.run_path(r'{scriptPath}', run_name='__main__')\n");
-        var stubRun = await SiepicRealGeometryExportTests.RunPythonAsync(python, _root, stubRunner);
-        stubRun.ExitCode.ShouldBe(0, $"stub run failed: {stubRun.StdErr}");
-        var stubCopy = Path.Combine(_root, "mzi_stub.gds");
-        File.Move(gdsPath, stubCopy, overwrite: true);
-
-        await Analyze("STUB", stubCopy, expected, upgraded: false);
-        if (upgraded)
-            await Analyze("UPGRADED", upgradedCopy, expected, upgraded: true);
+        await Analyze("STUB", _export.StubGds, expected, upgraded: false);
+        if (_export.UpgradedGds is { } upgradedGds)
+            await Analyze("UPGRADED", upgradedGds, expected, upgraded: true);
     }
 
     /// <summary>

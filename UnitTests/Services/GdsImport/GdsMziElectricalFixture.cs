@@ -29,6 +29,15 @@ namespace UnitTests.Services.GdsImport;
 /// </summary>
 internal static class GdsMziElectricalFixture
 {
+    private static readonly Lazy<DesignCanvasViewModel> SharedRouted = new(BuildMziCanvas);
+
+    /// <summary>
+    /// One routed build shared by every READ-ONLY consumer in a test process — routing the
+    /// design runs the full pass with its ordering cascade and contention repair (seconds).
+    /// Tests that change the canvas build their own with <see cref="BuildMziCanvas"/>.
+    /// </summary>
+    public static DesignCanvasViewModel SharedMziCanvas => SharedRouted.Value;
+
     /// <summary>
     /// Rebuilds the user's MZI design on a fresh canvas: the ten components at his
     /// exact coordinates (three bond pads rotated 180°), instantiated from the REAL

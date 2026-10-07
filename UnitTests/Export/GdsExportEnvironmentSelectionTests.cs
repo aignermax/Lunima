@@ -14,7 +14,7 @@ namespace UnitTests.Export;
 public class GdsExportEnvironmentSelectionTests
 {
     private static GdsExportViewModel CreateViewModel() =>
-        new(new GdsExportService());
+        new(new InstantEnvironmentGdsExportService());
 
     [Fact]
     public void RefreshManagedCandidates_WithProvider_ListsAllCandidates()
