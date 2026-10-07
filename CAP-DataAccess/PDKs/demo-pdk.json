@@ -814,33 +814,33 @@
       "name": "Waveguide Crossing",
       "category": "Crossings",
       "nazcaFunction": "demo_crossing",
-      "widthMicrometers": 20,
-      "heightMicrometers": 20,
+      "widthMicrometers": 10,
+      "heightMicrometers": 10,
       "nazcaOriginOffsetX": 0,
-      "nazcaOriginOffsetY": 10,
+      "nazcaOriginOffsetY": 5,
       "pins": [
         {
           "name": "port 1",
           "offsetXMicrometers": 0,
-          "offsetYMicrometers": 10,
+          "offsetYMicrometers": 5,
           "angleDegrees": 180
         },
         {
           "name": "port 2",
-          "offsetXMicrometers": 20,
-          "offsetYMicrometers": 10,
+          "offsetXMicrometers": 10,
+          "offsetYMicrometers": 5,
           "angleDegrees": 0
         },
         {
           "name": "port 3",
-          "offsetXMicrometers": 10,
+          "offsetXMicrometers": 5,
           "offsetYMicrometers": 0,
           "angleDegrees": 270
         },
         {
           "name": "port 4",
-          "offsetXMicrometers": 10,
-          "offsetYMicrometers": 20,
+          "offsetXMicrometers": 5,
+          "offsetYMicrometers": 10,
           "angleDegrees": 90
         }
       ],
@@ -945,7 +945,7 @@
           }
         ]
       },
-      "rawCode": "def component():\n    with nd.Cell(name=\u0027demo_crossing_body\u0027) as c:\n        demo.shallow.strt(length=20).put(0, 0, 0)\n        demo.shallow.strt(length=20).put(10, -10, 90)\n    return c\n",
+      "rawCode": "def component():\n    with nd.Cell(name=\u0027demo_crossing_body\u0027) as c:\n        nd.Polygon(points=[(0, -1.5), (10, -1.5), (10, 1.5), (0, 1.5)], layer=(1, 0)).put(0, 0, 0)\n        nd.Polygon(points=[(3.5, -5), (6.5, -5), (6.5, 5), (3.5, 5)], layer=(1, 0)).put(0, 0, 0)\n        nd.Polygon(points=[(0, -5), (10, -5), (10, 5), (0, 5)], layer=(2, 0)).put(0, 0, 0)\n    return c\n",
       "rawCodeBackend": "nazca"
     }
   ]

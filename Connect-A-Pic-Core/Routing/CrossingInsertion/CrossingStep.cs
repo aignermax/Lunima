@@ -13,16 +13,29 @@ public readonly record struct PlannedCrossing(Guid CrossedConnection, double Cen
 
 /// <summary>
 /// The crossing move of a crossing-aware A* search: where the next cell is blocked by
-/// another waveguide, the search may jump straight across it — as a placed crossing
-/// component will later carry both signals — but only where a crossing physically fits:
-/// the move is axis-aligned and arrives straight, the blocking waveguide is exactly one
-/// straight segment perpendicular to the move with enough straight run on both sides,
-/// and the crossing's footprint and landing cells hold nothing else.
+/// other waveguides, the search may jump straight across them — one placed crossing
+/// component per crossed wire, so a bundle of parallel wires is crossed by a row of
+/// crossings — but only where the crossings physically fit: the move is axis-aligned and
+/// arrives straight; every crossed wire is exactly one straight segment perpendicular to
+/// the move with enough straight run on both sides; neighbouring crossings do not
+/// overlap; nothing but the crossed wires lies in their footprints; and the route lands
+/// on free cells behind the last one.
 /// </summary>
 public sealed class CrossingStep
 {
+    /// <summary>Longest jump (µm) — a bundle wider than this is not crossed in one move.</summary>
+    private const double MaxJumpMicrometers = 120;
+
+    /// <summary>Most crossings one jump may place.</summary>
+    private const int MaxCrossingsPerJump = 8;
+
+    private const byte Free = 0;
+    private const byte BlockedByWaveguide = 2;
+
     private readonly PathfindingGrid _grid;
+    private readonly double _edge;
     private readonly double _halfFootprint;
+    private readonly int _maxScanCells;
 
     /// <summary>Creates the step for crossings of <paramref name="crossingEdgeMicrometers"/> edge length.</summary>
     /// <param name="grid">The routing grid with the registered waveguides.</param>
@@ -32,9 +45,11 @@ public sealed class CrossingStep
     public CrossingStep(PathfindingGrid grid, double crossingEdgeMicrometers, double clearanceMicrometers, double penaltyCost)
     {
         _grid = grid;
+        _edge = crossingEdgeMicrometers;
         _halfFootprint = crossingEdgeMicrometers / 2 + clearanceMicrometers;
         PenaltyCost = penaltyCost;
         ApproachCells = (int)Math.Ceiling(_halfFootprint / grid.CellSizeMicrometers);
+        _maxScanCells = (int)Math.Ceiling(MaxJumpMicrometers / grid.CellSizeMicrometers);
     }
 
     /// <summary>Extra search cost of one crossing (µm-equivalent).</summary>
@@ -45,8 +60,8 @@ public sealed class CrossingStep
 
     /// <summary>
     /// Tries to jump from cell (<paramref name="x"/>, <paramref name="y"/>) in cardinal
-    /// direction (<paramref name="dx"/>, <paramref name="dy"/>) across the waveguide blocking
-    /// the next cell. Returns false when no crossing fits there.
+    /// direction (<paramref name="dx"/>, <paramref name="dy"/>) across the waveguides blocking
+    /// the cells ahead. Returns false when no row of crossings fits there.
     /// </summary>
     /// <param name="x">Current cell X.</param>
     /// <param name="y">Current cell Y.</param>
@@ -54,69 +69,94 @@ public sealed class CrossingStep
     /// <param name="dy">Step Y (−1, 0 or 1; exactly one of dx, dy is non-zero).</param>
     /// <param name="straightRun">Straight cells the search has run in this direction.</param>
     /// <param name="spanCells">Cells the jump advances.</param>
-    /// <param name="crossing">The planned crossing.</param>
-    public bool TryJump(int x, int y, int dx, int dy, int straightRun, out int spanCells, out PlannedCrossing crossing)
+    /// <param name="crossings">The planned crossings, in travel order.</param>
+    public bool TryJump(int x, int y, int dx, int dy, int straightRun,
+                        out int spanCells, out IReadOnlyList<PlannedCrossing> crossings)
     {
         spanCells = 0;
-        crossing = default;
+        crossings = Array.Empty<PlannedCrossing>();
         if (dx != 0 == (dy != 0) || straightRun < ApproachCells) return false;
         if (_grid.GetCellState(x + dx, y + dy) != BlockedByWaveguide) return false;
 
-        var (nextX, nextY) = _grid.GridToPhysical(x + dx, y + dy);
-        var blockers = _grid.StraightSegmentsAt(nextX, nextY);
-        if (blockers.Count != 1) return false;
-        var segment = blockers[0];
-        bool movingHorizontally = dx != 0;
-        if (segment.IsHorizontal == movingHorizontally) return false;
-
+        var planned = new List<PlannedCrossing>();
         var (currentX, currentY) = _grid.GridToPhysical(x, y);
-        double centerX = movingHorizontally ? segment.CrossCoordinate : currentX;
-        double centerY = movingHorizontally ? currentY : segment.CrossCoordinate;
-        if (!HasStraightRunAround(segment, movingHorizontally ? centerY : centerX)) return false;
+        bool horizontal = dx != 0;
+        double origin = horizontal ? currentX : currentY;
+        double direction = horizontal ? dx : dy;
 
-        double toCenter = movingHorizontally ? Math.Abs(centerX - currentX) : Math.Abs(centerY - currentY);
-        spanCells = (int)Math.Ceiling((toCenter + _halfFootprint) / _grid.CellSizeMicrometers);
-        if (!IsPassable(x, y, dx, dy, spanCells, segment.Owner) || !IsFootprintClear(centerX, centerY, segment.Owner))
-            return false;
-
-        crossing = new PlannedCrossing(segment.Owner, centerX, centerY);
-        return true;
-    }
-
-    private const byte Free = 0;
-    private const byte BlockedByWaveguide = 2;
-
-    private bool HasStraightRunAround(PathfindingGrid.StraightWaveguideSegment segment, double along)
-    {
-        var (min, max) = segment.AxisRange;
-        return along - min >= _halfFootprint && max - along >= _halfFootprint;
-    }
-
-    /// <summary>Every jumped cell is free or the crossed waveguide's own; the landing cell is free.</summary>
-    private bool IsPassable(int x, int y, int dx, int dy, int spanCells, Guid owner)
-    {
-        for (int k = 1; k <= spanCells; k++)
+        for (int k = 1; k <= _maxScanCells; k++)
         {
             int cx = x + dx * k, cy = y + dy * k;
             byte state = _grid.GetCellState(cx, cy);
-            if (state == Free) continue;
-            if (k == spanCells || state != BlockedByWaveguide || !_grid.IsCellOfWaveguide(owner, cx, cy))
+            if (state == Free)
+            {
+                if (planned.Count > 0 && Along(cx, cy, horizontal, origin, direction)
+                    - CenterAlong(planned[^1], horizontal, origin, direction) >= _halfFootprint)
+                {
+                    if (!FootprintsClear(planned)) return false;
+                    spanCells = k;
+                    crossings = planned;
+                    return true;
+                }
+                continue;
+            }
+            if (state != BlockedByWaveguide) return false;
+            if (planned.Count > 0 && _grid.IsCellOfWaveguide(planned[^1].CrossedConnection, cx, cy)) continue;
+            if (planned.Count == MaxCrossingsPerJump || !TryPlanCrossing(cx, cy, horizontal, currentX, currentY, planned))
                 return false;
         }
+        return false;
+    }
+
+    /// <summary>Plans the crossing of the wire blocking cell (<paramref name="cx"/>, <paramref name="cy"/>).</summary>
+    private bool TryPlanCrossing(int cx, int cy, bool horizontal, double currentX, double currentY, List<PlannedCrossing> planned)
+    {
+        var (px, py) = _grid.GridToPhysical(cx, cy);
+        var blockers = _grid.StraightSegmentsAt(px, py);
+        if (blockers.Count != 1) return false;
+        var segment = blockers[0];
+        if (segment.IsHorizontal == horizontal) return false;
+
+        double centerX = horizontal ? segment.CrossCoordinate : currentX;
+        double centerY = horizontal ? currentY : segment.CrossCoordinate;
+        var (min, max) = segment.AxisRange;
+        double along = horizontal ? centerY : centerX;
+        if (along - min < _halfFootprint || max - along < _halfFootprint) return false;
+        if (planned.Count > 0)
+        {
+            var previous = planned[^1];
+            double gap = horizontal ? Math.Abs(centerX - previous.CenterX) : Math.Abs(centerY - previous.CenterY);
+            if (gap < _edge) return false; // the two crossing bodies would overlap
+        }
+        planned.Add(new PlannedCrossing(segment.Owner, centerX, centerY));
         return true;
     }
 
-    /// <summary>The crossing body (plus clearance) holds no component and no third waveguide.</summary>
-    private bool IsFootprintClear(double centerX, double centerY, Guid owner)
+    private double Along(int cx, int cy, bool horizontal, double origin, double direction)
     {
-        var (gx1, gy1) = _grid.PhysicalToGrid(centerX - _halfFootprint, centerY - _halfFootprint);
-        var (gx2, gy2) = _grid.PhysicalToGrid(centerX + _halfFootprint, centerY + _halfFootprint);
-        for (int gx = gx1; gx <= gx2; gx++)
-        for (int gy = gy1; gy <= gy2; gy++)
+        var (px, py) = _grid.GridToPhysical(cx, cy);
+        return ((horizontal ? px : py) - origin) * direction;
+    }
+
+    private static double CenterAlong(PlannedCrossing crossing, bool horizontal, double origin, double direction) =>
+        ((horizontal ? crossing.CenterX : crossing.CenterY) - origin) * direction;
+
+    /// <summary>Each crossing body (plus clearance) holds no component and no wire but the ones this jump crosses.</summary>
+    private bool FootprintsClear(List<PlannedCrossing> planned)
+    {
+        var crossed = planned.Select(p => p.CrossedConnection).ToList();
+        foreach (var crossing in planned)
         {
-            byte state = _grid.GetCellState(gx, gy);
-            if (state == Free) continue;
-            if (state != BlockedByWaveguide || !_grid.IsCellOfWaveguide(owner, gx, gy)) return false;
+            var (gx1, gy1) = _grid.PhysicalToGrid(crossing.CenterX - _halfFootprint, crossing.CenterY - _halfFootprint);
+            var (gx2, gy2) = _grid.PhysicalToGrid(crossing.CenterX + _halfFootprint, crossing.CenterY + _halfFootprint);
+            for (int gx = gx1; gx <= gx2; gx++)
+            for (int gy = gy1; gy <= gy2; gy++)
+            {
+                byte state = _grid.GetCellState(gx, gy);
+                if (state == Free) continue;
+                if (state != BlockedByWaveguide || !crossed.Any(owner => _grid.IsCellOfWaveguide(owner, gx, gy)))
+                    return false;
+            }
         }
         return true;
     }

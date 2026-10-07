@@ -10,7 +10,18 @@ namespace CAP_Core.Routing;
 /// <param name="CrossingEdgeMicrometers">Edge length of the crossing component (µm).</param>
 /// <param name="ClearanceMicrometers">Straight run kept beyond the crossing ports on both wires (µm).</param>
 /// <param name="PenaltyCost">Search cost of one crossing in µm of equivalent path length.</param>
-public sealed record CrossingRouteSettings(double CrossingEdgeMicrometers, double ClearanceMicrometers, double PenaltyCost);
+/// <param name="MaxNodesExpanded">
+/// Node budget of a crossing-aware search. Crossing routes run only for wires the avoid-only
+/// search could not connect, through dense layouts, so they get a larger budget than an
+/// everyday route.
+/// </param>
+public sealed record CrossingRouteSettings(
+    double CrossingEdgeMicrometers, double ClearanceMicrometers, double PenaltyCost,
+    int MaxNodesExpanded = CrossingRouteSettings.DefaultMaxNodesExpanded)
+{
+    /// <summary>Default node budget of a crossing-aware search.</summary>
+    public const int DefaultMaxNodesExpanded = 8_000_000;
+}
 
 /// <summary>
 /// The crossing-aware half of <see cref="WaveguideRouter"/>: with <see cref="CrossingRouting"/>
@@ -38,7 +49,7 @@ public partial class WaveguideRouter
     /// <summary>Records the crossings the grid path jumped through.</summary>
     private void RecordPlannedCrossings(List<AStarNode>? gridPath) =>
         LastPlannedCrossings = gridPath?
-            .Where(node => node.Crossing.HasValue)
-            .Select(node => node.Crossing!.Value)
+            .Where(node => node.Crossings != null)
+            .SelectMany(node => node.Crossings!)
             .ToList() ?? (IReadOnlyList<PlannedCrossing>)Array.Empty<PlannedCrossing>();
 }

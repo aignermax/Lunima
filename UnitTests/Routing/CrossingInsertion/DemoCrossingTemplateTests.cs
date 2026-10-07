@@ -79,7 +79,7 @@ public class DemoCrossingTemplateTests
         var script = new SimpleNazcaExporter().Export(canvas, library: Templates);
 
         script.ShouldContain("demo_crossing_body", customMessage: "the raw crossing cell is inlined, not a placeholder box");
-        script.ShouldContain("demo.shallow.strt(length=20)");
+        script.ShouldContain("nd.Polygon(points=[(0, -1.5)");
     }
 
     [SkippableFact]

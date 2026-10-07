@@ -387,7 +387,7 @@ public class AStarPathfinder
         if (Crossings == null || dir.IsDiagonal() || dir != current.Direction)
             return null;
         var (dx, dy) = dir.GetDelta();
-        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength, out int span, out var crossing))
+        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength, out int span, out var crossings))
             return null;
 
         int landX = current.X + dx * span, landY = current.Y + dy * span;
@@ -396,7 +396,7 @@ public class AStarPathfinder
             return null;
 
         double stepCost = _costCalculator.CalculateMoveCost(current, current.X + dx, current.Y + dy, dir);
-        double gCost = current.GCost + stepCost * span + Crossings.PenaltyCost;
+        double gCost = current.GCost + stepCost * span + Crossings.PenaltyCost * crossings.Count;
         int straightRun = current.StraightRunLength + span;
         if (visited.TryGetValue(StateKey(landX, landY, dir, straightRun), out var existing) && gCost >= existing.GCost)
             return null;
@@ -408,7 +408,7 @@ public class AStarPathfinder
             Parent = current,
             StraightRunLength = straightRun,
             DistanceFromStart = distanceFromStart + span,
-            Crossing = crossing,
+            Crossings = crossings,
         };
     }
 

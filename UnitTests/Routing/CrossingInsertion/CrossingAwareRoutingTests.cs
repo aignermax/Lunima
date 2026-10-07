@@ -19,12 +19,15 @@ public class CrossingAwareRoutingTests
     private const double BendRadius = 10;
     private const double WallY = 300;
     private const double PinX = 400;
-    private const double CrossingEdge = 20;
-    private const double Clearance = 5;
+    private const double CrossingEdge = 10;
+    private const double Clearance = 1;
     private const double Penalty = 2000;
 
     /// <summary>Blocked corridor width of a routed wire (core plus clearance), as the app registers it.</summary>
     private const double ObstacleWidth = 6;
+
+    /// <summary>Pitch of a wire bundle in the logic examples' routing channels (µm).</summary>
+    private const double BundlePitch = 12;
     private static readonly CrossingRouteSettings Crossings = new(CrossingEdge, Clearance, Penalty);
 
     [Fact]
@@ -52,6 +55,22 @@ public class CrossingAwareRoutingTests
     }
 
     [Fact]
+    public void BundleOfParallelWires_IsCrossedByARowOfCrossings()
+    {
+        // Three wires at a 12-µm pitch — closer than two crossing footprints, so only a
+        // row of adjacent crossings (one per wire) gets through.
+        var (router, start, end) = SceneWithWalls(WallY - BundlePitch, WallY, WallY + BundlePitch);
+        router.CrossingRouting = Crossings;
+
+        var path = router.Route(start, end);
+
+        path.IsBlockedFallback.ShouldBeFalse();
+        router.LastPlannedCrossings.Select(c => c.CenterY)
+            .ShouldBe(new[] { WallY - BundlePitch, WallY, WallY + BundlePitch }, "one crossing per wire, in travel order");
+        router.LastPlannedCrossings.Select(c => c.CrossedConnection).Distinct().Count().ShouldBe(3);
+    }
+
+    [Fact]
     public void WallWithAGap_WithCrossings_TakesTheDetourInstead()
     {
         // A 120-µm gap far to the side: the detour is far shorter than the crossing penalty.
@@ -72,13 +91,22 @@ public class CrossingAwareRoutingTests
         router.LastPlannedCrossings.ShouldBeEmpty("a detour cheaper than a crossing wins");
     }
 
+    private static (WaveguideRouter Router, PhysicalPin Start, PhysicalPin End) SceneWithWalls(params double[] wallYs)
+    {
+        var (router, start, end) = SceneWithWall(new RoutedPath());
+        foreach (var y in wallYs)
+            router.PathfindingGrid!.AddWaveguideObstacle(Guid.NewGuid(), new[] { new StraightSegment(0, y, 800, y, 0) }, ObstacleWidth);
+        return (router, start, end);
+    }
+
     private static (WaveguideRouter Router, PhysicalPin Start, PhysicalPin End) SceneWithWall(RoutedPath wall)
     {
         var top = Gate(240, 40, (160, 60, 90));       // pin (400,100) facing south
         var bottom = Gate(240, 500, (160, 0, 270));   // pin (400,500) facing north
         var router = new WaveguideRouter { MinBendRadiusMicrometers = BendRadius };
         router.InitializePathfindingGrid(0, 0, 800, 600, new[] { top, bottom });
-        router.PathfindingGrid!.AddWaveguideObstacle(Guid.NewGuid(), wall.Segments, ObstacleWidth);
+        if (wall.Segments.Count > 0)
+            router.PathfindingGrid!.AddWaveguideObstacle(Guid.NewGuid(), wall.Segments, ObstacleWidth);
         return (router, top.PhysicalPins[0], bottom.PhysicalPins[0]);
     }
 

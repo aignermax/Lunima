@@ -225,7 +225,9 @@ public partial class WaveguideRouter
             // former quick-then-extended phases (the extended phase re-expanded the
             // quick phase's prefix identically), so the extended phase's budget IS
             // the total budget — the quick phase survives only as the escalation mark.
-            MaxNodesExpanded = Phase2MaxNodes,
+            MaxNodesExpanded = crossingStep != null && CrossingRouting != null
+                ? CrossingRouting.MaxNodesExpanded
+                : Phase2MaxNodes,
             UseDiagonals = UseDiagonalRouting,
             EscalationThresholdNodes = Phase1MaxNodes,
             OnEscalationThresholdReached = () => OnComplexRouteStarted?.Invoke(),

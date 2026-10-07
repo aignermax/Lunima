@@ -45,7 +45,9 @@ public partial class PathfindingGrid
         var index = StraightSegmentIndex();
         if (!index.TryGetValue(BucketOf(x, y), out var bucket))
             return Array.Empty<StraightWaveguideSegment>();
-        double reach = CellSizeMicrometers / 2;
+        // A cell counts as blocked as soon as its square overlaps the corridor, so its
+        // centre can sit up to half a cell diagonal (~0.71 cells) beyond the half width.
+        double reach = CellSizeMicrometers;
         return bucket.Where(s => Covers(s, x, y, reach)).ToList();
     }
 
