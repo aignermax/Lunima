@@ -43,7 +43,8 @@ public partial class WaveguideRouter
     /// <summary>The crossing move for the current grid, or null while crossing routing is off.</summary>
     private CrossingStep? CreateCrossingStep() =>
         CrossingRouting is { } settings && PathfindingGrid != null
-            ? new CrossingStep(PathfindingGrid, settings.CrossingEdgeMicrometers, settings.ClearanceMicrometers, settings.PenaltyCost)
+            ? new CrossingStep(PathfindingGrid, settings.CrossingEdgeMicrometers, settings.ClearanceMicrometers,
+                               settings.PenaltyCost, CostCalculator.MinBendRadiusMicrometers)
             : null;
 
     /// <summary>Records the crossings the grid path jumped through.</summary>

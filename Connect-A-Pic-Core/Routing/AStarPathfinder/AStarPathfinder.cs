@@ -387,7 +387,8 @@ public class AStarPathfinder
         if (Crossings == null || dir.IsDiagonal() || dir != current.Direction)
             return null;
         var (dx, dy) = dir.GetDelta();
-        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength, out int span, out var crossings))
+        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength,
+                               out int span, out int runAfter, out var crossings))
             return null;
 
         int landX = current.X + dx * span, landY = current.Y + dy * span;
@@ -397,7 +398,9 @@ public class AStarPathfinder
 
         double stepCost = _costCalculator.CalculateMoveCost(current, current.X + dx, current.Y + dy, dir);
         double gCost = current.GCost + stepCost * span + Crossings.PenaltyCost * crossings.Count;
-        int straightRun = current.StraightRunLength + span;
+        // The run restarts behind the last crossing; the landing already leaves room for a
+        // turn's arc, so the next bend cannot reach back into a crossing.
+        int straightRun = runAfter;
         if (visited.TryGetValue(StateKey(landX, landY, dir, straightRun), out var existing) && gCost >= existing.GCost)
             return null;
 

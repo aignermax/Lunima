@@ -16,6 +16,17 @@ public class CrossingInsertionService
     private readonly CrossingRecordRegistry _registry = new();
     private readonly CrossingInserter _inserter = new();
     private readonly CrossingPlacement _placement = new();
+    private readonly CrossingChainInserter _chainInserter = new();
+
+    /// <summary>Straight run (µm) a crossing chain keeps beyond each crossing port on both wires.</summary>
+    public const double ChainClearanceMicrometers = 1.0;
+
+    /// <summary>
+    /// Search cost (µm-equivalent) of one crossing in a chain. Chains are only tried for wires
+    /// the avoid-only search could not connect, so the penalty only has to keep a short detour
+    /// preferable — a large one floods the search.
+    /// </summary>
+    public const double ChainCrossingPenalty = 50.0;
 
     /// <summary>
     /// Creates the service with a factory producing fresh crossing component
@@ -124,6 +135,42 @@ public class CrossingInsertionService
                 changed = true;
                 break; // connection list changed — restart the scan
             }
+        }
+
+        RouteBlockedThroughCrossingChains(manager, router, draft.WidthMicrometers, cancellationToken);
+    }
+
+    /// <summary>
+    /// Connects every still-blocked wire through a chain of crossings where the
+    /// crossing-aware router finds one (see <see cref="CrossingChainInserter"/>).
+    /// A wire that cannot be connected keeps its blocked fallback.
+    /// </summary>
+    private void RouteBlockedThroughCrossingChains(
+        WaveguideConnectionManager manager, WaveguideRouter router, double crossingEdgeMicrometers,
+        CancellationToken cancellationToken)
+    {
+        var settings = new CrossingRouteSettings(crossingEdgeMicrometers, ChainClearanceMicrometers, ChainCrossingPenalty);
+        var blockedWires = manager.Connections.Where(c => c.IsBlockedFallback).ToList();
+        // Blocked fallbacks are placeholder lines, not geometry: none of them may wall in
+        // another blocked wire's search. Wires that stay blocked get theirs back below.
+        foreach (var blocked in blockedWires)
+            router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
+        try
+        {
+            foreach (var blocked in blockedWires)
+            {
+                if (cancellationToken.IsCancellationRequested) return;
+                var placed = _chainInserter.TryInsert(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
+                if (placed != null)
+                    router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
+                foreach (var crossing in placed ?? Array.Empty<Component>())
+                    ComponentAdded?.Invoke(crossing);
+            }
+        }
+        finally
+        {
+            foreach (var stillBlocked in blockedWires.Where(c => manager.Connections.Contains(c) && c.RoutedPath != null))
+                router.PathfindingGrid!.AddWaveguideObstacle(stillBlocked.Id, stillBlocked.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
         }
     }
 

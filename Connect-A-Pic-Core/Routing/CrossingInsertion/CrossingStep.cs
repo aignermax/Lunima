@@ -35,6 +35,7 @@ public sealed class CrossingStep
     private readonly PathfindingGrid _grid;
     private readonly double _edge;
     private readonly double _halfFootprint;
+    private readonly double _clearRunAfter;
     private readonly int _maxScanCells;
 
     /// <summary>Creates the step for crossings of <paramref name="crossingEdgeMicrometers"/> edge length.</summary>
@@ -42,20 +43,29 @@ public sealed class CrossingStep
     /// <param name="crossingEdgeMicrometers">Edge length of the crossing component (µm).</param>
     /// <param name="clearanceMicrometers">Straight run kept beyond the crossing ports on both wires (µm).</param>
     /// <param name="penaltyCost">Extra search cost of one crossing, in µm of equivalent path length.</param>
-    public CrossingStep(PathfindingGrid grid, double crossingEdgeMicrometers, double clearanceMicrometers, double penaltyCost)
+    /// <param name="bendRadiusMicrometers">
+    /// Bend radius of the route: the smoother rounds a turn with an arc that starts this far
+    /// before the corner, so the approach must be that much longer to keep the crossing straight.
+    /// </param>
+    public CrossingStep(PathfindingGrid grid, double crossingEdgeMicrometers, double clearanceMicrometers,
+                        double penaltyCost, double bendRadiusMicrometers = 0)
     {
         _grid = grid;
         _edge = crossingEdgeMicrometers;
         _halfFootprint = crossingEdgeMicrometers / 2 + clearanceMicrometers;
+        _clearRunAfter = _halfFootprint + bendRadiusMicrometers;
         PenaltyCost = penaltyCost;
-        ApproachCells = (int)Math.Ceiling(_halfFootprint / grid.CellSizeMicrometers);
+        ApproachCells = (int)Math.Ceiling((_halfFootprint + bendRadiusMicrometers) / grid.CellSizeMicrometers);
         _maxScanCells = (int)Math.Ceiling(MaxJumpMicrometers / grid.CellSizeMicrometers);
     }
 
     /// <summary>Extra search cost of one crossing (µm-equivalent).</summary>
     public double PenaltyCost { get; }
 
-    /// <summary>Straight run (cells) the search must have before it may jump.</summary>
+    /// <summary>
+    /// Straight run (cells) the search must have before it may jump: the crossing's half
+    /// footprint plus the bend radius, so the arc of the previous turn ends before it.
+    /// </summary>
     public int ApproachCells { get; }
 
     /// <summary>
@@ -69,11 +79,13 @@ public sealed class CrossingStep
     /// <param name="dy">Step Y (−1, 0 or 1; exactly one of dx, dy is non-zero).</param>
     /// <param name="straightRun">Straight cells the search has run in this direction.</param>
     /// <param name="spanCells">Cells the jump advances.</param>
+    /// <param name="runAfterCells">Straight cells between the last crossing and the landing cell.</param>
     /// <param name="crossings">The planned crossings, in travel order.</param>
     public bool TryJump(int x, int y, int dx, int dy, int straightRun,
-                        out int spanCells, out IReadOnlyList<PlannedCrossing> crossings)
+                        out int spanCells, out int runAfterCells, out IReadOnlyList<PlannedCrossing> crossings)
     {
         spanCells = 0;
+        runAfterCells = 0;
         crossings = Array.Empty<PlannedCrossing>();
         if (dx != 0 == (dy != 0) || straightRun < ApproachCells) return false;
         if (_grid.GetCellState(x + dx, y + dy) != BlockedByWaveguide) return false;
@@ -90,11 +102,16 @@ public sealed class CrossingStep
             byte state = _grid.GetCellState(cx, cy);
             if (state == Free)
             {
-                if (planned.Count > 0 && Along(cx, cy, horizontal, origin, direction)
-                    - CenterAlong(planned[^1], horizontal, origin, direction) >= _halfFootprint)
+                // Land only where the free straight behind the last crossing is long enough
+                // for the crossing's half footprint plus the arc of a turn right after it —
+                // a gap inside a wire bundle is not a landing, the next wire is crossed too.
+                double runAfter = planned.Count == 0 ? 0
+                    : Along(cx, cy, horizontal, origin, direction) - CenterAlong(planned[^1], horizontal, origin, direction);
+                if (planned.Count > 0 && runAfter >= _clearRunAfter)
                 {
                     if (!FootprintsClear(planned)) return false;
                     spanCells = k;
+                    runAfterCells = (int)Math.Floor(runAfter / _grid.CellSizeMicrometers);
                     crossings = planned;
                     return true;
                 }
