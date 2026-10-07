@@ -30,7 +30,10 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// network (A0/A1, LOAD, D0–D3 in, Q0–Q3 out) moves the machine's data memory onto
 /// light (issue #1446): every STORE clocks a photonic register through
 /// <see cref="PhotonicDataMemory"/> and every RAM-operand read taps Q0–Q3, and the
-/// RAM readout carries an "on light" chip while it does. The toggle
+/// RAM readout carries an "on light" chip while it does. On the combined ALU + RAM
+/// chip the data memory answers to the <c>RAM.</c>-prefixed signal map (default map
+/// first, prefixed as fallback), so the adder and the memory run on light together
+/// and toggle label, header and unit-chip row name both (issue #1468). The toggle
 /// is enabled while the built network is accepted by any ALU, the zero flag or the
 /// data memory; otherwise a hint points at the shipped examples (4-bit adder, NOT
 /// 4-bit, AND 4-bit, Logic Unit 4-bit, Zero Detect 4-bit, RAM 4x4). Toggling recreates the machine at
@@ -80,12 +83,19 @@ public partial class IsaPlaygroundViewModel
     [ObservableProperty]
     private string _photonicStatusText = string.Empty;
 
+    /// <summary>
+    /// The prefix the shipped ALU + RAM chip puts its RAM signals under (issue
+    /// #1463), so the data memory can live next to the adder's plain names.
+    /// </summary>
+    private const string RamSignalPrefix = "RAM.";
+
     private int _photonicGateCount;
     private PhotonicAdderAlu? _photonicAlu;
     private PhotonicNotAlu? _photonicNotAlu;
     private PhotonicAndAlu? _photonicAndAlu;
     private PhotonicZeroFlag? _photonicZeroFlag;
     private PhotonicDataMemory? _photonicDataMemory;
+    private IsaDataMemorySignalMap? _dataMemoryMap;
 
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic ADD ALU while the toggle is on.</summary>
     internal PhotonicAdderAlu? PhotonicAlu => _photonicAlu;
@@ -163,19 +173,21 @@ public partial class IsaPlaygroundViewModel
     /// 4-bit chip, issue #1322).
     /// </summary>
     public string PhotonicToggleLabel =>
-        Translate(IsPhotonicAddAvailable
+        Translate(IsPhotonicAddAvailable && IsPhotonicDataMemoryAvailable
+            ? "IsaPlayground.PhotonicAdderDataMemoryToggle"
+            : IsPhotonicAddAvailable
                 || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable && !IsPhotonicZeroFlagAvailable
                     && !IsPhotonicDataMemoryAvailable)
-            ? "IsaPlayground.PhotonicAdderToggle"
-            : IsPhotonicZeroFlagAvailable && !IsPhotonicAndAvailable && !IsPhotonicNotAvailable
-                ? "IsaPlayground.PhotonicZeroFlagToggle"
-                : IsPhotonicAndAvailable && IsPhotonicNotAvailable
-                    ? "IsaPlayground.PhotonicAndNotToggle"
-                    : IsPhotonicAndAvailable
-                        ? "IsaPlayground.PhotonicAndToggle"
-                        : IsPhotonicNotAvailable
-                            ? "IsaPlayground.PhotonicNotToggle"
-                            : "IsaPlayground.PhotonicDataMemoryToggle");
+                ? "IsaPlayground.PhotonicAdderToggle"
+                : IsPhotonicZeroFlagAvailable && !IsPhotonicAndAvailable && !IsPhotonicNotAvailable
+                    ? "IsaPlayground.PhotonicZeroFlagToggle"
+                    : IsPhotonicAndAvailable && IsPhotonicNotAvailable
+                        ? "IsaPlayground.PhotonicAndNotToggle"
+                        : IsPhotonicAndAvailable
+                            ? "IsaPlayground.PhotonicAndToggle"
+                            : IsPhotonicNotAvailable
+                                ? "IsaPlayground.PhotonicNotToggle"
+                                : "IsaPlayground.PhotonicDataMemoryToggle");
 
     /// <summary>
     /// The header title, naming the ALU the machine actually uses so the window
@@ -184,17 +196,19 @@ public partial class IsaPlaygroundViewModel
     /// </summary>
     public string HeaderTitle =>
         Translate(UsePhotonicAdder
-            ? (_photonicAlu is not null
-                ? "IsaPlayground.TitlePhotonic"
-                : _photonicAndAlu is not null && _photonicNotAlu is not null
-                    ? "IsaPlayground.TitlePhotonicAndNot"
-                    : _photonicAndAlu is not null
-                        ? "IsaPlayground.TitlePhotonicAnd"
-                        : _photonicNotAlu is not null
-                            ? "IsaPlayground.TitlePhotonicNot"
-                            : _photonicDataMemory is not null
-                                ? "IsaPlayground.TitlePhotonicDataMemory"
-                                : "IsaPlayground.TitlePhotonicZeroFlag")
+            ? (_photonicAlu is not null && _photonicDataMemory is not null
+                ? "IsaPlayground.TitlePhotonicAdderDataMemory"
+                : _photonicAlu is not null
+                    ? "IsaPlayground.TitlePhotonic"
+                    : _photonicAndAlu is not null && _photonicNotAlu is not null
+                        ? "IsaPlayground.TitlePhotonicAndNot"
+                        : _photonicAndAlu is not null
+                            ? "IsaPlayground.TitlePhotonicAnd"
+                            : _photonicNotAlu is not null
+                                ? "IsaPlayground.TitlePhotonicNot"
+                                : _photonicDataMemory is not null
+                                    ? "IsaPlayground.TitlePhotonicDataMemory"
+                                    : "IsaPlayground.TitlePhotonicZeroFlag")
             : "IsaPlayground.Title");
 
     /// <summary>Flipping the toggle resets the machine to power-on state with the chosen ALU.</summary>
@@ -242,7 +256,26 @@ public partial class IsaPlaygroundViewModel
             (PhotonicNotAlu.Accepts(network) && !IsPhotonicAndAvailable)
             || PhotonicNotAlu.Accepts(network, IsaAluSignalMap.CombinedLogicUnitNot);
         IsPhotonicZeroFlagAvailable = PhotonicZeroFlag.Accepts(network);
-        IsPhotonicDataMemoryAvailable = PhotonicDataMemory.Accepts(network);
+        // Default (unprefixed) map first; the ALU + RAM chip keeps its RAM under the
+        // 'RAM.' prefix, so the prefixed map is the fallback (issue #1468).
+        _dataMemoryMap = ResolveDataMemoryMap(network);
+        IsPhotonicDataMemoryAvailable = _dataMemoryMap is not null;
+    }
+
+    /// <summary>
+    /// The signal map the network's data memory answers to: the shipped RAM 4x4
+    /// names when they are exposed, otherwise the <c>RAM.</c>-prefixed names of the
+    /// combined ALU + RAM chip, otherwise null (no photonic data memory).
+    /// </summary>
+    private static IsaDataMemorySignalMap? ResolveDataMemoryMap(LogicNetworkEvaluator? network)
+    {
+        if (PhotonicDataMemory.Accepts(network))
+        {
+            return IsaDataMemorySignalMap.Default;
+        }
+
+        var prefixed = IsaDataMemorySignalMap.WithPrefix(RamSignalPrefix);
+        return PhotonicDataMemory.Accepts(network, prefixed) ? prefixed : null;
     }
 
     /// <summary>
@@ -265,7 +298,9 @@ public partial class IsaPlaygroundViewModel
             _photonicAndAlu = PhotonicAndAlu.Accepts(network) ? new PhotonicAndAlu(network) : null;
             _photonicNotAlu = CreatePhotonicNotAlu(network);
             _photonicZeroFlag = PhotonicZeroFlag.Accepts(network) ? new PhotonicZeroFlag(network) : null;
-            _photonicDataMemory = PhotonicDataMemory.Accepts(network) ? new PhotonicDataMemory(network) : null;
+            _photonicDataMemory = _dataMemoryMap is not null && PhotonicDataMemory.Accepts(network, _dataMemoryMap)
+                ? new PhotonicDataMemory(network, _dataMemoryMap)
+                : null;
             var golden = new GoldenIsaAlu();
             var emulator = new IsaEmulator(_assembledWords, new CompositeIsaAlu(
                 _photonicAlu ?? (IIsaAlu)golden,
