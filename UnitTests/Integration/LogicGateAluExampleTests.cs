@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -59,9 +61,9 @@ public class LogicGateAluExampleTests : IClassFixture<LogicGateAluExampleTests.A
     public void Example_LoadsOnlyTopLevelGateGroups_EachWithPersistedRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the ALU contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(8, "eight wires join the nine gates");
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the ALU contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(8, "eight wires join the nine gates");
 
         var groups = _fixture.Groups;
         groups.Select(g => g.GroupName).ShouldBe(GateNames, ignoreOrder: true);
@@ -145,7 +147,7 @@ public class LogicGateAluExampleTests : IClassFixture<LogicGateAluExampleTests.A
                     group.GroupName == "Out" ? new() { ["Y"] = "Result" } : null,
                     $"the output name of '{group.GroupName}' must survive the save → load round trip (#1046)");
             }
-            reloadedCanvas.Connections.Count.ShouldBe(8,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(8,
                 "every gate wire must survive the save → load round trip");
 
             var reloaded = await AssembleNetwork(reloadedCanvas);

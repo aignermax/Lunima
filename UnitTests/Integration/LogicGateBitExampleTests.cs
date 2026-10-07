@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -61,9 +63,9 @@ public class LogicGateBitExampleTests
     public void Example_LoadsOnlyTopLevelGateGroups_WithPersistedRolesAndTheRegisterDesignation()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the load-enabled bit contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(4,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the load-enabled bit contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(4,
             "four wires join the four gates: the two MUX arms into Out, the select inversion, " +
             "and the register feedback Out.Y → NANDA.A — every waveguide keeps one driver and one load");
 
@@ -173,7 +175,7 @@ public class LogicGateBitExampleTests
             reloadedGroups.Single(g => g.GroupName == RegisterName).TruthTablePinAssignment!
                 .OutputSignalNames.ShouldBe(new Dictionary<string, string> { ["Y"] = QTap },
                     "the named output tap Q must survive the save → load round trip (#1025)");
-            reloadedCanvas.Connections.Count.ShouldBe(4,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(4,
                 "every bit wire — the feedback included — must survive the save → load round trip");
 
             var reloaded = await LogicGateMuxExampleTests.AssembleNetwork(reloadedCanvas);

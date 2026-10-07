@@ -26,7 +26,7 @@ namespace UnitTests.Integration;
 /// (<see cref="PhotonicAdderAlu"/>) and the photonic data RAM
 /// (<see cref="PhotonicDataMemory"/>) run over the one assembled network. Both blocks load
 /// through the real load path with their cached routes and are never re-routed: the RAM's
-/// 84 inter-cell wires are frozen into a wrapping <c>RAM</c> group exactly the way
+/// inter-cell wires (and the crossings they run through) are frozen into a wrapping <c>RAM</c> group exactly the way
 /// <see cref="CreateGroupCommand"/> freezes internal connections (loaded wires reference
 /// the nested leaf pins, so the command's top-level classification cannot be reused), the
 /// group is translated to the right of the adder with <see cref="ComponentGroup.MoveGroup"/>
@@ -62,7 +62,8 @@ public class AluRamChipExampleAuthoringTests
     private const string AdderFileName = "Logic Gate 4-Bit Adder.lun";
     private const string RamFileName = "Logic Gate RAM 4x4.lun";
     private const int RamTopLevelGroupCount = 55;
-    private const int RamTopLevelWireCount = 84;
+    private const int RamTopLevelCrossingCount = 11;
+    private const int RamTopLevelWireCount = 106;
     private const double BlockGapMicrometers = 500.0;
 
     private readonly ITestOutputHelper _output;
@@ -110,27 +111,29 @@ public class AluRamChipExampleAuthoringTests
     /// <summary>
     /// Loads the shipped RAM 4x4 through the real load path, prefixes every persisted
     /// signal name of its gates with <see cref="RamSignalPrefix"/> and wraps the whole
-    /// block — the 55 top-level groups plus their 84 inter-cell wires — into one
+    /// block — the 55 top-level groups, the crossings between them and their inter-cell wires — into one
     /// <see cref="ComponentGroup"/> whose internal paths freeze the loaded routes.
     /// </summary>
     private async Task<ComponentGroup> LoadPrefixedRamGroup()
     {
         var (scratch, fileOps) = await LoadExampleOntoCanvas(RamFileName);
-        scratch.Components.Count.ShouldBe(RamTopLevelGroupCount,
+        var topLevel = scratch.Components.Select(vm => vm.Component).ToList();
+        var topLevelGroups = topLevel.OfType<ComponentGroup>().ToList();
+        topLevelGroups.Count.ShouldBe(RamTopLevelGroupCount,
             "the RAM 4x4 loads its address stage, copy trees, read-MUX combines and four cell instances");
+        (topLevel.Count - topLevelGroups.Count).ShouldBe(RamTopLevelCrossingCount,
+            "the only loose components are the crossings the inter-cell wires run through");
         scratch.Connections.Count.ShouldBe(RamTopLevelWireCount, "only the inter-cell wires load as connections");
-
-        var topLevelGroups = scratch.Components.Select(vm => vm.Component).OfType<ComponentGroup>().ToList();
         PrefixSignalNames(topLevelGroups);
 
         var group = new ComponentGroup(RamGroupName)
         {
-            PhysicalX = topLevelGroups.Min(g => g.PhysicalX),
-            PhysicalY = topLevelGroups.Min(g => g.PhysicalY),
+            PhysicalX = topLevel.Min(c => c.PhysicalX),
+            PhysicalY = topLevel.Min(c => c.PhysicalY),
             Description = "The shipped Logic Gate RAM 4x4 block, signal names under the 'RAM.' prefix, " +
                 "placed next to the 4-bit adder so ALU and data memory share one logic network (#1463).",
         };
-        group.AddChildren(topLevelGroups);
+        group.AddChildren(topLevel);
 
         // Mirror CreateGroupCommand's freeze step; the loaded wires reference the nested
         // leaf pins, which the command's ParentComponent classification cannot see.
@@ -232,11 +235,11 @@ public class AluRamChipExampleAuthoringTests
         int blockedTotal = issues.Count(i => i.Type == DesignIssueType.BlockedPath);
         Report($"[author] {ExampleFileName}: blockedTopLevel={blockedTopLevel} blockedTotal={blockedTotal} " +
             "— pin these in ExampleLoadRoutingTests.KnownBlockedWires / ExampleFrozenBlockedPathTests.KnownBlockedPathCounts");
-        blockedTopLevel.ShouldBe(90,
+        blockedTopLevel.ShouldBe(69,
             "the top level carries the 4-bit adder's pinned blocked wires alone; " +
             "the RAM's wires are frozen inside the RAM group");
-        blockedTotal.ShouldBe(167,
-            "90 adder top-level + the RAM 4x4's 77 (45 inter-cell + 4 × 8 intra-cell) frozen inside the RAM group");
+        blockedTotal.ShouldBe(139,
+            "69 adder top-level + the RAM 4x4's 70 (38 inter-cell + 4 × 8 intra-cell) frozen inside the RAM group");
     }
 
     private void Report(string line)

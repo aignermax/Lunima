@@ -141,6 +141,26 @@ public class CrossingInsertionService
     }
 
     /// <summary>
+    /// Connects every blocked wire through a chain of crossings where the crossing-aware
+    /// router finds one, leaving all other routes as they are. Returns how many blocked
+    /// wires were connected. Skipped (0) when no usable crossing component is available.
+    /// </summary>
+    /// <param name="manager">The connection manager owning the design's connections.</param>
+    /// <param name="router">The router whose grid holds the routed wires.</param>
+    /// <param name="cancellationToken">Cancels the pass.</param>
+    public int ConnectBlockedWiresThroughCrossings(
+        WaveguideConnectionManager manager, WaveguideRouter router, CancellationToken cancellationToken = default)
+    {
+        var draft = CrossingComponentFactory();
+        if (router.PathfindingGrid == null || draft == null || !_inserter.HasAllFourWiredPorts(draft)
+            || _inserter.GetCrossingThroughLossDb(draft) == null)
+            return 0;
+        int blockedBefore = manager.Connections.Count(c => c.IsBlockedFallback);
+        RouteBlockedThroughCrossingChains(manager, router, draft.WidthMicrometers, cancellationToken);
+        return blockedBefore - manager.Connections.Count(c => c.IsBlockedFallback);
+    }
+
+    /// <summary>
     /// Connects every still-blocked wire through a chain of crossings where the
     /// crossing-aware router finds one (see <see cref="CrossingChainInserter"/>).
     /// A wire that cannot be connected keeps its blocked fallback.

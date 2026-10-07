@@ -52,6 +52,8 @@ public sealed class CrossingChainInserter
         var plan = BuildPlan(blocked, route, planned, manager, crossingFactory, settings, grid.CellSizeMicrometers);
         if (plan == null)
             return null;
+        if (ChainPieceCrossingGuard.CrossesAnotherWire(plan.Added, plan.Removed, manager))
+            return Reject("a piece crosses another wire outside its crossings");
         if (!Apply(plan, manager, router))
             return Reject("a docked piece is invalid");
         return plan.Crossings;

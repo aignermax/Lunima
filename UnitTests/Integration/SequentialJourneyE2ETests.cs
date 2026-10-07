@@ -1,3 +1,4 @@
+using UnitTests.Helpers;
 using System.Globalization;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView;
@@ -53,7 +54,7 @@ public class SequentialJourneyE2ETests : IClassFixture<LogicGateCounter2BitExamp
             new[] { "Q0", "COPY0", "COPY0X", "X0", "R0", "S0", "COPY1", "COPYX", "Q1" },
             ignoreOrder: true,
             customMessage: "step 1: the shipped 2-bit counter loads through the real load path");
-        _fixture.Canvas.Connections.Count.ShouldBe(13, "step 1: every counter wire loads");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(13, "step 1: every counter wire loads");
 
         // (2) The panel assembles the network through the same command the build button runs.
         var vm = await BuildPanel(_fixture.Canvas);

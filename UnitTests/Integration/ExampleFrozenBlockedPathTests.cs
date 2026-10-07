@@ -37,24 +37,23 @@ public class ExampleFrozenBlockedPathTests
     /// </summary>
     private static readonly Dictionary<string, int> KnownBlockedPathCounts = new()
     {
-        ["Logic Gate ALU 1-bit.lun"] = 1,
-        ["Logic Gate Register 2-bit.lun"] = 1,
-        ["Logic Gate Counter 2-bit.lun"] = 4,
-        ["Logic Gate Full Adder.lun"] = 2,
-        ["Logic Gate PC 2-bit.lun"] = 12,
-        ["Logic Gate RAM 2x2.lun"] = 18,
+        ["Logic Gate ALU 1-bit.lun"] = 0,
+        ["Logic Gate Register 2-bit.lun"] = 0,
+        ["Logic Gate Counter 2-bit.lun"] = 2,
+        ["Logic Gate Full Adder.lun"] = 1,
+        ["Logic Gate PC 2-bit.lun"] = 4,
+        ["Logic Gate RAM 2x2.lun"] = 9,
         // 3 blocked top-level inter-cell wires + 2 cell instances × 9 blocked intra-cell
         // wires frozen with the flag (re-baked in #1419 after the extraction path learned
         // to carry the flag — before, the file shipped 383 frozen paths with zero flags).
         ["Logic Gate RAM 2x4.lun"] = 21,
-        // 45 blocked top-level wires + 4 cell instances × 8 blocked intra-cell wires
-        // frozen with the flag (re-baked in #1425 with the coarse-retry router of #1423:
-        // the cell dropped 9 → 8, the top level rose 44 → 45 — the total still drops).
-        ["Logic Gate RAM 4x4.lun"] = 77,
-        ["Logic Gate 4-Bit Adder.lun"] = 90,
-        // 90 blocked top-level adder wires + the RAM 4x4's 77 (45 inter-cell + 4 × 8
-        // intra-cell) frozen inside the wrapping RAM group (#1463).
-        ["Logic Gate ALU + RAM.lun"] = 167,
+        // 38 blocked top-level wires + 4 cell instances × 8 blocked intra-cell wires
+        // frozen with the flag.
+        ["Logic Gate RAM 4x4.lun"] = 70,
+        ["Logic Gate 4-Bit Adder.lun"] = 69,
+        // 69 blocked top-level adder wires + the RAM 4x4's 70 (38 inter-cell + 4 × 8
+        // intra-cell) frozen inside the wrapping RAM group.
+        ["Logic Gate ALU + RAM.lun"] = 139,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

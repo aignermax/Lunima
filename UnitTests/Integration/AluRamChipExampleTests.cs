@@ -1,3 +1,4 @@
+using UnitTests.Helpers;
 using System.Diagnostics;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP.Avalonia.ViewModels.Logic.IsaPlayground;
@@ -51,7 +52,7 @@ public class AluRamChipExampleTests : IClassFixture<AluRamChipExampleTests.AluRa
         groups.Count.ShouldBe(345,
             "the adder's 344 top-level gate groups plus the wrapped RAM block");
         groups.Select(g => g.GroupName).ShouldContain(AluRamChipExampleAuthoringTests.RamGroupName);
-        _fixture.Canvas.Connections.Count.ShouldBe(339,
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(339,
             "the adder's 339 wires stay top level; the RAM's 84 inter-cell wires are frozen inside the RAM group");
     }
 

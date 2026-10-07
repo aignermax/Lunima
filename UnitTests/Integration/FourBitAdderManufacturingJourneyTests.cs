@@ -1,3 +1,4 @@
+using ExampleWires = UnitTests.Helpers.ExampleWires;
 using System.Diagnostics;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -46,7 +47,7 @@ public class FourBitAdderManufacturingJourneyTests
             "four stages × (32-gate base + duplicated carry copies)");
         _journey.Groups.ShouldAllBe(g => g.TruthTablePinAssignment != null,
             "every gate group must carry its persisted pin roles for the manufacturing path to matter");
-        _journey.Canvas.Connections.Count.ShouldBe(ExpectedWireCount, "339 wires join the 344 gates");
+        ExampleWires.LogicalWireCount(_journey.Canvas).ShouldBe(ExpectedWireCount, "339 wires join the 344 gates");
     }
 
     [Fact]
