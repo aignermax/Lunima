@@ -1,5 +1,6 @@
 using CAP.Avalonia.ViewModels.Library;
 using CAP_Core.Components.Core;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP.Avalonia.ViewModels.Canvas.CrossingInsertion;
 
@@ -17,17 +18,14 @@ public record CrossingComponentInstance(
     string? TemplatePdkSource)
 {
     /// <summary>Nazca function name of the SiEPIC crossing — the default when nothing else is preferred.</summary>
-    public const string CrossingNazcaFunctionName = "ebeam_crossing4";
+    public const string CrossingNazcaFunctionName = CrossingComponentCatalog.SiepicCrossingFunction;
 
     /// <summary>Nazca function name of the Demo PDK crossing (two crossing demofab straights).</summary>
-    public const string DemoCrossingNazcaFunctionName = "demo_crossing";
-
-    /// <summary>Known 4-port crossing components, in default priority order.</summary>
-    private static readonly string[] KnownCrossingFunctions = { CrossingNazcaFunctionName, DemoCrossingNazcaFunctionName };
+    public const string DemoCrossingNazcaFunctionName = CrossingComponentCatalog.DemoCrossingFunction;
 
     /// <summary>True when <paramref name="template"/> is one of the known 4-port crossings.</summary>
     public static bool IsCrossingTemplate(ComponentTemplate template) =>
-        KnownCrossingFunctions.Contains(template.NazcaFunctionName, StringComparer.OrdinalIgnoreCase);
+        CrossingComponentCatalog.IsCrossingFunction(template.NazcaFunctionName);
 
     /// <summary>
     /// Finds the loaded crossing template to insert, or null while none is available.
@@ -46,7 +44,7 @@ public record CrossingComponentInstance(
             var match = crossings.FirstOrDefault(t => string.Equals(t.PdkSource, pdk, StringComparison.OrdinalIgnoreCase));
             if (match != null) return match;
         }
-        return KnownCrossingFunctions
+        return CrossingComponentCatalog.KnownFunctions
             .Select(function => crossings.FirstOrDefault(t =>
                 string.Equals(t.NazcaFunctionName, function, StringComparison.OrdinalIgnoreCase)))
             .FirstOrDefault(t => t != null);
