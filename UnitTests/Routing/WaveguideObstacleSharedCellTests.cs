@@ -6,8 +6,9 @@ using Xunit;
 namespace UnitTests.Routing;
 
 /// <summary>
-/// Two waveguides can cover the same cells — a crossing, or a blocked fallback line drawn
-/// straight across another wire. Removing one must leave the other wire intact in the grid.
+/// How waveguides occupy grid cells: two waveguides can cover the same cells (a crossing, or a
+/// blocked fallback line drawn straight across another wire) and removing one must leave the
+/// other intact; and a wire must never rasterize with gaps a route could slip through.
 /// </summary>
 public class WaveguideObstacleSharedCellTests
 {
@@ -29,6 +30,21 @@ public class WaveguideObstacleSharedCellTests
         grid.GetCellState(gx, gy).ShouldBe((byte)2, "the horizontal wire still runs through the crossing cell");
         var (vx, vy) = grid.PhysicalToGrid(200, 100);
         grid.GetCellState(vx, vy).ShouldBe((byte)0, "the removed wire's own cells are free again");
+    }
+
+    [Fact]
+    public void WireMidwayBetweenCellColumns_StillBlocksACellAlongItsWholeLength()
+    {
+        // Cell centres sit at 2, 6, 10 … µm; a 4-µm wire at x = 152 is exactly 2 µm from the
+        // centres of both neighbouring columns, so the centre test alone marked none of them.
+        var grid = new PathfindingGrid(0, 0, 400, 400, CellSize);
+        grid.AddWaveguideObstacle(Guid.NewGuid(), new[] { new StraightSegment(152, 20, 152, 380, 90) }, Width);
+
+        for (double y = 40; y <= 360; y += CellSize)
+        {
+            var (gx, gy) = grid.PhysicalToGrid(152, y);
+            grid.GetCellState(gx, gy).ShouldBe((byte)2, $"the wire must leave no gap at y = {y}");
+        }
     }
 
     [Fact]

@@ -28,6 +28,13 @@ public class CrossingInsertionService
     /// </summary>
     public const double ChainCrossingPenalty = 50.0;
 
+    /// <summary>
+    /// Weight on the chain search's distance estimate: the routes may cost up to 1.5 × the
+    /// optimum (typically one extra crossing), but a search across a large chip finishes in a
+    /// fraction of a second instead of exhausting its budget.
+    /// </summary>
+    public const double ChainHeuristicWeight = 1.5;
+
     /// <summary>Most sweeps over the blocked wires in one chain pass.</summary>
     private const int MaxChainPasses = 3;
 
@@ -181,7 +188,9 @@ public class CrossingInsertionService
         WaveguideConnectionManager manager, WaveguideRouter router, double crossingEdgeMicrometers,
         CancellationToken cancellationToken)
     {
-        var settings = new CrossingRouteSettings(crossingEdgeMicrometers, ChainClearanceMicrometers, ChainCrossingPenalty);
+        var settings = new CrossingRouteSettings(
+            crossingEdgeMicrometers, ChainClearanceMicrometers, ChainCrossingPenalty,
+            HeuristicWeight: ChainHeuristicWeight);
         var blockedWires = manager.Connections.Where(c => c.IsBlockedFallback).ToList();
         // Blocked fallbacks are placeholder lines, not geometry: none of them may wall in
         // another blocked wire's search. Wires that stay blocked get theirs back below.

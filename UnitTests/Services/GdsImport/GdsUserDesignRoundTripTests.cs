@@ -231,7 +231,7 @@ public class GdsUserDesignRoundTripTests : IDisposable
         outcome.Warnings.ShouldBeEmpty();
         outcome.Infos.ShouldContain(i => i.Contains("junction with"));
         outcome.Infos.ShouldContain(i => i.Contains("restored as 5 real connection(s)"));
-        outcome.TopCellWaveguidePolygons.Count.ShouldBe(32,
+        outcome.TopCellWaveguidePolygons.Count.ShouldBe(30,
             "the junction network rides the group as frozen, non-re-routable paths");
 
         // The registered templates carry the pins found in the GDS:
@@ -292,7 +292,7 @@ public class GdsUserDesignRoundTripTests : IDisposable
         group.GroupName.ShouldBe("ConnectAPIC_Design");
         group.InternalPaths.ShouldContain(p => p.StartPin == null,
             "the junction networks' polygons ride the group as pin-less frozen paths");
-        group.InternalPaths.Count(p => p.StartPin == null).ShouldBe(32);
+        group.InternalPaths.Count(p => p.StartPin == null).ShouldBe(30);
         group.InternalPaths.Count(p => p.StartPin != null).ShouldBe(5,
             "the five restored connections are frozen into the group with their pins");
         var children = group.GetAllComponentsRecursive().ToList();

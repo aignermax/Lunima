@@ -35,16 +35,16 @@ public class ExampleLoadRoutingTests
         ["Logic Gate Full Adder.lun"] = 1,
         ["Logic Gate PC 2-bit.lun"] = 3,
         ["Logic Gate RAM 2x2.lun"] = 7,
-        // Top-level inter-cell wires only; each word-cell instance freezes 6 more blocked
-        // intra-cell wires (counted in ExampleFrozenBlockedPathTests.KnownBlockedPathCounts).
+        // Top-level inter-cell wires only; each word-cell instance freezes 1 more blocked
+        // intra-cell wire (counted in ExampleFrozenBlockedPathTests.KnownBlockedPathCounts).
         ["Logic Gate RAM 2x4.lun"] = 2,
-        // Top-level wires only; each word-cell instance freezes 6 more blocked intra-cell
+        // Top-level wires only; each word-cell instance freezes 1 more blocked intra-cell
         // wires (see ExampleFrozenBlockedPathTests).
-        ["Logic Gate RAM 4x4.lun"] = 34,
-        ["Logic Gate 4-Bit Adder.lun"] = 41,
+        ["Logic Gate RAM 4x4.lun"] = 25,
+        ["Logic Gate 4-Bit Adder.lun"] = 18,
         // Same blocked top-level wires as the 4-bit adder — the RAM block's wires
         // are frozen inside the RAM group (#1463), so the top level is the adder's alone.
-        ["Logic Gate ALU + RAM.lun"] = 41,
+        ["Logic Gate ALU + RAM.lun"] = 18,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

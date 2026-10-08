@@ -71,6 +71,18 @@ public class CrossingAwareRoutingTests
     }
 
     [Fact]
+    public void WeightedSearch_StillCrossesTheBundle_WithTheSamePhysicalChecks()
+    {
+        var (router, start, end) = SceneWithWalls(WallY - BundlePitch, WallY, WallY + BundlePitch);
+        router.CrossingRouting = Crossings with { HeuristicWeight = 1.5 };
+
+        var path = router.Route(start, end);
+
+        path.IsBlockedFallback.ShouldBeFalse("a weighted estimate only orders the search, it never relaxes a crossing rule");
+        router.LastPlannedCrossings.Count.ShouldBe(3);
+    }
+
+    [Fact]
     public void WallWithAGap_WithCrossings_TakesTheDetourInstead()
     {
         // A 120-µm gap far to the side: the detour is far shorter than the crossing penalty.

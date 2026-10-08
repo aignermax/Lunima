@@ -20,7 +20,8 @@ namespace UnitTests.Integration;
 /// <para>
 /// Gated by <c>CAP_BAKE_CROSSINGS=1</c> (unset, the theory is a no-op) and <c>Category=Slow</c>;
 /// <c>CAP_BAKE_ONLY</c> restricts it to examples whose file name contains one of its
-/// ';'-separated parts.
+/// ';'-separated parts, <c>CAP_BAKE_SKIP</c> leaves those out (e.g. a composed example that
+/// is re-authored from its baked parts instead).
 /// </para>
 /// </summary>
 [Trait("Category", "Slow")]
@@ -28,6 +29,7 @@ public class ExampleCrossingBakeTests
 {
     private const string BakeEnableVariable = "CAP_BAKE_CROSSINGS";
     private const string BakeOnlyVariable = "CAP_BAKE_ONLY";
+    private const string BakeSkipVariable = "CAP_BAKE_SKIP";
 
     /// <summary>File names of every example listed in the manifest.</summary>
     public static TheoryData<string> ExampleFiles => ExampleRouteBakeTests.ExampleFiles;
@@ -38,9 +40,9 @@ public class ExampleCrossingBakeTests
     {
         if (Environment.GetEnvironmentVariable(BakeEnableVariable) != "1") return;
         var only = Environment.GetEnvironmentVariable(BakeOnlyVariable);
-        if (!string.IsNullOrEmpty(only) && !only.Split(';', StringSplitOptions.RemoveEmptyEntries)
-                .Any(part => exampleFileName.Contains(part, StringComparison.OrdinalIgnoreCase)))
-            return;
+        if (!string.IsNullOrEmpty(only) && !MatchesAny(exampleFileName, only)) return;
+        var skip = Environment.GetEnvironmentVariable(BakeSkipVariable);
+        if (!string.IsNullOrEmpty(skip) && MatchesAny(exampleFileName, skip)) return;
 
         var (canvas, fileOps, _) = await MziFringeAnalysis.LoadExample(exampleFileName);
         await fileOps.PostLoadRouting;
@@ -72,6 +74,10 @@ public class ExampleCrossingBakeTests
         var examplePath = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), exampleFileName);
         File.WriteAllText(examplePath, KeepShippedProcess(examplePath, bakedPath));
     }
+
+    private static bool MatchesAny(string exampleFileName, string semicolonSeparatedParts) =>
+        semicolonSeparatedParts.Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Any(part => exampleFileName.Contains(part, StringComparison.OrdinalIgnoreCase));
 
     private static List<ComponentGroup> TopLevelGroups(DesignCanvasViewModel canvas) =>
         canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().ToList();

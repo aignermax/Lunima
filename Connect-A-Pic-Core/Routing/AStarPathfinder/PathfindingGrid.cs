@@ -915,11 +915,19 @@ public partial class PathfindingGrid
     }
 
     /// <summary>
-    /// Marks cells in a circle around a point.
+    /// Marks cells in a circle around a point, always including the cell the point lies in.
     /// </summary>
+    /// <remarks>
+    /// The centre test alone misses a waveguide whose centreline runs midway between two cell
+    /// columns when its half width equals half a cell: neither column's centres are within
+    /// the radius of the sampled points, the wire leaves no cells at all, and later routes
+    /// pass straight through it. The cell containing the centreline overlaps the wire for sure.
+    /// </remarks>
     private void MarkCircleAsCells(double cx, double cy, double radius, HashSet<(int, int)> cells)
     {
         var (gcx, gcy) = PhysicalToGrid(cx, cy);
+        if (IsInBounds(gcx, gcy))
+            cells.Add((gcx, gcy));
         int gridRadius = (int)Math.Ceiling(radius / CellSizeMicrometers);
 
         for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)

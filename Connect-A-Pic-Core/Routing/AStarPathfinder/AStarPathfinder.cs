@@ -16,6 +16,13 @@ public class AStarPathfinder
     /// </summary>
     public int MaxNodesExpanded { get; set; } = 200000;
 
+    /// <summary>
+    /// The distance estimate the search orders nodes by, weighted while crossings are allowed
+    /// (see <see cref="CrossingInsertion.CrossingStep.HeuristicWeight"/>).
+    /// </summary>
+    private double Heuristic(int fromX, int fromY, GridDirection fromDir, int toX, int toY, GridDirection toDir) =>
+        _costCalculator.CalculateHeuristic(fromX, fromY, fromDir, toX, toY, toDir) * (Crossings?.HeuristicWeight ?? 1.0);
+
     /// <summary>Default <see cref="GoalTolerance"/> in grid cells.</summary>
     public const int DefaultGoalTolerance = 3;
 
@@ -137,8 +144,7 @@ public class AStarPathfinder
             GCost = 0,
             StraightRunLength = Math.Max(0, (_costCalculator.MinStraightRunCells - 1) / 2)
         };
-        startNode.HCost = _costCalculator.CalculateHeuristic(
-            startX, startY, startDirection, endX, endY, endDirection);
+        startNode.HCost = Heuristic(startX, startY, startDirection, endX, endY, endDirection);
 
         openSet.Enqueue(startNode, startNode.FCost);
         visited[StateKey(startNode)] = startNode;
@@ -359,8 +365,7 @@ public class AStarPathfinder
                 && newGCost >= existingNode.GCost)
                 continue;
 
-            double newHCost = _costCalculator.CalculateHeuristic(
-                newX, newY, dir, goalX, goalY, goalDir);
+            double newHCost = Heuristic(newX, newY, dir, goalX, goalY, goalDir);
 
             var neighbor = new AStarNode(newX, newY, dir)
             {
@@ -407,7 +412,7 @@ public class AStarPathfinder
         return new AStarNode(landX, landY, dir)
         {
             GCost = gCost,
-            HCost = _costCalculator.CalculateHeuristic(landX, landY, dir, goalX, goalY, goalDir),
+            HCost = Heuristic(landX, landY, dir, goalX, goalY, goalDir),
             Parent = current,
             StraightRunLength = straightRun,
             DistanceFromStart = distanceFromStart + span,
