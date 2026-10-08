@@ -17,6 +17,7 @@ public class CrossingInsertionService
     private readonly CrossingInserter _inserter = new();
     private readonly CrossingPlacement _placement = new();
     private readonly CrossingChainInserter _chainInserter = new();
+    private readonly PinPairRerouter _pinPairRerouter;
 
     /// <summary>Straight run (µm) a crossing chain keeps beyond each crossing port on both wires.</summary>
     public const double ChainClearanceMicrometers = 1.0;
@@ -48,6 +49,7 @@ public class CrossingInsertionService
     public CrossingInsertionService(Func<Component?> crossingComponentFactory)
     {
         CrossingComponentFactory = crossingComponentFactory;
+        _pinPairRerouter = new PinPairRerouter(_chainInserter);
     }
 
     /// <summary>Factory for fresh crossing component instances (null = PDK crossing unavailable).</summary>
@@ -204,11 +206,34 @@ public class CrossingInsertionService
                 if (!ConnectBlockedOnce(manager, router, settings, clock, cancellationToken))
                     break;
             }
+            ResolvePinPairs(manager, router, settings, clock, cancellationToken);
         }
         finally
         {
             foreach (var stillBlocked in blockedWires.Where(c => manager.Connections.Contains(c) && c.IsBlockedFallback))
                 router.PathfindingGrid!.AddWaveguideObstacle(stillBlocked.Id, stillBlocked.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
+        }
+    }
+
+    /// <summary>
+    /// For every wire still blocked, swaps the routing order with its pin neighbours
+    /// (see <see cref="PinPairRerouter"/>) — a neighbour routed first may have sealed its pin.
+    /// </summary>
+    private void ResolvePinPairs(
+        WaveguideConnectionManager manager, WaveguideRouter router, CrossingRouteSettings settings,
+        System.Diagnostics.Stopwatch clock, CancellationToken cancellationToken)
+    {
+        foreach (var blocked in manager.Connections.Where(c => c.IsBlockedFallback).ToList())
+        {
+            if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
+                return;
+            if (!blocked.IsBlockedFallback || !manager.Connections.Contains(blocked)) continue;
+            var placed = _pinPairRerouter.TryResolve(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
+            if (placed == null) continue;
+            if (!manager.Connections.Contains(blocked))
+                router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
+            foreach (var crossing in placed)
+                ComponentAdded?.Invoke(crossing);
         }
     }
 

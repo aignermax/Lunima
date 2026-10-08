@@ -191,7 +191,16 @@ public partial class WaveguideRouter
             RecordPlannedCrossings(gridPath);
 
             // Success requires valid segments without geometry violations
-            return path.Segments.Count > 0 && !path.IsInvalidGeometry;
+            if (path.Segments.Count == 0 || path.IsInvalidGeometry
+                || CutsThroughClearedWaveguide(path, (startX, startY), (endX, endY), clearedStart,
+                    clearedEndApproach, clearedEndTerminal, clearedStartFanout, clearedEndFanout))
+            {
+                // A failed attempt's crossings must not leak into the route a later attempt finds.
+                ResetPlannedCrossings();
+                path.Segments.Clear();
+                return false;
+            }
+            return true;
         }
         finally
         {

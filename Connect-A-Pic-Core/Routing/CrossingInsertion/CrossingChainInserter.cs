@@ -19,6 +19,12 @@ public sealed class CrossingChainInserter
     /// </summary>
     public Action<string>? Rejected { get; set; }
 
+    /// <summary>
+    /// Undoes the most recent successful <see cref="TryInsert"/>: the chain's pieces and
+    /// crossings leave the design and the wire returns as it was. Null after a failed call.
+    /// </summary>
+    public Action? LastUndo { get; private set; }
+
     private sealed class Plan
     {
         public List<Component> Crossings { get; } = new();
@@ -41,6 +47,7 @@ public sealed class CrossingChainInserter
         WaveguideConnection blocked, WaveguideConnectionManager manager, WaveguideRouter router,
         Func<Component?> crossingFactory, CrossingRouteSettings settings, CancellationToken cancellationToken)
     {
+        LastUndo = null;
         var grid = router.PathfindingGrid;
         if (grid == null || blocked.StartPin == null || blocked.EndPin == null) return null;
 
@@ -50,9 +57,12 @@ public sealed class CrossingChainInserter
         if (route == null)
             return Reject("no route");
         if (planned.Count == 0)
-            return PlainRouteApplier.TryApply(blocked, route, manager, router)
-                ? Array.Empty<Component>()
-                : Reject("the crossing-free route crosses another wire");
+        {
+            if (!PlainRouteApplier.TryApply(blocked, route, manager, router, out var undoPlain))
+                return Reject("the crossing-free route crosses another wire");
+            LastUndo = undoPlain;
+            return Array.Empty<Component>();
+        }
         var plan = BuildPlan(blocked, route, planned, manager, crossingFactory, settings, grid.CellSizeMicrometers);
         if (plan == null)
             return null;
@@ -60,6 +70,7 @@ public sealed class CrossingChainInserter
             return Reject("a piece crosses another wire outside its crossings");
         if (!Apply(plan, manager, router))
             return Reject("a docked piece is invalid");
+        LastUndo = () => { lock (manager.SyncRoot) Rollback(plan, manager, router); };
         return plan.Crossings;
     }
 

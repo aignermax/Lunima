@@ -83,6 +83,25 @@ public class CrossingAwareRoutingTests
     }
 
     [Fact]
+    public void RouteAfterACrossingRoute_DoesNotInheritItsCrossings()
+    {
+        var (router, start, end) = SceneWithWalls(WallY);
+        router.CrossingRouting = Crossings;
+        router.Route(start, end);
+        router.LastPlannedCrossings.ShouldHaveSingleItem();
+
+        // Two facing pins between the wall and the bottom gate: a straight route needs no crossing.
+        var left = Gate(0, 380, (320, 30, 0));
+        var right = Gate(480, 380, (0, 30, 180));
+        router.AddComponentObstacle(left);
+        router.AddComponentObstacle(right);
+        var path = router.Route(left.PhysicalPins[0], right.PhysicalPins[0]);
+
+        path.IsBlockedFallback.ShouldBeFalse();
+        router.LastPlannedCrossings.ShouldBeEmpty("the crossings belong to the earlier route");
+    }
+
+    [Fact]
     public void WallWithAGap_WithCrossings_TakesTheDetourInstead()
     {
         // A 120-µm gap far to the side: the detour is far shorter than the crossing penalty.

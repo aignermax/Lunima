@@ -56,6 +56,9 @@ public partial class WaveguideRouter
             }
             : null;
 
+    /// <summary>Forgets the crossings of an earlier route or a failed attempt.</summary>
+    private void ResetPlannedCrossings() => LastPlannedCrossings = Array.Empty<PlannedCrossing>();
+
     /// <summary>Records the crossings the grid path jumped through.</summary>
     private void RecordPlannedCrossings(List<AStarNode>? gridPath) =>
         LastPlannedCrossings = gridPath?
