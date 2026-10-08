@@ -635,7 +635,6 @@
   "IsaPlayground.StopButton": "Detener",
   "IsaPlayground.ResetButton": "Reiniciar",
   "IsaPlayground.StateTitle": "Estado de la máquina",
-  "IsaPlayground.TraceTitle": "Programa (línea actual resaltada)",
   "IsaPlayground.PcLabel": "PC",
   "IsaPlayground.AccLabel": "ACC",
   "IsaPlayground.AccBinaryLabel": "ACC (binario)",
