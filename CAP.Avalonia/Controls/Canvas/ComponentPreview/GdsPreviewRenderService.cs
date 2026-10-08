@@ -69,6 +69,14 @@ public sealed class GdsPreviewRenderService
     public event Action? OnPreviewLoaded;
 
     /// <summary>
+    /// Resolves the inline Nazca code of a component whose geometry its PDK template carries
+    /// as code (module, function → code), or null for a component the PDK module renders.
+    /// Called on the UI thread when a preview is requested. Unset, every component renders
+    /// through its PDK module.
+    /// </summary>
+    public Func<string?, string?, string?>? InlineNazcaCodeLookup { get; set; }
+
+    /// <summary>
     /// Initializes the service with the shared Nazca preview back-end and a
     /// default disk cache.
     /// </summary>
@@ -114,7 +122,8 @@ public sealed class GdsPreviewRenderService
         // Enqueue a background fetch only once per key; the task is also tracked in
         // _pending so WaitForPendingAsync covers canvas preview fetches.
         if (_pendingFetches.TryAdd(cacheKey, 0))
-            _pending[cacheKey] = FetchAndCacheAsync(cacheKey, comp);
+            _pending[cacheKey] = FetchAndCacheAsync(cacheKey, comp,
+                InlineNazcaCodeLookup?.Invoke(comp.Component.NazcaModuleName, comp.Component.NazcaFunctionName));
 
         return null;
     }
@@ -168,7 +177,7 @@ public sealed class GdsPreviewRenderService
         return await _gdsFactoryPreviewService.RenderRawCodeAsync(code);
     }
 
-    private async Task FetchAndCacheAsync(string cacheKey, ComponentViewModel comp)
+    private async Task FetchAndCacheAsync(string cacheKey, ComponentViewModel comp, string? inlineCode)
     {
         NazcaPreviewResult result;
         try
@@ -178,7 +187,7 @@ public sealed class GdsPreviewRenderService
             await _renderGate.WaitAsync();
             try
             {
-                result = await RenderPreviewAsync(comp);
+                result = await RenderPreviewAsync(comp, inlineCode);
             }
             finally { _renderGate.Release(); }
         }
@@ -219,10 +228,13 @@ public sealed class GdsPreviewRenderService
     /// <summary>
     /// Renders the canvas preview via the gdsfactory back-end for gdsfactory-native
     /// components (precedence over the possibly synthesized nazcaFunction — see
-    /// <see cref="BuildCacheKey"/>), the Nazca back-end otherwise.
+    /// <see cref="BuildCacheKey"/>), the component's inline Nazca code when its template
+    /// carries one, the Nazca back-end otherwise.
     /// </summary>
-    private Task<NazcaPreviewResult> RenderPreviewAsync(ComponentViewModel comp)
+    private Task<NazcaPreviewResult> RenderPreviewAsync(ComponentViewModel comp, string? inlineCode)
     {
+        if (inlineCode != null)
+            return _previewService.RenderRawCodeAsync(inlineCode);
         if (IsGdsFactoryNative(comp.Component))
             return RenderGdsFactoryAsync(comp.Component.GdsFactoryFunction);
         return _previewService.RenderAsync(
@@ -246,18 +258,20 @@ public sealed class GdsPreviewRenderService
         // started task straight into TryAdd would run the task before TryAdd decides
         // to keep it, defeating the _pending dedup under concurrent callers.
         if (_pending.TryAdd(cacheKey, Task.CompletedTask))
-            _pending[cacheKey] = FetchGeometryAsync(key, cacheKey);
+            _pending[cacheKey] = FetchGeometryAsync(key, cacheKey, InlineNazcaCodeLookup?.Invoke(key.Module, key.Function));
         return null;
     }
 
     /// <summary>Test hook: awaits all in-flight geometry and canvas preview fetches.</summary>
     public Task WaitForPendingAsync() => Task.WhenAll(_pending.Values.ToArray());
 
-    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey)
+    private async Task FetchGeometryAsync(GdsPreviewKey key, string cacheKey, string? inlineCode)
     {
         try
         {
-            if (_diskCache.TryRead(key, out var disk))
+            // Inline code is not part of the disk-cache key, so its renders are never persisted:
+            // an edited template must not keep showing the old geometry.
+            if (inlineCode == null && _diskCache.TryRead(key, out var disk))
             {
                 _memGeometry.Set(cacheKey, disk);
                 RaisePreviewLoaded();
@@ -267,22 +281,24 @@ public sealed class GdsPreviewRenderService
             NazcaPreviewResult result;
             try
             {
-                result = string.IsNullOrWhiteSpace(key.Function)
-                    ? await RenderGdsFactoryAsync(key.GdsFactoryFunction)
-                    : await _previewService.RenderAsync(key.Module, key.Function!, key.Parameters);
+                result = inlineCode != null
+                    ? await _previewService.RenderRawCodeAsync(inlineCode)
+                    : string.IsNullOrWhiteSpace(key.Function)
+                        ? await RenderGdsFactoryAsync(key.GdsFactoryFunction)
+                        : await _previewService.RenderAsync(key.Module, key.Function!, key.Parameters);
             }
             finally { _renderGate.Release(); }
 
             if (result.Success && result.Polygons.Count > 0)
             {
-                _diskCache.Write(key, result);
+                if (inlineCode == null) _diskCache.Write(key, result);
                 _memGeometry.Set(cacheKey, result);
             }
             else if (result.Success)
             {
                 // A genuinely empty render (0 polygons) — persist the empty marker so we don't
                 // keep re-rendering a component that has no geometry.
-                _diskCache.WriteEmpty(key);
+                if (inlineCode == null) _diskCache.WriteEmpty(key);
                 _memGeometry.Set(cacheKey, null);
             }
             else
