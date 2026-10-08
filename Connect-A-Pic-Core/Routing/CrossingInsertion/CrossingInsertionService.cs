@@ -28,6 +28,9 @@ public class CrossingInsertionService
     /// </summary>
     public const double ChainCrossingPenalty = 50.0;
 
+    /// <summary>Most sweeps over the blocked wires in one chain pass.</summary>
+    private const int MaxChainPasses = 3;
+
     /// <summary>
     /// Creates the service with a factory producing fresh crossing component
     /// instances (e.g. instantiated from the "Crossing 4-Port" PDK template).
@@ -56,6 +59,13 @@ public class CrossingInsertionService
         get => _registry.ComponentRemoved;
         set => _registry.ComponentRemoved = value;
     }
+
+    /// <summary>
+    /// Wall-clock budget of one chain pass. A blocked wire without any fitting route
+    /// exhausts its whole search, so a design with many of them would otherwise keep the
+    /// routing pass busy for minutes; offline bakes lift it.
+    /// </summary>
+    public TimeSpan ChainPassTimeBudget { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>Safety cap on crossings inserted in one pass.</summary>
     public int MaxCrossingsPerPass { get; set; } = 8;
@@ -162,7 +172,9 @@ public class CrossingInsertionService
 
     /// <summary>
     /// Connects every still-blocked wire through a chain of crossings where the
-    /// crossing-aware router finds one (see <see cref="CrossingChainInserter"/>).
+    /// crossing-aware router finds one (see <see cref="CrossingChainInserter"/>), or along a
+    /// crossing-free route where one has opened up. Every connected wire changes the
+    /// geometry the others search in, so the pass repeats while it still connects wires.
     /// A wire that cannot be connected keeps its blocked fallback.
     /// </summary>
     private void RouteBlockedThroughCrossingChains(
@@ -175,23 +187,42 @@ public class CrossingInsertionService
         // another blocked wire's search. Wires that stay blocked get theirs back below.
         foreach (var blocked in blockedWires)
             router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            foreach (var blocked in blockedWires)
+            for (int pass = 0; pass < MaxChainPasses && !cancellationToken.IsCancellationRequested; pass++)
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                var placed = _chainInserter.TryInsert(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
-                if (placed != null)
-                    router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
-                foreach (var crossing in placed ?? Array.Empty<Component>())
-                    ComponentAdded?.Invoke(crossing);
+                if (!ConnectBlockedOnce(manager, router, settings, clock, cancellationToken))
+                    break;
             }
         }
         finally
         {
-            foreach (var stillBlocked in blockedWires.Where(c => manager.Connections.Contains(c) && c.RoutedPath != null))
+            foreach (var stillBlocked in blockedWires.Where(c => manager.Connections.Contains(c) && c.IsBlockedFallback))
                 router.PathfindingGrid!.AddWaveguideObstacle(stillBlocked.Id, stillBlocked.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
         }
+    }
+
+    /// <summary>One sweep over the blocked wires; true when at least one was connected.</summary>
+    private bool ConnectBlockedOnce(
+        WaveguideConnectionManager manager, WaveguideRouter router, CrossingRouteSettings settings,
+        System.Diagnostics.Stopwatch clock, CancellationToken cancellationToken)
+    {
+        bool connectedAny = false;
+        foreach (var blocked in manager.Connections.Where(c => c.IsBlockedFallback).ToList())
+        {
+            if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
+                return false;
+            var placed = _chainInserter.TryInsert(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
+            if (placed == null) continue;
+            connectedAny = true;
+            // A chain replaced the wire by its pieces; a crossing-free route kept it.
+            if (!manager.Connections.Contains(blocked))
+                router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
+            foreach (var crossing in placed)
+                ComponentAdded?.Invoke(crossing);
+        }
+        return connectedAny;
     }
 
     /// <summary>

@@ -47,15 +47,17 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
     /// count from 17 of 44 down to 9 in the five iterations the issue budgets; the ≤3
     /// target was not reached — the remaining blocks are contention-repair stamps on
     /// forced crossings (the load-tree trunks, the leaf down-hops and the one
-    /// cell-spanning select wire), not gate obstacles. The pin guards against regressions.
+    /// cell-spanning select wire), not gate obstacles. The crossing bake then connected three
+    /// of them through placed crossings or freed-up routes, leaving 6. The pin guards
+    /// against regressions.
     /// </summary>
     [Fact]
     public void WordCell_BlockedIntraCellWires_WithinFloorplanBudget()
     {
         _cell.BlockedCount.ShouldBeGreaterThan(0,
             "a zero count means the shipped example lost the blocked flags again — the pin must never pass vacuously");
-        _cell.BlockedCount.ShouldBe(9,
-            "the re-floorplanned word cell (issue #1400) routes with exactly 9 blocked intra-cell wires (was 17)");
+        _cell.BlockedCount.ShouldBe(6,
+            "the crossing-baked word cell ships exactly 6 blocked intra-cell wires (17 before the re-floorplan, 9 before the bake)");
     }
 
     [Fact]

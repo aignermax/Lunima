@@ -65,6 +65,41 @@ public class CrossingChainInserterTests
         canvas.ConnectionManager.Connections.ShouldBe(new[] { crossed, blocked }, ignoreOrder: true);
     }
 
+    [Fact]
+    public async Task BlockedWire_WhoseWayHasOpenedUp_GetsAPlainRouteWithoutCrossings()
+    {
+        var (canvas, crossed, blocked) = await SceneAsync();
+        var grid = canvas.Router.PathfindingGrid!;
+        grid.RemoveWaveguideObstacle(blocked.Id);
+        grid.RemoveWaveguideObstacle(crossed.Id);
+        canvas.ConnectionManager.Connections.Remove(crossed);
+
+        var placed = new CrossingChainInserter().TryInsert(
+            blocked, canvas.ConnectionManager, canvas.Router, () => null, Settings, CancellationToken.None);
+
+        placed.ShouldNotBeNull().ShouldBeEmpty("no crossing is needed once the sealing wire is gone");
+        canvas.ConnectionManager.Connections.ShouldContain(blocked, "the wire keeps its identity");
+        blocked.IsBlockedFallback.ShouldBeFalse();
+        blocked.IsPathValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ChainPass_WithItsTimeBudgetSpent_LeavesTheBlockedWireAlone()
+    {
+        var (canvas, _, blocked) = await SceneAsync();
+        var templates = TestPdkLoader.LoadAllTemplates();
+        var service = new CrossingInsertionService(
+            () => CrossingComponentInstance.CreateFromTemplates(templates, new[] { "Demo PDK" })?.Component)
+        {
+            ChainPassTimeBudget = TimeSpan.Zero,
+        };
+
+        service.ConnectBlockedWiresThroughCrossings(canvas.ConnectionManager, canvas.Router).ShouldBe(0);
+
+        blocked.IsBlockedFallback.ShouldBeTrue("a spent budget must stop the pass, not leave a half-applied chain");
+        canvas.ConnectionManager.Connections.ShouldContain(blocked);
+    }
+
     /// <summary>
     /// A frozen horizontal wire from the left to the right chip edge seals the chip, so the
     /// vertical wire between the top and bottom gates can only cross it.

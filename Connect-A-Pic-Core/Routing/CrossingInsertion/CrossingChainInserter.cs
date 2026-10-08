@@ -28,8 +28,8 @@ public sealed class CrossingChainInserter
 
     /// <summary>
     /// Tries to connect <paramref name="blocked"/> through crossings. Returns the placed
-    /// crossing components (the host adds them to its model), or null when the wire stays
-    /// as it was.
+    /// crossing components (the host adds them to its model) — empty when the search found a
+    /// way without any crossing — or null when the wire stays as it was.
     /// </summary>
     /// <param name="blocked">The blocked connection to route through crossings.</param>
     /// <param name="manager">The connection manager owning the design's connections.</param>
@@ -48,7 +48,11 @@ public sealed class CrossingChainInserter
         // fallback out of the grid while it connects blocked wires (see the service).
         var (route, planned) = RouteWithCrossings(blocked, router, settings, cancellationToken);
         if (route == null)
-            return Reject("no crossing route");
+            return Reject("no route");
+        if (planned.Count == 0)
+            return PlainRouteApplier.TryApply(blocked, route, manager, router)
+                ? Array.Empty<Component>()
+                : Reject("the crossing-free route crosses another wire");
         var plan = BuildPlan(blocked, route, planned, manager, crossingFactory, settings, grid.CellSizeMicrometers);
         if (plan == null)
             return null;
@@ -67,8 +71,7 @@ public sealed class CrossingChainInserter
         try
         {
             var route = router.Route(blocked.StartPin, blocked.EndPin, cancellationToken);
-            bool usable = route.IsValid && !route.IsBlockedFallback && !route.IsInvalidGeometry
-                          && router.LastPlannedCrossings.Count > 0;
+            bool usable = route.IsValid && !route.IsBlockedFallback && !route.IsInvalidGeometry;
             return usable ? (route, router.LastPlannedCrossings) : (null, Array.Empty<PlannedCrossing>());
         }
         finally

@@ -18,10 +18,10 @@ namespace UnitTests.Integration;
 /// <summary>
 /// Issue #1410: after load + post-load routing, <see cref="DesignValidator"/> must report
 /// blocked fallback wires both at the top level AND frozen inside groups (recursively).
-/// The count is pinned per shipped example: the RAM 2x4 ships three blocked top-level
+/// The count is pinned per shipped example: the RAM 2x4 ships two blocked top-level
 /// inter-cell wires (pinned in <c>ExampleLoadRoutingTests.KnownBlockedWires</c>) plus the
 /// blocked intra-cell wires frozen inside its two word-cell instances — DRC-lite used to
-/// see only the top-level three. The RAM examples were re-authored in #1419 so the frozen
+/// see only the top-level two. The RAM examples were re-authored in #1419 so the frozen
 /// intra-cell blocked wires carry the flag, and the pinned RAM counts include the frozen
 /// split (see the entries below). Counts may only change when the layout or the router
 /// changes on purpose. Routes are never edited.
@@ -41,19 +41,18 @@ public class ExampleFrozenBlockedPathTests
         ["Logic Gate Register 2-bit.lun"] = 0,
         ["Logic Gate Counter 2-bit.lun"] = 2,
         ["Logic Gate Full Adder.lun"] = 1,
-        ["Logic Gate PC 2-bit.lun"] = 4,
-        ["Logic Gate RAM 2x2.lun"] = 9,
-        // 3 blocked top-level inter-cell wires + 2 cell instances × 9 blocked intra-cell
-        // wires frozen with the flag (re-baked in #1419 after the extraction path learned
-        // to carry the flag — before, the file shipped 383 frozen paths with zero flags).
-        ["Logic Gate RAM 2x4.lun"] = 21,
-        // 38 blocked top-level wires + 4 cell instances × 8 blocked intra-cell wires
+        ["Logic Gate PC 2-bit.lun"] = 3,
+        ["Logic Gate RAM 2x2.lun"] = 7,
+        // 2 blocked top-level inter-cell wires + 2 cell instances × 6 blocked intra-cell
+        // wires frozen with the flag.
+        ["Logic Gate RAM 2x4.lun"] = 14,
+        // 34 blocked top-level wires + 4 cell instances × 6 blocked intra-cell wires
         // frozen with the flag.
-        ["Logic Gate RAM 4x4.lun"] = 70,
-        ["Logic Gate 4-Bit Adder.lun"] = 69,
-        // 69 blocked top-level adder wires + the RAM 4x4's 70 (38 inter-cell + 4 × 8
+        ["Logic Gate RAM 4x4.lun"] = 58,
+        ["Logic Gate 4-Bit Adder.lun"] = 41,
+        // 41 blocked top-level adder wires + the RAM 4x4's 58 (34 inter-cell + 4 × 6
         // intra-cell) frozen inside the wrapping RAM group.
-        ["Logic Gate ALU + RAM.lun"] = 139,
+        ["Logic Gate ALU + RAM.lun"] = 99,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>
