@@ -62,6 +62,9 @@ public sealed class CrossingStep
     /// <summary>Extra search cost of one crossing (µm-equivalent).</summary>
     public double PenaltyCost { get; }
 
+    /// <summary>Weight the search puts on its distance estimate while crossings are allowed (1 = optimal).</summary>
+    public double HeuristicWeight { get; init; } = 1.0;
+
     /// <summary>
     /// Straight run (cells) the search must have before it may jump: the crossing's half
     /// footprint plus the bend radius, so the arc of the previous turn ends before it.

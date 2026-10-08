@@ -15,9 +15,15 @@ namespace CAP_Core.Routing;
 /// search could not connect, through dense layouts, so they get a larger budget than an
 /// everyday route.
 /// </param>
+/// <param name="HeuristicWeight">
+/// Weight on the A* distance estimate (1 = optimal search). A crossing adds a cost the
+/// estimate cannot foresee, so an unweighted search fans out over the whole chip before it
+/// commits; a weight w bounds the route at w × the optimal cost and expands far fewer nodes.
+/// </param>
 public sealed record CrossingRouteSettings(
     double CrossingEdgeMicrometers, double ClearanceMicrometers, double PenaltyCost,
-    int MaxNodesExpanded = CrossingRouteSettings.DefaultMaxNodesExpanded)
+    int MaxNodesExpanded = CrossingRouteSettings.DefaultMaxNodesExpanded,
+    double HeuristicWeight = 1.0)
 {
     /// <summary>Default node budget of a crossing-aware search.</summary>
     public const int DefaultMaxNodesExpanded = 8_000_000;
@@ -45,6 +51,9 @@ public partial class WaveguideRouter
         CrossingRouting is { } settings && PathfindingGrid != null
             ? new CrossingStep(PathfindingGrid, settings.CrossingEdgeMicrometers, settings.ClearanceMicrometers,
                                settings.PenaltyCost, CostCalculator.MinBendRadiusMicrometers)
+            {
+                HeuristicWeight = settings.HeuristicWeight,
+            }
             : null;
 
     /// <summary>Records the crossings the grid path jumped through.</summary>

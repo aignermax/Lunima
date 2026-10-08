@@ -113,11 +113,12 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         // crossing area: bdc↔crossing and crossing↔crossing restore cleanly,
         // adiabatic↔crossing entangles — one net additional clean chain. The
         // collision-checked terminal-approach arcs of #1084 re-fragment the
-        // frozen network: 32 polygons, was 39 — the 5/5 restore split is unchanged.)
+        // frozen network: 30 polygons since waveguides rasterize without gaps (32 before,
+        // 39 before #1084) — the 5/5 restore split is unchanged.)
         outcome.Connections.Count.ShouldBe(5);
         outcome.Connections.ShouldAllBe(c => c.IsRouteDerived);
         outcome.Warnings.ShouldBeEmpty("restored/frozen accounting is informational now");
-        outcome.TopCellWaveguidePolygons.Count.ShouldBe(32,
+        outcome.TopCellWaveguidePolygons.Count.ShouldBe(30,
             "the junction network's polygons ride the group as frozen, non-routable paths");
 
         // ── 4. Place with frozen imported geometry: this is a netlist-TOPOLOGY

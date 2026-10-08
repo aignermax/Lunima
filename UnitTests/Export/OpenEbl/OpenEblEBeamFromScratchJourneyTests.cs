@@ -27,24 +27,19 @@ namespace UnitTests.Export.OpenEbl;
 /// Layout: three GCs on the 127 µm openEBL fiber-array pitch (laser on top — at most
 /// one GC above and two below the opt_in label), splitter ~100 µm right of the column,
 /// combiner at the splitter's height with the arms cross-connected so the router must
-/// draw unequal arms. The routed ΔL is 31.7 µm (deterministic): six deep nulls in the
-/// 1500–1600 nm sweep, FSR matching λ²/(n_g·ΔL) with the PDK group index. The spare
+/// draw unequal arms: the second arm loops around the splitter instead of crossing the
+/// first, and the fringe FSR matches λ²/(n_g·ΔL) with the routed ΔL and the PDK group index. The spare
 /// coupler is terminated (a dangling GC waveguide pin is a proven openEBL
 /// "Disconnected pin" error, and 3 GCs + 2 Y-branches have odd pin parity) and carries
 /// the second opt_in label — SiEPIC's DFT check requires a label on every sub-circuit
 /// that contains a grating coupler.
 /// </para>
 /// <para>
-/// PINNED DEFECT (the journey's finding): the cross-connected arms are a non-planar
-/// two-wire crossover, and the router leaves the second arm CROSSING the first. Since
-/// the router-honesty fix (#1381) the crossing arm keeps its blocked-fallback stamp, so
-/// the canvas and DRC-lite report it. The exported GDS still has exactly one SiEPIC
-/// verification error ("Overlapping component" where the two arm waveguide cells
-/// intersect near (267, 36) µm) — the stamp reports the crossing, it does not remove
-/// the geometry. The test pins that single error with its category; every other
-/// journey step — routing, fringes, submission check, opt_in labels, die size,
-/// save/load — is asserted green. When the router learns to untangle the pair, this
-/// test must flip to 0/0.
+/// The journey used to pin one router defect: the second arm crossed the first (it slipped
+/// through a gap in the first arm's rasterization), leaving one SiEPIC "Overlapping
+/// component" error. With waveguides rasterized without gaps the router untangles the pair,
+/// so every step — routing, DRC-lite, fringes, submission check, verification, save/load —
+/// is asserted clean.
 /// </para>
 /// <para>
 /// Gating: needs a Python with nazca + klayout + siepic_ebeam_pdk + SiEPIC (installed
@@ -59,11 +54,8 @@ public class OpenEblEBeamFromScratchJourneyTests
     private const double MaxFsrRelativeError = 0.10;
     private const double MinArmLengthDifferenceMicrometers = 25.0;
 
-    /// <summary>The pinned router defect: exactly one verification error, the arm crossing.</summary>
-    private const int PinnedVerificationErrorCount = 1;
-
     [SkippableFact]
-    public async Task StudentBuiltEBeamMzi_FullJourney_PinsRemainingRouterDefect()
+    public async Task StudentBuiltEBeamMzi_FullJourney_ExportsWithoutVerificationErrors()
     {
         var python = await OpenEblMziReadinessTests.FindOpenEblVerificationPythonAsync();
         Skip.If(python == null, "No Python with nazca + klayout + siepic_ebeam_pdk + SiEPIC (expected on CI).");
@@ -73,7 +65,7 @@ public class OpenEblEBeamFromScratchJourneyTests
             .Where(t => t.PdkSource == EBeamFromScratchMziDesign.EBeamPdkName).ToList();
         var canvas = await EBeamFromScratchMziDesign.BuildRoutedAsync(templates);
 
-        // ── 4. Every connection routed for real; DRC-lite reports only the crossing ──
+        // ── 4. Every connection routed for real; DRC-lite reports nothing ──
         AssertFullyRouted(canvas);
         // Fully qualified: CAP_Core.Analysis is a sibling feature namespace the Export
         // slice may not import (VerticalSliceConventionTests).
@@ -85,31 +77,23 @@ public class OpenEblEBeamFromScratchJourneyTests
             .ToList();
         var drcIssues = validator.Validate(
             canvas.ConnectionManager.Connections, components, externalPortPins);
-        var blockedIssue = drcIssues.ShouldHaveSingleItem(
-            "DRC-lite must report the crossing arm's blocked fallback — and nothing else");
-        blockedIssue.Description.ShouldContain("no free lane");
+        drcIssues.ShouldBeEmpty("DRC-lite must find nothing on the student-built MZI");
         validator.ValidateComponentBounds(components,
                 EBeamFromScratchMziDesign.ChipWidthMicrometers,
                 EBeamFromScratchMziDesign.ChipHeightMicrometers)
             .ShouldBeEmpty("every component must sit inside the 605 x 410 µm floorplan");
 
-        // The pinned defect, canvas level: the two arms cross, and since #1381 the
-        // crossing arm KEEPS its blocked-fallback stamp — the crossing is reported on
-        // the canvas instead of rendering as a clean route.
+        // The cross-connected arms are untangled: one loops around the splitter.
         var upperArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 2");
         var lowerArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 3");
         PathIntersectionDetector.Crosses(upperArm.RoutedPath!, lowerArm.RoutedPath!)
-            .ShouldBeTrue("pinned defect #1363: the router leaves the cross-connected arms overlapping");
-        var stampedArms = new[] { upperArm, lowerArm }.Where(c => c.IsBlockedFallback).ToList();
-        stampedArms.Count.ShouldBe(1,
-            "router honesty (#1381): the crossing arm must keep its blocked-fallback stamp");
+            .ShouldBeFalse("the router must route the cross-connected arms without overlapping them");
 
         // ── 5. Coherent fringes against the routed ΔL and the PDK group index ──
         var outputPin = MziFringeAnalysis.FindPin(
             MziFringeAnalysis.FindComponent(canvas, "gc_out"), "port 2");
-        // Since #1381 the stamped crossing arm is the LONG one (the repair routes it
-        // first and the clean arm takes the direct lane), so the meander is port 2 —
-        // the fringe physics only needs |ΔL|.
+        // The arm looping around the splitter is the long one; the fringe physics only
+        // needs |ΔL|.
         double deltaL = Math.Abs(
             upperArm.PathLengthMicrometers - lowerArm.PathLengthMicrometers);
         deltaL.ShouldBeGreaterThanOrEqualTo(MinArmLengthDifferenceMicrometers,
@@ -175,13 +159,10 @@ public class OpenEblEBeamFromScratchJourneyTests
             c.IsPathValid.ShouldBeTrue(
                 $"{c.StartPin?.ParentComponent.Identifier}.{c.StartPin?.Name} has invalid route geometry");
         }
-        // Router honesty (#1381): exactly one connection may carry the blocked-fallback
-        // stamp — the crossing MZI arm. Every other route must be clean.
         var blocked = canvas.Connections.Where(c => c.Connection.IsBlockedFallback).ToList();
         var blockedNames = string.Join(", ",
             blocked.Select(c => $"{c.Connection.StartPin?.ParentComponent.Identifier}.{c.Connection.StartPin?.Name}"));
-        blocked.Count.ShouldBe(1, $"only the crossing arm may be blocked, found: {blockedNames}");
-        blocked[0].Connection.StartPin?.ParentComponent.Identifier.ShouldBe("mzi_splitter");
+        blocked.ShouldBeEmpty($"every route must be clean, blocked: {blockedNames}");
     }
 
     private static void AssertCheckReport(OpenEblCheckReport report)
@@ -198,14 +179,9 @@ public class OpenEblEBeamFromScratchJourneyTests
         report.DieBoundingBox.HeightMicrometers.ShouldBeLessThanOrEqualTo(
             EBeamFromScratchMziDesign.ChipHeightMicrometers);
 
-        // Pinned defect: exactly one verification error — the arm waveguide cells
-        // overlap where the cross-connected arms intersect.
-        report.VerificationErrorCount.ShouldBe(PinnedVerificationErrorCount,
-            $"pinned defect #1363 (router leaves the crossed arms overlapping) — " +
+        // A clean verification lists no error categories at all.
+        report.VerificationErrorCount.ShouldBe(0,
             $"verification output:\n{report.VerificationOutput}");
-        report.VerificationOutput.ShouldContain("category Overlapping component: 1");
-        report.VerificationOutput.ShouldContain("category Disconnected pin: 0");
-        report.VerificationOutput.ShouldContain("category Shapes outside component: 0");
     }
 
     private static async Task<string> ExportToGdsAsync(
