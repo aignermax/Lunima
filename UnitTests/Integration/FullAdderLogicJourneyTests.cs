@@ -1,3 +1,4 @@
+using UnitTests.Helpers;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Core;
 using Shouldly;
@@ -53,7 +54,7 @@ public class FullAdderLogicJourneyTests
             "Step 1: every gate group must carry its persisted pin roles");
         _journey.Groups.ShouldAllBe(g => g.TruthTablePinAssignment!.Threshold > 0,
             "Step 1: every gate group must carry its persisted power threshold");
-        _journey.Canvas.Connections.Count.ShouldBe(WireCount,
+        ExampleWires.LogicalWireCount(_journey.Canvas).ShouldBe(WireCount,
             "Step 1: thirty wires join the thirty-two gates");
     }
 
@@ -225,14 +226,15 @@ public class FullAdderLogicJourneyTests
             .DefaultIfEmpty(0)
             .Max();
 
-    /// <summary>The driver gates of every gate, derived from the canvas wiring and the persisted roles.</summary>
+    /// <summary>The driver gates of every gate, derived from the canvas wiring (followed through crossings) and the persisted roles.</summary>
     private IReadOnlyDictionary<string, List<string>> GateDriversByLoad()
     {
         var drivers = _journey.Groups.ToDictionary(g => g.GroupName, _ => new List<string>());
-        foreach (var connection in _journey.Canvas.Connections.Select(c => c.Connection))
+        var connections = _journey.Canvas.Connections.Select(c => c.Connection).ToList();
+        foreach (var (startPin, endPin) in ExampleWires.LogicalWireEnds(connections))
         {
-            var start = ResolveGatePin(connection.StartPin);
-            var end = ResolveGatePin(connection.EndPin);
+            var start = ResolveGatePin(startPin);
+            var end = ResolveGatePin(endPin);
             if (start == null || end == null) continue;
             var (driver, load) = start.Value.IsOutput
                 ? (start.Value.GateId, end.Value.GateId)

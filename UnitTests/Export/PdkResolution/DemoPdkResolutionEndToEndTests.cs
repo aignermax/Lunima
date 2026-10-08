@@ -29,7 +29,9 @@ public class DemoPdkResolutionEndToEndTests
             "No nazca-capable Python env found (expected on CI); covered on a dev machine with nazca installed.");
 
         var draft = new PdkLoader().LoadFromFile(pdkPath!);
+        // Inline raw-code components (the Demo crossing) call no demofab function.
         var entries = draft.Components
+            .Where(c => string.IsNullOrWhiteSpace(c.RawCode))
             .Select(c =>
             {
                 var (module, function) = NazcaFunctionPath.Split(c.NazcaFunction);

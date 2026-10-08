@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using System.Diagnostics;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -59,8 +61,8 @@ public class LogicGateFourBitAdderExampleTests : IClassFixture<LogicGateFourBitA
     public void Example_LoadsOnlyTopLevelGateGroups_EachWithPersistedRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup, "the 4-bit adder contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(339, "339 wires join the 344 gates");
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component), "the 4-bit adder contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(339, "339 wires join the 344 gates");
         var groups = _fixture.Groups;
         groups.Count.ShouldBe(344, "four stages × (32-base + duplicated carry copies)");
         groups.Select(g => g.GroupName).ShouldBe(GateNames, ignoreOrder: true);
@@ -157,7 +159,7 @@ public class LogicGateFourBitAdderExampleTests : IClassFixture<LogicGateFourBitA
                     ExpectedOutputSignalNames.GetValueOrDefault(group.GroupName),
                     $"the output signal names of '{group.GroupName}' must survive the round trip (#1046)");
             }
-            reloadedCanvas.Connections.Count.ShouldBe(339, "every gate wire must survive the round trip");
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(339, "every gate wire must survive the round trip");
 
             var watch = Stopwatch.StartNew();
             var reloaded = await AssembleNetwork(reloadedCanvas);

@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView;
@@ -80,9 +82,9 @@ public class LogicGateRegister2BitExampleTests
     public void Example_LoadsOnlyTopLevelGateGroups_WithPersistedRolesAndRegisterDesignations()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the 2-bit register contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(9,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the 2-bit register contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(9,
             "nine wires join the eight gates: the select inversion through the copy stage onto " +
             "both hold arms, the two MUX arms into each register, and the two register feedbacks " +
             "— every waveguide keeps one driver and one load");
@@ -276,7 +278,7 @@ public class LogicGateRegister2BitExampleTests
                 roles.OutputSignalNames.ShouldBe(ExpectedOutputSignalNames.GetValueOrDefault(group.GroupName),
                     $"the output signal names of '{group.GroupName}' must survive the save → load round trip (#1025)");
             }
-            reloadedCanvas.Connections.Count.ShouldBe(9,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(9,
                 "every register wire — the feedbacks included — must survive the save → load round trip");
 
             var reloaded = await LogicGateMuxExampleTests.AssembleNetwork(reloadedCanvas);

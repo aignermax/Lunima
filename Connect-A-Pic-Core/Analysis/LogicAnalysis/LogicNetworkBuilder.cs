@@ -1,6 +1,7 @@
 using CAP_Core.Components.ComponentHelpers;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP_Core.Analysis.LogicAnalysis;
 
@@ -236,14 +237,17 @@ public sealed partial class LogicNetworkBuilder
     /// <summary>
     /// The far-side pin of a passive pass-through element: a non-group component
     /// with exactly two physical pins (a waveguide, an edge coupler) has exactly
-    /// one optical in→out path. Anything else — a group shell, a splitter, a
-    /// one-port laser — has no unique continuation and stops the trace.
+    /// one optical in→out path, and a waveguide crossing passes light straight on
+    /// to its opposite port. Anything else — a group shell, a splitter, a one-port
+    /// laser — has no unique continuation and stops the trace.
     /// </summary>
     private static PhysicalPin? PassThroughExit(PhysicalPin pin)
     {
         var parent = pin.ParentComponent;
         if (parent == null || parent is ComponentGroup)
             return null;
+        if (CrossingComponentCatalog.IsCrossing(parent))
+            return CrossingComponentCatalog.StraightThroughExit(pin);
         if (parent.PhysicalPins.Count != 2 || !parent.PhysicalPins.Contains(pin))
             return null;
         return parent.PhysicalPins.First(p => !ReferenceEquals(p, pin));

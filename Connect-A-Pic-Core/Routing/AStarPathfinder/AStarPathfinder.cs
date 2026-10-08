@@ -55,6 +55,13 @@ public class AStarPathfinder
     public Action? OnEscalationThresholdReached { get; set; }
 
     /// <summary>
+    /// When set, the search may cross other waveguides where a crossing component fits
+    /// (see <see cref="CrossingInsertion.CrossingStep"/>); null (default) keeps the classic
+    /// avoid-only search.
+    /// </summary>
+    public CrossingInsertion.CrossingStep? Crossings { get; set; }
+
+    /// <summary>
     /// True when the last <see cref="FindPath"/> returned null because the open set emptied
     /// — a proof that no goal-reaching path exists in the reachable region — rather than
     /// because the node budget cut the search short or cancellation stopped it. Lets a
@@ -289,7 +296,11 @@ public class AStarPathfinder
 
             // Check bounds and obstacles
             if (_grid.IsBlocked(newX, newY))
+            {
+                if (TryCreateCrossingNeighbor(current, dir, goalX, goalY, goalDir, distanceFromStart, visited) is { } jump)
+                    buffer.Add(jump);
                 continue;
+            }
 
             // Diagonal block check: a diagonal step is only allowed when BOTH
             // orthogonal neighbor cells are free, so the waveguide cannot
@@ -362,6 +373,46 @@ public class AStarPathfinder
 
             buffer.Add(neighbor);
         }
+    }
+
+    /// <summary>
+    /// The neighbor reached by jumping straight across the waveguide that blocks the next
+    /// cell, or null when crossings are off, the move is not a straight continuation, or no
+    /// crossing fits there (see <see cref="CrossingInsertion.CrossingStep.TryJump"/>).
+    /// </summary>
+    private AStarNode? TryCreateCrossingNeighbor(AStarNode current, GridDirection dir,
+                                                 int goalX, int goalY, GridDirection goalDir,
+                                                 int distanceFromStart, Dictionary<long, AStarNode> visited)
+    {
+        if (Crossings == null || dir.IsDiagonal() || dir != current.Direction)
+            return null;
+        var (dx, dy) = dir.GetDelta();
+        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength,
+                               out int span, out int runAfter, out var crossings))
+            return null;
+
+        int landX = current.X + dx * span, landY = current.Y + dy * span;
+        int distanceToGoal = Math.Abs(landX - goalX) + Math.Abs(landY - goalY);
+        if (distanceToGoal <= _costCalculator.MinPinEscapeCells && dir != goalDir)
+            return null;
+
+        double stepCost = _costCalculator.CalculateMoveCost(current, current.X + dx, current.Y + dy, dir);
+        double gCost = current.GCost + stepCost * span + Crossings.PenaltyCost * crossings.Count;
+        // The run restarts behind the last crossing; the landing already leaves room for a
+        // turn's arc, so the next bend cannot reach back into a crossing.
+        int straightRun = runAfter;
+        if (visited.TryGetValue(StateKey(landX, landY, dir, straightRun), out var existing) && gCost >= existing.GCost)
+            return null;
+
+        return new AStarNode(landX, landY, dir)
+        {
+            GCost = gCost,
+            HCost = _costCalculator.CalculateHeuristic(landX, landY, dir, goalX, goalY, goalDir),
+            Parent = current,
+            StraightRunLength = straightRun,
+            DistanceFromStart = distanceFromStart + span,
+            Crossings = crossings,
+        };
     }
 
     /// <summary>

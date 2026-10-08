@@ -1,3 +1,4 @@
+using UnitTests.Helpers;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Core;
@@ -51,7 +52,7 @@ public class LogicGateRam2x4ExampleTests
 
         _fixture.Canvas.Components.Count.ShouldBe(TopLevelGroupNames.Length,
             "top level: the address inverter, the four read-MUX combines and the two cell instances");
-        _fixture.Canvas.Connections.Count.ShouldBe(9,
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(9,
             "only the nine inter-cell wires load as connections — the intra-cell wiring is frozen inside the cells");
 
         var groups = _fixture.Canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().ToList();

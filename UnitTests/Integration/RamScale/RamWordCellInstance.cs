@@ -27,6 +27,11 @@ public sealed partial class RamWordCellTemplate
             gates[role] = ReRollGate(gateEntry, RamWordCellBuilder.InstanceGateName(gateName, word), dx, dy, cellIdentifier, cellGuid);
         }
 
+        var crossings = _crossings.ToDictionary(kv => kv.Key, kv => ReRollCrossing(kv.Value, dx, dy));
+        var childIds = gates.Values.Select(g => g["GroupDto"]!["Identifier"]!.GetValue<string>())
+            .Concat(crossings.Values.Select(c => c["Identifier"]!.GetValue<string>()));
+        var childGuids = gates.Values.Select(g => g["GroupDto"]!["IdGuid"]!.GetValue<string>())
+            .Concat(crossings.Values.Select(c => c["ComponentGuid"]!.GetValue<string>()));
         var cellDto = new JsonObject
         {
             ["GroupName"] = $"CELL{word}",
@@ -38,15 +43,15 @@ public sealed partial class RamWordCellTemplate
             ["PhysicalX"] = anchorX,
             ["PhysicalY"] = anchorY,
             ["Rotation90CounterClock"] = 0,
-            ["ChildComponentIds"] = new JsonArray(gates.Values.Select(g => (JsonNode)g["GroupDto"]!["Identifier"]!.GetValue<string>()).ToArray()),
-            ["ChildComponentGuids"] = new JsonArray(gates.Values.Select(g => (JsonNode)g["GroupDto"]!["IdGuid"]!.GetValue<string>()).ToArray()),
-            ["InternalPaths"] = new JsonArray(_paths.Select(p => (JsonNode)EmitPath(p, gates, dx, dy)).ToArray()),
+            ["ChildComponentIds"] = new JsonArray(childIds.Select(id => (JsonNode)id).ToArray()),
+            ["ChildComponentGuids"] = new JsonArray(childGuids.Select(guid => (JsonNode)guid).ToArray()),
+            ["InternalPaths"] = new JsonArray(_paths.Select(p => (JsonNode)EmitPath(p, gates, crossings, dx, dy)).ToArray()),
             ["ExternalPins"] = new JsonArray(_ports.Select(kv => (JsonNode)EmitPort(kv.Key, kv.Value, gates)).ToArray()),
         };
         var entry = new JsonObject
         {
             ["GroupDto"] = cellDto,
-            ["ChildComponents"] = new JsonArray(),
+            ["ChildComponents"] = new JsonArray(crossings.Values.Select(c => (JsonNode)c).ToArray()),
             ["CanvasX"] = anchorX,
             ["CanvasY"] = anchorY,
         };
@@ -114,8 +119,20 @@ public sealed partial class RamWordCellTemplate
         return entry;
     }
 
+    /// <summary>Clones one cell crossing with a fresh identity, translated to the instance.</summary>
+    private static JsonObject ReRollCrossing(JsonObject template, double dx, double dy)
+    {
+        var crossing = template.DeepClone().AsObject();
+        crossing["Identifier"] = $"{template["Identifier"]!.GetValue<string>().Split('_')[0]}_{Guid.NewGuid():N}";
+        crossing["ComponentGuid"] = Guid.NewGuid().ToString();
+        crossing["X"] = template["X"]!.GetValue<double>() + dx;
+        crossing["Y"] = template["Y"]!.GetValue<double>() + dy;
+        return crossing;
+    }
+
     /// <summary>Emits one frozen intra-cell path with translated segments and instance leaf endpoints.</summary>
-    private static JsonObject EmitPath(TemplatePath path, IReadOnlyDictionary<string, JsonObject> gates, double dx, double dy)
+    private static JsonObject EmitPath(TemplatePath path, IReadOnlyDictionary<string, JsonObject> gates,
+                                       IReadOnlyDictionary<string, JsonObject> crossings, double dx, double dy)
     {
         var segments = path.Segments.DeepClone().AsArray();
         foreach (var segment in segments)
@@ -130,9 +147,24 @@ public sealed partial class RamWordCellTemplate
             ["WidthMicrometers"] = 0.5,
             ["BendRadiusMicrometers"] = 10,
         };
-        EmitPinTriple(frozen, "Start", gates[path.StartRole], path.StartPin);
-        EmitPinTriple(frozen, "End", gates[path.EndRole], path.EndPin);
+        EmitEndpoint(frozen, "Start", path.StartRole, path.StartPin, gates, crossings);
+        EmitEndpoint(frozen, "End", path.EndRole, path.EndPin, gates, crossings);
         return frozen;
+    }
+
+    /// <summary>Writes one path endpoint: a gate's external pin, or a port of a cell crossing.</summary>
+    private static void EmitEndpoint(JsonObject path, string prefix, string role, string pin,
+                                     IReadOnlyDictionary<string, JsonObject> gates, IReadOnlyDictionary<string, JsonObject> crossings)
+    {
+        if (!role.StartsWith(CrossingRolePrefix, StringComparison.Ordinal))
+        {
+            EmitPinTriple(path, prefix, gates[role], pin);
+            return;
+        }
+        var crossing = crossings[role[CrossingRolePrefix.Length..]];
+        path[$"{prefix}ComponentId"] = crossing["Identifier"]!.GetValue<string>();
+        path[$"{prefix}ComponentGuid"] = crossing["ComponentGuid"]!.GetValue<string>();
+        path[$"{prefix}PinName"] = pin;
     }
 
     /// <summary>Emits one cell port: the instance leaf triple behind the gate pin, template-relative position.</summary>
@@ -165,7 +197,7 @@ public sealed partial class RamWordCellTemplate
 /// <summary>One stamped-out word cell: the top-level cell entry plus its nested gate entries.</summary>
 public sealed class RamWordCellInstance
 {
-    /// <summary>The cell's own group entry (children are the gate groups, no leaf components).</summary>
+    /// <summary>The cell's own group entry (children are the gate groups plus any crossings between their wires).</summary>
     public required JsonObject CellGroupEntry { get; init; }
 
     /// <summary>The nested gate entries keyed by cell role (<c>LE2</c>, <c>CSEL_0</c>, …), parents set.</summary>
