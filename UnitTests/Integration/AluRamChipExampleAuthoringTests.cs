@@ -235,11 +235,11 @@ public class AluRamChipExampleAuthoringTests
         int blockedTotal = issues.Count(i => i.Type == DesignIssueType.BlockedPath);
         Report($"[author] {ExampleFileName}: blockedTopLevel={blockedTopLevel} blockedTotal={blockedTotal} " +
             "— pin these in ExampleLoadRoutingTests.KnownBlockedWires / ExampleFrozenBlockedPathTests.KnownBlockedPathCounts");
-        blockedTopLevel.ShouldBe(12,
+        blockedTopLevel.ShouldBe(5,
             "the top level carries the 4-bit adder's pinned blocked wires alone; " +
             "the RAM's wires are frozen inside the RAM group");
-        blockedTotal.ShouldBe(36,
-            "12 adder top-level + the RAM 4x4's 24 inter-cell wires frozen inside the RAM group");
+        blockedTotal.ShouldBe(29,
+            "5 adder top-level + the RAM 4x4's 24 inter-cell wires frozen inside the RAM group");
     }
 
     private void Report(string line)

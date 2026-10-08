@@ -150,7 +150,7 @@ public class ExampleRouteBakeTests
     /// routing before it restores the chip size, and an unrestored chip would route the
     /// design on the small default grid and save the default chip size back.
     /// </summary>
-    private static (DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps) CreateCanvasAndFileOperations(
+    internal static (DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps) CreateCanvasAndFileOperations(
         BakePreparation prep)
     {
         var canvas = new DesignCanvasViewModel();
@@ -234,7 +234,7 @@ public class ExampleRouteBakeTests
     internal static string StripRouteGeometryToTempFile(string sourcePath) =>
         PrepareGeometryLessCopy(sourcePath).TempPath;
 
-    private static BakePreparation PrepareGeometryLessCopy(string examplePath)
+    internal static BakePreparation PrepareGeometryLessCopy(string examplePath)
     {
         var json = JsonNode.Parse(File.ReadAllText(examplePath))!;
         var prep = new BakePreparation(Path.Combine(Path.GetTempPath(), $"route-bake-{Guid.NewGuid():N}.lun"));
@@ -283,7 +283,7 @@ public class ExampleRouteBakeTests
     }
 
     /// <summary>Mutable bake counters gathered while stripping one example's route geometry.</summary>
-    private sealed class BakePreparation(string tempPath)
+    internal sealed class BakePreparation(string tempPath)
     {
         public string TempPath { get; } = tempPath;
         public int ConnectionCount { get; set; }

@@ -51,7 +51,7 @@ public class PinPairRerouterTests
             Settings, CancellationToken.None);
 
         placed.ShouldNotBeNull("both wires fit once the inner pin routes first")
-            .ShouldHaveSingleItem("the upper wire now crosses the lower one through a crossing");
+            .Placed.ShouldHaveSingleItem("the upper wire now crosses the lower one through a crossing");
         var connections = canvas.ConnectionManager.Connections;
         connections.Count.ShouldBe(4, "both wires are split onto the crossing's opposite ports");
         connections.ShouldAllBe(c => !c.IsBlockedFallback && c.IsPathValid);

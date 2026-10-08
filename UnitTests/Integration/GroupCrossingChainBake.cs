@@ -54,6 +54,7 @@ internal static class GroupCrossingChainBake
         {
             ComponentAdded = placed.Add,
             ChainPassTimeBudget = TimeSpan.MaxValue,
+            FallbackChainSearches = new[] { (40_000_000, 1.0), (8_000_000, 2.5) },
         };
         int groupConnected = service.ConnectBlockedWiresThroughCrossings(manager, router);
         if (groupConnected == 0)
