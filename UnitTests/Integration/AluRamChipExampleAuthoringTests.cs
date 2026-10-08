@@ -62,8 +62,8 @@ public class AluRamChipExampleAuthoringTests
     private const string AdderFileName = "Logic Gate 4-Bit Adder.lun";
     private const string RamFileName = "Logic Gate RAM 4x4.lun";
     private const int RamTopLevelGroupCount = 55;
-    private const int RamTopLevelCrossingCount = 31;
-    private const int RamTopLevelWireCount = 146;
+    private const int RamTopLevelCrossingCount = 34;
+    private const int RamTopLevelWireCount = 152;
     private const double BlockGapMicrometers = 500.0;
 
     private readonly ITestOutputHelper _output;
@@ -235,11 +235,11 @@ public class AluRamChipExampleAuthoringTests
         int blockedTotal = issues.Count(i => i.Type == DesignIssueType.BlockedPath);
         Report($"[author] {ExampleFileName}: blockedTopLevel={blockedTopLevel} blockedTotal={blockedTotal} " +
             "— pin these in ExampleLoadRoutingTests.KnownBlockedWires / ExampleFrozenBlockedPathTests.KnownBlockedPathCounts");
-        blockedTopLevel.ShouldBe(18,
+        blockedTopLevel.ShouldBe(12,
             "the top level carries the 4-bit adder's pinned blocked wires alone; " +
             "the RAM's wires are frozen inside the RAM group");
-        blockedTotal.ShouldBe(47,
-            "18 adder top-level + the RAM 4x4's 29 (25 inter-cell + 4 × 1 intra-cell) frozen inside the RAM group");
+        blockedTotal.ShouldBe(36,
+            "12 adder top-level + the RAM 4x4's 24 inter-cell wires frozen inside the RAM group");
     }
 
     private void Report(string line)

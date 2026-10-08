@@ -39,20 +39,19 @@ public class ExampleFrozenBlockedPathTests
     {
         ["Logic Gate ALU 1-bit.lun"] = 0,
         ["Logic Gate Register 2-bit.lun"] = 0,
-        ["Logic Gate Counter 2-bit.lun"] = 2,
-        ["Logic Gate Full Adder.lun"] = 1,
+        ["Logic Gate Counter 2-bit.lun"] = 1,
+        ["Logic Gate Full Adder.lun"] = 0,
         ["Logic Gate PC 2-bit.lun"] = 3,
-        ["Logic Gate RAM 2x2.lun"] = 7,
+        ["Logic Gate RAM 2x2.lun"] = 2,
         // 2 blocked top-level inter-cell wires + 2 cell instances × 1 blocked intra-cell
         // wire frozen with the flag.
         ["Logic Gate RAM 2x4.lun"] = 4,
-        // 25 blocked top-level wires + 4 cell instances × 1 blocked intra-cell wire
-        // frozen with the flag.
-        ["Logic Gate RAM 4x4.lun"] = 29,
-        ["Logic Gate 4-Bit Adder.lun"] = 18,
-        // 18 blocked top-level adder wires + the RAM 4x4's 29 (25 inter-cell + 4 × 1
-        // intra-cell) frozen inside the wrapping RAM group.
-        ["Logic Gate ALU + RAM.lun"] = 47,
+        // 24 blocked top-level wires; the four cell instances carry none.
+        ["Logic Gate RAM 4x4.lun"] = 24,
+        ["Logic Gate 4-Bit Adder.lun"] = 12,
+        // 12 blocked top-level adder wires + the RAM 4x4's 24 inter-cell wires frozen
+        // inside the wrapping RAM group.
+        ["Logic Gate ALU + RAM.lun"] = 36,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

@@ -19,9 +19,11 @@ internal static class PlainRouteApplier
     /// <param name="route">The crossing-free route the search found.</param>
     /// <param name="manager">The connection manager owning the design's connections.</param>
     /// <param name="router">The router whose grid gets the new obstacle.</param>
+    /// <param name="undo">Puts the blocked fallback back (set only on success).</param>
     public static bool TryApply(WaveguideConnection blocked, RoutedPath route,
-                                WaveguideConnectionManager manager, WaveguideRouter router)
+                                WaveguideConnectionManager manager, WaveguideRouter router, out Action undo)
     {
+        undo = () => { };
         if (ChainPieceCrossingGuard.CrossesAnotherWire(new[] { (blocked, route) }, new[] { blocked }, manager))
             return false;
         var fallback = blocked.RoutedPath;
@@ -31,6 +33,14 @@ internal static class PlainRouteApplier
             if (blocked.IsPathValid && !blocked.IsBlockedFallback && blocked.RoutedPath != null)
             {
                 router.PathfindingGrid!.AddWaveguideObstacle(blocked.Id, blocked.RoutedPath.Segments, manager.WaveguideWidthMicrometers);
+                undo = () =>
+                {
+                    lock (manager.SyncRoot)
+                    {
+                        router.PathfindingGrid?.RemoveWaveguideObstacle(blocked.Id);
+                        if (fallback != null) blocked.RestoreCachedPath(fallback);
+                    }
+                };
                 return true;
             }
             if (fallback != null)
