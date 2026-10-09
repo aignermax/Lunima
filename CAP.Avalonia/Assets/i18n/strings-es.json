@@ -669,7 +669,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "Calcular ADD y mantener la RAM de datos en el chip fotónico",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "Calcular ADD y mantener la RAM de datos y el acumulador en el chip fotónico",
   "IsaPlayground.PhotonicAccumulatorToggle": "Mantener el acumulador en el chip fotónico",
-  "IsaPlayground.PhotonicAdderHint": "Abre el ejemplo del sumador de 4 bits, el de NOT de 4 bits, el de AND de 4 bits, el de unidad lógica de 4 bits, el de detección de cero de 4 bits o el de RAM 4x4 y pulsa «Construir red lógica» en la pestaña Lógica.",
+  "IsaPlayground.PhotonicAdderHint": "Abre el ejemplo ALU + RAM + ACC (todas las unidades a la vez) o un ejemplo de 4 bits (sumador, NOT de 4 bits, AND de 4 bits, unidad lógica de 4 bits, detección de cero de 4 bits, RAM 4x4) y pulsa «Construir red lógica» en la pestaña Lógica.",
   "IsaPlayground.StatusPhotonicAdd": "ADD fotónico {0} + {1} = {2} — la luz tardó {3:0.##} ps ({4} puertas)",
   "IsaPlayground.StatusPhotonicNot": "NOT fotónico {0} = {1} ({2} puertas)",
   "IsaPlayground.StatusPhotonicAnd": "AND fotónico {0} & {1} = {2} ({3} puertas)",

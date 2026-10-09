@@ -669,7 +669,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "ADDを計算し、データRAMをフォトニックチップに保持",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "ADDを計算し、データRAMとアキュムレータをフォトニックチップに保持",
   "IsaPlayground.PhotonicAccumulatorToggle": "アキュムレータをフォトニックチップに保持",
-  "IsaPlayground.PhotonicAdderHint": "4ビット加算器、NOT 4ビット、AND 4ビット、ロジックユニット 4ビット、ゼロ検出 4ビット、RAM 4x4 のいずれかの例を開き、ロジックタブで「論理ネットワークを構築」を押してください。",
+  "IsaPlayground.PhotonicAdderHint": "ALU + RAM + ACC の例（全ユニットを一度に）または 4ビットの例（加算器、NOT 4ビット、AND 4ビット、ロジックユニット 4ビット、ゼロ検出 4ビット、RAM 4x4）を開き、ロジックタブで「論理ネットワークを構築」を押してください。",
   "IsaPlayground.StatusPhotonicAdd": "フォトニック ADD {0} + {1} = {2} — 光の所要時間 {3:0.##} ps（{4} ゲート）",
   "IsaPlayground.StatusPhotonicNot": "フォトニック NOT {0} = {1}（{2} ゲート）",
   "IsaPlayground.StatusPhotonicAnd": "フォトニック AND {0} & {1} = {2}（{3} ゲート）",

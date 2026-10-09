@@ -669,7 +669,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "ADD berechnen und das Daten-RAM auf dem photonischen Chip halten",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "ADD, Daten-RAM und Akkumulator auf dem photonischen Chip",
   "IsaPlayground.PhotonicAccumulatorToggle": "Akkumulator auf dem photonischen Chip halten",
-  "IsaPlayground.PhotonicAdderHint": "Öffne das 4-Bit-Addierer-, das NOT-4-Bit-, das AND-4-Bit-, das Logic-Unit-4-Bit-, das Zero-Detect-4-Bit- oder das RAM-4x4-Beispiel und drücke im Logik-Tab auf „Logiknetzwerk aufbauen“.",
+  "IsaPlayground.PhotonicAdderHint": "Öffne das Beispiel ALU + RAM + ACC (alle Einheiten auf einmal) oder ein 4-Bit-Beispiel (Addierer, NOT 4-Bit, AND 4-Bit, Logic Unit 4-Bit, Zero Detect 4-Bit, RAM 4x4) und drücke im Logik-Tab auf „Logiknetzwerk aufbauen“.",
   "IsaPlayground.StatusPhotonicAdd": "Photonisches ADD {0} + {1} = {2} — das Licht brauchte {3:0.##} ps ({4} Gatter)",
   "IsaPlayground.StatusPhotonicNot": "Photonisches NOT {0} = {1} ({2} Gatter)",
   "IsaPlayground.StatusPhotonicAnd": "Photonisches AND {0} & {1} = {2} ({3} Gatter)",

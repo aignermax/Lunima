@@ -669,7 +669,7 @@
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "在光子芯片上计算 ADD 并保存数据 RAM",
   "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "在光子芯片上计算 ADD 并保存数据 RAM 和累加器",
   "IsaPlayground.PhotonicAccumulatorToggle": "在光子芯片上保存累加器",
-  "IsaPlayground.PhotonicAdderHint": "打开 4 位加法器、NOT 4 位、AND 4 位、逻辑单元 4 位或零检测 4 位或 RAM 4x4 示例，然后在“逻辑”选项卡中点击“构建逻辑网络”。",
+  "IsaPlayground.PhotonicAdderHint": "打开 ALU + RAM + ACC 示例（一次包含所有单元）或 4 位示例（加法器、NOT 4 位、AND 4 位、逻辑单元 4 位、零检测 4 位、RAM 4x4），然后在“逻辑”选项卡中点击“构建逻辑网络”。",
   "IsaPlayground.StatusPhotonicAdd": "光子 ADD {0} + {1} = {2} — 光耗时 {3:0.##} ps（{4} 个门）",
   "IsaPlayground.StatusPhotonicNot": "光子 NOT {0} = {1}（{2} 个门）",
   "IsaPlayground.StatusPhotonicAnd": "光子 AND {0} & {1} = {2}（{3} 个门）",
