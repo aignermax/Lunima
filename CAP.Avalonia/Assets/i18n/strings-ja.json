@@ -422,6 +422,7 @@
   "Examples.TwoChiplets.Description": "2つのチップ、1つの光路:チップエッジをまたぐリンク。",
   "Examples.LogicAcrossTwoChiplets.Description": "2つのチップ、1つの真理値表:チップレットAのNOTがエッジカプラーリンク越しにチップレットBのANDを駆動 — Y = NOT A AND B。",
   "Examples.AluRamChip.Description": "4ビット加算器とRAM 4x4を1つのチップに:ALUは光で加算し、データメモリは光で記憶します。",
+  "Examples.AluRamAccChip.Description": "4ビット加算器、RAM 4x4、アキュムレータレジスタを1つのチップに:ALU、データメモリ、ACCがすべて光で動作します。",
   "ErrorConsole.ClearTip": "コンソールをクリア",
   "ErrorConsole.CopyAllTip": "すべてのエントリをクリップボードにコピー",
   "ErrorConsole.Title": "エラーコンソール",

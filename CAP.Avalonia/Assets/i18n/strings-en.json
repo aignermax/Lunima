@@ -422,6 +422,7 @@
   "Examples.TwoChiplets.Description": "Two chips, one light path: the link across the chip edge.",
   "Examples.LogicAcrossTwoChiplets.Description": "Two chips, one truth table: a NOT on chiplet A drives an AND on chiplet B across the edge-coupler link — Y = NOT A AND B.",
   "Examples.AluRamChip.Description": "The 4-bit adder and the RAM 4x4 on one chip: the ALU adds on light and the data memory stores on light.",
+  "Examples.AluRamAccChip.Description": "The 4-bit adder, the RAM 4x4 and the accumulator register on one chip: the ALU, the data memory and the ACC run on light.",
   "ErrorConsole.ClearTip": "Clear console",
   "ErrorConsole.CopyAllTip": "Copy all entries to clipboard",
   "ErrorConsole.Title": "Error Console",

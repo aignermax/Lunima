@@ -172,7 +172,7 @@ public class AluRamChipExampleAuthoringTests
     }
 
     /// <summary>Loads one shipped example through the real load path (cached routes: no routing).</summary>
-    private static async Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps)> LoadExampleOntoCanvas(
+    internal static async Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps)> LoadExampleOntoCanvas(
         string fileName)
     {
         var canvas = new DesignCanvasViewModel();
@@ -188,7 +188,7 @@ public class AluRamChipExampleAuthoringTests
     }
 
     /// <summary>Writes the merged design through the real save command (byte-for-byte product output).</summary>
-    private static async Task SaveThroughRealPath(DesignCanvasViewModel canvas, string examplePath)
+    internal static async Task SaveThroughRealPath(DesignCanvasViewModel canvas, string examplePath)
     {
         var saveOps = new FileOperationsViewModel(
             canvas,

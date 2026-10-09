@@ -422,6 +422,7 @@
   "Examples.TwoChiplets.Description": "两颗芯片,一条光路:跨越芯片边缘的链路。",
   "Examples.LogicAcrossTwoChiplets.Description": "两颗芯片,一张真值表:小芯片 A 上的 NOT 通过边缘耦合链路驱动小芯片 B 上的 AND — Y = NOT A AND B。",
   "Examples.AluRamChip.Description": "4 位加法器与 RAM 4x4 在同一颗芯片上:ALU 用光做加法,数据存储器用光存储。",
+  "Examples.AluRamAccChip.Description": "4 位加法器、RAM 4x4 与累加器寄存器在同一颗芯片上:ALU、数据存储器和 ACC 都用光运行。",
   "ErrorConsole.ClearTip": "清空控制台",
   "ErrorConsole.CopyAllTip": "将所有条目复制到剪贴板",
   "ErrorConsole.Title": "错误控制台",
