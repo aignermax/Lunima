@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using System.Collections.ObjectModel;
 using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
@@ -59,9 +61,9 @@ public class LogicGateHalfAdderExampleTests : IClassFixture<LogicGateHalfAdderEx
     public void Example_LoadsOnlyTopLevelGateGroups_EachWithPersistedRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the half adder contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(5, "five wires join the seven gates");
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the half adder contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(5, "five wires join the seven gates");
 
         var groups = _fixture.Groups;
         groups.Select(g => g.GroupName).ShouldBe(GateNames, ignoreOrder: true);
@@ -126,7 +128,7 @@ public class LogicGateHalfAdderExampleTests : IClassFixture<LogicGateHalfAdderEx
                     ExpectedSignalNames[group.GroupName],
                     $"the signal names of '{group.GroupName}' must survive the save → load round trip (#1025)");
             }
-            reloadedCanvas.Connections.Count.ShouldBe(5,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(5,
                 "every gate wire must survive the save → load round trip");
 
             var reloaded = await BuildNetwork(reloadedCanvas, reloadedGroups);

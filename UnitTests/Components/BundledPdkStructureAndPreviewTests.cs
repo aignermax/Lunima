@@ -155,6 +155,8 @@ public class BundledPdkStructureAndPreviewTests
                 if (!string.IsNullOrWhiteSpace(comp.GdsFactoryFunction)
                     && GdsFactoryPreviewCode.For(comp.GdsFactoryFunction) is { } code)
                     result = await gdsFactory.RenderRawCodeAsync(code);
+                else if (HasInlineNazcaCode(comp))
+                    result = await nazca.RenderRawCodeAsync(comp.RawCode!);
                 else
                     result = await nazca.RenderAsync(pdk.NazcaModuleName, comp.NazcaFunction!, comp.NazcaParameters);
 
@@ -174,6 +176,11 @@ public class BundledPdkStructureAndPreviewTests
             $"every bundled component must render a non-empty preview ({renderedCount} rendered OK)." +
             $"\n{string.Join("\n", failures)}");
     }
+
+    /// <summary>Mirrors the app's preview: a component written as Nazca code in its PDK renders that code.</summary>
+    private static bool HasInlineNazcaCode(PdkComponentDraft comp) =>
+        !string.IsNullOrWhiteSpace(comp.RawCode)
+        && !string.Equals(comp.RawCodeBackend, "gdsfactory", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsEnvironmentGap(string? error) =>
         error?.Contains("No module named") == true

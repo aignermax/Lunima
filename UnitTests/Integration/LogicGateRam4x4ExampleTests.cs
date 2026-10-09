@@ -1,3 +1,4 @@
+using UnitTests.Helpers;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Core;
@@ -52,9 +53,9 @@ public class LogicGateRam4x4ExampleTests
         _fixture.LoadDuration.ShouldBeLessThan(TimeSpan.FromSeconds(30),
             "the cached routes must keep the open under the loose CI bound of 30 s (target: 10 s)");
 
-        _fixture.Canvas.Components.Count.ShouldBe(TopLevelGroupCount,
+        _fixture.Canvas.Components.Count(c => c.Component is ComponentGroup).ShouldBe(TopLevelGroupCount,
             "top level: the address stage, the copy trees, the read-MUX combines and the four cell instances");
-        _fixture.Canvas.Connections.Count.ShouldBe(TopLevelWireCount,
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(TopLevelWireCount,
             "only the inter-cell wires load as connections — the intra-cell wiring is frozen inside the cells");
 
         var groups = _fixture.Canvas.Components.Select(c => c.Component).OfType<ComponentGroup>().ToList();

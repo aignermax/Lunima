@@ -34,6 +34,15 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>
         </Style>
+        <!-- One height for every main-toolbar button: text buttons (Import, Export, Tools)
+             and larger-glyph buttons (AI, Settings) otherwise grow with their content and
+             stand taller than the icon buttons. -->
+        <Style Selector="StackPanel#MainToolbar > Button">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
     </Window.Styles>
 
     <Grid>
@@ -44,7 +53,7 @@
                       VerticalScrollBarVisibility="Disabled"
                       Background="#2d2d2d"
                       Height="40">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel x:Name="MainToolbar" Orientation="Horizontal">
                 <!-- Home -->
                 <Button Command="{Binding ShowHomeCommand}"
                         Width="36" Margin="10,2,2,2" Background="#3d3d3d"
@@ -153,7 +162,7 @@
                         Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.SaveDesignAsTip}"/>
                 <!-- GDS import as the Export button's sibling — same command as the
                      library panel's GDS button (#808), so the tooltip reuses its text. -->
-                <Button MinWidth="95" Margin="2" Padding="8,4" Background="#3d3d3d"
+                <Button MinWidth="95" Margin="2" Background="#3d3d3d"
                         Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
                         ToolTip.Tip="{loc:Localize GdsImport.OpenTip}">
                     <Button.Content>
@@ -161,7 +170,7 @@
                     </Button.Content>
                 </Button>
                 <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
-                <Button MinWidth="95" Margin="2" Padding="8,4" Background="#3d4d3d"
+                <Button MinWidth="95" Margin="2" Background="#3d4d3d"
                         ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
                     <Button.Content>
                         <TextBlock Text="{loc:Localize Toolbar.ExportButton}"/>
@@ -260,7 +269,7 @@
 
                 <!-- Tools -->
                 <Button x:Name="ToolsMenuButton"
-                        MinWidth="80" Margin="2" Padding="8,4" Background="#3d3d5d"
+                        MinWidth="80" Margin="2" Background="#3d3d5d"
                         ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
                     <Button.Content>
                         <TextBlock Text="{loc:Localize Toolbar.ToolsButton}"/>

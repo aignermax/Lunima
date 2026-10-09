@@ -86,7 +86,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     public async Task FullLoop_UserDesign_ExportReimport_NetlistTopologyMatchesOriginal()
     {
         // ── 1+2. Export the user's design with the app's exporter and run it ──
-        var export = await ExportUserDesignAsync("export", stripSiepicUpgrade: false);
+        var export = await ExportUserDesignAsync(stripSiepicUpgrade: false);
         export.SkippedConnections.ShouldBeEmpty("all 10 routes are real, exportable geometry");
         export.ExportWarnings.ShouldBeEmpty();
         GdsUserDesignFixture.CountLines(export.Script, ".put('org',").ShouldBe(7,
@@ -113,11 +113,12 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         // crossing area: bdc↔crossing and crossing↔crossing restore cleanly,
         // adiabatic↔crossing entangles — one net additional clean chain. The
         // collision-checked terminal-approach arcs of #1084 re-fragment the
-        // frozen network: 32 polygons, was 39 — the 5/5 restore split is unchanged.)
+        // frozen network: 30 polygons since waveguides rasterize without gaps (32 before,
+        // 39 before #1084) — the 5/5 restore split is unchanged.)
         outcome.Connections.Count.ShouldBe(5);
         outcome.Connections.ShouldAllBe(c => c.IsRouteDerived);
         outcome.Warnings.ShouldBeEmpty("restored/frozen accounting is informational now");
-        outcome.TopCellWaveguidePolygons.Count.ShouldBe(32,
+        outcome.TopCellWaveguidePolygons.Count.ShouldBe(30,
             "the junction network's polygons ride the group as frozen, non-routable paths");
 
         // ── 4. Place with frozen imported geometry: this is a netlist-TOPOLOGY
@@ -184,11 +185,12 @@ public class GdsHighestLevelRoundTripTests : IDisposable
     public async Task ExportedGds_IndependentPythonCrossCheck_ConfirmsDesignStructure()
     {
         // Scenario-agnostic (asserts fork on export.SiepicUpgraded) — plain nazca gating suffices.
-        var export = await ExportUserDesignAsync("export-pycheck", stripSiepicUpgrade: false, requireSiepicUpgradeStack: false);
+        var export = await ExportUserDesignAsync(stripSiepicUpgrade: false, requireSiepicUpgradeStack: false);
 
         var engine = await ProbeGdsEngineAsync(export.Python);
         Skip.If(engine == null, "Python has neither klayout.db nor gdstk — no independent GDS reader.");
 
+        Directory.CreateDirectory(_root);
         var checkPath = Path.Combine(_root, "gds_cross_check.py");
         await File.WriteAllTextAsync(checkPath, CrossCheckScript);
         var run = await RunViaFactoryAsync(export.Python, _root, checkPath, engine, export.GdsPath);
@@ -274,7 +276,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         // The stripped script needs only nazca — bare-nazca machines are exactly
         // what this scenario pins, so it must not gate on the SiEPIC stack.
         var export = await ExportUserDesignAsync(
-            "export-stub", stripSiepicUpgrade: true, requireSiepicUpgradeStack: false);
+            stripSiepicUpgrade: true, requireSiepicUpgradeStack: false);
         export.SiepicUpgraded.ShouldBeFalse("the upgrade call was stripped — the stubs survive");
 
         var (outcome, host) = await ImportExplodeAsync(export.GdsPath);
@@ -510,21 +512,50 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         List<string> ExportWarnings,
         string StdErr);
 
-    /// <summary>Instance wrapper over the shared static harness, bound to this fixture's temp root.</summary>
-    private async Task<ExportResult> ExportUserDesignAsync(
-        string subdir, bool stripSiepicUpgrade, bool requireSiepicUpgradeStack = true) =>
-        await ExportUserDesignAsync(_root, subdir, stripSiepicUpgrade, requireSiepicUpgradeStack);
-
     /// <summary>
     /// Builds the user's design, exports it with the app's exporter and runs the
     /// script with real nazca. <paramref name="stripSiepicUpgrade"/> removes the
     /// klayout upgrade CALL (the def stays, unused) — exactly the GDS a
     /// bare-nazca python would write (stub boxes + (1,10) pin labels). Internal
-    /// static with an explicit temp root so <see cref="GdsReexportIdempotencyTests"/>
-    /// reuses the same harness.
+    /// static so <see cref="GdsReexportIdempotencyTests"/> shares the same exports.
     /// </summary>
     internal static async Task<ExportResult> ExportUserDesignAsync(
-        string root, string subdir, bool stripSiepicUpgrade, bool requireSiepicUpgradeStack = true)
+        bool stripSiepicUpgrade, bool requireSiepicUpgradeStack = true)
+    {
+        var python = await FindExportPythonAsync(requireSiepicUpgradeStack);
+        // One export per scenario and test run: building + routing the design and the Nazca
+        // run cost seconds each, and every caller only reads the result. The files live in
+        // a run-wide directory — callers' own roots stay theirs to clean up.
+        var export = ExportCache.GetOrAdd((stripSiepicUpgrade, python!),
+            key => new Lazy<Task<ExportResult>>(() => ExportUserDesignUncachedAsync(key.Python, key.Strip)));
+        return await export.Value;
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(bool Strip, string Python), Lazy<Task<ExportResult>>>
+        ExportCache = new();
+
+    private static readonly string ExportCacheRoot = CreateExportCacheRoot();
+
+    /// <summary>The run-wide export directory, deleted when the test process exits.</summary>
+    private static string CreateExportCacheRoot()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lunima-user-design-export-" + Guid.NewGuid().ToString("N"));
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch (IOException)
+            {
+                // A locked file must not fail the test run's shutdown; the OS temp cleanup takes it.
+            }
+        };
+        return root;
+    }
+
+    /// <summary>The interpreter for the scenario, or a skip when the machine has none.</summary>
+    private static async Task<string?> FindExportPythonAsync(bool requireSiepicUpgradeStack)
     {
         // Scenario-honest gating (#1353): a script that KEEPS the klayout upgrade
         // call pins the SiEPIC-upgraded topology, so it must run on a Python that
@@ -538,7 +569,11 @@ public class GdsHighestLevelRoundTripTests : IDisposable
         Skip.If(python == null, requireSiepicUpgradeStack
             ? "No Python with nazca + klayout + siepic_ebeam_pdk available — the round trip pins the SiEPIC-upgraded topology."
             : "No Python with nazca available — the round trip needs the real engine.");
+        return python;
+    }
 
+    private static async Task<ExportResult> ExportUserDesignUncachedAsync(string python, bool stripSiepicUpgrade)
+    {
         var canvas = GdsUserDesignFixture.BuildUserDesignCanvas();
         var skippedConnections = new List<string>();
         var exportWarnings = new List<string>();
@@ -552,7 +587,7 @@ public class GdsHighestLevelRoundTripTests : IDisposable
             script.ShouldNotContain("_lunima_upgrade_siepic_cells(gds_filename");
         }
 
-        var exportDir = Path.Combine(root, subdir);
+        var exportDir = Path.Combine(ExportCacheRoot, stripSiepicUpgrade ? "stub" : "full");
         Directory.CreateDirectory(exportDir);
         var scriptPath = Path.Combine(exportDir, "user_design.py");
         await File.WriteAllTextAsync(scriptPath, script);

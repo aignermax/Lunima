@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -55,9 +57,9 @@ public class LogicGateSrLatchExampleTests : IClassFixture<LogicGateSrLatchExampl
     public void Example_LoadsOnlyTopLevelGateGroups_EachRegisterDesignatedWithPersistedRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the SR latch contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(2,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the SR latch contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(2,
             "two cross-coupling wires join the two gates: Q → NANDQB.B and Q̄ → NANDQ.B");
 
         var groups = _fixture.Groups;
@@ -150,7 +152,7 @@ public class LogicGateSrLatchExampleTests : IClassFixture<LogicGateSrLatchExampl
                     ExpectedOutputSignalNames[group.GroupName],
                     $"the output signal names of '{group.GroupName}' must survive the save → load round trip");
             }
-            reloadedCanvas.Connections.Count.ShouldBe(2,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(2,
                 "both cross-coupling wires must survive the save → load round trip");
 
             var reloaded = await LogicGateMuxExampleTests.AssembleNetwork(reloadedCanvas);

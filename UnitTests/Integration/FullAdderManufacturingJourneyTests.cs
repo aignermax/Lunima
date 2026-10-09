@@ -1,3 +1,4 @@
+using ExampleWires = UnitTests.Helpers.ExampleWires;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -41,7 +42,7 @@ public class FullAdderManufacturingJourneyTests
             .ShouldBe(ExpectedGateNames, ignoreOrder: true);
         _journey.Groups.ShouldAllBe(g => g.TruthTablePinAssignment != null,
             "every gate group must carry its persisted pin roles for the manufacturing path to matter");
-        _journey.Canvas.Connections.Count.ShouldBe(30, "thirty wires join the thirty-two gates");
+        ExampleWires.LogicalWireCount(_journey.Canvas).ShouldBe(30, "thirty wires join the thirty-two gates");
     }
 
     [Theory]

@@ -236,6 +236,9 @@ public partial class WaveguideRouter
                              CancellationToken cancellationToken = default)
     {
         LastRouteCoarseNodesExpanded = 0;
+        // Crossings belong to the route that planned them: a route found another way (direct,
+        // coarse retry) must not inherit those of an earlier call.
+        ResetPlannedCrossings();
         try
         {
             return RouteCore(startPin, endPin, cancellationToken);

@@ -24,8 +24,7 @@ public class GdsExportIntegrationTests
     public async Task ViewModel_CheckEnvironment_UpdatesStatusProperties()
     {
         // Arrange
-        var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        var viewModel = new GdsExportViewModel(new InstantEnvironmentGdsExportService());
 
         // Act
         await viewModel.CheckEnvironmentAsync();
@@ -38,18 +37,21 @@ public class GdsExportIntegrationTests
         viewModel.IsChecking.ShouldBeFalse();
     }
 
-    [Fact]
-    public async Task ViewModel_CheckEnvironment_SetsIsEnvironmentReady()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ViewModel_CheckEnvironment_SetsIsEnvironmentReady(bool ready)
     {
-        // Arrange
-        var service = new GdsExportService();
-        var viewModel = new GdsExportViewModel(service);
+        // Arrange — both environment states, deterministically (the real probe is
+        // covered by GdsExportServiceTests and the end-to-end test below).
+        var viewModel = new GdsExportViewModel(new InstantEnvironmentGdsExportService(ready));
 
         // Act
         await viewModel.CheckEnvironmentAsync();
 
         // Assert
         var envReady = viewModel.IsEnvironmentReady;
+        envReady.ShouldBe(ready);
         if (envReady)
         {
             viewModel.PythonAvailable.ShouldBeTrue();

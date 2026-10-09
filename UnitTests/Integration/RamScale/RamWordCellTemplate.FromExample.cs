@@ -35,8 +35,12 @@ public sealed partial class RamWordCellTemplate
             .Select(g => (nameToRole[g["GroupDto"]!["GroupName"]!.GetValue<string>()], (JsonObject)g.DeepClone()))
             .ToList();
 
+        // Crossings placed by the crossing bake sit in the cell as leaf children.
+        var crossings = (cellEntry["ChildComponents"]?.AsArray() ?? new JsonArray())
+            .Select(c => (JsonObject)c!.DeepClone())
+            .ToDictionary(c => c["ComponentGuid"]!.GetValue<string>());
         var paths = cellDto["InternalPaths"]!.AsArray()
-            .Select(p => ToTemplatePath(p!.AsObject(), gateEntries, nameToRole))
+            .Select(p => ToTemplatePath(p!.AsObject(), gateEntries, nameToRole, crossings))
             .ToList();
         int blockedCount = cellDto["InternalPaths"]!.AsArray()
             .Count(p => p!["IsBlockedFallback"]?.GetValue<bool>() == true);
@@ -48,30 +52,34 @@ public sealed partial class RamWordCellTemplate
         double height = gateEntries.Max(g => g["GroupDto"]!["PhysicalY"]!.GetValue<double>()) - originY
             + RamGateFactory.RowPitch;
         var ports = cell.Ports.ToDictionary(kv => kv.Key, kv => ToTemplatePort(kv.Value, gates, originX, originY));
-        return new RamWordCellTemplate(gates, paths, ports, originX, originY, width, height, blockedCount);
+        return new RamWordCellTemplate(gates, paths, ports, originX, originY, width, height, blockedCount, crossings);
     }
 
     /// <summary>Maps a frozen internal path back to its endpoint gate roles and pin names.</summary>
     private static TemplatePath ToTemplatePath(
         JsonObject path,
         IReadOnlyList<JsonObject> gateEntries,
-        IReadOnlyDictionary<string, string> nameToRole)
+        IReadOnlyDictionary<string, string> nameToRole,
+        IReadOnlyDictionary<string, JsonObject> crossings)
     {
-        var (startRole, startPin) = EndpointRole(path, "Start", gateEntries, nameToRole);
-        var (endRole, endPin) = EndpointRole(path, "End", gateEntries, nameToRole);
+        var (startRole, startPin) = EndpointRole(path, "Start", gateEntries, nameToRole, crossings);
+        var (endRole, endPin) = EndpointRole(path, "End", gateEntries, nameToRole, crossings);
         return new TemplatePath(startRole, startPin, endRole, endPin, path["Segments"]!.DeepClone().AsArray(),
             path["IsBlockedFallback"]?.GetValue<bool>() == true);
     }
 
-    /// <summary>Resolves one frozen-path endpoint to its gate role and external pin name.</summary>
+    /// <summary>Resolves one frozen-path endpoint to its gate role and external pin name, or to a crossing port.</summary>
     private static (string Role, string Pin) EndpointRole(
         JsonObject path,
         string prefix,
         IReadOnlyList<JsonObject> gateEntries,
-        IReadOnlyDictionary<string, string> nameToRole)
+        IReadOnlyDictionary<string, string> nameToRole,
+        IReadOnlyDictionary<string, JsonObject> crossings)
     {
         string componentGuid = path[$"{prefix}ComponentGuid"]!.GetValue<string>();
         string pinName = path[$"{prefix}PinName"]!.GetValue<string>();
+        if (crossings.ContainsKey(componentGuid))
+            return (CrossingRolePrefix + componentGuid, pinName);
         foreach (var gate in gateEntries)
         {
             var extPin = gate["GroupDto"]!["ExternalPins"]!.AsArray()

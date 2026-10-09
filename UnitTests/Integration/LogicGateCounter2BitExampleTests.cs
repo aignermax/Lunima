@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis.LogicAnalysis;
@@ -68,9 +70,9 @@ public class LogicGateCounter2BitExampleTests
     public void Example_LoadsOnlyTopLevelGateGroups_WithPersistedRolesAndRegisterDesignations()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the 2-bit counter contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(13,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the 2-bit counter contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(13,
             "thirteen wires fan the committed bits and the XOR pivot through the copy gates — " +
             "every waveguide keeps one driver and one load");
 
@@ -219,7 +221,7 @@ public class LogicGateCounter2BitExampleTests
             reloadedGroups.Single(g => g.GroupName == "Q0").TruthTablePinAssignment!.InputSignalNames
                 .ShouldBe(new Dictionary<string, string> { ["B"] = PresetSignal },
                     "the preset signal name of Q0.B must survive the save → load round trip (#1025)");
-            reloadedCanvas.Connections.Count.ShouldBe(13,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(13,
                 "every counter wire must survive the save → load round trip");
 
             var reloaded = await LogicGateMuxExampleTests.AssembleNetwork(reloadedCanvas);

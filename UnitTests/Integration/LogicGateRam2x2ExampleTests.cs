@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis;
 using CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView;
@@ -100,9 +102,9 @@ public class LogicGateRam2x2ExampleTests
     public void Example_LoadsOnlyTopLevelGateGroups_WithPersistedRolesAndRegisterDesignations()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup,
-            "the RAM contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(49,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component),
+            "the RAM contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(49,
             "49 wires join the 37 gates: the address/NA trees, the per-word enable "
             + "cascades, the register feedbacks, the read taps and the read MUX — every "
             + "waveguide keeps one driver and one load");
@@ -308,7 +310,7 @@ public class LogicGateRam2x2ExampleTests
                 roles.OutputSignalNames.ShouldBe(ExpectedOutputSignalNames.GetValueOrDefault(group.GroupName),
                     $"the output signal names of '{group.GroupName}' must survive the save → load round trip (#1025)");
             }
-            reloadedCanvas.Connections.Count.ShouldBe(49,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(49,
                 "every RAM wire — the register feedbacks and read taps included — must "
                 + "survive the save → load round trip");
 

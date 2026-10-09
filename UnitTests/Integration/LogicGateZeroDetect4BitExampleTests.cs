@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis;
@@ -40,8 +42,8 @@ public class LogicGateZeroDetect4BitExampleTests
     public void Example_LoadsFourSlices_EachWithPersistedRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup, "the zero detect contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(3,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component), "the zero detect contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(3,
             "three wires carry the cascade: OR01.Y → ORALL.A, OR23.Y → ORALL.B, ORALL.Y → NOTZ.A");
         var groups = _fixture.Groups;
         groups.Count.ShouldBe(4, "three OR slices plus one NOT slice");
@@ -112,7 +114,7 @@ public class LogicGateZeroDetect4BitExampleTests
                 new[] { "OR01", "OR23", "ORALL", "NOTZ" }, ignoreOrder: true);
             reloadedGroups.ShouldAllBe(g => g.TruthTablePinAssignment != null,
                 "the persisted pin roles must survive the save → load round trip");
-            reloadedCanvas.Connections.Count.ShouldBe(3,
+            ExampleWires.LogicalWireCount(reloadedCanvas).ShouldBe(3,
                 "every cascade wire must survive the round trip");
 
             var reloaded = await LogicGateFourBitAdderExampleTests.AssembleNetwork(reloadedCanvas);
