@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-photonic-alu-ram-acc-de.png",
+    "caption": "ISA-Playground mit aufgebautem kombiniertem ALU-\u002BRAM-\u002BACC-Netzwerk und eingeschaltetem Photonic-Toggle, Multiply-3x4 bis HALT gelaufen: Der Titel nennt den photonischen Addierer, das photonische Daten-RAM und den photonischen Akkumulator, und die Baustein-Zeile zeigt ALU, RAM und ACC gemeinsam auf Licht \u2014 ein Chip, drei Einheiten auf Licht."
+  },
+  {
+    "file": "isa-playground-photonic-alu-ram-acc-en.png",
+    "caption": "ISA playground with the combined ALU \u002B RAM \u002B ACC network built and the photonic toggle on, multiply-3x4 run to HALT: the header names the photonic adder, the photonic data RAM and the photonic accumulator, and the unit-chip row shows ALU, RAM and ACC on light together \u2014 one chip, three units on light."
+  }
+]
