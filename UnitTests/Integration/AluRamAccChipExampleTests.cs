@@ -5,6 +5,7 @@ using CAP_Core.Analysis;
 using CAP_Core.Components.Core;
 using CAP_Core.Logic.Isa;
 using Shouldly;
+using UnitTests.Helpers;
 using UnitTests.Integration.RamScale;
 using Xunit;
 
@@ -54,7 +55,7 @@ public class AluRamAccChipExampleTests : IClassFixture<AluRamAccChipExampleTests
             "the adder's 344 top-level gate groups plus the wrapped RAM block plus the wrapped ACC register");
         groups.Select(g => g.GroupName).ShouldContain(AluRamChipExampleAuthoringTests.RamGroupName);
         groups.Select(g => g.GroupName).ShouldContain(AluRamAccChipExampleAuthoringTests.AccGroupName);
-        _fixture.Canvas.Connections.Count.ShouldBe(339,
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(339,
             "the adder's 339 wires stay top level; the RAM's and the register's wires are frozen inside their groups");
     }
 

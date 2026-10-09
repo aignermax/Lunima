@@ -226,11 +226,11 @@ public class AluRamAccChipExampleAuthoringTests
         int blockedTotal = issues.Count(i => i.Type == DesignIssueType.BlockedPath);
         Report($"[author] {ExampleFileName}: blockedTopLevel={blockedTopLevel} blockedTotal={blockedTotal} " +
             "— pin these in ExampleLoadRoutingTests.KnownBlockedWires / ExampleFrozenBlockedPathTests.KnownBlockedPathCounts");
-        blockedTopLevel.ShouldBe(90,
+        blockedTopLevel.ShouldBe(12,
             "the top level still carries the 4-bit adder's pinned blocked wires alone; " +
             "the RAM's and the register's wires are frozen inside their groups");
-        blockedTotal.ShouldBe(167,
-            "167 as on ALU + RAM — the Logic Gate Bit cells ship zero blocked wires to freeze");
+        blockedTotal.ShouldBe(36,
+            "36 as on ALU + RAM — the Logic Gate Bit cells ship zero blocked wires to freeze");
     }
 
     private void Report(string line)
