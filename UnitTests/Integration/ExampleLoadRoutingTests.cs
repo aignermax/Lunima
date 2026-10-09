@@ -43,6 +43,9 @@ public class ExampleLoadRoutingTests
         // Same blocked top-level wires as the 4-bit adder — the RAM block's wires
         // are frozen inside the RAM group (#1463), so the top level is the adder's alone.
         ["Logic Gate ALU + RAM.lun"] = 5,
+        // Same again — the ACC register's intra-bit wires are frozen inside the
+        // ACC group, so the top level is still the adder's alone.
+        ["Logic Gate ALU + RAM + ACC.lun"] = 5,
     };
 
     /// <summary>File names of every example listed in the manifest.</summary>

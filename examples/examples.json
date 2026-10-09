@@ -23,6 +23,7 @@
     { "file": "Logic Gate RAM 4x4.lun", "rank": 100, "level": "Sequential", "descriptionKey": "Examples.Ram4x4.Description" },
     { "file": "Logic Gate Counter 2-bit.lun", "rank": 101, "level": "Sequential", "descriptionKey": "Examples.Counter2bit.Description" },
     { "file": "Logic Gate ALU + RAM.lun", "rank": 102, "level": "Systems", "descriptionKey": "Examples.AluRamChip.Description" },
+    { "file": "Logic Gate ALU + RAM + ACC.lun", "rank": 103, "level": "Systems", "descriptionKey": "Examples.AluRamAccChip.Description" },
     { "file": "Logic Gate PC 2-bit.lun", "rank": 105, "level": "Datapath", "descriptionKey": "Examples.Pc2bit.Description" },
     { "file": "Two Chiplets - Edge-Coupler Link.lun", "rank": 110, "level": "Systems", "descriptionKey": "Examples.TwoChiplets.Description" },
     { "file": "Logic Gate Across Two Chiplets.lun", "rank": 115, "level": "Systems", "descriptionKey": "Examples.LogicAcrossTwoChiplets.Description" }

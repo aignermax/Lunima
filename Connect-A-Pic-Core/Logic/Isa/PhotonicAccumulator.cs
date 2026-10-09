@@ -81,6 +81,13 @@ namespace CAP_Core.Logic.Isa
             }
         }
 
+        /// <summary>
+        /// How many <see cref="Write"/> calls this accumulator committed since
+        /// construction — the trace seam that pins "the ACC really ran on light",
+        /// the accumulator analogue of <see cref="PhotonicDataMemory.WriteCount"/>.
+        /// </summary>
+        public int WriteCount { get; private set; }
+
         /// <inheritdoc />
         public int Read()
         {
@@ -100,6 +107,7 @@ namespace CAP_Core.Logic.Isa
         /// <inheritdoc />
         public void Write(int value)
         {
+            WriteCount++;
             var bits = AllInputsZero();
             bits[_signalMap.Load] = true;
             int masked = value & IsaMachine.MaxDataValue;

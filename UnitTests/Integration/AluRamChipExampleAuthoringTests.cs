@@ -154,23 +154,25 @@ public class AluRamChipExampleAuthoringTests
     }
 
     /// <summary>
-    /// The adder and the RAM were baked in separate sessions, so a component of each can carry
-    /// the same identifier (e.g. two crossings both numbered by their own session). Saved
-    /// connections reference components by identifier, so every RAM component whose identifier
-    /// the adder already uses gets a fresh one.
+    /// Blocks baked in separate sessions (or the same cell loaded several times) can carry
+    /// the same identifiers, e.g. two crossings both numbered by their own session. Saved
+    /// connections reference components by identifier, so every component of
+    /// <paramref name="block"/> whose identifier the design or the block itself already uses
+    /// gets a fresh one.
     /// </summary>
-    private static void RenameCollidingIdentifiers(ComponentGroup ramGroup, IEnumerable<Component> adderComponents)
+    internal static void RenameCollidingIdentifiers(ComponentGroup block, IEnumerable<Component> designComponents)
     {
-        var taken = adderComponents
+        var taken = designComponents
             .SelectMany(c => c is ComponentGroup g ? g.GetAllComponentsRecursive().Prepend(c) : new[] { c })
             .Select(c => c.Identifier)
             .ToHashSet();
-        foreach (var component in ramGroup.GetAllComponentsRecursive())
+        foreach (var component in block.GetAllComponentsRecursive())
         {
-            if (!taken.Contains(component.Identifier)) continue;
+            if (taken.Add(component.Identifier)) continue;
             int separator = component.Identifier.LastIndexOf('_');
             var stem = separator > 0 ? component.Identifier[..separator] : component.Identifier;
             component.Identifier = $"{stem}_{Guid.NewGuid():N}";
+            taken.Add(component.Identifier);
         }
     }
 
@@ -194,7 +196,7 @@ public class AluRamChipExampleAuthoringTests
     }
 
     /// <summary>Loads one shipped example through the real load path (cached routes: no routing).</summary>
-    private static async Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps)> LoadExampleOntoCanvas(
+    internal static async Task<(DesignCanvasViewModel Canvas, FileOperationsViewModel FileOps)> LoadExampleOntoCanvas(
         string fileName)
     {
         var canvas = new DesignCanvasViewModel();
@@ -210,7 +212,7 @@ public class AluRamChipExampleAuthoringTests
     }
 
     /// <summary>Writes the merged design through the real save command (byte-for-byte product output).</summary>
-    private static async Task SaveThroughRealPath(DesignCanvasViewModel canvas, string examplePath)
+    internal static async Task SaveThroughRealPath(DesignCanvasViewModel canvas, string examplePath)
     {
         var saveOps = new FileOperationsViewModel(
             canvas,
