@@ -71,6 +71,7 @@ public sealed class CrossingStep
     /// </summary>
     public int ApproachCells { get; }
 
+
     /// <summary>
     /// Tries to jump from cell (<paramref name="x"/>, <paramref name="y"/>) in cardinal
     /// direction (<paramref name="dx"/>, <paramref name="dy"/>) across the waveguides blocking
@@ -81,16 +82,22 @@ public sealed class CrossingStep
     /// <param name="dx">Step X (−1, 0 or 1).</param>
     /// <param name="dy">Step Y (−1, 0 or 1; exactly one of dx, dy is non-zero).</param>
     /// <param name="straightRun">Straight cells the search has run in this direction.</param>
+    /// <param name="runStartsAtPin">
+    /// True when the run is the route's first straight, straight out of the start pin — then
+    /// <paramref name="straightRun"/> is the distance (cells) from the pin, no bend radius is
+    /// reserved, and the first crossing's body only has to clear the pin.
+    /// </param>
     /// <param name="spanCells">Cells the jump advances.</param>
     /// <param name="runAfterCells">Straight cells between the last crossing and the landing cell.</param>
     /// <param name="crossings">The planned crossings, in travel order.</param>
     public bool TryJump(int x, int y, int dx, int dy, int straightRun,
-                        out int spanCells, out int runAfterCells, out IReadOnlyList<PlannedCrossing> crossings)
+                        out int spanCells, out int runAfterCells, out IReadOnlyList<PlannedCrossing> crossings,
+                        bool runStartsAtPin = false)
     {
         spanCells = 0;
         runAfterCells = 0;
         crossings = Array.Empty<PlannedCrossing>();
-        if (dx != 0 == (dy != 0) || straightRun < ApproachCells) return false;
+        if (dx != 0 == (dy != 0) || (!runStartsAtPin && straightRun < ApproachCells)) return false;
         if (_grid.GetCellState(x + dx, y + dy) != BlockedByWaveguide) return false;
 
         var planned = new List<PlannedCrossing>();
@@ -112,7 +119,7 @@ public sealed class CrossingStep
                     : Along(cx, cy, horizontal, origin, direction) - CenterAlong(planned[^1], horizontal, origin, direction);
                 if (planned.Count > 0 && runAfter >= _clearRunAfter)
                 {
-                    if (!FootprintsClear(planned)) return false;
+                    if (!FootprintsClear(planned, allowPadding: runStartsAtPin)) return false;
                     spanCells = k;
                     runAfterCells = (int)Math.Floor(runAfter / _grid.CellSizeMicrometers);
                     crossings = planned;
@@ -123,6 +130,10 @@ public sealed class CrossingStep
             if (state != BlockedByWaveguide) return false;
             if (planned.Count > 0 && _grid.IsCellOfWaveguide(planned[^1].CrossedConnection, cx, cy)) continue;
             if (planned.Count == MaxCrossingsPerJump || !TryPlanCrossing(cx, cy, horizontal, currentX, currentY, planned))
+                return false;
+            // Straight out of the pin: the first crossing's body only has to clear the pin itself.
+            if (runStartsAtPin && planned.Count == 1
+                && CenterAlong(planned[0], horizontal, origin, direction) - _halfFootprint < -straightRun * _grid.CellSizeMicrometers)
                 return false;
         }
         return false;
@@ -161,8 +172,12 @@ public sealed class CrossingStep
     private static double CenterAlong(PlannedCrossing crossing, bool horizontal, double origin, double direction) =>
         ((horizontal ? crossing.CenterX : crossing.CenterY) - origin) * direction;
 
-    /// <summary>Each crossing body (plus clearance) holds no component and no wire but the ones this jump crosses.</summary>
-    private bool FootprintsClear(List<PlannedCrossing> planned)
+    /// <summary>
+    /// Each crossing body (plus clearance) holds no component and no wire but the ones this jump
+    /// crosses. Straight out of a pin, a component's padding band (routing clearance, not body)
+    /// may reach into it — the pin's own component always pads the cells right in front of it.
+    /// </summary>
+    private bool FootprintsClear(List<PlannedCrossing> planned, bool allowPadding)
     {
         var crossed = planned.Select(p => p.CrossedConnection).ToList();
         foreach (var crossing in planned)
@@ -173,7 +188,7 @@ public sealed class CrossingStep
             for (int gy = gy1; gy <= gy2; gy++)
             {
                 byte state = _grid.GetCellState(gx, gy);
-                if (state == Free) continue;
+                if (state == Free || allowPadding && _grid.IsComponentPaddingOnly(gx, gy)) continue;
                 if (state != BlockedByWaveguide || !crossed.Any(owner => _grid.IsCellOfWaveguide(owner, gx, gy)))
                     return false;
             }

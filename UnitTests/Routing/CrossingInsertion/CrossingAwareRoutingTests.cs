@@ -83,6 +83,21 @@ public class CrossingAwareRoutingTests
     }
 
     [Fact]
+    public void WireRightInFrontOfThePin_IsCrossedStraightOutOfThePin()
+    {
+        // The top pin sits at (400, 100) facing south; the wall runs 12 µm below it — closer
+        // than half a crossing plus a bend radius, but no bend precedes the first straight.
+        const double wallClose = 112;
+        var (router, start, end) = SceneWithWalls(wallClose);
+        router.CrossingRouting = Crossings;
+
+        var path = router.Route(start, end);
+
+        path.IsBlockedFallback.ShouldBeFalse();
+        router.LastPlannedCrossings.ShouldHaveSingleItem().CenterY.ShouldBe(wallClose);
+    }
+
+    [Fact]
     public void RouteAfterACrossingRoute_DoesNotInheritItsCrossings()
     {
         var (router, start, end) = SceneWithWalls(WallY);

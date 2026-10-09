@@ -175,6 +175,20 @@ public partial class PathfindingGrid
     }
 
     /// <summary>
+    /// True when the cell is blocked only by components' padding bands (their routing
+    /// clearance), with no component body claiming it.
+    /// </summary>
+    internal bool IsComponentPaddingOnly(int gridX, int gridY)
+    {
+        if (!IsInBounds(gridX, gridY) || _cells[gridX, gridY] != 1) return false;
+        lock (_ownershipLock)
+        {
+            bool anyBody = AnyClaim(gridX, gridY, (_, isBody) => isBody, out var claimed);
+            return claimed && !anyBody;
+        }
+    }
+
+    /// <summary>
     /// True when a component-blocked cell stays blocking despite the corridor tolerance:
     /// either it lies outside the tolerated corridors, or a body (not just padding) claims
     /// it. A blocked cell without any ownership record stays blocking — conservative.
