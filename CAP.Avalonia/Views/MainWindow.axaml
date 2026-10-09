@@ -1228,6 +1228,15 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
+    <!-- "Store a number in light" tour overlay (#1422): same anchored spotlight,
+         watching the Logic panel while the RAM 2x4 example stores and reads a word -->
+    <tour:TourAnchorOverlay IsVisible="{Binding StoreNumberTour.IsActive, FallbackValue=False}"
+                                TargetName="{Binding StoreNumberTour.CurrentTargetName}">
+        <tour:TourAnchorOverlay.Card>
+            <panels:StoreNumberTourPanel DataContext="{Binding StoreNumberTour}"/>
+        </tour:TourAnchorOverlay.Card>
+    </tour:TourAnchorOverlay>
+
     <!-- Home screen overlay: compact centered card over the dimmed editor,
          shown until a project is opened/created; reopenable via the Home button -->
     <Border IsVisible="{Binding Home.IsHomeVisible}" Background="#B3141414">
