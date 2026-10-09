@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Core;
 using Shouldly;
@@ -33,8 +35,8 @@ public class LogicGateNot4BitExampleTests : IClassFixture<LogicGateNot4BitExampl
     public void Example_LoadsFourNotSlices_EachWithPersistedNotRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup, "the 4-bit NOT contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(0,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component), "the 4-bit NOT contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(0,
             "the four slices stand side by side without wires — inputs arrive via signal names");
         var groups = _fixture.Groups;
         groups.Count.ShouldBe(4, "one NOT slice per bit of the 4-bit word");

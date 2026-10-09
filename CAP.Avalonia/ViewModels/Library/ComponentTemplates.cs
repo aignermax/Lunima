@@ -10,13 +10,37 @@ public static class ComponentTemplates
 {
     private static int _componentCounter = 0;
 
+    /// <summary>
+    /// Advances the instance counter past the numeric suffix of an identifier already in use
+    /// ("MMI_3765" reserves 3765), so components created afterwards — placed by hand or by the
+    /// crossing pass — never reuse the identifier of a component loaded from a file. Saved
+    /// connections reference components by identifier, so a collision rewires the design on
+    /// the next load.
+    /// </summary>
+    /// <param name="identifier">An identifier present in the design.</param>
+    public static void ReserveIdentifier(string? identifier)
+    {
+        if (identifier == null) return;
+        int separator = identifier.LastIndexOf('_');
+        if (separator < 0 || !int.TryParse(identifier.AsSpan(separator + 1), System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int suffix))
+            return;
+        int current;
+        do
+        {
+            current = Volatile.Read(ref _componentCounter);
+            if (suffix <= current) return;
+        }
+        while (Interlocked.CompareExchange(ref _componentCounter, suffix, current) != current);
+    }
+
     [Obsolete("Use JSON PDK files (demo-pdk.json, siepic-ebeam-pdk.json) as the source of component templates. This method returns an empty list.")]
     public static List<ComponentTemplate> GetAllTemplates() => new List<ComponentTemplate>();
 
     public static Component CreateFromTemplate(ComponentTemplate template, double x, double y)
     {
-        _componentCounter++;
-        var instanceName = $"{template.Name}_{_componentCounter}";
+        // Interlocked: the crossing pass creates components on the routing thread.
+        var instanceName = $"{template.Name}_{Interlocked.Increment(ref _componentCounter)}";
 
         var logicalPins = new List<Pin>();
         for (int i = 0; i < template.PinDefinitions.Length; i++)

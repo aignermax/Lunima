@@ -6,17 +6,16 @@ using Xunit;
 namespace UnitTests.Export.OpenEbl;
 
 /// <summary>
-/// Issue #1381 — router honesty on an unavoidable crossing: the cross-connected MZI
-/// arms are a non-planar two-wire pair, so after the full routing pass (ordering
-/// cascade, crossing scan, contention repair) one arm still crosses the other. The
-/// contention repair may accept its re-route (blocked count strictly decreases) but
-/// must NOT leave the crossing wire looking clean — it keeps the blocked-fallback
-/// stamp so the canvas and the design checks report the crossing.
+/// Router honesty on the cross-connected MZI arms: the pair is only planar if one arm loops
+/// around the splitter, so the second-routed arm must avoid the first — never cross it while
+/// looking clean. The routed result is planar with both arms connected, the detour is the
+/// arm-length difference the fringe measurement relies on, and a second full routing pass
+/// keeps it.
 /// </summary>
 public class CrossConnectedMziRouterHonestyTests
 {
     [Fact]
-    public async Task CrossConnectedArms_FullRoutingPass_CrossingArmKeepsBlockedStamp()
+    public async Task CrossConnectedArms_FullRoutingPass_AvoidEachOtherInsteadOfCrossing()
     {
         var templates = TestPdkLoader.LoadAllTemplates()
             .Where(t => t.PdkSource == EBeamFromScratchMziDesign.EBeamPdkName).ToList();
@@ -25,22 +24,18 @@ public class CrossConnectedMziRouterHonestyTests
         var upperArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 2");
         var lowerArm = MziFringeAnalysis.FindConnection(canvas, "mzi_splitter", "port 3");
 
+        upperArm.IsBlockedFallback.ShouldBeFalse();
+        lowerArm.IsBlockedFallback.ShouldBeFalse();
         PathIntersectionDetector.Crosses(upperArm.RoutedPath!, lowerArm.RoutedPath!)
-            .ShouldBeTrue("the cross-connected arms are non-planar — the crossing itself is expected");
+            .ShouldBeFalse("a clean-looking arm must never cut through the other one");
+        Math.Abs(upperArm.PathLengthMicrometers - lowerArm.PathLengthMicrometers)
+            .ShouldBeGreaterThan(0, "the avoiding arm is the longer one — the ΔL of the interferometer");
 
-        var stampedArms = new[] { upperArm, lowerArm }.Where(c => c.IsBlockedFallback).ToList();
-        stampedArms.Count.ShouldBe(1,
-            "exactly one side of the unavoidable crossing must keep the blocked-fallback stamp");
-        stampedArms[0].FailureReason.ShouldBe(RoutingFailureReason.Contention);
-
-        // A second full routing pass must not flip which arm crosses: an accepted
-        // repair that left its crossing in place stays in the known-failed set, so the
-        // stamp — and the geometry — is stable across recalculations.
-        var stampedBefore = stampedArms[0];
+        var upperBefore = upperArm.PathLengthMicrometers;
+        var lowerBefore = lowerArm.PathLengthMicrometers;
         await canvas.RecalculateRoutesAsync();
-        var stampedAfter = new[] { upperArm, lowerArm }.Where(c => c.IsBlockedFallback).ToList();
-        stampedAfter.Count.ShouldBe(1, "the crossing arm must stay stamped after a re-route");
-        stampedAfter[0].ShouldBeSameAs(stampedBefore,
-            "the same arm must keep the stamp — the repair must not swap the crossing side");
+        upperArm.PathLengthMicrometers.ShouldBe(upperBefore, 1e-6, "a second pass must keep the planar routes");
+        lowerArm.PathLengthMicrometers.ShouldBe(lowerBefore, 1e-6);
+        PathIntersectionDetector.Crosses(upperArm.RoutedPath!, lowerArm.RoutedPath!).ShouldBeFalse();
     }
 }

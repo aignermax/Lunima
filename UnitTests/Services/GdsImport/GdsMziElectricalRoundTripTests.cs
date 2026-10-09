@@ -48,15 +48,13 @@ namespace UnitTests.Services.GdsImport;
 /// </para>
 /// </summary>
 [Trait("Category", "Slow")]
-public class GdsMziElectricalRoundTripTests : IDisposable
+[Collection(GdsMziElectricalExportCollection.Name)]
+public class GdsMziElectricalRoundTripTests
 {
-    private readonly string _root =
-        Path.Combine(Path.GetTempPath(), "lunima-gds-mzi-elec-" + Guid.NewGuid().ToString("N"));
+    private readonly GdsMziElectricalExportFixture _export;
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_root)) Directory.Delete(_root, true);
-    }
+    /// <summary>Attaches the shared export.</summary>
+    public GdsMziElectricalRoundTripTests(GdsMziElectricalExportFixture export) => _export = export;
 
     // His design, keyed by instance name for the position/rotation congruence checks.
     private static readonly (string Instance, string Cell, double X, double Y, double Rot)[] Expected =
@@ -76,11 +74,10 @@ public class GdsMziElectricalRoundTripTests : IDisposable
     [SkippableFact]
     public async Task RoundTrip_MziWithElectricalConnections_ExplodeMode()
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        Skip.If(_export.Python == null, "No Python with nazca available — the round trip needs the real engine.");
 
         // ── 1. Build his design verbatim; every connection must be real geometry ──
-        var canvas = GdsMziElectricalFixture.BuildMziCanvas();
+        var canvas = _export.Canvas;
         canvas.Components.Count.ShouldBe(10);
         canvas.Connections.Count.ShouldBe(10);
         canvas.Connections.Count(c => c.Connection.IsElectrical).ShouldBe(4,
@@ -92,12 +89,9 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         }
 
         // ── 2. Export with the app's own exporter; nothing may be skipped ──
-        var skippedConnections = new List<string>();
-        var exportWarnings = new List<string>();
-        var script = new SimpleNazcaExporter().Export(
-            canvas, skippedConnections: skippedConnections, exportWarnings: exportWarnings);
-        skippedConnections.ShouldBeEmpty("all 10 routes are real, exportable geometry");
-        exportWarnings.ShouldBeEmpty();
+        var script = _export.Script;
+        _export.SkippedConnections.ShouldBeEmpty("all 10 routes are real, exportable geometry");
+        _export.ExportWarnings.ShouldBeEmpty();
 
         // The export carries everything the re-import needs:
         // — the bond-pad stub labels its electrical pin (purely electrical components
@@ -124,7 +118,7 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         CountLines(script, ".put('org',").ShouldBe(12,
             "the ten canvas components plus the two wrapper-internal demofab puts");
 
-        var (stubGds, upgradedGds) = await RunExportAsync(python, script);
+        var (stubGds, upgradedGds) = (_export.StubGds, _export.UpgradedGds);
 
         // ── 3. GDS structure sanity (our own reader): the evidence for where
         // the electrical connections live in the exported layout ──
@@ -147,7 +141,7 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         // rip-up-and-reroute pass then re-routes the wires that the cascade left
         // on blocked fallbacks, so they flatten into more (real) polygons.
         designCell.Elements.OfType<GdsPolygon>().Count(p => p.Layer == 1111 && p.DataType == 0)
-            .ShouldBe(42, "the six optical routes, flattened");
+            .ShouldBe(41, "the six optical routes, flattened");
         designCell.Elements.OfType<GdsPolygon>().Count(p => p.Layer == 1 && p.DataType == 0)
             .ShouldBe(0, "nothing dissolves into the top cell anymore (the straight keeps its cell)");
 
@@ -166,12 +160,9 @@ public class GdsMziElectricalRoundTripTests : IDisposable
     [SkippableFact]
     public async Task RoundTrip_MziWithElectricalConnections_BlackBoxMode()
     {
-        var python = await GdsUserDesignFixture.FindNazcaPythonAsync();
-        Skip.If(python == null, "No Python with nazca available — the round trip needs the real engine.");
+        Skip.If(_export.Python == null, "No Python with nazca available — the round trip needs the real engine.");
 
-        var canvas = GdsMziElectricalFixture.BuildMziCanvas();
-        var script = new SimpleNazcaExporter().Export(canvas);
-        var (stubGds, upgradedGds) = await RunExportAsync(python, script);
+        var (stubGds, upgradedGds) = (_export.StubGds, _export.UpgradedGds);
 
         // Stub scenario: the black box exposes the FULL flattened pin set,
         // including the four pad labels of the stub cells.
@@ -186,11 +177,11 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         stubTemplate.PinDefinitions.Select(p => p.Name).ShouldContain("ebeam_BondPad#0_elec");
         // A known position: detector_bar's anode rides the first Photodetector
         // instance. Offsets are bbox-relative (template origin = layout
-        // top-left); the metal A* detours around the #888 wider optical arcs
-        // change the layout's Y extent, so the Y offset re-frames while X
-        // stays put.
+        // top-left): the metal A* detours around the #888 wider optical arcs
+        // change the layout's Y extent, and the reference arm's detour widens
+        // it 12 µm to the left, so both offsets re-frame.
         var anode = stubTemplate.PinDefinitions.First(p => p.Name == "Photodetector#0_anode");
-        anode.OffsetX.ShouldBe(1036.29, 0.6);
+        anode.OffsetX.ShouldBe(1048.29, 0.6);
         anode.OffsetY.ShouldBe(221.70, 0.6);
         // Pin anchors stay put: anode and cathode keep the Photodetector
         // template's exact 55 µm pin spacing — the pins did not move relative
@@ -273,11 +264,11 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         detectorBar.PhysicalPins.Count(p => p.MatterType == CAP_Core.Components.Core.MatterType.Electricity)
             .ShouldBe(2, "anode/cathode stay electrical on the placed detector");
 
-        // Four connections restored: his two CLEAN optical chains (the curved
-        // metal traces are larger obstacles, so two more optical routes cross
-        // and freeze — see the junction assertions below)…
+        // Six connections restored: his four CLEAN optical chains (only the
+        // combiner's two outputs still cross and freeze — see the junction
+        // assertions below)…
         var optical = r.Outcome.Connections.Where(c => !c.IsElectrical).ToList();
-        optical.Count.ShouldBe(2);
+        optical.Count.ShouldBe(4);
         optical.ShouldAllBe(c => c.IsRouteDerived);
         // …and detector_bar's TWO metal traces as ELECTRICAL connections.
         // detector_cross's two traces merge into a metal junction: its
@@ -299,7 +290,7 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         // import group (grouping freezes live connections), pins and kinds intact.
         var group = (ComponentGroup)r.Canvas.Components.Single().Component;
         var pinned = group.InternalPaths.Where(p => p.StartPin != null).ToList();
-        pinned.Count.ShouldBe(4);
+        pinned.Count.ShouldBe(6);
         pinned.Count(p => p.StartPin!.MatterType == CAP_Core.Components.Core.MatterType.Electricity
                           && p.EndPin!.MatterType == CAP_Core.Components.Core.MatterType.Electricity)
             .ShouldBe(2, "the two restored metal connections keep both-electrical pins");
@@ -311,24 +302,19 @@ public class GdsMziElectricalRoundTripTests : IDisposable
             || (p.StartPin!.Name == "cathode" && p.EndPin!.Name == "elec"));
 
         // His waveguide crossings stay frozen, reported as junctions with their
-        // pins — two OPTICAL junctions (the larger metal obstacles push two more
-        // optical routes into a genuine crossing near the phase shifter) plus
-        // ONE METAL junction: detector_cross's two traces merge where pad35's
-        // detour crosses pad37's pre-existing fallback diagonal.
-        r.Outcome.Infos.ShouldContain(i =>
-            i.Contains("junction with 4 pins") && i.Contains("'a0'") && i.Contains("'out2'")
-            && i.Contains("'in'") && i.Contains("'out1'"));
+        // pins — ONE OPTICAL junction (the combiner's two outputs cross on the way
+        // to the detectors) plus ONE METAL junction: detector_cross's two traces
+        // merge where pad35's detour crosses pad37's pre-existing fallback diagonal.
+        r.Outcome.Infos.Count(i => i.Contains("junction with 4 pins")).ShouldBe(2);
         r.Outcome.Infos.ShouldContain(i =>
             i.Contains("junction with 4 pins") && i.Contains("'in'") && i.Contains("'out2'")
             && i.Contains("'out1'") && !i.Contains("'a0'"));
         r.Outcome.Infos.ShouldContain(i =>
             i.Contains("junction with 4 pins") && i.Contains("'anode'") && i.Contains("'cathode'")
             && i.Contains("'elec'"));
-        // The contention repair re-routes two former fallback wires, which flatten
-        // into two more optical polygons inside the junction networks.
-        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(40,
-            "the optical + metal polygons of the three junction networks ride the group as frozen paths");
-        r.Report.FrozenRoutePathCount.ShouldBe(40);
+        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(25,
+            "the optical + metal polygons of the two junction networks ride the group as frozen paths");
+        r.Report.FrozenRoutePathCount.ShouldBe(25);
 
         // His ask: zero WARNINGS in the clean case (infos acceptable).
         r.Outcome.Warnings.ShouldBeEmpty(
@@ -347,9 +333,9 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         r.Report.PlacedCount.ShouldBe(10);
         r.Report.SkippedPlacements.ShouldBeEmpty();
 
-        // The demofab side is unaffected by the pad upgrade: the same two clean
+        // The demofab side is unaffected by the pad upgrade: the same four clean
         // optical chains restore.
-        r.Outcome.Connections.Count(c => !c.IsElectrical).ShouldBe(2);
+        r.Outcome.Connections.Count(c => !c.IsElectrical).ShouldBe(4);
 
         // Pin-anchored placement (#811 follow-up): the resolved pads place on
         // their 'elec' pin labels, so the real cell's m_pin marker paths (bbox
@@ -360,7 +346,7 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         var electrical = r.Outcome.Connections.Where(c => c.IsElectrical).ToList();
         electrical.Count.ShouldBe(2);
         electrical.ShouldAllBe(c => c.IsRouteDerived);
-        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(40,
+        r.Outcome.TopCellWaveguidePolygons.Count.ShouldBe(25,
             "same frozen remainder as the stub scenario");
 
         // With the pins anchoring the placement, the marker-path bbox inflation
@@ -408,47 +394,6 @@ public class GdsMziElectricalRoundTripTests : IDisposable
         GdsImportOutcome Outcome,
         GdsPlacementReport Report,
         CAP.Avalonia.ViewModels.Library.ComponentTemplate Template);
-
-    /// <summary>
-    /// Runs the export script twice: normally (the klayout post-pass upgrades the
-    /// SiEPIC stub when the PDK is present) and forced-stub (klayout/siepic
-    /// imports poisoned — the upgrade block downgrades to keeping the stubs).
-    /// Returns (stubGds, upgradedGds-or-null-when-the-env-has-no-klayout).
-    /// </summary>
-    private async Task<(string StubGds, string? UpgradedGds)> RunExportAsync(string python, string script)
-    {
-        var exportDir = Path.Combine(_root, "export" + Guid.NewGuid().ToString("N")[..6]);
-        Directory.CreateDirectory(exportDir);
-        var scriptPath = Path.Combine(exportDir, "mzi.py");
-        await File.WriteAllTextAsync(scriptPath, script);
-
-        var run = await SiepicRealGeometryExportTests.RunPythonAsync(python, exportDir, scriptPath);
-        run.ExitCode.ShouldBe(0, $"nazca export script failed:\n{run.StdOut}\n{run.StdErr}");
-        var gdsPath = Path.ChangeExtension(scriptPath, ".gds");
-        File.Exists(gdsPath).ShouldBeTrue($"script did not write {gdsPath}:\n{run.StdOut}");
-        bool upgraded = run.StdOut.Contains("SiEPIC cell(s) upgraded", StringComparison.Ordinal);
-        string? upgradedCopy = null;
-        if (upgraded)
-        {
-            upgradedCopy = Path.Combine(exportDir, "mzi_upgraded.gds");
-            File.Copy(gdsPath, upgradedCopy, overwrite: true);
-        }
-
-        var stubRunner = Path.Combine(exportDir, "mzi_stub.py");
-        await File.WriteAllTextAsync(stubRunner,
-            "import sys, runpy\n" +
-            "sys.modules['klayout'] = None\n" +
-            "sys.modules['klayout.db'] = None\n" +
-            "sys.modules['siepic_ebeam_pdk'] = None\n" +
-            $"sys.argv = [r'{scriptPath}']\n" +
-            $"runpy.run_path(r'{scriptPath}', run_name='__main__')\n");
-        var stubRun = await SiepicRealGeometryExportTests.RunPythonAsync(python, exportDir, stubRunner);
-        stubRun.ExitCode.ShouldBe(0, $"forced-stub run failed:\n{stubRun.StdOut}\n{stubRun.StdErr}");
-        var stubCopy = Path.Combine(exportDir, "mzi_stub.gds");
-        File.Move(gdsPath, stubCopy, overwrite: true);
-
-        return (stubCopy, upgradedCopy);
-    }
 
     private static async Task<ExplodeResult> ExplodeAsync(string gdsPath)
     {

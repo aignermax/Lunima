@@ -103,8 +103,12 @@ public partial class IsaPlaygroundViewModel : ObservableObject
     /// <summary>The sample programs shown in the picker.</summary>
     public IReadOnlyList<IsaSampleProgram> Samples { get; }
 
-    /// <summary>All source lines with line numbers; the executed line is highlighted.</summary>
-    public ObservableCollection<IsaTraceLineViewModel> TraceLines { get; } = new();
+    /// <summary>
+    /// The 1-based editor line of the instruction the program counter points at — the
+    /// editor highlights it in place — or null when not assembled or halted.
+    /// </summary>
+    [ObservableProperty]
+    private int? _currentSourceLine;
 
     /// <summary>Selecting a sample loads its source into the editor and assembles it.</summary>
     partial void OnSelectedSampleChanged(IsaSampleProgram? value)
@@ -138,7 +142,6 @@ public partial class IsaPlaygroundViewModel : ObservableObject
             ErrorText = string.Empty;
             IsAssembled = true;
             PhotonicStatusText = string.Empty;
-            RebuildTraceLines();
             UpdateState();
         }
         catch (IsaAssemblerException ex)
@@ -152,7 +155,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
             _emulator = null;
             _assembledWords = Array.Empty<byte>();
             _instructionLineNumbers = Array.Empty<int>();
-            TraceLines.Clear();
+            HighlightCurrentLine(currentLine: null);
             ZeroState();
         }
     }
@@ -230,24 +233,7 @@ public partial class IsaPlaygroundViewModel : ObservableObject
         return null;
     }
 
-    private void HighlightCurrentLine(int? currentLine)
-    {
-        foreach (var line in TraceLines)
-        {
-            line.IsCurrent = line.LineNumber == currentLine;
-        }
-    }
-
-    /// <summary>Rebuilds the trace listing from every editor line, so numbers match the editor.</summary>
-    private void RebuildTraceLines()
-    {
-        TraceLines.Clear();
-        var rawLines = ProgramText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        for (int i = 0; i < rawLines.Length; i++)
-        {
-            TraceLines.Add(new IsaTraceLineViewModel(i + 1, rawLines[i].TrimEnd()));
-        }
-    }
+    private void HighlightCurrentLine(int? currentLine) => CurrentSourceLine = currentLine;
 
     private void ZeroState()
     {

@@ -610,6 +610,8 @@ public partial class PathfindingGrid
             _waveguideCells.Clear();
             _waveguideEndpoints.Clear();
             _waveguideGeometry.Clear();
+            _waveguideHalfWidths.Clear();
+            _waveguideCellBounds.Clear();
         }
         lock (_pinZoneLock)
         {
@@ -695,6 +697,8 @@ public partial class PathfindingGrid
         {
             _waveguideCells[connectionId] = cells;
             _waveguideGeometry[connectionId] = segmentList;
+            _waveguideHalfWidths[connectionId] = halfWidth;
+            RecordWaveguideCellBounds(connectionId, cells);
             _waveguideEndpoints[connectionId] = (
                 (segmentList[0].StartPoint.X, segmentList[0].StartPoint.Y),
                 (segmentList[^1].EndPoint.X, segmentList[^1].EndPoint.Y));
@@ -709,6 +713,7 @@ public partial class PathfindingGrid
     public void RemoveWaveguideObstacle(Guid connectionId)
     {
         HashSet<(int, int)>? cells;
+        HashSet<(int x, int y)> stillCovered;
         lock (_waveguideCellsLock)
         {
             if (!_waveguideCells.TryGetValue(connectionId, out cells))
@@ -716,11 +721,14 @@ public partial class PathfindingGrid
             _waveguideCells.Remove(connectionId);
             _waveguideEndpoints.Remove(connectionId);
             _waveguideGeometry.Remove(connectionId);
+            _waveguideHalfWidths.Remove(connectionId);
+            _waveguideCellBounds.Remove(connectionId);
+            stillCovered = CellsStillCoveredByOtherWaveguides(cells);
         }
 
         foreach (var (gx, gy) in cells)
         {
-            if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
+            if (IsInBounds(gx, gy) && _cells[gx, gy] == 2 && !stillCovered.Contains((gx, gy)))
             {
                 _cells[gx, gy] = 0;
             }
@@ -733,16 +741,24 @@ public partial class PathfindingGrid
     /// </summary>
     public void ClearAllWaveguideObstacles()
     {
-        List<Guid> connectionIds;
+        List<HashSet<(int x, int y)>> cellSets;
         lock (_waveguideCellsLock)
         {
-            connectionIds = _waveguideCells.Keys.ToList();
+            cellSets = _waveguideCells.Values.ToList();
+            _waveguideCells.Clear();
+            _waveguideEndpoints.Clear();
+            _waveguideGeometry.Clear();
+            _waveguideHalfWidths.Clear();
+            _waveguideCellBounds.Clear();
         }
 
-        foreach (var connectionId in connectionIds)
+        foreach (var cells in cellSets)
+        foreach (var (gx, gy) in cells)
         {
-            RemoveWaveguideObstacle(connectionId);
+            if (IsInBounds(gx, gy) && _cells[gx, gy] == 2)
+                _cells[gx, gy] = 0;
         }
+        WaveguideVersion++;
         OnAllWaveguidesCleared?.Invoke();
     }
 
@@ -899,11 +915,19 @@ public partial class PathfindingGrid
     }
 
     /// <summary>
-    /// Marks cells in a circle around a point.
+    /// Marks cells in a circle around a point, always including the cell the point lies in.
     /// </summary>
+    /// <remarks>
+    /// The centre test alone misses a waveguide whose centreline runs midway between two cell
+    /// columns when its half width equals half a cell: neither column's centres are within
+    /// the radius of the sampled points, the wire leaves no cells at all, and later routes
+    /// pass straight through it. The cell containing the centreline overlaps the wire for sure.
+    /// </remarks>
     private void MarkCircleAsCells(double cx, double cy, double radius, HashSet<(int, int)> cells)
     {
         var (gcx, gcy) = PhysicalToGrid(cx, cy);
+        if (IsInBounds(gcx, gcy))
+            cells.Add((gcx, gcy));
         int gridRadius = (int)Math.Ceiling(radius / CellSizeMicrometers);
 
         for (int gx = gcx - gridRadius; gx <= gcx + gridRadius; gx++)

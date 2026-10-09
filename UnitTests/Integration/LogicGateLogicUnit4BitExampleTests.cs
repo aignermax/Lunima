@@ -1,3 +1,5 @@
+using UnitTests.Helpers;
+using CAP_Core.Routing.CrossingInsertion;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Analysis;
@@ -43,8 +45,8 @@ public class LogicGateLogicUnit4BitExampleTests
     public void Example_LoadsEightSlices_EachWithPersistedRoles()
     {
         _fixture.Canvas.Components.ShouldAllBe(
-            c => c.Component is ComponentGroup, "the 4-bit logic unit contains only top-level gate groups");
-        _fixture.Canvas.Connections.Count.ShouldBe(0,
+            c => c.Component is ComponentGroup || CrossingComponentCatalog.IsCrossing(c.Component), "the 4-bit logic unit contains only top-level gate groups (and the crossings between their wires)");
+        ExampleWires.LogicalWireCount(_fixture.Canvas).ShouldBe(0,
             "the eight slices stand side by side without wires — inputs arrive via signal names");
         var groups = _fixture.Groups;
         groups.Count.ShouldBe(8, "one AND slice and one NOT slice per bit of the 4-bit words");

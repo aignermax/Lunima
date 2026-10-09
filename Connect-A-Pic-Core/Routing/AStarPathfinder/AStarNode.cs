@@ -54,6 +54,12 @@ public class AStarNode : IComparable<AStarNode>
     /// </summary>
     public int DistanceFromStart { get; set; }
 
+    /// <summary>
+    /// The crossings this node was reached through (a crossing-aware search jumped across
+    /// other waveguides to get here), or null for an ordinary step.
+    /// </summary>
+    public IReadOnlyList<CrossingInsertion.PlannedCrossing>? Crossings { get; init; }
+
     public AStarNode(int x, int y, GridDirection direction)
     {
         X = x;

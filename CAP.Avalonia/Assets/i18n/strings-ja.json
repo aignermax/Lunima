@@ -636,7 +636,6 @@
   "IsaPlayground.StopButton": "停止",
   "IsaPlayground.ResetButton": "リセット",
   "IsaPlayground.StateTitle": "マシン状態",
-  "IsaPlayground.TraceTitle": "プログラム（現在の行をハイライト）",
   "IsaPlayground.PcLabel": "PC",
   "IsaPlayground.AccLabel": "ACC",
   "IsaPlayground.AccBinaryLabel": "ACC（2進）",

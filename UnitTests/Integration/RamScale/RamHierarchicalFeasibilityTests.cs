@@ -17,7 +17,8 @@ namespace UnitTests.Integration.RamScale;
 /// with its own bound (<c>CAP_RAM_SPIKE_CELL_TIMEOUT_S</c>, default 300 s): the cell must
 /// route fully or there is no template. The top-level route of the inter-cell wires uses
 /// the spike's standard bound (<c>CAP_RAM_SPIKE_ROUTE_TIMEOUT_S</c>, default 60 s) — a
-/// timeout is a result, not a failure. Behaviour (store/read/hold, 16-value sweep,
+/// timeout is a result, not a failure — and only runs with <c>CAP_RAM_SPIKE_MEASURE_ROUTE=1</c>;
+/// by default it is cancelled at once, the logic never depends on it. Behaviour (store/read/hold, 16-value sweep,
 /// isolation) is asserted through the real assembler/evaluator over the canvas exactly
 /// as the Logic panel runs it, and must match the flat RAM exactly —
 /// same gates, same signals, same read taps. Numbers land in
@@ -46,23 +47,25 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
     /// count from 17 of 44 down to 9 in the five iterations the issue budgets; the ≤3
     /// target was not reached — the remaining blocks are contention-repair stamps on
     /// forced crossings (the load-tree trunks, the leaf down-hops and the one
-    /// cell-spanning select wire), not gate obstacles. The pin guards against regressions.
+    /// cell-spanning select wire), not gate obstacles. The crossing bake then connected eight
+    /// of them through placed crossings or freed-up routes, leaving 1. The pin guards
+    /// against regressions.
     /// </summary>
     [Fact]
     public void WordCell_BlockedIntraCellWires_WithinFloorplanBudget()
     {
         _cell.BlockedCount.ShouldBeGreaterThan(0,
             "a zero count means the shipped example lost the blocked flags again — the pin must never pass vacuously");
-        _cell.BlockedCount.ShouldBe(9,
-            "the re-floorplanned word cell (issue #1400) routes with exactly 9 blocked intra-cell wires (was 17)");
+        _cell.BlockedCount.ShouldBe(1,
+            "the crossing-baked word cell ships exactly 1 blocked intra-cell wire (17 before the re-floorplan, 9 before the bake)");
     }
 
     [Fact]
-    public Task Ram2Words4Bits_Hierarchical_AssemblyBehaviorAndRoute_Measured() =>
+    public Task Ram2Words4Bits_Hierarchical_AssemblyAndBehavior() =>
         MeasureAsync(words: 2, expectedGates: 71, expectedTopLevelWires: 9, expectedTopLevelGroups: 7);
 
     [Fact]
-    public Task Ram4Words4Bits_Hierarchical_AssemblyBehaviorAndRoute_Measured() =>
+    public Task Ram4Words4Bits_Hierarchical_AssemblyAndBehavior() =>
         MeasureAsync(words: 4, expectedGates: 183, expectedTopLevelWires: 84, expectedTopLevelGroups: 55);
 
     /// <summary>
@@ -87,16 +90,7 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
             fileOps.ApplyChipSizeAfterLoad = (width, height) => Ram4x4FeasibilityTests.ApplyChipSize(canvas, width, height);
             (await fileOps.LoadDesignFromPathAsync(tempPath)).ShouldBeTrue(
                 "the hierarchical RAM must load onto the canvas");
-            try
-            {
-                await fileOps.PostLoadRouting.WaitAsync(TimeSpan.FromMinutes(3));
-            }
-            catch (TimeoutException)
-            {
-                // A route timeout degrades delays, never the logic under test.
-                canvas.Routing.CancelRouting();
-                await fileOps.PostLoadRouting.WaitAsync(TimeSpan.FromMinutes(2));
-            }
+            await Ram4x4FeasibilityTests.SettlePostLoadRouting(canvas, fileOps, "RAM 2x4 hierarchical", Report);
 
             var cellInstances = canvas.Components.Select(c => c.Component).OfType<ComponentGroup>()
                 .Where(g => g.TruthTablePinAssignment == null).ToList();
@@ -144,7 +138,7 @@ public class RamHierarchicalFeasibilityTests : IClassFixture<RamWordCellFixture>
                 "top level: address stage, distribution, read mux and the cell instances — the word gates are nested");
             canvas.Connections.Count.ShouldBe(design.WireCount, "only the inter-cell wires load as connections");
 
-            var route = await Ram4x4FeasibilityTests.MeasureFullRoute(canvas, fileOps, label, Report);
+            var route = await Ram4x4FeasibilityTests.SettlePostLoadRouting(canvas, fileOps, label, Report);
             var network = await MeasureAssembly(canvas, design, label);
             Ram4x4FeasibilityTests.AssertNetworkShape(network, design, words, BitCount);
             Ram4x4FeasibilityTests.AssertStoreReadHold(network, design, words, BitCount);

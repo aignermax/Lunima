@@ -31,6 +31,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Dirty-state marker (`*`) appears in title bar after an edit and clears on save. `(auto: WindowTitleTests)`
 - [ ] Check for update banner appears when a newer release is available. `(manual)`
 - [ ] Settings window opens from toolbar and shows all settings pages. `(manual)`
+- [ ] All main-toolbar buttons have the same height (Import / Export / Tools / AI / Settings match New / Open / Save). `(auto: ToolbarButtonHeightTests)`
 
 ## 2. Localization & accessibility
 
@@ -193,6 +194,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Monte Carlo tab (?) help explains fabrication variance and yield; the scatter/histogram animation loops. `(manual)`
 - [ ] PDK JSON help page opens from the Tools flyout. `(manual)`
 - [ ] ISA playground opens from the Tools flyout; Assemble + Step runs count-to-5 to ACC = 5; Reset restores PC = 0. `(manual)`
+- [ ] ISA playground editor shows line numbers and highlights the current step in place (green bar follows Step); no second program listing beside the machine state. `(auto: IsaProgramEditorTests)`
 - [ ] ISA playground Run auto-steps count-to-5 to "halted after N steps" with ACC = 5; Stop mid-run freezes PC and re-enables Step. `(manual)`
 - [ ] ISA playground "Compute ADD on the photonic chip" toggle: disabled with a hint before a build; after building the 4-bit adder example in the Logic tab it runs count-to-5 to ACC = 5 and the status names the photonic adder. `(manual)`
 - [ ] ISA playground photonic ADD: each ADD step shows operands and result in binary with the light-travel time in ps (e.g. `0001 + 0001 = 0010`); the header names the photonic adder while the toggle is on, the golden model otherwise. `(manual)`

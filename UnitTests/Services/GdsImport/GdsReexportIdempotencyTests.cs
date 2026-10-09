@@ -53,8 +53,7 @@ public class GdsReexportIdempotencyTests : IDisposable
 
         // ── Generation 1: the exact round-trip arc (frozen placement — the
         // deterministic, router-independent mode the netlist comparisons use) ──
-        var export1 = await GdsHighestLevelRoundTripTests.ExportUserDesignAsync(
-            _root, "export1", stripSiepicUpgrade: false);
+        var export1 = await GdsHighestLevelRoundTripTests.ExportUserDesignAsync(stripSiepicUpgrade: false);
         var host1 = new GdsDesignScopeTestHost();
         _hosts.Add(host1);
         var outcome1 = await GdsHighestLevelRoundTripTests.ImportExplodeAsync(host1, export1.GdsPath);
@@ -142,11 +141,11 @@ public class GdsReexportIdempotencyTests : IDisposable
         // ── Absolute pins per generation (the equality assertions above are only
         // meaningful against a known-good generation 1 — the same numbers
         // GdsHighestLevelRoundTripTests pins for the single round trip) ──
-        // SiEPIC-upgraded: 32 frozen polygons since the collision-checked
-        // terminal-approach arcs of #1084 re-fragmented the junction network
-        // (was 39). The bare-nazca arm is unexercised where the SiEPIC upgrade
+        // SiEPIC-upgraded: 30 frozen polygons since waveguides rasterize without
+        // gaps (one blocked wire fewer shrinks the junction network; 32 after the
+        // collision-checked terminal-approach arcs of #1084, 39 before). The bare-nazca arm is unexercised where the SiEPIC upgrade
         // runs (CI, dev machines) — re-measure it if that env ever changes.
-        var expectedFrozen = export1.SiepicUpgraded ? 32 : 40;
+        var expectedFrozen = export1.SiepicUpgraded ? 30 : 40;
         pinless1.Count.ShouldBe(expectedFrozen,
             "the junction network's polygons ride the group as frozen paths");
         report1.FrozenRoutePathCount.ShouldBe(expectedFrozen);

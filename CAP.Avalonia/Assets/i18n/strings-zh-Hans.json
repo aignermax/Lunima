@@ -636,7 +636,6 @@
   "IsaPlayground.StopButton": "停止",
   "IsaPlayground.ResetButton": "复位",
   "IsaPlayground.StateTitle": "机器状态",
-  "IsaPlayground.TraceTitle": "程序（高亮当前行）",
   "IsaPlayground.PcLabel": "PC",
   "IsaPlayground.AccLabel": "ACC",
   "IsaPlayground.AccBinaryLabel": "ACC（二进制）",

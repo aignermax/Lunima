@@ -1557,6 +1557,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
         // Restore identifier to preserve references
         component.Identifier = compData.Identifier;
+        ComponentTemplates.ReserveIdentifier(compData.Identifier);
 
         // Restore HumanReadableName
         if (compData.HumanReadableName != null)
@@ -1639,6 +1640,7 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Restore human-readable name
                 child.Identifier = childData.Identifier;
+                ComponentTemplates.ReserveIdentifier(childData.Identifier);
 
                 // Restore HumanReadableName
                 if (childData.HumanReadableName != null)

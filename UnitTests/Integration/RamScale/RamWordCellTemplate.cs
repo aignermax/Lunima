@@ -22,13 +22,21 @@ public sealed partial class RamWordCellTemplate
     private readonly IReadOnlyList<TemplatePath> _paths;
     private readonly IReadOnlyDictionary<string, TemplatePort> _ports;
 
+    /// <summary>Leaf crossing components inside the cell (template coordinates), keyed by their template guid.</summary>
+    private readonly IReadOnlyDictionary<string, JsonObject> _crossings;
+
+    /// <summary>Endpoint-role prefix of a frozen path ending at a crossing port instead of a gate pin.</summary>
+    private const string CrossingRolePrefix = "crossing:";
+
     private RamWordCellTemplate(
         IReadOnlyList<(string Role, JsonObject Entry)> gates,
         IReadOnlyList<TemplatePath> paths,
         IReadOnlyDictionary<string, TemplatePort> ports,
         double originX, double originY, double width, double height,
-        int blockedFallbackCount = 0)
+        int blockedFallbackCount = 0,
+        IReadOnlyDictionary<string, JsonObject>? crossings = null)
     {
+        _crossings = crossings ?? new Dictionary<string, JsonObject>();
         _gates = gates;
         _paths = paths;
         _ports = ports;

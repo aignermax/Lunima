@@ -85,16 +85,16 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                 </StackPanel>
-                <TextBox AcceptsReturn="True" TextWrapping="NoWrap" AcceptsTab="True"
-                         Text="{Binding ProgramText}"
-                         IsReadOnly="{Binding IsEditorReadOnly}"
-                         FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="13"
-                         Background="#252525" BorderBrush="#3e3e3e"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                <ctrl:IsaProgramEditor x:Name="ProgramEditor"
+                                       Code="{Binding ProgramText}"
+                                       CurrentLine="{Binding CurrentSourceLine}"
+                                       IsReadOnly="{Binding IsEditorReadOnly}"
+                                       FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="13"
+                                       Foreground="White" LineNumbersForeground="Gray"
+                                       Background="#252525" BorderBrush="#3e3e3e" BorderThickness="1"
+                                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
             </DockPanel>
 
-            <!-- DockPanel, not StackPanel: the trace must get a bounded height so it
-                 scrolls instead of painting over the button row. -->
             <DockPanel Grid.Column="1" Margin="14,0,0,0" LastChildFill="True">
                 <TextBlock DockPanel.Dock="Top" Text="{loc:Localize IsaPlayground.StateTitle}" Foreground="DeepSkyBlue"
                            FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
@@ -176,31 +176,6 @@
                            TextWrapping="Wrap" Margin="0,0,0,4"
                            IsVisible="{Binding ErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                <TextBlock DockPanel.Dock="Top" Text="{loc:Localize IsaPlayground.TraceTitle}" Foreground="DeepSkyBlue"
-                           FontWeight="SemiBold" FontSize="13" Margin="0,6,0,6"/>
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding TraceLines}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="isa:IsaTraceLineViewModel">
-                                <Border Classes.current="{Binding IsCurrent}" Padding="4,1" CornerRadius="3">
-                                    <Border.Styles>
-                                        <Style Selector="Border.current">
-                                            <Setter Property="Background" Value="#3d5d3d"/>
-                                        </Style>
-                                    </Border.Styles>
-                                    <DockPanel LastChildFill="True">
-                                        <TextBlock DockPanel.Dock="Left" Text="{Binding LineNumber}"
-                                                   Foreground="Gray" MinWidth="30"
-                                                   FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="11"/>
-                                        <TextBlock Text="{Binding Text}" Foreground="White"
-                                                   FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="11"/>
-                                    </DockPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
             </DockPanel>
         </Grid>
     </DockPanel>

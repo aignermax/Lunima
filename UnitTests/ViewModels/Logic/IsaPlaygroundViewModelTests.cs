@@ -32,7 +32,7 @@ public class IsaPlaygroundViewModelTests
         vm.ProgramText.ShouldContain("LOAD 1");
         vm.IsAssembled.ShouldBeTrue();
         vm.ErrorText.ShouldBeEmpty();
-        vm.TraceLines.ShouldNotBeEmpty();
+        vm.CurrentSourceLine.ShouldNotBeNull("the first instruction is the current step after assembling");
     }
 
     [Fact]
