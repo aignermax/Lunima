@@ -35,6 +35,10 @@ public class ExampleCrossingBakeTests
     private const string BakeSkipVariable = "CAP_BAKE_SKIP";
     private const string BakeSourceDirectoryVariable = "CAP_BAKE_SOURCE_DIR";
 
+    /// <summary>The two-pin straight used as a group feed-through (transparent to the logic network).</summary>
+    private const string FeedThroughPdk = "Demo PDK";
+    private const string FeedThroughFunction = "demo.shallow.strt";
+
     /// <summary>File names of every example listed in the manifest.</summary>
     public static TheoryData<string> ExampleFiles => ExampleRouteBakeTests.ExampleFiles;
 
@@ -50,6 +54,8 @@ public class ExampleCrossingBakeTests
 
         var (shipped, shippedOps, _) = await MziFringeAnalysis.LoadExample(exampleFileName);
         await shippedOps.PostLoadRouting;
+        // Overlaps an earlier bake left inside groups become honest blocked paths first.
+        int demoted = HiddenOverlapRepair.Demote(shipped);
         int blockedBefore = TotalBlockedPaths(shipped);
         if (blockedBefore == 0) return;
         var sourceDirectory = Environment.GetEnvironmentVariable(BakeSourceDirectoryVariable);
@@ -67,11 +73,14 @@ public class ExampleCrossingBakeTests
         binder.Service.FallbackChainSearches = new[] { (40_000_000, 1.0), (8_000_000, 2.5) };
         int connected = binder.Service.ConnectBlockedWiresThroughCrossings(canvas.ConnectionManager, canvas.Router);
         Component? NewCrossing() => CrossingComponentInstance.CreateFromTemplates(templates, preferred)?.Component;
+        var topLevelWires = canvas.ConnectionManager.Connections
+            .Where(c => !c.IsBlockedFallback && c.RoutedPath != null).Select(c => c.RoutedPath!).ToList();
         foreach (var group in TopLevelGroups(canvas))
             connected += GroupCrossingChainBake.Bake(group, NewCrossing, canvas.Router.MinBendRadiusMicrometers,
-                canvas.ConnectionManager.WaveguideWidthMicrometers);
-        Console.WriteLine($"[crossing-bake] {exampleFileName}: blocked paths {blockedBefore}, connected {connected}");
-        if (connected == 0 && ReferenceEquals(canvas, shipped)) return;
+                canvas.ConnectionManager.WaveguideWidthMicrometers, topLevelWires);
+        connected += LeadIntoGroups(canvas, binder, templates, NewCrossing);
+        Console.WriteLine($"[crossing-bake] {exampleFileName}: blocked paths {blockedBefore} (incl. {demoted} demoted overlaps), connected {connected}");
+        if (connected == 0 && demoted == 0 && ReferenceEquals(canvas, shipped)) return;
 
         var bakedPath = Path.Combine(Path.GetTempPath(), $"crossing-bake-{Guid.NewGuid():N}.lun");
         await MziFringeAnalysis.SaveToFileAsync(fileOps, bakedPath);
@@ -81,7 +90,10 @@ public class ExampleCrossingBakeTests
         verify.Connections.Count(c => c.Connection.RoutedPath == null).ShouldBe(0, "every wire reloads with a route");
         int blockedAfter = TotalBlockedPaths(verify);
         Console.WriteLine($"[crossing-bake] {exampleFileName}: reloaded blocked paths {blockedAfter}, artifact {bakedPath}");
-        blockedAfter.ShouldBeLessThan(blockedBefore, "the bake must reduce the blocked paths");
+        if (demoted == 0)
+            blockedAfter.ShouldBeLessThan(blockedBefore, "the bake must reduce the blocked paths");
+        else
+            blockedAfter.ShouldBeLessThanOrEqualTo(blockedBefore, "the repair may only trade hidden overlaps for blocked paths");
         var examplePath = Path.Combine(ExampleDesignFilesTests.ExamplesDirectory(), exampleFileName);
         File.WriteAllText(examplePath, KeepShippedProcess(examplePath, bakedPath));
     }
@@ -97,6 +109,34 @@ public class ExampleCrossingBakeTests
         await canvas.RecalculateRoutesAsync();
         Console.WriteLine($"[crossing-bake] {Path.GetFileName(sourcePath)}: from scratch, {TotalBlockedPaths(canvas)} blocked before crossings");
         return (canvas, fileOps);
+    }
+
+    /// <summary>
+    /// Gives blocked wires that end deep inside a group a feed-through at the group's edge
+    /// (<see cref="GroupPortLeadBake"/>) and brings the canvas in line with the connection
+    /// manager for the save.
+    /// </summary>
+    private static int LeadIntoGroups(DesignCanvasViewModel canvas, CrossingInsertionCanvasBinder binder,
+                                      IReadOnlyList<CAP.Avalonia.ViewModels.Library.ComponentTemplate> templates,
+                                      Func<Component?> newCrossing)
+    {
+        var feedThrough = templates.FirstOrDefault(t => t.PdkSource == FeedThroughPdk && t.NazcaFunctionName == FeedThroughFunction);
+        if (feedThrough == null) return 0;
+        var settings = new CAP_Core.Routing.CrossingRouteSettings(
+            10, CrossingInsertionService.ChainClearanceMicrometers, CrossingInsertionService.ChainCrossingPenalty,
+            HeuristicWeight: CrossingInsertionService.ChainHeuristicWeight);
+        var (connected, placed) = GroupPortLeadBake.Run(
+            canvas.ConnectionManager, canvas.Router, TopLevelGroups(canvas), feedThrough, newCrossing, settings);
+        foreach (var crossing in placed)
+            binder.Service.ComponentAdded?.Invoke(crossing);
+        var managed = canvas.ConnectionManager.Connections.ToList();
+        foreach (var stale in canvas.Connections.Where(vm => !managed.Contains(vm.Connection)).ToList())
+            canvas.Connections.Remove(stale);
+        var shown = canvas.Connections.Select(vm => vm.Connection).ToHashSet();
+        foreach (var connection in managed.Where(c => !shown.Contains(c)))
+            canvas.Connections.Add(new WaveguideConnectionViewModel(connection));
+        Console.WriteLine($"[crossing-bake] group feed-throughs connected {connected}");
+        return connected;
     }
 
     private static bool MatchesAny(string exampleFileName, string semicolonSeparatedParts) =>

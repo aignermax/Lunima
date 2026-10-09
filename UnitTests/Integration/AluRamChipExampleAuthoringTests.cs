@@ -62,8 +62,8 @@ public class AluRamChipExampleAuthoringTests
     private const string AdderFileName = "Logic Gate 4-Bit Adder.lun";
     private const string RamFileName = "Logic Gate RAM 4x4.lun";
     private const int RamTopLevelGroupCount = 55;
-    private const int RamTopLevelCrossingCount = 34;
-    private const int RamTopLevelWireCount = 152;
+    private const int RamTopLevelCrossingCount = 62;
+    private const int RamTopLevelWireCount = 208;
     private const double BlockGapMicrometers = 500.0;
 
     private readonly ITestOutputHelper _output;
@@ -82,6 +82,7 @@ public class AluRamChipExampleAuthoringTests
         double adderChipHeight = canvas.ChipMaxY;
 
         var ramGroup = await LoadPrefixedRamGroup();
+        RenameCollidingIdentifiers(ramGroup, canvas.Components.Select(vm => vm.Component));
 
         // Place the RAM block to the right of the adder with a clear gap; MoveGroup
         // translates the frozen inter-cell routes along, so nothing re-routes.
@@ -150,6 +151,27 @@ public class AluRamChipExampleAuthoringTests
         }).ToList();
         group.AddInternalPaths(frozenPaths);
         return group;
+    }
+
+    /// <summary>
+    /// The adder and the RAM were baked in separate sessions, so a component of each can carry
+    /// the same identifier (e.g. two crossings both numbered by their own session). Saved
+    /// connections reference components by identifier, so every RAM component whose identifier
+    /// the adder already uses gets a fresh one.
+    /// </summary>
+    private static void RenameCollidingIdentifiers(ComponentGroup ramGroup, IEnumerable<Component> adderComponents)
+    {
+        var taken = adderComponents
+            .SelectMany(c => c is ComponentGroup g ? g.GetAllComponentsRecursive().Prepend(c) : new[] { c })
+            .Select(c => c.Identifier)
+            .ToHashSet();
+        foreach (var component in ramGroup.GetAllComponentsRecursive())
+        {
+            if (!taken.Contains(component.Identifier)) continue;
+            int separator = component.Identifier.LastIndexOf('_');
+            var stem = separator > 0 ? component.Identifier[..separator] : component.Identifier;
+            component.Identifier = $"{stem}_{Guid.NewGuid():N}";
+        }
     }
 
     /// <summary>Moves every persisted signal name of the block's gates under the RAM prefix.</summary>
@@ -238,8 +260,8 @@ public class AluRamChipExampleAuthoringTests
         blockedTopLevel.ShouldBe(5,
             "the top level carries the 4-bit adder's pinned blocked wires alone; " +
             "the RAM's wires are frozen inside the RAM group");
-        blockedTotal.ShouldBe(29,
-            "5 adder top-level + the RAM 4x4's 24 inter-cell wires frozen inside the RAM group");
+        blockedTotal.ShouldBe(34,
+            "5 adder top-level + the RAM 4x4's 29 (18 inter-cell + 11 intra-cell) frozen inside the RAM group");
     }
 
     private void Report(string line)

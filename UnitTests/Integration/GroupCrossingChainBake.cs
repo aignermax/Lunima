@@ -28,15 +28,44 @@ internal static class GroupCrossingChainBake
     /// <param name="crossingFactory">Creates a fresh crossing component.</param>
     /// <param name="bendRadiusMicrometers">The design's minimum bend radius.</param>
     /// <param name="waveguideWidthMicrometers">The routing waveguide width.</param>
+    /// <param name="topLevelWires">The design's routed top-level wires — internal routes must never cross them.</param>
     public static int Bake(ComponentGroup group, Func<Component?> crossingFactory,
-                           double bendRadiusMicrometers, double waveguideWidthMicrometers)
+                           double bendRadiusMicrometers, double waveguideWidthMicrometers,
+                           IReadOnlyList<RoutedPath> topLevelWires)
     {
         int connected = group.ChildComponents.OfType<ComponentGroup>().ToList()
-            .Sum(child => Bake(child, crossingFactory, bendRadiusMicrometers, waveguideWidthMicrometers));
+            .Sum(child => Bake(child, crossingFactory, bendRadiusMicrometers, waveguideWidthMicrometers, topLevelWires));
         if (!group.InternalPaths.Any(p => p.Path.IsBlockedFallback && p.StartPin != null && p.EndPin != null))
             return connected;
 
-        var children = group.ChildComponents.ToList();
+        var (router, manager) = CreateScratch(group, Array.Empty<Component>(), bendRadiusMicrometers, waveguideWidthMicrometers, topLevelWires);
+        var before = manager.Connections.ToDictionary(c => c, c => c.RoutedPath);
+        var placed = new List<Component>();
+        var service = ScratchService(crossingFactory, placed);
+        int groupConnected = service.ConnectBlockedWiresThroughCrossings(manager, router);
+        if (groupConnected == 0 || ForeignWireFence.AnyCrossing(NewRoutes(manager, before), topLevelWires))
+            return connected;
+        WriteBack(group, manager, placed);
+        return connected + groupConnected;
+    }
+
+    /// <summary>The routes the scratch pass created or changed.</summary>
+    internal static IEnumerable<RoutedPath> NewRoutes(
+        WaveguideConnectionManager manager, IReadOnlyDictionary<WaveguideConnection, RoutedPath?> before) =>
+        manager.Connections
+            .Where(c => !c.IsBlockedFallback && c.RoutedPath != null
+                        && (!before.TryGetValue(c, out var old) || !ReferenceEquals(old, c.RoutedPath)))
+            .Select(c => c.RoutedPath!);
+
+    /// <summary>
+    /// A scratch router holding the group's children (plus <paramref name="extraChildren"/>)
+    /// and its frozen paths as connections, the way the group bake routes inside a group.
+    /// </summary>
+    internal static (WaveguideRouter Router, WaveguideConnectionManager Manager) CreateScratch(
+        ComponentGroup group, IReadOnlyCollection<Component> extraChildren, double bendRadiusMicrometers, double waveguideWidthMicrometers,
+        IReadOnlyList<RoutedPath> topLevelWires)
+    {
+        var children = group.ChildComponents.Concat(extraChildren).ToList();
         var router = new WaveguideRouter { MinBendRadiusMicrometers = bendRadiusMicrometers };
         router.InitializePathfindingGrid(
             children.Min(c => c.PhysicalX) - GridMarginMicrometers,
@@ -48,24 +77,27 @@ internal static class GroupCrossingChainBake
         var manager = new WaveguideConnectionManager(router) { WaveguideWidthMicrometers = waveguideWidthMicrometers };
         foreach (var path in group.InternalPaths.Where(p => p.StartPin != null && p.EndPin != null))
             manager.Connections.Add(ToConnection(path, manager, router));
+        ForeignWireFence.Mark(router.PathfindingGrid, topLevelWires, waveguideWidthMicrometers);
+        return (router, manager);
+    }
 
-        var placed = new List<Component>();
-        var service = new CrossingInsertionService(crossingFactory)
+    /// <summary>The crossing service the scratch passes use, collecting placed crossings.</summary>
+    internal static CrossingInsertionService ScratchService(Func<Component?> crossingFactory, List<Component> placed) =>
+        new(crossingFactory)
         {
             ComponentAdded = placed.Add,
             ChainPassTimeBudget = TimeSpan.MaxValue,
             FallbackChainSearches = new[] { (40_000_000, 1.0), (8_000_000, 2.5) },
         };
-        int groupConnected = service.ConnectBlockedWiresThroughCrossings(manager, router);
-        if (groupConnected == 0)
-            return connected;
 
+    /// <summary>Replaces the group's frozen paths by the scratch connections and adds the placed crossings.</summary>
+    internal static void WriteBack(ComponentGroup group, WaveguideConnectionManager manager, IEnumerable<Component> placed)
+    {
         foreach (var path in group.InternalPaths.ToList())
             group.RemoveInternalPath(path);
         group.AddInternalPaths(manager.Connections.Select(ToFrozenPath).ToList());
         foreach (var crossing in placed)
             group.AddChild(crossing);
-        return connected + groupConnected;
     }
 
     private static WaveguideConnection ToConnection(FrozenWaveguidePath path, WaveguideConnectionManager manager, WaveguideRouter router)

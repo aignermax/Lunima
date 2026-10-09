@@ -35,10 +35,10 @@ public class ExampleLoadRoutingTests
         ["Logic Gate Full Adder.lun"] = 0,
         ["Logic Gate PC 2-bit.lun"] = 2,
         ["Logic Gate RAM 2x2.lun"] = 1,
-        // Top-level inter-cell wires only; its word-cell instances carry no blocked wire.
+        // Top-level inter-cell wires only (see ExampleFrozenBlockedPathTests for the cells).
         ["Logic Gate RAM 2x4.lun"] = 2,
-        // Top-level wires only; its word-cell instances carry no blocked wire.
-        ["Logic Gate RAM 4x4.lun"] = 24,
+        // Top-level inter-cell wires only (see ExampleFrozenBlockedPathTests for the cells).
+        ["Logic Gate RAM 4x4.lun"] = 18,
         ["Logic Gate 4-Bit Adder.lun"] = 5,
         // Same blocked top-level wires as the 4-bit adder — the RAM block's wires
         // are frozen inside the RAM group (#1463), so the top level is the adder's alone.
