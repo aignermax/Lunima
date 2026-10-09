@@ -1,0 +1,26 @@
+[
+  {
+    "file": "step1-build-logic-en.png",
+    "caption": "Tour step 1/5 (en): the Build-logic-network button of the analysis dock\u0027s Logic tab is spotlighted in the real MainWindow, the shipped RAM 2x4 example loaded on the canvas behind it. Placement: below the Build button, because the dock sits at the bottom edge and the card must not cover the memory cells on the canvas."
+  },
+  {
+    "file": "step3-store-word-en.png",
+    "caption": "Tour step 3/5 (en): the card points at the Step-clock button right after one real clock edge committed 5 (D0\u002BD2) into word 0 \u2014 the register readout behind the card lists the eight committed cell bits. Placement: next to the clock controls, so the input toggles and the Q readout stay visible while the user steps."
+  },
+  {
+    "file": "step4-read-back-en.png",
+    "caption": "Tour step 4/5 (en): the output rows are spotlighted while the Q bus reads 5 again \u2014 LOAD went off, the address A was flipped to word 1 (Q fell to 0) and back, and the cell held its state in light. Placement: beside the output rows, keeping the Q chips readable behind the card."
+  },
+  {
+    "file": "step1-build-logic-de.png",
+    "caption": "Tour step 1/5 (de): the Build-logic-network button of the analysis dock\u0027s Logic tab is spotlighted in the real MainWindow, the shipped RAM 2x4 example loaded on the canvas behind it. Placement: below the Build button, because the dock sits at the bottom edge and the card must not cover the memory cells on the canvas."
+  },
+  {
+    "file": "step3-store-word-de.png",
+    "caption": "Tour step 3/5 (de): the card points at the Step-clock button right after one real clock edge committed 5 (D0\u002BD2) into word 0 \u2014 the register readout behind the card lists the eight committed cell bits. Placement: next to the clock controls, so the input toggles and the Q readout stay visible while the user steps."
+  },
+  {
+    "file": "step4-read-back-de.png",
+    "caption": "Tour step 4/5 (de): the output rows are spotlighted while the Q bus reads 5 again \u2014 LOAD went off, the address A was flipped to word 1 (Q fell to 0) and back, and the cell held its state in light. Placement: beside the output rows, keeping the Q chips readable behind the card."
+  }
+]
