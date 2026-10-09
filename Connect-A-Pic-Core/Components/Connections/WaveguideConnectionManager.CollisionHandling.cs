@@ -1,3 +1,4 @@
+using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 
 namespace CAP_Core.Components.Connections;
@@ -15,23 +16,47 @@ public partial class WaveguideConnectionManager
     /// overrides are discarded so the connection is re-routed around the component.
     /// Uses the true arc geometry against component obstacles only, so the verdict does
     /// not depend on which sibling waveguides are currently registered in the grid.
+    /// Frozen group path markings (cell state 3) are deliberately excluded: they are
+    /// ephemeral routing aids, and while a group is being ungrouped a stale in-flight
+    /// pass still holds a grid rebuilt from the removed group — the marking is then a
+    /// ghost of the very connection being judged and unfreezing would silently discard
+    /// the user's manual edits.
+    /// The route may hug its own pins: cells inside the pin corridors of the connection's
+    /// endpoint pins that only a NEIGHBOUR's padding band covers are tolerated — a foreign
+    /// component placed next to a pin must not unfreeze a collapsed manual edit. A foreign
+    /// component body inside the corridor still unfreezes.
     /// Styled routes (Type != Auto) are never unfrozen here — their shape is forced and a
     /// collision is surfaced via <see cref="RoutedPath.PassesThroughComponent"/> instead.
+    /// Imported routes that still carry their drawn polygons
+    /// (<see cref="WaveguideConnection.AsDrawnGeometry"/>) are never unfrozen either: in a
+    /// finished layout the drawn route IS the design, and its tapers routinely overlap the
+    /// cells they connect. Only the user unfreezes such a route; overlaps go to the design checks.
     /// </summary>
     /// <returns>True when the connection was unfrozen and must be re-routed.</returns>
     private static bool TryUnfreezeCollidedAutoRoute(WaveguideConnection connection, WaveguideRouter router)
     {
         if (connection.Type != WaveguideType.Auto || !connection.IsRouteFrozen)
             return false;
+        if (connection.AsDrawnGeometry is not null)
+            return false;
         if (!connection.FrozenPathStillMatchesPins())
             return false; // Endpoint moved: RecalculateTransmission already unfreezes.
-        if (!router.IsPathBlockedByComponents(connection.RoutedPath!.Segments))
+        if (!router.IsPathBlockedByComponentOnly(connection.RoutedPath!.Segments, OwnEndpointPins(connection)))
             return false;
 
         connection.IsRouteFrozen = false;
         connection.BendRadiusOverrides.Clear();
         connection.StraightShiftOffsets.Clear();
         return true;
+    }
+
+    /// <summary>The connection's endpoint pins, whose pin corridors the route may hug.</summary>
+    private static List<PhysicalPin> OwnEndpointPins(WaveguideConnection connection)
+    {
+        var pins = new List<PhysicalPin>(2);
+        if (connection.StartPin != null) pins.Add(connection.StartPin);
+        if (connection.EndPin != null) pins.Add(connection.EndPin);
+        return pins;
     }
 
     /// <summary>
@@ -56,7 +81,7 @@ public partial class WaveguideConnectionManager
     /// pass and rendered as blocked until the crossing is resolved. Forced routes (styled or
     /// manually frozen) keep their shape; their overlap is reported by the design checks.
     /// </summary>
-    private void MarkUnresolvedSiblingCrossings()
+    internal void MarkUnresolvedSiblingCrossings()
     {
         // Snapshot: runs at the end of the routing pass on the routing thread while
         // UI commands may mutate the list — see _connectionsSync in the main partial.
@@ -72,7 +97,13 @@ public partial class WaveguideConnectionManager
                     continue;
                 var target = PickReroutableSide(routed[i], routed[j]);
                 if (target != null)
+                {
                     target.RoutedPath!.IsBlockedFallback = true;
+                    // A crossing with a routed sibling is contention by definition; keep an
+                    // existing classification (a sealed pin stays the actionable advice).
+                    if (target.RoutedPath.FailureReason == RoutingFailureReason.None)
+                        target.RoutedPath.FailureReason = RoutingFailureReason.Contention;
+                }
             }
         }
     }

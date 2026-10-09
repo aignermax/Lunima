@@ -13,7 +13,7 @@
     <BuiltInComInteropSupport Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">true</BuiltInComInteropSupport>
     <!-- Add macOS ARM64 and x64 support alongside Windows and Linux -->
     <RuntimeIdentifiers>win-x64;linux-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
-    <Version>0.14.0</Version>
+    <Version>0.15.0</Version>
     <!-- Windows icon (embedded in the .exe; macOS uses the .icns inside the bundle) -->
     <ApplicationIcon Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">LunimaIcon.ico</ApplicationIcon>
   </PropertyGroup>
@@ -79,6 +79,24 @@
          found" on every installed build. -->
     <Content Include="..\scripts\tidy3d_sparams.py"
              Link="scripts\tidy3d_sparams.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- openEBL submission-check scripts (issue #1365). OpenEblSubmissionChecker
+       resolves `<baseDir>/scripts/openebl/` walking up from AppContext.BaseDirectory,
+       so both files must land next to the published binary in that exact layout —
+       otherwise every installed build reports "scripts missing" for the openEBL
+       check even with a perfect Python toolchain. The macOS bundle script copies
+       the whole publish output into Contents/MacOS/, and the Windows MSI harvests
+       the publish directory recursively, so these entries cover all three OSes. -->
+  <ItemGroup>
+    <Content Include="..\scripts\openebl\openebl_submission_check.py"
+             Link="scripts\openebl\openebl_submission_check.py"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\scripts\openebl\openebl_verification.py"
+             Link="scripts\openebl\openebl_verification.py"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

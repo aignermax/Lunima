@@ -68,6 +68,28 @@ public partial class FileOperationsViewModel : ObservableObject
     private readonly HashSet<string> _pinCalibrationMigratedComponents = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Pin pairs of connections displaced (dropped) during the current load: a later
+    /// connection in the file landed on a pin an earlier connection already occupied
+    /// (replacement-on-connect UX, applied to the file's netlist). Reported once after
+    /// loading so a .lun that wires a pin more than once never shrinks silently.
+    /// </summary>
+    private readonly List<string> _displacedConnectionsDuringLoad = new();
+
+    /// <summary>
+    /// Groups whose reconstruction failed during the current load (corrupted or
+    /// externally edited pin/component references). A failing group must not take
+    /// the whole design down with it: the rest of the file loads and the failures
+    /// are reported once afterwards (status count + error-console detail).
+    /// </summary>
+    private readonly List<string> _failedGroupsDuringLoad = new();
+
+    /// <summary>
+    /// Background routing pass the last load started for connections that arrived without
+    /// geometry; already completed when every connection came with a usable route.
+    /// </summary>
+    public Task PostLoadRouting { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
     /// Per-component S-matrix overrides loaded from the PIR section of the .lun file,
     /// or added via the S-parameter import feature. Survives save-over-reload cycles.
     /// Keyed by component identifier string; values are the stored S-matrices.
@@ -123,6 +145,13 @@ public partial class FileOperationsViewModel : ObservableObject
     public Services.GdsImport.DesignScope.DesignScopedGdsComponentService? DesignScopedGdsComponents { get; set; }
 
     /// <summary>
+    /// Per-layer visibility of imported GDS geometry (issue #858). Wired by
+    /// MainViewModel; null in headless contexts. Captured into the .lun on
+    /// save, restored on load, and reset on New Project.
+    /// </summary>
+    public GdsImport.LayerVisibility.GdsLayerVisibilityViewModel? LayerVisibility { get; set; }
+
+    /// <summary>
     /// ViewModel for GDS export functionality.
     /// </summary>
     public GdsExportViewModel GdsExport { get; }
@@ -165,6 +194,13 @@ public partial class FileOperationsViewModel : ObservableObject
     /// Parameters: (widthMicrometers, heightMicrometers).
     /// </summary>
     public Action<double, double>? ApplyChipSizeAfterLoad { get; set; }
+
+    /// <summary>
+    /// Callback fired after a load restored the coherent interference mode, so
+    /// views holding a toggle bound to that mode can re-sync (the canvas and
+    /// its connection manager survive loads, so their Configure is not re-run).
+    /// </summary>
+    public Action? CoherentModeRestoredAfterLoad { get; set; }
 
     /// <summary>
     /// File dialog service for showing open/save dialogs.
@@ -371,6 +407,7 @@ public partial class FileOperationsViewModel : ObservableObject
             }
 
             var componentsList = _canvas.Components.ToList();
+            var unresolvedConnectionPins = new List<string>();
             var designData = new DesignFileData
             {
                 // Only save non-group, non-child components in the main list
@@ -381,16 +418,24 @@ public partial class FileOperationsViewModel : ObservableObject
                     .ToList(),
                 Connections = _canvas.Connections.Select(c =>
                 {
-                    var (startIdx, startPinName) = ResolveConnectionEndpoint(componentsList, c.Connection.StartPin);
-                    var (endIdx, endPinName) = ResolveConnectionEndpoint(componentsList, c.Connection.EndPin);
+                    var (startIdx, startPinName, startId, startAncestor) =
+                        ResolveConnectionEndpointWithOwner(componentsList, c.Connection.StartPin);
+                    var (endIdx, endPinName, endId, endAncestor) =
+                        ResolveConnectionEndpointWithOwner(componentsList, c.Connection.EndPin);
+                    if (startId == null)
+                        unresolvedConnectionPins.Add(c.Connection.StartPin.Name);
+                    if (endId == null)
+                        unresolvedConnectionPins.Add(c.Connection.EndPin.Name);
                     return new ConnectionData
                     {
                         StartComponentIndex = startIdx,
                         StartPinName = startPinName,
                         EndComponentIndex = endIdx,
                         EndPinName = endPinName,
-                        StartComponentId = startIdx >= 0 ? componentsList[startIdx].Component.Identifier : null,
-                        EndComponentId = endIdx >= 0 ? componentsList[endIdx].Component.Identifier : null,
+                        StartComponentId = startId,
+                        EndComponentId = endId,
+                        StartAncestorGroupId = startAncestor,
+                        EndAncestorGroupId = endAncestor,
                         CachedSegments = c.Connection.RoutedPath != null
                             ? PathSegmentConverter.ToDtoList(c.Connection.RoutedPath.Segments)
                             : null,
@@ -412,7 +457,10 @@ public partial class FileOperationsViewModel : ObservableObject
                             ? new Dictionary<int, double>(c.Connection.StraightShiftOffsets)
                             : null,
                         SourceGdsLayer = c.Connection.SourceGdsLayer,
-                        SourceGdsDataType = c.Connection.SourceGdsDataType
+                        SourceGdsDataType = c.Connection.SourceGdsDataType,
+                        TargetLengthMicrometers = c.Connection.TargetLengthMicrometers,
+                        LengthToleranceMicrometers = c.Connection.LengthToleranceMicrometers,
+                        AsDrawnPolygons = CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto.FromGeometry(c.Connection.AsDrawnGeometry),
                     };
                 }).ToList()
             };
@@ -427,6 +475,14 @@ public partial class FileOperationsViewModel : ObservableObject
                 }
             }
 
+            // Canvas-level pin-less frozen paths (issue #856) survive save/load.
+            if (_canvas.CanvasFrozenPaths.Count > 0)
+            {
+                designData.CanvasFrozenPaths = _canvas.CanvasFrozenPaths
+                    .Select(p => CAP_DataAccess.Persistence.ComponentGroupSerializer.ToCanvasFrozenPathDto(p.Path))
+                    .ToList();
+            }
+
             designData.FormatVersion = CurrentFormatVersion;
             // GDS-imported components travel inside the .lun (issue #830) so the
             // design stays self-contained; null when the design imported nothing.
@@ -436,6 +492,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 .Concat(designData.Groups?.SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
                         ?? Enumerable.Empty<string?>());
             designData.ImportedGdsComponents = DesignScopedGdsComponents?.CaptureForSave(referencedPdkSources);
+            designData.LayerVisibility = LayerVisibility?.CaptureForSave();
             designData.Metadata = BuildMetadataForSave();
             if (StoredSMatrices.Count > 0)
             {
@@ -457,6 +514,11 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.AnalysisOutputCoupler = _canvas.AnalysisOutput.CouplerId is Guid outputId
                 ? componentsList.FirstOrDefault(c => c.Component.Id == outputId)?.Component.Identifier
                 : null;
+            // Coherent interference mode (#1333): only stored when on — off is the
+            // default, so old files without the field round-trip identically.
+            designData.CoherentPropagationPhase = _canvas.ConnectionManager.EnableCoherentPropagationPhase
+                ? true
+                : null;
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -467,7 +529,19 @@ public partial class FileOperationsViewModel : ObservableObject
             CurrentFilePath = filePath;
             HasUnsavedChanges = false;
             _recentProjects?.RecordProject(filePath);
-            UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
+            if (unresolvedConnectionPins.Count > 0)
+            {
+                // Never drop a wire silently: an endpoint that resolved to neither a
+                // canvas component nor any group member would vanish on reload.
+                var warning = $"{unresolvedConnectionPins.Count} connection endpoint(s) could not be resolved " +
+                              $"({string.Join(", ", unresolvedConnectionPins)}) and were not saved.";
+                _errorConsole?.LogWarning(warning);
+                UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)} — {warning}");
+            }
+            else
+            {
+                UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
+            }
         }
         catch (Exception ex)
         {
@@ -491,7 +565,9 @@ public partial class FileOperationsViewModel : ObservableObject
             Y = c.Y,
             Identifier = c.Component.Identifier,
             Rotation = (int)c.Component.Rotation90CounterClock,
-            RotationDegrees = c.Component.RotationDegrees,
+            RotationDegrees = ComponentPoseTransform.GetNonCardinalRotationDegrees(c.Component),
+            Mirrored = c.Component.IsMirroredHorizontally ? true : null,
+            IsBackground = c.Component.IsRoutingObstacle ? null : true,
             SliderValue = c.HasSliders ? c.SliderValue : null,
             SliderValues = SnapshotSliderValues(c.Component),
             LaserWavelengthNm = c.LaserConfig?.WavelengthNm,
@@ -641,8 +717,35 @@ public partial class FileOperationsViewModel : ObservableObject
             GroupDto = groupDto,
             ChildComponents = childDataList,
             CanvasX = groupVm.X,
-            CanvasY = groupVm.Y
+            CanvasY = groupVm.Y,
+            // Only top-level groups act as chiplets (issue #938); a nested group's
+            // process scope is its top-level parent's.
+            ProcessBinding = group.ParentGroup == null ? ResolveGroupBindingForSave(group) : null,
+            // Truth Table pin roles persist on every group: a gate nested inside a
+            // cell instance must keep its assignment or hierarchical designs lose
+            // their gates on save.
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         });
+    }
+
+    /// <summary>
+    /// Serialized form of a top-level group's chiplet process binding (issue #938): the
+    /// explicitly set binding, or — for groups built without one (e.g. in Playground) —
+    /// the binding derived from the children's PDK sources when they unanimously belong
+    /// to one catalog process. Null when the group has no process content, its children
+    /// span processes, or no catalog is available.
+    /// </summary>
+    private ActiveProcessData? ResolveGroupBindingForSave(ComponentGroup group)
+    {
+        var binding = group.ProcessBinding;
+        if (binding == null && ProcessCatalogProvider?.Invoke() is { Count: > 0 } catalog)
+        {
+            binding = GroupProcessPolicy.DeriveProcessBinding(
+                group.GetAllComponentsRecursive().Select(FindTemplatePdkSource),
+                catalog,
+                ProcessAgnosticPdkNamesProvider?.Invoke() ?? Array.Empty<string>());
+        }
+        return ActiveProcessResolver.ToData(binding);
     }
 
     /// <summary>
@@ -669,7 +772,9 @@ public partial class FileOperationsViewModel : ObservableObject
             GroupDto = groupDto,
             ChildComponents = childDataList,
             CanvasX = group.PhysicalX,
-            CanvasY = group.PhysicalY
+            CanvasY = group.PhysicalY,
+            // A nested gate keeps its Truth Table pin roles like a top-level one.
+            TruthTablePinAssignment = group.TruthTablePinAssignment
         });
     }
 
@@ -700,7 +805,9 @@ public partial class FileOperationsViewModel : ObservableObject
                 X = child.PhysicalX,
                 Y = child.PhysicalY,
                 Rotation = (int)child.Rotation90CounterClock,
-                RotationDegrees = child.RotationDegrees,
+                RotationDegrees = ComponentPoseTransform.GetNonCardinalRotationDegrees(child),
+                Mirrored = child.IsMirroredHorizontally ? true : null,
+                IsBackground = child.IsRoutingObstacle ? null : true,
                 SliderValue = child.GetAllSliders().Count > 0
                     ? child.GetSlider(0)?.Value : null,
                 SliderValues = SnapshotSliderValues(child),
@@ -746,6 +853,14 @@ public partial class FileOperationsViewModel : ObservableObject
         if (vm?.TemplateName != null)
             return vm.TemplateName;
 
+        // Grouped children have no canvas VM: trust the template stamp the instance
+        // was created/loaded with — NazcaFunctionName is not unique across a PDK
+        // (demo PDK grating and edge couplers both map to "demo.io"), so guessing
+        // by it silently re-parents the component onto the wrong template.
+        if (!string.IsNullOrEmpty(component.TemplateName)
+            && _componentLibrary.Any(t => t.Name == component.TemplateName))
+            return component.TemplateName;
+
         // Match by NazcaFunctionName against the component library
         var nazcaFunc = component.NazcaFunctionName;
         if (!string.IsNullOrEmpty(nazcaFunc))
@@ -789,10 +904,37 @@ public partial class FileOperationsViewModel : ObservableObject
     internal static (int index, string pinName) ResolveConnectionEndpoint(
         List<ComponentViewModel> components, PhysicalPin pin)
     {
+        var (index, pinName, _, _) = ResolveConnectionEndpointWithOwner(components, pin);
+        return (index, pinName);
+    }
+
+    /// <summary>
+    /// Resolves which canvas component, pin name and stable identifiers to use when
+    /// serializing a connection endpoint. Handles regular components (direct match),
+    /// group external pins (via InternalPin lookup) and — at any nesting depth — pins of
+    /// components inside a group that are not exposed as an external pin: those persist
+    /// the owning child's identifier together with the identifier of the top-level
+    /// ancestor group, so the load path can resolve the endpoint inside that reconstructed
+    /// group instead of silently dropping the wire. The ancestor id is required because
+    /// child identifiers are only unique within one group, not across groups (two
+    /// instances of the same gate template share child identifiers), and because the
+    /// component index is not stable across save/load when a design mixes standalone
+    /// components and groups. A null component identifier means the endpoint could not
+    /// be resolved at all.
+    /// </summary>
+    /// <param name="components">All top-level components on the canvas.</param>
+    /// <param name="pin">The physical pin on the connection endpoint.</param>
+    /// <returns>
+    /// The component index, pin name, owning component identifier and — only for nested
+    /// endpoints — the top-level ancestor group identifier to store in ConnectionData.
+    /// </returns>
+    internal static (int index, string pinName, string? componentId, string? ancestorGroupId)
+        ResolveConnectionEndpointWithOwner(List<ComponentViewModel> components, PhysicalPin pin)
+    {
         // Direct match: pin belongs to a top-level canvas component
         int directIndex = components.FindIndex(c => c.Component == pin.ParentComponent);
         if (directIndex >= 0)
-            return (directIndex, pin.Name);
+            return (directIndex, pin.Name, components[directIndex].Component.Identifier, null);
 
         // Group match: pin is the InternalPin of a group's external pin
         for (int i = 0; i < components.Count; i++)
@@ -801,11 +943,41 @@ public partial class FileOperationsViewModel : ObservableObject
             {
                 var match = group.ExternalPins.FirstOrDefault(ep => ep.InternalPin == pin);
                 if (match != null)
-                    return (i, match.Name);
+                    return (i, match.Name, group.Identifier, null);
             }
         }
 
-        return (-1, pin.Name);
+        // Nested match: pin sits on a non-exposed pin of a component inside a group
+        for (int i = 0; i < components.Count; i++)
+        {
+            if (components[i].Component is ComponentGroup group)
+            {
+                var owner = FindPinOwnerRecursive(group, pin);
+                if (owner != null)
+                    return (i, pin.Name, owner.Identifier, group.Identifier);
+            }
+        }
+
+        return (-1, pin.Name, null, null);
+    }
+
+    /// <summary>
+    /// Recursively finds the child component (at any nesting depth) that owns the given pin.
+    /// </summary>
+    private static Component? FindPinOwnerRecursive(ComponentGroup group, PhysicalPin pin)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child == pin.ParentComponent || child.PhysicalPins.Contains(pin))
+                return child;
+            if (child is ComponentGroup nested)
+            {
+                var found = FindPinOwnerRecursive(nested, pin);
+                if (found != null)
+                    return found;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -972,9 +1144,12 @@ public partial class FileOperationsViewModel : ObservableObject
                 _canvas.Components.Clear();
                 _canvas.Connections.Clear();
                 _canvas.AllPins.Clear();
+                _canvas.CanvasFrozenPaths.Clear();
                 _canvas.ConnectionManager.Clear();
                 _commandManager.ClearHistory();
                 _pinCalibrationMigratedComponents.Clear();
+                _displacedConnectionsDuringLoad.Clear();
+                _failedGroupsDuringLoad.Clear();
 
                 // Design-scoped imported components (#830): restore the sets embedded
                 // in this .lun (replacing the previous design's) and migrate any legacy
@@ -993,6 +1168,9 @@ public partial class FileOperationsViewModel : ObservableObject
                         referencedPdkSources, w => _errorConsole?.LogWarning(w));
                 }
 
+                // Per-layer visibility overrides for imported geometry (#858).
+                LayerVisibility?.Restore(designData.LayerVisibility);
+
                 // Load standalone components
                 foreach (var compData in designData.Components)
                 {
@@ -1006,14 +1184,62 @@ public partial class FileOperationsViewModel : ObservableObject
                     groupCount = LoadGroups(designData.Groups);
                 }
 
+                // Restore chip size BEFORE the connections: each restored blocked wire is
+                // classified against the pathfinding grid (the .lun format persists the
+                // blocked flag but not the reason), and the small startup grid would clamp
+                // out-of-range pins into its blocked border column and misreport ordinary
+                // contention as a footprint-sealed endpoint.
+                bool hasWidth = designData.ChipWidthMicrometers.HasValue;
+                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
+                if (hasWidth && hasHeight)
+                {
+                    if (ApplyChipSizeAfterLoad != null)
+                    {
+                        ApplyChipSizeAfterLoad.Invoke(
+                            designData.ChipWidthMicrometers!.Value,
+                            designData.ChipHeightMicrometers!.Value);
+                    }
+                    else
+                    {
+                        _canvas.InitializeAStarRouting(
+                            0, 0,
+                            designData.ChipWidthMicrometers!.Value,
+                            designData.ChipHeightMicrometers!.Value);
+                    }
+                }
+                else if (hasWidth || hasHeight)
+                {
+                    _errorConsole?.LogWarning(
+                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
+                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
+                }
+
                 // Load connections (index-based references to _canvas.Components)
                 foreach (var connData in designData.Connections)
                 {
                     LoadConnectionFromData(connData);
                 }
 
-                // Pin-calibration migration: report discarded stale routes and re-route them.
+                // Restore canvas-level pin-less frozen paths (issue #856); files
+                // saved before the field simply have none.
+                if (designData.CanvasFrozenPaths != null)
+                {
+                    foreach (var pathDto in designData.CanvasFrozenPaths)
+                    {
+                        var frozenPath = CAP_DataAccess.Persistence.ComponentGroupSerializer
+                            .FromCanvasFrozenPathDto(pathDto);
+                        _canvas.CanvasFrozenPaths.Add(new CanvasFrozenPathViewModel(frozenPath));
+                    }
+                }
+
+                // Restore the coherent interference mode (#1333) before post-load
+                // routing recalculates transmissions; missing field (old files) = off.
+                _canvas.ConnectionManager.EnableCoherentPropagationPhase =
+                    designData.CoherentPropagationPhase == true;
+                CoherentModeRestoredAfterLoad?.Invoke();
+
                 ReportPinCalibrationMigrations();
+                StartPostLoadRouting();
 
                 // Rebuild dissolution records for loaded auto-inserted crossings (#705)
                 // so they dissolve/re-evaluate exactly like ones inserted this session.
@@ -1023,24 +1249,6 @@ public partial class FileOperationsViewModel : ObservableObject
                 foreach (var conn in _canvas.Connections)
                 {
                     conn.NotifyPathChanged();
-                }
-
-                // Restore chip size if saved. The two fields are written together by Save(), so
-                // a half-present pair indicates a truncated/edited file — warn the user via the
-                // error console rather than silently applying half the chip size.
-                bool hasWidth  = designData.ChipWidthMicrometers.HasValue;
-                bool hasHeight = designData.ChipHeightMicrometers.HasValue;
-                if (hasWidth && hasHeight)
-                {
-                    ApplyChipSizeAfterLoad?.Invoke(
-                        designData.ChipWidthMicrometers!.Value,
-                        designData.ChipHeightMicrometers!.Value);
-                }
-                else if (hasWidth || hasHeight)
-                {
-                    _errorConsole?.LogWarning(
-                        $"File '{Path.GetFileName(filePath)}' has only one chip-size field set " +
-                        $"(width: {hasWidth}, height: {hasHeight}). Falling back to current canvas size.");
                 }
 
                 // Restore the designated analysis-output coupler (#754); files without
@@ -1067,12 +1275,25 @@ public partial class FileOperationsViewModel : ObservableObject
                 else
                 {
                     var catalog = ProcessCatalogProvider?.Invoke() ?? Array.Empty<ProcessGroup>();
+                    // Chiplets with a restored binding carry their own process (issue
+                    // #938): their children stay out of the design-level inference,
+                    // which is only the default for ungrouped and unbound content.
                     var pdkSources = designData.Components.Select(c => c.PdkSource)
-                        .Concat(designData.Groups?.SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
+                        .Concat(designData.Groups?
+                                .Where(g => g.ProcessBinding == null)
+                                .SelectMany(g => g.ChildComponents.Select(ch => ch.PdkSource))
                                 ?? Enumerable.Empty<string?>());
                     ActiveProcess = ActiveProcessResolver.Migrate(pdkSources, catalog, out var warning,
                         ProcessAgnosticPdkNamesProvider?.Invoke() ?? System.Array.Empty<string>());
                     if (warning != null) OnProcessMigrationWarning?.Invoke(warning);
+
+                    // No unbound process content: the design default follows the
+                    // chiplets themselves — one shared process, or Playground for a
+                    // genuine multi-process carrier (no migration, hence no warning).
+                    ActiveProcess ??= ActiveProcessResolver.FromChipletBindings(
+                        _canvas.Components.Select(vm => vm.Component)
+                            .OfType<ComponentGroup>()
+                            .Select(g => g.ProcessBinding));
                 }
 
                 // Restore imported S-matrices from PIR section
@@ -1146,6 +1367,8 @@ public partial class FileOperationsViewModel : ObservableObject
                     _recentProjects?.RecordProject(filePath);
                 }
                 UpdateStatus?.Invoke($"Loaded {Path.GetFileName(filePath)} ({_canvas.Components.Count} components, {_canvas.Connections.Count} connections, {groupCount} groups)");
+                ReportDisplacedConnections();
+                ReportFailedGroups();
                 _commandManager.NotifyStateChanged();
 
                 // Rebuild hierarchy tree after loading
@@ -1231,6 +1454,11 @@ public partial class FileOperationsViewModel : ObservableObject
         // Clear the canvas
         ClearCanvas();
 
+        // The coherent interference mode is per design: a fresh project must not
+        // inherit it from the previously loaded one (and later save it as its own).
+        _canvas.ConnectionManager.EnableCoherentPropagationPhase = false;
+        CoherentModeRestoredAfterLoad?.Invoke();
+
         CurrentFilePath = null;
         _loadedMetadata = null;
         HasUnsavedChanges = false;
@@ -1257,6 +1485,7 @@ public partial class FileOperationsViewModel : ObservableObject
         _canvas.Components.Clear();
         _canvas.Connections.Clear();
         _canvas.AllPins.Clear();
+        _canvas.CanvasFrozenPaths.Clear();
         _canvas.ConnectionManager.Clear();
         _canvas.AnalysisOutput.Clear();
         _commandManager.ClearHistory();
@@ -1264,6 +1493,8 @@ public partial class FileOperationsViewModel : ObservableObject
         // Imported GDS components are design-scoped (#830): a fresh project must
         // not inherit the previous design's imported library entries.
         DesignScopedGdsComponents?.ClearDesignScope();
+        // Layer-visibility overrides are per design (#858): reset to all-visible.
+        LayerVisibility?.ClearForNewDesign();
     }
 
     /// <summary>
@@ -1326,36 +1557,16 @@ public partial class FileOperationsViewModel : ObservableObject
 
         // Restore identifier to preserve references
         component.Identifier = compData.Identifier;
+        ComponentTemplates.ReserveIdentifier(compData.Identifier);
 
         // Restore HumanReadableName
         if (compData.HumanReadableName != null)
             component.HumanReadableName = compData.HumanReadableName;
 
-        // Apply rotation: exact continuous angle when the file carries one
-        // (GDS imports keep non-cardinal rotations); cardinal angles keep the
-        // legacy quarter-turn loop (discrete-rotation sync, numerically exact).
-        if (compData.RotationDegrees is double exactDegrees)
-        {
-            int quarterTurns = (int)Math.Round(exactDegrees / 90.0);
-            if (Math.Abs(exactDegrees - (quarterTurns * 90.0)) < 1e-6)
-            {
-                for (int i = 0; i < ((quarterTurns % 4) + 4) % 4; i++)
-                {
-                    ApplyRotationToComponent(component);
-                }
-            }
-            else
-            {
-                RotateComponentCommand.ApplyModelRotation(component, exactDegrees);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < compData.Rotation; i++)
-            {
-                ApplyRotationToComponent(component);
-            }
-        }
+        RestorePose(component, compData.Mirrored, compData.Rotation, compData.RotationDegrees);
+        // Before AddComponent: a background component must never register as an obstacle.
+        if (compData.IsBackground == true)
+            component.IsRoutingObstacle = false;
 
         var vm = _canvas.AddComponent(component, template.Name, template.PdkSource);
 
@@ -1429,39 +1640,16 @@ public partial class FileOperationsViewModel : ObservableObject
 
                 // Restore human-readable name
                 child.Identifier = childData.Identifier;
+                ComponentTemplates.ReserveIdentifier(childData.Identifier);
 
                 // Restore HumanReadableName
                 if (childData.HumanReadableName != null)
                     child.HumanReadableName = childData.HumanReadableName;
 
-                // Apply rotation: the exact continuous angle when the file
-                // carries one (GDS imports keep non-cardinal rotations; the
-                // exact path also records the unrotated dims for outline
-                // rendering). Cardinal angles keep the legacy quarter-turn
-                // loop — it keeps the discrete rotation enum in sync and is
-                // numerically exact (no trig noise).
-                if (childData.RotationDegrees is double exactDegrees)
-                {
-                    int quarterTurns = (int)Math.Round(exactDegrees / 90.0);
-                    if (Math.Abs(exactDegrees - (quarterTurns * 90.0)) < 1e-6)
-                    {
-                        for (int i = 0; i < ((quarterTurns % 4) + 4) % 4; i++)
-                        {
-                            ApplyRotationToComponent(child);
-                        }
-                    }
-                    else
-                    {
-                        RotateComponentCommand.ApplyModelRotation(child, exactDegrees);
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < childData.Rotation; i++)
-                    {
-                        ApplyRotationToComponent(child);
-                    }
-                }
+                RestorePose(child, childData.Mirrored, childData.Rotation, childData.RotationDegrees);
+                // Before the group registers its obstacles: background never blocks routing.
+                if (childData.IsBackground == true)
+                    child.IsRoutingObstacle = false;
 
                 // Restore slider values (all sliders; legacy single value as fallback)
                 RestoreSliderValues(child, childData.SliderValues, childData.SliderValue);
@@ -1481,9 +1669,20 @@ public partial class FileOperationsViewModel : ObservableObject
 
         foreach (var groupData in orderedGroups)
         {
-            // Reconstruct the group using Guid-based lookup with name fallback
-            var group = ComponentGroupSerializer.FromDto(
-                groupData.GroupDto, guidLookup, nameFallback);
+            // Reconstruct the group using Guid-based lookup with name fallback.
+            // A corrupted group (dangling pin/component references) must not abort
+            // the load into an empty canvas — skip it, keep loading, report afterwards.
+            ComponentGroup group;
+            try
+            {
+                group = ComponentGroupSerializer.FromDto(
+                    groupData.GroupDto, guidLookup, nameFallback);
+            }
+            catch (Exception ex)
+            {
+                _failedGroupsDuringLoad.Add($"'{groupData.GroupDto.GroupName}': {ex.Message}");
+                continue;
+            }
 
             // Index the group itself so nested parents can find it
             if (groupData.GroupDto.IdGuid != null
@@ -1493,9 +1692,15 @@ public partial class FileOperationsViewModel : ObservableObject
             }
             nameFallback[group.Identifier] = group;
 
+            // Truth Table pin roles: restore as persisted on every group — a gate
+            // nested inside a cell instance keeps its roles; the panel silently
+            // skips pin names that no longer match a real external pin.
+            group.TruthTablePinAssignment = groupData.TruthTablePinAssignment;
+
             // Only add top-level groups (groups without a parent) to the canvas
             if (groupData.GroupDto.ParentGroupId == null)
             {
+                group.ProcessBinding = RestoreGroupBinding(groupData);
                 var groupVm = _canvas.AddComponent(group);
                 groupVm.X = groupData.CanvasX;
                 groupVm.Y = groupData.CanvasY;
@@ -1504,7 +1709,30 @@ public partial class FileOperationsViewModel : ObservableObject
             }
         }
 
-        return orderedGroups.Count;
+        return orderedGroups.Count - _failedGroupsDuringLoad.Count;
+    }
+
+    /// <summary>
+    /// Restores a top-level group's persisted chiplet process binding (issue #938),
+    /// re-anchored to the installed process catalog exactly like the design-level
+    /// record: newly installed compatible PDKs join the binding, and a chiplet whose
+    /// PDKs are all missing warns instead of silently pinning a nonexistent process.
+    /// Null for unbound groups and legacy files.
+    /// </summary>
+    private ActiveProcessSelection? RestoreGroupBinding(DesignGroupData groupData)
+    {
+        var binding = ActiveProcessResolver.FromData(groupData.ProcessBinding);
+        if (binding is not { IsPlayground: false })
+            return binding;
+
+        var catalog = ProcessCatalogProvider?.Invoke() ?? Array.Empty<ProcessGroup>();
+        var revalidated = ActiveProcessResolver.Revalidate(binding, catalog, out var warning);
+        if (warning != null)
+        {
+            OnProcessMigrationWarning?.Invoke(
+                $"Chiplet '{groupData.GroupDto.GroupName}': {warning}");
+        }
+        return revalidated;
     }
 
     /// <summary>
@@ -1513,54 +1741,70 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     private List<DesignGroupData> TopologicalSortGroups(List<DesignGroupData> groupDataList)
     {
-        // Build dependency map: group ID -> list of group IDs that depend on it (parents)
-        var dependents = new Dictionary<string, List<string>>();
-        var inDegree = new Dictionary<string, int>();
+        // Dependency bookkeeping keys are the data objects themselves, not the group
+        // identifier: identifiers are not unique — two groups sharing one must never
+        // merge into two copies of the first on load.
+        var dependents = new Dictionary<DesignGroupData, List<DesignGroupData>>();
+        var inDegree = new Dictionary<DesignGroupData, int>();
 
         foreach (var groupData in groupDataList)
         {
-            var groupId = groupData.GroupDto.Identifier;
-            if (!inDegree.ContainsKey(groupId))
-                inDegree[groupId] = 0;
+            if (!inDegree.ContainsKey(groupData))
+                inDegree[groupData] = 0;
 
             // Count how many child groups this group has (determines loading order)
-            foreach (var childId in groupData.GroupDto.ChildComponentIds)
+            var childIds = groupData.GroupDto.ChildComponentIds;
+            var childGuids = groupData.GroupDto.ChildComponentGuids;
+            for (var i = 0; i < childIds.Count; i++)
             {
-                // Check if this child is a group (appears as a group in the list)
-                var childGroup = groupDataList.FirstOrDefault(g => g.GroupDto.Identifier == childId);
-                if (childGroup != null)
+                // Check if this child is a group (appears as a group in the list).
+                // Match by saved Guid: identifiers are not unique, so a string match
+                // can pick a same-named group that merely appears earlier in the file
+                // and misorder the reconstruction (the parent then binds the wrong
+                // child through the name fallback). The identifier match remains as
+                // the fallback for files that predate the Guid fields.
+                DesignGroupData? childGroup = null;
+                if (i < childGuids.Count && Guid.TryParse(childGuids[i], out var childGuid))
+                {
+                    childGroup = groupDataList.FirstOrDefault(g =>
+                        g.GroupDto.IdGuid != null
+                        && Guid.TryParse(g.GroupDto.IdGuid, out var groupGuid)
+                        && groupGuid == childGuid);
+                }
+
+                childGroup ??= groupDataList.FirstOrDefault(g => g.GroupDto.Identifier == childIds[i]);
+                if (childGroup != null && childGroup != groupData)
                 {
                     // This group depends on its child group being loaded first
-                    if (!dependents.ContainsKey(childId))
-                        dependents[childId] = new List<string>();
-                    dependents[childId].Add(groupId);
-                    inDegree[groupId]++;
+                    if (!dependents.ContainsKey(childGroup))
+                        dependents[childGroup] = new List<DesignGroupData>();
+                    dependents[childGroup].Add(groupData);
+                    inDegree[groupData]++;
                 }
             }
         }
 
         // Kahn's algorithm for topological sort
-        var queue = new Queue<string>();
+        var queue = new Queue<DesignGroupData>();
         foreach (var groupData in groupDataList)
         {
-            if (inDegree[groupData.GroupDto.Identifier] == 0)
-                queue.Enqueue(groupData.GroupDto.Identifier);
+            if (inDegree[groupData] == 0)
+                queue.Enqueue(groupData);
         }
 
         var sorted = new List<DesignGroupData>();
         while (queue.Count > 0)
         {
-            var currentId = queue.Dequeue();
-            var groupData = groupDataList.First(g => g.GroupDto.Identifier == currentId);
-            sorted.Add(groupData);
+            var current = queue.Dequeue();
+            sorted.Add(current);
 
-            if (dependents.ContainsKey(currentId))
+            if (dependents.TryGetValue(current, out var dependentList))
             {
-                foreach (var dependentId in dependents[currentId])
+                foreach (var dependent in dependentList)
                 {
-                    inDegree[dependentId]--;
-                    if (inDegree[dependentId] == 0)
-                        queue.Enqueue(dependentId);
+                    inDegree[dependent]--;
+                    if (inDegree[dependent] == 0)
+                        queue.Enqueue(dependent);
                 }
             }
         }
@@ -1572,16 +1816,66 @@ public partial class FileOperationsViewModel : ObservableObject
 
     /// <summary>
     /// Finds a canvas component by identifier string (preferred) or by index (fallback for old files).
+    /// The identifier lookup also searches group children at any nesting depth, because a saved
+    /// connection endpoint can reference a non-exposed pin of a component inside a group. For such
+    /// nested endpoints <paramref name="ancestorGroupId"/> names the top-level ancestor group and
+    /// scopes the search — child identifiers are only unique within one group, not across groups,
+    /// and the saved component index is not stable across save/load for mixed designs.
     /// Returns null if the component cannot be found.
     /// </summary>
-    private ComponentViewModel? ResolveComponentForLoad(string? componentId, int fallbackIndex)
+    private Component? ResolveComponentForLoad(string? componentId, int fallbackIndex, string? ancestorGroupId)
     {
         if (!string.IsNullOrEmpty(componentId))
-            return _canvas.Components.FirstOrDefault(c => c.Component.Identifier == componentId);
+        {
+            var topLevel = _canvas.Components.FirstOrDefault(c => c.Component.Identifier == componentId);
+            if (topLevel != null)
+                return topLevel.Component;
+
+            // Nested endpoint: search inside the persisted top-level ancestor group first.
+            if (!string.IsNullOrEmpty(ancestorGroupId)
+                && _canvas.Components.FirstOrDefault(c => c.Component.Identifier == ancestorGroupId)
+                        ?.Component is ComponentGroup ancestor)
+            {
+                var scoped = FindComponentByIdentifierRecursive(ancestor, componentId);
+                if (scoped != null)
+                    return scoped;
+            }
+
+            // Unscoped fallback (ancestor missing or saved by an older format).
+            foreach (var vm in _canvas.Components)
+            {
+                if (vm.Component is ComponentGroup group)
+                {
+                    var nested = FindComponentByIdentifierRecursive(group, componentId);
+                    if (nested != null)
+                        return nested;
+                }
+            }
+            return null;
+        }
 
         if (fallbackIndex >= 0 && fallbackIndex < _canvas.Components.Count)
-            return _canvas.Components[fallbackIndex];
+            return _canvas.Components[fallbackIndex].Component;
 
+        return null;
+    }
+
+    /// <summary>
+    /// Recursively finds the child component with the given identifier inside a group.
+    /// </summary>
+    internal static Component? FindComponentByIdentifierRecursive(ComponentGroup group, string identifier)
+    {
+        foreach (var child in group.ChildComponents)
+        {
+            if (child.Identifier == identifier)
+                return child;
+            if (child is ComponentGroup nested)
+            {
+                var found = FindComponentByIdentifierRecursive(nested, identifier);
+                if (found != null)
+                    return found;
+            }
+        }
         return null;
     }
 
@@ -1610,14 +1904,16 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     private void LoadConnectionFromData(ConnectionData connData)
     {
-        var startComp = ResolveComponentForLoad(connData.StartComponentId, connData.StartComponentIndex);
-        var endComp = ResolveComponentForLoad(connData.EndComponentId, connData.EndComponentIndex);
+        var startComp = ResolveComponentForLoad(
+            connData.StartComponentId, connData.StartComponentIndex, connData.StartAncestorGroupId);
+        var endComp = ResolveComponentForLoad(
+            connData.EndComponentId, connData.EndComponentIndex, connData.EndAncestorGroupId);
 
         if (startComp == null || endComp == null)
             return;
 
-        var startPin = ResolvePin(startComp.Component, connData.StartPinName);
-        var endPin = ResolvePin(endComp.Component, connData.EndPinName);
+        var startPin = ResolvePin(startComp, connData.StartPinName);
+        var endPin = ResolvePin(endComp, connData.EndPinName);
 
         if (startPin == null || endPin == null)
             return;
@@ -1635,13 +1931,27 @@ public partial class FileOperationsViewModel : ObservableObject
         if (cachedPath != null && cachedPath.IsValid)
         {
             var (startOk, endOk) = CachedRouteValidator.CheckPinDirections(startPin, endPin, cachedPath);
-            if (!startOk) _pinCalibrationMigratedComponents.Add(startComp.Component.Name);
-            if (!endOk) _pinCalibrationMigratedComponents.Add(endComp.Component.Name);
+            if (!startOk) _pinCalibrationMigratedComponents.Add(startComp.Name);
+            if (!endOk) _pinCalibrationMigratedComponents.Add(endComp.Name);
             pinCalibrationChanged = !startOk || !endOk;
             if (pinCalibrationChanged) cachedPath = null;
         }
 
         WaveguideConnectionViewModel? connVm;
+
+        // Replacement-on-connect (both endpoints drop their existing wire) is intended
+        // UX interactively, but during load it quietly discards earlier wires from the
+        // file's netlist whenever a pin is wired more than once. Collect what is about
+        // to be displaced so the load report can name it — the wires stay dropped.
+        foreach (var existing in _canvas.Connections
+                     .Where(c => c.Connection.StartPin == startPin || c.Connection.EndPin == startPin
+                                 || c.Connection.StartPin == endPin || c.Connection.EndPin == endPin)
+                     .ToList())
+        {
+            var description = DescribeConnectionForLoadReport(existing.Connection);
+            if (!_displacedConnectionsDuringLoad.Contains(description))
+                _displacedConnectionsDuringLoad.Add(description);
+        }
 
         if (cachedPath != null && cachedPath.IsValid)
         {
@@ -1664,16 +1974,63 @@ public partial class FileOperationsViewModel : ObservableObject
         {
             connVm.Connection.SourceGdsLayer = connData.SourceGdsLayer;
             connVm.Connection.SourceGdsDataType = connData.SourceGdsDataType;
+            // Meander length intent (issue #1008); null in files that predate the field.
+            connVm.Connection.TargetLengthMicrometers = connData.TargetLengthMicrometers;
+            connVm.Connection.LengthToleranceMicrometers = connData.LengthToleranceMicrometers;
         }
 
         // Restore routing style / interconnect settings / freeze state (issue #574)
         if (connVm != null)
+        {
             RestoreRoutingSettings(connVm.Connection, connData, keepFrozenGeometry: !pinCalibrationChanged);
+            // Bound to the restored route: only a still-frozen, unedited route shows them.
+            var asDrawn = CAP_DataAccess.Persistence.DTOs.AsDrawnPolygonDto.ToGeometry(connData.AsDrawnPolygons, out int corrupt);
+            // A partial skin would silently miss pieces; the fitted centerline is the honest fallback.
+            if (asDrawn is not null && corrupt == 0)
+                connVm.Connection.AttachAsDrawnGeometry(asDrawn);
+            if (corrupt > 0)
+                _errorConsole?.LogWarning($"Connection {connVm.Connection.StartPin.ParentComponent.Identifier}.{connVm.Connection.StartPin.Name}: " +
+                    $"{corrupt} drawn polygon(s) in the file are damaged and were skipped — the route is drawn from its centerline instead.");
+        }
+    }
+
+    /// <summary>
+    /// Upper bound of path-less connections the loader routes on its own. Larger designs keep
+    /// their fallback lines and get a console hint instead, like the GDS import's guard for
+    /// very large re-routes: one unroutable wire makes a routing pass retry every ordering
+    /// and run for minutes, which must not happen silently on open.
+    /// </summary>
+    internal const int MaxConnectionsRoutedOnLoad = 300;
+
+    /// <summary>
+    /// Routes every connection the file carried without geometry: hand-written or generated
+    /// designs, and routes the pin-calibration migration discarded. The pass runs in the
+    /// background like every routing pass, so the design shows at once and the routes fill
+    /// in; the incremental router leaves cached routes untouched.
+    /// </summary>
+    private void StartPostLoadRouting()
+    {
+        int unrouted = _canvas.Connections.Count(c => c.Connection.RoutedPath == null);
+        if (unrouted == 0)
+        {
+            PostLoadRouting = Task.CompletedTask;
+            return;
+        }
+        if (unrouted > MaxConnectionsRoutedOnLoad)
+        {
+            _errorConsole?.LogInfo(string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                Services.Localization.LocalizationService.Instance.Translate("Load.RoutingSkippedLargeDesign"),
+                unrouted));
+            PostLoadRouting = Task.CompletedTask;
+            return;
+        }
+        PostLoadRouting = _canvas.RecalculateRoutesAsync();
     }
 
     /// <summary>
     /// Logs one localized hint per component whose pin calibration changed since the
-    /// design was saved and re-routes the affected — now path-less — connections.
+    /// design was saved; the post-load routing pass re-routes the now path-less connections.
     /// </summary>
     private void ReportPinCalibrationMigrations()
     {
@@ -1688,7 +2045,61 @@ public partial class FileOperationsViewModel : ObservableObject
                 name));
         }
         _pinCalibrationMigratedComponents.Clear();
-        _ = _canvas.RecalculateRoutesAsync();
+    }
+
+    /// <summary>
+    /// One-line description of a connection for the load report, identifying both
+    /// endpoint pins by component identifier and pin name.
+    /// </summary>
+    private static string DescribeConnectionForLoadReport(WaveguideConnection connection) =>
+        $"{connection.StartPin.ParentComponent?.Identifier}.{connection.StartPin.Name} ↔ "
+        + $"{connection.EndPin.ParentComponent?.Identifier}.{connection.EndPin.Name}";
+
+    /// <summary>
+    /// Surfaces connections that were displaced during the load: a .lun whose netlist
+    /// wires one pin more than once loads only the last wire, simulating a different
+    /// circuit than the file describes. The status bar carries the localized count and
+    /// the error console lists the dropped pin pairs. No dialog, no behavior change —
+    /// clean files report nothing.
+    /// </summary>
+    private void ReportDisplacedConnections()
+    {
+        if (_displacedConnectionsDuringLoad.Count == 0)
+            return;
+
+        var count = _displacedConnectionsDuringLoad.Count;
+        UpdateStatus?.Invoke(string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            Services.Localization.LocalizationService.Instance.Translate("Load.DuplicatePinConnectionsDropped"),
+            count));
+        _errorConsole?.LogWarning(
+            $"{count} connection(s) were dropped while loading because a pin already had a wire "
+            + "(the file may have been produced by a newer version or edited externally): "
+            + string.Join("; ", _displacedConnectionsDuringLoad));
+        _displacedConnectionsDuringLoad.Clear();
+    }
+
+    /// <summary>
+    /// Surfaces groups that failed to reconstruct during the load (corrupted or
+    /// externally edited references): the status bar carries the localized count and
+    /// the error console names each group with the failure reason. Clean files
+    /// report nothing.
+    /// </summary>
+    private void ReportFailedGroups()
+    {
+        if (_failedGroupsDuringLoad.Count == 0)
+            return;
+
+        var count = _failedGroupsDuringLoad.Count;
+        UpdateStatus?.Invoke(string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            Services.Localization.LocalizationService.Instance.Translate("Load.GroupsFailedToRestore"),
+            count));
+        _errorConsole?.LogWarning(
+            $"{count} group(s) could not be restored while loading "
+            + "(the file may be corrupted or was edited externally): "
+            + string.Join("; ", _failedGroupsDuringLoad));
+        _failedGroupsDuringLoad.Clear();
     }
 
     /// <summary>
@@ -1820,7 +2231,8 @@ public partial class FileOperationsViewModel : ObservableObject
                 var nazcaCode = _nazcaExporter.Export(
                     _canvas, metalSpec: MetalRoutingSpecProvider?.Invoke(),
                     skippedConnections: skippedConnectionsList, unresolvedCrossings: unresolvedCrossingsList,
-                    library: _componentLibrary, exportWarnings: exportWarningsList);
+                    library: _componentLibrary, exportWarnings: exportWarningsList,
+                    designName: CurrentFilePath != null ? Path.GetFileNameWithoutExtension(CurrentFilePath) : null);
                 await File.WriteAllTextAsync(filePath, nazcaCode);
 
                 // Raw-code components whose geometry source vanished (a deleted .gds) exported
@@ -1974,28 +2386,24 @@ public partial class FileOperationsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Applies a 90° counter-clockwise rotation to a component.
+    /// Restores a freshly template-created component's saved pose in placement
+    /// order: mirror first (local, unrotated frame — matching
+    /// <see cref="Commands.PlaceComponentCommand.CreateExact"/>), then the
+    /// discrete quarter turns, then the exact continuous angle when the file
+    /// carries one (GDS-imported non-cardinal instance; null in older files
+    /// and for cardinal rotations).
     /// </summary>
-    private static void ApplyRotationToComponent(Component comp)
+    private static void RestorePose(
+        Component component, bool? mirrored, int quarterTurns, double? exactRotationDegrees)
     {
-        var width = comp.WidthMicrometers;
-        var height = comp.HeightMicrometers;
+        if (mirrored == true)
+            ComponentPoseTransform.MirrorPinsHorizontally(component);
 
-        foreach (var pin in comp.PhysicalPins)
-        {
-            var cx = width / 2;
-            var cy = height / 2;
-            var x = pin.OffsetXMicrometers - cx;
-            var y = pin.OffsetYMicrometers - cy;
-            var newX = -y;
-            var newY = x;
-            pin.OffsetXMicrometers = newX + cy;
-            pin.OffsetYMicrometers = newY + cx;
-        }
+        for (int i = 0; i < quarterTurns; i++)
+            ComponentPoseTransform.Rotate90CounterClockwise(component);
 
-        comp.WidthMicrometers = height;
-        comp.HeightMicrometers = width;
-        comp.RotateBy90CounterClockwise();
+        if (exactRotationDegrees is double exact)
+            ComponentPoseTransform.ApplyExactRotation(component, exact);
     }
 
     /// <summary>

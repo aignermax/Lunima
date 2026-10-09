@@ -37,13 +37,17 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance
 
         /// <inheritdoc />
         public SMatrix GetSystemSMatrix(int LaserWaveLengthInNm)
+            => GetSystemSMatrix((double)LaserWaveLengthInNm);
+
+        /// <inheritdoc />
+        public SMatrix GetSystemSMatrix(double wavelengthNm)
         {
-            var matrix = _inner.GetSystemSMatrix(LaserWaveLengthInNm);
+            var matrix = _inner.GetSystemSMatrix(wavelengthNm);
             var deviations = _source.CurrentDeviations;
             if (deviations == null) return matrix;
 
-            var perturbations = ComputePerturbations(deviations, LaserWaveLengthInNm);
-            PerturbLinearEntries(matrix, perturbations, LaserWaveLengthInNm);
+            var perturbations = ComputePerturbations(deviations, wavelengthNm);
+            PerturbLinearEntries(matrix, perturbations, wavelengthNm);
             PerturbNonLinearEntries(matrix, perturbations);
             return matrix;
         }
@@ -64,7 +68,7 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance
         }
 
         private static Dictionary<Component, SMatrixPerturbation> ComputePerturbations(
-            IReadOnlyDictionary<Component, ComponentDeviation> deviations, int wavelengthNm)
+            IReadOnlyDictionary<Component, ComponentDeviation> deviations, double wavelengthNm)
         {
             var perturbations = new Dictionary<Component, SMatrixPerturbation>();
             foreach (var (component, deviation) in deviations)
@@ -85,7 +89,7 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance
         private void PerturbLinearEntries(
             SMatrix matrix,
             Dictionary<Component, SMatrixPerturbation> perturbations,
-            int wavelengthNm)
+            double wavelengthNm)
         {
             var updates = new Dictionary<(Guid, Guid), Complex>();
             var shiftedBases = new Dictionary<Component, Dictionary<(Guid, Guid), Complex>>();
@@ -111,7 +115,7 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance
             Component component,
             SMatrixPerturbation perturbation,
             KeyValuePair<(Guid PinIdStart, Guid PinIdEnd), Complex> entry,
-            int wavelengthNm,
+            double wavelengthNm,
             Dictionary<Component, Dictionary<(Guid, Guid), Complex>> shiftedBases)
         {
             if (perturbation.WavelengthShiftNm == 0 || component.WaveLengthToSMatrixMap.Count < 2)
@@ -119,7 +123,7 @@ namespace CAP_Core.Analysis.MonteCarloAnalysis.FabricationVariance
 
             if (!shiftedBases.TryGetValue(component, out var shifted))
             {
-                int shiftedTargetNm = wavelengthNm - (int)Math.Round(perturbation.WavelengthShiftNm);
+                double shiftedTargetNm = wavelengthNm - Math.Round(perturbation.WavelengthShiftNm);
                 shifted = WavelengthInterpolator
                     .GetMatrix(component.WaveLengthToSMatrixMap, shiftedTargetNm, out _)
                     .GetNonNullValues();

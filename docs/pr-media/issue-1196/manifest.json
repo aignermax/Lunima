@@ -1,0 +1,14 @@
+[
+  {
+    "file": "logichelp-1-first.png",
+    "caption": "Logic tab help: a strong pulse lifts the gate output over the threshold (0 \u2192 1); a weak one stays below. (first frame)"
+  },
+  {
+    "file": "logichelp-2-mid.png",
+    "caption": "Logic tab help: a strong pulse lifts the gate output over the threshold (0 \u2192 1); a weak one stays below. (mid loop \u2014 above threshold, badge 1)"
+  },
+  {
+    "file": "logichelp-3-last.png",
+    "caption": "Logic tab help: a strong pulse lifts the gate output over the threshold (0 \u2192 1); a weak one stays below. (last frame \u2014 weak pulse stays below the threshold)"
+  }
+]

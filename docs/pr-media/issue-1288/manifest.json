@@ -1,0 +1,30 @@
+[
+  {
+    "file": "home-tour-entry.png",
+    "caption": "The Home card\u0027s guided-tour buttons: the new \u0027Connect two chiplets\u0027 tour sits below the three existing tours \u2014 the multi-chiplet story (rung 6) gets its guided entry point. Placement: own row under the tours, because all guided tours must be reachable from one glance at the Home card."
+  },
+  {
+    "file": "step1-two-chiplets.png",
+    "caption": "Tour step 1/6: the shipped Two-Chiplets example on the canvas \u2014 two dies joined by an edge-coupler link. The card anchors to the canvas. Placement: beside the design, because both dies and the link between them must stay visible."
+  },
+  {
+    "file": "step2-run-simulation.png",
+    "caption": "Tour step 2/6: the toolbar\u0027s Run-simulation button is spotlighted. Placement: below the toolbar, so the card never covers the chiplets the user is about to simulate."
+  },
+  {
+    "file": "step3-move-die.png",
+    "caption": "Tour step 3/6: the move step on the canvas, with the \u0027Move it for me\u0027 helper button that shifts the receiver die 5 \u00B5m through an undoable group move. Placement: beside the design, keeping both dies in view while the user drags."
+  },
+  {
+    "file": "step4-design-checks.png",
+    "caption": "Tour step 4/6: the receiver die sits 5 \u00B5m off its facet and the tour has opened the analysis dock on the Design Checks tab \u2014 the card points at Run checks. Placement: above the dock, so the tab and the canvas stay readable."
+  },
+  {
+    "file": "step5-align-chiplet.png",
+    "caption": "Tour step 5/6: the checker flags the facet gap and the card points at the \u0027Align chiplet\u0027 one-click fix next to Prev/Next. Placement: above the dock, keeping the finding row and the fix button uncovered."
+  },
+  {
+    "file": "step6-closing.png",
+    "caption": "Tour step 6/6: aligned again, checks clean \u2014 the closing card floats bottom-centre with the facet-gap takeaway and the pointer to the Gaussian-beam animation in the Design Checks help."
+  }
+]

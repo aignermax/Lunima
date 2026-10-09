@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using CAP.Avalonia.Services.Localization;
 using CAP_Core.Components;
 using CAP_Core.Components.Connections;
+using CAP_Core.Components.Core;
 using CAP_Core.Routing;
 
 namespace CAP.Avalonia.ViewModels.Canvas.Services;
@@ -17,6 +19,11 @@ public class RoutingOrchestrator
 
     private CancellationTokenSource? _routingCts;
     private readonly SemaphoreSlim _routingSemaphore = new(1, 1);
+
+    private int _routedCount;
+    private int _totalCount;
+    private int _passId;
+    private DateTime _passStartUtc;
 
     /// <summary>
     /// Default canvas bounds for A* pathfinding grid (in micrometers).
@@ -42,6 +49,17 @@ public class RoutingOrchestrator
     public string RoutingStatusText { get; private set; } = "";
 
     /// <summary>
+    /// Connections routed so far in the current (or last) pass. Updated on the routing
+    /// thread as each connection finishes; the throttled status text reads it.
+    /// </summary>
+    public int RoutedConnectionCount => _routedCount;
+
+    /// <summary>
+    /// Total number of connections in the current (or last) pass.
+    /// </summary>
+    public int TotalConnectionCount => _totalCount;
+
+    /// <summary>
     /// Callback invoked when the canvas needs to be repainted during progressive updates.
     /// </summary>
     public Action? RepaintRequested { get; set; }
@@ -54,6 +72,26 @@ public class RoutingOrchestrator
     /// switch takes effect on the next reroute. When unwired, the router floor stays unchanged.
     /// </summary>
     public Func<double>? GetProcessMinBendRadiusMicrometers { get; set; }
+
+    /// <summary>
+    /// Callback returning the active process' metal routing spec (wired by <c>MainViewModel</c>
+    /// to <c>MetalRoutingSpecFactory</c>, the same provider the exporters use). Consulted at the
+    /// start of every routing pass: its bend radius becomes the router's metal floor and its
+    /// trace width the obstacle padding for electrical connections (issue #854). When unwired,
+    /// the metal defaults stay unchanged.
+    /// </summary>
+    public Func<CAP_Core.Routing.MetalRouting.MetalRoutingSpec>? GetMetalRoutingSpec { get; set; }
+
+    /// <summary>
+    /// Factory building the per-connection process bend-floor provider for one routing pass
+    /// (wired by <c>MainViewModel</c>, issue #937). Invoked on the UI thread at pass start —
+    /// together with the canvas-wide floor refresh — so the returned provider closes over
+    /// pass-start snapshots of the component library and PDK drafts and the routing thread
+    /// never enumerates live ViewModel collections. A null factory (or a null provider)
+    /// clears <see cref="WaveguideRouter.ConnectionProcessFloorProvider"/> and the
+    /// canvas-wide floor governs every connection.
+    /// </summary>
+    public Func<Func<PhysicalPin, PhysicalPin, double?>?>? BuildConnectionProcessFloorProvider { get; set; }
 
     /// <summary>
     /// Raised when IsRouting or RoutingStatusText changes.
@@ -106,6 +144,12 @@ public class RoutingOrchestrator
     }
 
     /// <summary>
+    /// Cancels the currently running routing pass (status-bar Stop button). Already-routed
+    /// connections keep their new routes; the pass reports how far it got.
+    /// </summary>
+    public void CancelRouting() => _routingCts?.Cancel();
+
+    /// <summary>
     /// Asynchronously recalculates all waveguide routes on a background thread.
     /// Cancels any previous in-progress routing. Provides progressive updates throttled to 10 Hz.
     /// </summary>
@@ -115,6 +159,16 @@ public class RoutingOrchestrator
         // UI thread — the provider reads ViewModel state).
         if (GetProcessMinBendRadiusMicrometers != null)
             _router.ProcessMinBendRadiusMicrometers = GetProcessMinBendRadiusMicrometers();
+        if (GetMetalRoutingSpec != null)
+        {
+            var metalSpec = GetMetalRoutingSpec();
+            _router.MetalProcessMinBendRadiusMicrometers = metalSpec.MinBendRadiusMicrometers;
+            _connectionManager.MetalTraceWidthMicrometers = metalSpec.TraceWidthMicrometers;
+        }
+        // Per-connection floor (issue #937): the factory runs here on the UI thread, so the
+        // provider it builds can close over pass-start snapshots; the router then consults
+        // it per connection on the routing thread.
+        _router.ConnectionProcessFloorProvider = BuildConnectionProcessFloorProvider?.Invoke();
 
         _routingCts?.Cancel();
         _routingCts?.Dispose();
@@ -134,8 +188,13 @@ public class RoutingOrchestrator
         {
             if (token.IsCancellationRequested) return;
 
+            var passId = ++_passId;
+            _totalCount = _connectionManager.Connections.Count;
+            _routedCount = 0;
+            _passStartUtc = DateTime.UtcNow;
+
             IsRouting = true;
-            RoutingStatusText = $"Routing {_connectionManager.Connections.Count} connections...";
+            RoutingStatusText = BuildProgressText();
             StateChanged?.Invoke();
 
             // Wire Phase 2 callback: update status text when a complex route is being computed.
@@ -144,9 +203,9 @@ public class RoutingOrchestrator
             {
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    if (!token.IsCancellationRequested)
+                    if (passId == _passId && !token.IsCancellationRequested)
                     {
-                        RoutingStatusText = "Computing complex path...";
+                        RoutingStatusText = LocalizationService.Instance.Translate("Routing.Status.ComplexPath");
                         StateChanged?.Invoke();
                     }
                 }, global::Avalonia.Threading.DispatcherPriority.Normal);
@@ -158,22 +217,28 @@ public class RoutingOrchestrator
 
             Action progressCallback = () =>
             {
+                var routed = Interlocked.Increment(ref _routedCount);
                 lock (updateLock)
                 {
                     var now = DateTime.UtcNow;
-                    if ((now - lastUpdateTime).TotalMilliseconds >= 100)
+                    // The last connection always forces an update so the counter visibly
+                    // reaches total/total; intermediate updates stay throttled to 10 Hz.
+                    var isFinal = routed >= _totalCount;
+                    if (!isFinal && (now - lastUpdateTime).TotalMilliseconds < 100)
+                        return;
+
+                    lastUpdateTime = now;
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                     {
-                        lastUpdateTime = now;
-                        global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                        {
-                            if (!token.IsCancellationRequested)
-                            {
-                                foreach (var conn in _connections)
-                                    conn.NotifyPathChanged();
-                                RepaintRequested?.Invoke();
-                            }
-                        }, global::Avalonia.Threading.DispatcherPriority.Normal);
-                    }
+                        if (passId != _passId || token.IsCancellationRequested || !IsRouting)
+                            return;
+
+                        RoutingStatusText = BuildProgressText();
+                        StateChanged?.Invoke();
+                        foreach (var conn in _connections)
+                            conn.NotifyPathChanged();
+                        RepaintRequested?.Invoke();
+                    }, global::Avalonia.Threading.DispatcherPriority.Normal);
                 }
             };
 
@@ -193,6 +258,16 @@ public class RoutingOrchestrator
                 RoutingStatusText = "";
                 StateChanged?.Invoke();
             }
+            else
+            {
+                // Stopped (Stop button, or superseded by a newer pass which immediately
+                // overwrites this): already-routed wires keep their routes, the rest stay
+                // as they were — report how far the pass got.
+                RoutingStatusText = string.Format(
+                    LocalizationService.Instance.Translate("Routing.Status.Stopped"),
+                    Math.Min(_routedCount, _totalCount), _totalCount);
+                StateChanged?.Invoke();
+            }
         }
         finally
         {
@@ -201,5 +276,18 @@ public class RoutingOrchestrator
             IsRouting = false;
             StateChanged?.Invoke();
         }
+    }
+
+    /// <summary>
+    /// Localized "Routing n/m connections · t s" status for the current pass. Retried
+    /// ordering attempts can route a connection twice, so the displayed count is clamped
+    /// to the connection total.
+    /// </summary>
+    private string BuildProgressText()
+    {
+        var elapsedSeconds = (int)(DateTime.UtcNow - _passStartUtc).TotalSeconds;
+        return string.Format(
+            LocalizationService.Instance.Translate("Routing.Status.Progress"),
+            Math.Min(_routedCount, _totalCount), _totalCount, elapsedSeconds);
     }
 }

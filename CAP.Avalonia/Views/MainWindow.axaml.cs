@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.Notifications;
 using CAP.Avalonia.ViewModels;
@@ -62,6 +63,20 @@ public partial class MainWindow : Window
     /// </summary>
     private RegistryBrowserWindow? _registryBrowserWindow;
 
+    /// <summary>
+    /// The open AI Design Assistant tool window. Single instance: a second open
+    /// activates the existing window instead of spawning a duplicate — same
+    /// pattern as <see cref="_registryBrowserWindow"/>. Cleared when it closes.
+    /// </summary>
+    private AiAssistantWindow? _aiAssistantWindow;
+
+    /// <summary>
+    /// The open ISA playground tool window (issue #1194). Single instance: a second
+    /// open activates the existing window instead of spawning a duplicate — same
+    /// pattern as <see cref="_aiAssistantWindow"/>. Cleared when it closes.
+    /// </summary>
+    private IsaPlaygroundWindow? _isaPlaygroundWindow;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -93,6 +108,7 @@ public partial class MainWindow : Window
                 vm.RightPanel.Netlist.FileDialogService = vm.FileDialogService;
                 vm.BottomPanel.Analysis.Transient.FileDialogService = vm.FileDialogService;
                 vm.BottomPanel.Analysis.Eye.FileDialogService = vm.FileDialogService;
+                vm.BottomPanel.Analysis.Spectrum.Overlay.FileDialogService = vm.FileDialogService;
                 ExportDialogWiring.Wire(vm, this, vm.ErrorConsole);
                 vm.ViewportControl.GetViewportSize = GetActualViewportSize;
 
@@ -422,6 +438,8 @@ public partial class MainWindow : Window
             var leftSplitter = LeftPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (leftSplitter != null)
             {
+                leftSplitter.DragDelta += (s, e) =>
+                    ResizePanelColumn(LeftPanelGrid.ColumnDefinitions[0], e.Vector.X, LeftPanelBorder);
                 leftSplitter.DragCompleted += (s, e) =>
                 {
                     if (LeftPanelGrid.ColumnDefinitions.Count > 0)
@@ -442,6 +460,8 @@ public partial class MainWindow : Window
             var rightSplitter = RightPanelGrid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (rightSplitter != null)
             {
+                rightSplitter.DragDelta += (s, e) =>
+                    ResizePanelColumn(RightPanelGrid.ColumnDefinitions[1], -e.Vector.X, RightPanelBorder);
                 rightSplitter.DragCompleted += (s, e) =>
                 {
                     if (RightPanelGrid.ColumnDefinitions.Count > 1)
@@ -455,6 +475,18 @@ public partial class MainWindow : Window
                 };
             }
         }
+    }
+
+    /// <summary>
+    /// Applies a splitter drag to a side panel's pixel column. Each side panel is a grid docked
+    /// into the window's DockPanel with the splitter in its outermost column, so the GridSplitter
+    /// itself finds no neighbouring column to trade space with and leaves the width alone; the
+    /// drag is applied here instead, clamped to the panel's own Min/MaxWidth.
+    /// </summary>
+    private static void ResizePanelColumn(ColumnDefinition column, double delta, Layoutable panel)
+    {
+        double width = Math.Clamp(column.Width.Value + delta, panel.MinWidth, panel.MaxWidth);
+        column.Width = new GridLength(width, GridUnitType.Pixel);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -630,7 +662,24 @@ public partial class MainWindow : Window
     /// click activates the already-open window; the lazy index load happens in
     /// the window's own Opened hook.
     /// </summary>
-    private void OpenRegistryBrowser_Click(object? sender, RoutedEventArgs e)
+    private void OpenRegistryBrowser_Click(object? sender, RoutedEventArgs e) =>
+        OpenRegistryBrowserWindow();
+
+    /// <summary>
+    /// Link row under the local library hits (issue #772): opens the registry window
+    /// with the library search pre-filled — same window-dedup as the other entry
+    /// points, so a second click only activates the window and refreshes its search.
+    /// </summary>
+    private void OpenRegistrySearchHint_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        vm.Registry.SearchText = vm.LeftPanel.SearchText;
+        OpenRegistryBrowserWindow();
+    }
+
+    private void OpenRegistryBrowserWindow()
     {
         if (_registryBrowserWindow is { IsVisible: true } existing)
         {
@@ -657,6 +706,66 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Opens the non-modal AI Design Assistant tool window from the toolbar.
+    /// A second click activates the already-open window.
+    /// </summary>
+    private void OpenAiAssistant_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_aiAssistantWindow is { IsVisible: true } existing)
+        {
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        if (DataContext is not MainViewModel vm)
+            return;
+
+        var window = new AiAssistantWindow { DataContext = vm };
+        _aiAssistantWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_aiAssistantWindow, window))
+                _aiAssistantWindow = null;
+        };
+        window.Show(this);
+    }
+
+    /// <summary>
+    /// Opens the non-modal ISA playground tool window from the Tools flyout
+    /// (issue #1194). A second click activates the already-open window.
+    /// </summary>
+    private void OpenIsaPlayground_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_isaPlaygroundWindow is { IsVisible: true } existing)
+        {
+            // Un-minimize first: Activate() alone leaves a minimized window minimized.
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            return;
+        }
+
+        var vm = App.Services.GetService(typeof(ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel))
+            as ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel;
+        if (vm == null) return;
+
+        var window = new IsaPlaygroundWindow { DataContext = vm };
+        // The "Run a program on your chip" tour (#1267) hosts its card here for
+        // the playground steps and tracks the window's open state.
+        window.Tour = App.Services.GetService(
+            typeof(ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel))
+            as ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel;
+        _isaPlaygroundWindow = window;
+        // Only clear the field if it still points at THIS window.
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_isaPlaygroundWindow, window))
+                _isaPlaygroundWindow = null;
+        };
+        window.Show(this);
+    }
+
+    /// <summary>
     /// Opens the "Check PDKs against Python" dialog from the Tools menu (issue #515).
     /// </summary>
     private void OpenPdkResolutionCheckDialog_Click(object? sender, RoutedEventArgs e)
@@ -675,6 +784,35 @@ public partial class MainWindow : Window
             var (width, height) = GetActualViewportSize();
             vm.ZoomToFit(width, height);
         }
+    }
+
+    /// <summary>
+    /// Opens the analysis dock on the Checks tab after the "Check design" menu entry
+    /// ran the validation (the bound command does the checking itself).
+    /// </summary>
+    private void CheckDesignMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.BottomPanel.Analysis.OpenChecks();
+    }
+
+    /// <summary>
+    /// Opens the "Check for openEBL…" dialog (issue #1361): exports the current design to
+    /// GDS and runs the openEBL submission + verification checks on it. The ViewModel is a
+    /// DI singleton so a reopened dialog keeps the entered username/design name.
+    /// </summary>
+    private async void CheckOpenEblMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        var checkVm = App.Services.GetService(typeof(ViewModels.Export.OpenEbl.OpenEblCheckViewModel))
+            as ViewModels.Export.OpenEbl.OpenEblCheckViewModel;
+        if (checkVm == null) return;
+
+        var designName = DataContext is MainViewModel vm && vm.FileOperations.CurrentFilePath != null
+            ? System.IO.Path.GetFileNameWithoutExtension(vm.FileOperations.CurrentFilePath)
+            : null;
+        checkVm.PrepareForOpen(designName);
+        var dialog = new Views.Dialogs.OpenEblCheckDialog { DataContext = checkVm };
+        await dialog.ShowDialog(this);
     }
 
     /// <summary>

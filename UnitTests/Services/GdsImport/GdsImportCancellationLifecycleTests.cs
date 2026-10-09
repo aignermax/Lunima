@@ -55,7 +55,9 @@ public class GdsImportCancellationLifecycleTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var service = _host.CreateService();
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        return (new GdsImportDialogViewModel(gdsPath, service, executor, console), canvas, _host);
+        // The lifecycle scenarios were written against the grouped, re-routed import.
+        return (new GdsImportDialogViewModel(gdsPath, service, executor, console)
+            { GroupImportRequested = true, RerouteConnectionsRequested = true }, canvas, _host);
     }
 
     private static void AssertNoDisposedSourceError(ErrorConsoleService console, GdsImportDialogViewModel vm)
@@ -100,7 +102,8 @@ public class GdsImportCancellationLifecycleTests : IDisposable
             return _host.Templates.ToList();
         });
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        var vm = built = new GdsImportDialogViewModel(WriteGds(TwoWaveguideLibrary()), service, executor, console);
+        var vm = built = new GdsImportDialogViewModel(WriteGds(TwoWaveguideLibrary()), service, executor, console)
+            { GroupImportRequested = true, RerouteConnectionsRequested = true };
         await vm.StartAnalysisAsync();
 
         await vm.ImportCommand.ExecuteAsync(null);
@@ -126,13 +129,19 @@ public class GdsImportCancellationLifecycleTests : IDisposable
         var (vm, canvas, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()), console);
         await vm.StartAnalysisAsync();
 
-        var run = vm.ImportCommand.ExecuteAsync(null);
-        var cts = vm.CurrentCts.ShouldNotBeNull();
+        // Capture the source and close from the mid-run test hook: the tiny
+        // fixture import can otherwise finish (releasing CurrentCts) before an
+        // unawaited test thread observes it under full-suite load.
+        CancellationTokenSource? cts = null;
+        vm.ImportServiceCompletedTestHook = () =>
+        {
+            cts = vm.CurrentCts;
+            vm.OnWindowClosed(); // the auto-close landing mid-run
+        };
+        await vm.ImportCommand.ExecuteAsync(null);
 
-        vm.OnWindowClosed(); // the auto-close landing mid-run
-
-        cts.IsCancellationRequested.ShouldBeFalse("a close mid-import no longer cancels (auto-close by design)");
-        await run;
+        cts.ShouldNotBeNull().IsCancellationRequested.ShouldBeFalse(
+            "a close mid-import no longer cancels (auto-close by design)");
         vm.IsBusy.ShouldBeFalse();
         vm.HasError.ShouldBeFalse(vm.ErrorText);
         vm.ImportCompleted.ShouldBeTrue("the import finishes in the background");

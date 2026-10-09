@@ -1,0 +1,26 @@
+[
+  {
+    "file": "01-pass-en.png",
+    "caption": "Pass: both checks green, die size shown, checked-file path at the bottom."
+  },
+  {
+    "file": "02-pass-de.png",
+    "caption": "Pass: both checks green, die size shown, checked-file path at the bottom."
+  },
+  {
+    "file": "03-fail-en.png",
+    "caption": "Fail: per-check outcome rows, typed error list with localized category chips and a \u00B5m location."
+  },
+  {
+    "file": "04-fail-de.png",
+    "caption": "Fail: per-check outcome rows, typed error list with localized category chips and a \u00B5m location."
+  },
+  {
+    "file": "05-toolchain-missing-en.png",
+    "caption": "Toolchain missing: amber headline, actionable message, pip hint with copy button."
+  },
+  {
+    "file": "06-toolchain-missing-de.png",
+    "caption": "Toolchain missing: amber headline, actionable message, pip hint with copy button."
+  }
+]

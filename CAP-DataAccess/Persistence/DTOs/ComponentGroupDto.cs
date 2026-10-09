@@ -66,6 +66,13 @@ public class ComponentGroupDto
     public int Rotation90CounterClock { get; set; }
 
     /// <summary>
+    /// Exact continuous rotation in degrees for non-cardinal placements (GDS
+    /// import). Null in old files and for cardinal rotations —
+    /// <see cref="Rotation90CounterClock"/> alone restores those.
+    /// </summary>
+    public double? RotationDegrees { get; set; }
+
+    /// <summary>
     /// List of child component identifiers (by Identifier property).
     /// Used to rebuild the parent-child relationships.
     /// </summary>
@@ -204,6 +211,12 @@ public class FrozenPathDto
     public double? PropagationLossDbPerCm { get; set; }
 
     /// <summary>
+    /// Bend loss of the original connection in dB per 90-degree bend.
+    /// Null in old design files — loads with the model default.
+    /// </summary>
+    public double? BendLossDbPer90Deg { get; set; }
+
+    /// <summary>
     /// Manual per-bend radius overrides keyed by bend index.
     /// Null in old design files — loads empty.
     /// </summary>
@@ -214,6 +227,13 @@ public class FrozenPathDto
     /// Null in old design files — loads empty.
     /// </summary>
     public Dictionary<int, double>? StraightShiftOffsets { get; set; }
+
+    /// <summary>
+    /// The exact polygons the geometry was drawn with in an imported layout (see
+    /// <see cref="CAP_Core.Components.Connections.AsDrawnGeometry"/>); null when the
+    /// path has none or the file predates the field.
+    /// </summary>
+    public List<AsDrawnPolygonDto>? AsDrawnPolygons { get; set; }
 }
 
 /// <summary>

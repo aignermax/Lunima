@@ -47,13 +47,17 @@ internal static class CrossingInsertionFeatureExtensions
     }
 
     /// <summary>
-    /// Instantiates a fresh crossing component through the production PDK path.
+    /// Instantiates a fresh crossing component through the production PDK path, from the
+    /// PDK the design is built from (a demofab design gets the Demo crossing).
     /// Returns null while no crossing template is loaded (e.g. PDK disabled) —
     /// the crossing pass then keeps detours instead of guessing.
     /// </summary>
     private static CrossingComponentInstance? CreateCrossingInstance(IServiceProvider sp)
     {
-        return CrossingComponentInstance.CreateFromTemplates(
-            sp.GetRequiredService<LeftPanelViewModel>().AllTemplates);
+        var templates = sp.GetRequiredService<LeftPanelViewModel>().AllTemplates;
+        var canvas = sp.GetRequiredService<DesignCanvasViewModel>();
+        var preferred = CrossingComponentInstance.PreferredPdksOf(
+            canvas.Components.Select(c => c.Component), templates);
+        return CrossingComponentInstance.CreateFromTemplates(templates, preferred);
     }
 }

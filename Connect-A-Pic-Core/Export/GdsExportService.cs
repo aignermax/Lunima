@@ -16,6 +16,13 @@ public class GdsExportService
     private string? _customPythonPath;
 
     /// <summary>
+    /// The last READY environment and the interpreter setting it was probed with. An export
+    /// reuses it instead of re-probing (each probe spawns python and imports Nazca —
+    /// seconds); a not-ready result is never kept, so a fresh Nazca install is seen at once.
+    /// </summary>
+    private (string? Interpreter, PythonEnvironmentInfo Info)? _readyEnvironment;
+
+    /// <summary>
     /// Initializes the service with a process launch factory and Python discovery service.
     /// </summary>
     /// <param name="launchFactory">Factory used to build process start info.</param>
@@ -109,6 +116,8 @@ public class GdsExportService
     /// <param name="pythonPath">Path to Python executable, or null to use system default.</param>
     public void SetCustomPythonPath(string? pythonPath)
     {
+        if (pythonPath != _customPythonPath)
+            _readyEnvironment = null;
         _customPythonPath = pythonPath;
     }
 
@@ -126,6 +135,17 @@ public class GdsExportService
     /// </summary>
     /// <returns>Environment information including versions.</returns>
     public async Task<PythonEnvironmentInfo> CheckPythonEnvironmentAsync()
+    {
+        var result = await ProbeEnvironmentAsync();
+        _readyEnvironment = result.IsReady ? (_customPythonPath, result) : null;
+        return result;
+    }
+
+    /// <summary>
+    /// Probes the configured interpreter: its version, then whether it imports Nazca.
+    /// </summary>
+    /// <returns>Environment information including versions.</returns>
+    protected virtual async Task<PythonEnvironmentInfo> ProbeEnvironmentAsync()
     {
         var result = new PythonEnvironmentInfo();
 
@@ -174,7 +194,9 @@ public class GdsExportService
             };
         }
 
-        var envInfo = await CheckPythonEnvironmentAsync();
+        var envInfo = _readyEnvironment is { } ready && ready.Interpreter == _customPythonPath
+            ? ready.Info
+            : await CheckPythonEnvironmentAsync();
         if (!envInfo.IsReady)
         {
             return new ExportResult

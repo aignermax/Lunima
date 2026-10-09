@@ -1,0 +1,26 @@
+[
+  {
+    "file": "spectrum-overlay-en.png",
+    "caption": "Spectrum tab (en): swept EBeam Mach-Zehnder (coherent on) with the fixture CSV as the dashed \u0022Measured\u0022 overlay and the extracted FSR / n_g result line."
+  },
+  {
+    "file": "csv-error-en.png",
+    "caption": "Spectrum tab (en): a malformed CSV shows an inline red parse error with the offending line \u2014 never a modal dialog."
+  },
+  {
+    "file": "help-flyout-en.png",
+    "caption": "Spectrum tab (en): the measured-overlay (?) flyout explaining the CSV format, FSR and n_g = \u03BB\u00B2/(FSR\u00B7\u0394L)."
+  },
+  {
+    "file": "spectrum-overlay-de.png",
+    "caption": "Spectrum tab (de): swept EBeam Mach-Zehnder (coherent on) with the fixture CSV as the dashed \u0022Measured\u0022 overlay and the extracted FSR / n_g result line."
+  },
+  {
+    "file": "csv-error-de.png",
+    "caption": "Spectrum tab (de): a malformed CSV shows an inline red parse error with the offending line \u2014 never a modal dialog."
+  },
+  {
+    "file": "help-flyout-de.png",
+    "caption": "Spectrum tab (de): the measured-overlay (?) flyout explaining the CSV format, FSR and n_g = \u03BB\u00B2/(FSR\u00B7\u0394L)."
+  }
+]

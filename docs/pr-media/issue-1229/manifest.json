@@ -1,0 +1,14 @@
+[
+  {
+    "file": "pdkhelp-1-first.png",
+    "caption": "PDK help: a component snaps onto a chiplet of its own process (its waveguide lights up); a component of another process is rejected there and lands on its own chiplet. (first frame \u2014 chiplets empty)"
+  },
+  {
+    "file": "pdkhelp-2-mid.png",
+    "caption": "PDK help: a component snaps onto a chiplet of its own process (its waveguide lights up); a component of another process is rejected there and lands on its own chiplet. (mid loop \u2014 process-B component rejected at chiplet A)"
+  },
+  {
+    "file": "pdkhelp-3-last.png",
+    "caption": "PDK help: a component snaps onto a chiplet of its own process (its waveguide lights up); a component of another process is rejected there and lands on its own chiplet. (last frame \u2014 both components seated on their own chiplets)"
+  }
+]

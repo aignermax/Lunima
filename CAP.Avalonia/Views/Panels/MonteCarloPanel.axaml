@@ -1,6 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:oxy="using:OxyPlot.Avalonia"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.MonteCarloPanel"
@@ -88,6 +90,17 @@
                 <TextBlock Text=" " FontSize="9" Margin="0,0,0,1"/>
                 <Button Content="{loc:Localize Common.Cancel}" Classes="analysis" Background="#3d3d3d"
                         Command="{Binding BottomPanel.Analysis.MonteCarlo.CancelAnalysisCommand}"/>
+            </StackPanel>
+            <!-- Plain-language help (#1344): why fabrication variance scatters the
+                 results and how to read the histogram/yield. Same reusable "?"
+                 control as the other analysis tabs. -->
+            <StackPanel Margin="0,0,0,4" VerticalAlignment="Bottom">
+                <TextBlock Text=" " FontSize="9" Margin="0,0,0,1"/>
+                <controls:HelpFlyoutButton Title="{loc:Localize MonteCarloHelp.Title}">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <panels:MonteCarloHelpFlyout/>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
             </StackPanel>
         </WrapPanel>
 

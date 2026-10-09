@@ -1,0 +1,14 @@
+[
+  {
+    "file": "truthtablehelp-1-first.png",
+    "caption": "Truth Table help: two input pulses meet in a coupler \u2014 in phase they add (bright output = 1), in anti-phase they cancel (dark = 0); the bias arm sets the working point. (first frame)"
+  },
+  {
+    "file": "truthtablehelp-2-mid.png",
+    "caption": "Truth Table help: two input pulses meet in a coupler \u2014 in phase they add (bright output = 1), in anti-phase they cancel (dark = 0); the bias arm sets the working point. (mid loop \u2014 in-phase sum, badge 1)"
+  },
+  {
+    "file": "truthtablehelp-3-last.png",
+    "caption": "Truth Table help: two input pulses meet in a coupler \u2014 in phase they add (bright output = 1), in anti-phase they cancel (dark = 0); the bias arm sets the working point. (last frame \u2014 anti-phase inputs cancel, dark output = 0)"
+  }
+]

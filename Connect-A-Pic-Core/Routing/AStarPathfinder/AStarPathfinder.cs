@@ -17,10 +17,20 @@ public class AStarPathfinder
     public int MaxNodesExpanded { get; set; } = 200000;
 
     /// <summary>
+    /// The distance estimate the search orders nodes by, weighted while crossings are allowed
+    /// (see <see cref="CrossingInsertion.CrossingStep.HeuristicWeight"/>).
+    /// </summary>
+    private double Heuristic(int fromX, int fromY, GridDirection fromDir, int toX, int toY, GridDirection toDir) =>
+        _costCalculator.CalculateHeuristic(fromX, fromY, fromDir, toX, toY, toDir) * (Crossings?.HeuristicWeight ?? 1.0);
+
+    /// <summary>Default <see cref="GoalTolerance"/> in grid cells.</summary>
+    public const int DefaultGoalTolerance = 3;
+
+    /// <summary>
     /// Distance tolerance for reaching the goal (in grid cells).
     /// With 5µm cells, 3 cells = 15µm tolerance.
     /// </summary>
-    public int GoalTolerance { get; set; } = 3;
+    public int GoalTolerance { get; set; } = DefaultGoalTolerance;
 
     /// <summary>
     /// When true, the goal also accepts arrivals laterally offset from the
@@ -39,6 +49,47 @@ public class AStarPathfinder
     /// are expanded — a much smaller search space for faster everyday routing.
     /// </summary>
     public bool UseDiagonals { get; set; } = true;
+
+    /// <summary>
+    /// Node count at which <see cref="OnEscalationThresholdReached"/> fires once
+    /// (default: never). Lets a caller keep a single continuous search while still
+    /// surfacing "this route is complex" at the point a separate quick phase would
+    /// have given up.
+    /// </summary>
+    public int EscalationThresholdNodes { get; set; } = int.MaxValue;
+
+    /// <summary>Fired once when the search expands its <see cref="EscalationThresholdNodes"/>-th node.</summary>
+    public Action? OnEscalationThresholdReached { get; set; }
+
+    /// <summary>
+    /// When set, the search may cross other waveguides where a crossing component fits
+    /// (see <see cref="CrossingInsertion.CrossingStep"/>); null (default) keeps the classic
+    /// avoid-only search.
+    /// </summary>
+    public CrossingInsertion.CrossingStep? Crossings { get; set; }
+
+    /// <summary>
+    /// True when the last <see cref="FindPath"/> returned null because the open set emptied
+    /// — a proof that no goal-reaching path exists in the reachable region — rather than
+    /// because the node budget cut the search short or cancellation stopped it. Lets a
+    /// caller skip follow-up searches that cannot succeed.
+    /// </summary>
+    public bool LastSearchProvedNoPath { get; private set; }
+
+    /// <summary>
+    /// True when the last <see cref="FindPath"/> dequeued at least one node that would
+    /// satisfy the goal test with <see cref="AllowLateralGoalTolerance"/> enabled. When
+    /// <see cref="LastSearchProvedNoPath"/> is also true, every reachable state was
+    /// expanded, so a lateral-tolerance retry cannot succeed either and may be skipped.
+    /// </summary>
+    public bool LastSearchReachedGoalVicinity { get; private set; }
+
+    /// <summary>
+    /// Node expansions the last <see cref="FindPath"/> performed. Diagnostic surface:
+    /// lets callers measure what a coarse retry actually costs per
+    /// blocked wire, without re-running the search.
+    /// </summary>
+    public int LastSearchNodesExpanded { get; private set; }
 
     public AStarPathfinder(PathfindingGrid grid, RoutingCostCalculator costCalculator)
     {
@@ -73,9 +124,12 @@ public class AStarPathfinder
                                       int endX, int endY, GridDirection endDirection,
                                       CancellationToken cancellationToken = default)
     {
-        var openSet = new PriorityQueue<AStarNode, double>();
-        var visited = new Dictionary<(int, int, GridDirection, int), AStarNode>();
-        var distanceFromStart = new Dictionary<(int, int, GridDirection, int), int>();
+        LastSearchProvedNoPath = false;
+        LastSearchReachedGoalVicinity = false;
+        LastSearchNodesExpanded = 0;
+        var openSet = new PriorityQueue<AStarNode, double>(initialCapacity: 4096);
+        var visited = new Dictionary<long, AStarNode>(capacity: 4096);
+        var neighborBuffer = new List<AStarNode>(8);
 
         // Create start node.
         // A pin start needs room for only ONE arc tangent before the first turn (the
@@ -90,12 +144,10 @@ public class AStarPathfinder
             GCost = 0,
             StraightRunLength = Math.Max(0, (_costCalculator.MinStraightRunCells - 1) / 2)
         };
-        startNode.HCost = _costCalculator.CalculateHeuristic(
-            startX, startY, startDirection, endX, endY, endDirection);
+        startNode.HCost = Heuristic(startX, startY, startDirection, endX, endY, endDirection);
 
         openSet.Enqueue(startNode, startNode.FCost);
         visited[StateKey(startNode)] = startNode;
-        distanceFromStart[StateKey(startNode)] = 0;
 
         int nodesExpanded = 0;
 
@@ -103,21 +155,31 @@ public class AStarPathfinder
         {
             // Check cancellation periodically to remain responsive
             if (nodesExpanded % CancellationCheckInterval == 0 && cancellationToken.IsCancellationRequested)
+            {
+                LastSearchProvedNoPath = false;
+                LastSearchNodesExpanded = nodesExpanded;
                 return null;
+            }
 
             var current = openSet.Dequeue();
             nodesExpanded++;
+            if (nodesExpanded == EscalationThresholdNodes)
+                OnEscalationThresholdReached?.Invoke();
 
             // Check if we reached the goal
             if (IsGoalReached(current, endX, endY, endDirection))
             {
+                LastSearchReachedGoalVicinity = true;
                 var path = ReconstructPath(current);
 
                 // A waveguide cannot cross itself (no optical model for that): discard
                 // looping arrivals — e.g. a full 360° circle at the start pin — and keep
                 // searching for a loop-free alternative.
                 if (!PathLoopDetector.IsSelfIntersecting(path))
+                {
+                    LastSearchNodesExpanded = nodesExpanded;
                     return path;
+                }
 
                 // Forget this looping arrival's grid state, otherwise its (cheaper) entry
                 // stays in the visited map and rejects a later, more expensive but loop-free
@@ -127,42 +189,46 @@ public class AStarPathfinder
                 if (visited.TryGetValue(loopingKey, out var stored) && ReferenceEquals(stored, current))
                 {
                     visited.Remove(loopingKey);
-                    distanceFromStart.Remove(loopingKey);
                 }
                 continue;
             }
+            if (!AllowLateralGoalTolerance && !LastSearchReachedGoalVicinity
+                && IsGoalReached(current, endX, endY, endDirection, GoalTolerance))
+            {
+                LastSearchReachedGoalVicinity = true;
+            }
 
             // Expand neighbors
-            foreach (var neighbor in GetNeighbors(current, endX, endY, endDirection,
-                                                   distanceFromStart))
+            CollectNeighbors(current, endX, endY, endDirection, visited, neighborBuffer);
+            foreach (var neighbor in neighborBuffer)
             {
-                var key = StateKey(neighbor);
-
-                if (visited.TryGetValue(key, out var existingNode))
-                {
-                    // Skip if we've found a better path already
-                    if (neighbor.GCost >= existingNode.GCost)
-                        continue;
-                }
-
-                visited[key] = neighbor;
+                visited[StateKey(neighbor)] = neighbor;
                 openSet.Enqueue(neighbor, neighbor.FCost);
             }
         }
 
-        // No path found
+        // No path found: hitting the budget with frontier left is a cut-short
+        // search; an empty open set is a proof that no path exists.
+        LastSearchProvedNoPath = openSet.Count == 0;
+        LastSearchNodesExpanded = nodesExpanded;
         return null;
     }
 
     /// <summary>
-    /// State identity of a node in the octile search. The straight-run length
-    /// is part of the state: a cheap arrival with a short run must not shadow
-    /// a costlier arrival with a long run, because only the latter may be
-    /// allowed to turn (IsTurnValid). Runs are capped at the largest value
-    /// IsTurnValid ever requires.
+    /// State identity of a node in the octile search, packed into one long for cheap
+    /// hashing. The straight-run length is part of the state: a cheap arrival with a
+    /// short run must not shadow a costlier arrival with a long run, because only the
+    /// latter may be allowed to turn (IsTurnValid). Runs are capped at the largest
+    /// value IsTurnValid ever requires. Bit budget: X 28, Y 20, direction+1 4, run 12.
     /// </summary>
-    private (int X, int Y, GridDirection Dir, int Run) StateKey(AStarNode n) =>
-        (n.X, n.Y, n.Direction, Math.Min(n.StraightRunLength, _costCalculator.MinStraightRunCells));
+    private long StateKey(AStarNode n) =>
+        StateKey(n.X, n.Y, n.Direction, n.StraightRunLength);
+
+    private long StateKey(int x, int y, GridDirection dir, int straightRunLength) =>
+        ((long)x << 36)
+        | ((long)y << 16)
+        | ((long)((int)dir + 1) << 12)
+        | (uint)Math.Min(straightRunLength, _costCalculator.MinStraightRunCells);
 
     /// <summary>
     /// Checks if the current node has reached the goal.
@@ -172,7 +238,11 @@ public class AStarPathfinder
     /// <see cref="AllowLateralGoalTolerance"/> small lateral offsets are also
     /// accepted and the path smoother snaps the approach onto the axis.
     /// </summary>
-    private bool IsGoalReached(AStarNode node, int endX, int endY, GridDirection endDirection)
+    private bool IsGoalReached(AStarNode node, int endX, int endY, GridDirection endDirection) =>
+        IsGoalReached(node, endX, endY, endDirection, AllowLateralGoalTolerance ? GoalTolerance : 0);
+
+    /// <summary>Goal test with a caller-chosen lateral tolerance (cells); see the overload.</summary>
+    private bool IsGoalReached(AStarNode node, int endX, int endY, GridDirection endDirection, int maxCross)
     {
         if (node.Direction != endDirection)
             return false;
@@ -187,7 +257,6 @@ public class AStarPathfinder
         // Perpendicular offset from the entry axis: exactly zero in strict
         // mode, within GoalTolerance in the lateral-tolerance retry.
         int cross = dx * uy - dy * ux;
-        int maxCross = AllowLateralGoalTolerance ? GoalTolerance : 0;
         if (Math.Abs(cross) > maxCross)
             return false;
 
@@ -201,14 +270,25 @@ public class AStarPathfinder
     }
 
     /// <summary>
-    /// Gets valid neighboring nodes from the current position.
+    /// Collects the valid neighboring nodes of the current position into
+    /// <paramref name="buffer"/> (cleared first — a reusable buffer avoids an
+    /// iterator allocation per expansion). Neighbors that cannot beat the stored
+    /// arrival at their state are rejected BEFORE the node is allocated — the
+    /// accepted sequence is unchanged.
     /// </summary>
-    private IEnumerable<AStarNode> GetNeighbors(AStarNode current,
-                                                  int goalX, int goalY, GridDirection goalDir,
-                                                  Dictionary<(int, int, GridDirection, int), int> distFromStart)
+    private void CollectNeighbors(AStarNode current,
+                                  int goalX, int goalY, GridDirection goalDir,
+                                  Dictionary<long, AStarNode> visited,
+                                  List<AStarNode> buffer)
     {
-        // Get distance from start for pin escape enforcement
-        int distanceFromStart = distFromStart.GetValueOrDefault(StateKey(current), 0);
+        buffer.Clear();
+
+        // Distance from start for pin escape enforcement: the LATEST arrival at the
+        // current state (the dequeued node may have been superseded by a cheaper one).
+        int distanceFromStart =
+            visited.TryGetValue(StateKey(current), out var latestArrival)
+                ? latestArrival.DistanceFromStart
+                : current.DistanceFromStart;
 
         var directions = UseDiagonals
             ? GridDirectionExtensions.GetAllDirections()
@@ -222,7 +302,11 @@ public class AStarPathfinder
 
             // Check bounds and obstacles
             if (_grid.IsBlocked(newX, newY))
+            {
+                if (TryCreateCrossingNeighbor(current, dir, goalX, goalY, goalDir, distanceFromStart, visited) is { } jump)
+                    buffer.Add(jump);
                 continue;
+            }
 
             // Diagonal block check: a diagonal step is only allowed when BOTH
             // orthogonal neighbor cells are free, so the waveguide cannot
@@ -273,24 +357,67 @@ public class AStarPathfinder
             double proximityCost = _costCalculator.CalculateProximityCost(_grid, newX, newY);
             double pinZoneCost = _costCalculator.CalculatePinZoneCost(_grid, newX, newY);
             double newGCost = current.GCost + moveCost + proximityCost + pinZoneCost;
-            double newHCost = _costCalculator.CalculateHeuristic(
-                newX, newY, dir, goalX, goalY, goalDir);
+
+            // Skip a worse arrival before paying for the node — the g-check the
+            // search loop used to run after construction.
+            int newStraightRun = (current.Direction == dir) ? current.StraightRunLength + 1 : 1;
+            if (visited.TryGetValue(StateKey(newX, newY, dir, newStraightRun), out var existingNode)
+                && newGCost >= existingNode.GCost)
+                continue;
+
+            double newHCost = Heuristic(newX, newY, dir, goalX, goalY, goalDir);
 
             var neighbor = new AStarNode(newX, newY, dir)
             {
                 GCost = newGCost,
                 HCost = newHCost,
                 Parent = current,
-                StraightRunLength = (current.Direction == dir)
-                    ? current.StraightRunLength + 1
-                    : 1
+                StraightRunLength = newStraightRun,
+                DistanceFromStart = distanceFromStart + 1
             };
 
-            // Track distance from start for this neighbor
-            distFromStart[StateKey(neighbor)] = distanceFromStart + 1;
-
-            yield return neighbor;
+            buffer.Add(neighbor);
         }
+    }
+
+    /// <summary>
+    /// The neighbor reached by jumping straight across the waveguide that blocks the next
+    /// cell, or null when crossings are off, the move is not a straight continuation, or no
+    /// crossing fits there (see <see cref="CrossingInsertion.CrossingStep.TryJump"/>).
+    /// </summary>
+    private AStarNode? TryCreateCrossingNeighbor(AStarNode current, GridDirection dir,
+                                                 int goalX, int goalY, GridDirection goalDir,
+                                                 int distanceFromStart, Dictionary<long, AStarNode> visited)
+    {
+        if (Crossings == null || dir.IsDiagonal() || dir != current.Direction)
+            return null;
+        var (dx, dy) = dir.GetDelta();
+        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength,
+                               out int span, out int runAfter, out var crossings))
+            return null;
+
+        int landX = current.X + dx * span, landY = current.Y + dy * span;
+        int distanceToGoal = Math.Abs(landX - goalX) + Math.Abs(landY - goalY);
+        if (distanceToGoal <= _costCalculator.MinPinEscapeCells && dir != goalDir)
+            return null;
+
+        double stepCost = _costCalculator.CalculateMoveCost(current, current.X + dx, current.Y + dy, dir);
+        double gCost = current.GCost + stepCost * span + Crossings.PenaltyCost * crossings.Count;
+        // The run restarts behind the last crossing; the landing already leaves room for a
+        // turn's arc, so the next bend cannot reach back into a crossing.
+        int straightRun = runAfter;
+        if (visited.TryGetValue(StateKey(landX, landY, dir, straightRun), out var existing) && gCost >= existing.GCost)
+            return null;
+
+        return new AStarNode(landX, landY, dir)
+        {
+            GCost = gCost,
+            HCost = Heuristic(landX, landY, dir, goalX, goalY, goalDir),
+            Parent = current,
+            StraightRunLength = straightRun,
+            DistanceFromStart = distanceFromStart + span,
+            Crossings = crossings,
+        };
     }
 
     /// <summary>

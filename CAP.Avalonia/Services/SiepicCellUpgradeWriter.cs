@@ -48,8 +48,20 @@ public static class SiepicCellUpgradeWriter
     /// footer's <c>nd.export_gds()</c>, which defines <c>gds_filename</c>.</param>
     /// <param name="canvas">The design canvas.</param>
     /// <param name="include">Optional group filter of a partial (mixed-backend) export.</param>
+    /// <param name="addDevRec">
+    /// True for EBeam-only designs (<see cref="SiepicEBeamExportProfile"/>): appends a
+    /// second klayout pass that gives every component cell without one a DevRec (68, 0)
+    /// polygon over its footprint — openEBL's functional verification
+    /// (<c>SiEPIC.verification.layout_check</c>) aborts in <c>find_components</c> when no
+    /// DevRec exists at all (gap #2 of the readiness report). Cells the upgrade swapped
+    /// for real foundry geometry already carry the PDK's own DevRec and are left
+    /// untouched; the polygon lands only on cells that kept the stub box (PDK or klayout
+    /// missing at export time). False keeps the script byte-identical for every other
+    /// design.
+    /// </param>
     public static void AppendUpgradeBlock(
-        StringBuilder sb, DesignCanvasViewModel canvas, Func<Component, bool>? include = null)
+        StringBuilder sb, DesignCanvasViewModel canvas, Func<Component, bool>? include = null,
+        bool addDevRec = false)
     {
         var cells = CollectSiepicStubCells(canvas, include);
         if (cells.Count == 0)
@@ -69,6 +81,12 @@ public static class SiepicCellUpgradeWriter
             sb.AppendLine(
                 $"print(\"[Lunima] WARN: SiEPIC stub cell '{Escape(collision)}' maps to multiple parameter sets " +
                 "(parameters-hash collision) — one shared cell is used for all instances; check geometry against the PDK.\", file=sys.stderr)");
+        if (addDevRec)
+        {
+            var nameList = string.Join(", ", cells.Keys.Select(k => $"'{Escape(k)}'"));
+            sb.AppendLine(DevRecBlock);
+            sb.AppendLine($"_lunima_ensure_devrec(gds_filename, [{nameList}])");
+        }
         sb.AppendLine();
     }
 
@@ -170,6 +188,48 @@ public static class SiepicCellUpgradeWriter
 
     private static string Escape(string value) =>
         value.Replace("\\", "\\\\").Replace("'", "\\'");
+
+    /// <summary>
+    /// klayout pass that guarantees one DevRec (68, 0) polygon per named component
+    /// cell: a cell the upgrade swapped for real foundry geometry already carries the
+    /// PDK's own DevRec and is skipped (never duplicated); only a cell that kept the
+    /// stub box gets its content bbox drawn on the DevRec layer, so SiEPIC-Tools'
+    /// <c>find_components</c> sees every component even without a PDK install.
+    /// </summary>
+    private const string DevRecBlock = """
+def _lunima_ensure_devrec(gds_path, cell_names):
+    import sys as _sys
+    try:
+        import klayout.db as _kdb
+        _ly = _kdb.Layout()
+        _ly.read(gds_path)
+        _lp = _kdb.LayerInfo(68, 0)
+        _li = _ly.find_layer(_lp)
+        if _li is None:
+            _li = _ly.layer(_lp)
+        _added = 0
+        for _name in cell_names:
+            _c = _ly.cell(_name)
+            if _c is None:
+                continue
+            # The foundry cell's own DevRec came along with the upgrade — never duplicate it.
+            if any(True for _ in _c.shapes(_li).each()):
+                continue
+            _bb = _c.dbbox()
+            if _bb.empty():
+                continue
+            _c.shapes(_li).insert(_kdb.DBox(_bb.left, _bb.bottom, _bb.right, _bb.top))
+            _added += 1
+        if _added:
+            import os as _os
+            _tmp = _os.path.splitext(gds_path)[0] + '.tmp.gds'  # .gds suffix — klayout sniffs the format from the extension
+            _ly.write(_tmp)
+            _os.replace(_tmp, gds_path)  # atomic — a failed write never truncates the export
+            print(f"[Lunima] {_added} component cell(s) received a DevRec (68/0) footprint polygon.")
+    except Exception as _exc:
+        print(f"[Lunima] WARN: DevRec emission skipped ({_exc}).", file=_sys.stderr)
+
+""";
 
     private const string PythonBlock = """
 def _lunima_upgrade_siepic_cells(gds_path, cells):

@@ -30,6 +30,18 @@ internal static class GdsRouteCellDissolver
         "sinecurve", "cobra", "arc", "ic_strt", "ic_bend", "ic_sbend",
     ];
 
+    /// <summary>SiEPIC Waveguide guide layer (1/99) — only waveguide cells carry it.</summary>
+    private const int SiepicGuideLayer = 1;
+    private const int SiepicGuideDataType = 99;
+
+    /// <summary>SiEPIC PinRec layer (1/10): pin stub paths and opt-pin labels.</summary>
+    private const int SiepicPinRecLayer = 1;
+    private const int SiepicPinRecDataType = 10;
+
+    /// <summary>SiEPIC DevRec layer (68/0): the waveguide's envelope outline.</summary>
+    private const int SiepicDevRecLayer = 68;
+    private const int SiepicDevRecDataType = 0;
+
     /// <summary>
     /// Whether the cell is a routed-interconnect cell that should be dissolved
     /// instead of imported as a component draft. All criteria must hold:
@@ -46,13 +58,23 @@ internal static class GdsRouteCellDissolver
     /// bounding box; any polygon that adds its own geometry outside disqualifies
     /// the cell (real device content).
     /// </para>
+    /// <para>
+    /// SiEPIC exception: Lunima's own EBeam export wraps each route in a SiEPIC
+    /// waveguide cell carrying a Waveguide (1/99) guide, a DevRec (68/0)
+    /// envelope, PinRec (1/10) pin stubs and <c>optN</c> pin labels — the labels
+    /// and the end-located pin stubs would trip the no-texts and containment
+    /// rules above. A cell showing that full signature (guide present, every
+    /// text an optN label on PinRec) is route geometry, and its SiEPIC furniture
+    /// is exempted from both rules. Real device cells never carry a 1/99 guide.
+    /// </para>
     /// </summary>
     public static bool IsRouteCell(
         string cellName, FlattenedGdsCell flattened, GdsHierarchyImportOptions options)
     {
         if (!HasRouteCellName(cellName))
             return false;
-        if (flattened.Texts.Count > 0 || flattened.Polygons.Count == 0)
+        bool siepicWaveguide = IsSiepicWaveguideCell(flattened);
+        if ((flattened.Texts.Count > 0 && !siepicWaveguide) || flattened.Polygons.Count == 0)
             return false;
 
         var routeLayers = new HashSet<(int, int)>(
@@ -69,8 +91,32 @@ internal static class GdsRouteCellDissolver
         const double envelopeToleranceUm = 0.01;
         return flattened.Polygons
             .Where(p => !routeLayers.Contains((p.Layer, p.DataType)))
+            .Where(p => !(siepicWaveguide && IsSiepicFurniture(p)))
             .All(p => Contains(BoundingUnion(p), routeBBox, envelopeToleranceUm));
     }
+
+    /// <summary>
+    /// Whether the flattened cell shows the SiEPIC waveguide signature our EBeam
+    /// export emits: a Waveguide (1/99) guide polygon plus texts that are ALL
+    /// <c>optN</c> pin labels on the PinRec layer (1/10). A single foreign label
+    /// or a missing guide keeps the strict device-cell rules in force.
+    /// </summary>
+    private static bool IsSiepicWaveguideCell(FlattenedGdsCell flattened) =>
+        flattened.Polygons.Any(p => p.Layer == SiepicGuideLayer && p.DataType == SiepicGuideDataType)
+        && flattened.Texts.All(IsSiepicOptPinLabel);
+
+    private static bool IsSiepicOptPinLabel(GdsText text) =>
+        text.Layer == SiepicPinRecLayer && text.TextType == SiepicPinRecDataType
+        && text.Text.StartsWith("opt", StringComparison.OrdinalIgnoreCase)
+        && text.Text.Length > 3 && text.Text.Skip(3).All(char.IsAsciiDigit);
+
+    /// <summary>SiEPIC guide/envelope/pin furniture layers of a waveguide cell —
+    /// annotation, not device geometry; regenerated on export.</summary>
+    private static bool IsSiepicFurniture(GdsPolygon polygon) =>
+        (polygon.Layer, polygon.DataType) is
+            (SiepicGuideLayer, SiepicGuideDataType)
+            or (SiepicPinRecLayer, SiepicPinRecDataType)
+            or (SiepicDevRecLayer, SiepicDevRecDataType);
 
     /// <summary>
     /// Transforms the cell's flattened ROUTE-LAYER polygons through the

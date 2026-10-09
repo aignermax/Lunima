@@ -51,8 +51,8 @@ public class WavelengthSweepConfigurationTests
         var values = config.GenerateWavelengthValues();
 
         values.Length.ShouldBe(3);
-        values[0].ShouldBe(1500);
-        values[2].ShouldBe(1600);
+        values[0].ShouldBe(1500.0);
+        values[2].ShouldBe(1600.0);
     }
 
     [Fact]
@@ -61,7 +61,34 @@ public class WavelengthSweepConfigurationTests
         var config = new WavelengthSweepConfiguration(1500, 1600, 2);
         var values = config.GenerateWavelengthValues();
 
-        values[0].ShouldBe(1500);
-        values[1].ShouldBe(1600);
+        values[0].ShouldBe(1500.0);
+        values[1].ShouldBe(1600.0);
+    }
+
+    [Fact]
+    public void GenerateWavelengthValues_SubNmSteps_KeepsEveryPointDistinct()
+    {
+        var config = new WavelengthSweepConfiguration(1540, 1560, 400);
+        var values = config.GenerateWavelengthValues();
+
+        values.Length.ShouldBe(400,
+            "400 requested steps must yield 400 points — no integer-nm rounding collapse");
+        values.Distinct().Count().ShouldBe(400);
+        for (int i = 1; i < values.Length; i++)
+            values[i].ShouldBeGreaterThan(values[i - 1],
+                "the sweep grid must be strictly increasing");
+        values[0].ShouldBe(1540.0);
+        values[^1].ShouldBe(1560.0);
+    }
+
+    [Fact]
+    public void GenerateWavelengthValues_OneNmGrid_StaysExactlyIntegral()
+    {
+        var config = new WavelengthSweepConfiguration(1500, 1600, 101);
+        var values = config.GenerateWavelengthValues();
+
+        for (int i = 0; i < values.Length; i++)
+            values[i].ShouldBe(1500.0 + i,
+                "an all-integer request must reproduce today's integer grid bit-for-bit");
     }
 }

@@ -55,9 +55,15 @@ internal static class CanvasAndPanelExtensions
         // component-library thumbnails. Uses the Nazca backend for Nazca components and the
         // gdsfactory backend for gdsfactory-native components (CornerStone SiN etc., #570).
         services.AddSingleton(sp =>
-            new GdsPreviewRenderService(
+        {
+            var previews = new GdsPreviewRenderService(
                 sp.GetRequiredService<NazcaComponentPreviewService>(),
-                sp.GetRequiredService<GdsFactoryComponentPreviewService>()));
+                sp.GetRequiredService<GdsFactoryComponentPreviewService>());
+            // Resolved lazily: the left panel itself shows previews through this service.
+            previews.InlineNazcaCodeLookup = (module, function) =>
+                InlineNazcaCode.Find(sp.GetRequiredService<LeftPanelViewModel>().AllTemplates, module, function);
+            return previews;
+        });
 
         // Left panel sub-ViewModels
         services.AddTransient<HierarchyPanelViewModel>();
@@ -67,6 +73,8 @@ internal static class CanvasAndPanelExtensions
         // Right panel sub-ViewModels
         services.AddSingleton<ChipSizeViewModel>();
         services.AddTransient<ParameterSweepViewModel>();
+        services.AddTransient<ViewModels.Analysis.LogicAnalysis.TruthTableViewModel>();
+        services.AddTransient<ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel>();
         services.AddTransient<ViewModels.Analysis.CircuitOptimization.CircuitOptimizationViewModel>();
         services.AddTransient<OnaSweepViewModel>();
         services.AddTransient<RoutingDiagnosticsViewModel>();
@@ -99,6 +107,8 @@ internal static class CanvasAndPanelExtensions
 
         // Bottom panel sub-ViewModels
         services.AddTransient<ConnectionRoutingViewModel>();
+        services.AddTransient<LengthMatchingViewModel>();
+        services.AddTransient<ViewModels.Canvas.RerouteImported.RerouteImportedRoutesViewModel>();
         services.AddTransient<ElementLockViewModel>();
         services.AddTransient<ErrorConsoleViewModel>();
 

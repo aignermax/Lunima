@@ -23,9 +23,9 @@
                     ToolTip.Tip="{loc:Localize PdkCheck.CopyFailingListTip}"/>
             <Button Content="{loc:Localize PdkCheck.RunCheck}"
                     Command="{Binding RunCheckCommand}"
-                    Width="100" Background="#3d4d6d"
+                    MinWidth="100" Padding="12,0" Background="#3d4d6d"
                     IsEnabled="{Binding !IsRunning}"/>
-            <Button Content="{loc:Localize Common.Close}" Width="70" Click="OnCloseClicked"/>
+            <Button Content="{loc:Localize Common.Close}" MinWidth="70" Padding="12,0" Click="OnCloseClicked"/>
         </StackPanel>
 
         <!-- Status line -->

@@ -1,0 +1,10 @@
+[
+  {
+    "file": "logic-tab-after-photonic-add.png",
+    "caption": "Dock Logic tab after the ISA playground ran LOAD 5 / STORE 0 / LOAD 3 / ADD 0 photonically (issue #1240): the driven input toggles read A = 3 (0011) and B = 5 (0101), Cin off \u2014 exactly as if the user had clicked the toggles."
+  },
+  {
+    "file": "logic-tab-outputs-after-photonic-add.png",
+    "caption": "Same Logic tab scrolled to the named output chips: S = 8 (1000) and Cout = 0 \u2014 the live evaluation refreshed on the driven inputs shows the addition the program ran."
+  }
+]

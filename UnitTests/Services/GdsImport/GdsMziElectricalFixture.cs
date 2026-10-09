@@ -29,6 +29,15 @@ namespace UnitTests.Services.GdsImport;
 /// </summary>
 internal static class GdsMziElectricalFixture
 {
+    private static readonly Lazy<DesignCanvasViewModel> SharedRouted = new(BuildMziCanvas);
+
+    /// <summary>
+    /// One routed build shared by every READ-ONLY consumer in a test process — routing the
+    /// design runs the full pass with its ordering cascade and contention repair (seconds).
+    /// Tests that change the canvas build their own with <see cref="BuildMziCanvas"/>.
+    /// </summary>
+    public static DesignCanvasViewModel SharedMziCanvas => SharedRouted.Value;
+
     /// <summary>
     /// Rebuilds the user's MZI design on a fresh canvas: the ten components at his
     /// exact coordinates (three bond pads rotated 180°), instantiated from the REAL
@@ -50,7 +59,7 @@ internal static class GdsMziElectricalFixture
             // box centre, pin offsets included) — a bare RotationDegrees assignment
             // would leave the pin offsets unrotated.
             for (var quarterTurns = (int)Math.Round(rotation / 90.0); quarterTurns > 0; quarterTurns--)
-                CAP.Avalonia.Commands.RotateComponentCommand.ApplyModelRotation90(component);
+                CAP_Core.Components.Core.ComponentPoseTransform.Rotate90CounterClockwise(component);
             canvas.AddComponent(component, templateName, pdk);
             return component;
         }

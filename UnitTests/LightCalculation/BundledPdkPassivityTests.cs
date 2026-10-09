@@ -102,11 +102,11 @@ public class BundledPdkPassivityTests
     /// Round-4 hotfix: the stop-only sweep above cannot see a passivity peak that only
     /// exists BETWEEN stops — production evaluates components at arbitrary laser λ
     /// (e.g. 1546 nm) through <see cref="WavelengthInterpolator"/>, so the guard must
-    /// hold on the full interpolated raster, not just the stops. Real/imaginary lerp is
-    /// a convex combination (σ_max cannot exceed the bracketing stops), but this sweep
-    /// pins that property against the PRODUCTION interpolator: if interpolation ever
-    /// changes to magnitude/phase lerp (NOT convex — it can push σ_max above both
-    /// stops), the next interpolation peak fails here instead of crashing a user.
+    /// hold on the full interpolated raster, not just the stops. The production
+    /// interpolator lerps magnitude/phase in polar form (NOT convex — rotating phasors
+    /// can push σ_max above both stops) and then renormalizes any over-unity matrix
+    /// back to the passivity boundary; this sweep pins that the renormalization holds
+    /// for every bundled component on the integer-nm raster.
     /// </summary>
     [Fact]
     public void BundledPdks_EveryInterpolatedWavelength_IsPassive()

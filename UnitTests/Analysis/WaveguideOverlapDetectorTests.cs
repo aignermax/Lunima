@@ -43,30 +43,27 @@ public class WaveguideOverlapDetectorTests
     // ── Straight-segment pair detection ──────────────────────────────────
 
     [Fact]
-    public void DetectOverlaps_CrossingConnections_ReturnsOneIssue()
+    public void DetectOverlaps_CrossingConnections_DeferredToCrossingDetector()
     {
-        // Horizontal segment from (0,50) to (100,50)
+        // A proper connection×connection crossing is reported as WaveguideCrossing by
+        // ConnectionCrossingDetector (via DesignValidator) — never double-reported here.
         var conn1 = CreateConnectionWithSegment(0, 50, 100, 50);
-        // Vertical segment from (50,0) to (50,100) — crosses at (50,50)
         var conn2 = CreateConnectionWithSegment(50, 0, 50, 100);
 
         var result = _detector.DetectOverlaps(
             new[] { conn1, conn2 },
             Array.Empty<ComponentGroup>());
 
-        result.Count.ShouldBe(1);
-        result[0].Type.ShouldBe(DesignIssueType.OverlappingPaths);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
-    public void DetectOverlaps_CrossingConnections_ReportsCrossPoint()
+    public void DetectOverlaps_ConnectionCrossingFrozenPath_ReportsCrossPoint()
     {
-        var conn1 = CreateConnectionWithSegment(0, 50, 100, 50);
-        var conn2 = CreateConnectionWithSegment(50, 0, 50, 100);
+        var conn = CreateConnectionWithSegment(0, 50, 100, 50);
+        var group = CreateGroupWithFrozenPath(50, 0, 50, 100);
 
-        var result = _detector.DetectOverlaps(
-            new[] { conn1, conn2 },
-            Array.Empty<ComponentGroup>());
+        var result = _detector.DetectOverlaps(new[] { conn }, new[] { group });
 
         result[0].X.ShouldBe(50, 0.5);
         result[0].Y.ShouldBe(50, 0.5);
@@ -206,23 +203,72 @@ public class WaveguideOverlapDetectorTests
     {
         var conn1 = CreateConnectionWithSegment(0, 50, 100, 50);
         var conn2 = CreateConnectionWithSegment(0, 70, 100, 70);
-        var conn3 = CreateConnectionWithSegment(50, 0, 50, 100);  // crosses conn1 and conn2
+        // Frozen vertical path crosses conn1 and conn2
+        var group = CreateGroupWithFrozenPath(50, 0, 50, 100);
 
         var result = _detector.DetectOverlaps(
-            new[] { conn1, conn2, conn3 },
-            Array.Empty<ComponentGroup>());
+            new[] { conn1, conn2 },
+            new[] { group });
 
         result.Count.ShouldBe(2);
     }
 
+    // ── Bend–bend pairs (must not produce bounding-box false positives) ──
+
+    [Fact]
+    public void DetectOverlaps_ConcentricBendArcs_ReturnsEmpty()
+    {
+        // Same center, different radii — the arcs never touch, but their
+        // full-circle bounding boxes overlap.
+        var conn1 = CreateConnectionWithBend(new BendSegment(0, 0, 50, 0, 360));
+        var conn2 = CreateConnectionWithBend(new BendSegment(0, 0, 100, 0, 360));
+
+        var result = _detector.DetectOverlaps(
+            new[] { conn1, conn2 },
+            Array.Empty<ComponentGroup>());
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void DetectOverlaps_CrossingBendArcs_ReturnsIssue()
+    {
+        // A connection circle and a frozen-path circle whose centers are one radius
+        // apart — the arcs intersect.
+        var conn = CreateConnectionWithBend(new BendSegment(0, 0, 50, 0, 360));
+        var group = CreateGroupWithFrozenBend(new BendSegment(50, 0, 50, 0, 360));
+
+        var result = _detector.DetectOverlaps(new[] { conn }, new[] { group });
+
+        result.Count.ShouldBe(1);
+        result[0].Type.ShouldBe(DesignIssueType.OverlappingPaths);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    private static WaveguideConnection CreateConnectionWithBend(BendSegment bend)
+    {
+        var connection = CreateConnectionPair();
+        var path = new RoutedPath();
+        path.Segments.Add(bend);
+        connection.RestoreCachedPath(path);
+        return connection;
+    }
+
 
     private static WaveguideConnection CreateConnectionWithSegment(
         double x1, double y1, double x2, double y2)
     {
+        var connection = CreateConnectionPair();
+        var path = new RoutedPath();
+        path.Segments.Add(new StraightSegment(x1, y1, x2, y2, 0));
+        connection.RestoreCachedPath(path);
+        return connection;
+    }
+
+    private static WaveguideConnection CreateConnectionPair()
+    {
         var comp1 = TestComponentFactory.CreateStraightWaveGuide();
-        comp1.PhysicalX = x1;
-        comp1.PhysicalY = y1;
         var pin1 = new PhysicalPin
         {
             Name = "out",
@@ -233,8 +279,6 @@ public class WaveguideOverlapDetectorTests
         comp1.PhysicalPins.Add(pin1);
 
         var comp2 = TestComponentFactory.CreateStraightWaveGuide();
-        comp2.PhysicalX = x2;
-        comp2.PhysicalY = y2;
         var pin2 = new PhysicalPin
         {
             Name = "in",
@@ -244,11 +288,7 @@ public class WaveguideOverlapDetectorTests
         };
         comp2.PhysicalPins.Add(pin2);
 
-        var conn = new WaveguideConnection { StartPin = pin1, EndPin = pin2 };
-        var path = new RoutedPath();
-        path.Segments.Add(new StraightSegment(x1, y1, x2, y2, 0));
-        conn.RestoreCachedPath(path);
-        return conn;
+        return new WaveguideConnection { StartPin = pin1, EndPin = pin2 };
     }
 
     private static WaveguideConnection CreateConnectionWithoutPath()
@@ -276,12 +316,24 @@ public class WaveguideOverlapDetectorTests
         return new WaveguideConnection { StartPin = pin1, EndPin = pin2 };
     }
 
+    private static ComponentGroup CreateGroupWithFrozenBend(BendSegment bend)
+    {
+        var path = new RoutedPath();
+        path.Segments.Add(bend);
+        return CreateGroupWithFrozenPath(path);
+    }
+
     private static ComponentGroup CreateGroupWithFrozenPath(
         double x1, double y1, double x2, double y2)
     {
-        var group = new ComponentGroup("TestGroup");
         var path = new RoutedPath();
         path.Segments.Add(new StraightSegment(x1, y1, x2, y2, 0));
+        return CreateGroupWithFrozenPath(path);
+    }
+
+    private static ComponentGroup CreateGroupWithFrozenPath(RoutedPath path)
+    {
+        var group = new ComponentGroup("TestGroup");
 
         var pin1 = CreateGroupPin(group, "p1");
         var pin2 = CreateGroupPin(group, "p2");

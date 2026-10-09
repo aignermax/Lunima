@@ -1,0 +1,14 @@
+[
+  {
+    "file": "length-match-1-pulses-in-flight.png",
+    "caption": "Length Matching help: two pulses leave a splitter together \u2014 unequal arm lengths make them arrive out of step (phase slip), the grown meander matches the lengths and they arrive together; the readout is the real group delay \u0394t = \u0394L\u00B7n_g/c. (mismatched arms \u2014 both pulses in flight)"
+  },
+  {
+    "file": "length-match-2-phase-slip.png",
+    "caption": "Length Matching help: two pulses leave a splitter together \u2014 unequal arm lengths make them arrive out of step (phase slip), the grown meander matches the lengths and they arrive together; the readout is the real group delay \u0394t = \u0394L\u00B7n_g/c. (phase slip \u2014 the short arm\u0027s pulse has arrived, the long arm\u0027s is still travelling)"
+  },
+  {
+    "file": "length-match-3-matched-arrival.png",
+    "caption": "Length Matching help: two pulses leave a splitter together \u2014 unequal arm lengths make them arrive out of step (phase slip), the grown meander matches the lengths and they arrive together; the readout is the real group delay \u0394t = \u0394L\u00B7n_g/c. (length matched \u2014 the meander brings both pulses in together, \u0394t = 0)"
+  }
+]

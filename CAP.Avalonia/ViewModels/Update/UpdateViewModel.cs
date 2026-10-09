@@ -51,8 +51,9 @@ public partial class UpdateViewModel : ObservableObject
     [ObservableProperty]
     private string _releaseNotes = "";
 
-    /// <summary>Gets the current application version as a display string.</summary>
-    public string CurrentVersionText => $"Current: v{_currentVersion}";
+    /// <summary>Gets the current application version as a localized display string.</summary>
+    public string CurrentVersionText => string.Format(
+        LocalizationService.Instance.Translate("Settings.Updates.CurrentVersion"), _currentVersion);
 
     /// <summary>Initializes a new instance of <see cref="UpdateViewModel"/>.</summary>
     public UpdateViewModel(

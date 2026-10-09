@@ -95,7 +95,12 @@ public class GdsEnvelopeRouteDissolveIntegrationTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var executor = new GdsPlacementExecutor(
             canvas, new CommandManager(), () => _host.Templates.ToList());
-        var vm = new GdsImportDialogViewModel(gdsPath, service, executor);
+        var vm = new GdsImportDialogViewModel(gdsPath, service, executor)
+        {
+            // This scenario inspects the grouped, re-routed import.
+            GroupImportRequested = true,
+            RerouteConnectionsRequested = true,
+        };
         await vm.StartAnalysisAsync();
         vm.HasError.ShouldBeFalse(vm.ErrorText);
 

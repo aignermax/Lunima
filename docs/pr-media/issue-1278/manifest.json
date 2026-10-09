@@ -1,0 +1,10 @@
+[
+  {
+    "file": "01-statusbar-mid-routing.png",
+    "caption": "Status bar mid-routing: \u0027Routing n/m connections \u00B7 1 s\u0027 progress text with the Stop button next to it."
+  },
+  {
+    "file": "02-statusbar-stopped.png",
+    "caption": "After Stop: the pass reports \u0027Routing stopped \u2014 n/m routed\u0027; already-routed wires keep their routes."
+  }
+]

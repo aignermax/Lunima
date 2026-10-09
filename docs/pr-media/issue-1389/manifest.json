@@ -1,0 +1,14 @@
+[
+  {
+    "file": "ram2x4-overview.png",
+    "caption": "The shipped \u0027Logic Gate RAM 2x4\u0027 example (issue #1389): the hierarchical RAM \u2014 the address inverter NOTA and the four read-MUX combines OUT0\u2013OUT3 at top level, the two word-cell instances CELL0/CELL1 routed once and frozen; only nine inter-cell wires route at top level."
+  },
+  {
+    "file": "ram2x4-logic-panel-en.png",
+    "caption": "The Logic tab after the write/read demo (en): 5 was stored in word 0 and 10 in word 1 (one LOAD \u002B clock each), then LOAD went low \u2014 with A=1 the read bus Q shows 10; the eight register bits of the two instanced word cells are listed in the register readout."
+  },
+  {
+    "file": "ram2x4-logic-panel-de.png",
+    "caption": "The Logic tab after the write/read demo (de): 5 was stored in word 0 and 10 in word 1 (one LOAD \u002B clock each), then LOAD went low \u2014 with A=1 the read bus Q shows 10; the eight register bits of the two instanced word cells are listed in the register readout."
+  }
+]

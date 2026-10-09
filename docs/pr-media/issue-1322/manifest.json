@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-zero-flag-toggle-de.png",
+    "caption": "ISA-Playground mit aufgebautem Zero-Detect-4-Bit-Netzwerk und eingeschaltetem Photonic-Toggle: Der Toggle liest \u201EJZ auf dem photonischen Chip entscheiden\u201C und der Titel nennt das photonische Zero-Flag (JZ) \u2014 die Sprungentscheidung des Programms l\u00E4uft \u00FCber Licht."
+  },
+  {
+    "file": "isa-playground-zero-flag-toggle-en.png",
+    "caption": "ISA playground with the Zero Detect 4-bit network built and the photonic toggle on: the toggle reads \u0027Decide JZ on the photonic chip\u0027 and the header names the photonic zero flag (JZ) \u2014 the program\u0027s branch decision runs on light."
+  }
+]

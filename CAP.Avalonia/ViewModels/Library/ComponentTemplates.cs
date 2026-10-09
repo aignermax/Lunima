@@ -10,13 +10,37 @@ public static class ComponentTemplates
 {
     private static int _componentCounter = 0;
 
+    /// <summary>
+    /// Advances the instance counter past the numeric suffix of an identifier already in use
+    /// ("MMI_3765" reserves 3765), so components created afterwards — placed by hand or by the
+    /// crossing pass — never reuse the identifier of a component loaded from a file. Saved
+    /// connections reference components by identifier, so a collision rewires the design on
+    /// the next load.
+    /// </summary>
+    /// <param name="identifier">An identifier present in the design.</param>
+    public static void ReserveIdentifier(string? identifier)
+    {
+        if (identifier == null) return;
+        int separator = identifier.LastIndexOf('_');
+        if (separator < 0 || !int.TryParse(identifier.AsSpan(separator + 1), System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int suffix))
+            return;
+        int current;
+        do
+        {
+            current = Volatile.Read(ref _componentCounter);
+            if (suffix <= current) return;
+        }
+        while (Interlocked.CompareExchange(ref _componentCounter, suffix, current) != current);
+    }
+
     [Obsolete("Use JSON PDK files (demo-pdk.json, siepic-ebeam-pdk.json) as the source of component templates. This method returns an empty list.")]
     public static List<ComponentTemplate> GetAllTemplates() => new List<ComponentTemplate>();
 
     public static Component CreateFromTemplate(ComponentTemplate template, double x, double y)
     {
-        _componentCounter++;
-        var instanceName = $"{template.Name}_{_componentCounter}";
+        // Interlocked: the crossing pass creates components on the routing thread.
+        var instanceName = $"{template.Name}_{Interlocked.Increment(ref _componentCounter)}";
 
         var logicalPins = new List<Pin>();
         for (int i = 0; i < template.PinDefinitions.Length; i++)
@@ -80,7 +104,9 @@ public static class ComponentTemplates
                 OffsetXMicrometers = def.OffsetX,
                 OffsetYMicrometers = def.OffsetY,
                 AngleDegrees = def.AngleDegrees,
-                LogicalPin = logicalPins[i]
+                LogicalPin = logicalPins[i],
+                WaveguideWidthMicrometers = def.WaveguideWidthMicrometers,
+                Layer = def.Layer
             });
         }
 
@@ -110,6 +136,8 @@ public static class ComponentTemplates
         component.GdsFactoryRoutingCrossSection = template.GdsFactoryRoutingCrossSection;
 
         component.HumanReadableName = template.Name;
+        component.TemplateName = template.Name;
+        component.WaveguideDispersion = template.WaveguideDispersion;
         component.ParameterDefinitions = template.ParameterDefinitions;
         component.OutlinePolygons = template.OutlinePolygons;
 
@@ -176,6 +204,15 @@ public partial class ComponentTemplate : ObservableObject
 
     public string PdkSource { get; set; } = "Built-in";
 
+    /// <summary>
+    /// Wavelength-dependent waveguide dispersion of this template's PDK (root
+    /// <c>materialDispersion</c>, or the component's own block when it declares one),
+    /// resolved to a domain model. Stamped onto every placed instance as
+    /// <see cref="Component.WaveguideDispersion"/> so routed waveguide connections
+    /// inherit the PDK's n_eff(λ)/n_g(λ). Null when the PDK declares no dispersion.
+    /// </summary>
+    public CAP_Core.LightCalculation.MaterialDispersion.IDispersionModel? WaveguideDispersion { get; set; }
+
     public double NazcaOriginOffsetX { get; set; } = 0;
     public double NazcaOriginOffsetY { get; set; } = 0;
 
@@ -223,8 +260,19 @@ public class PinDefinition
 
     public PolarizationKind Polarization { get; }
 
+    /// <summary>
+    /// Waveguide width in µm at this pin from the PDK (per-pin value or the process'
+    /// default optical cross-section); null when the PDK declares neither — the
+    /// pin-mismatch rule then stays silent for this pin.
+    /// </summary>
+    public double? WaveguideWidthMicrometers { get; }
+
+    /// <summary>GDS layer number of this pin's waveguide from the PDK; null when undeclared.</summary>
+    public int? Layer { get; }
+
     public PinDefinition(string name, double offsetX, double offsetY, double angleDegrees,
-        MatterType kind = MatterType.Light, PolarizationKind polarization = PolarizationKind.TE)
+        MatterType kind = MatterType.Light, PolarizationKind polarization = PolarizationKind.TE,
+        double? waveguideWidthMicrometers = null, int? layer = null)
     {
         Name = name;
         OffsetX = offsetX;
@@ -232,5 +280,7 @@ public class PinDefinition
         AngleDegrees = angleDegrees;
         Kind = kind;
         Polarization = polarization;
+        WaveguideWidthMicrometers = waveguideWidthMicrometers;
+        Layer = layer;
     }
 }

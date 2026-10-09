@@ -1,0 +1,18 @@
+[
+  {
+    "file": "checks-tab-crossing-en.png",
+    "caption": "Design Checks tab (en): a waveguide-crossing finding with the new (?) help button next to it."
+  },
+  {
+    "file": "crossing-flyout-en-mid.png",
+    "caption": "Crossing help (en): at the bare X the pulse splits and leaks into the crossing arm (orange); through the crossing component it continues straight at full brightness."
+  },
+  {
+    "file": "crossing-flyout-en-approach.png",
+    "caption": "Crossing help (en): the pulses approach both junctions in lockstep \u2014 no leak yet."
+  },
+  {
+    "file": "crossing-flyout-de-mid.png",
+    "caption": "Crossing help (de): at the bare X the pulse splits and leaks into the crossing arm (orange); through the crossing component it continues straight at full brightness."
+  }
+]

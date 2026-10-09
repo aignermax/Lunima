@@ -3,6 +3,7 @@ using MathNet.Numerics.LinearAlgebra;
 using System.Linq.Dynamic.Core;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.FormulaReading;
+using CAP_Core.Components.Parametric;
 
 namespace CAP_Core.LightCalculation
 {
@@ -46,6 +47,17 @@ namespace CAP_Core.LightCalculation
         /// lives in a separate assembly (<c>CAP.Avalonia</c>).
         /// </summary>
         public Func<List<Pin>, List<Slider>, SMatrix>? ParametricRebuild { get; set; }
+
+        /// <summary>
+        /// Immutable parameter/formula definitions this matrix was built from
+        /// (<see cref="ParametricSMatrixSnapshot"/>), or <c>null</c> for non-parametric
+        /// matrices. Unlike <see cref="ParametricRebuild"/> (an opaque factory), the
+        /// snapshot exposes the actual formulas and parameter metadata, so serializers
+        /// can persist them and rebuild an equivalent live matrix after a disk
+        /// round-trip. Set once by <c>ParametricSMatrixFactory.Build</c> and carried
+        /// forward by rebuilds; the instance is immutable and freely shareable.
+        /// </summary>
+        public ParametricSMatrixSnapshot? ParametricSnapshot { get; set; }
 
         public SMatrix(List<Guid> allPinsInGrid, List<(Guid sliderID, double value)> AllSliders)
         {
@@ -165,27 +177,13 @@ namespace CAP_Core.LightCalculation
             await RecomputeSMatNonLinearPartsAsync(inputVector, SkipOuterLoopFunctions: false);
             try
             {
-                var inputAfterSteps = SMat * inputVector + inputVector;
-                var converged = false;
-
-                for (int i = 1; i < maxIterations && !converged; i++)
-                {
-                    cancellation.Token.ThrowIfCancellationRequested();
-                    await Task.Run(async () =>
-                    {
-                        var previousField = inputAfterSteps;
-                        // Recalculate non-linear entries because the field vector has changed
-                        // (e.g. logic gates that switch based on optical power).
-                        await RecomputeSMatNonLinearPartsAsync(inputAfterSteps, SkipOuterLoopFunctions: true);
-                        inputAfterSteps = SMat * inputAfterSteps + inputVector;
-
-                        // Residual-based convergence: stop when the field change is negligible.
-                        double delta = (inputAfterSteps - previousField).L2Norm();
-                        converged = delta < convergenceEpsilon;
-                    }, cancellation.Token);
-                }
-
-                return ConvertToDictWithGuids(inputAfterSteps);
+                // The whole iteration runs as ONE background task: a task hop per iteration
+                // resumed on the caller's context (the UI dispatcher) after every step, so a
+                // slowly converging ring spent its time waiting on thread switches. The single
+                // await below still resumes on the caller's context, as callers expect.
+                return await Task.Run(
+                    () => IterateToConvergenceAsync(inputVector, maxIterations, convergenceEpsilon, cancellation.Token),
+                    cancellation.Token);
             }
             catch (OperationCanceledException)
             {
@@ -243,6 +241,54 @@ namespace CAP_Core.LightCalculation
                 SMat[PinReference[connection.Key.PinIdEnd], PinReference[connection.Key.PinIdStart]] = calculatedWeight;
             }
         }
+
+        /// <summary>
+        /// Returns a lightweight copy of this matrix in which every parameter-only
+        /// (slider-driven) formula connection has been resolved to the numeric value
+        /// implied by the current slider positions. Field-dependent (inner-loop)
+        /// connections cannot be resolved without a field and stay unevaluated.
+        /// The original matrix is left untouched — used when a numeric snapshot of
+        /// the current parameter state is needed (e.g. prefab serialization) without
+        /// baking values into the live component.
+        /// </summary>
+        public SMatrix CreateEvaluatedSnapshot()
+        {
+            var snapshot = new SMatrix(
+                PinReference.Keys.ToList(),
+                SliderReference.Select(kv => (kv.Key, kv.Value)).ToList())
+            {
+                NonLinearConnections = NonLinearConnections,
+                ParametricRebuild = ParametricRebuild,
+                ParametricSnapshot = ParametricSnapshot
+            };
+            snapshot.SetValues(GetNonNullValues());
+            snapshot.EvaluateParameterOnlyConnections();
+            return snapshot;
+        }
+        private async Task<Dictionary<Guid, Complex>> IterateToConvergenceAsync(
+            MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector,
+            int maxIterations,
+            double convergenceEpsilon,
+            CancellationToken token)
+        {
+            var inputAfterSteps = SMat * inputVector + inputVector;
+            var converged = false;
+            for (int i = 1; i < maxIterations && !converged; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                var previousField = inputAfterSteps;
+                // Recalculate non-linear entries because the field vector has changed
+                // (e.g. logic gates that switch based on optical power).
+                await RecomputeSMatNonLinearPartsAsync(inputAfterSteps, SkipOuterLoopFunctions: true).ConfigureAwait(false);
+                inputAfterSteps = SMat * inputAfterSteps + inputVector;
+
+                // Residual-based convergence: stop when the field change is negligible.
+                double delta = (inputAfterSteps - previousField).L2Norm();
+                converged = delta < convergenceEpsilon;
+            }
+            return ConvertToDictWithGuids(inputAfterSteps);
+        }
+
         private async Task RecomputeSMatNonLinearPartsAsync(MathNet.Numerics.LinearAlgebra.Vector<Complex> inputVector, bool SkipOuterLoopFunctions = true)
         {
             foreach (var connection in NonLinearConnections)

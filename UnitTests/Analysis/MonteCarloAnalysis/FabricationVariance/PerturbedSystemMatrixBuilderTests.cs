@@ -27,6 +27,9 @@ namespace UnitTests.Analysis.MonteCarloAnalysis.FabricationVariance
             }
 
             public SMatrix GetSystemSMatrix(int LaserWaveLengthInNm)
+                => GetSystemSMatrix((double)LaserWaveLengthInNm);
+
+            public SMatrix GetSystemSMatrix(double wavelengthNm)
             {
                 var matrix = new SMatrix(_pins, new());
                 matrix.SetValues(new(_entries));
@@ -148,6 +151,7 @@ namespace UnitTests.Analysis.MonteCarloAnalysis.FabricationVariance
             private readonly SMatrix _matrix;
             public PassThroughBuilder(SMatrix matrix) => _matrix = matrix;
             public SMatrix GetSystemSMatrix(int LaserWaveLengthInNm) => _matrix;
+            public SMatrix GetSystemSMatrix(double wavelengthNm) => _matrix;
         }
     }
 }

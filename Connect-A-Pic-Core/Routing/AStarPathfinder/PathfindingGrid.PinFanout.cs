@@ -53,6 +53,8 @@ public partial class PathfindingGrid
             _cells[gx, gy] = 0;
         }
 
+        if (cleared.Count > 0)
+            WaveguideVersion++;
         return cleared;
     }
 

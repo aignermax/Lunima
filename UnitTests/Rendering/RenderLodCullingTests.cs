@@ -40,7 +40,7 @@ public class RenderLodCullingTests
         // the GDS-import pattern where all placed instances share the outline list
         // (see ComponentTemplates.CreateFromTemplate). 1 µm polygons ≈ 0.05 px here.
         var outlines = CreateOutlineTemplate(polygonCount: 10, polygonSize: 1.0);
-        var renderer = new ComponentOutlineRenderer();
+        var renderer = new ComponentOutlineRenderer(useRasterCache: false);
 
         using var bitmap = new RenderTargetBitmap(new PixelSize(BitmapWidth, BitmapHeight));
         using (var ctx = bitmap.CreateDrawingContext())
@@ -67,7 +67,7 @@ public class RenderLodCullingTests
             CreateSquarePolygon(size: 30.0), // exactly 1.5 px → drawn (threshold is strict)
             CreateSquarePolygon(size: 40.0), // 2 px → drawn
         };
-        var renderer = new ComponentOutlineRenderer();
+        var renderer = new ComponentOutlineRenderer(useRasterCache: false);
 
         using var bitmap = new RenderTargetBitmap(new PixelSize(BitmapWidth, BitmapHeight));
         using (var ctx = bitmap.CreateDrawingContext())
@@ -81,13 +81,13 @@ public class RenderLodCullingTests
     public void NormalZoom_PolygonsAboveThreshold_AreAllIssued()
     {
         var outlines = CreateOutlineTemplate(polygonCount: 10, polygonSize: 10.0); // 10 px at zoom 1
-        var renderer = new ComponentOutlineRenderer();
+        var renderer = new ComponentOutlineRenderer(useRasterCache: false);
 
         using var bitmap = new RenderTargetBitmap(new PixelSize(BitmapWidth, BitmapHeight));
         using (var ctx = bitmap.CreateDrawingContext())
             renderer.Draw(ctx, 0, 0, 60, 60, 0, outlines, false, 1.0);
 
-        renderer.IssuedGeometryCount.ShouldBe(10);
+        renderer.IssuedGeometryCount.ShouldBe(1, "the 10 same-layer, same-size polygons are one batched draw");
         renderer.CulledGeometryCount.ShouldBe(0);
     }
 
@@ -99,7 +99,7 @@ public class RenderLodCullingTests
         // 60×40 component at (20,20); its outline stripe covers local (0,10)..(30,30)
         // → world (20,30)..(50,50).
         var outlines = new[] { CreateStripePolygon() };
-        var renderer = new ComponentOutlineRenderer();
+        var renderer = new ComponentOutlineRenderer(useRasterCache: false);
 
         using var bitmap = new RenderTargetBitmap(new PixelSize(BitmapWidth, BitmapHeight));
         using (var ctx = bitmap.CreateDrawingContext())
@@ -122,7 +122,7 @@ public class RenderLodCullingTests
         // threshold. It lands at screen (20,20)..(21.4,21.4); if the cull regressed,
         // the fill (alpha 46, blue 220) would paint pixel (20,20) at blue ≈ 40.
         var outlines = new[] { CreateSquarePolygon(size: 28.0) };
-        var renderer = new ComponentOutlineRenderer();
+        var renderer = new ComponentOutlineRenderer(useRasterCache: false);
 
         using var bitmap = new RenderTargetBitmap(new PixelSize(BitmapWidth, BitmapHeight));
         using (var ctx = bitmap.CreateDrawingContext())

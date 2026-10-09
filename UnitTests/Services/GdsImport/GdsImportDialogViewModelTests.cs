@@ -113,6 +113,23 @@ public class GdsImportDialogViewModelTests : IDisposable
         .ToArray();
 
     /// <summary>
+    /// TOP referencing a single unlabeled waveguide cell — the detector must fall
+    /// back to the edge heuristic and produce two guessed pin suggestions.
+    /// </summary>
+    private static byte[] UnlabeledWaveguideLibrary() => GdsTestWriter.Create()
+        .StandardPrologue()
+        .BeginCell("TOP")
+            // A fictitious keep label plus the reference keeps TOP from being
+            // unwrapped as a pass-through wrapper, so the dialog's selected top
+            // cell stays "TOP" and its direct child is the unlabeled waveguide.
+            .Text(999, 0, "keep", 0, 0)
+            .SRef("wgNoLabel", 0, 0)
+        .EndCell()
+        .UnlabeledWaveguideCell("wgNoLabel")
+        .EndLibrary()
+        .ToArray();
+
+    /// <summary>
     /// TOP whose only content is two references to "np", a cell with a zero-width
     /// (degenerate) extent: the draft has zero size, so the service refuses
     /// registration and BOTH instances are skipped with the identical reason —
@@ -144,7 +161,9 @@ public class GdsImportDialogViewModelTests : IDisposable
         var canvas = new DesignCanvasViewModel();
         var service = _host.CreateService();
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        return (new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole), canvas, _host);
+        // Most scenarios here inspect the grouped import; the flat default has its own tests.
+        return (new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole)
+            { GroupImportRequested = true }, canvas, _host);
     }
 
     /// <summary>
@@ -166,7 +185,7 @@ public class GdsImportDialogViewModelTests : IDisposable
             return Array.Empty<ComponentTemplate>();
         });
         var executor = new GdsPlacementExecutor(canvas, new CommandManager(), () => _host.Templates.ToList());
-        vm = new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole);
+        vm = new GdsImportDialogViewModel(gdsPath, service, executor, errorConsole) { GroupImportRequested = true };
         return (vm, canvas);
     }
 
@@ -224,6 +243,35 @@ public class GdsImportDialogViewModelTests : IDisposable
 
         vm.CanImport.ShouldBeFalse();
         vm.ImportCommand.CanExecute(null).ShouldBeFalse();
+    }
+
+    // ── Guessed-pin suggestions ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task StartAnalysisAsync_UnlabeledWaveguide_PopulatesGuessedPinSuggestions()
+    {
+        var (vm, _, _) = CreateDialog(WriteGds(UnlabeledWaveguideLibrary()));
+
+        await vm.StartAnalysisAsync();
+
+        vm.HasError.ShouldBeFalse(vm.ErrorText);
+        vm.HasPinSuggestions.ShouldBeTrue();
+        vm.PinSuggestions.Count.ShouldBe(2);
+        vm.PinSuggestions.ShouldAllBe(s => s.IsGuessed,
+            "edge-heuristic pins must be flagged as guessed in the dialog");
+    }
+
+    [Fact]
+    public async Task RemovePinSuggestionCommand_RemovesPinFromSuggestions()
+    {
+        var (vm, _, _) = CreateDialog(WriteGds(UnlabeledWaveguideLibrary()));
+        await vm.StartAnalysisAsync();
+
+        var pin = vm.PinSuggestions.Where(s => s.PinName == "heur_1").ShouldHaveSingleItem();
+        pin.RemoveCommand.Execute(null);
+
+        vm.PinSuggestions.ShouldNotContain(s => s.PinName == "heur_1");
+        vm.PinSuggestions.Count.ShouldBe(1);
     }
 
     // ── Options validation ───────────────────────────────────────────────────
@@ -381,12 +429,35 @@ public class GdsImportDialogViewModelTests : IDisposable
     }
 
     [Fact]
-    public void RerouteConnectionsRequested_IsTrueByDefault()
+    public void NewDialog_KeepsDrawnRoutesFrozenAndImportFlat_ByDefault()
     {
-        var (vm, _, _) = CreateDialog(WriteGds(TwoWaveguideLibrary()));
+        var vm = new GdsImportDialogViewModel(
+            WriteGds(TwoWaveguideLibrary()), _host.CreateService(), new GdsPlacementExecutor(
+                new DesignCanvasViewModel(), null, () => Array.Empty<ComponentTemplate>()));
 
-        vm.RerouteConnectionsRequested.ShouldBeTrue(
-            "detected connections should come back as real Lunima routing by default");
+        vm.RerouteConnectionsRequested.ShouldBeFalse(
+            "a finished layout must import exactly as drawn — re-routing is opt-in");
+        vm.GroupImportRequested.ShouldBeFalse(
+            "a flat import keeps every component and waveguide individually editable");
+    }
+
+    [Fact]
+    public async Task ImportAsync_DefaultOptions_KeepTheRouteFrozenOnAFlatCanvas()
+    {
+        var (vm, canvas, _) = CreateDialog(WriteGds(TwoWaveguideLibraryBridgedByRoute()));
+        vm.GroupImportRequested = false;
+        vm.RerouteConnectionsRequested = false;
+        await vm.StartAnalysisAsync();
+
+        await vm.ImportCommand.ExecuteAsync(null);
+
+        vm.HasError.ShouldBeFalse(vm.ErrorText);
+        canvas.Components.Count.ShouldBe(2, "no group wraps the two placed cells");
+        var connection = canvas.Connections.ShouldHaveSingleItem().Connection;
+        connection.IsRouteFrozen.ShouldBeTrue("the drawn route is kept, not re-routed");
+        connection.AsDrawnGeometry.ShouldNotBeNull("the drawn polygon is rendered and exported verbatim");
+        connection.RoutedPath!.Segments.ShouldHaveSingleItem()
+            .ShouldBeOfType<CAP_Core.Routing.StraightSegment>("the stripe is fitted as one straight centerline");
     }
 
     // ── Connection reconstruction ────────────────────────────────────────────
@@ -769,5 +840,12 @@ file static class GdsImportDialogTestCells
                 .Boundary(111, 0, (0, 0), (10000, 0), (10000, 4000), (0, 4000), (0, 0))
                 .Text(1, 10, "in", 0, 2000)
                 .Text(1, 10, "out", 10000, 2000)
+            .EndCell();
+
+    public static GdsTestWriter UnlabeledWaveguideCell(this GdsTestWriter writer, string name) =>
+        writer
+            .BeginCell(name)
+                .Boundary(1, 0, (0, 1750), (10000, 1750), (10000, 2250), (0, 2250), (0, 1750))
+                .Boundary(111, 0, (0, 0), (10000, 0), (10000, 4000), (0, 4000), (0, 0))
             .EndCell();
 }

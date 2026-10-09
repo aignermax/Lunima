@@ -1,0 +1,255 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
+using CAP.Avalonia.Services;
+using CAP.Avalonia.Services.Localization;
+using CAP_Core.Logic.Isa;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
+
+/// <summary>
+/// ViewModel of the ISA playground tool window (issue #1194): edit a 4-bit
+/// assembly program (or pick a shipped sample), assemble it into the golden
+/// <see cref="IsaEmulator"/>, and step through it while the machine state and
+/// the current source line stay visible. Editing the text marks the assembled
+/// state stale until <see cref="AssembleCommand"/> runs again. The Run/Stop
+/// auto-step half (issue #1204) lives in IsaPlaygroundViewModel.Run.cs, the
+/// photonic toggle (issues #1215, #1275, #1322) in IsaPlaygroundViewModel.Photonic.cs.
+/// </summary>
+public partial class IsaPlaygroundViewModel : ObservableObject
+{
+    private const int AccumulatorBits = 4;
+
+    private readonly IsaAssembler _assembler = new();
+    private readonly BuiltLogicNetworkProvider? _builtNetworkProvider;
+    private IsaEmulator? _emulator;
+    private byte[] _assembledWords = Array.Empty<byte>();
+    private IReadOnlyList<int> _instructionLineNumbers = Array.Empty<int>();
+
+    [ObservableProperty]
+    private string _programText = string.Empty;
+
+    [ObservableProperty]
+    private IsaSampleProgram? _selectedSample;
+
+    [ObservableProperty]
+    private string _errorText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StepCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResetCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleRunCommand))]
+    private bool _isAssembled;
+
+    [ObservableProperty]
+    private int _programCounter;
+
+    [ObservableProperty]
+    private int _accumulator;
+
+    [ObservableProperty]
+    private string _accumulatorBinary = string.Empty;
+
+    [ObservableProperty]
+    private string _ramText = string.Empty;
+
+    [ObservableProperty]
+    private string _machineStatusText = string.Empty;
+
+    /// <summary>Creates the playground with the samples discovered next to the app (or the repo).</summary>
+    public IsaPlaygroundViewModel()
+        : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider: null)
+    {
+    }
+
+    /// <summary>
+    /// Creates the playground wired to the shared <see cref="BuiltLogicNetworkProvider"/>,
+    /// so the photonic toggle sees the Logic tab's network.
+    /// </summary>
+    public IsaPlaygroundViewModel(BuiltLogicNetworkProvider networkProvider)
+        : this(IsaSampleProgramCatalog.LoadDefault(), networkProvider)
+    {
+    }
+
+    /// <summary>Creates the playground with an explicit sample catalog (test seam).</summary>
+    internal IsaPlaygroundViewModel(IsaSampleProgramCatalog catalog)
+        : this(catalog, networkProvider: null)
+    {
+    }
+
+    /// <summary>Creates the playground with an explicit catalog and network provider (test seam).</summary>
+    internal IsaPlaygroundViewModel(IsaSampleProgramCatalog catalog, BuiltLogicNetworkProvider? networkProvider)
+    {
+        _builtNetworkProvider = networkProvider;
+        if (_builtNetworkProvider != null)
+        {
+            _builtNetworkProvider.Changed += OnBuiltNetworkChanged;
+        }
+
+        RefreshPhotonicAvailability();
+        Samples = catalog.Samples;
+        if (Samples.Count == 0)
+        {
+            ErrorText = Translate("IsaPlayground.NoSamplesFound");
+            return;
+        }
+
+        // Loads the sample's source into the editor and auto-assembles it,
+        // so the window opens demo-ready.
+        SelectedSample = Samples[0];
+    }
+
+    /// <summary>The sample programs shown in the picker.</summary>
+    public IReadOnlyList<IsaSampleProgram> Samples { get; }
+
+    /// <summary>
+    /// The 1-based editor line of the instruction the program counter points at — the
+    /// editor highlights it in place — or null when not assembled or halted.
+    /// </summary>
+    [ObservableProperty]
+    private int? _currentSourceLine;
+
+    /// <summary>Selecting a sample loads its source into the editor and assembles it.</summary>
+    partial void OnSelectedSampleChanged(IsaSampleProgram? value)
+    {
+        if (value == null || IsRunning)
+        {
+            return;
+        }
+
+        ProgramText = value.Source;
+        Assemble();
+    }
+
+    /// <summary>Edits make the assembled state stale: disable stepping and drop the highlight.</summary>
+    partial void OnProgramTextChanged(string value)
+    {
+        IsAssembled = false;
+        HighlightCurrentLine(currentLine: null);
+    }
+
+    /// <summary>Assembles the editor text; on success resets the machine with the new program.</summary>
+    [RelayCommand(CanExecute = nameof(CanAssemble))]
+    private void Assemble()
+    {
+        try
+        {
+            var result = _assembler.AssembleWithSourceMap(ProgramText);
+            _assembledWords = result.Words;
+            _emulator = CreateEmulator();
+            _instructionLineNumbers = result.InstructionLineNumbers;
+            ErrorText = string.Empty;
+            IsAssembled = true;
+            PhotonicStatusText = string.Empty;
+            UpdateState();
+        }
+        catch (IsaAssemblerException ex)
+        {
+            ErrorText = string.Format(
+                CultureInfo.InvariantCulture,
+                Translate("IsaPlayground.ErrorFormat"),
+                ex.LineNumber,
+                StripLinePrefix(ex));
+            IsAssembled = false;
+            _emulator = null;
+            _assembledWords = Array.Empty<byte>();
+            _instructionLineNumbers = Array.Empty<int>();
+            HighlightCurrentLine(currentLine: null);
+            ZeroState();
+        }
+    }
+
+    /// <summary>Executes the single instruction at the program counter.</summary>
+    [RelayCommand(CanExecute = nameof(CanStep))]
+    private void Step()
+    {
+        if (_emulator is null)
+        {
+            return;
+        }
+
+        var photonicAdd = NextStepIsPhotonicAdd();
+        var photonicAnd = NextStepIsPhotonicAnd(out var andOperandA, out var andOperandB);
+        var photonicNotOperand = NextStepIsPhotonicNot() ? _emulator.Accumulator : (int?)null;
+        try
+        {
+            _emulator.Step();
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorText = ex.Message;
+        }
+
+        UpdateState();
+        if (photonicAdd)
+        {
+            ReportPhotonicAdd();
+            PublishDrivenInputs();
+        }
+        else if (photonicAnd)
+        {
+            ReportPhotonicAnd(andOperandA, andOperandB);
+        }
+        else if (photonicNotOperand is { } notOperand)
+        {
+            ReportPhotonicNot(notOperand);
+        }
+    }
+
+    /// <summary>Restores the power-on state; the assembled program stays loaded.</summary>
+    [RelayCommand(CanExecute = nameof(IsAssembled))]
+    private void Reset()
+    {
+        _emulator?.Reset();
+        PhotonicStatusText = string.Empty;
+        UpdateState();
+    }
+
+    private void UpdateState()
+    {
+        if (_emulator is null)
+        {
+            ZeroState();
+            return;
+        }
+
+        ProgramCounter = _emulator.ProgramCounter;
+        Accumulator = _emulator.Accumulator;
+        AccumulatorBinary = Convert.ToString(_emulator.Accumulator, 2).PadLeft(AccumulatorBits, '0');
+        RamText = string.Join("  ", _emulator.Ram);
+        MachineStatusText = Translate(_emulator.IsHalted ? "IsaPlayground.StatusHalted" : "IsaPlayground.StatusRunning");
+        HighlightCurrentLine(FindCurrentLine());
+    }
+
+    /// <summary>The source line the program counter points at, or null when halted/past the program.</summary>
+    private int? FindCurrentLine()
+    {
+        if (_emulator is { IsHalted: false } && _emulator.ProgramCounter < _instructionLineNumbers.Count)
+        {
+            return _instructionLineNumbers[_emulator.ProgramCounter];
+        }
+
+        return null;
+    }
+
+    private void HighlightCurrentLine(int? currentLine) => CurrentSourceLine = currentLine;
+
+    private void ZeroState()
+    {
+        ProgramCounter = 0;
+        Accumulator = 0;
+        AccumulatorBinary = string.Empty;
+        RamText = string.Empty;
+        MachineStatusText = string.Empty;
+    }
+
+    /// <summary>Drops the "Line N: " prefix the exception message already carries.</summary>
+    private static string StripLinePrefix(IsaAssemblerException ex)
+    {
+        var prefix = string.Format(CultureInfo.InvariantCulture, "Line {0}: ", ex.LineNumber);
+        return ex.Message.StartsWith(prefix, StringComparison.Ordinal) ? ex.Message[prefix.Length..] : ex.Message;
+    }
+
+    private static string Translate(string key) => LocalizationService.Instance.Translate(key);
+}

@@ -27,6 +27,13 @@ public sealed class GdsPlacementReport
     /// </summary>
     public int CachedRouteCount { get; internal set; }
 
+    /// <summary>
+    /// How many of the <see cref="CachedRouteCount"/> frozen routes carry a real
+    /// centerline (straights and arcs fitted to the drawn polygons) rather than the
+    /// traced polygon outline.
+    /// </summary>
+    public int CenterlineRouteCount { get; internal set; }
+
     /// <summary>Number of top-cell route polygons kept as frozen, non-re-routable paths on the group.</summary>
     public int FrozenRoutePathCount { get; internal set; }
 
@@ -41,6 +48,21 @@ public sealed class GdsPlacementReport
     /// recalculation) instead of keeping imported geometry.
     /// </summary>
     public int ReroutedCount { get; internal set; }
+
+    /// <summary>
+    /// Number of connections the opt-in auto-connect stage created between
+    /// facing, previously unconnected pins (routed with Lunima's router).
+    /// </summary>
+    public int AutoConnectedCount { get; internal set; }
+
+    /// <summary>
+    /// Number of auto-connected pairs the router could not route — they stay on
+    /// the canvas as visible blocked paths and are named in <see cref="Warnings"/>.
+    /// </summary>
+    public int AutoConnectFailedCount { get; internal set; }
+
+    /// <summary>Number of unconnected pins the auto-connect stage found no facing partner for.</summary>
+    public int AutoConnectUnpairedPinCount { get; internal set; }
 
     /// <summary>
     /// Issues the post-batch <see cref="CAP_Core.Analysis.DesignValidator"/> run found in the

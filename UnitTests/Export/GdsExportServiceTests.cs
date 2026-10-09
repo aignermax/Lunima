@@ -18,11 +18,20 @@ public class GdsExportServiceTests
         _service = new GdsExportService();
     }
 
+    /// <summary>
+    /// The real environment probe (spawns python, imports Nazca — seconds), taken once per
+    /// test run: every probe test below inspects the same machine state.
+    /// </summary>
+    private static readonly Lazy<Task<GdsExportService.PythonEnvironmentInfo>> RealEnvironment =
+        new(() => new GdsExportService().CheckPythonEnvironmentAsync());
+
+    private static Task<GdsExportService.PythonEnvironmentInfo> ProbeRealEnvironmentAsync() => RealEnvironment.Value;
+
     [Fact]
     public async Task CheckPythonEnvironmentAsync_ReturnsEnvironmentInfo()
     {
         // Act
-        var result = await _service.CheckPythonEnvironmentAsync();
+        var result = await ProbeRealEnvironmentAsync();
 
         // Assert
         result.ShouldNotBeNull();
@@ -35,7 +44,7 @@ public class GdsExportServiceTests
         // This test will only pass on systems without Python
         // On CI/CD, we can control the environment
         // Act
-        var result = await _service.CheckPythonEnvironmentAsync();
+        var result = await ProbeRealEnvironmentAsync();
 
         // Assert - Either Python is found or not, both are valid states
         if (!result.PythonAvailable)
@@ -51,7 +60,7 @@ public class GdsExportServiceTests
     public async Task CheckPythonEnvironmentAsync_WhenPythonAvailableButNotNazca_ReturnsPartialInfo()
     {
         // Act
-        var result = await _service.CheckPythonEnvironmentAsync();
+        var result = await ProbeRealEnvironmentAsync();
 
         // Assert - If Python is available but not Nazca
         if (result.PythonAvailable && !result.NazcaAvailable)
@@ -66,7 +75,7 @@ public class GdsExportServiceTests
     public async Task CheckPythonEnvironmentAsync_WhenBothAvailable_ReturnsFullInfo()
     {
         // Act
-        var result = await _service.CheckPythonEnvironmentAsync();
+        var result = await ProbeRealEnvironmentAsync();
 
         // Assert - If both are available
         if (result.PythonAvailable && result.NazcaAvailable)
@@ -136,7 +145,7 @@ public class GdsExportServiceTests
             result.ScriptPath.ShouldBe(tempScript);
 
             // If environment not ready, should skip GDS generation
-            var envInfo = await _service.CheckPythonEnvironmentAsync();
+            var envInfo = await ProbeRealEnvironmentAsync();
             if (!envInfo.IsReady)
             {
                 result.Success.ShouldBeFalse();

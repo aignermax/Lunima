@@ -6,14 +6,24 @@ name: 🔍 xUnit Tests
 on:
   push:
     branches: [main]
+    # Every release tag runs the suite on exactly the tagged commit.
+    tags: ['v*']
   pull_request:
+  # On-demand baseline runs (e.g. on dev-ki) so a red PR check can be told
+  # apart from an already-red integration branch.
+  workflow_dispatch:
+
+# A newer push to the same PR supersedes the running check.
+concurrency:
+  group: xunit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   nunit_tests:
     name: 🔍 xUnit Tests
     runs-on: ubuntu-latest
-    # Safety net: the suite takes ~8 min when healthy; anything beyond 30 min is a
-    # hang (previously it burned the full 6h default timeout).
+    # Safety net: a run takes ~12 min (setup, build, three test shards).
+    # Anything beyond 50 min is a hang.
     timeout-minutes: 50
 
     env:
@@ -40,6 +50,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          # Wheels (torch above all) come from the cache instead of PyPI on every run.
+          cache: 'pip'
+          cache-dependency-path: .github/workflows/xUnitTests.yaml
 
       - name: 🔦 Install PhotonTorch (for Phase 3 export integration tests)
         run: |
@@ -48,7 +61,10 @@ jobs:
           # scipy is a transitive dep of photontorch 0.4.1 but missing from its
           # published requirements — install it explicitly so `import photontorch`
           # doesn't fail with ModuleNotFoundError on a fresh runner.
-          pip install photontorch torch matplotlib scipy
+          # CPU-only torch: the default wheel drags in ~2 GB of CUDA libraries the
+          # runner never uses — installing it took over two minutes per run.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install photontorch matplotlib scipy
           # Verify the import works with the exact probe the test uses.
           python3 -c "import photontorch; print('photontorch', photontorch.__version__)"
 
@@ -85,14 +101,28 @@ jobs:
           # gdstk: GDS polygon reader for the demo-PDK render path.
           # klayout / siepic_ebeam_pdk: required for the SiEPIC fixed-cell
           # and PCell rendering paths exercised by NazcaComponentPreviewService.
-          pip install gdstk klayout siepic_ebeam_pdk
+          # SiEPIC: SiEPIC-Tools layout_check for the openEBL functional-
+          # verification readiness test (OpenEblEBeamMziVerificationTests).
+          pip install gdstk klayout siepic_ebeam_pdk SiEPIC
           # Nazca is AGPLv3+ but not published on PyPI (the PyPI 'nazca'
           # package is an unrelated Logilab data-mining library). We mirror
           # the upstream tarball as a Lunima release asset and install from
           # there — Lunima only invokes Nazca as a subprocess, so no linking.
           # Upstream source: https://nazca-design.org/download/
           pip install "https://github.com/aignermax/Lunima/releases/download/vendor-cache-nazca-0.6.1/nazca-0.6.1.tar.gz"
-          python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk; print('PDK preview deps ok')"
+          python3 -c "import nazca, nazca.demofab, gdstk, klayout.db, siepic_ebeam_pdk, SiEPIC; print('PDK preview deps ok')"
+
+      - name: 🔬 Install KLayout CLI (for foundry-deck DRC tests)
+        run: |
+          set -euo pipefail
+          # The klayout pip wheel above ships only the Python module (klayout.db) —
+          # no executable on PATH. The foundry-deck DRC tests probe a `klayout`/
+          # `klayout_app` executable ($KLAYOUT or PATH), so the runner needs the
+          # app itself. Ubuntu universe ships 0.28.x, which runs the vendored
+          # CORNERSTONE pre-DRC deck headless (-b) just fine.
+          sudo apt-get update
+          sudo apt-get install -y klayout
+          klayout -v
 
       - name: 🏃 Run xUnit Tests
         working-directory: UnitTests
@@ -106,7 +136,40 @@ jobs:
           # block the render subprocess waiting for a display.
           MPLBACKEND: Agg
           QT_QPA_PLATFORM: offscreen
-        run: dotnet test --no-restore
+        run: |
+          set -euo pipefail
+          # The suite runs serially inside one process (xunit.runner.json disables
+          # collection parallelization because the Avalonia headless app is a
+          # process-wide singleton). Wall clock is cut by running disjoint,
+          # complementary filter shards as separate processes in parallel — the
+          # union of the filters is the whole suite, so coverage is unchanged.
+          dotnet build --no-restore
+          mkdir -p TestResults
+          run_shard() {
+            local name="$1" filter="$2"
+            # A test hanging past 5 min aborts its shard with the test's name in the log
+            # (instead of silently eating the 50-min job budget); no dump, to keep the
+            # artifact small.
+            dotnet test --no-build --filter "$filter" \
+              --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
+              --results-directory TestResults \
+              --logger "trx;LogFileName=${name}.trx" \
+              --logger "console;verbosity=minimal" \
+              > "TestResults/${name}.log" 2>&1
+          }
+          # Shard by Category, the composition that has run reliably for months.
+          # Mixing slow UI test classes into other shards (by namespace, or five
+          # shards) deadlocked on the Linux runner: xUnit runs a collection inline
+          # on whichever thread finishes a class fixture, and Avalonia's headless
+          # test case blocks that thread — reproduced in a Linux container, not on
+          # Windows. The test fixes shrank the formerly 16-min slow-core shard to ~5.
+          run_shard fast      'Category!=Slow' &
+          run_shard slow-ui   'Category=Slow&FullyQualifiedName~UnitTests.UI.' &
+          run_shard slow-core 'Category=Slow&FullyQualifiedName!~UnitTests.UI.' &
+          status=0
+          for pid in $(jobs -p); do wait "$pid" || status=1; done
+          for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done
+          exit $status
 
       - name: 📎 Upload TestResults (hang diagnostics)
         if: always()

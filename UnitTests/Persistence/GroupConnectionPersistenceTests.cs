@@ -218,6 +218,102 @@ public class GroupConnectionPersistenceTests
         resolved.ShouldBeNull();
     }
 
+    // ── nested non-exposed pin round-trip (issue #1444) ──────────────────────
+
+    /// <summary>
+    /// A canvas connection whose endpoint is a NON-exposed pin of a gate nested two
+    /// groups deep must round-trip: the save side persists the owning component's
+    /// identifier plus the identifier of the top-level ancestor group, and the load
+    /// side resolves that identifier inside the ancestor back to the same pin on the
+    /// same component.
+    /// </summary>
+    [Fact]
+    public void NestedNonExposedPin_RoundTrip_SamePinAndComponentIdentifier()
+    {
+        // Arrange: outer group → inner group → gate with a pin that is never exposed
+        var gate = CreateComponent("gate_nested", "gate_in");
+        var inner = new ComponentGroup("InnerGroup");
+        inner.AddChild(gate);
+        var outer = new ComponentGroup("OuterGroup");
+        outer.AddChild(inner);
+
+        var other = CreateComponent("comp_top", "pin_out", x: 50);
+        var components = new List<ComponentViewModel>
+        {
+            new ComponentViewModel(outer),
+            new ComponentViewModel(other)
+        };
+        var nestedPin = gate.PhysicalPins[0];
+
+        // ── Save ──
+        var (startIdx, startPinName, startId, startAncestor) =
+            FileOperationsViewModel.ResolveConnectionEndpointWithOwner(components, nestedPin);
+        var (endIdx, endPinName, endId, endAncestor) =
+            FileOperationsViewModel.ResolveConnectionEndpointWithOwner(components, other.PhysicalPins[0]);
+
+        startPinName.ShouldBe("gate_in");
+        startId.ShouldBe(gate.Identifier, "the endpoint persists the owning gate's identifier");
+        startAncestor.ShouldBe(outer.Identifier, "the endpoint persists the top-level ancestor group");
+        endIdx.ShouldBe(1);
+        endId.ShouldBe(other.Identifier);
+        endAncestor.ShouldBeNull("a top-level endpoint has no ancestor group");
+
+        // ── Load: identifier resolves inside the ancestor group, pin name resolves on the owner ──
+        var owner = FileOperationsViewModel.FindComponentByIdentifierRecursive(outer, startId!);
+        owner.ShouldNotBeNull("the stored identifier must resolve at any nesting depth");
+        owner.Identifier.ShouldBe(gate.Identifier);
+        FileOperationsViewModel.ResolvePin(owner, startPinName).ShouldBe(nestedPin);
+    }
+
+    /// <summary>
+    /// Two groups built from the same template reuse child identifiers. The persisted
+    /// ancestor group id must scope the load-side search so the endpoint resolves to
+    /// the child in the CORRECT group, not the first group that happens to contain
+    /// the identifier.
+    /// </summary>
+    [Fact]
+    public void NestedNonExposedPin_DuplicateChildIdsAcrossGroups_AncestorScopesSearch()
+    {
+        var gateA = CreateComponent("gate", "in");   // same Identifier in both groups
+        var gateB = CreateComponent("gate", "in");
+        var groupA = new ComponentGroup("GroupA");
+        groupA.AddChild(gateA);
+        var groupB = new ComponentGroup("GroupB");
+        groupB.AddChild(gateB);
+        var components = new List<ComponentViewModel>
+        {
+            new ComponentViewModel(groupA),
+            new ComponentViewModel(groupB)
+        };
+
+        var (_, _, id, ancestorId) =
+            FileOperationsViewModel.ResolveConnectionEndpointWithOwner(components, gateB.PhysicalPins[0]);
+
+        id.ShouldBe(gateB.Identifier);
+        ancestorId.ShouldBe(groupB.Identifier);
+        var ancestor = components.Single(c => c.Component.Identifier == ancestorId).Component as ComponentGroup;
+        var owner = FileOperationsViewModel.FindComponentByIdentifierRecursive(ancestor!, id!);
+        owner.ShouldBe(gateB, "scoped resolution returns group B's child, not group A's");
+    }
+
+    /// <summary>
+    /// An endpoint that belongs to no canvas component and no group member reports a
+    /// null identifier so the save path can warn instead of dropping the wire silently.
+    /// </summary>
+    [Fact]
+    public void ResolveConnectionEndpointWithOwner_UnresolvablePin_ReturnsNullIdentifier()
+    {
+        var comp = CreateComponent("comp1", "pin_out");
+        var orphanPin = new PhysicalPin { Name = "orphan", ParentComponent = comp };
+        var components = new List<ComponentViewModel>();
+
+        var (index, _, componentId, _) =
+            FileOperationsViewModel.ResolveConnectionEndpointWithOwner(components, orphanPin);
+
+        index.ShouldBe(-1);
+        componentId.ShouldBeNull();
+    }
+
     // ── full round-trip test ──────────────────────────────────────────────────
 
     /// <summary>

@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:isa="using:CAP.Avalonia.Controls.HelpAnimations.Isa"
+             x:Class="CAP.Avalonia.Views.IsaPlaygroundHelpFlyout">
+
+    <!-- Help of the ISA playground window (#1237, #1152 pattern): the existing
+         machine-explanation section stays as-is; the new "Why light adds" section
+         (short, all five locales) is carried by one looping carry-ripple diagram —
+         for 0111 + 0001 a light pulse enters FA0 and the carry hops FA0→FA1→FA2→FA3
+         (each full adder lights up while the carry is inside), the sum bits flip to
+         1000 at the end and the time bar grows with every hop, mirroring the ps
+         number in the playground's status line. Schematic, not a simulation. Hosted
+         as the HelpContent of the window's HelpFlyoutButton, which supplies the
+         title and the ScrollViewer. -->
+
+    <StackPanel Spacing="8" MaxWidth="380">
+
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize IsaPlayground.HelpContent}"/>
+
+        <TextBlock Text="{loc:Localize IsaPlayground.HelpWhyLightAddsTitle}"
+                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   Text="{loc:Localize IsaPlayground.HelpWhyLightAddsBody}"/>
+
+        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                CornerRadius="4" Padding="4">
+            <StackPanel Spacing="2">
+                <isa:CarryRippleAnimation Width="336" Height="100" IsHitTestVisible="False"/>
+                <TextBlock Text="{loc:Localize IsaPlayground.HelpCarryCaption}"
+                           Foreground="Gray" FontSize="9" TextWrapping="Wrap"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+</UserControl>

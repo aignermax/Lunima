@@ -35,7 +35,6 @@ public sealed class ComponentRenderer : ICanvasRenderer
     private static readonly Pen NeutralBorderPenDimmed = new(new SolidColorBrush(Color.FromArgb(128, 128, 128, 128)), 1);
     private static readonly IBrush ChildNameBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
     private static readonly IBrush ChildNameBrushDimmed = new SolidColorBrush(Color.FromArgb(128, 255, 255, 255));
-    private static readonly Typeface LabelTypeface = new("Arial");
 
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
@@ -57,7 +56,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
 
         if (comp.Component is ComponentGroup group)
         {
-            DrawComponentGroup(context, group, comp.IsSelected, rc, cullRect, isDimmed);
+            DrawComponentGroup(context, group, comp.IsSelected, rc, visibleNameIds, cullRect, isDimmed);
             return;
         }
 
@@ -109,7 +108,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
             // rectangle body. No Nazca preview is fetched for it — the real imported
             // geometry is already on screen, and the synthesized import function name
             // would only spawn a doomed Python render per unique cell.
-            _outlineRenderer.Draw(context, comp, comp.Component.OutlinePolygons!, isDimmed, rc.Zoom);
+            _outlineRenderer.Draw(context, comp, comp.Component.OutlinePolygons!, isDimmed, rc.Zoom, rc.LayerVisibility,
+                RenderCulling.ComputeViewportWorld(rc.ViewModel.PanX, rc.ViewModel.PanY, rc.Bounds, rc.Zoom));
             return;
         }
 
@@ -124,7 +124,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
     }
 
     private void DrawComponentGroup(DrawingContext context, ComponentGroup group, bool isSelected,
-        CanvasRenderContext rc, Rect cullRect, bool isDimmed = false)
+        CanvasRenderContext rc, IReadOnlySet<Guid> visibleNameIds, Rect cullRect, bool isDimmed = false)
     {
         var vm = rc.ViewModel;
         bool isHovered = rc.InteractionState.HoveredGroup == group;
@@ -138,20 +138,21 @@ public sealed class ComponentRenderer : ICanvasRenderer
             _outlineRenderer.Draw(context, group.PhysicalX, group.PhysicalY,
                 group.WidthMicrometers, group.HeightMicrometers,
                 group.RotationDegrees, backgroundPolygons, isDimmed, rc.Zoom,
-                group.UnrotatedWidthMicrometers, group.UnrotatedHeightMicrometers);
+                group.UnrotatedWidthMicrometers, group.UnrotatedHeightMicrometers,
+                rc.LayerVisibility);
         }
 
         foreach (var child in group.ChildComponents)
         {
             if (child is ComponentGroup nestedGroup)
             {
-                DrawComponentGroup(context, nestedGroup, isSelected, rc, cullRect, isDimmed);
+                DrawComponentGroup(context, nestedGroup, isSelected, rc, visibleNameIds, cullRect, isDimmed);
                 continue;
             }
 
             var childRect = new Rect(child.PhysicalX, child.PhysicalY, child.WidthMicrometers, child.HeightMicrometers);
             if (cullRect.Intersects(childRect))
-                DrawGroupChild(context, child, childRect, rc, isHovered, isDimmed);
+                DrawGroupChild(context, child, childRect, rc, visibleNameIds, isHovered, isDimmed);
         }
 
         var powerFlowResult = vm.ShowPowerFlow ? vm.PowerFlowVisualizer.CurrentResult : null;
@@ -162,7 +163,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
             // is culled individually by its cached bounding box.
             if (RenderCulling.GetFrozenPathBounds(frozenPath) is { } pathBounds && !cullRect.Intersects(pathBounds))
                 continue;
-            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect);
+            ComponentGroupRenderer.RenderFrozenWaveguidePath(context, frozenPath, powerFlowResult, fadeThreshold, cullRect, rc.LayerVisibility, zoom: rc.Zoom);
         }
 
         if (!cullRect.Intersects(bounds))
@@ -185,7 +186,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
     }
 
     private void DrawGroupChild(DrawingContext context, Component child, Rect childRect,
-        CanvasRenderContext rc, bool isGroupHovered, bool isDimmed)
+        CanvasRenderContext rc, IReadOnlySet<Guid> visibleNameIds, bool isGroupHovered, bool isDimmed)
     {
         if (isGroupHovered)
             ComponentGroupRenderer.RenderGroupHoverOverlay(context, childRect.X, childRect.Y, childRect.Width, childRect.Height);
@@ -201,7 +202,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
             _outlineRenderer.Draw(context, child.PhysicalX, child.PhysicalY,
                 child.WidthMicrometers, child.HeightMicrometers,
                 child.RotationDegrees, childOutlines, isDimmed, rc.Zoom,
-                child.UnrotatedWidthMicrometers, child.UnrotatedHeightMicrometers);
+                child.UnrotatedWidthMicrometers, child.UnrotatedHeightMicrometers,
+                rc.LayerVisibility, child.IsMirroredHorizontally);
         }
         else
         {
@@ -212,15 +214,17 @@ public sealed class ComponentRenderer : ICanvasRenderer
         if (RenderCulling.IsBelowLodThreshold(childRect.Width, childRect.Height, rc.Zoom))
             return;
 
-        var displayName = child.HumanReadableName ?? child.Identifier;
-        // Deferred to the topmost label pass like every other name label: a top-level
-        // component drawn after this group must never paint over a child name.
-        var nameBrush = isDimmed ? ChildNameBrushDimmed : ChildNameBrush;
-        rc.Labels.Enqueue(
-            new FormattedText(displayName, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, LabelTypeface, 10, nameBrush),
-            nameBrush,
-            new Point(childRect.X + 3, childRect.Y + 3));
+        // Child names go through the same declutter pass as top-level names (measured bounds,
+        // flat-below-footprint anchor, overlap resolution) — two stacked flat children must
+        // never draw both labels on top of each other. Deferred to the topmost label pass:
+        // a top-level component drawn after this group must never paint over a child name.
+        if (visibleNameIds.Contains(child.Id)
+            && _nameLabels.TryGetLabelText(child.Id) is { } childLabelText)
+        {
+            rc.Labels.Enqueue(childLabelText, isDimmed ? ChildNameBrushDimmed : ChildNameBrush,
+                ComponentNameLabelComputer.GetLabelAnchor(
+                    childRect.X, childRect.Y, childRect.Height, childLabelText.Height));
+        }
     }
 
     private static void RenderGroupPins(DrawingContext context, ComponentGroup group, bool isCurrentEditGroup, bool isHovered, DesignCanvasViewModel vm, DeferredLabelLayer labels)

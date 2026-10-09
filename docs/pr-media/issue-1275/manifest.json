@@ -1,0 +1,10 @@
+[
+  {
+    "file": "isa-playground-photonic-not-after-step.png",
+    "caption": "ISA playground with the NOT 4-bit network built: toggle on (\u0027Compute NOT on the photonic chip\u0027), right after the NOT step \u2014 the status line shows the photonic NOT with operand and result in binary plus the gate count."
+  },
+  {
+    "file": "isa-playground-photonic-toggle-disabled.png",
+    "caption": "ISA playground without a built logic network: the photonic toggle is disabled and the hint names both accepted examples (4-bit adder, NOT 4-bit)."
+  }
+]
