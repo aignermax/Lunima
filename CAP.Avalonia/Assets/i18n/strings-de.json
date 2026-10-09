@@ -664,7 +664,7 @@
   "IsaPlayground.PhotonicZeroFlagToggle": "JZ auf dem photonischen Chip entscheiden",
   "IsaPlayground.PhotonicDataMemoryToggle": "Daten-RAM auf dem photonischen Chip halten",
   "IsaPlayground.PhotonicAdderDataMemoryToggle": "ADD berechnen und das Daten-RAM auf dem photonischen Chip halten",
-  "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "ADD berechnen und das Daten-RAM und den Akkumulator auf dem photonischen Chip halten",
+  "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle": "ADD, Daten-RAM und Akkumulator auf dem photonischen Chip",
   "IsaPlayground.PhotonicAccumulatorToggle": "Akkumulator auf dem photonischen Chip halten",
   "IsaPlayground.PhotonicAdderHint": "Öffne das 4-Bit-Addierer-, das NOT-4-Bit-, das AND-4-Bit-, das Logic-Unit-4-Bit-, das Zero-Detect-4-Bit- oder das RAM-4x4-Beispiel und drücke im Logik-Tab auf „Logiknetzwerk aufbauen“.",
   "IsaPlayground.StatusPhotonicAdd": "Photonisches ADD {0} + {1} = {2} — das Licht brauchte {3:0.##} ps ({4} Gatter)",
