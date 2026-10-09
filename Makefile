@@ -10,11 +10,11 @@ build:
 
 # Run tests (excludes Category=Slow — heavy UI renders run in CI; see test-all)
 test:
-	dotnet test UnitTests/UnitTests.csproj --filter "Category!=Slow"
+	scripts/throttle.sh dotnet test UnitTests/UnitTests.csproj --filter "Category!=Slow"
 
 # Run ALL tests including the slow ones (CI parity — can destabilise a local desktop session)
 test-all:
-	dotnet test UnitTests/UnitTests.csproj
+	scripts/throttle.sh dotnet test UnitTests/UnitTests.csproj
 
 # Clean build artifacts
 clean:
