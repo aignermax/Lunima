@@ -147,6 +147,9 @@ public partial class StoreNumberTourViewModel : ObservableObject
 
     private void OnInputsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.OldItems != null)
+            foreach (LogicNetworkInputViewModel input in e.OldItems)
+                input.PropertyChanged -= OnInputPropertyChanged;
         if (e.NewItems != null)
             foreach (LogicNetworkInputViewModel input in e.NewItems)
                 input.PropertyChanged += OnInputPropertyChanged;
