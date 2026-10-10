@@ -176,6 +176,11 @@
     <Setter Property="MinHeight" Value="{DynamicResource ControlHeight.Compact}"/>
   </Style>
 
+  <!-- NumericUpDown forwards its alignment to the inner TextBox via TemplateBinding. -->
+  <Style Selector="NumericUpDown">
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+
   <!-- ── Icon inside buttons follows the button's text color ──────────────── -->
   <Style Selector="controls|Icon">
     <Setter Property="Size" Value="{DynamicResource IconSize}"/>
