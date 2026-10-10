@@ -7,201 +7,144 @@
         x:Class="CAP.Avalonia.Views.Dialogs.ModeSolverDialog"
         x:DataType="vm:ModeSolverViewModel"
         Title="{loc:Localize ModeSolver.WindowTitle}"
-        Width="480" Height="560"
+        Width="480" Height="700"
         MinWidth="400" MinHeight="460"
-        WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16" LastChildFill="True">
-
-        <!-- Buttons — always visible at the bottom -->
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
-            <Button Content="{loc:Localize ModeSolver.CancelSolve}"
-                    Command="{Binding CancelSolveCommand}"
-                    MinWidth="100" Padding="12,0" Background="#5d3d3d" FontSize="11"
-                    IsVisible="{Binding IsSolving}"/>
-            <Button Content="{loc:Localize ModeSolver.Solve}"
-                    Command="{Binding SolveCommand}"
-                    MinWidth="90" Padding="12,0" Background="#3d4d6d"
-                    IsEnabled="{Binding CanSolve}"/>
-            <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" MinWidth="70" Padding="12,0" Click="OnCloseClicked"/>
-        </StackPanel>
-
+    <Grid RowDefinitions="*,Auto">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="10">
+            <StackPanel Spacing="16" Margin="24">
 
-                <!-- Title (+ plain-language help for the two photonics terms, #1431) -->
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="{loc:Localize ModeSolver.Title}" FontSize="15" FontWeight="SemiBold"
-                               Foreground="LightBlue" VerticalAlignment="Center"/>
-                    <controls:HelpFlyoutButton Title="{loc:Localize ModeSolver.HelpTitle}"
-                                               VerticalAlignment="Center">
-                        <controls:HelpFlyoutButton.HelpContent>
-                            <StackPanel Spacing="8" MaxWidth="380">
-                                <TextBlock Text="{loc:Localize ModeSolver.HelpModeTitle}"
-                                           FontWeight="Bold" FontSize="12" Foreground="White"/>
-                                <TextBlock Text="{loc:Localize ModeSolver.HelpModeBody}"
-                                           TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
-                                <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                        CornerRadius="4" Padding="4" HorizontalAlignment="Left">
-                                    <help:ModeConfinementAnimation
-                                        CladTickLabel="{loc:Localize ModeSolver.HelpAnimCladTick}"
-                                        CoreTickLabel="{loc:Localize ModeSolver.HelpAnimCoreTick}"/>
-                                </Border>
-                                <TextBlock Text="{loc:Localize ModeSolver.HelpNeffTitle}"
-                                           FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                                <TextBlock Text="{loc:Localize ModeSolver.HelpNeffBody}"
-                                           TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
-                            </StackPanel>
-                        </controls:HelpFlyoutButton.HelpContent>
-                    </controls:HelpFlyoutButton>
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="title" Text="{loc:Localize ModeSolver.Title}" VerticalAlignment="Center"/>
+                        <controls:HelpFlyoutButton Title="{loc:Localize ModeSolver.HelpTitle}"
+                                                   VerticalAlignment="Center">
+                            <controls:HelpFlyoutButton.HelpContent>
+                                <StackPanel Spacing="8" MaxWidth="380">
+                                    <TextBlock Classes="subtitle" Text="{loc:Localize ModeSolver.HelpModeTitle}"/>
+                                    <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                               Text="{loc:Localize ModeSolver.HelpModeBody}"/>
+                                    <Border Classes="card" Padding="4" HorizontalAlignment="Left">
+                                        <help:ModeConfinementAnimation
+                                            CladTickLabel="{loc:Localize ModeSolver.HelpAnimCladTick}"
+                                            CoreTickLabel="{loc:Localize ModeSolver.HelpAnimCoreTick}"/>
+                                    </Border>
+                                    <TextBlock Classes="subtitle" Margin="0,4,0,0"
+                                               Text="{loc:Localize ModeSolver.HelpNeffTitle}"/>
+                                    <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                               Text="{loc:Localize ModeSolver.HelpNeffBody}"/>
+                                </StackPanel>
+                            </controls:HelpFlyoutButton.HelpContent>
+                        </controls:HelpFlyoutButton>
+                    </StackPanel>
+                    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize ModeSolver.Description}"/>
                 </StackPanel>
-                <TextBlock Text="{loc:Localize ModeSolver.Description}"
-                           Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
-
-                <Separator Background="#3d3d3d"/>
 
                 <!-- Cross-section geometry -->
-                <TextBlock Text="{loc:Localize ModeSolver.GeometrySection}" Foreground="#aaaaaa" FontSize="11"
-                           FontWeight="SemiBold"/>
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="{loc:Localize ModeSolver.GeometrySection}"/>
+                    <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto,8,Auto">
+                        <TextBlock Grid.Row="0" Classes="secondary" Text="{loc:Localize ModeSolver.CoreWidth}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding Width}"
+                                       Minimum="0.1" Maximum="5.0" Increment="0.05" FormatString="F3"/>
 
-                <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto,8,Auto">
+                        <TextBlock Grid.Row="2" Classes="secondary" Text="{loc:Localize ModeSolver.CoreHeight}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding Height}"
+                                       Minimum="0.05" Maximum="2.0" Increment="0.02" FormatString="F3"/>
 
-                    <!-- Width -->
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Localize ModeSolver.CoreWidth}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="0" Grid.Column="2"
-                                  Value="{Binding Width}"
-                                  Minimum="0.1" Maximum="5.0" Increment="0.05"
-                                  FormatString="F3"
-                                  Background="#2d2d2d" Foreground="White"/>
-
-                    <!-- Height -->
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Localize ModeSolver.CoreHeight}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="2" Grid.Column="2"
-                                  Value="{Binding Height}"
-                                  Minimum="0.05" Maximum="2.0" Increment="0.02"
-                                  FormatString="F3"
-                                  Background="#2d2d2d" Foreground="White"/>
-
-                    <!-- Slab height -->
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{loc:Localize ModeSolver.SlabHeight}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="4" Grid.Column="2"
-                                  Value="{Binding SlabHeight}"
-                                  Minimum="0.0" Maximum="2.0" Increment="0.01"
-                                  FormatString="F3"
-                                  Background="#2d2d2d" Foreground="White"/>
-                </Grid>
-
-                <Separator Background="#3d3d3d"/>
+                        <TextBlock Grid.Row="4" Classes="secondary" Text="{loc:Localize ModeSolver.SlabHeight}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="4" Grid.Column="2" Value="{Binding SlabHeight}"
+                                       Minimum="0.0" Maximum="2.0" Increment="0.01" FormatString="F3"/>
+                    </Grid>
+                </StackPanel>
 
                 <!-- Refractive indices -->
-                <TextBlock Text="{loc:Localize ModeSolver.RefractiveIndicesSection}" Foreground="#aaaaaa" FontSize="11"
-                           FontWeight="SemiBold"/>
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="{loc:Localize ModeSolver.RefractiveIndicesSection}"/>
+                    <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto">
+                        <TextBlock Grid.Row="0" Classes="secondary" Text="{loc:Localize ModeSolver.CoreIndex}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding CoreIndex}"
+                                       Minimum="1.0" Maximum="5.0" Increment="0.01" FormatString="F3"/>
 
-                <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Localize ModeSolver.CoreIndex}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="0" Grid.Column="2"
-                                  Value="{Binding CoreIndex}"
-                                  Minimum="1.0" Maximum="5.0" Increment="0.01"
-                                  FormatString="F3"
-                                  Background="#2d2d2d" Foreground="White"/>
-
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Localize ModeSolver.CladIndex}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="2" Grid.Column="2"
-                                  Value="{Binding CladIndex}"
-                                  Minimum="1.0" Maximum="4.0" Increment="0.01"
-                                  FormatString="F3"
-                                  Background="#2d2d2d" Foreground="White"/>
-                </Grid>
-
-                <Separator Background="#3d3d3d"/>
+                        <TextBlock Grid.Row="2" Classes="secondary" Text="{loc:Localize ModeSolver.CladIndex}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding CladIndex}"
+                                       Minimum="1.0" Maximum="4.0" Increment="0.01" FormatString="F3"/>
+                    </Grid>
+                </StackPanel>
 
                 <!-- Solver settings -->
-                <TextBlock Text="{loc:Localize ModeSolver.SolverSettingsSection}" Foreground="#aaaaaa" FontSize="11"
-                           FontWeight="SemiBold"/>
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="{loc:Localize ModeSolver.SolverSettingsSection}"/>
+                    <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto,8,Auto">
+                        <TextBlock Grid.Row="0" Classes="secondary" Text="{loc:Localize ModeSolver.Wavelength}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding WavelengthNm}"
+                                       Minimum="400" Maximum="2500" Increment="10" FormatString="F0"/>
 
-                <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto,8,Auto">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Localize ModeSolver.Wavelength}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="0" Grid.Column="2"
-                                  Value="{Binding WavelengthNm}"
-                                  Minimum="400" Maximum="2500" Increment="10"
-                                  FormatString="F0"
-                                  Background="#2d2d2d" Foreground="White"/>
+                        <TextBlock Grid.Row="2" Classes="secondary" Text="{loc:Localize ModeSolver.MaxModes}"
+                                   VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding NumModes}"
+                                       Minimum="1" Maximum="20" Increment="1" FormatString="F0"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Localize ModeSolver.MaxModes}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="2" Grid.Column="2"
-                                  Value="{Binding NumModes}"
-                                  Minimum="1" Maximum="20" Increment="1"
-                                  FormatString="F0"
-                                  Background="#2d2d2d" Foreground="White"/>
+                        <TextBlock Grid.Row="4" Classes="secondary" Text="{loc:Localize ModeSolver.Backend}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="4" Grid.Column="2" HorizontalAlignment="Stretch"
+                                  ItemsSource="{x:Static vm:ModeSolverViewModel.AvailableBackends}"
+                                  SelectedItem="{Binding SelectedBackend}"/>
+                    </Grid>
+                </StackPanel>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{loc:Localize ModeSolver.Backend}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Row="4" Grid.Column="2"
-                              ItemsSource="{x:Static vm:ModeSolverViewModel.AvailableBackends}"
-                              SelectedItem="{Binding SelectedBackend}"
-                              Background="#2d2d2d" Foreground="White"/>
-                </Grid>
-
-                <Separator Background="#3d3d3d"/>
-
-                <!-- Status -->
-                <TextBlock Text="{Binding StatusText}" Foreground="#dddddd" FontSize="11"
-                           TextWrapping="Wrap"/>
+                <TextBlock Classes="secondary" Text="{Binding StatusText}" TextWrapping="Wrap"/>
 
                 <!-- Results table -->
-                <StackPanel IsVisible="{Binding HasResult}" Spacing="6">
-                    <TextBlock Text="{loc:Localize ModeSolver.Results}" Foreground="#aaaaaa" FontSize="11"
-                               FontWeight="SemiBold"/>
+                <StackPanel IsVisible="{Binding HasResult}" Spacing="8">
+                    <TextBlock Classes="label" Text="{loc:Localize ModeSolver.Results}"/>
 
-                    <!-- Header row -->
-                    <Border Background="#3a3a3a" Padding="4,3">
-                        <Grid ColumnDefinitions="70,48,85,75,55">
-                            <TextBlock Grid.Column="0" Text="λ (µm)"  Foreground="#bbbbbb" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Text="{loc:Localize ModeSolver.ColMode}"    Foreground="#bbbbbb" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="2" Text="n_eff"   Foreground="#bbbbbb" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="3" Text="n_g"     Foreground="#bbbbbb" FontSize="11" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="4" Text="{loc:Localize ModeSolver.ColPol}"    Foreground="#bbbbbb" FontSize="11" FontWeight="SemiBold"/>
-                        </Grid>
+                    <Border Classes="card" Padding="0">
+                        <StackPanel>
+                            <Border Background="{DynamicResource Brush.Surface.Hover}" Padding="8,4"
+                                    CornerRadius="10,10,0,0">
+                                <Grid ColumnDefinitions="70,48,85,75,55">
+                                    <TextBlock Grid.Column="0" Classes="label" Text="λ (µm)"/>
+                                    <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize ModeSolver.ColMode}"/>
+                                    <TextBlock Grid.Column="2" Classes="label" Text="n_eff"/>
+                                    <TextBlock Grid.Column="3" Classes="label" Text="n_g"/>
+                                    <TextBlock Grid.Column="4" Classes="label" Text="{loc:Localize ModeSolver.ColPol}"/>
+                                </Grid>
+                            </Border>
+
+                            <ItemsControl ItemsSource="{Binding Modes}" MaxHeight="160">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="8,3" Background="Transparent">
+                                            <Grid ColumnDefinitions="70,48,85,75,55">
+                                                <TextBlock Grid.Column="0" Classes="mono" Text="{Binding Wavelength, StringFormat=F4}"/>
+                                                <TextBlock Grid.Column="1" Classes="mono" Text="{Binding ModeIndex}"/>
+                                                <TextBlock Grid.Column="2" Classes="mono success" Text="{Binding NEff, StringFormat=F5}"/>
+                                                <TextBlock Grid.Column="3" Classes="mono accent" Text="{Binding NGroup, StringFormat=F4}"/>
+                                                <TextBlock Grid.Column="4" Classes="warning" Text="{Binding Polarisation}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </Border>
-
-                    <!-- Data rows -->
-                    <ItemsControl ItemsSource="{Binding Modes}" MaxHeight="160">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Padding="4,2" Background="Transparent">
-                                    <Grid ColumnDefinitions="70,48,85,75,55">
-                                        <TextBlock Grid.Column="0" Text="{Binding Wavelength, StringFormat=F4}" Foreground="White" FontSize="11"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding ModeIndex}"                   Foreground="White" FontSize="11"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding NEff, StringFormat=F5}"       Foreground="#aaffaa" FontSize="11"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding NGroup, StringFormat=F4}"     Foreground="#aaaaff" FontSize="11"/>
-                                        <TextBlock Grid.Column="4" Text="{Binding Polarisation}"                Foreground="#ffddaa" FontSize="11"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
                 </StackPanel>
 
                 <!-- Raw stderr expander — shown only on failure with stderr -->
                 <Expander IsVisible="{Binding HasStderr}"
-                          Header="{loc:Localize ModeSolver.RawOutputHeader}"
-                          Foreground="#cc8888">
-                    <TextBox Text="{Binding RawStderr}"
+                          Header="{loc:Localize ModeSolver.RawOutputHeader}">
+                    <TextBox Classes="mono" Text="{Binding RawStderr}"
                              IsReadOnly="True"
-                             Background="#2a1a1a"
-                             Foreground="#ff9999"
-                             FontFamily="Monospace"
-                             FontSize="10"
+                             Foreground="{DynamicResource Brush.Danger}"
+                             FontSize="{DynamicResource FontSize.Caption}"
                              MaxHeight="120"
                              TextWrapping="Wrap"/>
                 </Expander>
@@ -209,5 +152,17 @@
             </StackPanel>
         </ScrollViewer>
 
-    </DockPanel>
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Classes="danger" Content="{loc:Localize ModeSolver.CancelSolve}"
+                        Command="{Binding CancelSolveCommand}"
+                        IsVisible="{Binding IsSolving}"/>
+                <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" Click="OnCloseClicked"/>
+                <Button Classes="primary" Content="{loc:Localize ModeSolver.Solve}"
+                        Command="{Binding SolveCommand}"
+                        IsEnabled="{Binding CanSolve}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

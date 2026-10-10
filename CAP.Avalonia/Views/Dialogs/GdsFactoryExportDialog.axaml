@@ -5,49 +5,47 @@
         x:Class="CAP.Avalonia.Views.Dialogs.GdsFactoryExportDialog"
         x:DataType="vm:GdsFactoryExportViewModel"
         Title="{loc:Localize GdsFactoryExport.Title}"
-        Width="460" Height="480"
+        Width="460" SizeToContent="Height" MaxHeight="560"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Background="#1e1e1e"
-        Foreground="White">
+        CanResize="False">
 
-    <DockPanel Margin="16,10" LastChildFill="True">
-
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
-            <Button Content="{loc:Localize Common.ExportEllipsis}"
-                    Command="{Binding ExportCommand}"
-                    MinWidth="90" Padding="12,0" Background="#3d5d4d"
-                    IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
-            <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" MinWidth="70" Padding="12,0" Click="OnCloseClicked"/>
-        </StackPanel>
-
+    <Grid RowDefinitions="*,Auto">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="8">
-                <TextBlock Text="{loc:Localize GdsFactoryExport.Heading}" FontSize="15" FontWeight="SemiBold"
-                           Foreground="LightGreen"/>
-                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-                           Text="{loc:Localize GdsFactoryExport.Description}"/>
+            <StackPanel Spacing="16" Margin="24">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="title" Text="{loc:Localize GdsFactoryExport.Heading}"/>
+                    <TextBlock Classes="caption" TextWrapping="Wrap"
+                               Text="{loc:Localize GdsFactoryExport.Description}"/>
+                </StackPanel>
 
-                <Border Background="#2a2a20" CornerRadius="4" Padding="8"
+                <Border Classes="card" Background="{DynamicResource Brush.Warning.Subtle}"
                         IsVisible="{Binding UnmappedComponents.Count}">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="{loc:Localize GdsFactoryExport.StubGeometry}"
-                                   Foreground="#e8c872" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Classes="label warning" Text="{loc:Localize GdsFactoryExport.StubGeometry}"/>
                         <ItemsControl ItemsSource="{Binding UnmappedComponents}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" Foreground="Gray" FontSize="10"/>
+                                    <TextBlock Classes="caption" Text="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="{Binding StatusText}"
-                           Foreground="LightSkyBlue" FontSize="11" TextWrapping="Wrap"
+                <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Info}" TextWrapping="Wrap"
+                           Text="{Binding StatusText}"
                            IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
         </ScrollViewer>
-    </DockPanel>
+
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" Click="OnCloseClicked"/>
+                <Button Classes="primary" Content="{loc:Localize Common.ExportEllipsis}"
+                        Command="{Binding ExportCommand}"
+                        IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

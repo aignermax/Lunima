@@ -19,58 +19,6 @@
     "HexColors": 3,
     "SmallFonts": 0
   },
-  "CAP.Avalonia/Views/ComponentPreviewWindow.axaml": {
-    "HexColors": 2,
-    "SmallFonts": 0
-  },
-  "CAP.Avalonia/Views/ComponentSettingsDialog.axaml": {
-    "HexColors": 40,
-    "SmallFonts": 18
-  },
-  "CAP.Avalonia/Views/CreateCustomPdkWindow.axaml": {
-    "HexColors": 28,
-    "SmallFonts": 15
-  },
-  "CAP.Avalonia/Views/Dialogs/DockerSetupDialog.axaml": {
-    "HexColors": 20,
-    "SmallFonts": 0
-  },
-  "CAP.Avalonia/Views/Dialogs/GdsFactoryExportDialog.axaml": {
-    "HexColors": 4,
-    "SmallFonts": 1
-  },
-  "CAP.Avalonia/Views/Dialogs/GdsImportDialog.axaml": {
-    "HexColors": 35,
-    "SmallFonts": 30
-  },
-  "CAP.Avalonia/Views/Dialogs/GdsLayerPickerWindow.axaml": {
-    "HexColors": 9,
-    "SmallFonts": 4
-  },
-  "CAP.Avalonia/Views/Dialogs/ModeSolverDialog.axaml": {
-    "HexColors": 34,
-    "SmallFonts": 2
-  },
-  "CAP.Avalonia/Views/Dialogs/OnaAnalyzerWindow.axaml": {
-    "HexColors": 11,
-    "SmallFonts": 1
-  },
-  "CAP.Avalonia/Views/Dialogs/OpenEblCheckDialog.axaml": {
-    "HexColors": 39,
-    "SmallFonts": 5
-  },
-  "CAP.Avalonia/Views/Dialogs/PdkResolutionCheckDialog.axaml": {
-    "HexColors": 9,
-    "SmallFonts": 1
-  },
-  "CAP.Avalonia/Views/Dialogs/PhotonTorchExportDialog.axaml": {
-    "HexColors": 7,
-    "SmallFonts": 2
-  },
-  "CAP.Avalonia/Views/Dialogs/VerilogAExportDialog.axaml": {
-    "HexColors": 6,
-    "SmallFonts": 4
-  },
   "CAP.Avalonia/Views/HierarchyPanel.axaml": {
     "HexColors": 8,
     "SmallFonts": 1
@@ -94,10 +42,6 @@
   "CAP.Avalonia/Views/MainWindow.axaml": {
     "HexColors": 97,
     "SmallFonts": 24
-  },
-  "CAP.Avalonia/Views/NewComponentWindow.axaml": {
-    "HexColors": 48,
-    "SmallFonts": 9
   },
   "CAP.Avalonia/Views/Panels/AiAssistantPanel.axaml": {
     "HexColors": 10,
@@ -286,10 +230,6 @@
   "CAP.Avalonia/Views/Panels/WavelengthSpectrumPanel.axaml": {
     "HexColors": 14,
     "SmallFonts": 13
-  },
-  "CAP.Avalonia/Views/PdkImport/PdkImportWizardWindow.axaml": {
-    "HexColors": 18,
-    "SmallFonts": 8
   },
   "CAP.Avalonia/Views/PdkOffsetEditorWindow.axaml": {
     "HexColors": 36,
