@@ -5,69 +5,61 @@
         x:Class="CAP.Avalonia.Views.Dialogs.PhotonTorchExportDialog"
         x:DataType="vm:PhotonTorchExportViewModel"
         Title="{loc:Localize PhotonTorchExport.Title}"
-        Width="400" Height="380"
+        Width="420" SizeToContent="Height" MaxHeight="560"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Background="#1e1e1e"
-        Foreground="White">
+        CanResize="False">
 
-    <DockPanel Margin="16" LastChildFill="True">
-
-        <!-- Buttons docked at the bottom so they're always visible regardless of form height -->
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
-            <Button Content="{loc:Localize Common.OpenFolder}"
-                    Command="{Binding OpenOutputDirectoryCommand}"
-                    MinWidth="100" Padding="12,0" Background="#2d4d3d" FontSize="11"
-                    IsVisible="{Binding LastExportSucceeded}"/>
-            <Button Content="{loc:Localize Common.ExportEllipsis}"
-                    Command="{Binding ExportCommand}"
-                    MinWidth="90" Padding="12,0" Background="#3d4d6d"
-                    IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
-            <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" MinWidth="70" Padding="12,0" Click="OnCloseClicked"/>
-        </StackPanel>
-
+    <Grid RowDefinitions="*,Auto">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="10">
-                <TextBlock Text="{loc:Localize PhotonTorchExport.Heading}" FontSize="15" FontWeight="SemiBold"
-                           Foreground="LightBlue"/>
-                <TextBlock Text="{loc:Localize PhotonTorchExport.Description}"
-                           Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
-
-                <Separator Background="#3d3d3d"/>
-
-                <!-- Wavelength -->
-                <TextBlock Text="{loc:Localize PhotonTorchExport.WavelengthNm}" Foreground="Gray" FontSize="11"/>
-                <NumericUpDown Value="{Binding WavelengthNm}"
-                               Minimum="1260" Maximum="1625" Increment="10"
-                               FormatString="F0"
-                               Background="#2d2d2d" Foreground="White"/>
-
-                <!-- Simulation mode -->
-                <CheckBox Content="{loc:Localize PhotonTorchExport.TimeDomain}"
-                          IsChecked="{Binding UseTimeDomain}"
-                          Foreground="White"/>
-
-                <!-- Time-domain settings -->
-                <StackPanel IsVisible="{Binding UseTimeDomain}" Margin="10,0,0,0" Spacing="6">
-                    <TextBlock Text="{loc:Localize PhotonTorchExport.BitRate}" Foreground="Gray" FontSize="11"/>
-                    <NumericUpDown Value="{Binding BitRateGbps}"
-                                   Minimum="0.1" Maximum="100" Increment="1"
-                                   FormatString="F1"
-                                   Background="#2d2d2d" Foreground="White"/>
-
-                    <TextBlock Text="{loc:Localize PhotonTorchExport.TimeSteps}" Foreground="Gray" FontSize="11"/>
-                    <NumericUpDown Value="{Binding TimeDomainSteps}"
-                                   Minimum="100" Maximum="10000" Increment="100"
-                                   FormatString="F0"
-                                   Background="#2d2d2d" Foreground="White"/>
+            <StackPanel Spacing="16" Margin="24">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="title" Text="{loc:Localize PhotonTorchExport.Heading}"/>
+                    <TextBlock Classes="caption" TextWrapping="Wrap"
+                               Text="{loc:Localize PhotonTorchExport.Description}"/>
                 </StackPanel>
 
-                <!-- Status -->
-                <TextBlock Text="{Binding LastExportStatus}"
-                           Foreground="LightBlue" FontSize="10" TextWrapping="Wrap"
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{loc:Localize PhotonTorchExport.WavelengthNm}"/>
+                    <NumericUpDown Value="{Binding WavelengthNm}"
+                                   Minimum="1260" Maximum="1625" Increment="10"
+                                   FormatString="F0"/>
+                </StackPanel>
+
+                <CheckBox Content="{loc:Localize PhotonTorchExport.TimeDomain}"
+                          IsChecked="{Binding UseTimeDomain}"/>
+
+                <StackPanel IsVisible="{Binding UseTimeDomain}" Margin="24,0,0,0" Spacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{loc:Localize PhotonTorchExport.BitRate}"/>
+                        <NumericUpDown Value="{Binding BitRateGbps}"
+                                       Minimum="0.1" Maximum="100" Increment="1"
+                                       FormatString="F1"/>
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{loc:Localize PhotonTorchExport.TimeSteps}"/>
+                        <NumericUpDown Value="{Binding TimeDomainSteps}"
+                                       Minimum="100" Maximum="10000" Increment="100"
+                                       FormatString="F0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Info}" TextWrapping="Wrap"
+                           Text="{Binding LastExportStatus}"
                            IsVisible="{Binding LastExportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
         </ScrollViewer>
-    </DockPanel>
+
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{loc:Localize Common.OpenFolder}"
+                        Command="{Binding OpenOutputDirectoryCommand}"
+                        IsVisible="{Binding LastExportSucceeded}"/>
+                <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" Click="OnCloseClicked"/>
+                <Button Classes="primary" Content="{loc:Localize Common.ExportEllipsis}"
+                        Command="{Binding ExportCommand}"
+                        IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

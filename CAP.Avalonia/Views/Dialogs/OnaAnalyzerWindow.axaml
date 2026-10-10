@@ -10,100 +10,86 @@
         Title="{Binding WindowTitle}"
         Width="780" Height="560"
         MinWidth="520" MinHeight="380"
-        Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
     <Window.Styles>
-        <!-- Dark hover-tracker so its (white) text is readable instead of the
-             default lemon-yellow box that clashes with the dark theme. -->
+        <!-- Dark hover-tracker so its text is readable instead of the default
+             lemon-yellow box that clashes with the dark theme. -->
         <Style Selector="oxy|TrackerControl">
-            <Setter Property="Background" Value="#2D2D2D"/>
-            <Setter Property="LineStroke" Value="#A0A0A0"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Overlay}"/>
+            <Setter Property="LineStroke" Value="{DynamicResource Color.Gray300}"/>
         </Style>
     </Window.Styles>
 
-    <DockPanel Margin="14">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
 
-        <!-- Top: Title -->
-        <TextBlock DockPanel.Dock="Top"
-                   Text="{Binding WindowTitle}"
-                   FontWeight="SemiBold" FontSize="15"
-                   Foreground="Cyan" Margin="0,0,0,4"/>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,12">
-            <TextBlock Text="{loc:Localize Ona.Subtitle}"
-                       Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-            <controls:HelpFlyoutButton Title="{loc:Localize Ona.HelpTitle}">
-                <controls:HelpFlyoutButton.HelpContent>
-                    <StackPanel Spacing="8" MaxWidth="400">
-                        <TextBlock Text="{loc:Localize Ona.HelpSweepTitle}"
-                                   FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock Text="{loc:Localize Ona.HelpSweepBody}"
-                                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
-                        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                CornerRadius="4" Padding="2">
-                            <helpAnim:OnaSweepAnimation Width="360" Height="90"/>
-                        </Border>
-                        <TextBlock Text="{loc:Localize Ona.HelpDipsTitle}"
-                                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock Text="{loc:Localize Ona.HelpDipsBody}"
-                                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
-                    </StackPanel>
-                </controls:HelpFlyoutButton.HelpContent>
-            </controls:HelpFlyoutButton>
+        <StackPanel Grid.Row="0" Margin="24,24,24,16" Spacing="4">
+            <TextBlock Classes="title" Text="{Binding WindowTitle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Classes="caption" Text="{loc:Localize Ona.Subtitle}" VerticalAlignment="Center"/>
+                <controls:HelpFlyoutButton Title="{loc:Localize Ona.HelpTitle}">
+                    <controls:HelpFlyoutButton.HelpContent>
+                        <StackPanel Spacing="8" MaxWidth="400">
+                            <TextBlock Classes="subtitle" Text="{loc:Localize Ona.HelpSweepTitle}"/>
+                            <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                       Text="{loc:Localize Ona.HelpSweepBody}"/>
+                            <Border Classes="card" Padding="2">
+                                <helpAnim:OnaSweepAnimation Width="360" Height="90"/>
+                            </Border>
+                            <TextBlock Classes="subtitle" Margin="0,4,0,0" Text="{loc:Localize Ona.HelpDipsTitle}"/>
+                            <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                       Text="{loc:Localize Ona.HelpDipsBody}"/>
+                        </StackPanel>
+                    </controls:HelpFlyoutButton.HelpContent>
+                </controls:HelpFlyoutButton>
+            </StackPanel>
         </StackPanel>
 
-        <!-- Bottom: Status + buttons -->
-        <Border DockPanel.Dock="Bottom" Background="#161616" Padding="8" Margin="0,10,0,0">
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="24,0">
+            <!-- Left: sweep parameters -->
+            <StackPanel Width="270" Margin="0,0,16,0" Spacing="8">
+                <TextBlock Classes="label" Text="{loc:Localize Ona.SweepParameters}"/>
+
+                <Grid ColumnDefinitions="80,*">
+                    <TextBlock Classes="secondary" Text="{loc:Localize Ona.StartNm}" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding StartNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0"/>
+                </Grid>
+                <Grid ColumnDefinitions="80,*">
+                    <TextBlock Classes="secondary" Text="{loc:Localize Ona.EndNm}" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding EndNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0"/>
+                </Grid>
+                <Grid ColumnDefinitions="80,*">
+                    <TextBlock Classes="secondary" Text="{loc:Localize Ona.Steps}" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding StepCount}" Minimum="2" Maximum="500" Increment="1" FormatString="F0"/>
+                </Grid>
+
+                <TextBlock Classes="caption warning" TextWrapping="Wrap" Margin="0,8,0,0"
+                           Text="{Binding WarningText}"
+                           IsVisible="{Binding WarningText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+
+            <!-- Centre: plot -->
+            <Border Grid.Column="1" Classes="card" Padding="0" ClipToBounds="True">
+                <oxy:PlotView Model="{Binding PlotModel}" Background="Transparent"/>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Margin="0,16,0,0" Padding="24,12"
+                BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding StatusText}"
-                           Foreground="Gray" FontSize="11"
-                           VerticalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{Binding StatusText}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Content="{loc:Localize Common.Run}"
-                            Command="{Binding RunSweepCommand}"
-                            Background="#3d5d5d" Width="80"
-                            IsEnabled="{Binding IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
-                    <Button Content="{loc:Localize Common.Cancel}"
-                            Command="{Binding CancelSweepCommand}"
-                            Background="#5d3d3d" Width="80"
-                            IsVisible="{Binding IsSweeping}"/>
                     <Button Content="{loc:Localize Common.ExportCsv}"
                             Command="{Binding ExportCsvCommand}"
-                            Background="#3d3d5d" Width="90"
                             IsVisible="{Binding HasResult}"/>
+                    <Button Classes="danger" Content="{loc:Localize Common.Cancel}"
+                            Command="{Binding CancelSweepCommand}"
+                            IsVisible="{Binding IsSweeping}"/>
+                    <Button Classes="primary" Content="{loc:Localize Common.Run}"
+                            Command="{Binding RunSweepCommand}"
+                            IsEnabled="{Binding IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
                 </StackPanel>
             </Grid>
         </Border>
-
-        <!-- Left: Sweep parameters -->
-        <StackPanel DockPanel.Dock="Left" Width="230" Margin="0,0,12,0" Spacing="6">
-            <TextBlock Text="{loc:Localize Ona.SweepParameters}" Foreground="LightGray" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,2"/>
-
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{loc:Localize Ona.StartNm}" Foreground="Gray" Width="80" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding StartNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0" Width="135"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{loc:Localize Ona.EndNm}" Foreground="Gray" Width="80" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding EndNm}" Minimum="400" Maximum="2500" Increment="10" FormatString="F0" Width="135"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{loc:Localize Ona.Steps}" Foreground="Gray" Width="80" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding StepCount}" Minimum="2" Maximum="500" Increment="1" FormatString="F0" Width="135"/>
-            </StackPanel>
-
-            <TextBlock Text="{Binding WarningText}"
-                       Foreground="Gold" FontSize="10" TextWrapping="Wrap"
-                       Margin="0,8,0,0"
-                       IsVisible="{Binding WarningText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        </StackPanel>
-
-        <!-- Centre: Plot -->
-        <Border Background="#1a1a1a" BorderBrush="#3d3d3d" BorderThickness="1">
-            <oxy:PlotView Model="{Binding PlotModel}" Background="Transparent"/>
-        </Border>
-
-    </DockPanel>
-
+    </Grid>
 </Window>

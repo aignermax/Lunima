@@ -4,58 +4,45 @@
         xmlns:vmp="using:CAP.Avalonia.ViewModels"
         xmlns:dto="using:CAP_DataAccess.Components.ComponentDraftMapper.DTOs"
         xmlns:conv="using:CAP.Avalonia.Converters"
+        xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.CreateCustomPdkWindow"
         x:DataType="vm:CreateCustomPdkViewModel"
         Title="{loc:Localize CreatePdk.Title}"
-        Width="640" Height="640"
+        Width="680" Height="680"
         MinWidth="480" MinHeight="420"
-        Background="#1e1e1e"
-        Foreground="White"
         WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16">
+    <Grid RowDefinitions="*,Auto">
 
-        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
-            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#ffaa66" TextWrapping="Wrap"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Content="{loc:Localize Common.Cancel}" Click="OnCancelClick" Width="90"
-                        Background="#3d3d3d" Foreground="White"/>
-                <Button Content="{loc:Localize CreatePdk.CreateButton}" Command="{Binding CreatePdkCommand}" Width="110"
-                        Background="#2a4a2a" Foreground="White" IsDefault="True"/>
-            </StackPanel>
-        </StackPanel>
-
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="12">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24" Spacing="24">
 
                 <StackPanel Spacing="4">
-                    <TextBlock Text="{loc:Localize CreatePdk.PdkName}" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Classes="label" Text="{loc:Localize CreatePdk.PdkName}"/>
                     <TextBox Text="{Binding PdkName}" Watermark="{loc:Localize CreatePdk.PdkNameWatermark}"/>
                 </StackPanel>
 
-                <Separator Background="#3d3d3d"/>
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="{loc:Localize CreatePdk.FabricationProcess}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <RadioButton GroupName="processSource" Content="{loc:Localize CreatePdk.UseExisting}"
+                                     IsChecked="{Binding ProcessSource,
+                                                 Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
+                                                 ConverterParameter=UseExisting}"/>
+                        <RadioButton GroupName="processSource" Content="{loc:Localize CreatePdk.DefineNew}"
+                                     IsChecked="{Binding ProcessSource,
+                                                 Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
+                                                 ConverterParameter=DefineNew}"/>
+                    </StackPanel>
 
-                <TextBlock Text="{loc:Localize CreatePdk.FabricationProcess}" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
-                <StackPanel Orientation="Horizontal" Spacing="16">
-                    <RadioButton GroupName="processSource" Content="{loc:Localize CreatePdk.UseExisting}"
-                                 IsChecked="{Binding ProcessSource,
-                                             Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
-                                             ConverterParameter=UseExisting}"/>
-                    <RadioButton GroupName="processSource" Content="{loc:Localize CreatePdk.DefineNew}"
-                                 IsChecked="{Binding ProcessSource,
-                                             Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
-                                             ConverterParameter=DefineNew}"/>
-                </StackPanel>
-
-                <StackPanel Spacing="4"
-                            IsVisible="{Binding ProcessSource,
-                                        Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
-                                        ConverterParameter=UseExisting}">
                     <ComboBox ItemsSource="{Binding AvailableProcesses}"
                               SelectedItem="{Binding SelectedExistingProcess}"
                               PlaceholderText="{loc:Localize CreatePdk.ChooseLoadedProcess}"
-                              HorizontalAlignment="Stretch">
+                              HorizontalAlignment="Stretch"
+                              IsVisible="{Binding ProcessSource,
+                                          Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
+                                          ConverterParameter=UseExisting}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="dto:ProcessDefinition">
                                 <TextBlock Text="{Binding Name}"/>
@@ -65,113 +52,140 @@
                 </StackPanel>
 
                 <!-- One IsVisible for the whole define-new region on this outer wrapper; the DataContext swap happens only on an inner child so this binding stays on CreateCustomPdkViewModel. -->
-                <StackPanel Spacing="10"
+                <StackPanel Spacing="24"
                             IsVisible="{Binding ProcessSource,
                                         Converter={x:Static conv:PdkProcessSourceToBoolConverter.Instance},
                                         ConverterParameter=DefineNew}">
 
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{loc:Localize CreatePdk.StartFromTemplate}" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
-                        <ComboBox ItemsSource="{Binding AvailableProcesses}"
-                                  SelectedItem="{Binding SelectedTemplate}"
-                                  PlaceholderText="{loc:Localize CreatePdk.ChooseTemplate}"
-                                  HorizontalAlignment="Stretch">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="dto:ProcessDefinition">
-                                    <TextBlock Text="{Binding Name}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{loc:Localize CreatePdk.CoreThickness}" VerticalAlignment="Center" Foreground="#aaa"/>
-                        <TextBox Text="{Binding CoreThicknessNm}" Width="120" Watermark="{loc:Localize CreatePdk.CoreThicknessWatermark}"/>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="*,16,160">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="label" Text="{loc:Localize CreatePdk.StartFromTemplate}"/>
+                            <ComboBox ItemsSource="{Binding AvailableProcesses}"
+                                      SelectedItem="{Binding SelectedTemplate}"
+                                      PlaceholderText="{loc:Localize CreatePdk.ChooseTemplate}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:ProcessDefinition">
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Classes="label" Text="{loc:Localize CreatePdk.CoreThickness}"/>
+                            <TextBox Text="{Binding CoreThicknessNm}"
+                                     Watermark="{loc:Localize CreatePdk.CoreThicknessWatermark}"/>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Inner panel swaps DataContext to ProcessDefinitionEditor and carries no IsVisible (owned by the outer wrapper). -->
-                    <StackPanel Spacing="10"
+                    <StackPanel Spacing="24"
                                 DataContext="{Binding ProcessDefinitionEditor}"
                                 x:DataType="vmp:ProcessManagementViewModel">
 
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{loc:Localize CreatePdk.ProcessName}" VerticalAlignment="Center" Foreground="#aaa"/>
-                            <TextBox Text="{Binding ProcessName}" Width="240"/>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="{loc:Localize CreatePdk.ProcessName}"/>
+                            <TextBox Text="{Binding ProcessName}"/>
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{loc:Localize CreatePdk.LayerStack}" FontWeight="SemiBold" Foreground="#aaaacc" FontSize="13" VerticalAlignment="Center"/>
-                            <Button Content="{loc:Localize CreatePdk.AddLayer}" Command="{Binding AddLayerCommand}" FontSize="10" Padding="6,1" Background="#2a4a2a"/>
+                        <!-- Layer stack -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="subtitle" Text="{loc:Localize CreatePdk.LayerStack}"
+                                           VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Command="{Binding AddLayerCommand}" Content="{loc:Localize CreatePdk.AddLayer}"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="2*,1*,1*,1*,3*">
+                                <TextBlock Grid.Column="0" Classes="label" Text="{loc:Localize CreatePdk.ColName}"/>
+                                <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize CreatePdk.ColLayer}"/>
+                                <TextBlock Grid.Column="2" Classes="label" Text="{loc:Localize CreatePdk.ColDatatype}"/>
+                                <TextBlock Grid.Column="3" Classes="label" Text="{loc:Localize CreatePdk.ColField}"/>
+                                <TextBlock Grid.Column="4" Classes="label" Text="{loc:Localize CreatePdk.ColDescription}"/>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding Layers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:ProcessLayer">
+                                        <Grid ColumnDefinitions="2*,1*,1*,1*,3*" Margin="0,2">
+                                            <TextBox Grid.Column="0" Classes="compact" Text="{Binding Name}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="1" Classes="compact" Text="{Binding Layer}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="2" Classes="compact" Text="{Binding Datatype}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="3" Classes="compact" Text="{Binding Field}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="4" Classes="compact" Text="{Binding Description}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                        <Grid ColumnDefinitions="2*,1*,1*,1*,3*">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize CreatePdk.ColName}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="1" Text="{loc:Localize CreatePdk.ColLayer}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="2" Text="{loc:Localize CreatePdk.ColDatatype}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="3" Text="{loc:Localize CreatePdk.ColField}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="4" Text="{loc:Localize CreatePdk.ColDescription}" Foreground="#888" FontSize="10"/>
-                        </Grid>
-                        <ItemsControl ItemsSource="{Binding Layers}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="dto:ProcessLayer">
-                                    <Grid ColumnDefinitions="2*,1*,1*,1*,3*" Margin="0,1">
-                                        <TextBox Grid.Column="0" Text="{Binding Name}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="1" Text="{Binding Layer}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="2" Text="{Binding Datatype}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="3" Text="{Binding Field}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="4" Text="{Binding Description}" FontSize="11"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
 
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{loc:Localize CreatePdk.CrossSectionsTitle}" FontWeight="SemiBold" Foreground="#aaaacc" FontSize="13" VerticalAlignment="Center"/>
-                            <Button Content="{loc:Localize CreatePdk.AddXsection}" Command="{Binding AddXsectionCommand}" FontSize="10" Padding="6,1" Background="#2a4a2a"/>
-                            <Button Content="{loc:Localize CreatePdk.AddMetal}" Command="{Binding AddMetalXsectionCommand}" FontSize="10" Padding="6,1" Background="#4a3a2a"/>
+                        <!-- Cross-sections -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="subtitle" Text="{loc:Localize CreatePdk.CrossSectionsTitle}"
+                                           VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Command="{Binding AddXsectionCommand}" Content="{loc:Localize CreatePdk.AddXsection}"/>
+                                <Button Classes="ghost" Command="{Binding AddMetalXsectionCommand}" Content="{loc:Localize CreatePdk.AddMetal}"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="2*,1*,1*,1.2*,1.4*,2*">
+                                <TextBlock Grid.Column="0" Classes="label" Text="{loc:Localize CreatePdk.ColName}"/>
+                                <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize CreatePdk.ColKind}"/>
+                                <TextBlock Grid.Column="2" Classes="label" Text="{loc:Localize CreatePdk.ColWidth}"/>
+                                <TextBlock Grid.Column="3" Classes="label" Text="{loc:Localize CreatePdk.ColMinR}"/>
+                                <TextBlock Grid.Column="4" Classes="label" Text="{loc:Localize CreatePdk.ColRecR}"/>
+                                <TextBlock Grid.Column="5" Classes="label" Text="{loc:Localize CreatePdk.ColDescription}"/>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding Xsections}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:ProcessXsection">
+                                        <Grid ColumnDefinitions="2*,1*,1*,1.2*,1.4*,2*" Margin="0,2">
+                                            <TextBox Grid.Column="0" Classes="compact" Text="{Binding Name}" Margin="0,0,4,0"/>
+                                            <ComboBox Grid.Column="1" Classes="compact" Margin="0,0,4,0" HorizontalAlignment="Stretch"
+                                                      ItemsSource="{x:Static vmp:ProcessManagementViewModel.XsectionKinds}"
+                                                      SelectedItem="{Binding Kind}"/>
+                                            <TextBox Grid.Column="2" Classes="compact" Text="{Binding WidthUm}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="3" Classes="compact" Text="{Binding MinRadiusUm}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="4" Classes="compact" Text="{Binding RecommendedRadiusUm}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="5" Classes="compact" Text="{Binding Description}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                        <Grid ColumnDefinitions="2*,1*,1*,1.2*,1.4*,2*">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize CreatePdk.ColName}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="1" Text="{loc:Localize CreatePdk.ColKind}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="2" Text="{loc:Localize CreatePdk.ColWidth}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="3" Text="{loc:Localize CreatePdk.ColMinR}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="4" Text="{loc:Localize CreatePdk.ColRecR}" Foreground="#888" FontSize="10"/>
-                            <TextBlock Grid.Column="5" Text="{loc:Localize CreatePdk.ColDescription}" Foreground="#888" FontSize="10"/>
-                        </Grid>
-                        <ItemsControl ItemsSource="{Binding Xsections}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="dto:ProcessXsection">
-                                    <Grid ColumnDefinitions="2*,1*,1*,1.2*,1.4*,2*" Margin="0,1">
-                                        <TextBox Grid.Column="0" Text="{Binding Name}" FontSize="11" Margin="0,0,2,0"/>
-                                        <ComboBox Grid.Column="1" FontSize="11" Margin="0,0,2,0" HorizontalAlignment="Stretch"
-                                                  ItemsSource="{x:Static vmp:ProcessManagementViewModel.XsectionKinds}"
-                                                  SelectedItem="{Binding Kind}"/>
-                                        <TextBox Grid.Column="2" Text="{Binding WidthUm}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="3" Text="{Binding MinRadiusUm}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="4" Text="{Binding RecommendedRadiusUm}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="5" Text="{Binding Description}" FontSize="11"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
 
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{loc:Localize CreatePdk.Materials}" FontWeight="SemiBold" Foreground="#aaaacc" FontSize="13" VerticalAlignment="Center"/>
-                            <Button Content="{loc:Localize CreatePdk.AddMaterial}" Command="{Binding AddMaterialCommand}" FontSize="10" Padding="6,1" Background="#2a4a2a"/>
+                        <!-- Materials -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="subtitle" Text="{loc:Localize CreatePdk.Materials}"
+                                           VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Command="{Binding AddMaterialCommand}" Content="{loc:Localize CreatePdk.AddMaterial}"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding Materials}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:ProcessMaterial">
+                                        <Grid ColumnDefinitions="2*,2*" Margin="0,2">
+                                            <TextBox Grid.Column="0" Classes="compact" Text="{Binding Name}" Margin="0,0,4,0"/>
+                                            <TextBox Grid.Column="1" Classes="compact" Text="{Binding Role}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                        <ItemsControl ItemsSource="{Binding Materials}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="dto:ProcessMaterial">
-                                    <Grid ColumnDefinitions="2*,2*" Margin="0,1">
-                                        <TextBox Grid.Column="0" Text="{Binding Name}" FontSize="11" Margin="0,0,2,0"/>
-                                        <TextBox Grid.Column="1" Text="{Binding Role}" FontSize="11"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
                     </StackPanel>
                 </StackPanel>
 
             </StackPanel>
         </ScrollViewer>
-    </DockPanel>
+
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="caption warning" Text="{Binding StatusText}" TextWrapping="Wrap"
+                           VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{loc:Localize Common.Cancel}" Click="OnCancelClick"/>
+                    <Button Classes="primary" Content="{loc:Localize CreatePdk.CreateButton}"
+                            Command="{Binding CreatePdkCommand}" IsDefault="True"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

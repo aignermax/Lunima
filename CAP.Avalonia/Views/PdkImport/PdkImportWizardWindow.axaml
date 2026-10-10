@@ -1,194 +1,164 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels.PdkImport"
+        xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.PdkImport.PdkImportWizardWindow"
         x:DataType="vm:PdkImportWizardViewModel"
         Title="{loc:Localize PdkImport.WindowTitle}"
-        Width="700" Height="540"
+        Width="700" Height="560"
         WindowStartupLocation="CenterOwner"
-        CanResize="True"
-        Background="#1e1e1e"
-        Foreground="White">
+        CanResize="True">
 
-    <DockPanel Margin="16">
+    <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Header -->
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
-            <TextBlock Text="{loc:Localize PdkImport.WindowTitle}" FontSize="17" FontWeight="Bold" Foreground="White"/>
-            <TextBlock Text="{Binding PyFilePath}" FontSize="10" Foreground="Gray"
-                       TextWrapping="Wrap" Margin="0,4,0,0"/>
-            <!-- Step indicator -->
-            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
-                <Border Padding="8,3" CornerRadius="4"
-                        Background="{Binding IsParsingStep, Converter={x:Static BoolConverters.Not}, FallbackValue=#2d2d2d}">
-                    <Border.Background>
-                        <MultiBinding>
-                            <!-- green when active, dark when not -->
-                        </MultiBinding>
-                    </Border.Background>
+        <StackPanel Grid.Row="0" Margin="24,24,24,16" Spacing="8">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="title" Text="{loc:Localize PdkImport.WindowTitle}"/>
+                <TextBlock Classes="caption mono" Text="{Binding PyFilePath}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <!-- Step indicator: the current step is the accent chip -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="chip" Classes.accent="{Binding IsParsingStep}">
+                    <TextBlock Text="{loc:Localize PdkImport.StepParse}"/>
                 </Border>
-                <TextBlock Text="{loc:Localize PdkImport.StepParse}" FontSize="11"
-                           Foreground="{Binding IsParsingStep, Converter={x:Static BoolConverters.Not}, FallbackValue=Gray}">
-                    <TextBlock.Foreground>
-                        <SolidColorBrush Color="LightBlue"/>
-                    </TextBlock.Foreground>
-                </TextBlock>
-                <TextBlock Text="›" Foreground="Gray"/>
-                <TextBlock Text="{loc:Localize PdkImport.StepReview}" FontSize="11"
-                           Foreground="{Binding IsReviewStep, Converter={x:Static BoolConverters.Not}, FallbackValue=Gray}"/>
-                <TextBlock Text="›" Foreground="Gray"/>
-                <TextBlock Text="{loc:Localize PdkImport.StepSave}" FontSize="11"
-                           Foreground="{Binding IsSaveStep, Converter={x:Static BoolConverters.Not}, FallbackValue=Gray}"/>
+                <controls:Icon Data="{StaticResource Icon.ChevronRight}" Size="12"
+                               Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                <Border Classes="chip" Classes.accent="{Binding IsReviewStep}">
+                    <TextBlock Text="{loc:Localize PdkImport.StepReview}"/>
+                </Border>
+                <controls:Icon Data="{StaticResource Icon.ChevronRight}" Size="12"
+                               Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                <Border Classes="chip" Classes.accent="{Binding IsSaveStep}">
+                    <TextBlock Text="{loc:Localize PdkImport.StepSave}"/>
+                </Border>
             </StackPanel>
         </StackPanel>
 
-        <!-- Bottom buttons (always visible) -->
-        <Border DockPanel.Dock="Bottom" Margin="0,14,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Content="{loc:Localize Common.Cancel}" Command="{Binding CancelCommand}"
-                        Background="#4d3d3d" Foreground="White" Width="80"/>
-                <!-- Parsing step: Retry on error -->
-                <Button Content="{loc:Localize PdkImport.Retry}" Command="{Binding RetryParsingCommand}"
-                        Background="#3d3d5d" Foreground="White" Width="80"
-                        IsVisible="{Binding HasError}"/>
-                <!-- Review step buttons -->
-                <Button Content="{loc:Localize PdkImport.Next}" Command="{Binding ProceedToSaveCommand}"
-                        Background="#3d5d3d" Foreground="White" Width="80"
-                        IsVisible="{Binding IsReviewStep}"/>
-                <!-- Save step buttons -->
-                <Button Content="{loc:Localize PdkImport.Back}" Command="{Binding BackToReviewCommand}"
-                        Background="#3d3d5d" Foreground="White" Width="80"
-                        IsVisible="{Binding IsSaveStep}"/>
-                <Button Content="{loc:Localize PdkImport.SaveAndLoad}" Command="{Binding SaveAndLoadCommand}"
-                        Background="#3d5d3d" Foreground="White" Padding="12,4"
-                        IsVisible="{Binding IsSaveStep}"
-                        IsEnabled="{Binding IsLoading, Converter={x:Static BoolConverters.Not}}"/>
-            </StackPanel>
-        </Border>
-
         <!-- Content area switches by step -->
-        <Grid>
+        <Grid Grid.Row="1" Margin="24,0">
 
             <!-- ═══ Step 1: Parsing ═══ -->
-            <StackPanel IsVisible="{Binding IsParsingStep}" Spacing="10">
-                <TextBlock Text="{loc:Localize PdkImport.ParsingTitle}"
-                           FontWeight="SemiBold" FontSize="13" Foreground="LightBlue"/>
-                <ProgressBar IsIndeterminate="{Binding IsLoading}"
-                             Height="5" Minimum="0" Maximum="1"
-                             Foreground="#3d9d5d"/>
-                <TextBlock Text="{Binding StatusText}" Foreground="LightGray"
-                           TextWrapping="Wrap" FontSize="11"/>
+            <StackPanel IsVisible="{Binding IsParsingStep}" Spacing="16">
+                <TextBlock Classes="subtitle" Text="{loc:Localize PdkImport.ParsingTitle}"/>
+                <ProgressBar IsIndeterminate="{Binding IsLoading}" Height="4" Minimum="0" Maximum="1"/>
+                <TextBlock Classes="secondary" Text="{Binding StatusText}" TextWrapping="Wrap"/>
 
-                <!-- Error panel -->
-                <Border Background="#3d1515" CornerRadius="4" Padding="10"
+                <Border Classes="card" Background="{DynamicResource Brush.Danger.Subtle}"
                         IsVisible="{Binding HasError}">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="{loc:Localize PdkImport.ParseError}" Foreground="#FF6B6B" FontWeight="SemiBold" FontSize="11"/>
-                        <TextBlock Text="{Binding ErrorText}" Foreground="#FF9090"
-                                   TextWrapping="Wrap" FontFamily="Consolas, Courier New, monospace"
-                                   FontSize="10"/>
+                        <TextBlock Classes="label danger" Text="{loc:Localize PdkImport.ParseError}"/>
+                        <TextBlock Classes="caption mono" Text="{Binding ErrorText}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Brush.Danger}"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Component list (populated after parsing) -->
                 <StackPanel IsVisible="{Binding IsLoading, Converter={x:Static BoolConverters.Not}}"
-                            Spacing="6">
-                    <TextBlock Foreground="Gray" FontSize="11"
+                            Spacing="8">
+                    <TextBlock Classes="label"
                                Text="{Binding ParsedComponents.Count, StringFormat='Components found: {0}'}"/>
-                    <ListBox ItemsSource="{Binding ParsedComponents}"
-                             MaxHeight="280" Background="#252526" BorderThickness="0">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ComponentParseResultViewModel">
-                                <Grid ColumnDefinitions="90,*,Auto" Margin="4,2">
-                                    <TextBlock Grid.Column="0" Text="{Binding StatusText}"
-                                               Foreground="{Binding StatusColor}" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                               Foreground="White" FontSize="11"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding Category}"
-                                               Foreground="Gray" FontSize="10" Margin="8,0,4,0"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <Border Classes="card" Padding="4">
+                        <ListBox ItemsSource="{Binding ParsedComponents}" MaxHeight="260">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ComponentParseResultViewModel">
+                                    <Grid ColumnDefinitions="90,*,Auto" Margin="4,2">
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                                                   Foreground="{Binding StatusColor}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                                        <TextBlock Grid.Column="2" Classes="caption" Text="{Binding Category}"
+                                                   Margin="8,0,4,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
                 </StackPanel>
             </StackPanel>
 
             <!-- ═══ Step 2: Review ═══ -->
-            <StackPanel IsVisible="{Binding IsReviewStep}" Spacing="10">
-                <TextBlock Text="{loc:Localize PdkImport.ReviewTitle}"
-                           FontWeight="SemiBold" FontSize="13" Foreground="LightBlue"/>
-                <TextBlock Text="{Binding StatusText}" Foreground="LightGray"
-                           TextWrapping="Wrap" FontSize="11"/>
-                <TextBlock Text="{loc:Localize PdkImport.ReviewHint}"
-                           Foreground="Gray" FontSize="10"/>
+            <StackPanel IsVisible="{Binding IsReviewStep}" Spacing="8">
+                <TextBlock Classes="subtitle" Text="{loc:Localize PdkImport.ReviewTitle}"/>
+                <TextBlock Classes="secondary" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+                <TextBlock Classes="caption" Text="{loc:Localize PdkImport.ReviewHint}"/>
 
-                <ListBox ItemsSource="{Binding ParsedComponents}"
-                         MaxHeight="340" Background="#252526" BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ComponentParseResultViewModel">
-                            <Grid ColumnDefinitions="Auto,*,100,80,90" Margin="4,3">
-                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
-                                          Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                           Foreground="White" FontSize="11" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Category}"
-                                           Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Text="{Binding DimensionsText}"
-                                           Foreground="#888" FontSize="10" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="4" Text="{Binding StatusText}"
-                                           Foreground="{Binding StatusColor}" FontSize="11"
-                                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <Border Classes="card" Padding="4">
+                    <ListBox ItemsSource="{Binding ParsedComponents}" MaxHeight="300">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ComponentParseResultViewModel">
+                                <Grid ColumnDefinitions="Auto,*,100,80,90" Margin="4,3">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
+                                              Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Classes="caption" Text="{Binding Category}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Classes="caption mono" Text="{Binding DimensionsText}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding StatusText}"
+                                               Foreground="{Binding StatusColor}"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
 
-                <TextBlock Foreground="Gray" FontSize="10"
+                <TextBlock Classes="caption"
                            Text="{Binding ParsedComponents.Count, StringFormat='Total: {0} component(s)'}"/>
             </StackPanel>
 
             <!-- ═══ Step 3: Save ═══ -->
-            <StackPanel IsVisible="{Binding IsSaveStep}" Spacing="12">
-                <TextBlock Text="{loc:Localize PdkImport.SaveTitle}"
-                           FontWeight="SemiBold" FontSize="13" Foreground="LightBlue"/>
+            <StackPanel IsVisible="{Binding IsSaveStep}" Spacing="16">
+                <TextBlock Classes="subtitle" Text="{loc:Localize PdkImport.SaveTitle}"/>
 
-                <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto">
-                    <!-- PDK Name -->
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Localize PdkImport.PdkNameLabel}"
-                               Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding PdkName}"
-                             Background="#2d2d2d" Foreground="White" Margin="0,0,0,8"/>
+                <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,12,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="secondary"
+                               Text="{loc:Localize PdkImport.PdkNameLabel}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding PdkName}"/>
 
-                    <!-- Output path -->
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Localize PdkImport.OutputFileLabel}"
-                               Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                        <TextBox Grid.Column="0" Text="{Binding OutputPath}"
-                                 Background="#2d2d2d" Foreground="White"/>
-                        <Button Grid.Column="1" Content="..." Command="{Binding BrowseOutputPathCommand}"
-                                Width="36" Margin="4,0,0,0" Background="#3d3d3d" Foreground="White"
-                                ToolTip.Tip="{loc:Localize PdkImport.BrowseTip}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="secondary"
+                               Text="{loc:Localize PdkImport.OutputFileLabel}" VerticalAlignment="Center"/>
+                    <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,8,Auto">
+                        <TextBox Grid.Column="0" Text="{Binding OutputPath}"/>
+                        <Button Grid.Column="2" Classes="icon" Command="{Binding BrowseOutputPathCommand}"
+                                ToolTip.Tip="{loc:Localize PdkImport.BrowseTip}">
+                            <controls:Icon Data="{StaticResource Icon.FolderOpen}"/>
+                        </Button>
                     </Grid>
-
-                    <!-- Summary -->
-                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                               Foreground="Gray" FontSize="11"
-                               Text="{Binding ParsedComponents.Count, StringFormat='Components to import: {0}'}"/>
                 </Grid>
 
-                <!-- Error panel -->
-                <Border Background="#3d1515" CornerRadius="4" Padding="10"
+                <TextBlock Classes="caption"
+                           Text="{Binding ParsedComponents.Count, StringFormat='Components to import: {0}'}"/>
+
+                <Border Classes="card" Background="{DynamicResource Brush.Danger.Subtle}"
                         IsVisible="{Binding HasError}">
-                    <TextBlock Text="{Binding ErrorText}" Foreground="#FF9090"
-                               TextWrapping="Wrap" FontSize="10"
-                               FontFamily="Consolas, Courier New, monospace"/>
+                    <TextBlock Classes="caption mono" Text="{Binding ErrorText}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Brush.Danger}"/>
                 </Border>
 
-                <TextBlock Text="{Binding StatusText}" Foreground="LightGray"
-                           TextWrapping="Wrap" FontSize="11"/>
+                <TextBlock Classes="secondary" Text="{Binding StatusText}" TextWrapping="Wrap"/>
             </StackPanel>
 
         </Grid>
-    </DockPanel>
+
+        <!-- Footer (always visible) -->
+        <Border Grid.Row="2" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{loc:Localize Common.Cancel}" Command="{Binding CancelCommand}"/>
+                <Button Content="{loc:Localize PdkImport.Retry}" Command="{Binding RetryParsingCommand}"
+                        IsVisible="{Binding HasError}"/>
+                <Button Content="{loc:Localize PdkImport.Back}" Command="{Binding BackToReviewCommand}"
+                        IsVisible="{Binding IsSaveStep}"/>
+                <Button Classes="primary" Content="{loc:Localize PdkImport.Next}"
+                        Command="{Binding ProceedToSaveCommand}"
+                        IsVisible="{Binding IsReviewStep}"/>
+                <Button Classes="primary" Content="{loc:Localize PdkImport.SaveAndLoad}"
+                        Command="{Binding SaveAndLoadCommand}"
+                        IsVisible="{Binding IsSaveStep}"
+                        IsEnabled="{Binding IsLoading, Converter={x:Static BoolConverters.Not}}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

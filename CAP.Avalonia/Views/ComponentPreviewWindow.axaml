@@ -6,12 +6,11 @@
         Width="640" Height="480"
         MinWidth="240" MinHeight="180"
         CanResize="True"
-        Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
     <!-- ClipToBounds keeps a zoomed/panned image from painting outside the window;
          the Image itself carries the zoom/pan transform (see code-behind). -->
-    <Border x:Name="ViewportBorder" Background="#101018" ClipToBounds="True">
+    <Border x:Name="ViewportBorder" Background="{DynamicResource Brush.Surface.Canvas}" ClipToBounds="True">
         <Image x:Name="PreviewImage"
                Stretch="None"
                HorizontalAlignment="Left"
