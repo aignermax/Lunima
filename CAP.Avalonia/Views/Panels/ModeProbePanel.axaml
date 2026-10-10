@@ -2,6 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels.Solvers.ModeProbe"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
              x:Class="CAP.Avalonia.Views.Panels.ModeProbePanel"
              x:DataType="vm:ModeProbeViewModel">
 
@@ -18,6 +20,13 @@
                 Background="Transparent" Foreground="#aaaaaa"
                 Command="{Binding CloseCommand}"
                 ToolTip.Tip="{loc:Localize ModeProbe.CloseTip}"/>
+        <controls:HelpFlyoutButton DockPanel.Dock="Right" Margin="0,0,4,0"
+                                   VerticalAlignment="Center"
+                                   Title="{loc:Localize ModeProbeHelp.Title}">
+          <controls:HelpFlyoutButton.HelpContent>
+            <panels:ModeProbeHelpFlyout/>
+          </controls:HelpFlyoutButton.HelpContent>
+        </controls:HelpFlyoutButton>
         <TextBlock Text="{Binding TargetName}" FontWeight="SemiBold"
                    Foreground="White" TextTrimming="CharacterEllipsis"
                    VerticalAlignment="Center"/>
