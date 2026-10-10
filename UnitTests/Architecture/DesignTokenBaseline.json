@@ -1,0 +1,322 @@
+{
+  "CAP.Avalonia/Controls/Help/WaveguideCrossingHelpFlyout.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Controls/HelpFlyoutButton.axaml": {
+    "HexColors": 6,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Controls/TourAnchor/TourAnchorOverlay.axaml": {
+    "HexColors": 6,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/AiAssistantWindow.axaml": {
+    "HexColors": 1,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/BreadcrumbBar.axaml": {
+    "HexColors": 3,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/ComponentPreviewWindow.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/ComponentSettingsDialog.axaml": {
+    "HexColors": 40,
+    "SmallFonts": 18
+  },
+  "CAP.Avalonia/Views/CreateCustomPdkWindow.axaml": {
+    "HexColors": 28,
+    "SmallFonts": 15
+  },
+  "CAP.Avalonia/Views/Dialogs/DockerSetupDialog.axaml": {
+    "HexColors": 20,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Dialogs/GdsFactoryExportDialog.axaml": {
+    "HexColors": 4,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Dialogs/GdsImportDialog.axaml": {
+    "HexColors": 35,
+    "SmallFonts": 30
+  },
+  "CAP.Avalonia/Views/Dialogs/GdsLayerPickerWindow.axaml": {
+    "HexColors": 9,
+    "SmallFonts": 4
+  },
+  "CAP.Avalonia/Views/Dialogs/ModeSolverDialog.axaml": {
+    "HexColors": 34,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Dialogs/OnaAnalyzerWindow.axaml": {
+    "HexColors": 11,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Dialogs/OpenEblCheckDialog.axaml": {
+    "HexColors": 39,
+    "SmallFonts": 5
+  },
+  "CAP.Avalonia/Views/Dialogs/PdkResolutionCheckDialog.axaml": {
+    "HexColors": 9,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Dialogs/PhotonTorchExportDialog.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Dialogs/VerilogAExportDialog.axaml": {
+    "HexColors": 6,
+    "SmallFonts": 4
+  },
+  "CAP.Avalonia/Views/HierarchyPanel.axaml": {
+    "HexColors": 8,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/HomeView.axaml": {
+    "HexColors": 17,
+    "SmallFonts": 4
+  },
+  "CAP.Avalonia/Views/IsaPlaygroundHelpFlyout.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/IsaPlaygroundWindow.axaml": {
+    "HexColors": 16,
+    "SmallFonts": 4
+  },
+  "CAP.Avalonia/Views/MainView.axaml": {
+    "HexColors": 3,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/MainWindow.axaml": {
+    "HexColors": 97,
+    "SmallFonts": 24
+  },
+  "CAP.Avalonia/Views/NewComponentWindow.axaml": {
+    "HexColors": 48,
+    "SmallFonts": 9
+  },
+  "CAP.Avalonia/Views/Panels/AiAssistantPanel.axaml": {
+    "HexColors": 10,
+    "SmallFonts": 5
+  },
+  "CAP.Avalonia/Views/Panels/AnalysisDockPanel.axaml": {
+    "HexColors": 20,
+    "SmallFonts": 4
+  },
+  "CAP.Avalonia/Views/Panels/CircuitOptimizationPanel.axaml": {
+    "HexColors": 4,
+    "SmallFonts": 6
+  },
+  "CAP.Avalonia/Views/Panels/ComponentDimensionDiagnosticsPanel.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Panels/ConnectChipletsTourPanel.axaml": {
+    "HexColors": 8,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/ConnectionRoutingPanel.axaml": {
+    "HexColors": 11,
+    "SmallFonts": 3
+  },
+  "CAP.Avalonia/Views/Panels/DesignChecksPanel.axaml": {
+    "HexColors": 5,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/EyeDiagramPanel.axaml": {
+    "HexColors": 9,
+    "SmallFonts": 9
+  },
+  "CAP.Avalonia/Views/Panels/EyeHelpFlyout.axaml": {
+    "HexColors": 11,
+    "SmallFonts": 3
+  },
+  "CAP.Avalonia/Views/Panels/FirstStepsTutorialPanel.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/GdsLayerVisibilityPanel.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Panels/LaserHelpFlyout.axaml": {
+    "HexColors": 13,
+    "SmallFonts": 6
+  },
+  "CAP.Avalonia/Views/Panels/LayoutCompressionPanel.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 3
+  },
+  "CAP.Avalonia/Views/Panels/LengthMatchingPanel.axaml": {
+    "HexColors": 3,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/LineShapeHelpFlyout.axaml": {
+    "HexColors": 4,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/LogicCellInstanceHelpFlyout.axaml": {
+    "HexColors": 37,
+    "SmallFonts": 5
+  },
+  "CAP.Avalonia/Views/Panels/LogicFanOutHelpFlyout.axaml": {
+    "HexColors": 30,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/LogicHelpFlyout.axaml": {
+    "HexColors": 11,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Panels/LogicPanel.axaml": {
+    "HexColors": 21,
+    "SmallFonts": 28
+  },
+  "CAP.Avalonia/Views/Panels/LogicTimelineHelpFlyout.axaml": {
+    "HexColors": 12,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/LogicTimingHelpFlyout.axaml": {
+    "HexColors": 1,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/ModeProbeHelpFlyout.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/ModeProbePanel.axaml": {
+    "HexColors": 15,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/MonteCarloHelpFlyout.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/MonteCarloPanel.axaml": {
+    "HexColors": 8,
+    "SmallFonts": 14
+  },
+  "CAP.Avalonia/Views/Panels/NetlistPanel.axaml": {
+    "HexColors": 3,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Panels/NewComponentHelpFlyout.axaml": {
+    "HexColors": 41,
+    "SmallFonts": 7
+  },
+  "CAP.Avalonia/Views/Panels/OptimizationHelpFlyout.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/ParameterSweepPanel.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Panels/PdkHelpFlyout.axaml": {
+    "HexColors": 11,
+    "SmallFonts": 3
+  },
+  "CAP.Avalonia/Views/Panels/PdkTrashPanel.axaml": {
+    "HexColors": 5,
+    "SmallFonts": 7
+  },
+  "CAP.Avalonia/Views/Panels/ProcessHelpFlyout.axaml": {
+    "HexColors": 6,
+    "SmallFonts": 5
+  },
+  "CAP.Avalonia/Views/Panels/PythonEnvironmentManagerPanel.axaml": {
+    "HexColors": 12,
+    "SmallFonts": 12
+  },
+  "CAP.Avalonia/Views/Panels/RerouteImportedPanel.axaml": {
+    "HexColors": 1,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/RinHelpFlyout.axaml": {
+    "HexColors": 5,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/RoutingDiagnosticsPanel.axaml": {
+    "HexColors": 4,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/Panels/RunProgramTourPanel.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/SelectedComponentPropertiesPanel.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 20
+  },
+  "CAP.Avalonia/Views/Panels/SpectrumCoherentHelpFlyout.axaml": {
+    "HexColors": 14,
+    "SmallFonts": 3
+  },
+  "CAP.Avalonia/Views/Panels/StoreNumberTourPanel.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/SweepHelpFlyout.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 1
+  },
+  "CAP.Avalonia/Views/Panels/TimeDomainPanel.axaml": {
+    "HexColors": 8,
+    "SmallFonts": 19
+  },
+  "CAP.Avalonia/Views/Panels/TransientHelpFlyout.axaml": {
+    "HexColors": 13,
+    "SmallFonts": 3
+  },
+  "CAP.Avalonia/Views/Panels/TruthTableHelpFlyout.axaml": {
+    "HexColors": 12,
+    "SmallFonts": 5
+  },
+  "CAP.Avalonia/Views/Panels/TruthTablePanel.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 15
+  },
+  "CAP.Avalonia/Views/Panels/WatchComputeTourPanel.axaml": {
+    "HexColors": 7,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/Panels/WavelengthSpectrumPanel.axaml": {
+    "HexColors": 14,
+    "SmallFonts": 13
+  },
+  "CAP.Avalonia/Views/PdkImport/PdkImportWizardWindow.axaml": {
+    "HexColors": 18,
+    "SmallFonts": 8
+  },
+  "CAP.Avalonia/Views/PdkOffsetEditorWindow.axaml": {
+    "HexColors": 36,
+    "SmallFonts": 4
+  },
+  "CAP.Avalonia/Views/PortMappingDialog.axaml": {
+    "HexColors": 10,
+    "SmallFonts": 2
+  },
+  "CAP.Avalonia/Views/ProcessManagementWindow.axaml": {
+    "HexColors": 24,
+    "SmallFonts": 16
+  },
+  "CAP.Avalonia/Views/ProcessSelectionDialog.axaml": {
+    "HexColors": 4,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/RegistryBrowserWindow.axaml": {
+    "HexColors": 21,
+    "SmallFonts": 18
+  },
+  "CAP.Avalonia/Views/RenameDialog.axaml": {
+    "HexColors": 2,
+    "SmallFonts": 0
+  },
+  "CAP.Avalonia/Views/SettingsWindow.axaml": {
+    "HexColors": 19,
+    "SmallFonts": 0
+  }
+}

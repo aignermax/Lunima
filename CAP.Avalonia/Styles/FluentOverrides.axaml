@@ -1,0 +1,154 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Maps the Fluent theme's own resource keys onto the Lunima tokens, so every control the
+    views do not restyle explicitly (ComboBox items, CheckBoxes, sliders, menus, tooltips…)
+    still matches the design system. Merged after FluentTheme, so these keys win.
+  -->
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceInclude Source="avares://CAP.Avalonia/Styles/Tokens.axaml"/>
+  </ResourceDictionary.MergedDictionaries>
+
+  <!-- Accent ramp (Fluent derives selection, focus and checked states from it). -->
+  <Color x:Key="SystemAccentColor">#5B8CFF</Color>
+  <Color x:Key="SystemAccentColorLight1">#7AA3FF</Color>
+  <Color x:Key="SystemAccentColorLight2">#9BBAFF</Color>
+  <Color x:Key="SystemAccentColorLight3">#BCD0FF</Color>
+  <Color x:Key="SystemAccentColorDark1">#4A76E8</Color>
+  <Color x:Key="SystemAccentColorDark2">#3B60C4</Color>
+  <Color x:Key="SystemAccentColorDark3">#2D4A99</Color>
+  <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#5B8CFF"/>
+
+  <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>
+
+  <!-- Buttons -->
+  <StaticResource x:Key="ButtonBackground" ResourceKey="Brush.Surface.Raised"/>
+  <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="Brush.Surface.Pressed"/>
+  <StaticResource x:Key="ButtonBackgroundDisabled" ResourceKey="Brush.Surface.Panel"/>
+  <StaticResource x:Key="ButtonBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="Brush.Border.Subtle"/>
+  <StaticResource x:Key="ButtonForeground" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="ButtonForegroundDisabled" ResourceKey="Brush.Text.Disabled"/>
+  <StaticResource x:Key="RepeatButtonBackground" ResourceKey="Brush.Surface.Raised"/>
+  <StaticResource x:Key="RepeatButtonBackgroundPointerOver" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="RepeatButtonBackgroundPressed" ResourceKey="Brush.Surface.Pressed"/>
+
+  <!-- Toggle buttons: checked = subtle accent wash, not a solid block. -->
+  <StaticResource x:Key="ToggleButtonBackground" ResourceKey="Brush.Surface.Raised"/>
+  <StaticResource x:Key="ToggleButtonBackgroundPointerOver" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="ToggleButtonBackgroundPressed" ResourceKey="Brush.Surface.Pressed"/>
+  <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="Brush.Accent.Subtle"/>
+  <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="Brush.Accent.SubtleHover"/>
+  <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="Brush.Accent.SubtleHover"/>
+  <StaticResource x:Key="ToggleButtonBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="ToggleButtonBorderBrushPointerOver" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="Brush.Accent.Hover"/>
+  <StaticResource x:Key="ToggleButtonForeground" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="Brush.Accent.Hover"/>
+  <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="Brush.Accent.Hover"/>
+
+  <!-- Text inputs -->
+  <StaticResource x:Key="TextControlBackground" ResourceKey="Brush.Surface.Input"/>
+  <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="Brush.Surface.Input"/>
+  <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="Brush.Surface.Input"/>
+  <StaticResource x:Key="TextControlBackgroundDisabled" ResourceKey="Brush.Surface.Panel"/>
+  <StaticResource x:Key="TextControlBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="TextControlBorderBrushDisabled" ResourceKey="Brush.Border.Subtle"/>
+  <StaticResource x:Key="TextControlForeground" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="TextControlForegroundPointerOver" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="TextControlForegroundFocused" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="TextControlForegroundDisabled" ResourceKey="Brush.Text.Disabled"/>
+  <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="Brush.Text.Tertiary"/>
+  <StaticResource x:Key="TextControlPlaceholderForegroundPointerOver" ResourceKey="Brush.Text.Tertiary"/>
+  <StaticResource x:Key="TextControlPlaceholderForegroundFocused" ResourceKey="Brush.Text.Tertiary"/>
+
+  <!-- ComboBox -->
+  <StaticResource x:Key="ComboBoxBackground" ResourceKey="Brush.Surface.Input"/>
+  <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="Brush.Surface.Raised"/>
+  <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="Brush.Surface.Input"/>
+  <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="ComboBoxBackgroundBorderBrushFocused" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="Brush.Surface.Overlay"/>
+  <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="ComboBoxDropDownGlyphForeground" ResourceKey="Brush.Text.Tertiary"/>
+  <StaticResource x:Key="ComboBoxItemBackgroundPointerOver" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="ComboBoxItemBackgroundSelected" ResourceKey="Brush.Accent.Subtle"/>
+  <StaticResource x:Key="ComboBoxItemBackgroundSelectedPointerOver" ResourceKey="Brush.Accent.SubtleHover"/>
+  <StaticResource x:Key="ComboBoxItemForegroundSelected" ResourceKey="Brush.Text.Primary"/>
+
+  <!-- Check boxes & radio buttons -->
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillChecked" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" ResourceKey="Brush.Accent.Hover"/>
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillCheckedPressed" ResourceKey="Brush.Accent.Pressed"/>
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillUnchecked" ResourceKey="Brush.Surface.Input"/>
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillUncheckedPointerOver" ResourceKey="Brush.Surface.Raised"/>
+  <StaticResource x:Key="CheckBoxCheckBackgroundStrokeUnchecked" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="CheckBoxCheckBackgroundStrokeUncheckedPointerOver" ResourceKey="Brush.Text.Tertiary"/>
+  <StaticResource x:Key="RadioButtonOuterEllipseCheckedFill" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="RadioButtonOuterEllipseCheckedFillPointerOver" ResourceKey="Brush.Accent.Hover"/>
+  <StaticResource x:Key="RadioButtonOuterEllipseCheckedStroke" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="RadioButtonOuterEllipseStroke" ResourceKey="Brush.Border.Strong"/>
+  <StaticResource x:Key="RadioButtonOuterEllipseFill" ResourceKey="Brush.Surface.Input"/>
+
+  <!-- Tabs: quiet headers, accent pipe under the selected one. -->
+  <x:Double x:Key="TabItemHeaderFontSize">12</x:Double>
+  <FontWeight x:Key="TabItemHeaderThemeFontWeight">Medium</FontWeight>
+  <StaticResource x:Key="TabItemHeaderSelectedPipeFill" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="TabItemHeaderForegroundUnselected" ResourceKey="Brush.Text.Tertiary"/>
+  <StaticResource x:Key="TabItemHeaderForegroundUnselectedPointerOver" ResourceKey="Brush.Text.Secondary"/>
+  <StaticResource x:Key="TabItemHeaderForegroundSelected" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="TabItemHeaderForegroundSelectedPointerOver" ResourceKey="Brush.Text.Primary"/>
+
+  <!-- Overlays: tooltips, flyouts, menus -->
+  <StaticResource x:Key="ToolTipBackground" ResourceKey="Brush.Surface.Overlay"/>
+  <StaticResource x:Key="ToolTipForeground" ResourceKey="Brush.Text.Primary"/>
+  <StaticResource x:Key="ToolTipBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <x:Double x:Key="ToolTipContentThemeFontSize">11.5</x:Double>
+  <Thickness x:Key="ToolTipBorderThemePadding">8,5,8,6</Thickness>
+  <StaticResource x:Key="FlyoutPresenterBackground" ResourceKey="Brush.Surface.Overlay"/>
+  <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="Brush.Surface.Overlay"/>
+  <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="Brush.Surface.Pressed"/>
+
+  <!-- Expander -->
+  <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="Brush.Surface.Panel"/>
+  <StaticResource x:Key="ExpanderHeaderBackgroundPointerOver" ResourceKey="Brush.Surface.Hover"/>
+  <StaticResource x:Key="ExpanderHeaderBackgroundPressed" ResourceKey="Brush.Surface.Pressed"/>
+  <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="Brush.Border.Subtle"/>
+  <StaticResource x:Key="ExpanderHeaderBorderBrushPointerOver" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="ExpanderContentBackground" ResourceKey="Brush.Surface.Panel"/>
+  <StaticResource x:Key="ExpanderContentBorderBrush" ResourceKey="Brush.Border.Subtle"/>
+  <x:Double x:Key="ExpanderMinHeight">28</x:Double>
+  <Thickness x:Key="ExpanderHeaderPadding">10,0,0,0</Thickness>
+  <x:Double x:Key="ExpanderChevronButtonSize">22</x:Double>
+  <Thickness x:Key="ExpanderChevronMargin">8,0,6,0</Thickness>
+
+  <!-- Sliders -->
+  <StaticResource x:Key="SliderTrackValueFill" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="Brush.Accent.Hover"/>
+  <StaticResource x:Key="SliderTrackFill" ResourceKey="Brush.Border.Default"/>
+  <StaticResource x:Key="SliderThumbBackground" ResourceKey="Brush.Accent"/>
+  <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="Brush.Accent.Hover"/>
+
+  <!-- Uniform control chrome: one row height for every input. -->
+  <Thickness x:Key="ButtonPadding">12,0,12,0</Thickness>
+  <Thickness x:Key="ComboBoxPadding">10,0,0,0</Thickness>
+  <Thickness x:Key="ComboBoxItemThemePadding">10,4,10,5</Thickness>
+  <x:Double x:Key="ComboBoxMinHeight">28</x:Double>
+  <Thickness x:Key="TextControlThemePadding">9,0,6,0</Thickness>
+  <!-- Inner content height: ControlHeight minus the 1 px top and bottom border. -->
+  <x:Double x:Key="TextControlThemeMinHeight">26</x:Double>
+</ResourceDictionary>

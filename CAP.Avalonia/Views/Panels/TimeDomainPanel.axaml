@@ -21,7 +21,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="LineStroke" Value="#A0A0A0"/>
         </Style>
-        <!-- CompactControlHeights.axaml drives input height/padding app-wide; only the
+        <!-- The design system (Styles/FluentOverrides.axaml) drives input height/padding app-wide; only the
              layout-specific VerticalContentAlignment and label FontSize stay local. -->
         <Style Selector="NumericUpDown">
             <Setter Property="VerticalContentAlignment" Value="Center"/>

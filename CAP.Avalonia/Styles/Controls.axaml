@@ -1,0 +1,183 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:CAP.Avalonia.Controls">
+  <!--
+    Interactive controls. Every button and input shares ControlHeight (28 px) and the
+    Radius.M corner, so rows of mixed controls line up. Button variants are classes:
+      (none)    secondary — raised surface with a border
+      primary   the one main action of a surface (accent fill)
+      ghost     quiet action, no chrome until hover
+      danger    destructive action
+      icon      square icon-only button (combine with ghost for toolbars)
+      toolbar   30 px square ghost button for the main toolbar; :checked shows the mode
+      link      inline text action
+    State changes animate background and border over Motion.Fast.
+  -->
+
+  <!-- ── Shared chrome ────────────────────────────────────────────────────── -->
+  <Style Selector="Button, ToggleButton">
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}"/>
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton /template/ ContentPresenter#PART_ContentPresenter,
+                   RepeatButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12"/>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.97)"/>
+  </Style>
+  <Style Selector="Button">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08"/>
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- ── Primary ──────────────────────────────────────────────────────────── -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnAccent}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Hover}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Hover}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnAccent}"/>
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Pressed}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Pressed}"/>
+  </Style>
+  <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/>
+  </Style>
+
+  <!-- ── Ghost ────────────────────────────────────────────────────────────── -->
+  <Style Selector="Button.ghost, ToggleButton.ghost">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+  </Style>
+  <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Pressed}"/>
+  </Style>
+  <Style Selector="ToggleButton.ghost:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+  </Style>
+
+  <!-- ── Danger ───────────────────────────────────────────────────────────── -->
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource Brush.Danger.Subtle}"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Danger}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Danger}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnAccent}"/>
+  </Style>
+
+  <!-- ── Icon & toolbar buttons ───────────────────────────────────────────── -->
+  <Style Selector="Button.icon, ToggleButton.icon">
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Width" Value="{DynamicResource ControlHeight}"/>
+    <Setter Property="Height" Value="{DynamicResource ControlHeight}"/>
+  </Style>
+  <Style Selector="Button.toolbar, ToggleButton.toolbar">
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="MinWidth" Value="{DynamicResource ToolbarButtonSize}"/>
+    <Setter Property="Height" Value="{DynamicResource ToolbarButtonSize}"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+  </Style>
+  <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.toolbar:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+  </Style>
+  <Style Selector="Button.toolbar:pressed /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.toolbar:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Pressed}"/>
+  </Style>
+  <Style Selector="ToggleButton.toolbar:checked /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.toolbar.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+  </Style>
+  <Style Selector="Button.toolbar:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.toolbar:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/>
+  </Style>
+
+  <!-- ── Link ─────────────────────────────────────────────────────────────── -->
+  <Style Selector="Button.link">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="MinHeight" Value="0"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Link}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+  </Style>
+  <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+  </Style>
+
+  <!-- ── Inputs ───────────────────────────────────────────────────────────── -->
+  <Style Selector="TextBox, ComboBox, NumericUpDown, AutoCompleteBox">
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}"/>
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+  </Style>
+  <Style Selector="TextBox">
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+  <!-- Fluent's TextBox template border reads its own 32 px minimum; pin it to ControlHeight
+       so text inputs line up with buttons and combo boxes. -->
+  <Style Selector="TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}"/>
+  </Style>
+  <Style Selector="TextBox.compact, ComboBox.compact, NumericUpDown.compact">
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight.Compact}"/>
+  </Style>
+  <Style Selector="TextBox.mono">
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+  </Style>
+  <Style Selector="CheckBox, RadioButton">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight.Compact}"/>
+  </Style>
+
+  <!-- ── Icon inside buttons follows the button's text color ──────────────── -->
+  <Style Selector="controls|Icon">
+    <Setter Property="Size" Value="{DynamicResource IconSize}"/>
+  </Style>
+</Styles>

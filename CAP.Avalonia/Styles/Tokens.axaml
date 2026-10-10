@@ -1,0 +1,122 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Lunima design tokens: the single source for colors, type, spacing, radii and motion.
+    Views reference these via {DynamicResource ...}; hex literals in views are guarded by
+    UnitTests/Architecture/DesignTokenGuardTests. Canvas renderers read the same palette
+    through Controls/Rendering/CanvasPalette.cs.
+
+    Palette: cool near-black neutrals (slight blue bias) so the photonic geometry on the
+    canvas carries the color; one azure accent for primary actions, selection and focus;
+    semantic colors only for state (success / warning / danger / info), never decoration.
+  -->
+
+  <!-- ── Neutrals ─────────────────────────────────────────────────────────── -->
+  <Color x:Key="Color.Gray950">#0B0D11</Color>
+  <Color x:Key="Color.Gray900">#111318</Color>
+  <Color x:Key="Color.Gray850">#161920</Color>
+  <Color x:Key="Color.Gray800">#1C2028</Color>
+  <Color x:Key="Color.Gray750">#232833</Color>
+  <Color x:Key="Color.Gray700">#2B313D</Color>
+  <Color x:Key="Color.Gray600">#3A4250</Color>
+  <Color x:Key="Color.Gray500">#5A6474</Color>
+  <Color x:Key="Color.Gray400">#7D8798</Color>
+  <Color x:Key="Color.Gray300">#A3ACBB</Color>
+  <Color x:Key="Color.Gray100">#E6E9EF</Color>
+
+  <!-- ── Accent & semantic ────────────────────────────────────────────────── -->
+  <Color x:Key="Color.Accent">#5B8CFF</Color>
+  <Color x:Key="Color.AccentHover">#7AA3FF</Color>
+  <Color x:Key="Color.AccentPressed">#4A76E8</Color>
+  <Color x:Key="Color.AccentSubtle">#245B8CFF</Color>
+  <Color x:Key="Color.AccentSubtleHover">#3A5B8CFF</Color>
+  <Color x:Key="Color.Success">#3DBE84</Color>
+  <Color x:Key="Color.SuccessSubtle">#243DBE84</Color>
+  <Color x:Key="Color.Warning">#F0B13E</Color>
+  <Color x:Key="Color.WarningSubtle">#24F0B13E</Color>
+  <Color x:Key="Color.Danger">#F2676E</Color>
+  <Color x:Key="Color.DangerSubtle">#24F2676E</Color>
+  <Color x:Key="Color.Info">#4FB6EA</Color>
+  <Color x:Key="Color.InfoSubtle">#244FB6EA</Color>
+  <Color x:Key="Color.Scrim">#99000000</Color>
+
+  <!-- ── Surfaces (back to front) ─────────────────────────────────────────── -->
+  <SolidColorBrush x:Key="Brush.Surface.Canvas" Color="{StaticResource Color.Gray950}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Base" Color="{StaticResource Color.Gray900}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Panel" Color="{StaticResource Color.Gray850}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Raised" Color="{StaticResource Color.Gray800}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Hover" Color="{StaticResource Color.Gray750}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Pressed" Color="{StaticResource Color.Gray700}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Overlay" Color="{StaticResource Color.Gray800}"/>
+  <SolidColorBrush x:Key="Brush.Surface.Input" Color="{StaticResource Color.Gray950}"/>
+  <SolidColorBrush x:Key="Brush.Scrim" Color="{StaticResource Color.Scrim}"/>
+
+  <!-- ── Borders ──────────────────────────────────────────────────────────── -->
+  <SolidColorBrush x:Key="Brush.Border.Subtle" Color="#21262F"/>
+  <SolidColorBrush x:Key="Brush.Border.Default" Color="{StaticResource Color.Gray700}"/>
+  <SolidColorBrush x:Key="Brush.Border.Strong" Color="{StaticResource Color.Gray600}"/>
+  <SolidColorBrush x:Key="Brush.Border.Focus" Color="{StaticResource Color.Accent}"/>
+
+  <!-- ── Text ─────────────────────────────────────────────────────────────── -->
+  <SolidColorBrush x:Key="Brush.Text.Primary" Color="{StaticResource Color.Gray100}"/>
+  <SolidColorBrush x:Key="Brush.Text.Secondary" Color="{StaticResource Color.Gray300}"/>
+  <SolidColorBrush x:Key="Brush.Text.Tertiary" Color="{StaticResource Color.Gray400}"/>
+  <SolidColorBrush x:Key="Brush.Text.Disabled" Color="{StaticResource Color.Gray500}"/>
+  <SolidColorBrush x:Key="Brush.Text.OnAccent" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="Brush.Text.Link" Color="{StaticResource Color.AccentHover}"/>
+
+  <!-- ── Accent & semantic brushes ────────────────────────────────────────── -->
+  <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}"/>
+  <SolidColorBrush x:Key="Brush.Accent.Hover" Color="{StaticResource Color.AccentHover}"/>
+  <SolidColorBrush x:Key="Brush.Accent.Pressed" Color="{StaticResource Color.AccentPressed}"/>
+  <SolidColorBrush x:Key="Brush.Accent.Subtle" Color="{StaticResource Color.AccentSubtle}"/>
+  <SolidColorBrush x:Key="Brush.Accent.SubtleHover" Color="{StaticResource Color.AccentSubtleHover}"/>
+  <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}"/>
+  <SolidColorBrush x:Key="Brush.Success.Subtle" Color="{StaticResource Color.SuccessSubtle}"/>
+  <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}"/>
+  <SolidColorBrush x:Key="Brush.Warning.Subtle" Color="{StaticResource Color.WarningSubtle}"/>
+  <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}"/>
+  <SolidColorBrush x:Key="Brush.Danger.Subtle" Color="{StaticResource Color.DangerSubtle}"/>
+  <SolidColorBrush x:Key="Brush.Info" Color="{StaticResource Color.Info}"/>
+  <SolidColorBrush x:Key="Brush.Info.Subtle" Color="{StaticResource Color.InfoSubtle}"/>
+
+  <!-- ── Typography ───────────────────────────────────────────────────────── -->
+  <FontFamily x:Key="Font.Ui">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>
+  <FontFamily x:Key="Font.Mono">Cascadia Mono, JetBrains Mono, Consolas, Menlo, DejaVu Sans Mono, monospace</FontFamily>
+  <x:Double x:Key="FontSize.Caption">11</x:Double>
+  <x:Double x:Key="FontSize.Body">12</x:Double>
+  <x:Double x:Key="FontSize.BodyLarge">13</x:Double>
+  <x:Double x:Key="FontSize.Subtitle">14</x:Double>
+  <x:Double x:Key="FontSize.Title">16</x:Double>
+  <x:Double x:Key="FontSize.Headline">20</x:Double>
+  <x:Double x:Key="FontSize.Display">26</x:Double>
+
+  <!-- ── Spacing (4 px grid) ──────────────────────────────────────────────── -->
+  <x:Double x:Key="Space.XS">4</x:Double>
+  <x:Double x:Key="Space.S">8</x:Double>
+  <x:Double x:Key="Space.M">12</x:Double>
+  <x:Double x:Key="Space.L">16</x:Double>
+  <x:Double x:Key="Space.XL">24</x:Double>
+  <x:Double x:Key="Space.XXL">32</x:Double>
+  <Thickness x:Key="Padding.Panel">12</Thickness>
+  <Thickness x:Key="Padding.Card">16</Thickness>
+  <Thickness x:Key="Padding.Dialog">24</Thickness>
+  <Thickness x:Key="Padding.Control">10,0</Thickness>
+
+  <!-- ── Shape ────────────────────────────────────────────────────────────── -->
+  <CornerRadius x:Key="Radius.S">4</CornerRadius>
+  <CornerRadius x:Key="Radius.M">6</CornerRadius>
+  <CornerRadius x:Key="Radius.L">10</CornerRadius>
+  <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
+  <x:Double x:Key="ControlHeight">28</x:Double>
+  <x:Double x:Key="ControlHeight.Compact">24</x:Double>
+  <x:Double x:Key="ToolbarButtonSize">30</x:Double>
+  <x:Double x:Key="IconSize">16</x:Double>
+  <x:Double x:Key="IconSize.Small">14</x:Double>
+  <x:Double x:Key="IconSize.Large">20</x:Double>
+
+  <!-- ── Motion ───────────────────────────────────────────────────────────── -->
+  <x:TimeSpan x:Key="Motion.Fast">0:0:0.12</x:TimeSpan>
+  <x:TimeSpan x:Key="Motion.Normal">0:0:0.2</x:TimeSpan>
+  <x:TimeSpan x:Key="Motion.Slow">0:0:0.32</x:TimeSpan>
+</ResourceDictionary>

@@ -1,0 +1,127 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Surfaces and containers as Border classes:
+      panel        a docked area (sidebar, dock, properties) — Surface.Panel
+      card         a self-contained object on a panel — raised, Radius.L, subtle border
+      toolbar      the main command bar — Surface.Panel with a bottom hairline
+      statusbar    the bottom status strip
+      chip         small pill for tags and state (add success/warning/danger/info/accent)
+      empty-state  centered placeholder block for panels without content
+      divider      1 px separator line (use on a Border with Height or Width 1)
+      overlay      floating card over the canvas (tour, probes, hints)
+  -->
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}"/>
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Raised}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.L}"/>
+    <Setter Property="Padding" Value="{DynamicResource Padding.Card}"/>
+  </Style>
+  <Style Selector="Border.card.interactive">
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12"/>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.card.interactive:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Strong}"/>
+  </Style>
+  <Style Selector="Border.toolbar">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+  </Style>
+  <Style Selector="Border.statusbar">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+    <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    <Setter Property="MinHeight" Value="26"/>
+  </Style>
+  <Style Selector="Border.overlay">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Overlay}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.L}"/>
+    <Setter Property="Padding" Value="{DynamicResource Padding.Card}"/>
+    <Setter Property="BoxShadow" Value="0 8 24 0 #66000000"/>
+  </Style>
+  <Style Selector="Border.divider">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}"/>
+    <Setter Property="MinHeight" Value="1"/>
+    <Setter Property="MinWidth" Value="1"/>
+  </Style>
+  <Style Selector="Border.empty-state">
+    <Setter Property="Padding" Value="24"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+
+  <!-- Chips -->
+  <Style Selector="Border.chip">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Pill}"/>
+    <Setter Property="Padding" Value="8,2,8,3"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Border.chip > TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+  </Style>
+  <Style Selector="Border.chip.success"><Setter Property="Background" Value="{DynamicResource Brush.Success.Subtle}"/></Style>
+  <Style Selector="Border.chip.success > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/></Style>
+  <Style Selector="Border.chip.warning"><Setter Property="Background" Value="{DynamicResource Brush.Warning.Subtle}"/></Style>
+  <Style Selector="Border.chip.warning > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/></Style>
+  <Style Selector="Border.chip.danger"><Setter Property="Background" Value="{DynamicResource Brush.Danger.Subtle}"/></Style>
+  <Style Selector="Border.chip.danger > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/></Style>
+  <Style Selector="Border.chip.info"><Setter Property="Background" Value="{DynamicResource Brush.Info.Subtle}"/></Style>
+  <Style Selector="Border.chip.info > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Info}"/></Style>
+  <Style Selector="Border.chip.accent"><Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/></Style>
+  <Style Selector="Border.chip.accent > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/></Style>
+
+  <!-- Lists: rounded, quiet selection -->
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+  <Style Selector="ListBoxItem">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.S}"/>
+    <Setter Property="Padding" Value="8,4"/>
+  </Style>
+  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.SubtleHover}"/>
+  </Style>
+
+  <!-- Separators & splitters -->
+  <Style Selector="Separator">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}"/>
+  </Style>
+  <Style Selector="GridSplitter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Border.Subtle}"/>
+  </Style>
+  <Style Selector="GridSplitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
+  </Style>
+
+  <!-- Tooltips and flyouts get the overlay shape -->
+  <Style Selector="ToolTip">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+  </Style>
+  <Style Selector="FlyoutPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.L}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}"/>
+  </Style>
+</Styles>
