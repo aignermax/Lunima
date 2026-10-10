@@ -271,7 +271,7 @@ unfiltered suite on a local desktop session — parallel test hosts fill RAM and
 freezes (global OOM). `make test` and `.agent.toml` already exclude `Category!=Slow`; with
 `smart_test.py` set `SMART_TEST_EXCLUDE_CATEGORY=Slow` (the `safe_test.sh` wrapper does
 this). Run local tests through `scripts/throttle.sh <cmd>` (`make test` does): one shared
-systemd slice caps CPU and memory (8 GB) across all concurrent runs, so a runaway run is
+systemd slice caps CPU and memory (10 GB) across all concurrent runs, so a runaway run is
 killed instead of the desktop. CI runs everything unfiltered, so nothing loses coverage.
 
 ---
