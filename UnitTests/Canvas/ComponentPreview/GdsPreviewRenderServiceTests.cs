@@ -16,95 +16,78 @@ namespace UnitTests.Canvas.ComponentPreview;
 /// <summary>Unit tests for <see cref="GdsPreviewRenderService"/>.</summary>
 public sealed class GdsPreviewRenderServiceTests
 {
-    // ── BuildCacheKey ───────────────────────────────────────────────────────
+    // ── Render key of a placed component ───────────────────────────────────
 
     [Fact]
-    public void BuildCacheKey_ComponentWithNazcaFunction_ReturnsKeyWithFunctionAndDimensions()
+    public void ForComponent_NazcaComponent_KeysOnModuleFunctionAndParameters()
     {
-        var comp = TestComponentFactory.CreateComponentViewModel(
-            nazcaFunctionName: "demo.mmi1x2_sh");
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi1x2_sh").Component;
 
-        var key = GdsPreviewRenderService.BuildCacheKey(comp);
+        var key = GdsPreviewKey.ForComponent(comp);
 
-        key.ShouldNotBeNull();
-        key!.ShouldStartWith("demo.mmi1x2_sh|");
+        key.Function.ShouldBe("demo.mmi1x2_sh");
+        key.Parameters.ShouldBe(comp.NazcaFunctionParameters);
+        key.IsRenderable.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public void ForComponent_WithoutNazcaFunction_IsNotRenderable(string? function)
+    {
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: function).Component;
+        GdsPreviewKey.ForComponent(comp).IsRenderable.ShouldBeFalse();
     }
 
     [Fact]
-    public void BuildCacheKey_ComponentWithEmptyNazcaFunction_ReturnsNull()
+    public void ForComponent_DifferentParameters_GetDifferentKeys()
     {
-        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "");
-        GdsPreviewRenderService.BuildCacheKey(comp).ShouldBeNull();
+        var a = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.io").Component;
+        var b = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.io").Component;
+        a.NazcaFunctionParameters = "length=10";
+        b.NazcaFunctionParameters = "length=20";
+
+        GdsPreviewKey.ForComponent(a).Hash().ShouldNotBe(GdsPreviewKey.ForComponent(b).Hash());
     }
 
     [Fact]
-    public void BuildCacheKey_ComponentWithNullNazcaFunction_ReturnsNull()
+    public void ForComponent_MatchesLibraryThumbnailKey_SoTheRenderIsShared()
     {
-        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: null);
-        GdsPreviewRenderService.BuildCacheKey(comp).ShouldBeNull();
+        // The library thumbnail keys a template on (module, function, template parameters);
+        // a placed instance carries the same strings, so both resolve to one cached render.
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi1x2_sh").Component;
+        comp.NazcaModuleName = "demo";
+        comp.NazcaFunctionParameters = "";
+        var thumbnailKey = new GdsPreviewKey("demo", "demo.mmi1x2_sh", null);
+
+        GdsPreviewKey.ForComponent(comp).Hash().ShouldBe(thumbnailKey.Hash());
     }
 
     [Fact]
-    public void BuildCacheKey_DifferentDimensions_ReturnsDifferentKeys()
+    public void ForComponent_GdsFactoryNative_IgnoresSynthesizedNazcaName()
     {
-        // Components with same function but different sizes should have different keys
-        var comp1 = TestComponentFactory.CreateComponentViewModel(
-            nazcaFunctionName: "demo.io", widthMicrometers: 4, heightMicrometers: 4);
-        var comp2 = TestComponentFactory.CreateComponentViewModel(
-            nazcaFunctionName: "demo.io", widthMicrometers: 8, heightMicrometers: 4);
+        // Placement gives a gdsfactory-native component a synthesized nazcaFunction
+        // ("nazca_<name>") no Nazca script can render; the gdsfactory factory wins.
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "nazca_mmi1x2").Component;
+        comp.GdsFactoryFunction = "cspdk.sin300.mmi1x2";
 
-        var key1 = GdsPreviewRenderService.BuildCacheKey(comp1);
-        var key2 = GdsPreviewRenderService.BuildCacheKey(comp2);
+        var key = GdsPreviewKey.ForComponent(comp);
 
-        key1.ShouldNotBe(key2);
+        key.Function.ShouldBeNull();
+        key.GdsFactoryFunction.ShouldBe("cspdk.sin300.mmi1x2");
+        key.IsRenderable.ShouldBeTrue();
     }
 
     [Fact]
-    public void BuildCacheKey_RotatedComponent_MatchesUnrotatedKey()
+    public void BuildPreviewKey_RotatedFootprint_MatchesUnrotated()
     {
-        // Rotating with R swaps Component.Width/HeightMicrometers and bumps RotationDegrees.
-        // The preview bitmap content is rotation-independent (the canvas rotates it at draw
-        // time), so the cache key must not change — otherwise every rotation re-runs the
-        // Python render and rasterises the unrotated geometry into a swapped-aspect bitmap.
-        var unrotated = TestComponentFactory.CreateComponentViewModel(
-            nazcaFunctionName: "demo.io", widthMicrometers: 8, heightMicrometers: 4);
+        // The bitmap holds unrotated geometry, so the bitmap key uses the unrotated size;
+        // a rotation must not trigger a second rasterisation.
+        var key = new GdsPreviewKey("m", "f", null);
+        var (w, h) = GdsPolygonRenderer.GetUnrotatedSize(90, 4, 8);
 
-        var rotated = TestComponentFactory.CreateComponentViewModel(
-            nazcaFunctionName: "demo.io", widthMicrometers: 4, heightMicrometers: 8);
-        rotated.Component.RotationDegrees = 90;
-
-        GdsPreviewRenderService.BuildCacheKey(rotated)
-            .ShouldBe(GdsPreviewRenderService.BuildCacheKey(unrotated));
-    }
-
-    [Fact]
-    public void BuildCacheKey_GdsFactoryNativeComponent_ReturnsGdsfactoryKey()
-    {
-        // A gdsfactory-native component (no Nazca function, a gdsfactory factory) must still get
-        // a cache key so it renders a real preview instead of falling back to a rectangle (#570).
-        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "");
-        comp.Component.GdsFactoryFunction = "cspdk.sin300.mmi1x2";
-
-        var key = GdsPreviewRenderService.BuildCacheKey(comp);
-
-        key.ShouldNotBeNull();
-        key!.ShouldStartWith("gdsfactory|cspdk.sin300.mmi1x2|");
-    }
-
-    [Fact]
-    public void BuildCacheKey_GdsFactoryNativeComponent_WithSynthesizedNazcaName_StillReturnsGdsfactoryKey()
-    {
-        // On placement, a gdsfactory-native component is given a synthesized nazcaFunction
-        // ("nazca_<name>") that no Nazca script can render. The gdsfactory factory must take
-        // precedence so the placed component previews via gdsfactory, not a dead Nazca call —
-        // otherwise the canvas grid stays blank.
-        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "nazca_mmi1x2");
-        comp.Component.GdsFactoryFunction = "cspdk.sin300.mmi1x2";
-
-        var key = GdsPreviewRenderService.BuildCacheKey(comp);
-
-        key.ShouldNotBeNull();
-        key!.ShouldStartWith("gdsfactory|cspdk.sin300.mmi1x2|");
+        GdsPreviewRenderService.BuildPreviewKey(key, w, h)
+            .ShouldBe(GdsPreviewRenderService.BuildPreviewKey(key, 8, 4));
     }
 
     [Fact]
@@ -146,7 +129,7 @@ public sealed class GdsPreviewRenderServiceTests
         var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "");
 
         // Should return null immediately (no fetch triggered)
-        service.TryGetPreview(comp).ShouldBeNull();
+        service.TryGetPreview(comp.Component).ShouldBeNull();
     }
 
     [Fact]
@@ -159,7 +142,7 @@ public sealed class GdsPreviewRenderServiceTests
             nazcaFunctionName: "demo.mmi1x2_sh");
 
         // First call enqueues fetch and returns null (fetch not yet complete)
-        var result = service.TryGetPreview(comp);
+        var result = service.TryGetPreview(comp.Component);
         result.ShouldBeNull();
     }
 
@@ -177,10 +160,10 @@ public sealed class GdsPreviewRenderServiceTests
         var svc = new GdsPreviewRenderService(mock.Object);
         var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "nazca_imported_cell");
 
-        svc.TryGetPreview(comp).ShouldBeNull();
+        svc.TryGetPreview(comp.Component).ShouldBeNull();
         await svc.WaitForPendingAsync();
-        svc.TryGetPreview(comp).ShouldBeNull();
-        svc.TryGetPreview(comp).ShouldBeNull();
+        svc.TryGetPreview(comp.Component).ShouldBeNull();
+        svc.TryGetPreview(comp.Component).ShouldBeNull();
         await svc.WaitForPendingAsync();
 
         mock.Verify(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -189,7 +172,7 @@ public sealed class GdsPreviewRenderServiceTests
     [Fact]
     public async Task TryGetPreview_FailureMarker_SurvivesLruEviction()
     {
-        // A large import carries more unique failing keys than the LRU preview cache
+        // A large import carries more unique failing keys than the LRU geometry cache
         // holds; the failure markers live outside the LRU so an evicted key must not
         // re-spawn a render.
         var mock = new Mock<NazcaComponentPreviewService>("py", "s.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
@@ -198,13 +181,13 @@ public sealed class GdsPreviewRenderServiceTests
         var svc = new GdsPreviewRenderService(mock.Object);
         var first = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "nazca_cell_first");
 
-        svc.TryGetPreview(first);
+        svc.TryGetPreview(first.Component);
         await svc.WaitForPendingAsync();
-        for (int i = 0; i < GdsPreviewCache.MaxEntries + 10; i++)
-            svc.TryGetPreview(TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: $"nazca_cell_{i}"));
+        for (int i = 0; i < GdsGeometryCache.MaxEntries + 10; i++)
+            svc.TryGetPreview(TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: $"nazca_cell_{i}").Component);
         await svc.WaitForPendingAsync();
 
-        svc.TryGetPreview(first).ShouldBeNull();
+        svc.TryGetPreview(first.Component).ShouldBeNull();
         await svc.WaitForPendingAsync();
         mock.Verify(s => s.RenderAsync(It.IsAny<string?>(), "nazca_cell_first", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -227,7 +210,7 @@ public sealed class GdsPreviewRenderServiceTests
         var svc = new GdsPreviewRenderService(mock.Object);
 
         for (int i = 0; i < 10; i++)
-            svc.TryGetPreview(TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: $"nazca_gate_{i}"));
+            svc.TryGetPreview(TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: $"nazca_gate_{i}").Component);
         release.SetResult();
         await svc.WaitForPendingAsync();
 
@@ -338,6 +321,52 @@ public sealed class GdsPreviewRenderServiceTests
         svc2.TryGetGeometry(key).ShouldNotBeNull();
         mock2.Verify(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
 
+        try { Directory.Delete(diskDir, true); } catch { }
+    }
+
+    // ── Canvas preview shares the library geometry cache ───────────────────
+
+    [Fact]
+    public async Task TryGetPreview_AfterLibraryThumbnailRendered_ReusesGeometryWithoutSecondRender()
+    {
+        var mock = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        mock.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Ok());
+        var diskDir = Path.Combine(Path.GetTempPath(), "lunima-svc-" + Guid.NewGuid().ToString("N"));
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache(diskDir));
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi").Component;
+        comp.NazcaModuleName = "demo";
+        comp.NazcaFunctionParameters = "";
+
+        svc.TryGetGeometry(new GdsPreviewKey("demo", "demo.mmi", null));   // library thumbnail
+        await svc.WaitForPendingAsync();
+        var preview = svc.TryGetPreview(comp);                              // component placed
+
+        preview.ShouldNotBeNull();
+        mock.Verify(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        try { Directory.Delete(diskDir, true); } catch { }
+    }
+
+    [Fact]
+    public async Task TryGetPreview_SecondInstance_ServesFromDisk_NoRender()
+    {
+        var diskDir = Path.Combine(Path.GetTempPath(), "lunima-svc-" + Guid.NewGuid().ToString("N"));
+        var first = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        first.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Ok());
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi").Component;
+        var svc1 = new GdsPreviewRenderService(first.Object, new GdsPreviewDiskCache(diskDir));
+        svc1.TryGetPreview(comp);
+        await svc1.WaitForPendingAsync();
+
+        // A restarted app: fresh service, same disk cache, no Python render.
+        var second = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        var svc2 = new GdsPreviewRenderService(second.Object, new GdsPreviewDiskCache(diskDir));
+        svc2.TryGetPreview(comp);
+        await svc2.WaitForPendingAsync();
+
+        svc2.TryGetPreview(comp).ShouldNotBeNull();
+        second.Verify(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         try { Directory.Delete(diskDir, true); } catch { }
     }
 }

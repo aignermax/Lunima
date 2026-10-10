@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CAP_Core.Components.Core;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
@@ -30,6 +31,26 @@ public readonly record struct GdsPreviewKey(string? Module, string? Function, st
     /// factory (built-in / external-port components have neither).</summary>
     public bool IsRenderable =>
         !string.IsNullOrWhiteSpace(Function) || !string.IsNullOrWhiteSpace(GdsFactoryFunction);
+
+    /// <summary>
+    /// Builds the render identity of a placed component: the same key the library thumbnail
+    /// of its template uses, so both share one cached render. gdsfactory-native components
+    /// (module-qualified <see cref="Component.GdsFactoryFunction"/>, e.g. "cspdk.sin300.mmi1x2")
+    /// render via gdsfactory; their placement-synthesized nazcaFunction is ignored because no
+    /// Nazca script can render it.
+    /// </summary>
+    public static GdsPreviewKey ForComponent(Component component)
+    {
+        if (IsGdsFactoryNative(component.GdsFactoryFunction))
+            return new GdsPreviewKey(component.NazcaModuleName, null, null)
+                { GdsFactoryFunction = component.GdsFactoryFunction };
+        return new GdsPreviewKey(component.NazcaModuleName, component.NazcaFunctionName,
+            component.NazcaFunctionParameters);
+    }
+
+    /// <summary>True for a module-qualified gdsfactory factory name.</summary>
+    public static bool IsGdsFactoryNative(string? gdsFactoryFunction) =>
+        !string.IsNullOrWhiteSpace(gdsFactoryFunction) && gdsFactoryFunction.Contains('.');
 
     /// <summary>Stable filesystem-safe hash, prefixed with the format version.</summary>
     public string Hash()
