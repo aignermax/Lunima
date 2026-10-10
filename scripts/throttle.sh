@@ -16,8 +16,8 @@
 # Tunables (env; defaults sized for a 20-core / 16 GB machine):
 #   SAFE_TEST_CPUS      "0-9"   cores the runs may use
 #   SAFE_TEST_QUOTA     "600%"  total CPU across all runs (≈6 cores)
-#   SAFE_TEST_MEM_HIGH  "6G"    slice starts reclaiming/throttling here
-#   SAFE_TEST_MEM_MAX   "8G"    hard cap — the test run is OOM-killed, not the desktop
+#   SAFE_TEST_MEM_HIGH  "8G"    slice starts reclaiming/throttling here
+#   SAFE_TEST_MEM_MAX   "10G"   hard cap — the test run is OOM-killed, not the desktop
 #   SAFE_TEST_SWAP_MAX  "1G"    keeps runs from thrashing swap
 #
 # Usage:
@@ -31,8 +31,8 @@ fi
 
 CPUS="${SAFE_TEST_CPUS:-0-9}"
 QUOTA="${SAFE_TEST_QUOTA:-600%}"
-MEM_HIGH="${SAFE_TEST_MEM_HIGH:-6G}"
-MEM_MAX="${SAFE_TEST_MEM_MAX:-8G}"
+MEM_HIGH="${SAFE_TEST_MEM_HIGH:-8G}"
+MEM_MAX="${SAFE_TEST_MEM_MAX:-10G}"
 SWAP_MAX="${SAFE_TEST_SWAP_MAX:-1G}"
 SLICE="captest.slice"
 
