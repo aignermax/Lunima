@@ -114,7 +114,7 @@ public class ComponentGroupRendererTests
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
             method.ShouldNotBeNull();
-            method!.GetParameters().Length.ShouldBe(3); // context, bounds, isDimmed
+            method!.GetParameters().Length.ShouldBe(4); // context, bounds, render context, group id
         });
     }
 

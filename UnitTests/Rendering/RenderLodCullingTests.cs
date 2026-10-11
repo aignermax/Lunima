@@ -137,6 +137,9 @@ public class RenderLodCullingTests
             .ShouldBe(0, "a culled polygon must not rasterize a single pixel");
     }
 
+    /// <summary>Waveguide stroke color (CanvasPalette.Waveguide, teal) — green and blue high, red low.</summary>
+    private static bool IsWaveguideTeal(byte r, byte g, byte b) => g > 120 && b > 100 && r < 120;
+
     // ── Frozen paths: per-segment cull ──────────────────────────────────────
 
     [AvaloniaFact]
@@ -154,7 +157,7 @@ public class RenderLodCullingTests
             ComponentGroupRenderer.RenderFrozenWaveguidePath(ctx, frozen, cullRect: cullRect);
         }
 
-        CountPixels(bitmap, new PixelRect(10, 8, 20, 5), (r, g, b) => r > 150 && g > 80)
+        CountPixels(bitmap, new PixelRect(10, 8, 20, 5), IsWaveguideTeal)
             .ShouldBeGreaterThan(20, "the segment inside the cull rect must render");
         CountPixels(bitmap, new PixelRect(60, 58, 30, 5), (r, g, b) => r > 20 || g > 20 || b > 20)
             .ShouldBe(0, "the segment outside the cull rect must be skipped");
@@ -174,9 +177,9 @@ public class RenderLodCullingTests
             ComponentGroupRenderer.RenderFrozenWaveguidePath(ctx, frozen);
         }
 
-        CountPixels(bitmap, new PixelRect(10, 8, 20, 5), (r, g, b) => r > 150 && g > 80)
+        CountPixels(bitmap, new PixelRect(10, 8, 20, 5), IsWaveguideTeal)
             .ShouldBeGreaterThan(20);
-        CountPixels(bitmap, new PixelRect(60, 58, 30, 5), (r, g, b) => r > 150 && g > 80)
+        CountPixels(bitmap, new PixelRect(60, 58, 30, 5), IsWaveguideTeal)
             .ShouldBeGreaterThan(20);
     }
 
@@ -213,8 +216,8 @@ public class RenderLodCullingTests
         renderer.IssuedConnectionCount.ShouldBe(1);
         renderer.CulledConnectionCount.ShouldBe(1);
 
-        // The in-viewport connection still paints its orange fallback line (no over-culling).
-        CountPixels(bitmap, new PixelRect(280, 122, 80, 7), (r, g, b) => r > 200 && g > 100)
+        // The in-viewport connection still paints its waveguide-teal fallback line (no over-culling).
+        CountPixels(bitmap, new PixelRect(280, 122, 80, 7), IsWaveguideTeal)
             .ShouldBeGreaterThan(50, "the in-viewport connection must render its line");
     }
 
