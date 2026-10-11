@@ -111,8 +111,10 @@ public class Issue907HelpFlyoutRenderTests
         try
         {
             // The host pins English at construction; switch to German and let the
-            // {loc:Localize} bindings re-read before looking the button up by title.
+            // {loc:Localize} bindings re-read before looking the button up by title. The
+            // button lives in the PDKs rail pane, which is only templated while shown.
             LocalizationService.Instance.SetLanguage(TestLanguage);
+            host.Vm.LeftRail.ShowPdksCommand.Execute(null);
             UiInput.RunJobs();
 
             var expected = LocalizationService.Instance.Translate("PdkHelp.Title");
