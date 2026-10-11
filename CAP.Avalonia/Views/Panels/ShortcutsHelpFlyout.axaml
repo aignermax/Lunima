@@ -8,20 +8,17 @@
          canvas mode; everything else lives here so the bar can never overflow. -->
 
     <StackPanel MaxWidth="380" Spacing="6">
-        <TextBlock Text="{loc:Localize StatusBar.ShortcutModesTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock Text="{loc:Localize StatusBar.ShortcutModesBody}"
-                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+        <TextBlock Classes="strong" Text="{loc:Localize StatusBar.ShortcutModesTitle}"/>
+        <TextBlock Classes="secondary" Text="{loc:Localize StatusBar.ShortcutModesBody}"
+                   TextWrapping="Wrap"/>
 
-        <TextBlock Text="{loc:Localize StatusBar.ShortcutEditingTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock Text="{loc:Localize StatusBar.ShortcutEditingBody}"
-                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+        <TextBlock Classes="strong" Text="{loc:Localize StatusBar.ShortcutEditingTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" Text="{loc:Localize StatusBar.ShortcutEditingBody}"
+                   TextWrapping="Wrap"/>
 
-        <TextBlock Text="{loc:Localize StatusBar.ShortcutViewTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock Text="{loc:Localize StatusBar.ShortcutViewBody}"
-                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+        <TextBlock Classes="strong" Text="{loc:Localize StatusBar.ShortcutViewTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" Text="{loc:Localize StatusBar.ShortcutViewBody}"
+                   TextWrapping="Wrap"/>
     </StackPanel>
 
 </UserControl>

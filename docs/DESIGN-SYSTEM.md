@@ -67,6 +67,7 @@ migrate a file, lower or remove its entry.
 | `Button` | *(none)* = secondary · `primary` · `ghost` · `danger` · `icon` · `toolbar` (+ `active`) · `link` |
 | `ToggleButton` | `ghost` · `icon` · `toolbar` (`:checked` shows the active mode) |
 | `TextBox` / `ComboBox` / `NumericUpDown` | `compact` · `mono` (TextBox) |
+| any control | `fade-in` + `Classes.shown="{Binding HasResult}"` fades a result area in (150 ms) |
 | `Border` | `panel` `card` (+ `interactive`) `toolbar` `statusbar` `overlay` `divider` `empty-state` `chip` (+ `success` `warning` `danger` `info` `accent`) |
 
 ## Examples

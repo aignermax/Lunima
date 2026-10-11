@@ -16,52 +16,50 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelCellHelp.Body}"/>
 
         <!-- one template, stamped twice; the lit bit lives in CELL0 only. -->
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="120">
                     <!-- the reusable template -->
-                    <TextBlock Canvas.Left="14" Canvas.Top="16" Text="{loc:Localize LogicPanelCellHelp.DiagramTemplate}"
-                               FontSize="9" Foreground="Gray"/>
+                    <TextBlock Classes="caption" Canvas.Left="14" Canvas.Top="16" Text="{loc:Localize LogicPanelCellHelp.DiagramTemplate}"/>
                     <Rectangle Canvas.Left="14" Canvas.Top="34" Width="96" Height="52"
-                               Fill="#1d1d2d" Stroke="#8d8dbd" StrokeThickness="1"
+                               Fill="{DynamicResource Brush.Surface.Raised}" Stroke="{DynamicResource Brush.Text.Secondary}" StrokeThickness="1"
                                RadiusX="4" RadiusY="4" StrokeDashArray="4,3"/>
-                    <Rectangle Canvas.Left="24" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
-                    <Rectangle Canvas.Left="44" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
-                    <Rectangle Canvas.Left="64" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
-                    <Rectangle Canvas.Left="84" Canvas.Top="55" Width="10" Height="10" Fill="#2a2a3d" Stroke="#5d5d8d"/>
+                    <Rectangle Canvas.Left="24" Canvas.Top="55" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Hover}" Stroke="{DynamicResource Brush.Accent}"/>
+                    <Rectangle Canvas.Left="44" Canvas.Top="55" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Hover}" Stroke="{DynamicResource Brush.Accent}"/>
+                    <Rectangle Canvas.Left="64" Canvas.Top="55" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Hover}" Stroke="{DynamicResource Brush.Accent}"/>
+                    <Rectangle Canvas.Left="84" Canvas.Top="55" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Hover}" Stroke="{DynamicResource Brush.Accent}"/>
                     <!-- stamping arrow: template → instances -->
-                    <Line StartPoint="114,60" EndPoint="168,60" Stroke="#909090" StrokeThickness="2"/>
-                    <Polyline Points="160,54 170,60 160,66" Stroke="#909090" StrokeThickness="2"/>
+                    <Line StartPoint="114,60" EndPoint="168,60" Stroke="{DynamicResource Brush.Text.Tertiary}" StrokeThickness="2"/>
+                    <Polyline Points="160,54 170,60 160,66" Stroke="{DynamicResource Brush.Text.Tertiary}" StrokeThickness="2"/>
                     <!-- instance CELL0 -->
                     <Border Canvas.Left="176" Canvas.Top="8" Width="120" Height="46"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
-                    <TextBlock Canvas.Left="182" Canvas.Top="12" Text="CELL0" FontSize="9"
-                               FontFamily="Consolas" Foreground="#cfe0ff"/>
-                    <Rectangle Canvas.Left="196" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <Rectangle Canvas.Left="216" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <Rectangle Canvas.Left="236" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <Rectangle Canvas.Left="256" Canvas.Top="30" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <TextBlock Canvas.Left="302" Canvas.Top="30" Text="CELL0/REG00" FontSize="9"
-                               FontFamily="Consolas" Foreground="Gray"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
+                    <TextBlock Classes="mono" Canvas.Left="182" Canvas.Top="12" Text="CELL0" FontSize="{DynamicResource FontSize.Caption}"
+                               Foreground="{DynamicResource Brush.Text.Primary}"/>
+                    <Rectangle Canvas.Left="196" Canvas.Top="30" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Rectangle Canvas.Left="216" Canvas.Top="30" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Rectangle Canvas.Left="236" Canvas.Top="30" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Rectangle Canvas.Left="256" Canvas.Top="30" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <TextBlock Classes="mono" Canvas.Left="302" Canvas.Top="30" Text="CELL0/REG00" FontSize="{DynamicResource FontSize.Caption}"
+                               Foreground="{DynamicResource Brush.Text.Tertiary}"/>
                     <!-- instance CELL1 -->
                     <Border Canvas.Left="176" Canvas.Top="66" Width="120" Height="46"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
-                    <TextBlock Canvas.Left="182" Canvas.Top="70" Text="CELL1" FontSize="9"
-                               FontFamily="Consolas" Foreground="#cfe0ff"/>
-                    <Rectangle Canvas.Left="196" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <Rectangle Canvas.Left="216" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <Rectangle Canvas.Left="236" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
-                    <Rectangle Canvas.Left="256" Canvas.Top="88" Width="10" Height="10" Fill="#101018" Stroke="#666666"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
+                    <TextBlock Classes="mono" Canvas.Left="182" Canvas.Top="70" Text="CELL1" FontSize="{DynamicResource FontSize.Caption}"
+                               Foreground="{DynamicResource Brush.Text.Primary}"/>
+                    <Rectangle Canvas.Left="196" Canvas.Top="88" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Rectangle Canvas.Left="216" Canvas.Top="88" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Rectangle Canvas.Left="236" Canvas.Top="88" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Rectangle Canvas.Left="256" Canvas.Top="88" Width="10" Height="10" Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
                     <!-- animated stamp ghosts + the lit CELL0 bit -->
                     <ha:CellInstanceStampAnimation Width="368" Height="120" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize LogicPanelCellHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize LogicPanelCellHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
     </StackPanel>
