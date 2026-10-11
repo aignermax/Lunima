@@ -11,7 +11,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class PythonEnvironmentsSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "📦";
+    public override string Icon => "Icon.Package";
 
     /// <inheritdoc/>
     public override string? Category => "Export";

@@ -9,53 +9,75 @@
         xmlns:vmPyEnv="using:CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager"
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:conv="using:CAP.Avalonia.Converters"
         x:Class="CAP.Avalonia.Views.SettingsWindow"
         x:DataType="settings:SettingsWindowViewModel"
         Title="{loc:Localize Settings.WindowTitle}"
         Width="820" Height="680"
-        WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <conv:IconKeyConverter x:Key="IconKey"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <!-- A settings row: label + description on the left, the control on the right. -->
+        <Style Selector="Border.setting">
+            <Setter Property="Padding" Value="0,12"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+        <Style Selector="TextBlock.group">
+            <Setter Property="FontSize" Value="{DynamicResource FontSize.Subtitle}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,24,0,0"/>
+        </Style>
+        <Style Selector="TextBlock.unit">
+            <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Styles>
 
     <Grid ColumnDefinitions="200,1,*">
 
         <!-- Navigation sidebar -->
-        <DockPanel Grid.Column="0" Background="#252525">
-            <TextBlock DockPanel.Dock="Top"
+        <DockPanel Grid.Column="0" Background="{DynamicResource Brush.Surface.Panel}">
+            <TextBlock DockPanel.Dock="Top" Classes="title"
                        Text="{loc:Localize Settings.WindowTitle}"
-                       FontSize="16" FontWeight="SemiBold"
-                       Foreground="White"
-                       Margin="15,15,15,12"/>
+                       Margin="20,20,16,16"/>
             <ListBox ItemsSource="{Binding Pages}"
                      SelectedItem="{Binding SelectedPage}"
-                     Background="Transparent"
+                     Margin="8,0,8,8"
                      BorderThickness="0">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="10,7"/>
+                        <Setter Property="Margin" Value="0,0,0,2"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+                    </Style>
+                    <Style Selector="ListBoxItem:selected">
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+                    </Style>
+                    <Style Selector="ListBoxItem:selected controls|Icon">
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+                    </Style>
+                </ListBox.Styles>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type settings:ISettingsPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="5,2">
-                            <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" FontSize="14"/>
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13"/>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <controls:Icon Data="{Binding Icon, Converter={StaticResource IconKey}}"
+                                           VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSize.BodyLarge}"
+                                       VerticalAlignment="Center"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
-                <ListBox.Styles>
-                    <Style Selector="ListBoxItem">
-                        <Setter Property="Padding" Value="10,6"/>
-                        <Setter Property="Foreground" Value="#cccccc"/>
-                    </Style>
-                    <Style Selector="ListBoxItem:selected">
-                        <Setter Property="Background" Value="#3a3a3a"/>
-                        <Setter Property="Foreground" Value="White"/>
-                    </Style>
-                    <Style Selector="ListBoxItem:pointerover">
-                        <Setter Property="Background" Value="#333333"/>
-                    </Style>
-                </ListBox.Styles>
             </ListBox>
         </DockPanel>
 
-        <!-- Divider -->
-        <Rectangle Grid.Column="1" Fill="#3d3d3d"/>
+        <Border Grid.Column="1" Classes="divider"/>
 
         <!-- Content area -->
         <!-- Padding belongs on the content, not the ScrollViewer: ScrollContentPresenter
@@ -65,142 +87,165 @@
             <ContentControl Padding="24,20" Content="{Binding SelectedPage.ViewModel}">
                 <ContentControl.DataTemplates>
 
-
                     <!-- Grid Snap & Alignment -->
                     <DataTemplate DataType="{x:Type settings:GridSnapSettingsViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.GridSnap.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <CheckBox Content="{loc:Localize Settings.GridSnap.Enable}"
-                                      IsChecked="{Binding GridSnap.IsEnabled}"
-                                      Foreground="White"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="{loc:Localize Settings.GridSnap.GridSize}" Foreground="Gray" VerticalAlignment="Center" MinWidth="80" Margin="0,0,8,0"/>
-                                <NumericUpDown Value="{Binding GridSnap.GridSizeMicrometers}"
-                                               Minimum="1" Maximum="1000" Increment="10"
-                                               Width="130" FormatString="F0"/>
-                                <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                            </StackPanel>
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.GridSnap.Title}" Margin="0,0,0,8"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.GridSnap.Enable}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent=""
+                                                  IsChecked="{Binding GridSnap.IsEnabled}"/>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.GridSnap.GridSize}"
+                                               VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                        <NumericUpDown Value="{Binding GridSnap.GridSizeMicrometers}"
+                                                       Minimum="1" Maximum="1000" Increment="10"
+                                                       Width="130" FormatString="F0"/>
+                                        <TextBlock Classes="unit" Text="µm"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
 
-                            <Separator Margin="0,16,0,8" Background="#3d3d3d"/>
-                            <TextBlock Text="{loc:Localize Settings.GridSnap.AlignmentTitle}" FontSize="16" FontWeight="SemiBold" Foreground="Cyan" Margin="0,0,0,4"/>
-                            <CheckBox Content="{loc:Localize Settings.GridSnap.ShowGuides}"
-                                      IsChecked="{Binding AlignmentGuide.IsEnabled}"
-                                      Foreground="White"/>
-                            <TextBlock Text="{loc:Localize Settings.GridSnap.GuidesDescription}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            <TextBlock Classes="group" Text="{loc:Localize Settings.GridSnap.AlignmentTitle}"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="strong" Text="{loc:Localize Settings.GridSnap.ShowGuides}"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Classes="caption" Text="{loc:Localize Settings.GridSnap.GuidesDescription}"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent=""
+                                                  VerticalAlignment="Top"
+                                                  IsChecked="{Binding AlignmentGuide.IsEnabled}"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </DataTemplate>
 
                     <!-- Routing -->
                     <DataTemplate DataType="{x:Type settings:RoutingSettingsViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.Routing.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <CheckBox Content="{loc:Localize Settings.Routing.DirectFirst}"
-                                      IsChecked="{Binding Canvas.PreferDirectStyledRoutes}"
-                                      Foreground="White"/>
-                            <TextBlock Text="{loc:Localize Settings.Routing.DirectFirstDescription}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.Routing.Title}" Margin="0,0,0,8"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="strong" Text="{loc:Localize Settings.Routing.DirectFirst}" TextWrapping="Wrap"/>
+                                        <TextBlock Classes="caption" Text="{loc:Localize Settings.Routing.DirectFirstDescription}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" VerticalAlignment="Top"
+                                                  IsChecked="{Binding Canvas.PreferDirectStyledRoutes}"/>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="strong" Text="{loc:Localize Settings.Routing.EnableDiagonal}" TextWrapping="Wrap"/>
+                                        <TextBlock Classes="caption" Text="{loc:Localize Settings.Routing.DiagonalDescription}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" VerticalAlignment="Top"
+                                                  IsChecked="{Binding Canvas.UseDiagonalRouting}"/>
+                                </Grid>
+                            </Border>
 
-                            <Separator Margin="0,16,0,8" Background="#3d3d3d"/>
-                            <CheckBox Content="{loc:Localize Settings.Routing.EnableDiagonal}"
-                                      IsChecked="{Binding Canvas.UseDiagonalRouting}"
-                                      Foreground="White"/>
-                            <TextBlock Text="{loc:Localize Settings.Routing.DiagonalDescription}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
-
-                            <Separator Margin="0,16,0,8" Background="#3d3d3d"/>
-                            <TextBlock Text="{loc:Localize Settings.Routing.CrossingsTitle}" FontSize="16" FontWeight="SemiBold" Foreground="Cyan" Margin="0,0,0,4"/>
-                            <CheckBox Content="{loc:Localize Settings.Routing.AdaptiveCrossing}"
-                                      IsChecked="{Binding CrossingInsertionEnabled}"
-                                      Foreground="White"/>
-                            <TextBlock Text="{loc:Localize Settings.Routing.CrossingDescription}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            <TextBlock Classes="group" Text="{loc:Localize Settings.Routing.CrossingsTitle}"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="strong" Text="{loc:Localize Settings.Routing.AdaptiveCrossing}" TextWrapping="Wrap"/>
+                                        <TextBlock Classes="caption" Text="{loc:Localize Settings.Routing.CrossingDescription}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" VerticalAlignment="Top"
+                                                  IsChecked="{Binding CrossingInsertionEnabled}"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </DataTemplate>
 
                     <!-- Software Updates -->
                     <DataTemplate DataType="{x:Type vmUpdate:UpdateViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.Updates.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding CurrentVersionText}" Foreground="Gray" FontSize="11"/>
+                        <StackPanel Spacing="12">
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.Updates.Title}"/>
+                            <TextBlock Classes="mono secondary" Text="{Binding CurrentVersionText}"/>
 
                             <Button Content="{loc:Localize Settings.Updates.Check}"
                                     Command="{Binding CheckForUpdatesCommand}"
-                                    Width="150" Margin="0,8,0,0" Background="#3d4d5d"
                                     HorizontalAlignment="Left"
                                     IsEnabled="{Binding IsChecking, Converter={x:Static BoolConverters.Not}}"/>
 
-                            <TextBlock Text="{Binding StatusText}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"
+                            <TextBlock Classes="caption" Text="{Binding StatusText}" TextWrapping="Wrap"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                            <StackPanel IsVisible="{Binding UpdateAvailable}" Spacing="6" Margin="0,8,0,0">
-                                <TextBlock Text="{Binding LatestVersionText}"
-                                           Foreground="LightGreen" FontWeight="SemiBold"/>
+                            <Border Classes="card" IsVisible="{Binding UpdateAvailable}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Classes="subtitle success" Text="{Binding LatestVersionText}"/>
 
-                                <ScrollViewer MaxHeight="120"
-                                              IsVisible="{Binding ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                    <TextBlock Text="{Binding ReleaseNotes}"
-                                               Foreground="#aaaaaa" FontSize="11" TextWrapping="Wrap"/>
-                                </ScrollViewer>
+                                    <ScrollViewer MaxHeight="120"
+                                                  IsVisible="{Binding ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <TextBlock Classes="caption" Text="{Binding ReleaseNotes}" TextWrapping="Wrap"/>
+                                    </ScrollViewer>
 
-                                <ProgressBar Value="{Binding DownloadProgress}"
-                                             Minimum="0" Maximum="1"
-                                             Height="6"
-                                             IsVisible="{Binding IsDownloading}"/>
+                                    <ProgressBar Value="{Binding DownloadProgress}"
+                                                 Minimum="0" Maximum="1" Height="6"
+                                                 IsVisible="{Binding IsDownloading}"/>
 
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Content="{loc:Localize Settings.Updates.DownloadInstall}"
-                                            Command="{Binding InstallUpdateCommand}"
-                                            Background="#3d5d3d"
-                                            IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                                    <Button Content="{loc:Localize Settings.Updates.RemindLater}"
-                                            Command="{Binding RemindLaterCommand}"
-                                            Background="#3d3d3d"
-                                            IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                                    <Button Content="{loc:Localize Settings.Updates.SkipVersion}"
-                                            Command="{Binding SkipThisVersionCommand}"
-                                            Background="#5d4330"
-                                            IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="primary" Content="{loc:Localize Settings.Updates.DownloadInstall}"
+                                                Command="{Binding InstallUpdateCommand}"
+                                                IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                        <Button Content="{loc:Localize Settings.Updates.RemindLater}"
+                                                Command="{Binding RemindLaterCommand}"
+                                                IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                        <Button Classes="ghost" Content="{loc:Localize Settings.Updates.SkipVersion}"
+                                                Command="{Binding SkipThisVersionCommand}"
+                                                IsEnabled="{Binding IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
+                            </Border>
                         </StackPanel>
                     </DataTemplate>
 
                     <!-- GDS Export (GDS toggle + Python environment) -->
                     <DataTemplate DataType="{x:Type vmExport:GdsExportViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.GdsExport.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Text="{loc:Localize Settings.GdsExport.Description}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.GdsExport.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.GdsExport.Description}"
+                                       TextWrapping="Wrap" Margin="0,4,0,8"/>
 
-                            <CheckBox Content="{loc:Localize Settings.GdsExport.GenerateGds}"
-                                      IsChecked="{Binding GenerateGdsEnabled}"
-                                      Foreground="White" Margin="0,4,0,0"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.GdsExport.GenerateGds}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent=""
+                                                  IsChecked="{Binding GenerateGdsEnabled}"/>
+                                </Grid>
+                            </Border>
 
-                            <Separator Margin="0,12,0,4" Background="#3d3d3d"/>
-                            <TextBlock Text="{loc:Localize Settings.GdsExport.PythonEnvTitle}" FontSize="14" FontWeight="SemiBold" Foreground="LightGray"/>
-                            <TextBlock Text="{loc:Localize Settings.GdsExport.PythonEnvDescription}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock Classes="group" Text="{loc:Localize Settings.GdsExport.PythonEnvTitle}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.GdsExport.PythonEnvDescription}"
+                                       TextWrapping="Wrap" Margin="0,4,0,12"/>
 
-                            <TextBlock Text="{loc:Localize Settings.GdsExport.ActiveInterpreter}" Foreground="Gray" FontSize="12" Margin="0,4,0,3"/>
-                            <TextBox Text="{Binding CustomPythonPath}"
+                            <TextBlock Classes="label" Text="{loc:Localize Settings.GdsExport.ActiveInterpreter}" Margin="0,0,0,4"/>
+                            <TextBox Classes="mono" Text="{Binding CustomPythonPath}"
                                      IsReadOnly="True"
                                      Watermark="{loc:Localize Settings.GdsExport.NoInterpreter}"/>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <TextBlock Text="Python: " Foreground="Gray" Width="70"/>
-                                <TextBlock Text="{Binding PythonStatus}" Foreground="White"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Nazca: " Foreground="Gray" Width="70"/>
-                                <TextBlock Text="{Binding NazcaStatus}" Foreground="White"/>
-                            </StackPanel>
+                            <Grid ColumnDefinitions="70,*" RowDefinitions="Auto,Auto" Margin="0,12,0,0">
+                                <TextBlock Classes="secondary" Text="Python"/>
+                                <TextBlock Grid.Column="1" Classes="mono" Text="{Binding PythonStatus}"/>
+                                <TextBlock Grid.Row="1" Classes="secondary" Text="Nazca" Margin="0,4,0,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding NazcaStatus}" Margin="0,4,0,0"/>
+                            </Grid>
 
                             <Button Content="{loc:Localize Settings.GdsExport.Manage}"
                                     Click="OnManageInterpretersClick"
-                                    HorizontalAlignment="Left" Margin="0,10,0,0"
-                                    Padding="12,4" Background="#3d4d5d" FontSize="11"
+                                    HorizontalAlignment="Left" Margin="0,16,0,0"
                                     ToolTip.Tip="{loc:Localize Settings.GdsExport.ManageTip}"/>
                         </StackPanel>
                     </DataTemplate>
@@ -212,156 +257,162 @@
 
                     <!-- AI Assistant -->
                     <DataTemplate DataType="{x:Type vmAi:AiAssistantViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.Ai.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Text="{loc:Localize Settings.Ai.Description}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.Ai.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.Ai.Description}"
+                                       TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-                            <TextBlock Text="{loc:Localize Settings.Ai.ApiKey}" Foreground="Gray" FontSize="12" Margin="0,0,0,3"/>
-                            <TextBox Text="{Binding ApiKey}"
+                            <TextBlock Classes="label" Text="{loc:Localize Settings.Ai.ApiKey}" Margin="0,0,0,4"/>
+                            <TextBox Classes="mono" Text="{Binding ApiKey}"
                                      Watermark="sk-ant-..."
                                      PasswordChar="•"/>
 
-                            <TextBlock Text="{Binding StatusText}"
-                                       Foreground="Gray" FontSize="11"
+                            <TextBlock Classes="caption" Text="{Binding StatusText}" Margin="0,8,0,0"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </DataTemplate>
 
                     <!-- Tidy3D Cloud — API key for the cloud FDTD S-matrix backend -->
                     <DataTemplate DataType="{x:Type vmSolvers:Tidy3dSettingsViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.Tidy3d.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Text="{loc:Localize Settings.Tidy3d.Description}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.Tidy3d.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.Tidy3d.Description}"
+                                       TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-                            <TextBlock Text="{loc:Localize Settings.Tidy3d.ApiKey}" Foreground="Gray" FontSize="12" Margin="0,0,0,3"/>
+                            <TextBlock Classes="label" Text="{loc:Localize Settings.Tidy3d.ApiKey}" Margin="0,0,0,4"/>
                             <!-- LostFocus: saving per keystroke would rewrite the prefs file on every keypress -->
-                            <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=LostFocus}"
+                            <TextBox Classes="mono" Text="{Binding ApiKey, UpdateSourceTrigger=LostFocus}"
                                      Watermark="{loc:Localize Settings.Tidy3d.ApiKeyWatermark}"
                                      PasswordChar="•"/>
 
-                            <TextBlock Text="{Binding StatusText}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"
+                            <TextBlock Classes="caption" Text="{Binding StatusText}" TextWrapping="Wrap" Margin="0,8,0,0"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                            <Button Content="{loc:Localize Settings.Tidy3d.LinkText}"
+                            <Button Classes="link" Content="{loc:Localize Settings.Tidy3d.LinkText}"
                                     Command="{Binding OpenPortalCommand}"
-                                    Padding="0"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="#7faaff"
-                                    FontSize="11"
-                                    HorizontalAlignment="Left"
-                                    Cursor="Hand"
-                                    Margin="0,8,0,0"/>
-                            <TextBlock Text="{loc:Localize Settings.Tidy3d.PackageNote}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
+                                    HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.Tidy3d.PackageNote}"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
                     </DataTemplate>
 
                     <!-- Chip Size — design-wide footprint of the PIC -->
                     <DataTemplate DataType="{x:Type vmCanvas:ChipSizeViewModel}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{loc:Localize Settings.ChipSize.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4"/>
-                            <TextBlock Text="{loc:Localize Settings.ChipSize.Description}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.ChipSize.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.ChipSize.Description}"
+                                       TextWrapping="Wrap" Margin="0,4,0,8"/>
 
-                            <TextBlock Text="{loc:Localize Settings.ChipSize.Preset}" Foreground="Gray" FontSize="12" Margin="0,4,0,2"/>
-                            <ComboBox ItemsSource="{Binding Presets}"
-                                      SelectedItem="{Binding SelectedPreset}"
-                                      DisplayMemberBinding="{Binding Name}"
-                                      HorizontalAlignment="Stretch"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,200">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.ChipSize.Preset}" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="2" ItemsSource="{Binding Presets}"
+                                              SelectedItem="{Binding SelectedPreset}"
+                                              DisplayMemberBinding="{Binding Name}"
+                                              HorizontalAlignment="Stretch"/>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,200">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.ChipSize.Width}" VerticalAlignment="Center"/>
+                                    <NumericUpDown Grid.Column="2" Value="{Binding WidthMillimeters}"
+                                                   Minimum="0.25" Maximum="100"
+                                                   Increment="1" FormatString="F2"/>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,200">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.ChipSize.Height}" VerticalAlignment="Center"/>
+                                    <NumericUpDown Grid.Column="2" Value="{Binding HeightMillimeters}"
+                                                   Minimum="0.25" Maximum="100"
+                                                   Increment="1" FormatString="F2"/>
+                                </Grid>
+                            </Border>
 
-                            <TextBlock Text="{loc:Localize Settings.ChipSize.Width}" Foreground="Gray" FontSize="12" Margin="0,8,0,2"/>
-                            <NumericUpDown Value="{Binding WidthMillimeters}"
-                                           Minimum="0.25" Maximum="100"
-                                           Increment="1" FormatString="F2"
-                                           HorizontalAlignment="Stretch"/>
-
-                            <TextBlock Text="{loc:Localize Settings.ChipSize.Height}" Foreground="Gray" FontSize="12" Margin="0,8,0,2"/>
-                            <NumericUpDown Value="{Binding HeightMillimeters}"
-                                           Minimum="0.25" Maximum="100"
-                                           Increment="1" FormatString="F2"
-                                           HorizontalAlignment="Stretch"/>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <TextBlock Text="{loc:Localize Settings.ChipSize.GridPrefix}" Foreground="Gray" FontSize="11"/>
-                                <TextBlock Text="{Binding TileColumns}" Foreground="LightGray" FontSize="11"/>
-                                <TextBlock Text=" × " Foreground="Gray" FontSize="11"/>
-                                <TextBlock Text="{Binding TileRows}" Foreground="LightGray" FontSize="11"/>
-                                <TextBlock Text="{loc:Localize Settings.ChipSize.TilesSuffix}" Foreground="Gray" FontSize="11"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <TextBlock Classes="caption" Text="{loc:Localize Settings.ChipSize.GridPrefix}"/>
+                                <TextBlock Classes="caption mono" Text="{Binding TileColumns}"/>
+                                <TextBlock Classes="caption" Text=" × "/>
+                                <TextBlock Classes="caption mono" Text="{Binding TileRows}"/>
+                                <TextBlock Classes="caption" Text="{loc:Localize Settings.ChipSize.TilesSuffix}"/>
                             </StackPanel>
 
-                            <Button Content="{loc:Localize Common.Apply}"
+                            <Button Classes="primary" Content="{loc:Localize Common.Apply}"
                                     Command="{Binding ApplyCommand}"
-                                    HorizontalAlignment="Left" Padding="16,4"
-                                    Background="#3d5d5d"
-                                    Margin="0,12,0,0"/>
+                                    HorizontalAlignment="Left" Margin="0,16,0,0"/>
 
-                            <TextBlock Text="{Binding StatusText}"
-                                       Foreground="LightGreen" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                            <TextBlock Classes="caption success" Text="{Binding StatusText}" Margin="0,8,0,0" TextWrapping="Wrap"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </DataTemplate>
 
-                    <!-- Interconnect defaults (issue #574) -->
+                    <!-- Interconnect defaults -->
                     <DataTemplate DataType="{x:Type settings:InterconnectSettingsViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.Interconnect.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Text="{loc:Localize Settings.Interconnect.Description}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.Interconnect.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.Interconnect.Description}"
+                                       TextWrapping="Wrap" Margin="0,4,0,8"/>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <TextBlock Text="{loc:Localize Settings.Interconnect.Width}" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
-                                <NumericUpDown Value="{Binding WidthMicrometers}"
-                                               Minimum="0.05" Maximum="100" Increment="0.05"
-                                               Width="130" FormatString="F2"/>
-                                <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                            </StackPanel>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.Interconnect.Width}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                        <NumericUpDown Value="{Binding WidthMicrometers}"
+                                                       Minimum="0.05" Maximum="100" Increment="0.05"
+                                                       Width="130" FormatString="F2"/>
+                                        <TextBlock Classes="unit" Text="µm"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.Interconnect.BendRadius}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                        <NumericUpDown Value="{Binding BendRadiusMicrometers}"
+                                                       Minimum="0.5" Maximum="10000" Increment="1"
+                                                       Width="130" FormatString="F1"/>
+                                        <TextBlock Classes="unit" Text="µm"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.Interconnect.GdsLayer}" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="2" Classes="mono" Text="{Binding GdsLayerText}" Width="130"
+                                             Watermark="{loc:Localize Settings.Interconnect.GdsLayerWatermark}"/>
+                                </Grid>
+                            </Border>
 
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{loc:Localize Settings.Interconnect.BendRadius}" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
-                                <NumericUpDown Value="{Binding BendRadiusMicrometers}"
-                                               Minimum="0.5" Maximum="10000" Increment="1"
-                                               Width="130" FormatString="F1"/>
-                                <TextBlock Text="µm" Foreground="Gray" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{loc:Localize Settings.Interconnect.GdsLayer}" Foreground="Gray" VerticalAlignment="Center" Width="100"/>
-                                <TextBox Text="{Binding GdsLayerText}" Width="130" Watermark="{loc:Localize Settings.Interconnect.GdsLayerWatermark}"/>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-                                <Button Content="{loc:Localize Settings.Interconnect.Apply}"
-                                        Command="{Binding ApplyCommand}"
-                                        Padding="16,4" Background="#3d5d5d"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+                                <Button Classes="primary" Content="{loc:Localize Settings.Interconnect.Apply}"
+                                        Command="{Binding ApplyCommand}"/>
                                 <Button Content="{loc:Localize Settings.Interconnect.Reset}"
-                                        Command="{Binding ResetToDefaultsCommand}"
-                                        Padding="16,4"/>
+                                        Command="{Binding ResetToDefaultsCommand}"/>
                             </StackPanel>
 
-                            <TextBlock Text="{Binding StatusText}"
-                                       Foreground="LightGreen" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                            <TextBlock Classes="caption success" Text="{Binding StatusText}" Margin="0,8,0,0" TextWrapping="Wrap"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </DataTemplate>
 
-                    <!-- Language — UI language picker (issue #744) -->
+                    <!-- Language — UI language picker -->
                     <DataTemplate DataType="{x:Type settings:LanguageSettingsViewModel}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="{loc:Localize Settings.Language.Title}" FontSize="18" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
-                            <TextBlock Text="{loc:Localize Settings.Language.Description}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.Language.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.Language.Description}"
+                                       TextWrapping="Wrap" Margin="0,4,0,8"/>
 
-                            <TextBlock Text="{loc:Localize Settings.Language.PickerLabel}" Foreground="Gray" FontSize="12" Margin="0,4,0,2"/>
-                            <ComboBox ItemsSource="{Binding Options}"
-                                      SelectedItem="{Binding SelectedOption}"
-                                      HorizontalAlignment="Stretch"/>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,200">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.Language.PickerLabel}" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="2" ItemsSource="{Binding Options}"
+                                              SelectedItem="{Binding SelectedOption}"
+                                              HorizontalAlignment="Stretch"/>
+                                </Grid>
+                            </Border>
 
-                            <TextBlock Text="{loc:Localize Settings.Language.RestartNote}"
-                                       Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.Language.RestartNote}"
+                                       TextWrapping="Wrap" Margin="0,12,0,0"/>
                         </StackPanel>
                     </DataTemplate>
 

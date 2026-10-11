@@ -3,31 +3,33 @@
         xmlns:vm="using:CAP.Avalonia.ViewModels.PdkOffset"
         xmlns:libvm="using:CAP.Avalonia.ViewModels.Library"
         xmlns:conv="using:CAP.Avalonia.Converters"
+        xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.PdkOffsetEditorWindow"
         x:DataType="vm:PdkOffsetEditorViewModel"
         Title="{loc:Localize PdkOffset.Title}"
         Width="1000" Height="700"
-        MinWidth="700" MinHeight="500"
-        Background="#1e1e1e"
-        Foreground="White">
+        MinWidth="700" MinHeight="500">
 
-    <Grid ColumnDefinitions="250,4,*" RowDefinitions="*">
+    <Window.Resources>
+        <conv:StatusBadgeConverter x:Key="StatusBadge"/>
+    </Window.Resources>
+
+    <Grid ColumnDefinitions="280,1,*" RowDefinitions="*">
 
         <!-- Left panel: component list -->
-        <DockPanel Grid.Column="0" Margin="8">
-            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8" Spacing="6">
+        <DockPanel Grid.Column="0" Margin="16" Background="Transparent">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12" Spacing="8">
                 <DockPanel>
-                    <TextBlock Text="{loc:Localize PdkOffset.PdkComponents}" FontWeight="Bold" Foreground="LightGray"
-                               VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                    <Button Content="{loc:Localize PdkOffset.LoadPdk}" Command="{Binding LoadPdkFileCommand}"
-                            DockPanel.Dock="Right" Padding="8,4" Background="#3d3d5d"/>
+                    <Button DockPanel.Dock="Right" Content="{loc:Localize PdkOffset.LoadPdk}"
+                            Command="{Binding LoadPdkFileCommand}"/>
+                    <TextBlock Classes="label" Text="{loc:Localize PdkOffset.PdkComponents}"
+                               VerticalAlignment="Center"/>
                 </DockPanel>
                 <ComboBox ItemsSource="{Binding AvailablePdks}"
                           SelectedItem="{Binding SelectedInstalledPdk}"
                           PlaceholderText="{loc:Localize PdkOffset.SelectPdkPlaceholder}"
                           HorizontalAlignment="Stretch"
-                          Background="#2d2d2d" Foreground="White"
                           ToolTip.Tip="{loc:Localize PdkOffset.LoadInstalledPdkTip}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="libvm:PdkInfoViewModel">
@@ -38,48 +40,45 @@
                 </ComboBox>
             </StackPanel>
 
-            <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="6"
-                    Background="#1a2a3a" CornerRadius="4">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="{loc:Localize PdkOffset.BatchOperations}" FontWeight="Bold" Foreground="LightGray" FontSize="11"/>
-                    <Grid ColumnDefinitions="*,4,*">
+            <Border DockPanel.Dock="Top" Classes="card" Padding="12" Margin="0,0,0,12">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="{loc:Localize PdkOffset.BatchOperations}"/>
+                    <Grid ColumnDefinitions="*,8,*">
                         <Button Grid.Column="0" Content="{loc:Localize PdkOffset.CheckAll}"
                                 Command="{Binding CheckAllCommand}"
-                                HorizontalAlignment="Stretch" Padding="6,4"
-                                Background="#3d3d5d" Foreground="White" FontSize="11"
+                                HorizontalAlignment="Stretch"
                                 ToolTip.Tip="{loc:Localize PdkOffset.CheckAllTip}"/>
                         <Button Grid.Column="2" Content="{loc:Localize PdkOffset.TryFixAll}"
                                 Command="{Binding TryFixAllCommand}"
-                                HorizontalAlignment="Stretch" Padding="6,4"
-                                Background="#5d3d8d" Foreground="White" FontSize="11"
+                                HorizontalAlignment="Stretch"
                                 ToolTip.Tip="{loc:Localize PdkOffset.TryFixAllTip}"/>
                     </Grid>
-                    <ProgressBar IsIndeterminate="True" Height="3" Foreground="#a080ff"
+                    <ProgressBar IsIndeterminate="True" Height="3"
                                  IsVisible="{Binding IsBatchRunning}"/>
-                    <TextBlock Text="{Binding BatchProgress}"
+                    <TextBlock Classes="caption" Text="{Binding BatchProgress}"
                                IsVisible="{Binding BatchProgress, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                               Foreground="LightGray" FontSize="10" TextTrimming="CharacterEllipsis"/>
-                    <Button Content="{loc:Localize PdkOffset.Cancel}" Command="{Binding CancelBatchCommand}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <Button Classes="ghost" Content="{loc:Localize PdkOffset.Cancel}"
+                            Command="{Binding CancelBatchCommand}"
                             IsVisible="{Binding IsBatchRunning}"
-                            HorizontalAlignment="Stretch" Padding="6,2"
-                            Background="#5d3d3d" Foreground="LightGray" FontSize="10"/>
-                    <TextBlock Text="{Binding BatchSummary}"
+                            HorizontalAlignment="Stretch"/>
+                    <TextBlock Classes="caption warning" Text="{Binding BatchSummary}"
                                IsVisible="{Binding BatchSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                               Foreground="LightYellow" FontSize="10" TextWrapping="Wrap"/>
+                               TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
             <ListBox ItemsSource="{Binding Components}"
                      SelectedItem="{Binding SelectedComponent}"
-                     Background="#252525"
                      SelectionMode="Single">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:PdkComponentOffsetItemViewModel">
-                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,3"
+                        <StackPanel Orientation="Horizontal" Spacing="8"
                                     ToolTip.Tip="{Binding StatusDescription}">
-                            <TextBlock Text="{Binding StatusBadge}" FontSize="14"/>
-                            <TextBlock Text="{Binding ComponentName}"
-                                       Foreground="White" VerticalAlignment="Center"/>
+                            <controls:Icon VerticalAlignment="Center" Size="14"
+                                           Data="{Binding StatusBadge, Converter={StaticResource StatusBadge}, ConverterParameter=icon}"
+                                           Foreground="{Binding StatusBadge, Converter={StaticResource StatusBadge}}"/>
+                            <TextBlock Text="{Binding ComponentName}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -87,139 +86,116 @@
         </DockPanel>
 
         <!-- Splitter -->
-        <GridSplitter Grid.Column="1" Background="#3d3d3d" ResizeDirection="Columns"/>
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" Width="1"/>
 
         <!-- Right panel: editor -->
-        <ScrollViewer Grid.Column="2" Margin="8" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="10">
+        <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="16" Margin="24">
 
                 <!-- Component header -->
-                <Border Background="#252525" CornerRadius="4" Padding="10,8">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{loc:Localize PdkOffset.NoComponentSelected}" Foreground="LightGray"
-                                   IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNull}}"/>
-                        <StackPanel Spacing="2"
-                                    IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Text="{Binding SelectedComponent.ComponentName}"
-                                       FontSize="16" FontWeight="Bold" Foreground="White"/>
-                            <TextBlock Text="{Binding SelectedComponent.PdkName}"
-                                       Foreground="Gray" FontSize="11"/>
-                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-                                <TextBlock Text="{Binding SelectedComponent.StatusBadge}" FontSize="14"/>
-                                <TextBlock Text="{Binding SelectedComponent.StatusDescription}"
-                                           Foreground="LightGray" VerticalAlignment="Center"/>
-                            </StackPanel>
+                <StackPanel Spacing="4">
+                    <StackPanel Spacing="8" HorizontalAlignment="Left"
+                                IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNull}}">
+                        <controls:Icon Data="{StaticResource Icon.Pointer}" Size="24"
+                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                        <TextBlock Classes="secondary" Text="{loc:Localize PdkOffset.NoComponentSelected}"/>
+                    </StackPanel>
+                    <StackPanel Spacing="2"
+                                IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="headline" Text="{Binding SelectedComponent.ComponentName}"/>
+                        <TextBlock Classes="caption" Text="{Binding SelectedComponent.PdkName}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                            <controls:Icon VerticalAlignment="Center" Size="14"
+                                           Data="{Binding SelectedComponent.StatusBadge, Converter={StaticResource StatusBadge}, ConverterParameter=icon}"
+                                           Foreground="{Binding SelectedComponent.StatusBadge, Converter={StaticResource StatusBadge}}"/>
+                            <TextBlock Classes="secondary" Text="{Binding SelectedComponent.StatusDescription}"
+                                       VerticalAlignment="Center"/>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                </StackPanel>
 
                 <!-- Offset editor -->
-                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                <Border Classes="card"
                         IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="{loc:Localize PdkOffset.OriginOffset}" FontWeight="Bold" Foreground="LightGray"/>
-                        <Grid ColumnDefinitions="Auto,120,20,Auto,120,*,Auto">
-                            <TextBlock Grid.Column="0" Text="X:" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
-                            <NumericUpDown Grid.Column="1"
-                                          Value="{Binding OffsetX}"
-                                          FormatString="F3"
-                                          Increment="0.5"
-                                          Background="#2d2d2d" Foreground="White"/>
-                            <TextBlock Grid.Column="3" Text="Y:" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
-                            <NumericUpDown Grid.Column="4"
-                                          Value="{Binding OffsetY}"
-                                          FormatString="F3"
-                                          Increment="0.5"
-                                          Background="#2d2d2d" Foreground="White"/>
-                            <Button Grid.Column="6" Content="{loc:Localize Common.Apply}" Command="{Binding ApplyOffsetCommand}"
-                                    Padding="12,4" Background="#3d5d3d"/>
+                    <StackPanel Spacing="12">
+                        <TextBlock Classes="subtitle" Text="{loc:Localize PdkOffset.OriginOffset}"/>
+                        <Grid ColumnDefinitions="Auto,120,24,Auto,120,*,Auto">
+                            <TextBlock Grid.Column="0" Classes="secondary" Text="X" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <NumericUpDown Grid.Column="1" Value="{Binding OffsetX}"
+                                           FormatString="F3" Increment="0.5"/>
+                            <TextBlock Grid.Column="3" Classes="secondary" Text="Y" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <NumericUpDown Grid.Column="4" Value="{Binding OffsetY}"
+                                           FormatString="F3" Increment="0.5"/>
+                            <Button Grid.Column="6" Classes="primary" Content="{loc:Localize Common.Apply}"
+                                    Command="{Binding ApplyOffsetCommand}"/>
                         </Grid>
-                        <Grid ColumnDefinitions="Auto,120,20,Auto,120,*">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize PdkOffset.Width}" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
-                            <NumericUpDown Grid.Column="1"
-                                          Value="{Binding ComponentWidth}"
-                                          FormatString="F3"
-                                          Increment="0.5"
-                                          Minimum="0.001"
-                                          Background="#2d2d2d" Foreground="White"/>
-                            <TextBlock Grid.Column="3" Text="{loc:Localize PdkOffset.Height}" VerticalAlignment="Center" Foreground="LightGray" Margin="0,0,6,0"/>
-                            <NumericUpDown Grid.Column="4"
-                                          Value="{Binding ComponentHeight}"
-                                          FormatString="F3"
-                                          Increment="0.5"
-                                          Minimum="0.001"
-                                          Background="#2d2d2d" Foreground="White"/>
+                        <Grid ColumnDefinitions="Auto,120,24,Auto,120,*">
+                            <TextBlock Grid.Column="0" Classes="secondary" Text="{loc:Localize PdkOffset.Width}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <NumericUpDown Grid.Column="1" Value="{Binding ComponentWidth}"
+                                           FormatString="F3" Increment="0.5" Minimum="0.001"/>
+                            <TextBlock Grid.Column="3" Classes="secondary" Text="{loc:Localize PdkOffset.Height}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <NumericUpDown Grid.Column="4" Value="{Binding ComponentHeight}"
+                                           FormatString="F3" Increment="0.5" Minimum="0.001"/>
                         </Grid>
-                        <Button Content="{loc:Localize PdkOffset.AutoCalibrate}"
-                                Command="{Binding AutoCalibrateCommand}"
-                                HorizontalAlignment="Stretch"
-                                Padding="12,6" Background="#5d3d8d" Foreground="White"
-                                ToolTip.Tip="{loc:Localize PdkOffset.AutoCalibrateTip}"/>
-                        <TextBlock Text="{loc:Localize PdkOffset.ApplyHint}"
-                                   Foreground="Gray" FontSize="11"/>
-                        <ProgressBar IsIndeterminate="True"
-                                     IsVisible="{Binding IsNazcaRendering}"
-                                     Height="3" Foreground="#00c060"/>
+                        <Button Command="{Binding AutoCalibrateCommand}"
+                                HorizontalAlignment="Left"
+                                ToolTip.Tip="{loc:Localize PdkOffset.AutoCalibrateTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <controls:Icon Data="{StaticResource Icon.Crosshair}"/>
+                                <TextBlock Text="{loc:Localize PdkOffset.AutoCalibrate}"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Classes="caption" Text="{loc:Localize PdkOffset.ApplyHint}" TextWrapping="Wrap"/>
+                        <ProgressBar IsIndeterminate="True" Height="3"
+                                     IsVisible="{Binding IsNazcaRendering}"/>
                         <Grid ColumnDefinitions="*,Auto,Auto">
-                            <TextBlock Grid.Column="0"
+                            <TextBlock Grid.Column="0" Classes="caption warning"
                                        Text="{Binding NazcaOverlayStatus}"
-                                       Foreground="LightYellow" FontSize="11"
-                                       VerticalAlignment="Center"
-                                       TextWrapping="Wrap"/>
-                            <Button Grid.Column="1"
-                                    Content="📋"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            <Button Grid.Column="1" Classes="ghost icon"
                                     Command="{Binding CopyStatusCommand}"
-                                    FontSize="11" Padding="6,2" Margin="4,0"
-                                    Background="#3d3d3d" Foreground="LightGray"
+                                    Margin="4,0"
                                     ToolTip.Tip="{loc:Localize PdkOffset.CopyStatusTip}"
                                     IsVisible="{Binding NazcaOverlayStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                    VerticalAlignment="Center"/>
+                                    VerticalAlignment="Center">
+                                <controls:Icon Data="{StaticResource Icon.Copy}"/>
+                            </Button>
                             <CheckBox Grid.Column="2"
                                       Content="{loc:Localize PdkOffset.ShowNazcaGds}"
                                       IsChecked="{Binding ShowNazcaOverlay}"
-                                      Foreground="LightGray" FontSize="11"
                                       ToolTip.Tip="{loc:Localize PdkOffset.ShowNazcaGdsTip}"
                                       VerticalAlignment="Center"/>
                         </Grid>
-                        <TextBlock Text="{Binding PinAlignmentSummary}"
-                                   Foreground="LightCyan" FontSize="11"
+                        <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Info}"
+                                   Text="{Binding PinAlignmentSummary}"
                                    TextWrapping="Wrap"
                                    IsVisible="{Binding PinAlignmentSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         <Expander Header="{loc:Localize PdkOffset.PerPinDeltas}"
-                                  Foreground="LightGray" FontSize="11"
                                   HorizontalAlignment="Stretch"
                                   IsExpanded="False"
                                   IsVisible="{Binding PinAlignmentResults.Count}">
                             <ItemsControl ItemsSource="{Binding PinAlignmentResults}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid ColumnDefinitions="80,80,80,80,Auto" Margin="0,2">
-                                            <TextBlock Grid.Column="0" Text="{Binding LunimaPinName}"
-                                                       Foreground="LightGray" FontSize="11"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding NearestNazcaPinName, StringFormat='→ {0}'}"
-                                                       Foreground="Gray" FontSize="11"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding DeltaXMicrometers, StringFormat='Δx={0:F2}µm'}"
-                                                       Foreground="LightGray" FontSize="11"/>
-                                            <TextBlock Grid.Column="3" Text="{Binding DeltaYMicrometers, StringFormat='Δy={0:F2}µm'}"
-                                                       Foreground="LightGray" FontSize="11"/>
-                                            <TextBlock Grid.Column="4" Text="{Binding AlignedLabel}"
-                                                       Foreground="LightYellow" FontSize="11" Margin="6,0,0,0"/>
+                                        <Grid ColumnDefinitions="90,90,100,100,Auto" Margin="0,2">
+                                            <TextBlock Grid.Column="0" Text="{Binding LunimaPinName}"/>
+                                            <TextBlock Grid.Column="1" Classes="caption" Text="{Binding NearestNazcaPinName, StringFormat='→ {0}'}"/>
+                                            <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding DeltaXMicrometers, StringFormat='Δx={0:F2}µm'}"/>
+                                            <TextBlock Grid.Column="3" Classes="mono secondary" Text="{Binding DeltaYMicrometers, StringFormat='Δy={0:F2}µm'}"/>
+                                            <TextBlock Grid.Column="4" Classes="warning" Text="{Binding AlignedLabel}" Margin="8,0,0,0"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </Expander>
                         <Expander Header="{loc:Localize PdkOffset.PreviewSource}"
-                                  Foreground="LightGray" FontSize="11"
                                   HorizontalAlignment="Stretch"
                                   IsExpanded="False"
                                   IsVisible="{Binding PreviewSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBox Text="{Binding PreviewSource}"
+                            <TextBox Classes="mono" Text="{Binding PreviewSource}"
                                      IsReadOnly="True"
-                                     FontFamily="Consolas, Courier New, monospace"
-                                     FontSize="10"
-                                     Background="#1a1a1a"
-                                     Foreground="#c0e8c0"
                                      AcceptsReturn="True"
                                      TextWrapping="NoWrap"
                                      Height="140"/>
@@ -228,43 +204,39 @@
                 </Border>
 
                 <!-- Visual overlay canvas -->
-                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                <Border Classes="card"
                         IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <StackPanel Spacing="6">
+                    <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="Auto,*">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize PdkOffset.VisualPinOverlay}" FontWeight="Bold"
-                                       Foreground="LightGray" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Classes="subtitle" Text="{loc:Localize PdkOffset.VisualPinOverlay}"
+                                       VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                        HorizontalAlignment="Right" Spacing="4">
-                                <TextBlock Text="{loc:Localize PdkOffset.Zoom}" Foreground="LightGray" FontSize="11"
+                                        HorizontalAlignment="Right" Spacing="8">
+                                <TextBlock Classes="secondary" Text="{loc:Localize PdkOffset.Zoom}"
                                            VerticalAlignment="Center"/>
                                 <Slider x:Name="ZoomSlider"
                                         Minimum="0.25" Maximum="8.0" Value="1.0"
                                         Width="160"
                                         TickFrequency="0.25" IsSnapToTickEnabled="False"
                                         ToolTip.Tip="{loc:Localize PdkOffset.ZoomTip}"/>
-                                <TextBlock Text="{Binding #ZoomSlider.Value, StringFormat={}{0:F2}x}"
-                                           Foreground="LightGray" FontSize="11"
-                                           VerticalAlignment="Center" Width="40"/>
+                                <TextBlock Classes="mono secondary" Text="{Binding #ZoomSlider.Value, StringFormat={}{0:F2}x}"
+                                           VerticalAlignment="Center" Width="44"/>
                                 <Button Content="1:1" Command="{Binding ResetZoomCommand}"
-                                        FontSize="11" Padding="6,2" Background="#3d3d3d" Foreground="LightGray"
                                         ToolTip.Tip="{loc:Localize PdkOffset.ResetZoomTip}"/>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="{loc:Localize PdkOffset.OverlayLegend}"
-                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
-                        <!-- Render problem banner: failed render OR empty geometry.
-                             Shown AT the component so the dashed box never poses
-                             as a successful preview again (field report). -->
-                        <Border Background="#4a1f1f" CornerRadius="4" Padding="8,6"
+                        <TextBlock Classes="caption" Text="{loc:Localize PdkOffset.OverlayLegend}" TextWrapping="Wrap"/>
+                        <!-- Render problem banner: failed render OR empty geometry. Shown AT the
+                             component so the dashed box never poses as a successful preview. -->
+                        <Border Background="{DynamicResource Brush.Danger.Subtle}"
+                                CornerRadius="{DynamicResource Radius.M}" Padding="12,8"
                                 IsVisible="{Binding OverlayErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding OverlayErrorText}"
-                                       Foreground="#ff9898" FontSize="11" TextWrapping="Wrap"/>
+                            <TextBlock Classes="caption danger" Text="{Binding OverlayErrorText}" TextWrapping="Wrap"/>
                         </Border>
                         <ScrollViewer x:Name="OverlayScrollViewer"
                                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                                       Height="450"
-                                      Background="#1a1a2e"
+                                      Background="{DynamicResource Brush.Surface.Canvas}"
                                       Cursor="Hand">
                             <!-- LayoutTransformControl re-measures its child after applying
                                  the scale, so the ScrollViewer learns the true rendered size
@@ -275,7 +247,7 @@
                                                     ScaleY="{Binding #ZoomSlider.Value}"/>
                                 </LayoutTransformControl.LayoutTransform>
                                 <Canvas x:Name="OverlayCanvas"
-                                        Background="#1a1a2e"
+                                        Background="{DynamicResource Brush.Surface.Canvas}"
                                         ClipToBounds="True"/>
                             </LayoutTransformControl>
                         </ScrollViewer>
@@ -283,27 +255,27 @@
                 </Border>
 
                 <!-- Pin positions table -->
-                <Border Background="#252525" CornerRadius="4" Padding="10,8"
+                <Border Classes="card"
                         IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <StackPanel Spacing="6">
-                        <TextBlock Text="{loc:Localize PdkOffset.PinPositionsTitle}" FontWeight="Bold" Foreground="LightGray"/>
-                        <Grid ColumnDefinitions="80,90,90,90,90" Margin="0,4,0,2">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize PdkOffset.Pin}" Foreground="Gray" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="1" Text="{loc:Localize PdkOffset.LocalX}" Foreground="Gray" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="2" Text="{loc:Localize PdkOffset.LocalY}" Foreground="Gray" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="3" Text="{loc:Localize PdkOffset.NazcaX}" Foreground="Cyan" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="4" Text="{loc:Localize PdkOffset.NazcaY}" Foreground="Cyan" FontWeight="Bold"/>
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="subtitle" Text="{loc:Localize PdkOffset.PinPositionsTitle}"/>
+                        <Grid ColumnDefinitions="90,90,90,90,90">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{loc:Localize PdkOffset.Pin}"/>
+                            <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize PdkOffset.LocalX}"/>
+                            <TextBlock Grid.Column="2" Classes="label" Text="{loc:Localize PdkOffset.LocalY}"/>
+                            <TextBlock Grid.Column="3" Classes="label" Text="{loc:Localize PdkOffset.NazcaX}"/>
+                            <TextBlock Grid.Column="4" Classes="label" Text="{loc:Localize PdkOffset.NazcaY}"/>
                         </Grid>
-                        <Rectangle Height="1" Fill="#3d3d3d"/>
+                        <Border Classes="divider" Height="1"/>
                         <ItemsControl ItemsSource="{Binding PinPositions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PinPositionViewModel">
-                                    <Grid ColumnDefinitions="80,90,90,90,90" Margin="0,2">
-                                        <TextBlock Grid.Column="0" Text="{Binding PinName}" Foreground="White"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding LocalXText}" Foreground="LightGray"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding LocalYText}" Foreground="LightGray"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding NazcaXText}" Foreground="Cyan"/>
-                                        <TextBlock Grid.Column="4" Text="{Binding NazcaYText}" Foreground="Cyan"/>
+                                    <Grid ColumnDefinitions="90,90,90,90,90" Margin="0,2">
+                                        <TextBlock Grid.Column="0" Text="{Binding PinName}"/>
+                                        <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding LocalXText}"/>
+                                        <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding LocalYText}"/>
+                                        <TextBlock Grid.Column="3" Classes="mono accent" Text="{Binding NazcaXText}"/>
+                                        <TextBlock Grid.Column="4" Classes="mono accent" Text="{Binding NazcaYText}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -312,53 +284,45 @@
                 </Border>
 
                 <!-- Batch report -->
-                <Border Background="#252525" CornerRadius="4" Padding="10,8"
-                        IsVisible="{Binding BatchCheckResults.Count}">
-                    <StackPanel Spacing="6">
+                <Border Classes="card" IsVisible="{Binding BatchCheckResults.Count}">
+                    <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto,Auto">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize PdkOffset.BatchReport}"
-                                       FontWeight="Bold" Foreground="LightGray"
+                            <TextBlock Grid.Column="0" Classes="subtitle" Text="{loc:Localize PdkOffset.BatchReport}"
                                        VerticalAlignment="Center"/>
                             <Button Grid.Column="1" Content="{loc:Localize PdkOffset.CopyReport}"
-                                    Command="{Binding CopyBatchReportCommand}"
-                                    FontSize="11" Padding="8,3" Margin="0,0,4,0"
-                                    Background="#3d3d3d" Foreground="LightGray"
-                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyReportTip}"
-                                    VerticalAlignment="Center"/>
+                                    Command="{Binding CopyBatchReportCommand}" Margin="0,0,8,0"
+                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyReportTip}"/>
                             <Button Grid.Column="2" Content="{loc:Localize PdkOffset.CopyErrors}"
                                     Command="{Binding CopyBatchErrorsCommand}"
-                                    FontSize="11" Padding="8,3"
-                                    Background="#5d3d3d" Foreground="White"
-                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyErrorsTip}"
-                                    VerticalAlignment="Center"/>
+                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyErrorsTip}"/>
                         </Grid>
-                        <Grid ColumnDefinitions="20,*,80,80,140" Margin="0,4,0,2">
-                            <TextBlock Grid.Column="0" Text="" Foreground="Gray"/>
-                            <TextBlock Grid.Column="1" Text="{loc:Localize PdkOffset.Component}" Foreground="Gray" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="2" Text="{loc:Localize PdkOffset.PinsLN}" Foreground="Gray" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="3" Text="{loc:Localize PdkOffset.DeltaMax}" Foreground="Gray" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="4" Text="{loc:Localize PdkOffset.Status}" Foreground="Gray" FontWeight="Bold"/>
+                        <Grid ColumnDefinitions="24,*,80,80,140">
+                            <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize PdkOffset.Component}"/>
+                            <TextBlock Grid.Column="2" Classes="label" Text="{loc:Localize PdkOffset.PinsLN}"/>
+                            <TextBlock Grid.Column="3" Classes="label" Text="{loc:Localize PdkOffset.DeltaMax}"/>
+                            <TextBlock Grid.Column="4" Classes="label" Text="{loc:Localize PdkOffset.Status}"/>
                         </Grid>
-                        <Rectangle Height="1" Fill="#3d3d3d"/>
+                        <Border Classes="divider" Height="1"/>
                         <ItemsControl ItemsSource="{Binding BatchCheckResults}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid ColumnDefinitions="20,*,80,80,140" Margin="0,2"
+                                    <Grid ColumnDefinitions="24,*,80,80,140" Margin="0,2"
                                           ToolTip.Tip="{Binding Message}">
-                                        <TextBlock Grid.Column="0" Text="{Binding StatusBadge}" FontSize="14"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding ComponentName}" Foreground="White"/>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding LunimaPinCount, StringFormat='{}{0}/'}"/>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding NazcaPinCount}"
-                                                   Foreground="LightGray" Margin="20,0,0,0"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Text="{Binding WorstDeltaMicrometers, StringFormat='{}{0:F2} µm'}"
-                                                   Foreground="LightGray"/>
+                                        <controls:Icon Grid.Column="0" Size="14" HorizontalAlignment="Left"
+                                                       Data="{Binding StatusBadge, Converter={StaticResource StatusBadge}, ConverterParameter=icon}"
+                                                       Foreground="{Binding StatusBadge, Converter={StaticResource StatusBadge}}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ComponentName}"/>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <TextBlock Classes="mono secondary"
+                                                       Text="{Binding LunimaPinCount, StringFormat='{}{0}/'}"/>
+                                            <TextBlock Classes="mono secondary" Text="{Binding NazcaPinCount}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="3" Classes="mono secondary"
+                                                   Text="{Binding WorstDeltaMicrometers, StringFormat='{}{0:F2} µm'}"/>
                                         <!-- MultiBinding: the second input binds the LocalizationService
                                              indexer, so a live language switch ("Item" notification)
                                              re-translates the Status column; its value is ignored. -->
-                                        <TextBlock Grid.Column="4" Foreground="LightYellow">
+                                        <TextBlock Grid.Column="4" Classes="warning">
                                             <TextBlock.Text>
                                                 <MultiBinding Converter="{x:Static conv:ComponentCheckStatusToTextConverter.Instance}">
                                                     <Binding Path="Status"/>
@@ -375,15 +339,18 @@
                 </Border>
 
                 <!-- Save + status bar -->
-                <Border Background="#252526" CornerRadius="4" Padding="10,8">
-                    <DockPanel>
-                        <Button Content="{loc:Localize PdkOffset.SavePdk}" Command="{Binding SavePdkCommand}"
-                                DockPanel.Dock="Right" Padding="12,6" Background="#3d5d3d"
-                                ToolTip.Tip="{loc:Localize PdkOffset.SavePdkTip}"/>
-                        <TextBlock Text="{Binding StatusText}"
-                                   Foreground="LightGray" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                    </DockPanel>
-                </Border>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="primary"
+                            Command="{Binding SavePdkCommand}"
+                            ToolTip.Tip="{loc:Localize PdkOffset.SavePdkTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:Icon Data="{StaticResource Icon.Save}"/>
+                            <TextBlock Text="{loc:Localize PdkOffset.SavePdk}"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Classes="secondary" Text="{Binding StatusText}"
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                </DockPanel>
 
             </StackPanel>
         </ScrollViewer>

@@ -146,19 +146,19 @@ public partial class HomeViewModel : ObservableObject
     private void RefreshTourEntries()
     {
         TourEntries.Clear();
-        TourEntries.Add(new HomeTourEntry(1, "🎓",
+        TourEntries.Add(new HomeTourEntry(1, "Icon.GraduationCap",
             "Home.Learn.FirstSteps", "Home.Learn.FirstStepsDescription",
             "Home.LearnTutorialTip", LearnTutorialCommand));
-        TourEntries.Add(new HomeTourEntry(2, "⏱",
+        TourEntries.Add(new HomeTourEntry(2, "Icon.Clock",
             "Home.WatchComputeTour", "Home.Learn.WatchComputeDescription",
             "Home.WatchComputeTourTip", WatchComputeTourCommand));
-        TourEntries.Add(new HomeTourEntry(3, "💾",
+        TourEntries.Add(new HomeTourEntry(3, "Icon.Save",
             "Home.StoreNumberTour", "Home.Learn.StoreNumberDescription",
             "Home.StoreNumberTourTip", StoreNumberTourCommand));
-        TourEntries.Add(new HomeTourEntry(4, "🧮",
+        TourEntries.Add(new HomeTourEntry(4, "Icon.Calculator",
             "Home.RunProgramTour", "Home.Learn.RunProgramDescription",
             "Home.RunProgramTourTip", RunProgramTourCommand));
-        TourEntries.Add(new HomeTourEntry(5, "🔗",
+        TourEntries.Add(new HomeTourEntry(5, "Icon.Link",
             "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
             "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
     }

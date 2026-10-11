@@ -11,7 +11,7 @@ public interface ISettingsPage
     /// <summary>Display name shown in the navigation list.</summary>
     string Title { get; }
 
-    /// <summary>Emoji or icon character displayed next to the title.</summary>
+    /// <summary>Resource key of the line icon (e.g. <c>Icon.Route</c>) displayed next to the title.</summary>
     string Icon { get; }
 
     /// <summary>Optional category header for grouping pages (e.g. "Canvas", "Export").</summary>

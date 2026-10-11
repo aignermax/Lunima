@@ -5,7 +5,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 
 public class Tidy3dSettingsPage : LocalizedSettingsPage
 {
-    public override string Icon => "☁️";
+    public override string Icon => "Icon.Waves";
 
     public override object ViewModel { get; }
 

@@ -12,7 +12,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class ChipSizeSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "📏";
+    public override string Icon => "Icon.Ruler";
 
     /// <inheritdoc/>
     public override string? Category => "Canvas";
