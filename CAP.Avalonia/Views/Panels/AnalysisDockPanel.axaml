@@ -3,25 +3,32 @@
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:panels="using:CAP.Avalonia.Views.Panels"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:behaviors="using:CAP.Avalonia.Behaviors"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.AnalysisDockPanel"
              x:DataType="vm:MainViewModel">
 
-    <!-- Analysis dock (collapsible, above the Error Console, #570/#535).
-         Hosts the Transient and Eye/BER tabs re-homed from the properties panel. -->
-    <Border Background="#161616" BorderThickness="0,1,0,0" BorderBrush="#3d3d3d">
+    <!-- Analysis dock (collapsible, above the Error Console): the whole-design analyses,
+         sweeps, checks, netlist and logic tabs. -->
+    <Border Classes="dockFrame">
         <StackPanel>
-            <!-- Header bar: always visible, click to toggle -->
-            <DockPanel Height="26" Background="#252526">
-                <!-- Plain-language help: what an S-matrix is and why light splits/recombines
-                     as it propagates through the simulated circuit. -->
+            <!-- Resize grip on the top edge: drag to change the dock height. -->
+            <Border x:Name="ResizeGrip" Classes="resizeGrip"
+                    IsVisible="{Binding BottomPanel.Analysis.IsVisible}"
+                    ToolTip.Tip="{loc:Localize AnalysisDock.ResizeTip}"
+                    PointerPressed="ResizeGrip_PointerPressed"
+                    PointerMoved="ResizeGrip_PointerMoved"
+                    PointerReleased="ResizeGrip_PointerReleased"/>
+
+            <DockPanel Classes="dockHeader">
+                <!-- What an S-matrix is and why light splits/recombines as it propagates. -->
                 <controls:HelpFlyoutButton DockPanel.Dock="Right"
                                            Title="{loc:Localize SMatrixHelp.Title}"
-                                           Margin="0,0,6,0" VerticalAlignment="Center">
+                                           Margin="0,0,8,0" VerticalAlignment="Center">
                     <controls:HelpFlyoutButton.HelpContent>
                         <StackPanel Spacing="8" MaxWidth="400">
                             <StackPanel.Styles>
-                                <!-- Simple animated coupler: input pulse, split, then recombine. -->
+                                <!-- Animated coupler: input pulse, split, then recombine. -->
                                 <Style Selector="Ellipse.pulse">
                                     <Style.Animations>
                                         <Animation Duration="0:0:2.5" IterationCount="INFINITE">
@@ -34,165 +41,139 @@
                                 </Style>
                             </StackPanel.Styles>
 
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                            <TextBlock Classes="secondary" TextWrapping="Wrap"
                                        Text="{loc:Localize SMatrixHelp.Intro}"/>
 
-                            <!-- Diagram: two waveguides approach, cross, and separate. -->
-                            <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                    CornerRadius="4" Padding="4">
+                            <Border Background="{DynamicResource Brush.Surface.Canvas}"
+                                    BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource Radius.M}" Padding="4">
                                 <Canvas Width="360" Height="80">
-                                    <!-- Waveguide core. -->
                                     <Path Data="M 20,40 L 120,40 C 150,40 150,20 180,20 L 340,20"
-                                          Stroke="#4FC3F7" StrokeThickness="4"/>
+                                          Stroke="{DynamicResource Brush.Info}" StrokeThickness="4"/>
                                     <Path Data="M 20,40 L 120,40 C 150,40 150,60 180,60 L 340,60"
-                                          Stroke="#4FC3F7" StrokeThickness="4"/>
-                                    <!-- Input pulse. -->
+                                          Stroke="{DynamicResource Brush.Info}" StrokeThickness="4"/>
                                     <Ellipse Classes="pulse" Canvas.Left="36" Canvas.Top="32"
-                                             Width="16" Height="16" Fill="#FFD54F"/>
-                                    <!-- Split pulses. -->
+                                             Width="16" Height="16" Fill="{DynamicResource Brush.Warning}"/>
                                     <Ellipse Classes="pulse" Canvas.Left="148" Canvas.Top="12"
-                                             Width="16" Height="16" Fill="#81C784"/>
+                                             Width="16" Height="16" Fill="{DynamicResource Brush.Success}"/>
                                     <Ellipse Classes="pulse" Canvas.Left="148" Canvas.Top="52"
-                                             Width="16" Height="16" Fill="#81C784"/>
-                                    <!-- Output pulses. -->
+                                             Width="16" Height="16" Fill="{DynamicResource Brush.Success}"/>
                                     <Ellipse Classes="pulse" Canvas.Left="300" Canvas.Top="12"
-                                             Width="16" Height="16" Fill="#FF8A65"/>
+                                             Width="16" Height="16" Fill="{DynamicResource Brush.Danger}"/>
                                     <Ellipse Classes="pulse" Canvas.Left="300" Canvas.Top="52"
-                                             Width="16" Height="16" Fill="#FF8A65"/>
-                                    <TextBlock Canvas.Left="8" Canvas.Top="62"
-                                               Text="{loc:Localize SMatrixHelp.DiagramInput}" FontSize="9" Foreground="Gray"/>
-                                    <TextBlock Canvas.Left="292" Canvas.Top="62"
-                                               Text="{loc:Localize SMatrixHelp.DiagramOutput}" FontSize="9" Foreground="Gray"/>
+                                             Width="16" Height="16" Fill="{DynamicResource Brush.Danger}"/>
+                                    <TextBlock Classes="caption" Canvas.Left="8" Canvas.Top="62"
+                                               Text="{loc:Localize SMatrixHelp.DiagramInput}"/>
+                                    <TextBlock Classes="caption" Canvas.Left="292" Canvas.Top="62"
+                                               Text="{loc:Localize SMatrixHelp.DiagramOutput}"/>
                                 </Canvas>
                             </Border>
 
-                            <TextBlock Text="{loc:Localize SMatrixHelp.WhatIsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize SMatrixHelp.WhatIsBody}"/>
+                            <TextBlock Classes="strong" Text="{loc:Localize SMatrixHelp.WhatIsTitle}"/>
+                            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize SMatrixHelp.WhatIsBody}"/>
 
-                            <TextBlock Text="{loc:Localize SMatrixHelp.SplitRecombineTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize SMatrixHelp.SplitRecombineBody}"/>
+                            <TextBlock Classes="strong" Margin="0,4,0,0" Text="{loc:Localize SMatrixHelp.SplitRecombineTitle}"/>
+                            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize SMatrixHelp.SplitRecombineBody}"/>
 
-                            <TextBlock Text="{loc:Localize SMatrixHelp.RunTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                       Text="{loc:Localize SMatrixHelp.RunBody}"/>
+                            <TextBlock Classes="strong" Margin="0,4,0,0" Text="{loc:Localize SMatrixHelp.RunTitle}"/>
+                            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize SMatrixHelp.RunBody}"/>
                         </StackPanel>
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
 
-                <Button Command="{Binding BottomPanel.Analysis.ToggleCommand}"
-                        Background="Transparent"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left"
-                        Height="26" Padding="8,0"
+                <Button Classes="dockToggle"
+                        Command="{Binding BottomPanel.Analysis.ToggleCommand}"
                         ToolTip.Tip="{loc:Localize AnalysisDock.ToggleTip}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="▶" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
-                                   IsVisible="{Binding BottomPanel.Analysis.IsVisible, Converter={x:Static BoolConverters.Not}}"/>
-                        <TextBlock Text="▼" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
-                                   IsVisible="{Binding BottomPanel.Analysis.IsVisible}"/>
-                        <TextBlock Text="{loc:Localize AnalysisDock.Title}" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronRight}"
+                                       Classes.open="{Binding BottomPanel.Analysis.IsVisible}"/>
+                        <controls:Icon Data="{StaticResource Icon.ChartLine}"/>
+                        <TextBlock Classes="dockTitle" Text="{loc:Localize AnalysisDock.Title}"/>
                     </StackPanel>
                 </Button>
             </DockPanel>
 
-            <!-- Resize grip: drag to change the dock height (#570 field feedback). -->
-            <Border x:Name="ResizeGrip"
-                    IsVisible="{Binding BottomPanel.Analysis.IsVisible}"
-                    Height="5" Background="#3d3d3d" Cursor="SizeNorthSouth"
-                    ToolTip.Tip="{loc:Localize AnalysisDock.ResizeTip}"
-                    PointerPressed="ResizeGrip_PointerPressed"
-                    PointerMoved="ResizeGrip_PointerMoved"
-                    PointerReleased="ResizeGrip_PointerReleased"/>
+            <Border Classes="dockBody" IsVisible="{Binding BottomPanel.Analysis.IsVisible}"
+                    behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromY="8">
+                <StackPanel>
+                    <!-- Shared analysis output: every tab evaluates THIS coupler. -->
+                    <Border Classes="dockToolbar">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:Icon Data="{StaticResource Icon.Target}" Size="14"
+                                           Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                           VerticalAlignment="Center"/>
+                            <TextBlock Classes="caption" VerticalAlignment="Center"
+                                       Text="{loc:Localize AnalysisDock.OutputLabel}"/>
+                            <TextBlock Classes="strong" VerticalAlignment="Center"
+                                       Text="{Binding BottomPanel.Analysis.Output.OutputDisplayName}"/>
+                            <Button Classes="compact"
+                                    Command="{Binding BottomPanel.Analysis.Output.PickCommand}"
+                                    ToolTip.Tip="{loc:Localize AnalysisDock.PickOutputTip}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <controls:Icon Data="{StaticResource Icon.Crosshair}" Size="12"/>
+                                    <TextBlock Text="{loc:Localize AnalysisDock.PickOutput}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="compact ghost"
+                                    Content="{loc:Localize AnalysisDock.ClearOutput}"
+                                    Command="{Binding BottomPanel.Analysis.Output.ClearCommand}"
+                                    IsVisible="{Binding BottomPanel.Analysis.Output.HasOutput}"
+                                    ToolTip.Tip="{loc:Localize AnalysisDock.ClearOutputTip}"/>
+                        </StackPanel>
+                    </Border>
 
-            <!-- Shared analysis-output header (#754): both tabs evaluate THIS coupler.
-                 Shows the designated output, starts the eyedropper picker, clears it. -->
-            <Border IsVisible="{Binding BottomPanel.Analysis.IsVisible}"
-                    Background="#1e1e1e" Padding="8,3" BorderThickness="0,0,0,1" BorderBrush="#3d3d3d">
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="{loc:Localize AnalysisDock.OutputLabel}"
-                               Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding BottomPanel.Analysis.Output.OutputDisplayName}"
-                               Foreground="#e5c07b" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Button Content="{loc:Localize AnalysisDock.PickOutput}"
-                            Command="{Binding BottomPanel.Analysis.Output.PickCommand}"
-                            ToolTip.Tip="{loc:Localize AnalysisDock.PickOutputTip}"
-                            FontSize="11" Padding="8,2" Background="#3d3d5d"/>
-                    <Button Content="{loc:Localize AnalysisDock.ClearOutput}"
-                            Command="{Binding BottomPanel.Analysis.Output.ClearCommand}"
-                            IsVisible="{Binding BottomPanel.Analysis.Output.HasOutput}"
-                            ToolTip.Tip="{loc:Localize AnalysisDock.ClearOutputTip}"
-                            FontSize="11" Padding="8,2" Background="#3d3d3d"/>
+                    <!-- Content height is user-adjustable via the grip. -->
+                    <TabControl Classes="dockTabs"
+                                Height="{Binding BottomPanel.Analysis.DockHeight}"
+                                SelectedIndex="{Binding BottomPanel.Analysis.SelectedTabIndex}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabTransient}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:TimeDomainPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabEyeBer}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:EyeDiagramPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabSpectrum}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:WavelengthSpectrumPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabMonteCarlo}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:MonteCarloPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabOptimization}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:CircuitOptimizationPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabSweep}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:ParameterSweepPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabChecks}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:DesignChecksPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="{loc:Localize AnalysisDock.TabNetlist}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:NetlistPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <!-- Logic: whole-design build, toggle, step/run clock, timeline. -->
+                        <TabItem Header="{loc:Localize AnalysisDock.TabLogic}">
+                            <ScrollViewer Classes="tabPage">
+                                <panels:LogicPanel/>
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
                 </StackPanel>
-            </Border>
-
-            <!-- Content area: only shown when IsVisible is true; height is user-adjustable. -->
-            <Border IsVisible="{Binding BottomPanel.Analysis.IsVisible}"
-                    Height="{Binding BottomPanel.Analysis.DockHeight}" Background="#161616">
-                <TabControl SelectedIndex="{Binding BottomPanel.Analysis.SelectedTabIndex}"
-                            Padding="0">
-                    <TabControl.Styles>
-                        <!-- Compact tab headers (#695): the Fluent default wastes ~20 px of plot height. Scoped to this TabControl only. -->
-                        <Style Selector="TabItem">
-                            <Setter Property="FontSize" Value="12"/>
-                            <Setter Property="MinHeight" Value="26"/>
-                            <Setter Property="Height" Value="26"/>
-                            <Setter Property="Padding" Value="10,0"/>
-                            <Setter Property="VerticalContentAlignment" Value="Center"/>
-                        </Style>
-                    </TabControl.Styles>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabTransient}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:TimeDomainPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabEyeBer}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:EyeDiagramPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabSpectrum}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:WavelengthSpectrumPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabMonteCarlo}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:MonteCarloPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabOptimization}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:CircuitOptimizationPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <!-- Sweep / Checks / Netlist: whole-design tools re-homed from the
-                         right properties sidebar — the sidebar is selection-only now. -->
-                    <TabItem Header="{loc:Localize AnalysisDock.TabSweep}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:ParameterSweepPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabChecks}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:DesignChecksPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="{loc:Localize AnalysisDock.TabNetlist}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:NetlistPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <!-- Logic (#1183, rest of #1156): whole-design build → toggle →
-                         step/run clock → timeline/waveforms, so it belongs with the
-                         other whole-design tools here, not in the selection sidebar. -->
-                    <TabItem Header="{loc:Localize AnalysisDock.TabLogic}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <panels:LogicPanel/>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
             </Border>
         </StackPanel>
     </Border>
