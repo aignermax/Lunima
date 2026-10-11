@@ -113,7 +113,7 @@
                                         <TextBlock Text="{loc:Localize Registry.DifferentProcess}"/>
                                     </Border>
                                 </StackPanel>
-                                <TextBlock Classes="caption mono" Text="{Binding TiersText}"/>
+                                <TextBlock Classes="caption mono" Text="{Binding TiersText}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>
@@ -175,7 +175,7 @@
                                         <StackPanel Margin="0,4" Spacing="2">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <TextBlock Classes="caption success" Text="{Binding Tier}"/>
-                                                <TextBlock Classes="caption secondary mono" Text="{Binding File}"/>
+                                                <TextBlock Classes="caption secondary mono" Text="{Binding File}" TextTrimming="CharacterEllipsis" MaxWidth="120"/>
                                                 <Border Classes="chip" Tag="{Binding Status}">
                                                     <TextBlock Text="{Binding Status}"/>
                                                 </Border>

@@ -28,6 +28,9 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
         </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
         <Style Selector="TextBlock.group">
             <Setter Property="FontSize" Value="{DynamicResource FontSize.Subtitle}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>

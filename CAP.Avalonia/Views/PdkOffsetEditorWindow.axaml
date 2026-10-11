@@ -15,6 +15,13 @@
         <conv:StatusBadgeConverter x:Key="StatusBadge"/>
     </Window.Resources>
 
+    <Window.Styles>
+        <Style Selector="NumericUpDown">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="MinWidth" Value="150"/>
+        </Style>
+    </Window.Styles>
+
     <Grid ColumnDefinitions="280,1,*" RowDefinitions="*">
 
         <!-- Left panel: component list -->
@@ -44,14 +51,12 @@
                 <StackPanel Spacing="8">
                     <TextBlock Classes="label" Text="{loc:Localize PdkOffset.BatchOperations}"/>
                     <Grid ColumnDefinitions="*,8,*">
-                        <Button Grid.Column="0" Content="{loc:Localize PdkOffset.CheckAll}"
-                                Command="{Binding CheckAllCommand}"
+                        <Button Grid.Column="0" Command="{Binding CheckAllCommand}"
                                 HorizontalAlignment="Stretch"
-                                ToolTip.Tip="{loc:Localize PdkOffset.CheckAllTip}"/>
-                        <Button Grid.Column="2" Content="{loc:Localize PdkOffset.TryFixAll}"
-                                Command="{Binding TryFixAllCommand}"
+                                ToolTip.Tip="{loc:Localize PdkOffset.CheckAllTip}"><StackPanel Orientation="Horizontal" Spacing="8"><controls:Icon Data="{StaticResource Icon.Search}"/><TextBlock Text="{loc:Localize PdkOffset.CheckAll}"/></StackPanel></Button>
+                        <Button Grid.Column="2" Command="{Binding TryFixAllCommand}"
                                 HorizontalAlignment="Stretch"
-                                ToolTip.Tip="{loc:Localize PdkOffset.TryFixAllTip}"/>
+                                ToolTip.Tip="{loc:Localize PdkOffset.TryFixAllTip}"><StackPanel Orientation="Horizontal" Spacing="8"><controls:Icon Data="{StaticResource Icon.Sparkles}"/><TextBlock Text="{loc:Localize PdkOffset.TryFixAll}"/></StackPanel></Button>
                     </Grid>
                     <ProgressBar IsIndeterminate="True" Height="3"
                                  IsVisible="{Binding IsBatchRunning}"/>
@@ -119,7 +124,7 @@
                         IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <StackPanel Spacing="12">
                         <TextBlock Classes="subtitle" Text="{loc:Localize PdkOffset.OriginOffset}"/>
-                        <Grid ColumnDefinitions="Auto,120,24,Auto,120,*,Auto">
+                        <Grid ColumnDefinitions="Auto,150,24,Auto,150,*,Auto">
                             <TextBlock Grid.Column="0" Classes="secondary" Text="X" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <NumericUpDown Grid.Column="1" Value="{Binding OffsetX}"
                                            FormatString="F3" Increment="0.5"/>
@@ -129,7 +134,7 @@
                             <Button Grid.Column="6" Classes="primary" Content="{loc:Localize Common.Apply}"
                                     Command="{Binding ApplyOffsetCommand}"/>
                         </Grid>
-                        <Grid ColumnDefinitions="Auto,120,24,Auto,120,*">
+                        <Grid ColumnDefinitions="Auto,150,24,Auto,150,*">
                             <TextBlock Grid.Column="0" Classes="secondary" Text="{loc:Localize PdkOffset.Width}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <NumericUpDown Grid.Column="1" Value="{Binding ComponentWidth}"
@@ -289,12 +294,10 @@
                         <Grid ColumnDefinitions="*,Auto,Auto">
                             <TextBlock Grid.Column="0" Classes="subtitle" Text="{loc:Localize PdkOffset.BatchReport}"
                                        VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="{loc:Localize PdkOffset.CopyReport}"
-                                    Command="{Binding CopyBatchReportCommand}" Margin="0,0,8,0"
-                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyReportTip}"/>
-                            <Button Grid.Column="2" Content="{loc:Localize PdkOffset.CopyErrors}"
-                                    Command="{Binding CopyBatchErrorsCommand}"
-                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyErrorsTip}"/>
+                            <Button Grid.Column="1" Command="{Binding CopyBatchReportCommand}" Margin="0,0,8,0"
+                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyReportTip}"><StackPanel Orientation="Horizontal" Spacing="8"><controls:Icon Data="{StaticResource Icon.Copy}"/><TextBlock Text="{loc:Localize PdkOffset.CopyReport}"/></StackPanel></Button>
+                            <Button Grid.Column="2" Command="{Binding CopyBatchErrorsCommand}"
+                                    ToolTip.Tip="{loc:Localize PdkOffset.CopyErrorsTip}"><StackPanel Orientation="Horizontal" Spacing="8"><controls:Icon Data="{StaticResource Icon.Copy}"/><TextBlock Text="{loc:Localize PdkOffset.CopyErrors}"/></StackPanel></Button>
                         </Grid>
                         <Grid ColumnDefinitions="24,*,80,80,140">
                             <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize PdkOffset.Component}"/>

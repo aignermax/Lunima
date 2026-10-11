@@ -44,9 +44,10 @@
                     <TextBox Text="{Binding ProcessName}" Width="240" VerticalAlignment="Center"/>
                 </StackPanel>
             </DockPanel>
-            <TextBlock Classes="caption success" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+            <TextBlock Classes="caption" Text="{Binding StatusText}" TextWrapping="Wrap"/>
         </StackPanel>
 
+        <Panel>
         <!-- Empty state until a process is loaded or started -->
         <Border Classes="empty-state" IsVisible="{Binding !HasProcess}">
             <StackPanel Spacing="8" HorizontalAlignment="Center">
@@ -180,5 +181,6 @@
                 </Border>
             </StackPanel>
         </ScrollViewer>
+        </Panel>
     </DockPanel>
 </Window>
