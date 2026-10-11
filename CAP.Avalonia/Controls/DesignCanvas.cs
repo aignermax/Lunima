@@ -72,6 +72,9 @@ public class DesignCanvas : Control
     /// <summary>Gets the shared per-canvas interaction state (renderers and gestures read/write it).</summary>
     public CanvasInteractionState InteractionState => _interactionState;
 
+    /// <summary>One-shot animation clock of this canvas (selection glow, blocked-marker pulse).</summary>
+    public CanvasMotion Motion { get; } = new();
+
     // ── Renderers ──────────────────────────────────────────────────────────
 
     private readonly GridRenderer _gridRenderer;
@@ -167,10 +170,11 @@ public class DesignCanvas : Control
             Zoom = Zoom,
             Bounds = Bounds,
             GdsPreviewRenderService = MainViewModel?.GdsPreviewRenderService,
-            LayerVisibility = MainViewModel?.LayerVisibility.State
+            LayerVisibility = MainViewModel?.LayerVisibility.State,
+            Motion = Motion,
         };
 
-        context.FillRectangle(Brushes.Black, Bounds);
+        Motion.BeginFrame();
         _gridRenderer.RenderBackground(context, rc);
 
         using (context.PushTransform(Matrix.CreateTranslation(vm.PanX, vm.PanY)))
@@ -188,6 +192,9 @@ public class DesignCanvas : Control
             // label — but BEFORE the interaction overlays/handles below, which the user
             // manipulates and which must keep winning against labels.
             rc.Labels.Flush(context, Zoom);
+            // Blocked-connection warnings sit above components and labels: a route the router
+            // could not place must never hide under a body or a name.
+            _waveguideConnectionRenderer.RenderBlockedMarkers(context, rc);
             // Analysis-output overlay (#754) sits on top of components so the candidate
             // glow and the designated "OUT" tag are never hidden by component fills.
             _analysisOutputRenderer.Render(context, rc);
@@ -208,6 +215,9 @@ public class DesignCanvas : Control
         }
 
         _overlayRenderer.Render(context, rc);
+        Motion.EndFrame();
+        if (Motion.NeedsNextFrame)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => InvalidateVisual());
     }
 
     // ── Mouse Input (delegates to gesture recognizers) ─────────────────────

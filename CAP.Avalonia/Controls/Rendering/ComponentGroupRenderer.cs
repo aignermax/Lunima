@@ -15,21 +15,23 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// </summary>
 public static class ComponentGroupRenderer
 {
-    private static readonly Color BorderColor = Color.FromRgb(100, 149, 237); // CornflowerBlue #6495ED
-    private static readonly Color HoverBorderColor = Color.FromRgb(65, 105, 225); // RoyalBlue #4169E1
-    private static readonly Color SelectedBorderColor = Color.FromRgb(0, 255, 255); // Cyan #00FFFF
-    private static readonly Color ExternalPinColor = Color.FromRgb(144, 238, 144); // LightGreen
-    private static readonly Color ExternalPinHoverColor = Color.FromRgb(255, 215, 0); // Gold
-    private static readonly Color GroupHoverOverlay = Color.FromArgb(51, 255, 165, 0); // Orange overlay (20% opacity)
-
-    // Static readonly — drawn once per group child / frozen path per frame, so these
-    // must never be allocated inside the render loop (see ComponentOutlineRenderer).
-    private static readonly IBrush GroupHoverOverlayBrush = new SolidColorBrush(GroupHoverOverlay);
-    private static readonly Pen DefaultFrozenPathPen = new(new SolidColorBrush(Color.FromArgb(200, 255, 140, 0)), 2);
+    private static readonly IBrush GroupHoverOverlayBrush = CanvasPalette.AccentSubtleBrush;
+    private static readonly IBrush ExternalPinBrush = CanvasPalette.Brush(CanvasPalette.PinOptical);
+    private static readonly IBrush ExternalPinHoverBrush = CanvasPalette.Brush(CanvasPalette.Gray100);
+    private static readonly IBrush ExternalPinGlowBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Accent, 0x55));
+    private static readonly IBrush LabelBackgroundBrush = CanvasPalette.SurfaceBrush;
+    private static readonly IBrush LabelHoverBackgroundBrush = CanvasPalette.Brush(CanvasPalette.Gray700);
+    private static readonly IBrush LabelTextBrush = CanvasPalette.TextSecondaryBrush;
+    private static readonly IBrush LabelHoverTextBrush = CanvasPalette.TextPrimaryBrush;
+    private static readonly IBrush KeyholeBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray950, 0xC8));
+    private static readonly Pen ExternalPinRimPen = new(CanvasPalette.Brush(CanvasPalette.Gray950), 1.5);
+    private static readonly Pen LabelBorderPen = new(CanvasPalette.SurfaceBorderBrush, 1);
+    private static readonly Pen LabelHoverBorderPen = new(CanvasPalette.Brush(CanvasPalette.Gray400), 1);
+    private static readonly Pen PinDirectionPen = new(CanvasPalette.Brush(CanvasPalette.PinDirection), 1);
+    private static readonly Pen PinDirectionHoverPen = new(CanvasPalette.AccentHoverBrush, 2);
 
     private const double DefaultPinSize = 8.0;
     private const double HoveredPinSize = 12.0;
-    private const double BorderThickness = 2.0;
     private const double BorderPadding = 10.0;
 
     /// <summary>
@@ -81,7 +83,7 @@ public static class ComponentGroupRenderer
         double fadeThresholdDb = -40.0,
         Rect? cullRect = null,
         Services.GdsImport.LayerVisibility.GdsLayerVisibilityState? layerVisibility = null,
-        Pen? penOverride = null,
+        IPen? penOverride = null,
         double zoom = 1.0)
     {
         if (frozenPath?.Path?.Segments == null || frozenPath.Path.Segments.Count == 0)
@@ -102,10 +104,10 @@ public static class ComponentGroupRenderer
         if (layerOpacity < 1.0)
         {
             using (context.PushOpacity(layerOpacity))
-                RenderFrozenPathBody(context, frozenPath, powerFlowResult, fadeThresholdDb, cullRect, penOverride);
+                RenderFrozenPathBody(context, frozenPath, powerFlowResult, fadeThresholdDb, cullRect, penOverride, zoom);
             return;
         }
-        RenderFrozenPathBody(context, frozenPath, powerFlowResult, fadeThresholdDb, cullRect, penOverride);
+        RenderFrozenPathBody(context, frozenPath, powerFlowResult, fadeThresholdDb, cullRect, penOverride, zoom);
     }
 
     /// <summary>Draws a frozen path's segments and optional power-flow label (the part
@@ -116,9 +118,10 @@ public static class ComponentGroupRenderer
         PowerFlowResult? powerFlowResult,
         double fadeThresholdDb,
         Rect? cullRect,
-        Pen? penOverride)
+        IPen? penOverride,
+        double zoom)
     {
-        Pen frozenPen;
+        IPen frozenPen;
 
         // Use power flow colors if available
         if (penOverride != null)
@@ -132,7 +135,7 @@ public static class ComponentGroupRenderer
         }
         else
         {
-            frozenPen = SelectFrozenPathPen(frozenPath);
+            frozenPen = SelectFrozenPathPen(frozenPath, zoom);
         }
 
         foreach (var segment in frozenPath.Path.Segments)
@@ -166,14 +169,14 @@ public static class ComponentGroupRenderer
     /// <summary>
     /// The pen a frozen path draws with when no power-flow overlay is active: a path
     /// tagged with its import source's (layer, datatype) draws in that layer's muted
-    /// palette color (same alpha/thickness as the default), everything else keeps
-    /// the historical orange. Internal so unit tests can assert the selection
-    /// headlessly (InternalsVisibleTo UnitTests).
+    /// palette color (same alpha/thickness as the default), everything else draws
+    /// like a routed waveguide (<see cref="CanvasPens.FrozenPath"/>). Internal so unit
+    /// tests can assert the selection headlessly (InternalsVisibleTo UnitTests).
     /// </summary>
-    internal static Pen SelectFrozenPathPen(FrozenWaveguidePath frozenPath) =>
+    internal static IPen SelectFrozenPathPen(FrozenWaveguidePath frozenPath, double zoom = 1.0) =>
         frozenPath.Layer is int layer && frozenPath.DataType is int dataType
             ? OutlineLayerPalette.PathPenFor(layer, dataType)
-            : DefaultFrozenPathPen;
+            : CanvasPens.For(zoom).FrozenPath;
 
     /// <summary>
     /// Calculates the visual midpoint of a frozen path from its first and last segment endpoints.
@@ -210,7 +213,7 @@ public static class ComponentGroupRenderer
         else
         {
             labelText = "no signal";
-            labelBrush = new SolidColorBrush(Color.FromArgb(120, 150, 150, 150));
+            labelBrush = CanvasPalette.TextTertiaryBrush;
         }
 
         var labelPosition = new Point(midPoint.X, midPoint.Y - 15);
@@ -218,7 +221,7 @@ public static class ComponentGroupRenderer
             labelText,
             CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Arial"),
+            CanvasTypography.Ui,
             10,
             labelBrush);
 
@@ -228,14 +231,14 @@ public static class ComponentGroupRenderer
             formatted.Width + 4,
             formatted.Height + 4);
 
-        context.FillRectangle(new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)), textBounds);
+        context.DrawRectangle(CanvasPalette.LabelBackplateBrush, null, textBounds, 2, 2);
         context.DrawText(formatted, labelPosition);
     }
 
     /// <summary>
     /// Renders a bend segment as a series of line segments approximating the arc.
     /// </summary>
-    private static void RenderBendSegment(DrawingContext context, Pen pen, BendSegment bend)
+    private static void RenderBendSegment(DrawingContext context, IPen pen, BendSegment bend)
     {
         int numSegments = Math.Max(8, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
 
@@ -274,33 +277,32 @@ public static class ComponentGroupRenderer
     }
 
     /// <summary>
-    /// Renders a dashed border around the group bounds.
+    /// Renders the dashed hairline outline of an unselected group (lighter under the pointer).
     /// </summary>
-    public static void RenderGroupBorder(DrawingContext context, Rect bounds, bool isHovered, bool isDimmed = false)
+    public static void RenderGroupBorder(DrawingContext context, Rect bounds, bool isHovered, CanvasPens pens)
     {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
-        var borderColor = isHovered ? HoverBorderColor : BorderColor;
-        var dimmedBorderColor = Color.FromArgb(alpha, borderColor.R, borderColor.G, borderColor.B);
-        var dashedPen = new Pen(new SolidColorBrush(dimmedBorderColor), BorderThickness)
-        {
-            DashStyle = new DashStyle(new[] { 4.0, 4.0 }, 0)
-        };
-
-        context.DrawRectangle(null, dashedPen, bounds);
+        context.DrawRectangle(null, isHovered ? pens.GroupBorderHover : pens.GroupBorder, bounds);
     }
 
     /// <summary>
-    /// Renders a solid selection border around the group bounds.
-    /// Used to indicate that the group is selected (distinct from hover).
+    /// Renders the selection outline of a group: accent border with a soft glow that fades in
+    /// over <see cref="CanvasMotion.SelectionFadeMs"/> (settled when no motion clock is attached).
     /// </summary>
-    public static void RenderGroupSelectionBorder(DrawingContext context, Rect bounds, bool isDimmed = false)
+    public static void RenderGroupSelectionBorder(DrawingContext context, Rect bounds, CanvasRenderContext rc, Guid groupId = default)
     {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
-        var selectionColor = Color.FromArgb(alpha, SelectedBorderColor.R, SelectedBorderColor.G, SelectedBorderColor.B);
-        var selectionPen = new Pen(new SolidColorBrush(selectionColor), BorderThickness + 1);
-
-        context.DrawRectangle(null, selectionPen, bounds);
+        double glow = rc.Motion?.SelectionGlow(groupId) ?? 1.0;
+        double zoom = rc.Zoom <= 0 ? 1.0 : rc.Zoom;
+        if (glow > 0)
+        {
+            double thickness = SelectionGlowPx / zoom;
+            var glowPen = rc.Pens.ScreenPen(CanvasPalette.WithAlpha(CanvasPalette.Accent, (byte)(SelectionGlowAlpha * glow)), SelectionGlowPx);
+            context.DrawRectangle(null, glowPen, bounds.Inflate(thickness / 2));
+        }
+        context.DrawRectangle(null, rc.Pens.Selection, bounds);
     }
+
+    private const double SelectionGlowPx = 5.0;
+    private const byte SelectionGlowAlpha = 0x40;
 
     /// <summary>
     /// Renders the group name label at the top-left of the group bounds.
@@ -311,53 +313,74 @@ public static class ComponentGroupRenderer
     }
 
     /// <summary>
-    /// Renders the group name label at the top-left of the group bounds with optional hover state.
+    /// Renders the group name tag above the top-left corner of the group bounds: a dark rounded
+    /// chip with a hairline border, brightened under the pointer to show it is grabbable. Below
+    /// 100 % zoom the tag grows with <see cref="LabelScale"/> so it stays legible — the group is
+    /// the readable unit of an overview — and is left out once it would be wider than its group.
+    /// Geometry matches <see cref="CalculateLabelBounds"/> exactly, so hit testing follows.
     /// </summary>
-    public static void RenderGroupNameLabel(DrawingContext context, Rect bounds, string groupName, bool isDimmed, bool isLabelHovered)
+    public static void RenderGroupNameLabel(DrawingContext context, Rect bounds, string groupName, bool isDimmed,
+        bool isLabelHovered, double zoom = 1.0)
     {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
+        double scale = LabelScale(zoom);
+        if (!IsLabelShown(bounds, groupName, scale))
+            return;
+
         var labelText = new FormattedText(
             groupName,
             CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Arial"),
-            12,
-            new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255))
-        );
+            CanvasTypography.UiMedium,
+            LabelFontSize,
+            isLabelHovered ? LabelHoverTextBrush : LabelTextBrush);
 
-        double labelWidth = labelText.Width + 8;
-        double labelHeight = 18;
-        var labelBg = new Rect(bounds.X, bounds.Y - 20, labelWidth, labelHeight);
+        var labelBg = new Rect(bounds.X, bounds.Y - LabelOffset, labelText.Width + 10, LabelHeight);
+        var transform = Matrix.CreateTranslation(-bounds.X, -bounds.Y) * Matrix.CreateScale(scale, scale)
+            * Matrix.CreateTranslation(bounds.X, bounds.Y);
 
-        // Use hover color if label is being hovered
-        var bgColor = isLabelHovered
-            ? Color.FromArgb(alpha, HoverBorderColor.R, HoverBorderColor.G, HoverBorderColor.B)
-            : Color.FromArgb(alpha, BorderColor.R, BorderColor.G, BorderColor.B);
-        context.FillRectangle(new SolidColorBrush(bgColor), labelBg);
-
-        // Add subtle border on hover to indicate interactivity
-        if (isLabelHovered)
+        using (context.PushTransform(transform))
+        using (isDimmed ? context.PushOpacity(0.5) : (IDisposable?)null)
         {
-            var hoverBorderPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)), 1);
-            context.DrawRectangle(null, hoverBorderPen, labelBg);
+            context.DrawRectangle(isLabelHovered ? LabelHoverBackgroundBrush : LabelBackgroundBrush,
+                isLabelHovered ? LabelHoverBorderPen : LabelBorderPen, labelBg, 4, 4);
+            context.DrawText(labelText, new Point(bounds.X + 5, labelBg.Y + (LabelHeight - labelText.Height) / 2));
         }
-
-        context.DrawText(labelText, new Point(bounds.X + 4, bounds.Y - 18));
     }
+
+    private const double LabelFontSize = 11;
+    private const double LabelHeight = 18;
+    private const double LabelOffset = 20;
+
+    /// <summary>Lowest on-screen scale of the group tag; below it the tag is enlarged in world units.</summary>
+    private const double LabelMinScreenScale = 0.9;
+
+    /// <summary>
+    /// World-space enlargement of the group name tag at <paramref name="zoom"/>: 1 at and above
+    /// <see cref="LabelMinScreenScale"/>, growing as the view zooms out so the tag keeps a
+    /// legible on-screen size.
+    /// </summary>
+    public static double LabelScale(double zoom) =>
+        zoom <= 0 ? 1.0 : Math.Max(1.0, LabelMinScreenScale / zoom);
+
+    private static double EstimateLabelWidth(string groupName) => Math.Max(60, groupName.Length * 7 + 8);
+
+    private static bool IsLabelShown(Rect groupBounds, string groupName, double scale) =>
+        scale <= 1.0 || EstimateLabelWidth(groupName) * scale <= groupBounds.Width;
 
     /// <summary>
     /// Calculates the actual label bounds for a ComponentGroup (used for hit testing).
     /// Returns a rectangle representing the clickable label area.
     /// </summary>
-    public static Rect CalculateLabelBounds(ComponentGroup group)
+    public static Rect CalculateLabelBounds(ComponentGroup group, double zoom = 1.0)
     {
         var groupBounds = CalculateGroupBounds(group);
+        double scale = LabelScale(zoom);
+        if (!IsLabelShown(groupBounds, group.GroupName, scale))
+            return default;
 
         // Estimate label width based on text (approximate 7 pixels per character + padding)
-        double labelWidth = Math.Max(60, group.GroupName.Length * 7 + 8);
-        double labelHeight = 18;
-
-        return new Rect(groupBounds.X, groupBounds.Y - 20, labelWidth, labelHeight);
+        double labelWidth = EstimateLabelWidth(group.GroupName) * scale;
+        return new Rect(groupBounds.X, groupBounds.Y - LabelOffset * scale, labelWidth, LabelHeight * scale);
     }
 
     /// <summary>
@@ -367,36 +390,15 @@ public static class ComponentGroupRenderer
     /// </summary>
     public static void RenderExternalPin(DrawingContext context, GroupPin pin, ComponentGroup group, bool isHovered, DeferredLabelLayer labels)
     {
-        // External pins are positioned relative to the group origin
         double pinX = group.PhysicalX + pin.RelativeX;
         double pinY = group.PhysicalY + pin.RelativeY;
-
         double pinSize = isHovered ? HoveredPinSize : DefaultPinSize;
-        var pinColor = isHovered ? ExternalPinHoverColor : ExternalPinColor;
 
-        // Draw circle for pin
-        context.DrawEllipse(
-            new SolidColorBrush(pinColor),
-            new Pen(Brushes.White, 2),
-            new Point(pinX, pinY),
-            pinSize / 2,
-            pinSize / 2
-        );
+        context.DrawEllipse(isHovered ? ExternalPinHoverBrush : ExternalPinBrush, ExternalPinRimPen,
+            new Point(pinX, pinY), pinSize / 2, pinSize / 2);
 
-        // Draw pin name on hover
         if (isHovered)
-        {
-            var nameText = new FormattedText(
-                pin.Name,
-                CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Arial"),
-                10,
-                Brushes.White
-            );
-
-            labels.Enqueue(nameText, Brushes.White, new Point(pinX + 8, pinY - 5));
-        }
+            EnqueuePinName(labels, pin.Name, new Point(pinX + 8, pinY - 5));
     }
 
     /// <summary>
@@ -411,57 +413,31 @@ public static class ComponentGroupRenderer
     /// (enqueued, not drawn inline, like every other pin name).</param>
     public static void RenderUnoccupiedGroupPin(DrawingContext context, GroupPin pin, ComponentGroup group, bool isHovered, DeferredLabelLayer labels)
     {
-        // Calculate absolute pin position
         double pinX = group.PhysicalX + pin.RelativeX;
         double pinY = group.PhysicalY + pin.RelativeY;
-
         double pinSize = isHovered ? HoveredPinSize : DefaultPinSize;
-        var pinColor = isHovered ? ExternalPinHoverColor : ExternalPinColor;
 
-        // Draw outer glow for visibility
         if (isHovered)
-        {
-            var glowBrush = new SolidColorBrush(Color.FromArgb(100, pinColor.R, pinColor.G, pinColor.B));
-            context.DrawEllipse(glowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
-        }
+            context.DrawEllipse(ExternalPinGlowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
 
-        // Draw main pin circle
-        context.DrawEllipse(
-            new SolidColorBrush(pinColor),
-            new Pen(Brushes.White, 2),
-            new Point(pinX, pinY),
-            pinSize / 2,
-            pinSize / 2
-        );
-
-        // Draw direction indicator (small line showing pin orientation)
         double angle = pin.AngleDegrees * Math.PI / 180;
         double dirLength = isHovered ? 20 : 15;
-        var dirPen = new Pen(
-            new SolidColorBrush(isHovered ? Color.FromRgb(255, 255, 255) : Color.FromRgb(200, 200, 200)),
-            isHovered ? 2 : 1
-        );
-
-        context.DrawLine(
-            dirPen,
+        context.DrawLine(isHovered ? PinDirectionHoverPen : PinDirectionPen,
             new Point(pinX, pinY),
-            new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength)
-        );
+            new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength));
 
-        // Draw pin name on hover
+        context.DrawEllipse(isHovered ? ExternalPinHoverBrush : ExternalPinBrush, ExternalPinRimPen,
+            new Point(pinX, pinY), pinSize / 2, pinSize / 2);
+
         if (isHovered)
-        {
-            var nameText = new FormattedText(
-                pin.Name,
-                CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Arial"),
-                10,
-                Brushes.White
-            );
+            EnqueuePinName(labels, pin.Name, new Point(pinX + 15, pinY - 15));
+    }
 
-            labels.Enqueue(nameText, Brushes.White, new Point(pinX + 15, pinY - 15));
-        }
+    private static void EnqueuePinName(DeferredLabelLayer labels, string name, Point origin)
+    {
+        var nameText = new FormattedText(name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            CanvasTypography.UiMedium, 10, CanvasPalette.AccentHoverBrush);
+        labels.Enqueue(nameText, CanvasPalette.AccentHoverBrush, origin);
     }
 
     /// <summary>
@@ -511,14 +487,13 @@ public static class ComponentGroupRenderer
         double scaledY = centerY - scaledSize / 2;
 
         // Draw semi-transparent background circle
-        var bgColor = isHovered ? Color.FromArgb(220, 60, 60, 60) : Color.FromArgb(180, 40, 40, 40);
-        var bgBrush = new SolidColorBrush(bgColor);
+        var bgBrush = isHovered ? LabelHoverBackgroundBrush : LabelBackgroundBrush;
         context.DrawEllipse(bgBrush, null, new Point(centerX, centerY), scaledSize / 2, scaledSize / 2);
 
         // Use red for locked (danger), green for unlocked (safe)
-        var lockColor = group.IsLocked
-            ? (isHovered ? Color.FromRgb(255, 100, 100) : Color.FromRgb(255, 107, 107)) // Red (#FF6B6B)
-            : (isHovered ? Color.FromRgb(100, 230, 200) : Color.FromRgb(78, 205, 196)); // Green (#4ECDC4)
+        var lockColor = group.IsLocked ? CanvasPalette.Danger : CanvasPalette.Success;
+        if (isHovered)
+            lockColor = CanvasPalette.Lighten(lockColor, 0.2);
 
         var lockBrush = new SolidColorBrush(lockColor);
         var lockStrokePen = new Pen(lockBrush, 1.5);
@@ -535,8 +510,7 @@ public static class ComponentGroupRenderer
         // Draw hover border around icon background to indicate interactivity
         if (isHovered)
         {
-            var hoverBorderPen = new Pen(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 1);
-            context.DrawEllipse(null, hoverBorderPen, new Point(centerX, centerY), scaledSize / 2 + 1, scaledSize / 2 + 1);
+            context.DrawEllipse(null, LabelHoverBorderPen, new Point(centerX, centerY), scaledSize / 2 + 1, scaledSize / 2 + 1);
         }
     }
 
@@ -559,7 +533,7 @@ public static class ComponentGroupRenderer
         double keyholeRadius = size * 0.08;
         double keyholeX = x + size / 2;
         double keyholeY = bodyY + bodyHeight * 0.4;
-        var keyholeBrush = new SolidColorBrush(Color.FromArgb(200, 40, 40, 40));
+        var keyholeBrush = KeyholeBrush;
         context.DrawEllipse(keyholeBrush, null, new Point(keyholeX, keyholeY), keyholeRadius, keyholeRadius);
 
         // Shackle (closed U-shape)
@@ -623,7 +597,7 @@ public static class ComponentGroupRenderer
         double keyholeRadius = size * 0.08;
         double keyholeX = x + size / 2;
         double keyholeY = bodyY + bodyHeight * 0.4;
-        var keyholeBrush = new SolidColorBrush(Color.FromArgb(200, 40, 40, 40));
+        var keyholeBrush = KeyholeBrush;
         context.DrawEllipse(keyholeBrush, null, new Point(keyholeX, keyholeY), keyholeRadius, keyholeRadius);
 
         // Shackle (open, rotated to the right)

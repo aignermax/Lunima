@@ -4,6 +4,7 @@ using Avalonia.Media.Imaging;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
+using CAP.Avalonia.Controls.Rendering;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
@@ -15,10 +16,11 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 public static class GdsPolygonRenderer
 {
     // ── Layer colour palette (static readonly — never allocate per-frame) ───
-    // Add new layers here without touching any other file.
+    // The waveguide layer shares the routed-waveguide color, so a device's geometry visibly
+    // continues into its connections. Add new layers here without touching any other file.
 
-    private static readonly IBrush WaveguideBrush = new SolidColorBrush(Color.FromArgb(180, 100, 160, 220)); // layer 1
-    private static readonly IBrush DefaultBrush   = new SolidColorBrush(Color.FromArgb(120, 160, 160, 160)); // all other layers
+    private static readonly IBrush WaveguideBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Waveguide, 0xD0)); // layer 1
+    private static readonly IBrush DefaultBrush   = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray300, 0x70)); // all other layers
 
     private const int WaveguideLayer = 1;
 
@@ -54,6 +56,13 @@ public static class GdsPolygonRenderer
     public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component) =>
         DrawGdsPreview(context, previewData, component, component.PhysicalX, component.PhysicalY,
             component.WidthMicrometers, component.HeightMicrometers);
+
+    /// <summary>
+    /// Draws the GDS preview of <paramref name="component"/> into its current footprint
+    /// <paramref name="footprint"/> (world coordinates, rotation-swapped like the live bounds).
+    /// </summary>
+    public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component, Rect footprint) =>
+        DrawGdsPreview(context, previewData, component, footprint.X, footprint.Y, footprint.Width, footprint.Height);
 
     private static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component,
         double x, double y, double width, double height)

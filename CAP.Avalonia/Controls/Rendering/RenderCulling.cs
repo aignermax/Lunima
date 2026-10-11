@@ -28,6 +28,13 @@ internal static class RenderCulling
     internal const double LodMinScreenPixels = 4.0;
 
     /// <summary>
+    /// On-screen size below which a component's pins are skipped: the glyphs would cover the
+    /// whole block and turn an overview into confetti. Pins return as soon as the block is
+    /// large enough to show where they sit.
+    /// </summary>
+    internal const double PinLodMinScreenPixels = 14.0;
+
+    /// <summary>
     /// On-screen size (larger bounding-box dimension × zoom) below which an outline
     /// polygon is not drawn at all (KLayout-style geometry LOD). Far tighter than
     /// <see cref="LodMinScreenPixels"/>: this culls real geometry, not decorations,
@@ -56,6 +63,10 @@ internal static class RenderCulling
     /// </summary>
     internal static bool IsBelowLodThreshold(double widthWorld, double heightWorld, double zoom) =>
         Math.Max(widthWorld, heightWorld) * SafeZoom(zoom) < LodMinScreenPixels;
+
+    /// <summary>True when the component is too small on screen for its pins (<see cref="PinLodMinScreenPixels"/>).</summary>
+    internal static bool IsBelowPinLodThreshold(double widthWorld, double heightWorld, double zoom) =>
+        Math.Max(widthWorld, heightWorld) * SafeZoom(zoom) < PinLodMinScreenPixels;
 
     /// <summary>
     /// True when the polygon's larger bounding-box dimension is smaller on screen than
