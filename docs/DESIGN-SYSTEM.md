@@ -95,3 +95,14 @@ migrate a file, lower or remove its entry.
 
 The design canvas is drawn in C#; its colors live in `CAP.Avalonia/Controls/Rendering/CanvasPalette.cs`
 and follow the same palette (accent = selection, danger = blocked / unroutable, warning = DRC hints).
+
+- Zoom-dependent pens (`CanvasPens`): UI strokes (borders, selection, chip frame) stay a fixed
+  number of screen pixels; waveguides and metal traces keep their world width but never drop
+  below a legible hairline.
+- Component bodies carry a thin category accent (`DeviceCategories/`): waveguide teal, coupler
+  violet, filter pink, active orange, I/O sky, detector lime. Far out a body collapses to a
+  block in its category color; pins and names follow a level of detail (`RenderCulling`).
+- Canvas text is Inter on a translucent backplate (`DeferredLabelLayer`).
+- Motion (`CanvasMotion`) is one-shot only: selection glow fades in (150 ms), a blocked-connection
+  marker pulses twice when first shown. An idle canvas never repaints on its own.
+

@@ -41,7 +41,7 @@ public class DesignCanvasHitTesting
             var comp = vm.Components[i];
             if (comp.Component is ComponentGroup group)
             {
-                var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group);
+                var labelBounds = ComponentGroupRenderer.CalculateLabelBounds(group, vm.ViewZoom);
                 if (labelBounds.Contains(canvasPoint))
                 {
                     return group;

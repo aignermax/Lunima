@@ -48,7 +48,7 @@ public sealed class PreviewRenderer : ICanvasRenderer
         context.DrawRectangle(null, new Pen(new SolidColorBrush(borderColor), 2), rect);
         context.DrawText(
             new FormattedText(template.Name, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, new Typeface("Arial"), 10, new SolidColorBrush(borderColor)),
+                FlowDirection.LeftToRight, CanvasTypography.Ui, 10, new SolidColorBrush(borderColor)),
             new Point(x + 5, y + 5));
     }
 
@@ -67,13 +67,13 @@ public sealed class PreviewRenderer : ICanvasRenderer
         context.DrawRectangle(null, new Pen(new SolidColorBrush(borderColor), 2), rect);
         context.DrawText(
             new FormattedText(template.Name, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, new Typeface("Arial", FontStyle.Normal, FontWeight.Bold), 12,
+                FlowDirection.LeftToRight, CanvasTypography.UiSemiBold, 12,
                 new SolidColorBrush(borderColor)),
             new Point(x + 5, y + 5));
         context.DrawText(
             new FormattedText($"{template.ComponentCount} components | {width:F0}×{height:F0}µm",
                 System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface("Arial"), 9, new SolidColorBrush(borderColor)),
+                CanvasTypography.Ui, 9, new SolidColorBrush(borderColor)),
             new Point(x + 5, y + height - 15));
     }
 
@@ -96,17 +96,17 @@ public sealed class PreviewRenderer : ICanvasRenderer
         bool isValidTarget = targetPin != null && targetPin != startPin;
 
         var pen = isValidTarget
-            ? new Pen(Brushes.LimeGreen, 2)
-            : new Pen(Brushes.Gray, 2) { DashStyle = new DashStyle(new double[] { 5, 3 }, 0) };
+            ? new Pen(CanvasPalette.AccentHoverBrush, 2)
+            : new Pen(CanvasPalette.TextTertiaryBrush, 2) { DashStyle = new DashStyle(new double[] { 5, 3 }, 0) };
 
         var endPoint = isValidTarget
             ? new Point(targetPin!.GetAbsolutePosition().x, targetPin.GetAbsolutePosition().y)
             : state.ConnectionDragCurrentPoint;
 
         context.DrawLine(pen, new Point(startX, startY), endPoint);
-        context.DrawEllipse(Brushes.LimeGreen, null, new Point(startX, startY), 5, 5);
+        context.DrawEllipse(CanvasPalette.AccentHoverBrush, null, new Point(startX, startY), 5, 5);
         if (isValidTarget)
-            context.DrawEllipse(Brushes.LimeGreen, null, endPoint, 5, 5);
+            context.DrawEllipse(CanvasPalette.AccentHoverBrush, null, endPoint, 5, 5);
     }
 
     private static void DrawSelectionRectangle(DrawingContext context, SelectionManager selection)
@@ -117,9 +117,9 @@ public sealed class PreviewRenderer : ICanvasRenderer
         if (width < 1 && height < 1) return;
 
         var rect = new Rect(minX, minY, width, height);
-        context.FillRectangle(new SolidColorBrush(Color.FromArgb(30, 100, 150, 255)), rect);
+        context.FillRectangle(CanvasPalette.SelectionBoxFillBrush, rect);
         context.DrawRectangle(null,
-            new Pen(new SolidColorBrush(Color.FromArgb(180, 100, 180, 255)), 1.5)
+            new Pen(CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.AccentHover, 200)), 1.5)
             {
                 DashStyle = new DashStyle(new double[] { 6, 3 }, 0)
             }, rect);
@@ -127,15 +127,17 @@ public sealed class PreviewRenderer : ICanvasRenderer
 
     private static (Color fill, Color border) GetPlacementColors(bool canPlace, byte fillAlpha, byte borderAlpha)
     {
-        var fill = canPlace ? Color.FromArgb(fillAlpha, 100, 255, 100) : Color.FromArgb(fillAlpha, 255, 100, 100);
-        var border = canPlace ? Color.FromArgb(borderAlpha, 100, 255, 100) : Color.FromArgb(borderAlpha, 255, 100, 100);
+        var hue = canPlace ? CanvasPalette.Accent : CanvasPalette.Danger;
+        var fill = CanvasPalette.WithAlpha(hue, fillAlpha);
+        var border = CanvasPalette.WithAlpha(hue, borderAlpha);
         return (fill, border);
     }
 
     private static (Color fill, Color border) GetGroupPlacementColors(bool canPlace)
     {
-        var fill = canPlace ? Color.FromArgb(50, 150, 150, 255) : Color.FromArgb(50, 255, 100, 100);
-        var border = canPlace ? Color.FromArgb(200, 150, 150, 255) : Color.FromArgb(200, 255, 100, 100);
+        var hue = canPlace ? CanvasPalette.AccentHover : CanvasPalette.Danger;
+        var fill = CanvasPalette.WithAlpha(hue, 50);
+        var border = CanvasPalette.WithAlpha(hue, 200);
         return (fill, border);
     }
 }
