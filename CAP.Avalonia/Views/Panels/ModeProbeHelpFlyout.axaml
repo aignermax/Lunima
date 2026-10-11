@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.ModeProbeHelpFlyout"
+             MaxWidth="420">
+
+    <!-- Plain-language explainer for the Mode Probe numbers (#1486): short sections
+         (#1152 text budget) plus the looping GuidedModeCrestAnimation (mode spot
+         confined in the core; a wave crest creeping along the guide while the
+         free-space crest outruns it). Shown from the probe header's "?" button. -->
+
+    <ScrollViewer MaxHeight="440">
+        <StackPanel Margin="12" Spacing="8">
+
+            <!-- Looping animation: confined mode spot + guided crest slower than free space. -->
+            <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+                    CornerRadius="4" Padding="4" HorizontalAlignment="Left">
+                <ha:GuidedModeCrestAnimation
+                    GuidedLabel="{loc:Localize ModeProbeHelp.AnimGuidedLabel}"
+                    FreeSpaceLabel="{loc:Localize ModeProbeHelp.AnimFreeLabel}"
+                    SpotLabel="{loc:Localize ModeProbeHelp.AnimSpotLabel}"/>
+            </Border>
+
+            <TextBlock Text="{loc:Localize ModeProbeHelp.GuidedTitle}"
+                       FontWeight="Bold" FontSize="12" Foreground="White"/>
+            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                       Text="{loc:Localize ModeProbeHelp.GuidedBody}"/>
+
+            <TextBlock Text="{loc:Localize ModeProbeHelp.GroupTitle}"
+                       FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                       Text="{loc:Localize ModeProbeHelp.GroupBody}"/>
+
+            <TextBlock Text="{loc:Localize ModeProbeHelp.MfdTitle}"
+                       FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                       Text="{loc:Localize ModeProbeHelp.MfdBody}"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

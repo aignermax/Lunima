@@ -6,8 +6,9 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// One chip in the playground's "what runs on light" row (issue #1456): the unit
 /// name (ALU, Z, RAM, ACC, PC) plus whether that unit is currently computed by the
 /// photonic network the user built (green "light") or simulated electronically
-/// (grey). ACC and PC are always electronic — there is no photonic accumulator or
-/// program counter yet.
+/// (grey). PC is always electronic — there is no photonic program counter yet;
+/// the ACC chip lights up on the combined ALU + RAM + ACC chip, whose register
+/// clocks the accumulator on light (issue #1479).
 /// </summary>
 public partial class IsaUnitChipViewModel : ObservableObject
 {

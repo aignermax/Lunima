@@ -29,6 +29,9 @@ namespace UnitTests.Services.GdsImport;
 /// </summary>
 internal static class GdsMziElectricalFixture
 {
+    /// <summary>A repair budget no routing pass of this fixture ever reaches.</summary>
+    private static readonly TimeSpan UnboundedRepairBudget = TimeSpan.FromMinutes(5);
+
     private static readonly Lazy<DesignCanvasViewModel> SharedRouted = new(BuildMziCanvas);
 
     /// <summary>
@@ -49,6 +52,10 @@ internal static class GdsMziElectricalFixture
     {
         var templates = TestPdkLoader.LoadAllTemplates();
         var canvas = new DesignCanvasViewModel();
+        // The contention repair stops at a wall-clock budget; on a loaded CI runner it would
+        // stop earlier than on a desktop and leave different routes behind. The pinned routing
+        // outcome must not depend on machine speed.
+        canvas.ConnectionManager.ContentionRepairTimeBudget = UnboundedRepairBudget;
 
         Component Place(string templateName, string pdk, string identifier, double x, double y, double rotation = 0)
         {

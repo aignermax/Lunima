@@ -29,6 +29,10 @@ internal static class OnboardingFeatureExtensions
             sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().DesignValidation,
             sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis,
             sp.GetRequiredService<Commands.CommandManager>()));
+        // Same for the RAM tour: it observes the Logic panel the window shows.
+        services.AddSingleton(sp => new StoreNumberTourViewModel(
+            sp.GetRequiredService<ViewModels.Panels.RightPanelViewModel>().Logic,
+            sp.GetRequiredService<ViewModels.Panels.BottomPanelViewModel>().Analysis));
 
         return services;
     }

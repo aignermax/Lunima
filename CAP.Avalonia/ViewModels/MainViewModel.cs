@@ -152,6 +152,13 @@ public partial class MainViewModel : ObservableObject
     public ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel ConnectChipletsTour { get; }
 
     /// <summary>
+    /// Step engine for the "Store a number in light" tour (issue #1422). Started
+    /// from the Home screen's fifth tour card; observes the Logic panel of the
+    /// RAM 2x4 example it opens.
+    /// </summary>
+    public ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel StoreNumberTour { get; }
+
+    /// <summary>
     /// Design file passed on the command line, resolved by
     /// <see cref="Services.DesignFileArguments.FindDesignFile"/> in App startup.
     /// Consumed once by the main window's Loaded handler; takes precedence
@@ -334,7 +341,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel? watchComputeTourViewModel = null,
         ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
         ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
+        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -383,6 +391,7 @@ public partial class MainViewModel : ObservableObject
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
         Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
+        Home.StoreNumberTourRequested = StartStoreNumberTourAsync;
         FileOperations.ProjectOpened = Home.OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
@@ -400,6 +409,9 @@ public partial class MainViewModel : ObservableObject
         ConnectChipletsTour = connectChipletsTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel(
                 Canvas, RightPanel.DesignValidation, BottomPanel.Analysis, CommandManager);
+        // The tour must observe the panel instance the user actually clicks.
+        StoreNumberTour = storeNumberTourViewModel
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>
@@ -1050,6 +1062,25 @@ public partial class MainViewModel : ObservableObject
             return;
 
         ConnectChipletsTour.Start();
+    }
+
+    /// <summary>
+    /// Starts the "Store a number in light" tour on the shipped RAM 2x4 example
+    /// (Home tour card, issue #1422). The example opens as an untitled copy
+    /// through the same loader the Examples list uses; when the user cancels the
+    /// unsaved-changes prompt (or the example is not installed), the tour does
+    /// not start and the current design stays open.
+    /// </summary>
+    private async Task StartStoreNumberTourAsync()
+    {
+        var ramPath = Home.Examples
+            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
+                == ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel.RamExampleFileName)
+            ?.FilePath;
+        if (ramPath == null || !await FileOperations.OpenDesignAsCopyAsync(ramPath))
+            return;
+
+        StoreNumberTour.Start();
     }
 
     /// <summary>

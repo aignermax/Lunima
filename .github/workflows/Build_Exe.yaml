@@ -17,6 +17,8 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    # Safety net: the sharded suite takes ~20 min; a hang must not eat the 6-h default.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,13 +59,36 @@ jobs:
           sudo apt-get install -y klayout
           klayout -v
 
+      # Same shards as xUnitTests.yaml (keep the two in sync). A single unfiltered
+      # `dotnet test` mixes the slow Avalonia-headless UI classes with the rest in one
+      # process, which deadlocks on the Linux runner; the v0.15.0 release build hung in
+      # this step until it was cancelled. The script lives inline (not in scripts/)
+      # because a dispatched release checks out the tagged commit, which may predate it.
       - name: Test
         working-directory: UnitTests
         env:
           LUNIMA_TEST_PYTHON3: ${{ steps.setup-python.outputs.python-path }}
           MPLBACKEND: Agg
           QT_QPA_PLATFORM: offscreen
-        run: dotnet test --no-restore
+        run: |
+          set -euo pipefail
+          dotnet build --no-restore
+          mkdir -p TestResults
+          run_shard() {
+            local name="$1" filter="$2"
+            dotnet test --no-build --filter "$filter" \
+              --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
+              --results-directory TestResults \
+              --logger "console;verbosity=minimal" \
+              > "TestResults/${name}.log" 2>&1
+          }
+          run_shard fast      'Category!=Slow' &
+          run_shard slow-ui   'Category=Slow&FullyQualifiedName~UnitTests.UI.' &
+          run_shard slow-core 'Category=Slow&FullyQualifiedName!~UnitTests.UI.' &
+          status=0
+          for pid in $(jobs -p); do wait "$pid" || status=1; done
+          for log in TestResults/*.log; do echo "===== $log ====="; cat "$log"; done
+          exit $status
 
   build:
     name: Build ${{ matrix.rid }}

@@ -117,7 +117,7 @@
             <!-- Bus view (#1068): indexed families (A0–A3) collapse into a bus header
                  line showing the decimal value with an editable quick-set field; plain
                  names keep their single toggle. -->
-            <ItemsControl ItemsSource="{Binding RightPanel.Logic.InputRows}">
+            <ItemsControl x:Name="LogicInputRows" ItemsSource="{Binding RightPanel.Logic.InputRows}">
                 <ItemsControl.DataTemplates>
                     <DataTemplate x:DataType="logic:LogicNetworkInputViewModel">
                         <CheckBox Content="{Binding PinName}" IsChecked="{Binding IsOn}"
@@ -150,7 +150,7 @@
                 <!-- What is a cell instance? (#1411): one template, stamped N times,
                      each copy keeping its own registers — shown only when the built
                      network actually contains cell groups. -->
-                <controls:HelpFlyoutButton Grid.Column="1"
+                <controls:HelpFlyoutButton x:Name="LogicCellInstanceHelpButton" Grid.Column="1"
                                            Title="{loc:Localize LogicPanelCellHelp.Title}"
                                            VerticalAlignment="Center" Margin="4,-4,0,0"
                                            IsVisible="{Binding RightPanel.Logic.HasCellGroups}">
@@ -159,7 +159,7 @@
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
             </Grid>
-            <ItemsControl ItemsSource="{Binding RightPanel.Logic.OutputRows}">
+            <ItemsControl x:Name="LogicOutputRows" ItemsSource="{Binding RightPanel.Logic.OutputRows}">
                 <ItemsControl.DataTemplates>
                     <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
                         <StackPanel Orientation="Horizontal" Margin="0,1">

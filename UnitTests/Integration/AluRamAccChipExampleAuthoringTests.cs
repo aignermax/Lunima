@@ -69,6 +69,7 @@ public class AluRamAccChipExampleAuthoringTests
         double baseChipHeight = canvas.ChipMaxY;
 
         var accGroup = await BuildAccumulatorRegisterGroup();
+        AluRamChipExampleAuthoringTests.RenameCollidingIdentifiers(accGroup, canvas.Components.Select(vm => vm.Component));
 
         // Place the register below the existing blocks; MoveGroup translates the
         // frozen intra-bit routes along, so nothing re-routes.
@@ -226,11 +227,11 @@ public class AluRamAccChipExampleAuthoringTests
         int blockedTotal = issues.Count(i => i.Type == DesignIssueType.BlockedPath);
         Report($"[author] {ExampleFileName}: blockedTopLevel={blockedTopLevel} blockedTotal={blockedTotal} " +
             "— pin these in ExampleLoadRoutingTests.KnownBlockedWires / ExampleFrozenBlockedPathTests.KnownBlockedPathCounts");
-        blockedTopLevel.ShouldBe(12,
+        blockedTopLevel.ShouldBe(5,
             "the top level still carries the 4-bit adder's pinned blocked wires alone; " +
             "the RAM's and the register's wires are frozen inside their groups");
-        blockedTotal.ShouldBe(36,
-            "36 as on ALU + RAM — the Logic Gate Bit cells ship zero blocked wires to freeze");
+        blockedTotal.ShouldBe(34,
+            "34 as on ALU + RAM — the Logic Gate Bit cells ship zero blocked wires to freeze");
     }
 
     private void Report(string line)

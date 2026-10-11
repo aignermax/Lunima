@@ -103,6 +103,13 @@ public partial class HomeViewModel : ObservableObject
     public Func<Task>? WatchComputeTourRequested { get; set; }
 
     /// <summary>
+    /// Callback to start the "Store a number in light" guided tour (issue #1422):
+    /// opens the shipped RAM 2x4 example as an untitled copy and activates the
+    /// tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? StoreNumberTourRequested { get; set; }
+
+    /// <summary>
     /// Callback to start the "Run a program on your chip" guided tour
     /// (issue #1267): opens the shipped 4-bit adder example as an untitled copy
     /// and activates the tour only when that succeeds.
@@ -145,10 +152,13 @@ public partial class HomeViewModel : ObservableObject
         TourEntries.Add(new HomeTourEntry(2, "⏱",
             "Home.WatchComputeTour", "Home.Learn.WatchComputeDescription",
             "Home.WatchComputeTourTip", WatchComputeTourCommand));
-        TourEntries.Add(new HomeTourEntry(3, "🧮",
+        TourEntries.Add(new HomeTourEntry(3, "💾",
+            "Home.StoreNumberTour", "Home.Learn.StoreNumberDescription",
+            "Home.StoreNumberTourTip", StoreNumberTourCommand));
+        TourEntries.Add(new HomeTourEntry(4, "🧮",
             "Home.RunProgramTour", "Home.Learn.RunProgramDescription",
             "Home.RunProgramTourTip", RunProgramTourCommand));
-        TourEntries.Add(new HomeTourEntry(4, "🔗",
+        TourEntries.Add(new HomeTourEntry(5, "🔗",
             "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
             "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
     }
@@ -313,6 +323,13 @@ public partial class HomeViewModel : ObservableObject
     {
         if (WatchComputeTourRequested != null)
             await WatchComputeTourRequested();
+    }
+
+    [RelayCommand]
+    private async Task StoreNumberTour()
+    {
+        if (StoreNumberTourRequested != null)
+            await StoreNumberTourRequested();
     }
 
     [RelayCommand]

@@ -27,6 +27,9 @@ namespace UnitTests.Export.OpenEbl;
 /// </summary>
 internal static class EBeamFromScratchMziDesign
 {
+    /// <summary>A repair budget no routing pass of this fixture ever reaches.</summary>
+    private static readonly TimeSpan UnboundedRepairBudget = TimeSpan.FromMinutes(5);
+
     internal const string EBeamPdkName = "SiEPIC EBeam PDK";
     internal const string GratingCouplerTemplate = "Grating Coupler TE 1550";
     internal const string YBranchTemplate = "Y-Branch 1550";
@@ -56,6 +59,10 @@ internal static class EBeamFromScratchMziDesign
         IReadOnlyList<ComponentTemplate> templates)
     {
         var canvas = new DesignCanvasViewModel();
+        // The contention repair stops at a wall-clock budget; on a loaded CI runner it would
+        // stop earlier than on a desktop and leave different routes behind. The pinned routing
+        // outcome must not depend on machine speed.
+        canvas.ConnectionManager.ContentionRepairTimeBudget = UnboundedRepairBudget;
         canvas.ChipMinX = 0;
         canvas.ChipMinY = 0;
         canvas.ChipMaxX = ChipWidthMicrometers;
