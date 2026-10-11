@@ -1,49 +1,54 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              x:Class="CAP.Avalonia.Controls.HelpFlyoutButton"
              x:Name="Root">
 
-    <!-- Reusable "?" help button (#682): lets any panel/window attach its own
-         help content (plain-language sections, an illustrative animation, ...)
-         without hand-rolling a Button + Flyout pair each time. Generalizes the
-         one-off pattern in CAP.Avalonia/Views/Panels/TransientHelpFlyout.axaml.
-         The flyout content fades/slides into place on open; see AnimateEntrance()
-         in the code-behind. -->
+    <!-- Reusable help button: a quiet ghost icon button that opens an overlay card with a
+         title and caller-supplied content (short text + illustrative animation). The card
+         content fades/slides in on open; see AnimateEntrance() in the code-behind. -->
 
-    <Button x:Name="HelpButton"
-            Width="22" Height="22" Padding="0"
-            CornerRadius="11"
-            Background="#333338"
-            BorderBrush="#5a5a60"
-            BorderThickness="1"
-            HorizontalContentAlignment="Center"
-            VerticalContentAlignment="Center"
+    <UserControl.Styles>
+        <Style Selector="Button.help">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource Radius.Pill}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
+        </Style>
+        <Style Selector="Button.help:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+        </Style>
+        <Style Selector="FlyoutPresenter.help">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Overlay}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource Radius.L}"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MaxWidth" Value="440"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Button x:Name="HelpButton" Classes="ghost help"
             ToolTip.Tip="{Binding Title, ElementName=Root, FallbackValue=Help}">
-
-        <Button.Styles>
-            <Style Selector="Button:pointerover /template/ ContentPresenter">
-                <Setter Property="Background" Value="#45454c"/>
-            </Style>
-        </Button.Styles>
-
-        <TextBlock Text="?" FontSize="12" FontWeight="Bold" Foreground="#cfcfd6"/>
+        <controls:Icon Data="{StaticResource Icon.CircleHelp}" Size="16"/>
 
         <Button.Flyout>
-            <Flyout Placement="Bottom" ShowMode="Standard">
-                <Border Background="#1a1a1a" BorderBrush="#3d3d3d" BorderThickness="1"
-                        CornerRadius="6" MaxWidth="440" MaxHeight="460">
-                    <ScrollViewer MaxWidth="440" MaxHeight="460">
-                        <StackPanel Margin="14" Spacing="8">
-                            <TextBlock x:Name="TitleText"
-                                       Text="{Binding Title, ElementName=Root}"
-                                       FontWeight="Bold" FontSize="13" Foreground="White"
-                                       TextWrapping="Wrap"
-                                       IsVisible="{Binding Title, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                            <ContentPresenter x:Name="ContentHost"
-                                              Content="{Binding HelpContent, ElementName=Root}"/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
+            <Flyout Placement="Bottom" ShowMode="Standard" FlyoutPresenterClasses="help">
+                <ScrollViewer MaxWidth="440" MaxHeight="460">
+                    <StackPanel Margin="{DynamicResource Padding.Card}" Spacing="8">
+                        <TextBlock x:Name="TitleText" Classes="subtitle"
+                                   Text="{Binding Title, ElementName=Root}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding Title, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <ContentPresenter x:Name="ContentHost"
+                                          Content="{Binding HelpContent, ElementName=Root}"/>
+                    </StackPanel>
+                </ScrollViewer>
             </Flyout>
         </Button.Flyout>
     </Button>

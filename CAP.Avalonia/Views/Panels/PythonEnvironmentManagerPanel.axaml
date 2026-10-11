@@ -1,30 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.PythonEnvironmentManagerPanel"
              x:DataType="vm:PythonEnvironmentManagerViewModel">
 
     <StackPanel x:Name="PanelRoot">
-        <TextBlock Text="{loc:Localize PyEnvMgr.Title}" Foreground="LightSkyBlue"
-                   Margin="0,0,0,5" FontWeight="SemiBold"/>
-        <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"
+        <TextBlock Classes="subtitle" Text="{loc:Localize PyEnvMgr.Title}" Margin="0,0,0,4"/>
+        <TextBlock Classes="caption" Margin="0,0,0,8" TextWrapping="Wrap"
                    Text="{loc:Localize PyEnvMgr.Description}"/>
 
         <!-- Create new managed environment (#645); the name is auto-generated from the version (#698). -->
-        <TextBlock Text="{loc:Localize PyEnvMgr.CreateHeading}" Foreground="Gray" FontSize="10"
+        <TextBlock Classes="caption" Text="{loc:Localize PyEnvMgr.CreateHeading}"
                    Margin="0,0,0,4"/>
         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
-            <TextBlock Text="Python:" Foreground="Gray" FontSize="11"
+            <TextBlock Classes="caption" Text="Python:"
                        VerticalAlignment="Center" Width="50"/>
             <ComboBox ItemsSource="{Binding PythonVersionChoices}"
                       SelectedItem="{Binding PythonVersion}"
-                      Width="90" FontSize="11"
+                      Width="90"
                       ToolTip.Tip="{loc:Localize PyEnvMgr.AutoNameTip}"/>
         </StackPanel>
-        <Button Content="{loc:Localize PyEnvMgr.CreateInstall}"
-                Command="{Binding CreateAndInstallCommand}"
-                Background="#3d5d7d" FontSize="11" Margin="0,0,0,6"
+        <Button Classes="primary" Content="{loc:Localize PyEnvMgr.CreateInstall}"
+                Command="{Binding CreateAndInstallCommand}" Margin="0,0,0,6"
                 ToolTip.Tip="{loc:Localize PyEnvMgr.CreateInstallTip}"
                 IsEnabled="{Binding IsBusy,
                                     Converter={x:Static BoolConverters.Not}}"/>
@@ -32,22 +31,19 @@
         <!-- Progress and cancel -->
         <StackPanel IsVisible="{Binding IsBusy}" Margin="0,0,0,4">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="{Binding ProgressText}"
-                           Foreground="LightSkyBlue" FontSize="10" TextWrapping="Wrap"/>
+                <TextBlock Classes="caption" Text="{Binding ProgressText}" TextWrapping="Wrap"/>
                 <Button Content="{loc:Localize Common.Cancel}"
                         Command="{Binding CancelCommand}"
-                        FontSize="10" Padding="6,2" Background="#5d3d3d"
                         IsEnabled="{Binding CanCancel}"/>
             </StackPanel>
         </StackPanel>
 
         <!-- Unified interpreter list: managed environments (with health + remove) and
              discovered system Pythons, each activatable the same way (issue #645). -->
-        <Separator Margin="0,6,0,6" Background="#2d2d2d"/>
+        <Border Classes="divider" Margin="0,8"/>
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
-            <TextBlock Grid.Column="0" Text="{loc:Localize PyEnvMgr.AvailableInterpreters}"
-                       Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Content="{loc:Localize PyEnvMgr.Rescan}" Padding="10,3" FontSize="11"
+            <TextBlock Classes="caption" Grid.Column="0" Text="{loc:Localize PyEnvMgr.AvailableInterpreters}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="{loc:Localize PyEnvMgr.Rescan}"
                     Command="{Binding RefreshInterpretersCommand}"
                     ToolTip.Tip="{loc:Localize PyEnvMgr.RescanTip}"
                     IsEnabled="{Binding IsDiscoveringInterpreters,
@@ -57,22 +53,20 @@
         <!-- Prominent scanning indicator: discovery shells out to every candidate Python and
              can take several seconds, so show an animated bar + explanation (issue #645). -->
         <Border IsVisible="{Binding IsDiscoveringInterpreters}"
-                Background="#20303d" CornerRadius="4" Padding="8,6" Margin="0,0,0,6">
+                Classes="card" Padding="8,6" Margin="0,0,0,6">
             <StackPanel Spacing="5">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="🔍" FontSize="12" VerticalAlignment="Center"/>
+                    <controls:Icon Data="{StaticResource Icon.Search}" Foreground="{DynamicResource Brush.Info}"/>
                     <TextBlock Text="{loc:Localize PyEnvMgr.Searching}"
-                               Foreground="LightSkyBlue" FontSize="11" FontWeight="SemiBold"
+                               Classes="strong"
                                VerticalAlignment="Center"/>
                 </StackPanel>
-                <TextBlock Text="{loc:Localize PyEnvMgr.Probing}"
-                           Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
-                <ProgressBar IsIndeterminate="True" Height="4" Foreground="LightSkyBlue"/>
+                <TextBlock Classes="caption" Text="{loc:Localize PyEnvMgr.Probing}" TextWrapping="Wrap"/>
+                <ProgressBar IsIndeterminate="True" Height="4" Foreground="{DynamicResource Brush.Info}"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize PyEnvMgr.NoInterpreters}"
-                   Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,4"
+        <TextBlock Classes="caption" Text="{loc:Localize PyEnvMgr.NoInterpreters}" TextWrapping="Wrap" Margin="0,0,0,4"
                    IsVisible="{Binding ShowNoInterpretersHint}"/>
 
         <ScrollViewer MaxHeight="260" Margin="0,0,0,6"
@@ -85,8 +79,7 @@
                         <!-- Cap at PanelRoot's arranged width: the host's padded ScrollViewer measures
                              this row ~48px too wide (Avalonia deflates Padding only at arrange), which
                              pushed the action buttons past the viewport (issue #698). -->
-                        <Border Background="#1e1e1e" BorderBrush="#3d3d3d" BorderThickness="1"
-                                CornerRadius="3" Margin="0,2,0,0" Padding="6,4"
+                        <Border Classes="card" Margin="0,2,0,0" Padding="8,6"
                                 MaxWidth="{Binding #PanelRoot.Bounds.Width}">
                             <Grid ColumnDefinitions="*,Auto,Auto,Auto" VerticalAlignment="Center">
                                 <!-- Interpreter info (not clickable — activation is an explicit button) -->
@@ -95,16 +88,15 @@
                                 <StackPanel Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center"
                                             ClipToBounds="True">
                                     <Grid ColumnDefinitions="Auto,*">
-                                        <Border Grid.Column="0" CornerRadius="3" Padding="4,1" Background="#333333"
+                                        <Border Grid.Column="0" Classes="chip" Classes.success="{Binding IsHealthy}"
+                                                Classes.danger="{Binding IsBroken}" Classes.warning="{Binding IsInProgress}"
                                                 VerticalAlignment="Top" Margin="0,0,6,0"
                                                 IsVisible="{Binding HasStatusBadge}">
-                                            <TextBlock Text="{Binding StatusBadge}"
-                                                       Foreground="{Binding StatusColor}" FontSize="10"/>
+                                            <TextBlock Text="{Binding StatusBadge}"/>
                                         </Border>
-                                        <TextBlock Grid.Column="1" Text="{Binding DisplayText}" Foreground="LightGray"
-                                                   FontSize="11" TextWrapping="Wrap"/>
+                                        <TextBlock Classes="secondary" Grid.Column="1" Text="{Binding DisplayText}" TextWrapping="Wrap"/>
                                     </Grid>
-                                    <TextBlock Text="{Binding Path}" Foreground="Gray" FontSize="10"
+                                    <TextBlock Classes="caption" Text="{Binding Path}"
                                                TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
                                                ToolTip.Tip="{Binding Path}"/>
                                 </StackPanel>
@@ -112,10 +104,10 @@
                                 <!-- Currently active: static indicator -->
                                 <Border Grid.Column="1" IsVisible="{Binding IsActive}"
                                         VerticalAlignment="Center" Margin="2,0,0,0"
-                                        CornerRadius="3" Padding="8,3" Background="#2e4d2e">
+                                        CornerRadius="{DynamicResource Radius.S}" Padding="8,3" Background="{DynamicResource Brush.Success.Subtle}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="✓" Foreground="Gold" FontWeight="Bold" FontSize="11"/>
-                                        <TextBlock Text="{loc:Localize PyEnvMgr.Active}" Foreground="#a8e0a8" FontSize="11"/>
+                                        <controls:Icon Data="{StaticResource Icon.Check}" Size="14" Foreground="{DynamicResource Brush.Success}" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="secondary" Text="{loc:Localize PyEnvMgr.Active}"/>
                                     </StackPanel>
                                 </Border>
 
@@ -125,7 +117,6 @@
                                         Command="{Binding #InterpretersList.DataContext.SetActiveInterpreterCommand}"
                                         CommandParameter="{Binding}"
                                         VerticalAlignment="Center" Margin="2,0,0,0"
-                                        Padding="10,3" FontSize="11" Background="#3d5d3d"
                                         ToolTip.Tip="{loc:Localize PyEnvMgr.SetActiveTip}"/>
 
                                 <!-- Managed-only: health check -->
@@ -134,17 +125,17 @@
                                         CommandParameter="{Binding}"
                                         IsVisible="{Binding IsManaged}"
                                         VerticalAlignment="Center" Margin="4,0,0,0"
-                                        Padding="8,3" FontSize="10" Background="#3d4d5d"
                                         ToolTip.Tip="{loc:Localize PyEnvMgr.CheckTip}"/>
 
                                 <!-- Managed-only: remove -->
-                                <Button Grid.Column="3" Content="✕"
+                                <Button Classes="ghost icon" Grid.Column="3"
                                         Command="{Binding #InterpretersList.DataContext.RemoveInterpreterCommand}"
                                         CommandParameter="{Binding}"
                                         IsVisible="{Binding IsManaged}"
                                         VerticalAlignment="Center" Margin="4,0,0,0"
-                                        Padding="8,3" FontSize="10" Background="#5d3d3d"
-                                        ToolTip.Tip="{loc:Localize PyEnvMgr.RemoveTip}"/>
+                                        ToolTip.Tip="{loc:Localize PyEnvMgr.RemoveTip}">
+                <controls:Icon Data="{StaticResource Icon.X}"/>
+            </Button>
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -153,8 +144,7 @@
         </ScrollViewer>
 
         <!-- Status (idle) -->
-        <TextBlock Text="{Binding ProgressText}"
-                   Foreground="Gray" FontSize="10" TextWrapping="Wrap"
+        <TextBlock Classes="caption" Text="{Binding ProgressText}" TextWrapping="Wrap"
                    IsVisible="{Binding IsBusy,
                                        Converter={x:Static BoolConverters.Not}}"
                    Margin="0,0,0,4"/>

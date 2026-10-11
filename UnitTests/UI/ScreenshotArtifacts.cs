@@ -1,4 +1,6 @@
+using Avalonia.Headless;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 
 namespace UnitTests.UI;
 
@@ -13,6 +15,23 @@ namespace UnitTests.UI;
 /// </summary>
 internal static class ScreenshotArtifacts
 {
+    /// <summary>
+    /// Lets entrance animations (up to 250 ms) run to their end value before a capture, so a
+    /// frame never shows a view mid-fade. Waits wall-clock time because the headless
+    /// animation clock follows the render timer, which follows real time.
+    /// </summary>
+    public static void SettleAnimations()
+    {
+        const int Ticks = 20;
+        const int TickDelayMilliseconds = 20;
+        for (var i = 0; i < Ticks; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Thread.Sleep(TickDelayMilliseconds);
+        }
+    }
+
     /// <summary>
     /// Set <c>CAP_UPDATE_PR_MEDIA=1</c> to refresh the published <c>docs/pr-media</c>
     /// screenshots; ordinary test runs write to a temp directory instead.

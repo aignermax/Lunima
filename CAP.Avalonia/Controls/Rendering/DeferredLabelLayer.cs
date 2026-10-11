@@ -11,11 +11,10 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// without deferral, a later component's body fill covers an earlier component's name label
 /// (and every connection label), so labels ended up underneath neighboring components.
 /// <para>
-/// Every flushed label is drawn twice: first in a near-black "halo" offset by one screen
-/// pixel, then in its original foreground on top — the cheap outline that keeps light label
-/// text readable on whitish GDS previews and selected connections without a background box.
-/// The halo is only a thin offset copy, so on the dark canvas background it is invisible and
-/// the label reads exactly as before.
+/// Every flushed label sits on a small rounded backplate (the canvas background, mostly
+/// opaque) so it stays legible over GDS geometry and waveguides, and is then drawn twice:
+/// first in a near-black "halo" offset by one screen pixel, then in its original foreground
+/// on top — the outline that keeps light text readable where it overhangs its plate.
 /// </para>
 /// </summary>
 public sealed class DeferredLabelLayer
@@ -27,7 +26,16 @@ public sealed class DeferredLabelLayer
 
     /// <summary>Near-black halo brush: dark enough to separate light label text from whitish
     /// component fills. Shared by all labels — one static brush, zero per-frame allocation.</summary>
-    private static readonly IBrush HaloBrush = new SolidColorBrush(Color.FromArgb(255, 16, 16, 20));
+    private static readonly IBrush HaloBrush = CanvasPalette.Brush(CanvasPalette.Gray950);
+
+    /// <summary>Backplate padding around the text, in screen pixels (horizontal, vertical).</summary>
+    internal const double BackplatePadXPx = 3.0;
+
+    /// <inheritdoc cref="BackplatePadXPx"/>
+    internal const double BackplatePadYPx = 0.5;
+
+    /// <summary>Backplate corner radius in screen pixels.</summary>
+    private const double BackplateRadiusPx = 3.0;
 
     private readonly List<QueuedLabel> _pending = new();
 
@@ -55,12 +63,30 @@ public sealed class DeferredLabelLayer
     /// </summary>
     public void Flush(DrawingContext context, double zoom)
     {
-        foreach (var draw in BuildDrawOperations(zoom))
+        double safeZoom = zoom <= 0 ? 1.0 : zoom;
+        double radius = BackplateRadiusPx / safeZoom;
+        var draws = BuildDrawOperations(zoom);
+        for (int i = 0; i < _pending.Count; i++)
         {
-            draw.Text.SetForegroundBrush(draw.Brush);
-            context.DrawText(draw.Text, draw.Origin);
+            context.DrawRectangle(CanvasPalette.LabelBackplateBrush, null, BuildBackplate(_pending[i], zoom), radius, radius);
+            for (int copy = 2 * i; copy < 2 * i + 2; copy++)
+            {
+                draws[copy].Text.SetForegroundBrush(draws[copy].Brush);
+                context.DrawText(draws[copy].Text, draws[copy].Origin);
+            }
         }
         _pending.Clear();
+    }
+
+    /// <summary>World-space backplate behind a queued label: its text bounds grown by the
+    /// screen-constant padding.</summary>
+    internal static Rect BuildBackplate(QueuedLabel label, double zoom)
+    {
+        double safeZoom = zoom <= 0 ? 1.0 : zoom;
+        double padX = BackplatePadXPx / safeZoom;
+        double padY = BackplatePadYPx / safeZoom;
+        return new Rect(label.Origin.X - padX, label.Origin.Y - padY,
+            label.Text.WidthIncludingTrailingWhitespace + 2 * padX, label.Text.Height + 2 * padY);
     }
 
     /// <summary>

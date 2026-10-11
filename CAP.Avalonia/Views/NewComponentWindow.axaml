@@ -13,116 +13,118 @@
         Title="{Binding WindowTitle}"
         Width="640" Height="920"
         MinWidth="560" MinHeight="700"
-        WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16" LastChildFill="True">
+    <Grid RowDefinitions="*,Auto">
 
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
-            <Button Content="{Binding SaveButtonLabel}" Command="{Binding SaveCommand}"
-                    MinWidth="130" Padding="14,4" Background="#2a4a2a"
-                    ToolTip.Tip="{loc:Localize NewComponent.SaveTip}"/>
-        </StackPanel>
-
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       AllowAutoHide="False">
-            <StackPanel Spacing="10">
+            <StackPanel Margin="24" Spacing="24">
 
-                <Border Background="#2a2440" CornerRadius="3" Padding="8,5" IsVisible="{Binding IsEditMode}">
+                <Border Classes="card" Background="{DynamicResource Brush.Accent.Subtle}"
+                        IsVisible="{Binding IsEditMode}">
                     <StackPanel Spacing="2">
-                        <TextBlock Text="{loc:Localize NewComponent.EditModeHeader}"
-                                   FontWeight="Bold" FontSize="11" Foreground="#c9b3ff"/>
-                        <TextBlock Text="{loc:Localize NewComponent.EditModeDescription}"
-                                   FontSize="10" Foreground="#9aa0b0" TextWrapping="Wrap"/>
+                        <TextBlock Classes="strong accent" Text="{loc:Localize NewComponent.EditModeHeader}"/>
+                        <TextBlock Classes="caption" TextWrapping="Wrap"
+                                   Text="{loc:Localize NewComponent.EditModeDescription}"/>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="PDK" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
-                <ComboBox ItemsSource="{Binding PdkChoices}"
-                          SelectedItem="{Binding SelectedPdkChoice}"
-                          Background="#2d2d2d" Foreground="White" HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PdkChoice">
-                            <TextBlock Text="{Binding DisplayName}"/>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <!-- Target: PDK, process, name -->
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="*,16,*">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="label" Text="PDK"/>
+                            <ComboBox ItemsSource="{Binding PdkChoices}"
+                                      SelectedItem="{Binding SelectedPdkChoice}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PdkChoice">
+                                        <TextBlock Text="{Binding DisplayName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Classes="label" Text="{loc:Localize NewComponent.FabricationProcess}"/>
+                            <TextBlock Classes="secondary" Text="{Binding SelectedProcess.Name}"
+                                       Height="28" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{loc:Localize NewComponent.Name}"/>
+                        <TextBox Text="{Binding ComponentName}"/>
+                    </StackPanel>
+                </StackPanel>
 
-                <Separator Background="#3d3d3d"/>
+                <!-- Structure: code, backend, preview -->
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Grid.Column="0" Classes="label" Text="{loc:Localize NewComponent.StructureLabel}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HelpFlyoutButton Grid.Column="1" Title="{loc:Localize NewComponent.HelpTitle}"
+                                                   Margin="0,0,8,0">
+                            <controls:HelpFlyoutButton.HelpContent>
+                                <panels:NewComponentHelpFlyout/>
+                            </controls:HelpFlyoutButton.HelpContent>
+                        </controls:HelpFlyoutButton>
+                        <Button Grid.Column="2" Classes="ghost" Command="{Binding LoadCodeFromFileCommand}"
+                                ToolTip.Tip="{loc:Localize NewComponent.LoadFromPyTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <controls:Icon Data="{StaticResource Icon.FileInput}"/>
+                                <TextBlock Text="{loc:Localize NewComponent.LoadFromPy}"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
-                <TextBlock Text="{loc:Localize NewComponent.FabricationProcess}" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Text="{Binding SelectedProcess.Name}" Foreground="White" FontSize="12"/>
+                    <Border Classes="card" Padding="0" ClipToBounds="True">
+                        <edit:TextEditor behaviors:TextEditorBindingBehavior.BoundText="{Binding Code, Mode=TwoWay}"
+                                         ShowLineNumbers="True"
+                                         WordWrap="False"
+                                         FontFamily="{DynamicResource Font.Mono}"
+                                         FontSize="{DynamicResource FontSize.Caption}"
+                                         Height="200"
+                                         Background="{DynamicResource Brush.Surface.Input}"
+                                         Foreground="{DynamicResource Brush.Text.Primary}"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         VerticalScrollBarVisibility="Auto"/>
+                    </Border>
 
-                <Separator Background="#3d3d3d"/>
+                    <Grid ColumnDefinitions="Auto,8,*,8,Auto">
+                        <TextBlock Grid.Column="0" Classes="secondary" Text="{loc:Localize NewComponent.Backend}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="2"
+                                  ItemsSource="{Binding AvailableBackends}"
+                                  SelectedItem="{Binding SelectedBackend}"
+                                  HorizontalAlignment="Stretch"/>
+                        <Button Grid.Column="4" Content="{loc:Localize NewComponent.Preview}"
+                                Command="{Binding RunPreviewCommand}"
+                                ToolTip.Tip="{loc:Localize NewComponent.PreviewTip}"/>
+                    </Grid>
 
-                <TextBlock Text="{loc:Localize NewComponent.Name}" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
-                <TextBox Text="{Binding ComponentName}" Background="#2d2d2d" Foreground="White"/>
+                    <Image x:Name="PreviewThumbnail"
+                           Source="{Binding PreviewBitmap}"
+                           Height="120"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Left"
+                           Cursor="Hand"
+                           IsVisible="{Binding PreviewBitmap, Converter={x:Static ObjectConverters.IsNotNull}}"
+                           PointerPressed="OnPreviewThumbnailPointerPressed"
+                           ToolTip.Tip="{loc:Localize NewComponent.ClickToEnlarge}"/>
+                </StackPanel>
 
-                <Separator Background="#3d3d3d"/>
+                <!-- S-matrix -->
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="S-matrix"/>
 
-                <Grid ColumnDefinitions="*,Auto,Auto">
-                    <TextBlock Grid.Column="0" Text="{loc:Localize NewComponent.StructureLabel}" Foreground="#aaaaaa" FontSize="11"
-                               FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <controls:HelpFlyoutButton Grid.Column="1" Title="{loc:Localize NewComponent.HelpTitle}" Margin="0,0,6,0">
-                        <controls:HelpFlyoutButton.HelpContent>
-                            <!-- Short sections + looping code→component→canvas diagram (#1171). -->
-                            <panels:NewComponentHelpFlyout/>
-                        </controls:HelpFlyoutButton.HelpContent>
-                    </controls:HelpFlyoutButton>
-                    <Button Grid.Column="2" Content="{loc:Localize NewComponent.LoadFromPy}" Command="{Binding LoadCodeFromFileCommand}"
-                            Background="#3d4d6d" FontSize="11"
-                            ToolTip.Tip="{loc:Localize NewComponent.LoadFromPyTip}"/>
-                </Grid>
-
-                <edit:TextEditor behaviors:TextEditorBindingBehavior.BoundText="{Binding Code, Mode=TwoWay}"
-                                  ShowLineNumbers="True"
-                                  WordWrap="False"
-                                  FontFamily="Consolas, Cascadia Mono, Courier New, monospace"
-                                  FontSize="11"
-                                  Height="200"
-                                  Background="#151515" Foreground="#dddddd"
-                                  BorderBrush="#3d3d3d" BorderThickness="1"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Auto"/>
-
-                <Grid ColumnDefinitions="Auto,8,*,8,Auto">
-                    <TextBlock Grid.Column="0" Text="{loc:Localize NewComponent.Backend}" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Column="2"
-                              ItemsSource="{Binding AvailableBackends}"
-                              SelectedItem="{Binding SelectedBackend}"
-                              Background="#2d2d2d" Foreground="White" HorizontalAlignment="Stretch"/>
-                    <Button Grid.Column="4" Content="{loc:Localize NewComponent.Preview}" Command="{Binding RunPreviewCommand}"
-                            Width="90" Background="#3d4d6d"
-                            ToolTip.Tip="{loc:Localize NewComponent.PreviewTip}"/>
-                </Grid>
-
-                <Image x:Name="PreviewThumbnail"
-                       Source="{Binding PreviewBitmap}"
-                       Height="120"
-                       Stretch="Uniform"
-                       HorizontalAlignment="Left"
-                       Cursor="Hand"
-                       IsVisible="{Binding PreviewBitmap, Converter={x:Static ObjectConverters.IsNotNull}}"
-                       PointerPressed="OnPreviewThumbnailPointerPressed"
-                       ToolTip.Tip="{loc:Localize NewComponent.ClickToEnlarge}"/>
-
-                <Separator Background="#3d3d3d"/>
-
-                <TextBlock Text="S-matrix" Foreground="#aaaaaa" FontSize="11" FontWeight="SemiBold"/>
-                <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <!-- Split button: compute with the selected backend; ▼ picks the backend. -->
-                        <StackPanel Orientation="Horizontal" Spacing="0">
+                        <!-- Split button: compute with the selected backend; the chevron picks the backend. -->
+                        <StackPanel Orientation="Horizontal" Spacing="4">
                             <Button Content="{Binding ComputeButtonLabel}" Command="{Binding ComputeSMatrixCommand}"
-                                    Padding="12,2" Height="26" Background="#3d4d6d"
+                                   
                                     ToolTip.Tip="{loc:Localize NewComponent.ComputeTip}"/>
-                            <Button Content="▼"
-                                    Padding="8,2" Height="26"
-                                    FontSize="9"
-                                    Background="#2d3d5d"
-                                    VerticalContentAlignment="Center"
+                            <Button
                                     IsVisible="{Binding HasBackendSelection}"
                                     ToolTip.Tip="{loc:Localize CompSettings.BackendPickerTip}">
                                 <Button.IsEnabled>
@@ -131,40 +133,33 @@
                                         <Binding Path="IsAwaitingCloudConfirmation" Converter="{x:Static BoolConverters.Not}"/>
                                     </MultiBinding>
                                 </Button.IsEnabled>
+                                <controls:Icon Data="{StaticResource Icon.ChevronDown}" Size="12"/>
                                 <Button.Flyout>
                                     <Flyout Placement="BottomEdgeAlignedLeft">
-                                        <StackPanel MinWidth="280" Margin="6" Spacing="2">
-                                            <TextBlock Text="{loc:Localize CompSettings.ChooseFdtdBackend}"
-                                                       Foreground="Gray" FontSize="11" Margin="0,0,0,6"/>
+                                        <StackPanel MinWidth="280" Margin="6" Spacing="4">
+                                            <TextBlock Classes="label" Margin="0,0,0,4"
+                                                       Text="{loc:Localize CompSettings.ChooseFdtdBackend}"/>
                                             <ItemsControl ItemsSource="{Binding BackendSelection.BackendItems}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="solvers:FdtdBackendItemViewModel">
-                                                        <Button HorizontalAlignment="Stretch"
+                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
                                                                 HorizontalContentAlignment="Left"
-                                                                Margin="0,2" Padding="10,4"
-                                                                Background="#2b2b3d"
+                                                                Margin="0,2"
                                                                 Command="{Binding SelectCommand}">
                                                             <Grid ColumnDefinitions="22,*">
-                                                                <TextBlock Grid.Column="0"
+                                                                <TextBlock Grid.Column="0" Classes="success"
                                                                            Text="{Binding SelectionMark}"
-                                                                           Foreground="#88ccaa"
-                                                                           FontSize="12"
-                                                                           VerticalAlignment="Top"
-                                                                           Margin="0,1,0,0"/>
+                                                                           VerticalAlignment="Top"/>
                                                                 <StackPanel Grid.Column="1">
                                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                        <TextBlock Text="{Binding Icon}" FontSize="13"/>
-                                                                        <TextBlock Text="{Binding Name}"
-                                                                                   Foreground="White"
-                                                                                   FontWeight="SemiBold"
-                                                                                   FontSize="12"
+                                                                        <TextBlock Text="{Binding Icon}"/>
+                                                                        <TextBlock Classes="strong"
+                                                                                   Foreground="{DynamicResource Brush.Text.Primary}"
+                                                                                   Text="{Binding Name}"
                                                                                    VerticalAlignment="Center"/>
                                                                     </StackPanel>
-                                                                    <TextBlock Text="{Binding Description}"
-                                                                               Foreground="#aaaaaa"
-                                                                               FontSize="9"
-                                                                               TextWrapping="Wrap"
-                                                                               MaxWidth="230"/>
+                                                                    <TextBlock Classes="caption" Text="{Binding Description}"
+                                                                               TextWrapping="Wrap" MaxWidth="230"/>
                                                                 </StackPanel>
                                                             </Grid>
                                                         </Button>
@@ -176,48 +171,29 @@
                                 </Button.Flyout>
                             </Button>
                         </StackPanel>
-                        <Button Content="{loc:Localize NewComponent.LoadFromFile}" Command="{Binding LoadSMatrixFromFileCommand}"
-                                Background="#3d5d3d"
+                        <Button Content="{loc:Localize NewComponent.LoadFromFile}"
+                                Command="{Binding LoadSMatrixFromFileCommand}"
                                 ToolTip.Tip="{loc:Localize NewComponent.LoadSMatrixTip}"/>
-                        <Button Content="{loc:Localize NewComponent.ShowStoredSMatrices}" Command="{Binding ShowSMatricesCommand}"
-                                Background="#3d3d5d"
+                        <Button Classes="ghost" Content="{loc:Localize NewComponent.ShowStoredSMatrices}"
+                                Command="{Binding ShowSMatricesCommand}"
                                 ToolTip.Tip="{loc:Localize NewComponent.ShowStoredSMatricesTip}"/>
                     </StackPanel>
 
-                    <!-- Amber hint when the selected backend can't run yet (Docker down / no API key). -->
-                    <Border Background="#26261a"
-                            BorderBrush="#5d5330"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="8,6"
+                    <!-- Hint when the selected backend can't run yet (Docker down / no API key). -->
+                    <Border Classes="card" Background="{DynamicResource Brush.Warning.Subtle}" Padding="12,8"
                             IsVisible="{Binding BackendSelection.HasAvailabilityHint, FallbackValue=False}">
                         <StackPanel Spacing="4"
                                     DataContext="{Binding BackendSelection}"
                                     x:DataType="solvers:FdtdBackendSelectionViewModel">
-                            <TextBlock Text="{Binding AvailabilityHint}"
-                                       Foreground="#ccaa66"
-                                       FontSize="10"
-                                       TextWrapping="Wrap"/>
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <Button Content="{loc:Localize CompSettings.Tidy3dGetKeyLink}"
+                            <TextBlock Classes="warning" Text="{Binding AvailabilityHint}" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <Button Classes="link" Content="{loc:Localize CompSettings.Tidy3dGetKeyLink}"
                                         Command="{Binding OpenTidy3dPortalCommand}"
-                                        Padding="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="#7faaff"
-                                        FontSize="10"
                                         HorizontalAlignment="Left"
-                                        Cursor="Hand"
                                         IsVisible="{Binding ShowMissingKeyLink}"/>
-                                <Button Content="{loc:Localize CompSettings.OpenTidy3dSettings}"
+                                <Button Classes="link" Content="{loc:Localize CompSettings.OpenTidy3dSettings}"
                                         Command="{Binding OpenTidy3dSettingsCommand}"
-                                        Padding="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="#7faaff"
-                                        FontSize="10"
                                         HorizontalAlignment="Left"
-                                        Cursor="Hand"
                                         IsVisible="{Binding ShowOpenSettingsLink}"/>
                             </StackPanel>
                         </StackPanel>
@@ -225,61 +201,62 @@
 
                     <!-- Cloud cost confirmation: Tidy3D runs consume credits, so nothing is
                          submitted until the user reviews the estimate and confirms. -->
-                    <Border Background="#26261a"
-                            BorderBrush="#5d5330"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="8,6"
+                    <Border Classes="card" Background="{DynamicResource Brush.Warning.Subtle}" Padding="12,8"
                             IsVisible="{Binding IsAwaitingCloudConfirmation}">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{Binding CloudCostText}"
-                                       Foreground="#ddcc88" FontSize="11" TextWrapping="Wrap"/>
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="warning" Text="{Binding CloudCostText}" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button Content="{loc:Localize CompSettings.CloudSubmit}"
-                                        Command="{Binding ConfirmCloudSubmitCommand}"
-                                        Padding="12,2" Background="#5d4330"/>
-                                <Button Content="{loc:Localize Common.Cancel}"
-                                        Command="{Binding CancelCloudSubmitCommand}"
-                                        Padding="12,2" Background="#3d3d3d"/>
+                                        Command="{Binding ConfirmCloudSubmitCommand}"/>
+                                <Button Classes="ghost" Content="{loc:Localize Common.Cancel}"
+                                        Command="{Binding CancelCloudSubmitCommand}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                </StackPanel>
-                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4" Background="#2d2d2d"/>
-                <!-- SelectableTextBlock so error messages can be copied (field round 6). -->
-                <SelectableTextBlock Text="{Binding StatusText}" Foreground="#dddddd" FontSize="11" TextWrapping="Wrap"
-                                     SelectionBrush="#3d5d8d"/>
 
-                <Expander Header="{loc:Localize NewComponent.SMatrixData}" IsExpanded="False"
-                          IsVisible="{Binding HasSMatrix}" Background="#161616">
-                    <ItemsControl ItemsSource="{Binding SMatrixEntries}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="cs:SMatrixEntryViewModel">
-                                <Border Background="#252526" CornerRadius="4" Padding="8,6" Margin="0,2">
-                                    <Grid ColumnDefinitions="110,80,*">
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding WavelengthLabel}" Foreground="White"
-                                                       FontWeight="SemiBold" FontSize="12"/>
-                                            <TextBlock Text="{Binding SourceNote}" Foreground="#666666" FontSize="9"
-                                                       IsVisible="{Binding SourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding Dimensions}" Foreground="#aaaaaa"
-                                                   FontSize="11" VerticalAlignment="Center"/>
-                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding MagnitudePreview}" Foreground="#88ccaa"
-                                                       FontFamily="Consolas, Courier New, monospace" FontSize="10"
-                                                       TextWrapping="NoWrap"/>
-                                            <TextBlock Text="{Binding PortNamesDisplay}" Foreground="#666666" FontSize="9"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Expander>
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4"/>
+                    <!-- SelectableTextBlock so error messages can be copied. -->
+                    <SelectableTextBlock Classes="secondary" Text="{Binding StatusText}" TextWrapping="Wrap"
+                                         SelectionBrush="{DynamicResource Brush.Accent.Subtle}"/>
+
+                    <Expander Header="{loc:Localize NewComponent.SMatrixData}" IsExpanded="False"
+                              HorizontalAlignment="Stretch"
+                              IsVisible="{Binding HasSMatrix}">
+                        <ItemsControl ItemsSource="{Binding SMatrixEntries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="cs:SMatrixEntryViewModel">
+                                    <Border Classes="card" Padding="12,8" Margin="0,4,0,0">
+                                        <Grid ColumnDefinitions="110,80,*">
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Classes="strong" Text="{Binding WavelengthLabel}"/>
+                                                <TextBlock Classes="caption" Text="{Binding SourceNote}"
+                                                           IsVisible="{Binding SourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding Dimensions}"
+                                                       VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock Classes="caption mono success" Text="{Binding MagnitudePreview}"
+                                                           TextWrapping="NoWrap"/>
+                                                <TextBlock Classes="caption" Text="{Binding PortNamesDisplay}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Expander>
+                </StackPanel>
 
             </StackPanel>
         </ScrollViewer>
-    </DockPanel>
+
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Classes="primary" Content="{Binding SaveButtonLabel}" Command="{Binding SaveCommand}"
+                        ToolTip.Tip="{loc:Localize NewComponent.SaveTip}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

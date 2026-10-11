@@ -11,7 +11,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class AiAssistantSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "🤖";
+    public override string Icon => "Icon.Bot";
 
     /// <inheritdoc/>
     public override object ViewModel { get; }

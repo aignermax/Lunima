@@ -16,8 +16,8 @@ using Xunit;
 namespace UnitTests.UI;
 
 /// <summary>
-/// Status-bar overflow fix (#1162): the bar shows only the shortcuts relevant to the
-/// current canvas mode, the full reference moved into a (?) flyout, and the process
+/// Status-bar overflow fix (#1162): the shortcuts relevant to the current canvas mode sit in
+/// the mode field's tooltip, the full reference lives in a (?) flyout, and the process
 /// badge keeps a fixed reserved column so it can never cover the hints again. The
 /// structural facts are asserted unconditionally; PNGs + manifest.json land in
 /// <c>artifacts/ui-screenshots/issue-1162/</c> when UI_SHOT_DIR is set.
@@ -54,9 +54,10 @@ public class Issue1162StatusBarScreenshotTests
                 .Any(t => t.Text?.Contains("Ctrl+Shift+G") == true && t.Text.Contains("F12"))
                 .ShouldBeFalse("the old all-shortcuts string must not live in the status bar anymore");
 
-            var hintBlock = FindHintTextBlock(statusBar, vm);
-            hintBlock.TextTrimming.ShouldBe(TextTrimming.CharacterEllipsis,
-                "an over-long hint must ellipsize instead of sliding under the badge");
+            statusBar.GetVisualDescendants().OfType<TextBlock>()
+                .Any(t => t.Text == vm.CanvasInteraction.ModeShortcutHints)
+                .ShouldBeFalse("the mode hints live in the mode field's tooltip, not as permanent bar text");
+            ToolTip.GetTip(FindModeField(window)).ShouldBe(vm.CanvasInteraction.ModeShortcutHints);
         }
         finally
         {
@@ -65,7 +66,7 @@ public class Issue1162StatusBarScreenshotTests
         }
     }
 
-    /// <summary>The visible hint text follows the canvas interaction mode.</summary>
+    /// <summary>The mode field and its hint tooltip follow the canvas interaction mode.</summary>
     [AvaloniaFact]
     public void StatusBar_HintTextFollowsTheCanvasMode()
     {
@@ -74,17 +75,16 @@ public class Issue1162StatusBarScreenshotTests
         var window = ShowcaseCircuit.BootMainWindow(vm);
         try
         {
-            var statusBar = FindStatusBarBadge(window).GetVisualAncestors().OfType<DockPanel>().First();
-            var hintBlock = FindHintTextBlock(statusBar, vm);
+            var modeField = FindModeField(window);
 
             vm.CanvasInteraction.CurrentMode = InteractionMode.Connect;
             Dispatcher.UIThread.RunJobs();
-            hintBlock.Text.ShouldBe(vm.CanvasInteraction.ModeShortcutHints);
-            hintBlock.Text.ShouldBe(LocalizationService.Instance.Translate("StatusBar.Hints.Connect"));
+            ToolTip.GetTip(modeField).ShouldBe(LocalizationService.Instance.Translate("StatusBar.Hints.Connect"));
+            vm.StatusBar.ModeLabel.ShouldBe(LocalizationService.Instance.Translate("Canvas.Mode.Connect"));
 
             vm.CanvasInteraction.CurrentMode = InteractionMode.Select;
             Dispatcher.UIThread.RunJobs();
-            hintBlock.Text.ShouldBe(LocalizationService.Instance.Translate("StatusBar.Hints.Select"));
+            ToolTip.GetTip(modeField).ShouldBe(LocalizationService.Instance.Translate("StatusBar.Hints.Select"));
         }
         finally
         {
@@ -181,11 +181,10 @@ public class Issue1162StatusBarScreenshotTests
         window.GetVisualDescendants().OfType<Border>()
             .First(b => b.Name == "ActiveProcessIndicator");
 
-    /// <summary>The status-bar TextBlock showing the mode-relevant hints (bound to the VM).</summary>
-    private static TextBlock FindHintTextBlock(DockPanel statusBar, CAP.Avalonia.ViewModels.MainViewModel vm) =>
-        statusBar.GetVisualDescendants().OfType<TextBlock>()
-            .FirstOrDefault(t => t.Text == vm.CanvasInteraction.ModeShortcutHints)
-        ?? throw new ShouldAssertException("no status-bar TextBlock shows the mode-relevant hints");
+    /// <summary>The status-bar mode field; its tooltip carries the mode-relevant hints.</summary>
+    private static StackPanel FindModeField(Window window) =>
+        window.GetVisualDescendants().OfType<StackPanel>()
+            .First(p => p.Name == "StatusBarModeField");
 
     private static void WriteManifest(string outputDir)
     {

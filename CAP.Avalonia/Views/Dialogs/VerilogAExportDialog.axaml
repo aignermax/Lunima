@@ -5,65 +5,54 @@
         x:Class="CAP.Avalonia.Views.Dialogs.VerilogAExportDialog"
         x:DataType="vm:VerilogAExportViewModel"
         Title="{loc:Localize VerilogAExport.Title}"
-        Width="440" Height="380"
+        Width="460" SizeToContent="Height" MaxHeight="560"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Background="#1e1e1e"
-        Foreground="White">
+        CanResize="False">
 
-    <DockPanel Margin="16" LastChildFill="True">
-
-        <!-- Buttons docked at the bottom so they're always visible -->
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
-            <Button Content="{loc:Localize Common.OpenFolder}"
-                    Command="{Binding OpenOutputDirectoryCommand}"
-                    MinWidth="100" Padding="12,0" Background="#2d4d3d" FontSize="11"
-                    IsVisible="{Binding LastExportSucceeded}"/>
-            <Button Content="{loc:Localize Common.ExportEllipsis}"
-                    Command="{Binding ExportCommand}"
-                    MinWidth="90" Padding="12,0" Background="#3d6d4d"
-                    IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
-            <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" MinWidth="70" Padding="12,0" Click="OnCloseClicked"/>
-        </StackPanel>
-
+    <Grid RowDefinitions="*,Auto">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="10">
-            <TextBlock Text="{loc:Localize VerilogAExport.Heading}" FontSize="15" FontWeight="SemiBold"
-                       Foreground="#7BC8A4"/>
-            <TextBlock Text="{loc:Localize VerilogAExport.Description}"
-                       Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
+            <StackPanel Spacing="16" Margin="24">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="title" Text="{loc:Localize VerilogAExport.Heading}"/>
+                    <TextBlock Classes="caption" TextWrapping="Wrap"
+                               Text="{loc:Localize VerilogAExport.Description}"/>
+                </StackPanel>
 
-            <Separator Background="#3d3d3d"/>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{loc:Localize VerilogAExport.WavelengthLabel}"/>
+                    <ComboBox ItemsSource="{Binding WavelengthOptions}"
+                              SelectedValue="{Binding WavelengthNm}"
+                              HorizontalAlignment="Stretch"/>
+                </StackPanel>
 
-            <!-- Wavelength -->
-            <TextBlock Text="{loc:Localize VerilogAExport.WavelengthLabel}" Foreground="Gray" FontSize="11"/>
-            <ComboBox ItemsSource="{Binding WavelengthOptions}"
-                      SelectedValue="{Binding WavelengthNm}"
-                      HorizontalAlignment="Stretch"
-                      Background="#2d2d2d"/>
+                <CheckBox Content="{loc:Localize VerilogAExport.IncludeTestBench}"
+                          IsChecked="{Binding IncludeTestBench}"/>
 
-            <!-- Options -->
-            <CheckBox Content="{loc:Localize VerilogAExport.IncludeTestBench}"
-                      IsChecked="{Binding IncludeTestBench}"
-                      Foreground="White"/>
+                <!-- Tells the user up-front which simulator chain the generated files target
+                     (OpenVAF + NGSpice OSDI, not arbitrary SPICE). -->
+                <Expander Header="{loc:Localize VerilogAExport.CaveatsHeader}" IsExpanded="False"
+                          HorizontalAlignment="Stretch">
+                    <TextBlock Classes="caption" TextWrapping="Wrap"
+                               Text="{loc:Localize VerilogAExport.CaveatsBody}"/>
+                </Expander>
 
-            <!-- Tooling requirements: tells the user up-front which simulator
-                 chain the generated files target. Mirko hit this when the
-                 modules looked like "weird Verilog-A" in his usual flow —
-                 they're correct for OpenVAF + NGSpice OSDI, not arbitrary SPICE. -->
-            <Expander Header="{loc:Localize VerilogAExport.CaveatsHeader}"
-                      Foreground="LightGray" FontSize="10"
-                      IsExpanded="False">
-                <TextBlock Foreground="LightGray" FontSize="10" TextWrapping="Wrap"
-                           Text="{loc:Localize VerilogAExport.CaveatsBody}"/>
-            </Expander>
-
-            <!-- Status -->
-            <TextBlock Text="{Binding StatusText}"
-                       Foreground="LightGreen" FontSize="10" TextWrapping="Wrap"
-                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        </StackPanel>
+                <TextBlock Classes="caption success" TextWrapping="Wrap"
+                           Text="{Binding StatusText}"
+                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
         </ScrollViewer>
-    </DockPanel>
+
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{loc:Localize Common.OpenFolder}"
+                        Command="{Binding OpenOutputDirectoryCommand}"
+                        IsVisible="{Binding LastExportSucceeded}"/>
+                <Button Content="{loc:Localize Common.Close}" x:Name="CloseButton" Click="OnCloseClicked"/>
+                <Button Classes="primary" Content="{loc:Localize Common.ExportEllipsis}"
+                        Command="{Binding ExportCommand}"
+                        IsEnabled="{Binding IsExporting, Converter={x:Static BoolConverters.Not}}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

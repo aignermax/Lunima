@@ -11,22 +11,18 @@
         Title="{loc:Localize IsaPlayground.WindowTitle}"
         Width="940" Height="600"
         MinWidth="700" MinHeight="420"
-        WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
 
-    <!-- Root grid: the tour overlay (#1267) floats above the whole window for
+    <!-- Root grid: the tour overlay floats above the whole window for
          the "Run a program on your chip" steps that anchor here. -->
     <Grid>
-    <DockPanel Margin="14" LastChildFill="True">
+    <DockPanel Margin="24" LastChildFill="True">
 
         <!-- Header: title + intro on the left, help flyout on the right -->
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
             <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="{Binding HeaderTitle}" Foreground="DeepSkyBlue"
-                           FontWeight="SemiBold" FontSize="16"/>
-                <TextBlock Text="{loc:Localize IsaPlayground.Intro}" Foreground="Gray"
-                           FontSize="11" TextWrapping="Wrap"/>
+                <TextBlock Classes="headline" Text="{Binding HeaderTitle}"/>
+                <TextBlock Classes="caption" Text="{loc:Localize IsaPlayground.Intro}" TextWrapping="Wrap"/>
             </StackPanel>
             <ctrl:HelpFlyoutButton Grid.Column="1" VerticalAlignment="Top"
                                    Title="{loc:Localize IsaPlayground.HelpTitle}">
@@ -37,47 +33,58 @@
         </Grid>
 
         <!-- Button row pinned to the bottom -->
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
-            <Button Content="{loc:Localize IsaPlayground.AssembleButton}"
-                    Command="{Binding AssembleCommand}"
-                    Background="#3d3d5d" Padding="12,6"/>
-            <Button x:Name="IsaStepButton"
-                    Content="{loc:Localize IsaPlayground.StepButton}"
-                    Command="{Binding StepCommand}"
-                    Background="#3d3d5d" Padding="12,6"/>
-            <Button Content="{Binding RunStopText}"
-                    Command="{Binding ToggleRunCommand}"
-                    Background="#3d3d5d" Padding="12,6"/>
-            <Button Content="{loc:Localize IsaPlayground.ResetButton}"
-                    Command="{Binding ResetCommand}"
-                    Background="#3d3d5d" Padding="12,6"/>
-            <StackPanel VerticalAlignment="Center" Spacing="2" Margin="8,0,0,0">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+            <Button Command="{Binding AssembleCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ctrl:Icon Data="{StaticResource Icon.Binary}"/>
+                    <TextBlock Text="{loc:Localize IsaPlayground.AssembleButton}"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="IsaStepButton" Command="{Binding StepCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ctrl:Icon Data="{StaticResource Icon.StepForward}"/>
+                    <TextBlock Text="{loc:Localize IsaPlayground.StepButton}"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="primary" Command="{Binding ToggleRunCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ctrl:Icon Data="{StaticResource Icon.Play}" IsVisible="{Binding !IsRunning}"/>
+                    <ctrl:Icon Data="{StaticResource Icon.CircleStop}" IsVisible="{Binding IsRunning}"/>
+                    <TextBlock Text="{Binding RunStopText}"/>
+                </StackPanel>
+            </Button>
+            <Button Command="{Binding ResetCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ctrl:Icon Data="{StaticResource Icon.RotateCcw}"/>
+                    <TextBlock Text="{loc:Localize IsaPlayground.ResetButton}"/>
+                </StackPanel>
+            </Button>
+            <StackPanel VerticalAlignment="Center" Spacing="2" Margin="16,0,0,0">
                 <CheckBox x:Name="IsaPhotonicToggle"
                           Content="{Binding PhotonicToggleLabel}"
                           IsChecked="{Binding UsePhotonicAdder}"
                           IsEnabled="{Binding IsPhotonicToggleEnabled}"
-                          FontSize="12" VerticalAlignment="Center"/>
-                <TextBlock Text="{loc:Localize IsaPlayground.PhotonicAdderHint}"
-                           Foreground="Gray" FontSize="10" TextWrapping="Wrap" MaxWidth="260"
+                          VerticalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize IsaPlayground.PhotonicAdderHint}"
+                           TextWrapping="Wrap" MaxWidth="260"
                            IsVisible="{Binding !IsAnyPhotonicAvailable}"/>
-                <TextBlock Text="{Binding PhotonicStatusText}" Foreground="#7ec87e" FontSize="10"
+                <TextBlock Classes="caption success" Text="{Binding PhotonicStatusText}"
                            TextWrapping="Wrap" MaxWidth="260"
                            IsVisible="{Binding PhotonicStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
         </StackPanel>
 
-        <!-- Main area: editor on the left, machine state + trace on the right -->
+        <!-- Main area: editor on the left, machine state on the right -->
         <Grid ColumnDefinitions="3*,2*">
 
             <DockPanel Grid.Column="0" LastChildFill="True">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
-                    <TextBlock Text="{loc:Localize IsaPlayground.SamplesLabel}" Foreground="Gray"
-                               FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                    <TextBlock Classes="secondary" Text="{loc:Localize IsaPlayground.SamplesLabel}"
+                               VerticalAlignment="Center"/>
                     <ComboBox x:Name="IsaSamplePicker"
                               ItemsSource="{Binding Samples}"
                               SelectedItem="{Binding SelectedSample}"
-                              MinWidth="180" FontSize="12"
-                              Background="#252525">
+                              MinWidth="180">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="isa:IsaSampleProgram">
                                 <TextBlock Text="{Binding DisplayName}"/>
@@ -89,50 +96,41 @@
                                        Code="{Binding ProgramText}"
                                        CurrentLine="{Binding CurrentSourceLine}"
                                        IsReadOnly="{Binding IsEditorReadOnly}"
-                                       FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="13"
-                                       Foreground="White" LineNumbersForeground="Gray"
-                                       Background="#252525" BorderBrush="#3e3e3e" BorderThickness="1"
+                                       FontFamily="{DynamicResource Font.Mono}" FontSize="13"
+                                       Foreground="{DynamicResource Brush.Text.Primary}"
+                                       LineNumbersForeground="{DynamicResource Brush.Text.Tertiary}"
+                                       Background="{DynamicResource Brush.Surface.Input}"
+                                       BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                                        HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
             </DockPanel>
 
-            <DockPanel Grid.Column="1" Margin="14,0,0,0" LastChildFill="True">
-                <TextBlock DockPanel.Dock="Top" Text="{loc:Localize IsaPlayground.StateTitle}" Foreground="DeepSkyBlue"
-                           FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,2,0,8">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Localize IsaPlayground.PcLabel}"
-                               Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ProgramCounter}"
-                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Localize IsaPlayground.AccLabel}"
-                               Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Accumulator}"
-                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Localize IsaPlayground.AccBinaryLabel}"
-                               Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AccumulatorBinary}"
-                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{loc:Localize IsaPlayground.RamLabel}"
-                               Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
-                        <TextBlock Text="{Binding RamText}"
-                                   FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
-                        <Border Background="#3d5d3d" CornerRadius="3" Padding="5,1" Margin="8,0,0,0"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding IsPhotonicDataMemoryActive}">
-                            <TextBlock Text="{loc:Localize IsaPlayground.RamOnLightChip}"
-                                       Foreground="#7ec87e" FontSize="9" FontWeight="SemiBold"/>
-                        </Border>
-                    </StackPanel>
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{loc:Localize IsaPlayground.StatusLabel}"
-                               Foreground="Gray" FontSize="12" Margin="0,1,10,1"/>
-                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MachineStatusText}"
-                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="12" Margin="0,1"/>
-                </Grid>
+            <DockPanel Grid.Column="1" Margin="24,0,0,0" LastChildFill="True">
+                <TextBlock DockPanel.Dock="Top" Classes="label" Text="{loc:Localize IsaPlayground.StateTitle}"
+                           Margin="0,0,0,8"/>
+                <Border DockPanel.Dock="Top" Classes="card" Padding="12">
+                    <Grid ColumnDefinitions="Auto,16,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Classes="secondary" Text="{loc:Localize IsaPlayground.PcLabel}" Margin="0,3"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Classes="mono" Text="{Binding ProgramCounter}" Margin="0,3"/>
+                        <TextBlock Grid.Row="1" Classes="secondary" Text="{loc:Localize IsaPlayground.AccLabel}" Margin="0,3"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" Text="{Binding Accumulator}" Margin="0,3"/>
+                        <TextBlock Grid.Row="2" Classes="secondary" Text="{loc:Localize IsaPlayground.AccBinaryLabel}" Margin="0,3"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Classes="mono" Text="{Binding AccumulatorBinary}" Margin="0,3"/>
+                        <TextBlock Grid.Row="3" Classes="secondary" Text="{loc:Localize IsaPlayground.RamLabel}" Margin="0,3"/>
+                        <StackPanel Grid.Row="3" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                            <TextBlock Classes="mono" Text="{Binding RamText}" Margin="0,3"/>
+                            <Border Classes="chip success" IsVisible="{Binding IsPhotonicDataMemoryActive}">
+                                <TextBlock Text="{loc:Localize IsaPlayground.RamOnLightChip}"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Grid.Row="4" Classes="secondary" Text="{loc:Localize IsaPlayground.StatusLabel}" Margin="0,3"/>
+                        <TextBlock Grid.Row="4" Grid.Column="2" Classes="mono" Text="{Binding MachineStatusText}" Margin="0,3"/>
+                    </Grid>
+                </Border>
 
-                <!-- "What runs on light" row (#1456): one chip per machine unit —
-                     green while the photonic network computes it, grey while it is
-                     simulated electronically. The (?) flyout explains the colors. -->
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,2,0,6">
+                <!-- "What runs on light": one chip per machine unit, green while the
+                     photonic network computes it, neutral while it is simulated
+                     electronically. The (?) flyout explains the colors. -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,12,0,0">
                     <ItemsControl ItemsSource="{Binding UnitChips}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -141,24 +139,8 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="isa:IsaUnitChipViewModel">
-                                <Border Classes="unitchip" Classes.onlight="{Binding IsOnLight}"
-                                        CornerRadius="3" Padding="6,1">
-                                    <Border.Styles>
-                                        <Style Selector="Border.unitchip">
-                                            <Setter Property="Background" Value="#3d3d3d"/>
-                                        </Style>
-                                        <Style Selector="Border.unitchip TextBlock">
-                                            <Setter Property="Foreground" Value="#9a9a9a"/>
-                                        </Style>
-                                        <Style Selector="Border.unitchip.onlight">
-                                            <Setter Property="Background" Value="#3d5d3d"/>
-                                        </Style>
-                                        <Style Selector="Border.unitchip.onlight TextBlock">
-                                            <Setter Property="Foreground" Value="#7ec87e"/>
-                                        </Style>
-                                    </Border.Styles>
-                                    <TextBlock Text="{Binding UnitName}"
-                                               FontSize="9" FontWeight="SemiBold"/>
+                                <Border Classes="chip" Classes.success="{Binding IsOnLight}">
+                                    <TextBlock Text="{Binding UnitName}"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -172,8 +154,8 @@
                     </ctrl:HelpFlyoutButton>
                 </StackPanel>
 
-                <TextBlock DockPanel.Dock="Top" Text="{Binding ErrorText}" Foreground="#ff6b6b" FontSize="11"
-                           TextWrapping="Wrap" Margin="0,0,0,4"
+                <TextBlock DockPanel.Dock="Top" Classes="caption danger" Text="{Binding ErrorText}"
+                           TextWrapping="Wrap" Margin="0,12,0,0"
                            IsVisible="{Binding ErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
             </DockPanel>

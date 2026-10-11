@@ -7,20 +7,20 @@ namespace UnitTests.ViewModels;
 public class ExampleIconTests
 {
     [Theory]
-    [InlineData("EBeam Add-Drop Ring", "⭕")]
-    [InlineData("Mach-Zehnder Interferometer", "〰️")]
-    [InlineData("Logic Gate NOT-NAND", "⚡")]
-    [InlineData("Logic Gate AND 4-bit", "⚡")]
-    [InlineData("Logic Gate Half Adder", "🔢")]
-    [InlineData("Logic Gate RAM 4x4", "🧮")]
-    [InlineData("Two Chiplets - Edge-Coupler Link", "🔗")]
-    [InlineData("Something Else", "🧪")]
+    [InlineData("EBeam Add-Drop Ring", "Icon.CircleDot")]
+    [InlineData("Mach-Zehnder Interferometer", "Icon.Waves")]
+    [InlineData("Logic Gate NOT-NAND", "Icon.Zap")]
+    [InlineData("Logic Gate AND 4-bit", "Icon.Zap")]
+    [InlineData("Logic Gate Half Adder", "Icon.Calculator")]
+    [InlineData("Logic Gate RAM 4x4", "Icon.MemoryStick")]
+    [InlineData("Two Chiplets - Edge-Coupler Link", "Icon.Link")]
+    [InlineData("Something Else", "Icon.FlaskConical")]
     public void For_PicksTheFamilyIcon(string name, string icon) => ExampleIcon.For(name).ShouldBe(icon);
 
     [Fact]
     public void For_MatchesWholeWordsOnly()
     {
-        ExampleIcon.For("Ordinary Waveguide").ShouldBe("🧪", "'OR' inside 'Ordinary' is not a logic gate");
+        ExampleIcon.For("Ordinary Waveguide").ShouldBe("Icon.FlaskConical", "'OR' inside 'Ordinary' is not a logic gate");
     }
 
     [Theory]

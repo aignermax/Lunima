@@ -201,7 +201,7 @@ public sealed class ComponentNameLabelComputer
             return cached;
 
         var formatted = new FormattedText(name, System.Globalization.CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight, new Typeface("Arial"), fontSize, Brushes.White);
+            FlowDirection.LeftToRight, CanvasTypography.Ui, fontSize, Brushes.White);
         _textCache[key] = formatted;
         return formatted;
     }

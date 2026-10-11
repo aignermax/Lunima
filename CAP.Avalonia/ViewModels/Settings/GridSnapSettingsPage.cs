@@ -11,7 +11,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class GridSnapSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "⊞";
+    public override string Icon => "Icon.Grid3x3";
 
     /// <inheritdoc/>
     public override string? Category => "Canvas";

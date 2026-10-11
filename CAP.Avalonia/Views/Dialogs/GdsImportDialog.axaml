@@ -11,29 +11,19 @@
         Width="560" MaxHeight="720"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Background="#1e1e1e"
-        Foreground="White">
+        CanResize="False">
 
-    <DockPanel Margin="16">
+    <DockPanel>
 
-        <!-- Header -->
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-            <TextBlock Text="{loc:Localize GdsImport.WindowTitle}" FontSize="17" FontWeight="Bold" Foreground="White"/>
-            <TextBlock Text="{Binding GdsFilePath}" FontSize="10" Foreground="Gray"
-                       TextWrapping="Wrap" Margin="0,4,0,0"/>
-        </StackPanel>
-
-        <!-- Bottom buttons -->
-        <Border DockPanel.Dock="Bottom" Margin="0,14,0,0">
+        <!-- Footer -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Brush.Border.Subtle}"
+                BorderThickness="0,1,0,0" Padding="24,12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Content="{Binding CloseButtonText}" Command="{Binding CancelCommand}"
-                        Background="#4d3d3d" Foreground="White" MinWidth="90" Padding="12,0"/>
+                <Button Content="{Binding CloseButtonText}" Command="{Binding CancelCommand}"/>
                 <Button Content="{loc:Localize GdsImport.Retry}" Command="{Binding RetryAnalysisCommand}"
-                        Background="#3d3d5d" Foreground="White" MinWidth="90" Padding="12,0"
                         IsVisible="{Binding HasError}"/>
-                <Button Content="{loc:Localize GdsImport.ImportButton}" Command="{Binding ImportCommand}"
-                        Background="#3d5d3d" Foreground="White" Padding="14,4"
+                <Button Classes="primary" Content="{loc:Localize GdsImport.ImportButton}"
+                        Command="{Binding ImportCommand}"
                         IsVisible="{Binding ShowOptions}"/>
             </StackPanel>
         </Border>
@@ -41,341 +31,333 @@
         <!-- Scrollable: with the census/suggestions sections the content can
              exceed MaxHeight — never let it spill past the window. -->
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="10">
+            <StackPanel Spacing="16" Margin="24">
 
-            <!-- Busy indicator + status -->
-            <ProgressBar IsIndeterminate="True" Height="5"
-                         Foreground="#3d9d5d"
-                         IsVisible="{Binding IsBusy}"/>
-            <TextBlock Text="{Binding StatusText}" Foreground="LightGray"
-                       TextWrapping="Wrap" FontSize="11"
-                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-            <!-- Error panel -->
-            <Border Background="#3d1515" CornerRadius="4" Padding="10"
-                    IsVisible="{Binding HasError}">
+                <!-- Header -->
                 <StackPanel Spacing="4">
-                    <TextBlock Text="{loc:Localize GdsImport.ErrorTitle}" Foreground="#FF6B6B"
-                               FontWeight="SemiBold" FontSize="11"/>
-                    <TextBlock Text="{Binding ErrorText}" Foreground="#FF9090"
-                               TextWrapping="Wrap" FontFamily="Consolas, Courier New, monospace"
-                               FontSize="10"/>
-                    <TextBlock Text="{loc:Localize GdsImport.DetailsInErrorConsole}" Foreground="#FF9090"
-                               FontSize="10" FontStyle="Italic" Opacity="0.8"/>
-                </StackPanel>
-            </Border>
-
-            <!-- ═══ Options (after successful analysis) ═══ -->
-            <StackPanel IsVisible="{Binding ShowOptions}" Spacing="10">
-
-                <!-- Top cell -->
-                <StackPanel Spacing="4">
-                    <TextBlock Text="{loc:Localize GdsImport.TopCellLabel}" Foreground="LightGray" FontSize="11"/>
-                    <ComboBox ItemsSource="{Binding TopCells}" SelectedItem="{Binding SelectedTopCell}"
-                              Background="#2d2d2d" Foreground="White" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="gds:GdsTopCellSummary">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="{Binding CellName}" Foreground="White" FontSize="11"/>
-                                    <TextBlock Text="{Binding DirectInstanceCount, StringFormat='({0})'}"
-                                               Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                    <TextBlock Classes="title" Text="{loc:Localize GdsImport.WindowTitle}"/>
+                    <TextBlock Classes="caption mono" Text="{Binding GdsFilePath}" TextWrapping="Wrap"/>
                 </StackPanel>
 
-                <!-- Hierarchy mode -->
-                <StackPanel Spacing="4">
-                    <TextBlock Text="{loc:Localize GdsImport.ModeLabel}" Foreground="LightGray" FontSize="11"/>
-                    <RadioButton GroupName="GdsMode" IsChecked="{Binding IsExplodeMode}"
-                                 Content="{loc:Localize GdsImport.ModeExplode}"
-                                 Foreground="White" FontSize="11"/>
-                    <RadioButton GroupName="GdsMode"
-                                 Content="{loc:Localize GdsImport.ModeBlackBox}"
-                                 Foreground="White" FontSize="11"/>
-                </StackPanel>
+                <!-- Busy indicator + status -->
+                <ProgressBar IsIndeterminate="True" Height="4" IsVisible="{Binding IsBusy}"/>
+                <TextBlock Classes="secondary" Text="{Binding StatusText}" TextWrapping="Wrap"
+                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                <!-- Layer assignment is auto-detected and applied on analysis;
-                     this section is the manual override for cases the algorithm
-                     cannot decide — collapsed by default. -->
-                <Expander x:Name="LayerAssignmentExpander" Background="#252526"
-                          CornerRadius="4" IsExpanded="False">
-                    <Expander.Header>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="{loc:Localize GdsImport.LayerAssignmentHeader}"
-                                       Foreground="LightGray" FontSize="11" VerticalAlignment="Center"/>
-                            <!-- Plain-language help: what GDS layer/datatype numbers mean
-                                 and that visibility/assignment here is display-only. -->
-                            <controls:HelpFlyoutButton Grid.Column="1"
-                                                       Title="{loc:Localize GdsLayerHelp.Title}"
-                                                       Margin="8,0,4,0" VerticalAlignment="Center">
-                                <controls:HelpFlyoutButton.HelpContent>
-                                    <StackPanel Spacing="8" MaxWidth="400">
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
-                                                   Text="{loc:Localize GdsLayerHelp.Intro}"/>
-
-                                        <!-- Diagram: a layer map table abstraction. -->
-                                        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                                CornerRadius="4" Padding="8">
-                                            <StackPanel Spacing="4">
-                                                <Grid ColumnDefinitions="60,90,*">
-                                                    <TextBlock Grid.Column="0" Text="{loc:Localize GdsLayerHelp.ColLayer}" Foreground="#888" FontSize="10"/>
-                                                    <TextBlock Grid.Column="1" Text="{loc:Localize GdsLayerHelp.ColDatatype}" Foreground="#888" FontSize="10"/>
-                                                    <TextBlock Grid.Column="2" Text="{loc:Localize GdsLayerHelp.ColMeaning}" Foreground="#888" FontSize="10"/>
-                                                </Grid>
-                                                <Rectangle Height="1" Fill="#3d3d3d"/>
-                                                <Grid ColumnDefinitions="60,90,*">
-                                                    <TextBlock Grid.Column="0" Text="1" Foreground="White" FontSize="10" FontFamily="Consolas, Courier New, monospace"/>
-                                                    <TextBlock Grid.Column="1" Text="0" Foreground="White" FontSize="10" FontFamily="Consolas, Courier New, monospace"/>
-                                                    <TextBlock Grid.Column="2" Text="{loc:Localize GdsLayerHelp.ExampleWaveguide}" Foreground="LightGray" FontSize="10"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="60,90,*">
-                                                    <TextBlock Grid.Column="0" Text="10" Foreground="White" FontSize="10" FontFamily="Consolas, Courier New, monospace"/>
-                                                    <TextBlock Grid.Column="1" Text="0" Foreground="White" FontSize="10" FontFamily="Consolas, Courier New, monospace"/>
-                                                    <TextBlock Grid.Column="2" Text="{loc:Localize GdsLayerHelp.ExampleMetal}" Foreground="LightGray" FontSize="10"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="60,90,*">
-                                                    <TextBlock Grid.Column="0" Text="1" Foreground="White" FontSize="10" FontFamily="Consolas, Courier New, monospace"/>
-                                                    <TextBlock Grid.Column="1" Text="5" Foreground="White" FontSize="10" FontFamily="Consolas, Courier New, monospace"/>
-                                                    <TextBlock Grid.Column="2" Text="{loc:Localize GdsLayerHelp.ExampleAnnotation}" Foreground="LightGray" FontSize="10"/>
-                                                </Grid>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <TextBlock Text="{loc:Localize GdsLayerHelp.PairTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                                   Text="{loc:Localize GdsLayerHelp.PairBody}"/>
-
-                                        <TextBlock Text="{loc:Localize GdsLayerHelp.DatatypeTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                                   Text="{loc:Localize GdsLayerHelp.DatatypeBody}"/>
-
-                                        <TextBlock Text="{loc:Localize GdsLayerHelp.DisplayOnlyTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
-                                                   Text="{loc:Localize GdsLayerHelp.DisplayOnlyBody}"/>
-                                    </StackPanel>
-                                </controls:HelpFlyoutButton.HelpContent>
-                            </controls:HelpFlyoutButton>
-                        </Grid>
-                    </Expander.Header>
-                    <StackPanel Spacing="10" Margin="4">
-
-                <!-- Click-to-assign picker (issue #1173): assign layer types by
-                     clicking the geometry instead of guessing layer numbers. -->
-                <Button Content="{loc:Localize GdsImport.LayerPickerButton}"
-                        Click="OnOpenLayerPicker"
-                        Background="#2d3d4d" Foreground="White" FontSize="11"
-                        Padding="10,4" HorizontalAlignment="Left"
-                        ToolTip.Tip="{loc:Localize GdsImport.LayerPickerButtonTip}"/>
-
-                <!-- Pin detection layers -->
-                <Grid ColumnDefinitions="*,12,*">
-                    <StackPanel Grid.Column="0" Spacing="4">
-                        <TextBlock Text="{loc:Localize GdsImport.PortLayersLabel}" Foreground="LightGray"
-                                   FontSize="11" TextWrapping="Wrap"/>
-                        <TextBox Text="{Binding PortLayersText}" GotFocus="OnPortLayersGotFocus"
-                                 Background="#2d2d2d" Foreground="White" FontSize="11"
-                                 ToolTip.Tip="{loc:Localize GdsImport.LayerSyntaxTip}"/>
+                <!-- Error panel -->
+                <Border Classes="card" Background="{DynamicResource Brush.Danger.Subtle}"
+                        IsVisible="{Binding HasError}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label danger" Text="{loc:Localize GdsImport.ErrorTitle}"/>
+                        <TextBlock Classes="caption mono" Text="{Binding ErrorText}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Brush.Danger}"/>
+                        <TextBlock Classes="caption" Text="{loc:Localize GdsImport.DetailsInErrorConsole}"
+                                   FontStyle="Italic"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Spacing="4">
-                        <TextBlock Text="{loc:Localize GdsImport.WaveguideLayersLabel}" Foreground="LightGray"
-                                   FontSize="11" TextWrapping="Wrap"/>
-                        <TextBox Text="{Binding WaveguideLayersText}" GotFocus="OnWaveguideLayersGotFocus"
-                                 Background="#2d2d2d" Foreground="White" FontSize="11"
-                                 ToolTip.Tip="{loc:Localize GdsImport.LayerSyntaxTip}"/>
-                    </StackPanel>
-                </Grid>
+                </Border>
 
-                <!-- Metal layers: drives route reconstruction as electrical AND the
-                     electrical pin-kind inference — foundry files often assign these
-                     numbers differently than our exporter defaults. -->
-                <StackPanel Spacing="4">
-                    <TextBlock Text="{loc:Localize GdsImport.MetalLayersLabel}" Foreground="LightGray"
-                               FontSize="11" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding MetalLayersText}" GotFocus="OnMetalLayersGotFocus"
-                             Background="#2d2d2d" Foreground="White" FontSize="11"
-                             ToolTip.Tip="{loc:Localize GdsImport.LayerSyntaxTip}"/>
-                </StackPanel>
+                <!-- ═══ Options (after successful analysis) ═══ -->
+                <StackPanel IsVisible="{Binding ShowOptions}" Spacing="16">
 
-                <!-- Layer-assignment suggestions: confident ones are auto-applied
-                     and show a checkmark; clicking a chip toggles its pair in/out.
-                     "Routing (kind unknown)" chips are informational only. -->
-                <StackPanel Spacing="4" IsVisible="{Binding HasSuggestions}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{loc:Localize GdsImport.SuggestionsHeader}" Foreground="LightGray"
-                                   FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                        <Button Content="{loc:Localize GdsImport.SuggestionsAcceptAll}"
-                                Command="{Binding AcceptAllSuggestionsCommand}"
-                                FontSize="10" Padding="8,2" CornerRadius="4"
-                                Background="#3d3d3d" Foreground="LightGray"
-                                VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <ItemsControl ItemsSource="{Binding SuggestionChips}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:GdsLayerSuggestionChip">
-                                <Button Margin="0,0,6,6" Padding="8,3" CornerRadius="10"
-                                        Background="#2d3d4d" Foreground="White"
-                                        IsEnabled="{Binding IsAcceptable}"
-                                        Command="{Binding $parent[Window].((vm:GdsImportDialogViewModel)DataContext).AcceptSuggestionCommand}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="{Binding Tooltip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <TextBlock Text="✓" Foreground="#7dd87d" FontSize="10"
-                                                   VerticalAlignment="Center"
-                                                   IsVisible="{Binding IsAccepted}"/>
-                                        <TextBlock Text="{Binding ChipText}" FontSize="10"
+                    <!-- Top cell -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{loc:Localize GdsImport.TopCellLabel}"/>
+                        <ComboBox ItemsSource="{Binding TopCells}" SelectedItem="{Binding SelectedTopCell}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="gds:GdsTopCellSummary">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding CellName}"/>
+                                        <TextBlock Classes="caption" Text="{Binding DirectInstanceCount, StringFormat='({0})'}"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
 
-                <!-- Layer census: the file's (layer, datatype) facts, so the user
-                     never types layer numbers blind. Clicking a row appends the pair
-                     to the layer field that last had focus. -->
-                <Expander IsVisible="{Binding HasCensus}" Background="#252526" CornerRadius="4">
-                    <Expander.Header>
-                        <TextBlock Text="{loc:Localize GdsImport.CensusHeader}" Foreground="LightGray"
-                                   FontSize="11"/>
-                    </Expander.Header>
-                    <StackPanel Spacing="4" Margin="4">
-                        <TextBlock Text="{Binding CensusHintText}" Foreground="Gray"
-                                   FontSize="10" FontStyle="Italic" TextWrapping="Wrap"/>
-                        <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding CensusRows}">
+                    <!-- Hierarchy mode -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{loc:Localize GdsImport.ModeLabel}"/>
+                        <RadioButton GroupName="GdsMode" IsChecked="{Binding IsExplodeMode}"
+                                     Content="{loc:Localize GdsImport.ModeExplode}"/>
+                        <RadioButton GroupName="GdsMode"
+                                     Content="{loc:Localize GdsImport.ModeBlackBox}"/>
+                    </StackPanel>
+
+                    <!-- Layer assignment is auto-detected and applied on analysis;
+                         this section is the manual override for cases the algorithm
+                         cannot decide — collapsed by default. -->
+                    <Expander x:Name="LayerAssignmentExpander" HorizontalAlignment="Stretch" IsExpanded="False">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Classes="strong" Text="{loc:Localize GdsImport.LayerAssignmentHeader}"
+                                           VerticalAlignment="Center"/>
+                                <!-- Plain-language help: what GDS layer/datatype numbers mean
+                                     and that visibility/assignment here is display-only. -->
+                                <controls:HelpFlyoutButton Grid.Column="1"
+                                                           Title="{loc:Localize GdsLayerHelp.Title}"
+                                                           Margin="8,0,4,0" VerticalAlignment="Center">
+                                    <controls:HelpFlyoutButton.HelpContent>
+                                        <StackPanel Spacing="8" MaxWidth="400">
+                                            <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                                       Text="{loc:Localize GdsLayerHelp.Intro}"/>
+
+                                            <!-- Diagram: a layer map table abstraction. -->
+                                            <Border Classes="card" Padding="8">
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnDefinitions="60,90,*">
+                                                        <TextBlock Grid.Column="0" Classes="caption" Text="{loc:Localize GdsLayerHelp.ColLayer}"/>
+                                                        <TextBlock Grid.Column="1" Classes="caption" Text="{loc:Localize GdsLayerHelp.ColDatatype}"/>
+                                                        <TextBlock Grid.Column="2" Classes="caption" Text="{loc:Localize GdsLayerHelp.ColMeaning}"/>
+                                                    </Grid>
+                                                    <Border Classes="divider" Height="1"/>
+                                                    <Grid ColumnDefinitions="60,90,*">
+                                                        <TextBlock Grid.Column="0" Classes="caption mono" Text="1"/>
+                                                        <TextBlock Grid.Column="1" Classes="caption mono" Text="0"/>
+                                                        <TextBlock Grid.Column="2" Classes="caption secondary" Text="{loc:Localize GdsLayerHelp.ExampleWaveguide}"/>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="60,90,*">
+                                                        <TextBlock Grid.Column="0" Classes="caption mono" Text="10"/>
+                                                        <TextBlock Grid.Column="1" Classes="caption mono" Text="0"/>
+                                                        <TextBlock Grid.Column="2" Classes="caption secondary" Text="{loc:Localize GdsLayerHelp.ExampleMetal}"/>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="60,90,*">
+                                                        <TextBlock Grid.Column="0" Classes="caption mono" Text="1"/>
+                                                        <TextBlock Grid.Column="1" Classes="caption mono" Text="5"/>
+                                                        <TextBlock Grid.Column="2" Classes="caption secondary" Text="{loc:Localize GdsLayerHelp.ExampleAnnotation}"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <TextBlock Classes="subtitle" Text="{loc:Localize GdsLayerHelp.PairTitle}"/>
+                                            <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                                       Text="{loc:Localize GdsLayerHelp.PairBody}"/>
+
+                                            <TextBlock Classes="subtitle" Margin="0,4,0,0" Text="{loc:Localize GdsLayerHelp.DatatypeTitle}"/>
+                                            <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                                       Text="{loc:Localize GdsLayerHelp.DatatypeBody}"/>
+
+                                            <TextBlock Classes="subtitle" Margin="0,4,0,0" Text="{loc:Localize GdsLayerHelp.DisplayOnlyTitle}"/>
+                                            <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                                       Text="{loc:Localize GdsLayerHelp.DisplayOnlyBody}"/>
+                                        </StackPanel>
+                                    </controls:HelpFlyoutButton.HelpContent>
+                                </controls:HelpFlyoutButton>
+                            </Grid>
+                        </Expander.Header>
+
+                        <StackPanel Spacing="16" Margin="4,8,4,4">
+
+                            <!-- Click-to-assign picker: assign layer types by clicking the
+                                 geometry instead of guessing layer numbers. -->
+                            <Button HorizontalAlignment="Left" Click="OnOpenLayerPicker"
+                                    ToolTip.Tip="{loc:Localize GdsImport.LayerPickerButtonTip}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:Icon Data="{StaticResource Icon.Crosshair}"/>
+                                    <TextBlock Text="{loc:Localize GdsImport.LayerPickerButton}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Pin detection layers -->
+                            <Grid ColumnDefinitions="*,12,*">
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Classes="label" Text="{loc:Localize GdsImport.PortLayersLabel}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBox Classes="mono" Text="{Binding PortLayersText}" GotFocus="OnPortLayersGotFocus"
+                                             ToolTip.Tip="{loc:Localize GdsImport.LayerSyntaxTip}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="4">
+                                    <TextBlock Classes="label" Text="{loc:Localize GdsImport.WaveguideLayersLabel}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBox Classes="mono" Text="{Binding WaveguideLayersText}" GotFocus="OnWaveguideLayersGotFocus"
+                                             ToolTip.Tip="{loc:Localize GdsImport.LayerSyntaxTip}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Metal layers: drives route reconstruction as electrical AND the
+                                 electrical pin-kind inference — foundry files often assign these
+                                 numbers differently than our exporter defaults. -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="label" Text="{loc:Localize GdsImport.MetalLayersLabel}"
+                                           TextWrapping="Wrap"/>
+                                <TextBox Classes="mono" Text="{Binding MetalLayersText}" GotFocus="OnMetalLayersGotFocus"
+                                         ToolTip.Tip="{loc:Localize GdsImport.LayerSyntaxTip}"/>
+                            </StackPanel>
+
+                            <!-- Layer-assignment suggestions: confident ones are auto-applied
+                                 and show a checkmark; clicking a chip toggles its pair in/out. -->
+                            <StackPanel Spacing="8" IsVisible="{Binding HasSuggestions}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="label" Text="{loc:Localize GdsImport.SuggestionsHeader}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <Button Grid.Column="1" Classes="ghost"
+                                            Content="{loc:Localize GdsImport.SuggestionsAcceptAll}"
+                                            Command="{Binding AcceptAllSuggestionsCommand}"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding SuggestionChips}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:GdsLayerSuggestionChip">
+                                            <Button Margin="0,0,8,8"
+                                                    IsEnabled="{Binding IsAcceptable}"
+                                                    Command="{Binding $parent[Window].((vm:GdsImportDialogViewModel)DataContext).AcceptSuggestionCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding Tooltip}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <controls:Icon Data="{StaticResource Icon.Check}" Size="12"
+                                                                   Foreground="{DynamicResource Brush.Success}"
+                                                                   VerticalAlignment="Center"
+                                                                   IsVisible="{Binding IsAccepted}"/>
+                                                    <TextBlock Text="{Binding ChipText}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <!-- Layer census: the file's (layer, datatype) facts, so the user
+                                 never types layer numbers blind. Clicking a row appends the pair
+                                 to the layer field that last had focus. -->
+                            <Expander IsVisible="{Binding HasCensus}" HorizontalAlignment="Stretch">
+                                <Expander.Header>
+                                    <TextBlock Classes="strong" Text="{loc:Localize GdsImport.CensusHeader}"/>
+                                </Expander.Header>
+                                <StackPanel Spacing="4" Margin="4">
+                                    <TextBlock Classes="caption" Text="{Binding CensusHintText}"
+                                               FontStyle="Italic" TextWrapping="Wrap"/>
+                                    <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding CensusRows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:GdsLayerCensusRow">
+                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left" Margin="0,1"
+                                                            Command="{Binding $parent[Window].((vm:GdsImportDialogViewModel)DataContext).AppendCensusRowCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TextBlock Classes="caption mono"
+                                                                       Foreground="{DynamicResource Brush.Text.Primary}"
+                                                                       Text="{Binding PairText}" MinWidth="70"/>
+                                                            <TextBlock Classes="caption secondary" Text="{Binding CountsText}"/>
+                                                            <TextBlock Classes="caption" Text="{Binding TextCellsText}"
+                                                                       IsVisible="{Binding HasTextCells}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Expander>
+
+                    <!-- Guessed pins: edge-heuristic pins the user can delete before placing -->
+                    <StackPanel Spacing="8" IsVisible="{Binding HasPinSuggestions}">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="label" Text="{loc:Localize GdsImport.GuessedPinsHeader}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize GdsImport.GuessedPinsHint}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding PinSuggestions}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:GdsLayerCensusRow">
-                                        <Button HorizontalAlignment="Stretch" Padding="6,2" Margin="0,1"
-                                                Background="Transparent"
-                                                Command="{Binding $parent[Window].((vm:GdsImportDialogViewModel)DataContext).AppendCensusRowCommand}"
-                                                CommandParameter="{Binding}">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{Binding PairText}" Foreground="White"
-                                                           FontSize="10" FontFamily="Consolas, Courier New, monospace"
-                                                           MinWidth="70"/>
-                                                <TextBlock Text="{Binding CountsText}" Foreground="LightGray"
-                                                           FontSize="10"/>
-                                                <TextBlock Text="{Binding TextCellsText}" Foreground="Gray"
-                                                           FontSize="10" IsVisible="{Binding HasTextCells}"/>
-                                            </StackPanel>
-                                        </Button>
+                                    <DataTemplate x:DataType="vm:GdsImportPinSuggestion">
+                                        <Border Classes="card" Padding="8,4" Margin="0,0,0,4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                    <TextBlock>
+                                                        <TextBlock.Text>
+                                                            <MultiBinding StringFormat="{}{0}.{1}">
+                                                                <Binding Path="CellName"/>
+                                                                <Binding Path="PinName"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                    <TextBlock Classes="caption mono">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding StringFormat="{}{0:F1},{1:F1} µm / {2:F0}° / w{3:F1} µm">
+                                                                <Binding Path="XUm"/>
+                                                                <Binding Path="YUm"/>
+                                                                <Binding Path="AngleDegrees"/>
+                                                                <Binding Path="WidthUm"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Classes="danger"
+                                                        Content="{loc:Localize GdsImport.RemoveGuessedPin}"
+                                                        Command="{Binding RemoveCommand}"/>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
                     </StackPanel>
-                </Expander>
-                    </StackPanel>
-                </Expander>
 
-                <!-- Guessed pins: edge-heuristic pins the user can delete before placing -->
-                <StackPanel Spacing="6" IsVisible="{Binding HasPinSuggestions}">
-                    <TextBlock Text="{loc:Localize GdsImport.GuessedPinsHeader}"
-                               Foreground="LightGray" FontSize="11" FontWeight="SemiBold"/>
-                    <TextBlock Text="{loc:Localize GdsImport.GuessedPinsHint}"
-                               Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
-                    <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding PinSuggestions}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:GdsImportPinSuggestion">
-                                    <Border Background="#252526" CornerRadius="4" Padding="6,4" Margin="0,0,0,4">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <StackPanel Grid.Column="0" Spacing="2">
-                                                <TextBlock FontSize="10" Foreground="White">
-                                                    <TextBlock.Text>
-                                                        <MultiBinding StringFormat="{}{0}.{1}">
-                                                            <Binding Path="CellName"/>
-                                                            <Binding Path="PinName"/>
-                                                        </MultiBinding>
-                                                    </TextBlock.Text>
-                                                </TextBlock>
-                                                <TextBlock FontSize="9" Foreground="Gray">
-                                                    <TextBlock.Text>
-                                                        <MultiBinding StringFormat="{}{0:F1},{1:F1} µm / {2:F0}° / w{3:F1} µm">
-                                                            <Binding Path="XUm"/>
-                                                            <Binding Path="YUm"/>
-                                                            <Binding Path="AngleDegrees"/>
-                                                            <Binding Path="WidthUm"/>
-                                                        </MultiBinding>
-                                                    </TextBlock.Text>
-                                                </TextBlock>
-                                            </StackPanel>
-                                            <Button Grid.Column="1" Content="{loc:Localize GdsImport.RemoveGuessedPin}"
-                                                    Command="{Binding RemoveCommand}"
-                                                    Background="#3d1515" Foreground="#FF9090"
-                                                    FontSize="9" Padding="8,2" CornerRadius="4"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <!-- Import behaviour -->
+                    <StackPanel Spacing="4">
+                        <!-- Recreate detected connections with Lunima routing -->
+                        <CheckBox IsChecked="{Binding RerouteConnectionsRequested}"
+                                  Content="{loc:Localize GdsImport.RerouteConnections}"
+                                  ToolTip.Tip="{loc:Localize GdsImport.RerouteConnectionsTip}"/>
+
+                        <!-- Keep the import flat (default) or wrap it in one group -->
+                        <CheckBox IsChecked="{Binding GroupImportRequested}"
+                                  Content="{loc:Localize GdsImport.GroupImport}"
+                                  ToolTip.Tip="{loc:Localize GdsImport.GroupImportTip}"/>
+
+                        <!-- Auto-connect all remaining facing pins after placement (opt-in) -->
+                        <CheckBox IsChecked="{Binding AutoConnectAllPinsRequested}"
+                                  Content="{loc:Localize GdsImport.AutoConnectAllPins}"
+                                  ToolTip.Tip="{loc:Localize GdsImport.AutoConnectAllPinsTip}"/>
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- Recreate detected connections with Lunima routing -->
-                <CheckBox IsChecked="{Binding RerouteConnectionsRequested}"
-                          Content="{loc:Localize GdsImport.RerouteConnections}"
-                          ToolTip.Tip="{loc:Localize GdsImport.RerouteConnectionsTip}"
-                          Foreground="White" FontSize="11" VerticalAlignment="Center"/>
+                <!-- ═══ Result (after successful import) ═══ -->
+                <StackPanel IsVisible="{Binding ImportCompleted}" Spacing="8">
+                    <TextBlock Classes="strong success" Text="{Binding ResultSummaryText}" TextWrapping="Wrap"/>
 
-                <!-- Keep the import flat (default) or wrap it in one group -->
-                <CheckBox IsChecked="{Binding GroupImportRequested}"
-                          Content="{loc:Localize GdsImport.GroupImport}"
-                          ToolTip.Tip="{loc:Localize GdsImport.GroupImportTip}"
-                          Foreground="White" FontSize="11" VerticalAlignment="Center"/>
+                    <TextBlock Classes="label warning" Text="{loc:Localize GdsImport.WarningsTitle}"
+                               IsVisible="{Binding HasWarnings}"/>
+                    <Border Classes="card" Padding="4" IsVisible="{Binding HasWarnings}">
+                        <ListBox ItemsSource="{Binding Warnings}" MaxHeight="180">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="system:String">
+                                    <TextBlock Classes="caption warning" Text="{Binding}"
+                                               TextWrapping="Wrap" Margin="4,2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
 
-                <!-- Auto-connect all remaining facing pins after placement (opt-in, issue #880) -->
-                <CheckBox IsChecked="{Binding AutoConnectAllPinsRequested}"
-                          Content="{loc:Localize GdsImport.AutoConnectAllPins}"
-                          ToolTip.Tip="{loc:Localize GdsImport.AutoConnectAllPinsTip}"
-                          Foreground="White" FontSize="11" VerticalAlignment="Center"/>
+                    <TextBlock Classes="label" Foreground="{DynamicResource Brush.Info}"
+                               Text="{loc:Localize GdsImport.InfosTitle}"
+                               IsVisible="{Binding HasInfos}"/>
+                    <Border Classes="card" Padding="4" IsVisible="{Binding HasInfos}">
+                        <ListBox ItemsSource="{Binding Infos}" MaxHeight="120">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="system:String">
+                                    <TextBlock Classes="caption secondary" Text="{Binding}"
+                                               TextWrapping="Wrap" Margin="4,2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <!-- Only shown with notes: without them nothing was mirrored to the console. -->
+                    <TextBlock Classes="caption" Text="{loc:Localize GdsImport.DetailsInErrorConsole}"
+                               FontStyle="Italic" IsVisible="{Binding HasResultNotes}"/>
+                </StackPanel>
+
             </StackPanel>
-
-            <!-- ═══ Result (after successful import) ═══ -->
-            <StackPanel IsVisible="{Binding ImportCompleted}" Spacing="8">
-                <TextBlock Text="{Binding ResultSummaryText}" Foreground="LightGreen"
-                           FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
-                <TextBlock Text="{loc:Localize GdsImport.WarningsTitle}" Foreground="#FFB86B"
-                           FontSize="11" FontWeight="SemiBold"
-                           IsVisible="{Binding HasWarnings}"/>
-                <ListBox ItemsSource="{Binding Warnings}" MaxHeight="180"
-                         Background="#252526" BorderThickness="0"
-                         IsVisible="{Binding HasWarnings}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="system:String">
-                            <TextBlock Text="{Binding}" Foreground="#FFCF9E" FontSize="10"
-                                       TextWrapping="Wrap" Margin="4,2"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <TextBlock Text="{loc:Localize GdsImport.InfosTitle}" Foreground="#7FB2E5"
-                           FontSize="11" FontWeight="SemiBold"
-                           IsVisible="{Binding HasInfos}"/>
-                <ListBox ItemsSource="{Binding Infos}" MaxHeight="120"
-                         Background="#252526" BorderThickness="0"
-                         IsVisible="{Binding HasInfos}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="system:String">
-                            <TextBlock Text="{Binding}" Foreground="#A9C7E8" FontSize="10"
-                                       TextWrapping="Wrap" Margin="4,2"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <!-- Only shown with notes: without them nothing was mirrored to the console. -->
-                <TextBlock Text="{loc:Localize GdsImport.DetailsInErrorConsole}" Foreground="Gray"
-                           FontSize="10" FontStyle="Italic"
-                           IsVisible="{Binding HasResultNotes}"/>
-            </StackPanel>
-
-        </StackPanel>
         </ScrollViewer>
     </DockPanel>
 </Window>

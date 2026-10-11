@@ -1,0 +1,74 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Type scale as TextBlock classes. Hierarchy comes from size and weight; color only
+    separates primary / secondary / tertiary text, never section from section.
+      display 26 · headline 20 · title 16 · subtitle 14 · body 12 · caption 11
+      label   11 semibold, tertiary, wide tracking — small section and field labels
+      muted / secondary / tertiary — text color steps; mono — numbers and code
+  -->
+  <Style Selector=":is(TopLevel)">
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Ui}"/>
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+  </Style>
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Base}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
+  </Style>
+
+  <Style Selector="TextBlock.display">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Display}"/>
+    <Setter Property="FontWeight" Value="Bold"/>
+    <Setter Property="LetterSpacing" Value="-0.4"/>
+  </Style>
+  <Style Selector="TextBlock.headline">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Headline}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="LetterSpacing" Value="-0.2"/>
+  </Style>
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Title}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="TextBlock.subtitle">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Subtitle}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="TextBlock.body">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}"/>
+  </Style>
+  <Style Selector="TextBlock.strong">
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
+  </Style>
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="LetterSpacing" Value="0.4"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
+  </Style>
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+  </Style>
+  <Style Selector="TextBlock.muted, TextBlock.tertiary">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
+  </Style>
+  <Style Selector="TextBlock.mono, SelectableTextBlock.mono">
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+  </Style>
+  <Style Selector="TextBlock.success">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/>
+  </Style>
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/>
+  </Style>
+  <Style Selector="TextBlock.danger">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+  </Style>
+  <Style Selector="TextBlock.accent">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+  </Style>
+</Styles>

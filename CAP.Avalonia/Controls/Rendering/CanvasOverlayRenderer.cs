@@ -8,16 +8,28 @@ using CAP.Avalonia.ViewModels.Panels;
 namespace CAP.Avalonia.Controls.Rendering;
 
 /// <summary>
-/// Renders screen-space overlays: interaction mode indicator and status bar.
+/// Renders the screen-space interaction-mode chip (top right) as a quiet translucent chip in
+/// the app's type and colors. Zoom, counts and the process live in the window's status bar.
 /// Implements <see cref="ICanvasRenderer"/> and draws in screen space (outside world transform).
 /// </summary>
 public sealed class CanvasOverlayRenderer : ICanvasRenderer
 {
+    private const double Margin = 12.0;
+    private const double ChipPadX = 10.0;
+    private const double ChipHeight = 24.0;
+    private const double ChipRadius = 6.0;
+    private const double DotRadius = 3.5;
+    private const double DotGap = 8.0;
+    private const double ModeFontSize = 12.0;
+
+    private static readonly IBrush ChipBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray800, 0xD8));
+    private static readonly IPen ChipBorderPen = new Pen(CanvasPalette.Brush(CanvasPalette.Gray700), 1);
+    private static readonly IBrush InfoBrush = CanvasPalette.Brush(CanvasPalette.Info);
+
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
         DrawModeIndicator(context, rc.Bounds, rc.MainViewModel);
-        DrawStatusInfo(context, rc.Bounds, rc.ViewModel, rc.Zoom);
     }
 
     private static void DrawModeIndicator(DrawingContext context, Rect bounds, MainViewModel? mainVm)
@@ -25,54 +37,36 @@ public sealed class CanvasOverlayRenderer : ICanvasRenderer
         if (mainVm == null) return;
 
         var loc = LocalizationService.Instance;
-        string modeText = mainVm.CanvasInteraction.CurrentMode switch
+        var mode = mainVm.CanvasInteraction.CurrentMode;
+        string modeText = mode switch
         {
-            InteractionMode.Select => $"[S] {loc.Translate("Canvas.Mode.Select")}",
-            InteractionMode.PlaceComponent => $"[P] {loc.Translate("Canvas.Mode.Place")}",
-            InteractionMode.Connect => $"[C] {loc.Translate("Canvas.Mode.Connect")}",
-            InteractionMode.Delete => $"[D] {loc.Translate("Canvas.Mode.Delete")}",
-            InteractionMode.Cut => $"[X] {loc.Translate("Canvas.Mode.Cut")}",
+            InteractionMode.Select => $"{loc.Translate("Canvas.Mode.Select")}  S",
+            InteractionMode.PlaceComponent => $"{loc.Translate("Canvas.Mode.Place")}  P",
+            InteractionMode.Connect => $"{loc.Translate("Canvas.Mode.Connect")}  C",
+            InteractionMode.Delete => $"{loc.Translate("Canvas.Mode.Delete")}  D",
+            InteractionMode.Cut => $"{loc.Translate("Canvas.Mode.Cut")}  X",
             _ => ""
         };
+        if (modeText.Length == 0) return;
 
-        IBrush brush = mainVm.CanvasInteraction.CurrentMode switch
-        {
-            InteractionMode.Select => Brushes.LightBlue,
-            InteractionMode.PlaceComponent => Brushes.LightGreen,
-            InteractionMode.Connect => Brushes.Orange,
-            InteractionMode.Delete => Brushes.Red,
-            InteractionMode.Cut => Brushes.Gold,
-            _ => Brushes.White
-        };
-
-        context.DrawText(
-            new FormattedText(modeText, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Arial", FontStyle.Normal, FontWeight.Bold),
-                14, brush),
-            new Point(bounds.Width - 100, 10));
+        var text = new FormattedText(modeText, System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight, CanvasTypography.UiMedium, ModeFontSize, CanvasPalette.TextPrimaryBrush);
+        double width = ChipPadX * 2 + DotRadius * 2 + DotGap + text.Width;
+        var chip = new Rect(bounds.Width - Margin - width, Margin, width, ChipHeight);
+        context.DrawRectangle(ChipBrush, ChipBorderPen, chip, ChipRadius, ChipRadius);
+        context.DrawEllipse(ModeBrush(mode), null,
+            new Point(chip.X + ChipPadX + DotRadius, chip.Y + ChipHeight / 2), DotRadius, DotRadius);
+        context.DrawText(text, new Point(chip.X + ChipPadX + DotRadius * 2 + DotGap, chip.Y + (ChipHeight - text.Height) / 2));
     }
 
-    private static void DrawStatusInfo(DrawingContext context, Rect bounds, DesignCanvasViewModel vm, double zoom)
+    /// <summary>Mode dot color: accent for select, then the semantic color the mode stands for.</summary>
+    private static IBrush ModeBrush(InteractionMode mode) => mode switch
     {
-        // The active fabrication process is shown here (grid HUD) rather than only at the
-        // bottom of the PDK panel; the snap/power key hints were dropped from the HUD because
-        // the full key legend is already displayed under the canvas.
-        string processInfo = string.IsNullOrEmpty(vm.ActiveProcessLabel) ? "" : $" | {vm.ActiveProcessLabel}";
+        InteractionMode.PlaceComponent => CanvasPalette.SuccessBrush,
+        InteractionMode.Connect => InfoBrush,
+        InteractionMode.Delete => CanvasPalette.DangerBrush,
+        InteractionMode.Cut => CanvasPalette.WarningBrush,
+        _ => CanvasPalette.AccentBrush,
+    };
 
-        var loc = LocalizationService.Instance;
-        string zoomLabel = loc.Translate("Canvas.Hud.Zoom");
-        string componentsLabel = loc.Translate("Canvas.Hud.Components");
-        string connectionsLabel = loc.Translate("Canvas.Hud.Connections");
-
-        context.DrawText(
-            new FormattedText(
-                $"{zoomLabel}: {zoom:P0} | {componentsLabel}: {vm.Components.Count} | {connectionsLabel}: {vm.Connections.Count}{processInfo}",
-                System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Arial"),
-                12,
-                Brushes.White),
-            new Point(10, bounds.Height - 25));
-    }
 }

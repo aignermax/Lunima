@@ -55,6 +55,7 @@ public sealed class HomeCompactLayoutScreenshotTests : IDisposable
         var shotRoot = Environment.GetEnvironmentVariable("UI_SHOT_DIR");
         if (!string.IsNullOrEmpty(shotRoot))
         {
+            ScreenshotArtifacts.SettleAnimations();
             var dir = Path.Combine(shotRoot, "home-compact");
             Directory.CreateDirectory(dir);
             using var frame = window.CaptureRenderedFrame();

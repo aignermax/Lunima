@@ -28,6 +28,17 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     /// <summary>Test seam (InternalsVisibleTo UnitTests): zeroes both counters.</summary>
     internal void ResetDrawCounters() => (IssuedConnectionCount, CulledConnectionCount) = (0, 0);
 
+    private readonly BlockedConnectionMarkerRenderer _blockedMarkers = new();
+
+    /// <summary>Blocked-connection markers collected by the last <see cref="Render"/> (test seam).</summary>
+    internal BlockedConnectionMarkerRenderer BlockedMarkers => _blockedMarkers;
+
+    /// <summary>
+    /// Draws the warning markers of the blocked connections seen by the last <see cref="Render"/>.
+    /// Call after the component pass so pins and bodies can never cover them.
+    /// </summary>
+    public void RenderBlockedMarkers(DrawingContext context, CanvasRenderContext rc) => _blockedMarkers.Flush(context, rc);
+
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
@@ -50,7 +61,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             }
 
             IssuedConnectionCount++;
-            DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments);
+            DrawWaveguideConnection(context, conn, vm, ReferenceEquals(conn, hovered), rc, segments, _blockedMarkers);
         }
 
         if (vm.ShowPowerFlow && rc.InteractionState.HoveredConnection != null)
@@ -81,12 +92,19 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
 
     private static void DrawWaveguideConnection(DrawingContext context, WaveguideConnectionViewModel conn,
         DesignCanvasViewModel vm, bool isHovered, CanvasRenderContext rc,
-        IReadOnlyList<CAP_Core.Routing.PathSegment> segments)
+        IReadOnlyList<CAP_Core.Routing.PathSegment> segments, BlockedConnectionMarkerRenderer blockedMarkers)
     {
-        var pen = CreateWaveguidePen(conn, vm, isHovered);
+        var pen = SelectPen(conn, vm, isHovered, rc.Pens);
         bool pathIsStale = segments.Count > 0 && UsesStaleFallback(conn) && IsPathStale(segments, conn);
+        bool drawsFallbackLine = segments.Count == 0 || pathIsStale;
 
-        if (segments.Count == 0 || pathIsStale)
+        if (IsBlocked(conn))
+        {
+            blockedMarkers.Collect(conn.Connection.Id, new Point(conn.StartX, conn.StartY), new Point(conn.EndX, conn.EndY),
+                drawsFallbackLine ? Array.Empty<CAP_Core.Routing.PathSegment>() : segments);
+        }
+
+        if (drawsFallbackLine)
         {
             context.DrawLine(pen, new Point(conn.StartX, conn.StartY), new Point(conn.EndX, conn.EndY));
             return;
@@ -108,6 +126,10 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         }
         DrawConnectionOverlays(context, conn, vm, isHovered, rc.Zoom, rc.Labels);
     }
+
+    /// <summary>A route the router could not place (blocked fallback) or whose geometry is invalid.</summary>
+    private static bool IsBlocked(WaveguideConnectionViewModel conn) =>
+        conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true;
 
     /// <summary>
     /// Draws whichever of the three independent text overlays apply, each with its own
@@ -152,71 +174,53 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
     /// </summary>
     internal static bool ShouldShowLengthLossLabel(bool isHovered, bool isSelected) => isHovered || isSelected;
 
-    /// <summary>Copper/gold marking electrical (metal) connections, matching the electrical
-    /// pin colour in <see cref="PinRenderer"/> (#519/#682).</summary>
-    private static readonly Color ElectricalTraceColor = Color.FromRgb(218, 165, 32);
-
-    /// <summary>Metal traces are drawn markedly thicker than optical waveguides so they read as
-    /// physical metal strips on the canvas, not thin light paths (#682 field feedback).</summary>
-    private const double ElectricalTraceThickness = 5;
-
     /// <summary>True when both endpoints are electrical pins — i.e. this is a metal trace,
     /// not an optical waveguide (matches the export classification in the exporters).</summary>
     private static bool IsElectricalTrace(WaveguideConnectionViewModel conn) =>
         PinKindHelper.IsElectrical(conn.Connection.StartPin)
         && PinKindHelper.IsElectrical(conn.Connection.EndPin);
 
-    /// <summary>Extra stroke width (px) added to the connection under the cursor.</summary>
+    /// <summary>Extra stroke width (world units) added to a power-flow pen under the cursor.</summary>
     private const double HoverThicknessBoost = 2.0;
 
-    private static Pen CreateWaveguidePen(WaveguideConnectionViewModel conn, DesignCanvasViewModel vm, bool isHovered)
+    /// <summary>
+    /// The connection's pen. Selection wins over hover; metal traces keep their copper strip and
+    /// never show optical power; with the power-flow view on, the simulated power decides; a
+    /// blocked route is danger-dashed; everything else is a plain waveguide.
+    /// </summary>
+    private static IPen SelectPen(WaveguideConnectionViewModel conn, DesignCanvasViewModel vm, bool isHovered, CanvasPens pens)
     {
-        // Selection styling wins over hover — a selected connection is already emphasized.
         if (conn.IsSelected)
-            return new Pen(Brushes.Yellow, 3);
+            return pens.WaveguideSelected;
 
-        return Emphasize(CreateBasePen(conn, vm), isHovered);
-    }
-
-    /// <summary>Builds the connection's normal (non-selected, non-hovered) pen.</summary>
-    private static Pen CreateBasePen(WaveguideConnectionViewModel conn, DesignCanvasViewModel vm)
-    {
-        // Electrical connections are metal traces: a thick copper/gold strip, distinct from
-        // optical waveguides. They carry no optical power flow, so this takes precedence over the
-        // power-flow styling below.
         if (IsElectricalTrace(conn))
-            return new Pen(new SolidColorBrush(ElectricalTraceColor), ElectricalTraceThickness)
-            {
-                LineCap = PenLineCap.Round,
-                LineJoin = PenLineJoin.Round,
-            };
+            return isHovered ? pens.ElectricalHover : pens.Electrical;
 
         if (vm.ShowPowerFlow && vm.PowerFlowVisualizer.CurrentResult != null)
         {
             var flow = vm.PowerFlowVisualizer.GetFlowForConnection(conn.Connection.Id);
             return flow != null
-                ? PowerFlowRenderer.CreatePowerPen(flow, vm.PowerFlowVisualizer.FadeThresholdDb)
-                : new Pen(new SolidColorBrush(Color.FromArgb(40, 80, 80, 120)), 1);
+                ? Emphasize(PowerFlowRenderer.CreatePowerPen(flow, vm.PowerFlowVisualizer.FadeThresholdDb), isHovered)
+                : pens.NoFlow;
         }
 
-        if (conn.IsBlockedFallback || conn.Connection.RoutedPath?.IsInvalidGeometry == true)
-            return new Pen(Brushes.Red, 2) { DashStyle = new DashStyle(new double[] { 5, 3 }, 0) };
+        if (IsBlocked(conn))
+            return isHovered ? pens.BlockedHover : pens.Blocked;
 
-        return new Pen(Brushes.Orange, 2);
+        return isHovered ? pens.WaveguideHover : pens.Waveguide;
     }
 
     /// <summary>
-    /// Emphasizes the hovered connection so the user sees it is clickable: keeps the base pen's
-    /// colour intent but draws it thicker and brighter (a solid-colour brush is lightened toward
-    /// white). Returns the pen unchanged when not hovered.
+    /// Emphasizes a hovered power-flow connection so the user sees it is clickable: keeps the
+    /// pen's colour intent but draws it thicker and brighter. Returns the pen unchanged when not hovered.
     /// </summary>
-    private static Pen Emphasize(Pen basePen, bool isHovered)
+    private static IPen Emphasize(IPen basePen, bool isHovered)
     {
         if (!isHovered)
             return basePen;
 
         var brush = basePen.Brush is ISolidColorBrush solid
-            ? new SolidColorBrush(Lighten(solid.Color))
+            ? new SolidColorBrush(CanvasPalette.Lighten(solid.Color, 0.5))
             : basePen.Brush;
 
         return new Pen(brush, basePen.Thickness + HoverThicknessBoost)
@@ -226,13 +230,6 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             LineJoin = PenLineJoin.Round,
         };
     }
-
-    /// <summary>Blends a colour halfway toward white for a brighter hover highlight.</summary>
-    private static Color Lighten(Color c) => Color.FromArgb(
-        c.A,
-        (byte)((c.R + 255) / 2),
-        (byte)((c.G + 255) / 2),
-        (byte)((c.B + 255) / 2));
 
     /// <summary>
     /// Only automatic, non-frozen routes may be replaced by the straight endpoint-to-endpoint
@@ -254,7 +251,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         return startDist > 1.0 || endDist > 1.0;
     }
 
-    private static void DrawPathSegments(DrawingContext context, Pen pen, IReadOnlyList<CAP_Core.Routing.PathSegment> segments)
+    private static void DrawPathSegments(DrawingContext context, IPen pen, IReadOnlyList<CAP_Core.Routing.PathSegment> segments)
     {
         foreach (var segment in segments)
         {
@@ -279,12 +276,12 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         // Metal traces carry no optical loss figure — label them with their length only, in the
         // electrical copper/gold tint (#682).
         string labelText = isElectrical ? $"{conn.PathLength:F0}µm" : $"{conn.PathLength:F0}µm, {conn.LossDb:F2}dB";
-        IBrush labelBrush = isElectrical ? new SolidColorBrush(ElectricalTraceColor) : Brushes.LightGray;
+        IBrush labelBrush = isElectrical ? CanvasPalette.CopperBrush : CanvasPalette.TextPrimaryBrush;
 
         double fontSize = PinScreenSize.ClampWorldFontSize(LabelFontSizeWorld, zoom);
         labels.Enqueue(
             new FormattedText(labelText, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, new Typeface("Arial"), fontSize, labelBrush),
+                FlowDirection.LeftToRight, CanvasTypography.Ui, fontSize, labelBrush),
             labelBrush,
             new Point(midX, midY - 15));
     }
@@ -306,16 +303,18 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         else
         {
             labelText = "no signal";
-            labelBrush = new SolidColorBrush(Color.FromArgb(120, 150, 150, 150));
+            labelBrush = CanvasPalette.TextTertiaryBrush;
         }
 
         double fontSize = PinScreenSize.ClampWorldFontSize(LabelFontSizeWorld, zoom);
         labels.Enqueue(
             new FormattedText(labelText, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, new Typeface("Arial"), fontSize, labelBrush),
+                FlowDirection.LeftToRight, CanvasTypography.Ui, fontSize, labelBrush),
             labelBrush,
             new Point(midX, midY - 15));
     }
+
+    private static readonly IBrush StyleBadgeBrush = CanvasPalette.Brush(CanvasPalette.AccentHover);
 
     /// <summary>Always-on badge for a manually styled connection (Type != Auto): shows the Nazca
     /// style name above the label so it's obvious at a glance that the autorouter no longer owns
@@ -329,7 +328,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
             new FormattedText(conn.Connection.Type.ToString(),
                 System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
-                new Typeface("Arial", FontStyle.Normal, FontWeight.Bold), fontSize, Brushes.Orange),
+                CanvasTypography.UiSemiBold, fontSize, StyleBadgeBrush),
             new Point(midX, midY - 28));
     }
 
@@ -340,7 +339,7 @@ public sealed class WaveguideConnectionRenderer : ICanvasRenderer
         PowerFlowRenderer.DrawPowerLabel(context, flow, new Point((conn.StartX + conn.EndX) / 2, (conn.StartY + conn.EndY) / 2 - 25));
     }
 
-    private static void DrawArc(DrawingContext context, Pen pen, BendSegment bend)
+    private static void DrawArc(DrawingContext context, IPen pen, BendSegment bend)
     {
         int numSegments = Math.Max(8, (int)(Math.Abs(bend.SweepAngleDegrees) / 5));
         if (numSegments == 0 || Math.Abs(bend.SweepAngleDegrees) < 0.1)

@@ -31,9 +31,6 @@ public partial class RegistryBrowserViewModel
     [ObservableProperty]
     private bool _downloadIsError;
 
-    /// <summary>Foreground of <see cref="DownloadMessage"/>: green on success, salmon on failure.</summary>
-    public string DownloadMessageColor => DownloadIsError ? "Salmon" : "#8fbf8f";
-
     /// <summary>True while the disputed-artifact warning awaits the user's explicit confirmation.</summary>
     [ObservableProperty]
     private bool _pendingDisputedConfirm;
@@ -147,6 +144,4 @@ public partial class RegistryBrowserViewModel
     }
 
     partial void OnIsDownloadingChanged(bool value) => NotifyDownloadStateChanged();
-
-    partial void OnDownloadIsErrorChanged(bool value) => OnPropertyChanged(nameof(DownloadMessageColor));
 }

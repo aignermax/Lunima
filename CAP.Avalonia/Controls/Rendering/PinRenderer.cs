@@ -9,19 +9,28 @@ namespace CAP.Avalonia.Controls.Rendering;
 
 /// <summary>
 /// Renders component pins, pin direction indicators, and component name labels.
-/// Used internally by <see cref="ComponentRenderer"/>.
+/// Used internally by <see cref="ComponentRenderer"/>. Dimming in group-edit mode is applied by
+/// the caller as an opacity layer, so pins only fade on their own for incompatible drag targets.
 /// </summary>
 internal sealed class PinRenderer
 {
-    /// <summary>Copper/gold colour marking electrical pins (Issue #519).</summary>
-    private static readonly Color ElectricalPinColor = Color.FromRgb(218, 165, 32);
-
     /// <summary>
     /// World-space font size for a component's name label before the <see cref="PinScreenSize"/>
     /// screen-space cap is applied. Shared with <see cref="LabelDeclutter.ComponentNameLabelComputer"/>
     /// so the overlap-resolution pass measures text at exactly the size actually drawn.
     /// </summary>
     internal const double NameLabelFontSizeWorld = 12.0;
+
+    /// <summary>Screen font size of a hovered pin's name.</summary>
+    private const double PinNameFontPx = 11.0;
+
+    /// <summary>Alpha of a pin that is not a valid target for the connection being dragged.</summary>
+    private const byte IncompatibleAlpha = 0x50;
+
+    private static readonly PinBrushes Normal = new(0xFF);
+    private static readonly PinBrushes Faint = new(IncompatibleAlpha);
+    private static readonly IBrush HighlightGlow = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Accent, 0x55));
+    private static readonly IBrush DimmedNameBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray300, 0x80));
 
     /// <summary>
     /// Renders all physical pins of a component.
@@ -31,7 +40,6 @@ internal sealed class PinRenderer
         bool isConnectMode = rc.MainViewModel?.CanvasInteraction.CurrentMode == InteractionMode.Connect;
         var highlightedPin = rc.ViewModel.HighlightedPin?.Pin;
         var dragStartPin = rc.InteractionState.ConnectionDragStartPin;
-        byte baseAlpha = (byte)(isDimmed ? 128 : 255);
         double pitchScale = PinPitchSizer.ComputeScale(comp.Component.PhysicalPins, isConnectMode ? 8 : 5);
 
         foreach (var pin in comp.Component.PhysicalPins)
@@ -44,34 +52,30 @@ internal sealed class PinRenderer
             // (issue #534, extended to the domain check in #724 point 4).
             bool isIncompatibleTarget = dragStartPin != null && pin != dragStartPin &&
                 PinConnectionAffordance.IsIncompatibleTarget(dragStartPin, pin);
-            byte alpha = isIncompatibleTarget ? (byte)(baseAlpha / 3) : baseAlpha;
+            var brushes = isIncompatibleTarget ? Faint : Normal;
 
             double pinSize = PinScreenSize.CapWorldRadius((isConnectMode ? 8 : 5) * pitchScale, rc.Zoom);
-            IBrush pinBrush = GetPinBrush(isHighlighted, isConnectMode, pin, alpha);
-
             if (isHighlighted)
             {
                 pinSize = PinScreenSize.CapWorldRadius(12 * pitchScale, rc.Zoom);
-                var glowBrush = new SolidColorBrush(Color.FromArgb((byte)(100 * alpha / 255), 0, 255, 255));
-                context.DrawEllipse(glowBrush, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
+                context.DrawEllipse(HighlightGlow, null, new Point(pinX, pinY), pinSize * 1.5, pinSize * 1.5);
             }
 
-            DrawPinShape(context, pin, pinBrush, pinX, pinY, pinSize, alpha);
-            DrawPinDirectionIndicator(context, pin, pinX, pinY, isHighlighted, isDimmed, rc.Zoom, pitchScale);
+            DrawPinDirectionIndicator(context, pin, pinX, pinY, isHighlighted, rc, pitchScale);
+            DrawPinShape(context, pin, brushes.For(pin, isHighlighted, isConnectMode), brushes.Rim, pinX, pinY, pinSize);
 
             if (isHighlighted)
             {
                 // Deferred to the topmost label pass: the hover/connect pin name must stay
                 // readable even where a neighboring component's body would paint over it.
-                var nameBrush = new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255));
                 var pinText = new FormattedText(
                     pin.Name,
                     System.Globalization.CultureInfo.CurrentCulture,
                     FlowDirection.LeftToRight,
-                    new Typeface("Arial"),
-                    10,
-                    nameBrush);
-                rc.Labels.Enqueue(pinText, nameBrush, new Point(pinX + 15, pinY - 15));
+                    CanvasTypography.UiMedium,
+                    PinNameFontPx / (rc.Zoom <= 0 ? 1 : rc.Zoom),
+                    CanvasPalette.AccentHoverBrush);
+                rc.Labels.Enqueue(pinText, CanvasPalette.AccentHoverBrush, new Point(pinX + 15, pinY - 15));
             }
         }
     }
@@ -81,16 +85,16 @@ internal sealed class PinRenderer
     /// inside the top-left corner otherwise — see
     /// <see cref="LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor"/>) into the
     /// deferred topmost pass, using the <see cref="FormattedText"/>
-    /// <see cref="LabelDeclutter.ComponentNameLabelComputer"/> already measured (screen-space
-    /// font-size clamped, and shared/cached by (name, font size)) — this method never measures
-    /// text itself, only attaches the current dim brush and queues. The foreground travels
-    /// with the queue entry because <see cref="FormattedText"/> bakes the brush at creation;
-    /// the flush re-applies it over the halo copy via <see cref="FormattedText.SetForegroundBrush"/>.
+    /// <see cref="LabelDeclutter.ComponentNameLabelComputer"/> already measured. Names at rest
+    /// use the secondary text color; a selected or hovered name is promoted to primary.
     /// </summary>
-    public void DrawComponentName(DeferredLabelLayer labels, ComponentViewModel comp, FormattedText labelText, bool isDimmed = false)
+    public void DrawComponentName(DeferredLabelLayer labels, ComponentViewModel comp, FormattedText labelText,
+        bool isDimmed = false, bool isEmphasized = false)
     {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
-        labels.Enqueue(labelText, new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)),
+        IBrush brush = isDimmed ? DimmedNameBrush
+            : isEmphasized ? CanvasPalette.TextPrimaryBrush
+            : CanvasPalette.TextSecondaryBrush;
+        labels.Enqueue(labelText, brush,
             LabelDeclutter.ComponentNameLabelComputer.GetLabelAnchor(comp, labelText.Height));
     }
 
@@ -98,42 +102,28 @@ internal sealed class PinRenderer
     /// Draws the pin marker glyph resolved by <see cref="PinGlyphSelector"/> — the single
     /// place deciding shape from (MatterType × Polarization), so an electrical pin can never
     /// pick up a polarization shape and a TM pin can never look electrical (issue #724).
-    /// Color already encodes <see cref="MatterType"/> via <see cref="GetPinBrush"/>.
+    /// Color already encodes <see cref="MatterType"/> via <see cref="PinBrushes.For"/>.
     /// </summary>
-    private static void DrawPinShape(DrawingContext context, PhysicalPin pin, IBrush brush,
-        double pinX, double pinY, double pinSize, byte alpha)
+    private static void DrawPinShape(DrawingContext context, PhysicalPin pin, IBrush brush, IBrush rim,
+        double pinX, double pinY, double pinSize)
     {
         switch (PinGlyphSelector.SelectGlyph(pin.MatterType, pin.Polarization))
         {
             case PinGlyph.ElectricalPad:
-                DrawElectricalPad(context, brush, pinX, pinY, pinSize, alpha);
+                var rect = new Rect(pinX - pinSize, pinY - pinSize, pinSize * 2, pinSize * 2);
+                context.DrawRectangle(brush, new Pen(rim, pinSize * 0.3), rect);
                 break;
             case PinGlyph.OpticalDiamond:
                 context.DrawGeometry(brush, null, BuildDiamondGeometry(pinX, pinY, pinSize));
                 break;
             case PinGlyph.OpticalCircleWithDiamondOutline:
                 context.DrawEllipse(brush, null, new Point(pinX, pinY), pinSize, pinSize);
-                var outlinePen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)), 1);
-                context.DrawGeometry(null, outlinePen, BuildDiamondGeometry(pinX, pinY, pinSize));
+                context.DrawGeometry(null, new Pen(rim, pinSize * 0.2), BuildDiamondGeometry(pinX, pinY, pinSize));
                 break;
             default:
                 context.DrawEllipse(brush, null, new Point(pinX, pinY), pinSize, pinSize);
                 break;
         }
-    }
-
-    /// <summary>
-    /// Draws the electrical pad glyph: a filled square (the historical electrical shape) plus a
-    /// darker contact-rim border, so it reads as a metal pad rather than a plain optical-domain
-    /// square — and never collides with the optical <see cref="PinGlyph.OpticalDiamond"/> shape.
-    /// </summary>
-    private static void DrawElectricalPad(DrawingContext context, IBrush brush,
-        double pinX, double pinY, double pinSize, byte alpha)
-    {
-        var rect = new Rect(pinX - pinSize, pinY - pinSize, pinSize * 2, pinSize * 2);
-        context.DrawRectangle(brush, null, rect);
-        var rimPen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 90, 60, 10)), 1.5);
-        context.DrawRectangle(null, rimPen, rect);
     }
 
     /// <summary>Builds a diamond (rotated square) geometry centered at the pin position.</summary>
@@ -151,32 +141,46 @@ internal sealed class PinRenderer
         return geometry;
     }
 
-    private static IBrush GetPinBrush(bool isHighlighted, bool isConnectMode, PhysicalPin pin, byte alpha)
+    private static void DrawPinDirectionIndicator(DrawingContext context, PhysicalPin pin, double pinX, double pinY,
+        bool isHighlighted, CanvasRenderContext rc, double pitchScale)
     {
-        if (isHighlighted)
-            return new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255));
-        if (pin.MatterType == MatterType.Electricity)
-            return new SolidColorBrush(Color.FromArgb(alpha, ElectricalPinColor.R, ElectricalPinColor.G, ElectricalPinColor.B));
-        if (isConnectMode)
-            return new SolidColorBrush(Color.FromArgb(alpha, 255, 200, 0));
-        if (pin.LogicalPin != null)
-            return new SolidColorBrush(Color.FromArgb(alpha, 100, 200, 100));
-        return new SolidColorBrush(Color.FromArgb(alpha, 200, 100, 100));
-    }
-
-    private static void DrawPinDirectionIndicator(
-        DrawingContext context, PhysicalPin pin, double pinX, double pinY,
-        bool isHighlighted, bool isDimmed, double zoom, double pitchScale)
-    {
-        byte alpha = (byte)(isDimmed ? 128 : 255);
-        var dirBrush = isHighlighted
-            ? new SolidColorBrush(Color.FromArgb(alpha, 0, 255, 255))
-            : new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255));
-        var dirPen = new Pen(dirBrush, isHighlighted ? 2 : 1);
+        var pen = isHighlighted ? rc.Pens.Selection : rc.Pens.PinDirection;
         double angle = pin.GetAbsoluteAngle() * Math.PI / 180;
-        double dirLength = PinScreenSize.CapWorldRadius((isHighlighted ? 20 : 15) * pitchScale, zoom);
-        context.DrawLine(dirPen,
+        double dirLength = PinScreenSize.CapWorldRadius((isHighlighted ? 20 : 15) * pitchScale, rc.Zoom);
+        context.DrawLine(pen,
             new Point(pinX, pinY),
             new Point(pinX + Math.Cos(angle) * dirLength, pinY + Math.Sin(angle) * dirLength));
+    }
+
+    /// <summary>Pin fills at one alpha level, allocated once.</summary>
+    private sealed class PinBrushes
+    {
+        private readonly IBrush _optical;
+        private readonly IBrush _unlinked;
+        private readonly IBrush _electrical;
+        private readonly IBrush _connectTarget;
+        private readonly IBrush _highlighted;
+
+        public PinBrushes(byte alpha)
+        {
+            _optical = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.PinOptical, alpha));
+            _unlinked = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Danger, alpha));
+            _electrical = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Lighten(CanvasPalette.Copper, 0.15), alpha));
+            _connectTarget = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.AccentHover, alpha));
+            _highlighted = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray100, alpha));
+            Rim = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray950, alpha));
+        }
+
+        /// <summary>Dark contact rim / outline color.</summary>
+        public IBrush Rim { get; }
+
+        /// <summary>Fill for a pin: highlight wins, then the electrical domain, connect mode, logical link.</summary>
+        public IBrush For(PhysicalPin pin, bool isHighlighted, bool isConnectMode)
+        {
+            if (isHighlighted) return _highlighted;
+            if (pin.MatterType == MatterType.Electricity) return _electrical;
+            if (isConnectMode) return _connectTarget;
+            return pin.LogicalPin != null ? _optical : _unlinked;
+        }
     }
 }

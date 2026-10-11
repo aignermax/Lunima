@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using CAP.Avalonia.Controls;
+using CAP.Avalonia.Controls.Rendering;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.GdsImport;
 using CAP.Avalonia.ViewModels.Canvas;
@@ -490,7 +491,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
 
     /// <summary>
     /// Panel 01: component bodies at the user's coordinates, every one of his 10
-    /// connections visible (healthy routes in orange, the blocked-fallback
+    /// connections visible (healthy routes in teal, the blocked-fallback
     /// detours of this tightly-overlapping layout as red dashes), name labels.
     /// </summary>
     private static void AssertPanel01(WriteableBitmap panel, string path, PixelSize size, Probes probes)
@@ -500,7 +501,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
             "bodies + borders + pins + labels + routes on the dark background");
 
         CountWhere(panel, probes.AroundMmiCenter(), IsComponentBody)
-            .ShouldBeGreaterThan(40, "the mmi1 footprint is the plain component body fill (40,50,70)");
+            .ShouldBeGreaterThan(40, "the mmi1 footprint is the plain component body fill (dark, category-tinted)");
 
         // The crossing↔crossing span (12.8 µm straight) is skipped: its route is
         // genuinely painted over by the two crossings' pin glyph clouds at this
@@ -514,14 +515,14 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
             .ToList();
         invisibleRoutes.ShouldBeEmpty(
             "every connection except the pin-glyph-covered crossing span renders a visible route "
-            + "(orange or red-dashed); misses: " + string.Join(" | ", invisibleRoutes));
-        CountWhere(panel, Full(size), IsCanvasOrange)
-            .ShouldBeGreaterThan(500, "the healthy A*-routed connections are drawn in orange");
+            + "(teal or red-dashed); misses: " + string.Join(" | ", invisibleRoutes));
+        CountWhere(panel, Full(size), IsCanvasWaveguide)
+            .ShouldBeGreaterThan(500, "the healthy A*-routed connections are drawn in the teal waveguide colour");
         CountWhere(panel, Full(size), IsBlockedRed)
             .ShouldBeGreaterThan(300, "the blocked-fallback detours render as red dashes — " +
                 "several of his connections cannot route cleanly through the overlapping app-template footprints");
 
-        CountWhere(panel, Full(size), IsWhiteishText)
+        CountWhere(panel, Full(size), IsLabelText)
             .ShouldBeGreaterThan(100, "component name labels are rendered");
         AssertEmptyCorner(panel, size);
     }
@@ -546,7 +547,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
 
     /// <summary>
     /// Panel 03: the re-imported group with re-routing OFF — GDS outline fills,
-    /// free green pins, and every drawn route is imported geometry: the
+    /// free teal pins, and every drawn route is imported geometry: the
     /// route-derived connections keep their imported polygons as frozen cached
     /// routes and the junction network rides the group as pin-less frozen paths,
     /// so the pixel probes on the drawn route polygons stay valid here.
@@ -560,7 +561,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
                 "(per-layer palette: the demofab cell has no (1,0) polygon, so its stacked " +
                 "foundry layers paint in their hashed hues, not the waveguide blue)");
         CountExternalPinPixels(panel, size)
-            .ShouldBeGreaterThan(30, "the unoccupied pins render green (route-derived connections occupy some)");
+            .ShouldBeGreaterThan(30, "the unoccupied pins render in the light-teal pin colour (route-derived connections occupy some)");
         probes.ImportedRouteProbes.ShouldNotBeEmpty(
             "the top cell's own waveguide polygons import as pin-less frozen paths");
         for (var polyIndex = 0; polyIndex < probes.ImportedRouteProbes.Count; polyIndex++)
@@ -609,13 +610,13 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
             .ShouldBeGreaterThan(50, "the imported pin-less outlines are drawn (the re-routed " +
                 "connections' geometry is the router's choice and is pinned at model level only)");
         CountExternalPinPixels(panel, size)
-            .ShouldBeGreaterThan(30, "the unoccupied pins render green");
+            .ShouldBeGreaterThan(30, "the unoccupied pins render in the light-teal pin colour");
         AssertEmptyCorner(panel, size);
     }
 
-    /// <summary>Count of light-green unoccupied-group-pin pixels in the whole panel.</summary>
+    /// <summary>Count of light-teal unoccupied-group-pin pixels in the whole panel.</summary>
     private static int CountExternalPinPixels(WriteableBitmap panel, PixelSize size) =>
-        CountWhere(panel, Full(size), IsExternalPinGreen);
+        CountWhere(panel, Full(size), IsExternalPin);
 
     /// <summary>The bottom-left corner lies inside the margin in every panel: pure background.</summary>
     private static void AssertEmptyCorner(WriteableBitmap panel, PixelSize size) =>
@@ -636,20 +637,38 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
         new FileInfo(path).Length.ShouldBeGreaterThan(20_000, $"{path} is a real render, not a stub");
     }
 
-    // ── Pixel predicates (BGRA bytes; background is #1E1E1E = (30,30,30)) ────
+    // ── Pixel predicates (panel background is #1E1E1E = (30,30,30)) ────
 
-    /// <summary>Plain component body fill (40,50,70) of non-outlined canvas components.</summary>
-    private static bool IsComponentBody(byte r, byte g, byte b) =>
-        Math.Abs(r - 40) <= 8 && Math.Abs(g - 50) <= 8 && Math.Abs(b - 70) <= 10;
+    /// <summary>Channel tolerance when matching a palette colour against anti-aliased strokes.</summary>
+    private const int PaletteTolerance = 16;
+
+    /// <summary>Highest channel value a component body fill reaches; keeps lighter strokes and fills out.</summary>
+    private const int ComponentBodyMaxChannel = 90;
+
+    /// <summary>Minimum blue lead over red and green that separates a body from the neutral panel background.</summary>
+    private const int ComponentBodyBlueLead = 8;
 
     /// <summary>
-    /// Core pixels of the canvas waveguide pen (#FFA500 = (255,165,0)). Kept
-    /// tight on purpose: subpixel-anti-aliased text fringes produce orange-ish
-    /// blends like (210,153,45) and (225,172,49) that a looser predicate would
-    /// mistake for routes.
+    /// Non-outlined canvas component body: <see cref="CanvasPalette.ComponentBody"/> (#181C24)
+    /// blended with its category tint, so a dark, blue-dominant fill — distinct from the
+    /// neutral gray panel background, the teal waveguides and the light pin glyphs.
     /// </summary>
-    private static bool IsCanvasOrange(byte r, byte g, byte b) =>
-        r >= 245 && g >= 130 && g <= 190 && b <= 60;
+    private static bool IsComponentBody(byte r, byte g, byte b) =>
+        b >= r + ComponentBodyBlueLead && b >= g + ComponentBodyBlueLead
+        && r <= ComponentBodyMaxChannel && b <= ComponentBodyMaxChannel;
+
+    private static bool IsNear(byte r, byte g, byte b, Color target) =>
+        Math.Abs(r - target.R) <= PaletteTolerance
+        && Math.Abs(g - target.G) <= PaletteTolerance
+        && Math.Abs(b - target.B) <= PaletteTolerance;
+
+    /// <summary>
+    /// Core pixels of the canvas waveguide pen (<see cref="CanvasPalette.Waveguide"/>,
+    /// teal #3CC7B6). Kept tight on purpose: the lighter optical pin glyphs
+    /// (<see cref="CanvasPalette.PinOptical"/>) and neutral text fringes must not read as routes.
+    /// </summary>
+    private static bool IsCanvasWaveguide(byte r, byte g, byte b) =>
+        IsNear(r, g, b, CanvasPalette.Waveguide);
 
     /// <summary>
     /// Core pixels of the imported frozen paths: the export flattens the routed
@@ -657,20 +676,20 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
     /// default interconnect xsection carries no layer), so the per-layer palette
     /// paints them in the hashed (1111, 0) hue (≈(140,204,112)) — at the frozen-path
     /// alpha 200 a ≈(116,166,94) core over the dark background, with multi-stroke
-    /// overlap blends up to ≈(135,196,107). The blue cap keeps the light-green
-    /// free-pin fill (144,238,144) out; the green floor keeps the muted demofab
+    /// overlap blends up to ≈(135,196,107). The blue cap keeps the light-teal
+    /// free-pin fill (126,219,207) out; the green floor keeps the muted demofab
     /// body fills (g ≤ 120) out.
     /// </summary>
     private static bool IsImportedRouteGreen(byte r, byte g, byte b) =>
         g >= 130 && g >= r + 25 && g >= b + 40 && b <= 140;
 
-    /// <summary>Blocked-fallback route pixels (red pen #FF0000, dashed).</summary>
+    /// <summary>Blocked-fallback route pixels (<see cref="CanvasPalette.Danger"/> pen, dashed).</summary>
     private static bool IsBlockedRed(byte r, byte g, byte b) =>
-        r >= 200 && g <= 70 && b <= 70;
+        IsNear(r, g, b, CanvasPalette.Danger);
 
     /// <summary>Any live top-level canvas route pixel, healthy or blocked (live-connection absence checks).</summary>
     private static bool IsRoutePixel(byte r, byte g, byte b) =>
-        IsCanvasOrange(r, g, b) || IsBlockedRed(r, g, b);
+        IsCanvasWaveguide(r, g, b) || IsBlockedRed(r, g, b);
 
     /// <summary>
     /// The placed mmi1's outline fill: the demofab cell carries no (1, 0) waveguide
@@ -683,8 +702,17 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
     private static bool IsDemofabBodyFill(byte r, byte g, byte b) =>
         g >= r + 4 && g >= b + 4 && g <= 120;
 
-    /// <summary>White-ish text pixels (name labels, pin labels).</summary>
-    private static bool IsWhiteishText(byte r, byte g, byte b) => r >= 200 && g >= 200 && b >= 200;
+    /// <summary>Maximum channel spread of a neutral, label-coloured pixel.</summary>
+    private const int LabelMaxChannelSpread = 40;
+
+    /// <summary>
+    /// Light neutral text pixels (name labels, pin labels): bright in every channel
+    /// like <see cref="CanvasPalette.Gray300"/>, but with far less colour than the
+    /// teal waveguides and pin glyphs.
+    /// </summary>
+    private static bool IsLabelText(byte r, byte g, byte b) =>
+        Math.Min(r, Math.Min(g, b)) >= CanvasPalette.Gray300.R - PaletteTolerance - 4
+        && Math.Max(r, Math.Max(g, b)) - Math.Min(r, Math.Min(g, b)) <= LabelMaxChannelSpread;
 
     /// <summary>
     /// Device-fill pixels of the ground-truth pane: steel blue (94,123,166) or
@@ -702,9 +730,9 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
     private static bool IsBronzeWaveguide(byte r, byte g, byte b) =>
         r >= 100 && r >= b + 30 && g >= b + 10 && g <= 170 && b <= 130;
 
-    /// <summary>Light-green unoccupied group pin fill (144,238,144).</summary>
-    private static bool IsExternalPinGreen(byte r, byte g, byte b) =>
-        g >= 190 && r >= 100 && r <= 190 && b >= 100 && b <= 190;
+    /// <summary>Unoccupied group pin fill (<see cref="CanvasPalette.PinOptical"/>, light teal).</summary>
+    private static bool IsExternalPin(byte r, byte g, byte b) =>
+        IsNear(r, g, b, CanvasPalette.PinOptical);
 
     /// <summary>The shared dark canvas background.</summary>
     private static bool IsBackground(byte r, byte g, byte b) => r <= 40 && g <= 40 && b <= 40;
@@ -844,7 +872,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
                     + "uses): 7 components from two PDKs (2× demofab 2x2 MMI; SiEPIC adiabatic coupler, "
                     + "broadband DC, 2× crossing 4-port, DC halfring) at the user's exact coordinates, joined "
                     + "by his 10 A*-routed waveguide connections. Dark #1E1E1E background, Y-down µm world. "
-                    + "Look at: healthy routes in orange; several connections drawn as RED DASHED blocked-"
+                    + "Look at: healthy routes in teal; several connections drawn as RED DASHED blocked-"
                     + "fallback detours (the overlapping app-template footprints leave no clean path — they "
                     + "still export as real geometry); the halfring↔adiabatic connection routed as a FULL "
                     + "CIRCLE (left, below the halfring pins — the bend math degenerates when the 10.6 µm pin "
@@ -872,7 +900,7 @@ public class GdsRoundTripVisualVerificationTests : IDisposable
                     + "after a real import) wraps the 7 placed instances, each drawn from its imported GDS "
                     + "outline polygons in the per-layer palette (the SiEPIC cells in waveguide blue; the "
                     + "demofab MMIs in muted hashed hues with the red 'mmi2x2_dp' name stubs etched into the "
-                    + "cells) with its name; light-green dots = the free group pins. Every drawn route is "
+                    + "cells) with its name; light-teal dots = the free group pins. Every drawn route is "
                     + "imported geometry: the 4 route-derived connections (2 MMI braids, crossing↔crossing, "
                     + "halfring↔adiabatic) keep their imported polygons as frozen cached routes, and the "
                     + "junction network rides the group as pin-less frozen paths — all in the hashed green "

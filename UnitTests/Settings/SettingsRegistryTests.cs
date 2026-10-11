@@ -146,7 +146,7 @@ public class SettingsRegistryTests
         ISettingsPage page = new RoutingSettingsPage(new DesignCanvasViewModel(), LocalizationService.Instance);
 
         page.Title.ShouldBe(LocalizationService.Instance.Translate("Settings.Section.Routing"));
-        page.Icon.ShouldBe("⤢");
+        page.Icon.ShouldBe("Icon.Route");
         page.Category.ShouldBe("Canvas");
         page.ViewModel.ShouldBeOfType<RoutingSettingsViewModel>();
     }
@@ -174,7 +174,7 @@ public class SettingsRegistryTests
         ISettingsPage page = new GridSnapSettingsPage(new DesignCanvasViewModel(), LocalizationService.Instance);
 
         page.Title.ShouldBe(LocalizationService.Instance.Translate("Settings.Section.GridAlignment"));
-        page.Icon.ShouldBe("⊞");
+        page.Icon.ShouldBe("Icon.Grid3x3");
         page.Category.ShouldBe("Canvas");
     }
 
@@ -187,7 +187,7 @@ public class SettingsRegistryTests
         ISettingsPage page = new UpdateSettingsPage(null!, LocalizationService.Instance);
 
         page.Title.ShouldBe(LocalizationService.Instance.Translate("Settings.Section.SoftwareUpdates"));
-        page.Icon.ShouldBe("🔄");
+        page.Icon.ShouldBe("Icon.RefreshCw");
         page.Category.ShouldBeNull();
     }
 
@@ -199,7 +199,7 @@ public class SettingsRegistryTests
         ISettingsPage page = new GdsExportSettingsPage(null!, LocalizationService.Instance);
 
         page.Title.ShouldBe(LocalizationService.Instance.Translate("Settings.Section.GdsExport"));
-        page.Icon.ShouldBe("🐍");
+        page.Icon.ShouldBe("Icon.FileOutput");
         page.Category.ShouldBe("Export");
     }
 
@@ -209,7 +209,7 @@ public class SettingsRegistryTests
         ISettingsPage page = new PythonEnvironmentsSettingsPage(null!, LocalizationService.Instance);
 
         page.Title.ShouldBe(LocalizationService.Instance.Translate("Settings.Section.PythonEnvironments"));
-        page.Icon.ShouldBe("📦");
+        page.Icon.ShouldBe("Icon.Package");
         page.Category.ShouldBe("Export");
     }
 
@@ -219,7 +219,7 @@ public class SettingsRegistryTests
         ISettingsPage page = new AiAssistantSettingsPage(null!, LocalizationService.Instance);
 
         page.Title.ShouldBe(LocalizationService.Instance.Translate("Settings.Section.AiAssistant"));
-        page.Icon.ShouldBe("🤖");
+        page.Icon.ShouldBe("Icon.Bot");
         page.Category.ShouldBeNull();
     }
 

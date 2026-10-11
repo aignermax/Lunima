@@ -55,13 +55,13 @@ public class PinScreenSizeTests
     }
 
     [Theory]
-    [InlineData(10.0, 0.8)]
+    [InlineData(20.0, 0.5)]
     [InlineData(10.0, 1.0)]
     [InlineData(12.0, 1.0)]
     public void ClampWorldFontSize_BetweenBounds_ReturnsWorldSizeUnchanged(double worldFontSize, double zoom)
     {
-        // worldFontSize * zoom lands strictly between MinLabelFontSizePx (6) and
-        // MaxLabelFontSizePx (14) at these combinations, so nothing clamps — labels still
+        // worldFontSize * zoom lands strictly between MinLabelFontSizePx (9) and
+        // MaxLabelFontSizePx (13) at these combinations, so nothing clamps — labels still
         // shrink/grow proportionally with the world exactly like CapWorldRadius below its cap.
         double result = PinScreenSize.ClampWorldFontSize(worldFontSize, zoom);
 

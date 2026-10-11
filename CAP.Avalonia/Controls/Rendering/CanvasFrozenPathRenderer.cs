@@ -6,13 +6,11 @@ namespace CAP.Avalonia.Controls.Rendering;
 /// Renders the pin-less frozen waveguide paths that live directly on the canvas
 /// (<see cref="ViewModels.Canvas.DesignCanvasViewModel.CanvasFrozenPaths"/>, issue #856).
 /// Reuses the group frozen-path drawing (layer-tagged palette pens, per-segment
-/// culling); a selected path draws with the same yellow highlight as a selected
+/// culling); a selected path draws with the same accent highlight as a selected
 /// waveguide connection. Implements <see cref="ICanvasRenderer"/> for world-space rendering.
 /// </summary>
 public sealed class CanvasFrozenPathRenderer : ICanvasRenderer
 {
-    // Static readonly — matches the selected-connection pen in WaveguideConnectionRenderer.
-    private static readonly Pen SelectedPen = new(Brushes.Yellow, 3);
 
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)
@@ -41,7 +39,7 @@ public sealed class CanvasFrozenPathRenderer : ICanvasRenderer
             ComponentGroupRenderer.RenderFrozenWaveguidePath(
                 context, pathVm.Path, powerFlowResult: null, cullRect: cullRect,
                 layerVisibility: rc.LayerVisibility,
-                penOverride: pathVm.IsSelected ? SelectedPen : null);
+                penOverride: pathVm.IsSelected ? rc.Pens.WaveguideSelected : null, zoom: rc.Zoom);
         }
     }
 }

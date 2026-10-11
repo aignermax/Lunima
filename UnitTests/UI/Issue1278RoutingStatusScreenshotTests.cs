@@ -103,14 +103,14 @@ public class Issue1278RoutingStatusScreenshotTests
         manifest.Count.ShouldBe(2);
     }
 
-    /// <summary>The status-bar Stop button (found via its localized content).</summary>
+    /// <summary>The status-bar Stop button.</summary>
     private static Button FindStopButton(Window window)
     {
         var statusBar = window.GetVisualDescendants().OfType<Border>()
             .First(b => b.Name == "ActiveProcessIndicator")
             .GetVisualAncestors().OfType<DockPanel>().First();
         return statusBar.GetVisualDescendants().OfType<Button>()
-            .FirstOrDefault(b => Equals(b.Content, LocalizationService.Instance.Translate("Routing.Status.Stop")))
+            .FirstOrDefault(b => b.Name == "StopRoutingButton")
             ?? throw new ShouldAssertException("no Stop button in the status bar");
     }
 

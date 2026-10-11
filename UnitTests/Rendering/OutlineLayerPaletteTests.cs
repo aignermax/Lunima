@@ -75,12 +75,14 @@ public class OutlineLayerPaletteTests
     }
 
     [Fact]
-    public void SelectFrozenPathPen_UntaggedPath_KeepsDefaultOrange()
+    public void SelectFrozenPathPen_UntaggedPath_DrawsLikeARoutedWaveguide()
     {
         var path = new FrozenWaveguidePath { Path = new RoutedPath() };
 
         var pen = ComponentGroupRenderer.SelectFrozenPathPen(path);
 
-        ((SolidColorBrush)pen.Brush!).Color.ShouldBe(Color.FromArgb(200, 255, 140, 0));
+        pen.ShouldBeSameAs(CanvasPens.For(1.0).FrozenPath);
+        var color = ((ISolidColorBrush)pen.Brush!).Color;
+        (color.R, color.G, color.B).ShouldBe((CanvasPalette.Waveguide.R, CanvasPalette.Waveguide.G, CanvasPalette.Waveguide.B));
     }
 }

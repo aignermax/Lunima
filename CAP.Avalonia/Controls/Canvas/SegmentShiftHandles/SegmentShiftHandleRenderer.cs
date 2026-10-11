@@ -22,12 +22,12 @@ public sealed class SegmentShiftHandleRenderer : ICanvasRenderer
     private const double LabelFontPx = 11.0;
     private const double LabelOffsetPx = 10.0;
 
-    private static readonly IBrush HandleFill = new SolidColorBrush(Color.FromRgb(80, 160, 255));
-    private static readonly IBrush ActiveFill = new SolidColorBrush(Color.FromRgb(120, 200, 255));
-    private static readonly IBrush ClampFill = new SolidColorBrush(Color.FromRgb(230, 70, 70));
-    private static readonly IBrush HandleStrokeBrush = Brushes.White;
-    private static readonly IBrush LabelBrush = Brushes.White;
-    private static readonly Typeface LabelTypeface = new("Arial");
+    private static readonly IBrush HandleFill = CanvasPalette.AccentBrush;
+    private static readonly IBrush ActiveFill = CanvasPalette.AccentHoverBrush;
+    private static readonly IBrush ClampFill = CanvasPalette.DangerBrush;
+    private static readonly IBrush HandleStrokeBrush = CanvasPalette.HandleStrokeBrush;
+    private static readonly IBrush LabelBrush = CanvasPalette.TextPrimaryBrush;
+    private static readonly Typeface LabelTypeface = CanvasTypography.UiMedium;
 
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)

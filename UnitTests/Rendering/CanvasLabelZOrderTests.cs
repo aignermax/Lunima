@@ -108,11 +108,11 @@ public class CanvasLabelZOrderTests
         pending.Count.ShouldBe(4,
             "A's name + B's name + hovered pin name + hovered connection length label");
         pending.ShouldContain(e => e.Origin == new Point(ComponentAX + 5, ComponentAY + 5)
-            && HasBrushColor(e.Foreground, 255, 255, 255),
+            && HasBrushColor(e.Foreground, CanvasPalette.Gray300.R, CanvasPalette.Gray300.G, CanvasPalette.Gray300.B),
             "component names must be enqueued at their top-left anchor, not drawn inline");
         pending.ShouldContain(e => e.Origin == new Point(PinAX + 15, PinAY - 15)
-            && HasBrushColor(e.Foreground, 0, 255, 255),
-            "the hovered/connect pin name must be enqueued (cyan) for the topmost pass");
+            && HasBrushColor(e.Foreground, CanvasPalette.AccentHover.R, CanvasPalette.AccentHover.G, CanvasPalette.AccentHover.B),
+            "the hovered/connect pin name must be enqueued (accent) for the topmost pass");
         pending.ShouldContain(e => e.Origin == new Point((PinAX + PinBX) / 2, PinAY - 15),
             "the hovered connection's length label must be enqueued for the topmost pass");
     }
@@ -213,9 +213,10 @@ public class CanvasLabelZOrderTests
     private static int CountLightTextPixels(RenderTargetBitmap bitmap, PixelRect region) =>
         CountPixels(bitmap, region, (r, g, b) => r > 100 && g > 100 && b > 100);
 
-    /// <summary>Counts pixels of the cyan (0,255,255) hover/connect pin name.</summary>
+    /// <summary>Counts pixels of the accent-hover (#7AA3FF) hover/connect pin name: strongly blue,
+    /// unlike the neutral name text, teal pins and dark bodies.</summary>
     private static int CountCyanTextPixels(RenderTargetBitmap bitmap, PixelRect region) =>
-        CountPixels(bitmap, region, (r, g, b) => r < 100 && g > 200 && b > 200);
+        CountPixels(bitmap, region, (r, g, b) => b > 180 && b > r + 60 && g > 110);
 
     private static int CountPixels(RenderTargetBitmap bitmap, PixelRect region,
         Func<byte, byte, byte, bool> matches)

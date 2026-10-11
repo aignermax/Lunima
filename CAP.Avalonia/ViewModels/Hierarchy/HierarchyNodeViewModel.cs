@@ -69,13 +69,6 @@ public partial class HierarchyNodeViewModel : ObservableObject
     public bool IsGroup => Component is ComponentGroup;
 
     /// <summary>
-    /// Icon glyph for display (folder for groups, box for components).
-    /// </summary>
-    public string IconGlyph => IsGroup
-        ? (IsExpanded ? "📂" : "📁") // Open/closed folder
-        : "🔷"; // Regular component
-
-    /// <summary>
     /// Display name with child count for groups.
     /// </summary>
     public string DisplayName
@@ -123,13 +116,6 @@ public partial class HierarchyNodeViewModel : ObservableObject
     public HierarchyNodeViewModel(Component component)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
-        PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(IsExpanded))
-            {
-                OnPropertyChanged(nameof(IconGlyph));
-            }
-        };
 
         // Subscribe to ComponentGroup property changes for real-time updates
         if (component is ComponentGroup group)
@@ -272,6 +258,5 @@ public partial class HierarchyNodeViewModel : ObservableObject
     public void RefreshDisplayName()
     {
         OnPropertyChanged(nameof(DisplayName));
-        OnPropertyChanged(nameof(IconGlyph));
     }
 }

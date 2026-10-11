@@ -9,7 +9,7 @@ namespace UnitTests.UI;
 
 /// <summary>
 /// Minimal Avalonia application for headless screenshot tests.
-/// Loads the Fluent theme plus the app-wide compact control height overrides —
+/// Loads the Fluent theme plus the Lunima design system (LunimaTheme.axaml) —
 /// intentionally avoids production App.cs DI setup so tests control all ViewModel
 /// construction themselves, but still needs the production style include so the
 /// screenshots reflect the real Button/ComboBox chrome.
@@ -19,10 +19,11 @@ internal class ScreenshotTestApp : Application
     public override void Initialize()
     {
         RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+        CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = false;
         Styles.Add(new FluentTheme());
         Styles.Add(new StyleInclude(new Uri("avares://CAP.Avalonia/Styles/"))
         {
-            Source = new Uri("avares://CAP.Avalonia/Styles/CompactControlHeights.axaml"),
+            Source = new Uri("avares://CAP.Avalonia/Styles/LunimaTheme.axaml"),
         });
         // Mirrors the production App.axaml includes: without them AvaloniaEdit's TextEditor and
         // OxyPlot's PlotView have no control template, so UI-flow tests could not type into the

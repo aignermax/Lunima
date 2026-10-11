@@ -113,6 +113,15 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public CanvasInteractionViewModel CanvasInteraction { get; }
 
+    /// <summary>Left icon rail: which section (library, hierarchy, PDKs) fills the left pane.</summary>
+    public Shell.LeftRailViewModel LeftRail { get; } = new();
+
+    /// <summary>Status-bar mode and selection fields.</summary>
+    public Shell.StatusBarViewModel StatusBar { get; private set; } = null!;
+
+    /// <summary>Status-bar warning field: blocked connections and the jump to the next one.</summary>
+    public Shell.BlockedConnectionsViewModel BlockedConnections { get; private set; } = null!;
+
     /// <summary>
     /// ViewModel for file operations (save, load, export).
     /// </summary>
@@ -723,6 +732,7 @@ public partial class MainViewModel : ObservableObject
 
         WireDesignValidation();
         WireHierarchyPanel();
+        WireShell();
         WireFileOperations();
         WireCommandManager();
 
@@ -772,6 +782,18 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private static string? RegistryProcessIdFor(ActiveProcessSelection? selection) =>
         selection == null || selection.IsPlayground ? null : selection.DisplayName;
+
+    private void WireShell()
+    {
+        StatusBar = new Shell.StatusBarViewModel(Canvas, CanvasInteraction, LocalizationService.Instance);
+        BlockedConnections = new Shell.BlockedConnectionsViewModel(Canvas, CanvasInteraction, ViewportControl.NavigateCanvasTo);
+        Tutorial.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(Tutorial.CurrentTargetName) or nameof(Tutorial.IsActive)
+                && Tutorial.IsActive)
+                LeftRail.RevealTourTarget(Tutorial.CurrentTargetName);
+        };
+    }
 
     private void WireHierarchyPanel()
     {
@@ -917,7 +939,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Recomputes the localized <see cref="ActiveProcessLabel"/> and <see cref="IsPlayground"/>
-    /// flag and mirrors the label into the canvas HUD — without re-applying the PDK process
+    /// flag (shown once, in the status bar) — without re-applying the PDK process
     /// lock. Called on process change and on UI language switch so the badge re-reads live.
     /// </summary>
     private void UpdateActiveProcessLabel(CAP_Core.Components.Process.ActiveProcessSelection? p)
@@ -927,9 +949,6 @@ public partial class MainViewModel : ObservableObject
         ActiveProcessLabel = p == null ? loc.Translate("Process.NoneSelected")
             : p.IsPlayground ? loc.Translate("Process.PlaygroundBadge")
             : string.Format(CultureInfo.InvariantCulture, loc.Translate("Process.Prefix"), p.DisplayName);
-        // Mirror into the canvas VM so the status HUD (CanvasOverlayRenderer) can show the
-        // active process in the grid overlay, not only at the bottom of the PDK panel.
-        Canvas.ActiveProcessLabel = ActiveProcessLabel;
     }
 
     // Canvas interaction delegates
