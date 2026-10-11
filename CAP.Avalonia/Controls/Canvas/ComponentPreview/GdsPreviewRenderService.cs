@@ -26,9 +26,6 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// </remarks>
 public sealed class GdsPreviewRenderService
 {
-    /// <summary>Lower bound on bitmap dimensions to avoid zero-size bitmaps.</summary>
-    internal const int MinBitmapPixels = 16;
-
     private readonly NazcaComponentPreviewService _previewService;
 
     /// <summary>Renders gdsfactory-native components (cspdk etc.); null falls back to no preview.
@@ -144,8 +141,7 @@ public sealed class GdsPreviewRenderService
     /// </summary>
     private void ScheduleRasterization(string previewKey, GdsPreviewData data)
     {
-        int bitmapW = Math.Max(MinBitmapPixels, (int)Math.Ceiling(data.WidthMicrometers));
-        int bitmapH = Math.Max(MinBitmapPixels, (int)Math.Ceiling(data.HeightMicrometers));
+        var (bitmapW, bitmapH) = GdsPolygonRenderer.GetBitmapSize(data.WidthMicrometers, data.HeightMicrometers);
         try
         {
             Dispatcher.UIThread.Post(() =>
