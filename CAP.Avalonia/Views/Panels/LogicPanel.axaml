@@ -55,6 +55,14 @@
         <TextBlock Classes="caption" Text="{Binding RightPanel.Logic.StatusText}" TextWrapping="Wrap" Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.Logic.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
+        <Border Classes="empty-state" IsVisible="{Binding RightPanel.Logic.HasNetwork, Converter={x:Static BoolConverters.Not}}">
+            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                <controls:Icon Data="{StaticResource Icon.Binary}" Size="24" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
+                <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"
+                           Text="{loc:Localize LogicPanel.Empty}"/>
+            </StackPanel>
+        </Border>
+
         <!-- Optical fan-out warnings (#996): non-blocking, the idealized logic result
              stays available — the warning marks where a physical implementation would
              need splitters and level restoration. -->

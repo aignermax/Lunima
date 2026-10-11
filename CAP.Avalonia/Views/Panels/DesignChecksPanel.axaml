@@ -70,6 +70,13 @@
                 </controls:HelpFlyoutButton.HelpContent>
             </controls:HelpFlyoutButton>
         </Grid>
+        <Border Classes="empty-state" IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                <controls:Icon Data="{StaticResource Icon.CircleCheck}" Size="24" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
+                <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"
+                           Text="{loc:Localize DesignChecks.Empty}"/>
+            </StackPanel>
+        </Border>
         <StackPanel Orientation="Horizontal" Margin="0,5,0,5"
                     IsVisible="{Binding RightPanel.DesignValidation.HasIssues}">
             <Button Content="{loc:Localize DesignChecks.Prev}"
