@@ -11,6 +11,7 @@ Every view uses the shared design system in `CAP.Avalonia/Styles/`. It is includ
 | `Typography.axaml` | `TextBlock` classes |
 | `Controls.axaml` | Button / input variants |
 | `Containers.axaml` | `Border` surface classes, chips, lists, splitters |
+| `Shell.axaml` | Main-window chrome: toolbar groups, flyout `menuItem`s, left `rail` + `paneHeader`, library rows, dock frames and `dockTabs`, status-bar `statusField` / `statusChip`, canvas `banner`s |
 
 `UnitTests/Architecture/DesignTokenGuardTests` fails when a view adds a hex color or a font
 size below 11. Remaining literals in not-yet-migrated views are listed in
@@ -36,7 +37,8 @@ migrate a file, lower or remove its entry.
 7. **Spacing on the 4 px grid**: 4 · 8 · 12 · 16 · 24 · 32 (`Space.*`, `Padding.*`).
 8. **Empty states are designed**: an icon, one sentence, and the action that fills the area.
 9. **Motion is quick and quiet**: hover/press transitions use `Motion.Fast` (120 ms); panels and
-   overlays fade/slide with `Motion.Normal` (200 ms). Nothing loops unless it shows live activity.
+   overlays fade/slide with `Motion.Normal` (200 ms) — attach `behaviors:RevealOnShowBehavior`
+   to a pane that appears (rail sections, docks, dock tabs). Nothing loops unless it shows live activity.
 
 ## Tokens
 

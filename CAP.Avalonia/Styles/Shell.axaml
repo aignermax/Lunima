@@ -478,6 +478,17 @@
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.OnAccent}"/>
   </Style>
 
+  <!-- Quiet buttons stay chromeless when disabled; only the content dims -->
+  <Style Selector="Button.rail:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.headerIcon:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.dockToggle:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.rowAction:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.menuItem:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/>
+  </Style>
+
   <!-- ── Canvas banners ───────────────────────────────────────────────────── -->
   <Style Selector="Border.banner">
     <Setter Property="Padding" Value="16,10"/>

@@ -128,22 +128,70 @@
                                 SelectedIndex="{Binding BottomPanel.Analysis.SelectedTabIndex}">
                         <TabItem Header="{loc:Localize AnalysisDock.TabTransient}">
                             <ScrollViewer Classes="tabPage">
+                                <StackPanel>
                                 <panels:TimeDomainPanel/>
+                                <Border Classes="empty-state" VerticalAlignment="Top"
+                                        IsVisible="{Binding !BottomPanel.Analysis.Transient.HasResult}">
+                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
+                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
+                                    </StackPanel>
+                                </Border>
+                                </StackPanel>
                             </ScrollViewer>
                         </TabItem>
                         <TabItem Header="{loc:Localize AnalysisDock.TabEyeBer}">
                             <ScrollViewer Classes="tabPage">
+                                <StackPanel>
                                 <panels:EyeDiagramPanel/>
+                                <Border Classes="empty-state" VerticalAlignment="Top"
+                                        IsVisible="{Binding !BottomPanel.Analysis.Eye.HasResult}">
+                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
+                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
+                                    </StackPanel>
+                                </Border>
+                                </StackPanel>
                             </ScrollViewer>
                         </TabItem>
                         <TabItem Header="{loc:Localize AnalysisDock.TabSpectrum}">
                             <ScrollViewer Classes="tabPage">
+                                <StackPanel>
                                 <panels:WavelengthSpectrumPanel/>
+                                <Border Classes="empty-state" VerticalAlignment="Top"
+                                        IsVisible="{Binding !BottomPanel.Analysis.Spectrum.HasResult}">
+                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
+                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
+                                    </StackPanel>
+                                </Border>
+                                </StackPanel>
                             </ScrollViewer>
                         </TabItem>
                         <TabItem Header="{loc:Localize AnalysisDock.TabMonteCarlo}">
                             <ScrollViewer Classes="tabPage">
+                                <StackPanel>
                                 <panels:MonteCarloPanel/>
+                                <Border Classes="empty-state" VerticalAlignment="Top"
+                                        IsVisible="{Binding !BottomPanel.Analysis.MonteCarlo.HasResult}">
+                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
+                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
+                                    </StackPanel>
+                                </Border>
+                                </StackPanel>
                             </ScrollViewer>
                         </TabItem>
                         <TabItem Header="{loc:Localize AnalysisDock.TabOptimization}">
