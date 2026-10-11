@@ -25,6 +25,10 @@ public partial class StatusBarViewModel : ObservableObject
     [ObservableProperty]
     private string _selectionSummary = "";
 
+    /// <summary>True while anything (component, connection or frozen path) is selected.</summary>
+    [ObservableProperty]
+    private bool _hasSelection;
+
     /// <summary>Creates the fields and subscribes to the selection and mode sources.</summary>
     /// <param name="canvas">Canvas owning the multi-selection set.</param>
     /// <param name="interaction">Owner of the mode and the single clicked selection.</param>
@@ -71,12 +75,21 @@ public partial class StatusBarViewModel : ObservableObject
                 break;
             case nameof(CanvasInteractionViewModel.SelectedComponent):
             case nameof(CanvasInteractionViewModel.SelectedWaveguideConnection):
+            case nameof(CanvasInteractionViewModel.SelectedCanvasFrozenPath):
                 UpdateSelection();
                 break;
         }
     }
 
-    private void UpdateSelection() => SelectionSummary = BuildSelectionSummary();
+    private void UpdateSelection()
+    {
+        SelectionSummary = BuildSelectionSummary();
+        HasSelection = _canvas.Selection.SelectedComponents.Count > 0
+            || _canvas.Selection.SelectedConnections.Count > 0
+            || _interaction.SelectedComponent != null
+            || _interaction.SelectedWaveguideConnection != null
+            || _interaction.SelectedCanvasFrozenPath != null;
+    }
 
     private string BuildSelectionSummary()
     {

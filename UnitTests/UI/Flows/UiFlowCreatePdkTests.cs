@@ -30,9 +30,9 @@ public class UiFlowCreatePdkTests
         var vm = host.Vm;
         var win = host.Window;
 
-        var plus = UiInput.Descendants<Button>(win).First(b =>
-            "+".Equals(b.Content as string, StringComparison.Ordinal)
-            && Equals(ToolTip.GetTip(b), "Create custom PDK…"));
+        vm.LeftRail.ShowPdksCommand.Execute(null);
+        UiInput.RunJobs();
+        var plus = UiInput.FindButtonByTip(win, "Create custom PDK…");
         UiInput.Click(win, plus);
 
         var dialog = win.OwnedWindows.OfType<CreateCustomPdkWindow>().Single();

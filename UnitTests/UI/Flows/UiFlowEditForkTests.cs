@@ -1,3 +1,4 @@
+using CAP.Avalonia.Services.Localization;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -38,14 +39,14 @@ public class UiFlowEditForkTests
         // ✏ on the library row (hover reveals it; Click moves the pointer first).
         host.LibraryListBox.ScrollIntoView(template);
         UiInput.RunJobs();
-        UiInput.Click(win, UiInput.FindButton(win, "✏", template));
+        UiInput.Click(win, UiInput.FindButtonByTip(win, LocalizationService.Instance.Translate("LeftPanel.EditComponentTip"), template));
 
         var editors = win.OwnedWindows.OfType<NewComponentWindow>().ToList();
         editors.Count.ShouldBe(1, "the ✏ must open exactly one editor window");
         editors[0].Title.ShouldBe($"Edit Component: {ComponentName}");
 
         // A second ✏ click re-activates the existing editor instead of duplicating it.
-        UiInput.Click(win, UiInput.FindButton(win, "✏", template));
+        UiInput.Click(win, UiInput.FindButtonByTip(win, LocalizationService.Instance.Translate("LeftPanel.EditComponentTip"), template));
         win.OwnedWindows.OfType<NewComponentWindow>().Count().ShouldBe(1,
             "a second ✏ click on the same component must not open a second window");
 

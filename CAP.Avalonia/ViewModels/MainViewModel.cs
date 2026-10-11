@@ -939,7 +939,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Recomputes the localized <see cref="ActiveProcessLabel"/> and <see cref="IsPlayground"/>
-    /// flag and mirrors the label into the canvas HUD — without re-applying the PDK process
+    /// flag (shown once, in the status bar) — without re-applying the PDK process
     /// lock. Called on process change and on UI language switch so the badge re-reads live.
     /// </summary>
     private void UpdateActiveProcessLabel(CAP_Core.Components.Process.ActiveProcessSelection? p)
@@ -949,9 +949,6 @@ public partial class MainViewModel : ObservableObject
         ActiveProcessLabel = p == null ? loc.Translate("Process.NoneSelected")
             : p.IsPlayground ? loc.Translate("Process.PlaygroundBadge")
             : string.Format(CultureInfo.InvariantCulture, loc.Translate("Process.Prefix"), p.DisplayName);
-        // Mirror into the canvas VM so the status HUD (CanvasOverlayRenderer) can show the
-        // active process in the grid overlay, not only at the bottom of the PDK panel.
-        Canvas.ActiveProcessLabel = ActiveProcessLabel;
     }
 
     // Canvas interaction delegates

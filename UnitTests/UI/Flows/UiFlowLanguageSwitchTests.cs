@@ -29,14 +29,14 @@ public class UiFlowLanguageSwitchTests
         using var host = new UiFlowTestHost();
         try
         {
-            // The toolbar mode label is a plain {loc:Localize Toolbar.ModeLabel} TextBlock.
-            var modeLabel = UiInput.Descendants<TextBlock>(host.Window)
-                .First(t => t.Text == "Mode:");
+            // The toolbar Run label is a plain {loc:Localize Toolbar.Run} TextBlock.
+            var runLabel = UiInput.Descendants<TextBlock>(host.Window)
+                .First(t => t.Text == "Run");
 
             LocalizationService.Instance.SetLanguage("es");
             UiInput.RunJobs();
 
-            modeLabel.Text.ShouldBe("Modo:",
+            runLabel.Text.ShouldBe("Simular",
                 "an open window's {loc:Localize} bindings must re-read live on a language switch");
         }
         finally

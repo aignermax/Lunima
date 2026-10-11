@@ -71,10 +71,6 @@
     "HexColors": 6,
     "SmallFonts": 4
   },
-  "CAP.Avalonia/Views/HierarchyPanel.axaml": {
-    "HexColors": 8,
-    "SmallFonts": 1
-  },
   "CAP.Avalonia/Views/HomeView.axaml": {
     "HexColors": 17,
     "SmallFonts": 4
@@ -91,10 +87,6 @@
     "HexColors": 3,
     "SmallFonts": 0
   },
-  "CAP.Avalonia/Views/MainWindow.axaml": {
-    "HexColors": 97,
-    "SmallFonts": 24
-  },
   "CAP.Avalonia/Views/NewComponentWindow.axaml": {
     "HexColors": 48,
     "SmallFonts": 9
@@ -102,10 +94,6 @@
   "CAP.Avalonia/Views/Panels/AiAssistantPanel.axaml": {
     "HexColors": 10,
     "SmallFonts": 5
-  },
-  "CAP.Avalonia/Views/Panels/AnalysisDockPanel.axaml": {
-    "HexColors": 20,
-    "SmallFonts": 4
   },
   "CAP.Avalonia/Views/Panels/CircuitOptimizationPanel.axaml": {
     "HexColors": 4,
@@ -246,10 +234,6 @@
   "CAP.Avalonia/Views/Panels/RunProgramTourPanel.axaml": {
     "HexColors": 7,
     "SmallFonts": 0
-  },
-  "CAP.Avalonia/Views/Panels/SelectedComponentPropertiesPanel.axaml": {
-    "HexColors": 7,
-    "SmallFonts": 20
   },
   "CAP.Avalonia/Views/Panels/SpectrumCoherentHelpFlyout.axaml": {
     "HexColors": 14,

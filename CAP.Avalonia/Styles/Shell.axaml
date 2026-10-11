@@ -40,6 +40,10 @@
     <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/>
   </Style>
+  <Style Selector="Button.toolbar:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.toolbar:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="Transparent"/>
+  </Style>
   <Style Selector="ComboBox.toolbar">
     <Setter Property="Height" Value="{DynamicResource ToolbarButtonSize}"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -49,12 +53,6 @@
   <Style Selector="controls|Icon.chevron">
     <Setter Property="Size" Value="12"/>
     <Setter Property="Opacity" Value="0.8"/>
-    <Setter Property="RenderTransform" Value="rotate(0deg)"/>
-    <Setter Property="Transitions">
-      <Transitions>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15"/>
-      </Transitions>
-    </Setter>
   </Style>
   <Style Selector="controls|Icon.chevron.open">
     <Setter Property="RenderTransform" Value="rotate(90deg)"/>

@@ -98,7 +98,7 @@
                                 <TextBlock Text="{loc:Localize Toolbar.Run}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <ComboBox Classes="toolbar" Width="112" Margin="4,0,0,0"
+                        <ComboBox Classes="toolbar" Width="104" Margin="4,0,0,0"
                                   SelectedIndex="{Binding SimulationModeIndex}"
                                   ToolTip.Tip="{loc:Localize Toolbar.SimulationModeTip}">
                             <ComboBoxItem>CW</ComboBoxItem>
@@ -350,7 +350,7 @@
                     </StackPanel>
                 </Button>
                 <!-- Stop for a full re-route: visible only while routing runs. -->
-                <Button DockPanel.Dock="Right" Classes="statusChip" Margin="4,0"
+                <Button DockPanel.Dock="Right" x:Name="StopRoutingButton" Classes="statusChip" Margin="4,0"
                         Command="{Binding Canvas.StopRoutingCommand}"
                         IsVisible="{Binding Canvas.IsRouting}"
                         ToolTip.Tip="{loc:Localize Routing.Status.StopTip}">
@@ -438,7 +438,7 @@
         <panels:AnalysisDockPanel DockPanel.Dock="Bottom"/>
 
         <!-- ══ Left: icon rail + one full-height pane ═════════════════════════════ -->
-        <Grid DockPanel.Dock="Left" ColumnDefinitions="*,Auto" Name="LeftPanelGrid">
+        <Grid DockPanel.Dock="Left" ColumnDefinitions="320,Auto" Name="LeftPanelGrid">
             <Border Grid.Column="0" Name="LeftPanelBorder" Classes="sidePanel left"
                     MinWidth="248" MaxWidth="800">
                 <DockPanel>
@@ -684,10 +684,10 @@
                         </DockPanel>
 
                         <!-- ── Hierarchy ── -->
-                        <views:HierarchyPanel Classes="railPane"
-                                              IsVisible="{Binding LeftRail.IsHierarchyActive}"
-                                              behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8"
-                                              DataContext="{Binding LeftPanel.HierarchyPanel}"/>
+                        <Border Classes="railPane" IsVisible="{Binding LeftRail.IsHierarchyActive}"
+                                behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                            <views:HierarchyPanel DataContext="{Binding LeftPanel.HierarchyPanel}"/>
+                        </Border>
 
                         <!-- ── PDKs ── -->
                         <DockPanel Classes="railPane" IsVisible="{Binding LeftRail.IsPdksActive}"

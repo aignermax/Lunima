@@ -1,127 +1,111 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels.Hierarchy"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.HierarchyPanel"
-             x:DataType="vm:HierarchyPanelViewModel"
-             Background="#1e1e1e">
+             x:DataType="vm:HierarchyPanelViewModel">
 
     <DockPanel>
-        <!-- Header -->
-        <Border DockPanel.Dock="Top"
-                Background="#2d2d2d"
-                Padding="8,6"
-                BorderBrush="#3d3d3d"
-                BorderThickness="0,0,0,1">
-            <TextBlock Text="{loc:Localize Hierarchy.Title}"
-                       FontWeight="SemiBold"
-                       FontSize="13"
-                       Foreground="LightBlue"/>
-        </Border>
+        <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+            <TextBlock Classes="paneTitle" Text="{loc:Localize Hierarchy.Title}"/>
+        </DockPanel>
 
-        <!-- Tree View -->
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-            <!-- SelectionMode=Multiple: a canvas box selection highlights ALL selected
-                 nodes; single-selection mode would immediately deselect all but one. -->
-            <TreeView ItemsSource="{Binding RootNodes}"
-                      SelectionMode="Multiple"
-                      Background="Transparent"
-                      Padding="4">
+        <Panel>
+            <!-- Empty design: say what fills this pane and offer the way there. -->
+            <Border Classes="empty-state" VerticalAlignment="Top" Margin="0,48,0,0"
+                    IsVisible="{Binding !RootNodes.Count}">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <controls:Icon Data="{StaticResource Icon.ListTree}" Size="24"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="220"
+                               Text="{loc:Localize Hierarchy.EmptyState}"/>
+                    <Button HorizontalAlignment="Center"
+                            Content="{loc:Localize Hierarchy.OpenLibrary}"
+                            Command="{Binding $parent[Window].DataContext.LeftRail.ShowLibraryCommand}"/>
+                </StackPanel>
+            </Border>
 
-                <TreeView.Styles>
-                    <!-- Tree item style -->
-                    <Style Selector="TreeViewItem">
-                        <Setter Property="Padding" Value="2"/>
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                        <!-- Unify the native tree selection with the node's IsSelected so a
-                             single click anywhere on the row selects, and canvas-driven
-                             selection highlights the matching node. -->
-                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                    </Style>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding RootNodes.Count}">
+                <!-- SelectionMode=Multiple: a canvas box selection highlights ALL selected
+                     nodes; single-selection mode would immediately deselect all but one. -->
+                <TreeView ItemsSource="{Binding RootNodes}"
+                          SelectionMode="Multiple"
+                          Background="Transparent"
+                          Padding="8,0,8,8">
 
-                    <!-- Selected item highlight -->
-                    <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
-                        <Setter Property="Background" Value="#2d5a8f"/>
-                    </Style>
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="MinHeight" Value="28"/>
+                            <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            <!-- One selection model: a click on the row selects, and canvas-driven
+                                 selection highlights the matching node. -->
+                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                        </Style>
+                        <Style Selector="TreeViewItem /template/ Border#PART_LayoutRoot">
+                            <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+                        </Style>
+                        <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+                            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+                        </Style>
+                        <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
+                            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+                        </Style>
+                    </TreeView.Styles>
 
-                    <!-- Hover highlight -->
-                    <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
-                        <Setter Property="Background" Value="#3d3d3d"/>
-                    </Style>
-                </TreeView.Styles>
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate ItemsSource="{Binding Children}">
+                            <Border Padding="0,2" Background="Transparent"
+                                    PointerPressed="TreeNode_PointerPressed">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{loc:Localize Hierarchy.ComponentSettings}" Command="{Binding OpenSettingsCommand}"/>
+                                        <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding StartRenameCommand}"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Panel VerticalAlignment="Center">
+                                        <controls:Icon Data="{StaticResource Icon.Group}" Size="14"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                                       IsVisible="{Binding IsGroup}"/>
+                                        <controls:Icon Data="{StaticResource Icon.Box}" Size="14"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                                       IsVisible="{Binding !IsGroup}"/>
+                                    </Panel>
 
-                <TreeView.ItemTemplate>
-                    <TreeDataTemplate ItemsSource="{Binding Children}">
-                        <Border Padding="4,2"
-                                Background="Transparent"
-                                PointerPressed="TreeNode_PointerPressed">
-                            <Border.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="{loc:Localize Hierarchy.ComponentSettings}" Command="{Binding OpenSettingsCommand}"/>
-                                    <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding StartRenameCommand}"/>
-                                </ContextMenu>
-                            </Border.ContextMenu>
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <!-- Icon -->
-                                <TextBlock Text="{Binding IconGlyph}"
-                                           FontSize="14"
-                                           VerticalAlignment="Center"/>
+                                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                                        <TextBlock Classes="rowTitle" Text="{Binding DisplayName}"
+                                                   IsVisible="{Binding !IsRenaming}"/>
+                                        <TextBox Classes="compact" Text="{Binding EditName, Mode=TwoWay}"
+                                                 IsVisible="{Binding IsRenaming}"
+                                                 MinWidth="120"
+                                                 KeyDown="RenameTextBox_KeyDown"
+                                                 LostFocus="RenameTextBox_LostFocus"/>
+                                        <TextBlock Classes="caption" Text="{Binding TypeLabel}"/>
+                                    </StackPanel>
 
-                                <!-- Component Name (view/edit toggle) -->
-                                <StackPanel Orientation="Vertical" Spacing="2">
+                                    <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="12"
+                                                   Foreground="{DynamicResource Brush.Info}"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding HasSMatrixOverride}"
+                                                   ToolTip.Tip="{loc:Localize Hierarchy.SMatrixOverrideTip}"/>
 
-                                    <!-- Normal display mode -->
-                                    <TextBlock Text="{Binding DisplayName}"
-                                               IsVisible="{Binding !IsRenaming}"
-                                               FontWeight="Medium"
-                                               FontSize="12"
-                                               Foreground="White"
-                                               VerticalAlignment="Center"/>
-
-                                    <!-- Inline rename mode: TextBox -->
-                                    <TextBox Text="{Binding EditName, Mode=TwoWay}"
-                                             IsVisible="{Binding IsRenaming}"
-                                             FontSize="12"
-                                             Padding="2,1"
-                                             Background="#3c3c3c"
-                                             Foreground="White"
-                                             BorderBrush="#007acc"
-                                             BorderThickness="1"
-                                             MinWidth="80"
-                                             KeyDown="RenameTextBox_KeyDown"
-                                             LostFocus="RenameTextBox_LostFocus"/>
-
-                                    <TextBlock Text="{Binding TypeLabel}"
-                                               FontSize="10"
-                                               Foreground="#999999"
-                                               VerticalAlignment="Center"/>
+                                    <StackPanel Classes="nodeActions" VerticalAlignment="Center">
+                                        <Button Classes="rowAction" Command="{Binding FocusCommand}"
+                                                ToolTip.Tip="{loc:Localize Hierarchy.ZoomToComponent}">
+                                            <controls:Icon Data="{StaticResource Icon.Crosshair}"/>
+                                        </Button>
+                                    </StackPanel>
                                 </StackPanel>
-
-                                <!-- S-matrix override badge -->
-                                <TextBlock Text="📊"
-                                           FontSize="11"
-                                           VerticalAlignment="Center"
-                                           Margin="2,0,0,0"
-                                           IsVisible="{Binding HasSMatrixOverride}"
-                                           ToolTip.Tip="{loc:Localize Hierarchy.SMatrixOverrideTip}"/>
-
-                                <!-- Focus Button -->
-                                <Button Content="🎯"
-                                        Command="{Binding FocusCommand}"
-                                        Width="24"
-                                        Height="24"
-                                        Padding="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        FontSize="12"
-                                        ToolTip.Tip="{loc:Localize Hierarchy.ZoomToComponent}"
-                                        Margin="4,0,0,0"/>
-                            </StackPanel>
-                        </Border>
-                    </TreeDataTemplate>
-                </TreeView.ItemTemplate>
-            </TreeView>
-        </ScrollViewer>
+                            </Border>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </ScrollViewer>
+        </Panel>
     </DockPanel>
 </UserControl>

@@ -112,6 +112,7 @@ public class ShellScreenshotTests
         await fileOps.PostLoadRouting;
 
         var vm = MainViewModelTestHelper.CreateMainViewModel(canvas: canvas);
+        vm.LeftPanel.HierarchyPanel.RebuildTree();
         vm.FileOperations.SetActiveProcess(ActiveProcessSelection.Playground(), markDirty: false);
         return vm;
     }
