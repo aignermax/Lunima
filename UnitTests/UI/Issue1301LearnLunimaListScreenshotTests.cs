@@ -59,6 +59,7 @@ public class Issue1301LearnLunimaListScreenshotTests
             try
             {
                 PumpRenderLoop();
+                ScreenshotArtifacts.SettleAnimations();
                 SaveFrame(window, Path.Combine(_outputDir, fileName));
             }
             finally

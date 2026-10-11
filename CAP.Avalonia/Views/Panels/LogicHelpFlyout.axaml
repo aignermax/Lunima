@@ -14,60 +14,59 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.Intro}"/>
 
         <!-- light → 0/1: strong pulse crosses the threshold, weak one stays below. -->
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="96">
                     <!-- Declared first so track and pulses slide *under* the gate box. -->
                     <ha:LightPulseAlongPath Width="368" Height="96" PathPoints="12,40 104,40"
-                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
                                             WindowStart="0" WindowEnd="0.2" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="96" PathPoints="12,40 104,40"
-                                            PulseBrush="#8A8A5A" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0.55" WindowEnd="0.7" IsHitTestVisible="False"/>
                     <!-- the gate -->
                     <Border Canvas.Left="110" Canvas.Top="20" Width="70" Height="40"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.DiagramGate}" FontSize="9" Foreground="LightGray"
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Classes="secondary" Text="{loc:Localize LogicPanelHelp.DiagramGate}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <!-- output waveguide to the power bar -->
-                    <Line StartPoint="180,40" EndPoint="240,40" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Line StartPoint="180,40" EndPoint="240,40" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="2"/>
                     <!-- output power bar with dashed threshold line -->
                     <Rectangle Canvas.Left="244" Canvas.Top="8" Width="24" Height="64"
-                               Fill="#101018" Stroke="#666666"/>
-                    <Line StartPoint="240,28" EndPoint="272,28" Stroke="#FFD54F" StrokeThickness="1.5"
+                               Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Line StartPoint="240,28" EndPoint="272,28" Stroke="{DynamicResource Brush.Warning}" StrokeThickness="1.5"
                           StrokeDashArray="4,3"/>
                     <!-- animated bar fill + 0/1 badge -->
                     <ha:LogicThresholdAnimation Width="368" Height="96" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize LogicPanelHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize LogicPanelHelp.AnimationCaption}" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.InputsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.InputsTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.InputsBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.BusTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.BusTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.BusBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.RegisterTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.RegisterTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.RegisterBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.RestorationTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.RestorationTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.RestorationBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.RunResetTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.RunResetTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.RunResetBody}"/>
     </StackPanel>
 

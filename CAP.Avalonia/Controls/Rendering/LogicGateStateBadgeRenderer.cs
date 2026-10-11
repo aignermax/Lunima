@@ -31,10 +31,10 @@ internal static class LogicGateStateBadgeRenderer
     private const double BadgeFontSize = 11;
     private const double BadgeTextPaddingX = 3;
 
-    private static readonly Color BackingColor = Color.FromArgb(220, 30, 30, 30);
-    private static readonly Color BorderColor = Color.FromArgb(160, 120, 120, 120);
-    private static readonly Color OneColor = Color.FromRgb(144, 238, 144); // LightGreen — matches the Logic panel
-    private static readonly Color ZeroColor = Color.FromRgb(158, 158, 158); // Gray — matches the Logic panel
+    private static readonly Color BackingColor = CanvasPalette.WithAlpha(CanvasPalette.Gray800, 235);
+    private static readonly Color BorderColor = CanvasPalette.Gray600;
+    private static readonly Color OneColor = CanvasPalette.Success;
+    private static readonly Color ZeroColor = CanvasPalette.Gray400;
 
     private static readonly IBrush BackingBrush = new SolidColorBrush(BackingColor);
     private static readonly Pen BorderPen = new(new SolidColorBrush(BorderColor), 1);
@@ -93,7 +93,7 @@ internal static class LogicGateStateBadgeRenderer
             badge.LabelText,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Arial", FontStyle.Normal, FontWeight.Bold),
+            CanvasTypography.UiSemiBold,
             BadgeFontSize,
             badge.IsOne ? OneBrush : ZeroBrush);
 

@@ -9,7 +9,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class LanguageSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "🌐";
+    public override string Icon => "Icon.Languages";
 
     /// <inheritdoc/>
     public override object ViewModel { get; }

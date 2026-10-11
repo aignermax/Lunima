@@ -15,73 +15,72 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize TruthTableHelp.Intro}"/>
 
         <!-- interference → 0/1: in-phase inputs add, anti-phase inputs cancel. -->
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="112">
                     <!-- Declared first so tracks and pulses slide *under* the coupler box.
                          First loop half (windows 0…0.3): both inputs in phase; second
                          half (0.58…0.88): anti-phase. The dim bias arm runs in both. -->
                     <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,26 150,40"
-                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
                                             WindowStart="0" WindowEnd="0.3" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,86 150,72"
-                                            PulseBrush="#4FC3F7" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Info}" PulseDiameter="10"
                                             WindowStart="0" WindowEnd="0.3" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,56 150,56"
-                                            PulseBrush="#8A8A5A" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0" WindowEnd="0.3" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,26 150,40"
-                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
                                             WindowStart="0.58" WindowEnd="0.88" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,86 150,72"
-                                            PulseBrush="#4FC3F7" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Info}" PulseDiameter="10"
                                             WindowStart="0.58" WindowEnd="0.88" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,56 150,56"
-                                            PulseBrush="#8A8A5A" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0.58" WindowEnd="0.88" IsHitTestVisible="False"/>
                     <!-- input labels -->
-                    <TextBlock Canvas.Left="2" Canvas.Top="12" Text="A" FontSize="9" Foreground="Gray"/>
-                    <TextBlock Canvas.Left="2" Canvas.Top="42" Text="BIAS" FontSize="9" Foreground="Gray"/>
-                    <TextBlock Canvas.Left="2" Canvas.Top="72" Text="B" FontSize="9" Foreground="Gray"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="12" Text="A"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="42" Text="BIAS"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="72" Text="B"/>
                     <!-- the coupler -->
                     <Border Canvas.Left="150" Canvas.Top="29" Width="80" Height="54"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
-                        <TextBlock Text="{loc:Localize TruthTableHelp.DiagramCoupler}" FontSize="9" Foreground="LightGray"
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Classes="secondary" Text="{loc:Localize TruthTableHelp.DiagramCoupler}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <!-- output waveguide to the 0/1 badge -->
-                    <Line StartPoint="230,56" EndPoint="306,56" Stroke="#4d4d4d" StrokeThickness="2"/>
+                    <Line StartPoint="230,56" EndPoint="306,56" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="2"/>
                     <!-- animated output glow + 0/1 badge + π marker -->
                     <ha:InterferenceOutputAnimation Width="368" Height="112" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize TruthTableHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize TruthTableHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize TruthTableHelp.SimulationTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize TruthTableHelp.SimulationTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize TruthTableHelp.SimulationBody}"/>
 
-        <TextBlock Text="{loc:Localize TruthTableHelp.ThresholdTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize TruthTableHelp.ThresholdTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize TruthTableHelp.ThresholdBody}"/>
 
-        <TextBlock Text="{loc:Localize TruthTableHelp.InterferenceTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize TruthTableHelp.InterferenceTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize TruthTableHelp.InterferenceBody}"/>
 
-        <TextBlock Text="{loc:Localize TruthTableHelp.BiasTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize TruthTableHelp.BiasTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize TruthTableHelp.BiasBody}"/>
 
-        <TextBlock Text="{loc:Localize TruthTableHelp.SignalsTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize TruthTableHelp.SignalsTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize TruthTableHelp.SignalsBody}"/>
     </StackPanel>
 

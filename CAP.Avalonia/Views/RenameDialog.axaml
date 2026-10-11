@@ -3,20 +3,15 @@
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.RenameDialog"
         Title="{loc:Localize Rename.Title}"
-        Width="340" Height="130"
+        Width="360" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Background="#1e1e1e"
-        Foreground="White">
-    <StackPanel Margin="15" Spacing="8">
-        <TextBlock Text="{loc:Localize Rename.EnterNewName}" Foreground="LightGray"/>
-        <TextBox x:Name="NameTextBox"
-                 Background="#2d2d2d"
-                 Foreground="White"
-                 CaretBrush="White"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="{loc:Localize Common.Ok}" Width="80" Click="OnOkClicked"/>
-            <Button Content="{loc:Localize Common.Cancel}" Width="80" Click="OnCancelClicked"/>
+        CanResize="False">
+    <StackPanel Margin="{DynamicResource Padding.Dialog}" Spacing="12">
+        <TextBlock Classes="secondary" Text="{loc:Localize Rename.EnterNewName}"/>
+        <TextBox x:Name="NameTextBox"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,4,0,0">
+            <Button Content="{loc:Localize Common.Cancel}" MinWidth="80" Click="OnCancelClicked"/>
+            <Button Classes="primary" Content="{loc:Localize Common.Ok}" MinWidth="80" IsDefault="True" Click="OnOkClicked"/>
         </StackPanel>
     </StackPanel>
 </Window>

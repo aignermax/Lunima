@@ -6,6 +6,7 @@
         xmlns:services="using:CAP.Avalonia.Services"
         xmlns:solvers="using:CAP.Avalonia.ViewModels.Solvers"
         xmlns:edit="using:AvaloniaEdit"
+        xmlns:controls="using:CAP.Avalonia.Controls"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.ComponentSettingsDialog"
         x:Name="DialogRoot"
@@ -14,338 +15,234 @@
         Width="620" Height="760"
         MinWidth="400" MinHeight="350"
         CanResize="True"
-        Background="#1e1e1e"
         WindowStartupLocation="CenterOwner">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
-    <DockPanel Margin="16">
+    <Grid RowDefinitions="*,Auto">
 
-        <Border DockPanel.Dock="Bottom"
-                Background="#161616"
-                CornerRadius="4"
-                Padding="8,6"
-                Margin="0,10,0,0"
-                IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <TextBlock Text="{Binding StatusText}"
-                       Foreground="#aaaacc"
-                       FontSize="11"
-                       TextWrapping="Wrap"/>
-        </Border>
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24" Spacing="16">
 
-        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,4,0,0">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="{loc:Localize ComponentSettings.LoadFromFile}"
-                        Command="{Binding LoadFromFileCommand}"
-                        Padding="12,2"
-                        Background="#3d5d3d"
-                        ToolTip.Tip="{loc:Localize ComponentSettings.LoadTip}"
-                        IsEnabled="{Binding IsImporting, Converter={x:Static BoolConverters.Not}}"/>
-                <!-- Split button: recalculate with the selected backend; ▼ picks the backend. -->
-                <StackPanel Orientation="Horizontal" Spacing="0" IsVisible="{Binding CanRecalculate}">
-                    <Button Content="{Binding RecalculateButtonLabel}"
-                            Command="{Binding RecalculateSMatrixCommand}"
-                            Padding="12,2" Height="26"
-                            Background="#3d4d6d"/>
-                    <Button Content="▼"
-                            Padding="8,2" Height="26"
-                            FontSize="9"
-                            Background="#2d3d5d"
-                            VerticalContentAlignment="Center"
-                            IsVisible="{Binding HasBackendSelection}"
-                            ToolTip.Tip="{loc:Localize CompSettings.BackendPickerTip}">
-                        <Button.IsEnabled>
-                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                <Binding Path="IsComputing" Converter="{x:Static BoolConverters.Not}"/>
-                                <Binding Path="IsAwaitingCloudConfirmation" Converter="{x:Static BoolConverters.Not}"/>
-                            </MultiBinding>
-                        </Button.IsEnabled>
-                        <Button.Flyout>
-                            <Flyout Placement="BottomEdgeAlignedLeft">
-                                <StackPanel MinWidth="280" Margin="6" Spacing="2">
-                                    <TextBlock Text="{loc:Localize CompSettings.ChooseFdtdBackend}"
-                                               Foreground="Gray" FontSize="11" Margin="0,0,0,6"/>
-                                    <ItemsControl ItemsSource="{Binding BackendSelection.BackendItems}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="solvers:FdtdBackendItemViewModel">
-                                                <Button HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Left"
-                                                        Margin="0,2" Padding="10,4"
-                                                        Background="#2b2b3d"
-                                                        Command="{Binding SelectCommand}">
-                                                    <Grid ColumnDefinitions="22,*">
-                                                        <TextBlock Grid.Column="0"
-                                                                   Text="{Binding SelectionMark}"
-                                                                   Foreground="#88ccaa"
-                                                                   FontSize="12"
-                                                                   VerticalAlignment="Top"
-                                                                   Margin="0,1,0,0"/>
-                                                        <StackPanel Grid.Column="1">
-                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <TextBlock Text="{Binding Icon}" FontSize="13"/>
-                                                                <TextBlock Text="{Binding Name}"
-                                                                           Foreground="White"
-                                                                           FontWeight="SemiBold"
-                                                                           FontSize="12"
-                                                                           VerticalAlignment="Center"/>
-                                                            </StackPanel>
-                                                            <TextBlock Text="{Binding Description}"
-                                                                       Foreground="#aaaaaa"
-                                                                       FontSize="9"
-                                                                       TextWrapping="Wrap"
-                                                                       MaxWidth="230"/>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Flyout>
-                        </Button.Flyout>
-                    </Button>
-                </StackPanel>
-            </StackPanel>
-
-            <!-- Amber hint when the selected backend can't run yet (Docker down / no API key). -->
-            <Border Background="#26261a"
-                    BorderBrush="#5d5330"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8,6"
-                    IsVisible="{Binding BackendSelection.HasAvailabilityHint, FallbackValue=False}">
-                <StackPanel Spacing="4"
-                            DataContext="{Binding BackendSelection}"
-                            x:DataType="solvers:FdtdBackendSelectionViewModel">
-                    <TextBlock Text="{Binding AvailabilityHint}"
-                               Foreground="#ccaa66"
-                               FontSize="10"
-                               TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Button Content="{loc:Localize CompSettings.Tidy3dGetKeyLink}"
-                                Command="{Binding OpenTidy3dPortalCommand}"
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Foreground="#7faaff"
-                                FontSize="10"
-                                HorizontalAlignment="Left"
-                                Cursor="Hand"
-                                IsVisible="{Binding ShowMissingKeyLink}"/>
-                        <Button Content="{loc:Localize CompSettings.OpenTidy3dSettings}"
-                                Command="{Binding OpenTidy3dSettingsCommand}"
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Foreground="#7faaff"
-                                FontSize="10"
-                                HorizontalAlignment="Left"
-                                Cursor="Hand"
-                                IsVisible="{Binding ShowOpenSettingsLink}"/>
+                <Border Classes="empty-state"
+                        IsVisible="{Binding HasSMatrices, Converter={x:Static BoolConverters.Not}}">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <controls:Icon Data="{StaticResource Icon.Table}" Size="24"
+                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                        <TextBlock Classes="secondary" HorizontalAlignment="Center" TextAlignment="Center"
+                                   MaxWidth="420" TextWrapping="Wrap"
+                                   Text="{loc:Localize ComponentSettings.NoCustomSMatrix}"/>
                     </StackPanel>
-                </StackPanel>
-            </Border>
+                </Border>
 
-            <!-- Cloud cost confirmation: Tidy3D runs consume credits, so nothing is
-                 submitted until the user reviews the estimate and confirms. -->
-            <Border Background="#26261a"
-                    BorderBrush="#5d5330"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8,6"
-                    IsVisible="{Binding IsAwaitingCloudConfirmation}">
-                <StackPanel Spacing="6">
-                    <TextBlock Text="{Binding CloudCostText}"
-                               Foreground="#ddcc88" FontSize="11" TextWrapping="Wrap"/>
+                <!-- Effective S-matrix: what the simulation actually uses -->
+                <StackPanel Spacing="8" IsVisible="{Binding HasEffectiveEntries}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="{loc:Localize CompSettings.CloudSubmit}"
-                                Command="{Binding ConfirmCloudSubmitCommand}"
-                                Padding="12,2" Background="#5d4330"/>
-                        <Button Content="{loc:Localize Common.Cancel}"
-                                Command="{Binding CancelCloudSubmitCommand}"
-                                Padding="12,2" Background="#3d3d3d"/>
+                        <TextBlock Classes="label" Text="{loc:Localize ComponentSettings.EffectiveSMatrix}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Classes="caption success" Text="{Binding EffectiveProvenanceText}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding EffectiveProvenanceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <Button Classes="danger" Content="{loc:Localize CompSettings.ResetToPdkOriginal}"
+                                Command="{Binding ResetToPdkOriginalCommand}"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding CanResetToPdkOriginal}"/>
                     </StackPanel>
+                    <Border Classes="card" Padding="12,8" MaxHeight="160">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding EffectiveEntries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EffectiveSMatrixEntryViewModel">
+                                        <!-- Last column Auto: the source tag carries provenance
+                                             (e.g. "Override active — FDTD Meep 2D") and must not clip. -->
+                                        <Grid ColumnDefinitions="80,60,*,Auto" Margin="0,2">
+                                            <TextBlock Grid.Column="0" Text="{Binding WavelengthLabel}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Classes="caption" Text="{Binding Dimensions}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Classes="caption mono success"
+                                                       Text="{Binding MagnitudePreview}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <!-- Two rows toggled by IsOverridden: compiled bindings can't set Foreground from a binding here. -->
+                                            <TextBlock Grid.Column="3" Classes="caption warning strong"
+                                                       Text="{Binding SourceTag}"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                       IsVisible="{Binding IsOverridden}"
+                                                       ToolTip.Tip="{loc:Localize ComponentSettings.OverriddenTip}"/>
+                                            <TextBlock Grid.Column="3" Classes="caption"
+                                                       Text="{Binding SourceTag}"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                       IsVisible="{Binding !IsOverridden}"
+                                                       ToolTip.Tip="{loc:Localize ComponentSettings.PdkDefaultTip}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
                 </StackPanel>
-            </Border>
-        </StackPanel>
 
-        <Border DockPanel.Dock="Bottom"
-                Background="#161616"
-                CornerRadius="4"
-                Padding="8,6"
-                Margin="0,8,0,0"
-                IsVisible="{Binding SolverStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <!-- Grid (not StackPanel): a star column bounds text width so long messages wrap. -->
-            <Grid ColumnDefinitions="Auto,*">
-                <TextBlock Grid.Column="0" Text="⏳" FontSize="12" VerticalAlignment="Center"
-                           Margin="0,0,8,0"
-                           IsVisible="{Binding IsComputing}"/>
-                <TextBlock Grid.Column="1" Text="{Binding SolverStatus}"
-                           Foreground="#aaccaa"
-                           FontSize="11"
-                           TextWrapping="Wrap"/>
-            </Grid>
-        </Border>
+                <!-- Stored S-matrices -->
+                <StackPanel Spacing="8" IsVisible="{Binding HasSMatrices}">
+                    <Grid ColumnDefinitions="110,80,*,36" Margin="12,0">
+                        <TextBlock Grid.Column="0" Classes="label" Text="{loc:Localize ComponentSettings.Wavelength}"/>
+                        <TextBlock Grid.Column="1" Classes="label" Text="{loc:Localize ComponentSettings.Size}"/>
+                        <TextBlock Grid.Column="2" Classes="label" Text="{loc:Localize ComponentSettings.StrongestCouplings}"
+                                   ToolTip.Tip="{loc:Localize ComponentSettings.CouplingsTip}"/>
+                    </Grid>
 
-        <TextBlock DockPanel.Dock="Top"
-                   Text="{loc:Localize ComponentSettings.NoCustomSMatrix}"
-                   Foreground="Gray"
-                   FontSize="11"
-                   Margin="0,0,0,10"
-                   TextWrapping="Wrap"
-                   IsVisible="{Binding HasSMatrices, Converter={x:Static BoolConverters.Not}}"/>
+                    <ItemsControl ItemsSource="{Binding SMatrixEntries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SMatrixEntryViewModel">
+                                <Border Classes="card" Padding="12,8" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="110,80,*,36">
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Classes="strong" Text="{Binding WavelengthLabel}"/>
+                                            <TextBlock Classes="caption" Text="{Binding SourceNote}"
+                                                       IsVisible="{Binding SourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                        </StackPanel>
 
-        <StackPanel DockPanel.Dock="Top"
-                    Orientation="Horizontal"
-                    Spacing="10"
-                    Margin="0,0,0,4"
-                    IsVisible="{Binding HasEffectiveEntries}">
-            <TextBlock Text="{loc:Localize ComponentSettings.EffectiveSMatrix}"
-                       Foreground="#aaaacc"
-                       FontSize="11"
-                       FontWeight="SemiBold"
-                       VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding EffectiveProvenanceText}"
-                       Foreground="#88ccaa"
-                       FontSize="10"
-                       VerticalAlignment="Center"
-                       IsVisible="{Binding EffectiveProvenanceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-            <Button Content="{loc:Localize CompSettings.ResetToPdkOriginal}"
-                    Command="{Binding ResetToPdkOriginalCommand}"
-                    Padding="8,1"
-                    FontSize="10"
-                    Background="#5d4330"
-                    VerticalAlignment="Center"
-                    IsVisible="{Binding CanResetToPdkOriginal}"/>
-        </StackPanel>
-        <Border DockPanel.Dock="Top"
-                Background="#161616"
-                CornerRadius="4"
-                Padding="6"
-                Margin="0,0,0,10"
-                MaxHeight="140"
-                IsVisible="{Binding HasEffectiveEntries}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding EffectiveEntries}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:EffectiveSMatrixEntryViewModel">
-                            <!-- Last column Auto: the source tag now carries provenance
-                                 (e.g. "Override active — FDTD Meep 2D", #582) and must not clip. -->
-                            <Grid ColumnDefinitions="80,60,*,Auto" Margin="0,1">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding WavelengthLabel}"
-                                           Foreground="White"
-                                           FontSize="11"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Dimensions}"
-                                           Foreground="#aaaaaa"
-                                           FontSize="10"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding MagnitudePreview}"
-                                           Foreground="#88ccaa"
-                                           FontFamily="Consolas, Courier New, monospace"
-                                           FontSize="10"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"/>
-                                <!-- Two pre-coloured rows toggled by IsOverridden: compiled bindings can't set Foreground from a binding here. -->
-                                <TextBlock Grid.Column="3"
-                                           Text="{Binding SourceTag}"
-                                           Foreground="#FFA500"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           IsVisible="{Binding IsOverridden}"
-                                           ToolTip.Tip="{loc:Localize ComponentSettings.OverriddenTip}"/>
-                                <TextBlock Grid.Column="3"
-                                           Text="{Binding SourceTag}"
-                                           Foreground="#777777"
-                                           FontSize="10"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           IsVisible="{Binding !IsOverridden}"
-                                           ToolTip.Tip="{loc:Localize ComponentSettings.PdkDefaultTip}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Border>
+                                        <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding Dimensions}"
+                                                   VerticalAlignment="Center"/>
 
-        <Grid DockPanel.Dock="Top"
-              ColumnDefinitions="110,80,*,80"
-              Margin="0,0,0,4"
-              IsVisible="{Binding HasSMatrices}">
-            <TextBlock Grid.Column="0" Text="{loc:Localize ComponentSettings.Wavelength}" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="1" Text="{loc:Localize ComponentSettings.Size}" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="2" Text="{loc:Localize ComponentSettings.StrongestCouplings}" Foreground="#888888" FontSize="10" FontWeight="SemiBold"
-                       ToolTip.Tip="{loc:Localize ComponentSettings.CouplingsTip}"/>
-            <TextBlock Grid.Column="3" Text="" Foreground="#888888" FontSize="10" FontWeight="SemiBold"/>
-        </Grid>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Classes="caption mono success" Text="{Binding MagnitudePreview}"
+                                                       TextWrapping="NoWrap"/>
+                                            <TextBlock Classes="caption" Text="{Binding PortNamesDisplay}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      IsVisible="{Binding HasSMatrices}">
-            <ItemsControl ItemsSource="{Binding SMatrixEntries}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SMatrixEntryViewModel">
-                        <Border Background="#252526"
-                                CornerRadius="4"
-                                Padding="8,6"
-                                Margin="0,2">
-                            <Grid ColumnDefinitions="110,80,*,36">
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding WavelengthLabel}"
-                                               Foreground="White"
-                                               FontWeight="SemiBold"
-                                               FontSize="12"/>
-                                    <TextBlock Text="{Binding SourceNote}"
-                                               Foreground="#666666"
-                                               FontSize="9"
-                                               IsVisible="{Binding SourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                </StackPanel>
+                                        <!-- Bind via #DialogRoot: the $parent cast form fails in deferred DataTemplate scope (XamlIl namespace resolution). -->
+                                        <Button Grid.Column="3" Classes="icon ghost"
+                                                CommandParameter="{Binding}"
+                                                Command="{Binding #DialogRoot.DataContext.DeleteEntryCommand}"
+                                                VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                ToolTip.Tip="{loc:Localize ComponentSettings.RemoveEntryTip}">
+                                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
 
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Dimensions}"
-                                           Foreground="#aaaaaa"
-                                           FontSize="11"
-                                           VerticalAlignment="Center"/>
-
-                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding MagnitudePreview}"
-                                               Foreground="#88ccaa"
-                                               FontFamily="Consolas, Courier New, monospace"
-                                               FontSize="10"
-                                               TextWrapping="NoWrap"/>
-                                    <TextBlock Text="{Binding PortNamesDisplay}"
-                                               Foreground="#666666"
-                                               FontSize="9"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-
-                                <!-- Bind via #DialogRoot: the $parent cast form fails in deferred DataTemplate scope (XamlIl namespace resolution). -->
-                                <Button Grid.Column="3"
-                                        Content="×"
-                                        CommandParameter="{Binding}"
-                                        Command="{Binding #DialogRoot.DataContext.DeleteEntryCommand}"
-                                        Width="28" Height="24"
-                                        Padding="0"
-                                        Background="#5d2020"
-                                        Foreground="#FF6B6B"
-                                        FontSize="14"
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        ToolTip.Tip="{loc:Localize ComponentSettings.RemoveEntryTip}"/>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            </StackPanel>
         </ScrollViewer>
 
-    </DockPanel>
-    </ScrollViewer>
+        <!-- Footer: status banners above the action row -->
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Spacing="8">
+
+                <TextBlock Classes="caption" Text="{Binding StatusText}" TextWrapping="Wrap"
+                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <!-- Grid (not StackPanel): a star column bounds text width so long messages wrap. -->
+                <Grid ColumnDefinitions="Auto,*"
+                      IsVisible="{Binding SolverStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <controls:Icon Grid.Column="0" Data="{StaticResource Icon.Clock}" Margin="0,0,8,0"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsComputing}"/>
+                    <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding SolverStatus}"
+                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Hint when the selected backend can't run yet (Docker down / no API key). -->
+                <Border Classes="card" Background="{DynamicResource Brush.Warning.Subtle}" Padding="12,8"
+                        IsVisible="{Binding BackendSelection.HasAvailabilityHint, FallbackValue=False}">
+                    <StackPanel Spacing="4"
+                                DataContext="{Binding BackendSelection}"
+                                x:DataType="solvers:FdtdBackendSelectionViewModel">
+                        <TextBlock Classes="warning" Text="{Binding AvailabilityHint}" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <Button Classes="link" Content="{loc:Localize CompSettings.Tidy3dGetKeyLink}"
+                                    Command="{Binding OpenTidy3dPortalCommand}"
+                                    HorizontalAlignment="Left"
+                                    IsVisible="{Binding ShowMissingKeyLink}"/>
+                            <Button Classes="link" Content="{loc:Localize CompSettings.OpenTidy3dSettings}"
+                                    Command="{Binding OpenTidy3dSettingsCommand}"
+                                    HorizontalAlignment="Left"
+                                    IsVisible="{Binding ShowOpenSettingsLink}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Cloud cost confirmation: Tidy3D runs consume credits, so nothing is
+                     submitted until the user reviews the estimate and confirms. -->
+                <Border Classes="card" Background="{DynamicResource Brush.Warning.Subtle}" Padding="12,8"
+                        IsVisible="{Binding IsAwaitingCloudConfirmation}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="warning" Text="{Binding CloudCostText}" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="{loc:Localize CompSettings.CloudSubmit}"
+                                    Command="{Binding ConfirmCloudSubmitCommand}"/>
+                            <Button Classes="ghost" Content="{loc:Localize Common.Cancel}"
+                                    Command="{Binding CancelCloudSubmitCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                    <Button Content="{loc:Localize ComponentSettings.LoadFromFile}"
+                            Command="{Binding LoadFromFileCommand}"
+                            ToolTip.Tip="{loc:Localize ComponentSettings.LoadTip}"
+                            IsEnabled="{Binding IsImporting, Converter={x:Static BoolConverters.Not}}"/>
+                    <!-- Split button: recalculate with the selected backend; the chevron picks the backend. -->
+                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding CanRecalculate}">
+                        <Button Classes="primary" Content="{Binding RecalculateButtonLabel}"
+                                Command="{Binding RecalculateSMatrixCommand}"
+                               />
+                        <Button Classes="primary"
+                                IsVisible="{Binding HasBackendSelection}"
+                                ToolTip.Tip="{loc:Localize CompSettings.BackendPickerTip}">
+                            <Button.IsEnabled>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsComputing" Converter="{x:Static BoolConverters.Not}"/>
+                                    <Binding Path="IsAwaitingCloudConfirmation" Converter="{x:Static BoolConverters.Not}"/>
+                                </MultiBinding>
+                            </Button.IsEnabled>
+                            <controls:Icon Data="{StaticResource Icon.ChevronDown}" Size="12"/>
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <StackPanel MinWidth="280" Margin="6" Spacing="4">
+                                        <TextBlock Classes="label" Margin="0,0,0,4"
+                                                   Text="{loc:Localize CompSettings.ChooseFdtdBackend}"/>
+                                        <ItemsControl ItemsSource="{Binding BackendSelection.BackendItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="solvers:FdtdBackendItemViewModel">
+                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            Margin="0,2"
+                                                            Command="{Binding SelectCommand}">
+                                                        <Grid ColumnDefinitions="22,*">
+                                                            <TextBlock Grid.Column="0" Classes="success"
+                                                                       Text="{Binding SelectionMark}"
+                                                                       VerticalAlignment="Top"/>
+                                                            <StackPanel Grid.Column="1">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <TextBlock Text="{Binding Icon}"/>
+                                                                    <TextBlock Classes="strong"
+                                                                               Foreground="{DynamicResource Brush.Text.Primary}"
+                                                                               Text="{Binding Name}"
+                                                                               VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                                <TextBlock Classes="caption" Text="{Binding Description}"
+                                                                           TextWrapping="Wrap" MaxWidth="230"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>

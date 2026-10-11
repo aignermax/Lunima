@@ -16,6 +16,9 @@ public class AStarPathfinder
     /// </summary>
     public int MaxNodesExpanded { get; set; } = 200000;
 
+    /// <summary>Straight-run credit the start node gets (the pin lead); see <see cref="FindPath"/>.</summary>
+    private int _startRunBonus;
+
     /// <summary>
     /// The distance estimate the search orders nodes by, weighted while crossings are allowed
     /// (see <see cref="CrossingInsertion.CrossingStep.HeuristicWeight"/>).
@@ -142,7 +145,7 @@ public class AStarPathfinder
         var startNode = new AStarNode(startX, startY, startDirection)
         {
             GCost = 0,
-            StraightRunLength = Math.Max(0, (_costCalculator.MinStraightRunCells - 1) / 2)
+            StraightRunLength = _startRunBonus = Math.Max(0, (_costCalculator.MinStraightRunCells - 1) / 2)
         };
         startNode.HCost = Heuristic(startX, startY, startDirection, endX, endY, endDirection);
 
@@ -392,8 +395,12 @@ public class AStarPathfinder
         if (Crossings == null || dir.IsDiagonal() || dir != current.Direction)
             return null;
         var (dx, dy) = dir.GetDelta();
-        if (!Crossings.TryJump(current.X, current.Y, dx, dy, current.StraightRunLength,
-                               out int span, out int runAfter, out var crossings))
+        // Still on the first straight out of the start pin (no turn yet): the run is real
+        // distance from the pin, and no arc can reach into the crossing.
+        bool fromPin = current.StraightRunLength - _startRunBonus == current.DistanceFromStart;
+        int run = fromPin ? current.DistanceFromStart : current.StraightRunLength;
+        if (!Crossings.TryJump(current.X, current.Y, dx, dy, run,
+                               out int span, out int runAfter, out var crossings, fromPin))
             return null;
 
         int landX = current.X + dx * span, landY = current.Y + dy * span;

@@ -31,9 +31,9 @@ internal static class LogicGateRegisterMarkerRenderer
     private const double MarkerCornerRadius = 3;
     private const double MarkerFontSize = 11;
 
-    private static readonly Color BackingColor = Color.FromArgb(220, 30, 30, 30);
-    private static readonly Color BorderColor = Color.FromArgb(160, 120, 120, 120);
-    private static readonly Color TextColor = Color.FromRgb(158, 180, 255); // muted blue — distinct from the green/gray badges without fighting them
+    private static readonly Color BackingColor = CanvasPalette.WithAlpha(CanvasPalette.Gray800, 235);
+    private static readonly Color BorderColor = CanvasPalette.Gray600;
+    private static readonly Color TextColor = CanvasPalette.AccentHover;
 
     private static readonly IBrush BackingBrush = new SolidColorBrush(BackingColor);
     private static readonly Pen BorderPen = new(new SolidColorBrush(BorderColor), 1);
@@ -91,7 +91,7 @@ internal static class LogicGateRegisterMarkerRenderer
             MarkerText,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Arial", FontStyle.Normal, FontWeight.Bold),
+            CanvasTypography.UiSemiBold,
             MarkerFontSize,
             TextBrush);
 

@@ -1,4 +1,3 @@
-using System.Globalization;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Logic.Isa;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -33,9 +32,14 @@ namespace CAP.Avalonia.ViewModels.Logic.IsaPlayground;
 /// RAM readout carries an "on light" chip while it does. On the combined ALU + RAM
 /// chip the data memory answers to the <c>RAM.</c>-prefixed signal map (default map
 /// first, prefixed as fallback), so the adder and the memory run on light together
-/// and toggle label, header and unit-chip row name both (issue #1468). The toggle
-/// is enabled while the built network is accepted by any ALU, the zero flag or the
-/// data memory; otherwise a hint points at the shipped examples (4-bit adder, NOT
+/// and toggle label, header and unit-chip row name both (issue #1468). The combined
+/// ALU + RAM + ACC chip adds the 4-bit accumulator register
+/// (<c>ACC.D0</c>–<c>ACC.D3</c>, <c>ACC.LOAD</c> → <c>ACC.Q0</c>–<c>ACC.Q3</c>):
+/// every instruction then clocks the machine's working register through a
+/// <see cref="PhotonicAccumulator"/>, so all three units run on light on one chip
+/// and toggle label, header and unit-chip row name all three (issue #1479). The toggle
+/// is enabled while the built network is accepted by any ALU, the zero flag, the
+/// data memory or the accumulator; otherwise a hint points at the shipped examples (4-bit adder, NOT
 /// 4-bit, AND 4-bit, Logic Unit 4-bit, Zero Detect 4-bit, RAM 4x4). Toggling recreates the machine at
 /// power-on state, and every photonic operation leaves a status line with operands and result
 /// in binary plus the gate count (photonic ADDs also name the light-travel time of
@@ -77,6 +81,12 @@ public partial class IsaPlaygroundViewModel
     private bool _isPhotonicDataMemoryAvailable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAnyPhotonicAvailable))]
+    [NotifyPropertyChangedFor(nameof(IsPhotonicToggleEnabled))]
+    [NotifyPropertyChangedFor(nameof(PhotonicToggleLabel))]
+    private bool _isPhotonicAccumulatorAvailable;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HeaderTitle))]
     private bool _usePhotonicAdder;
 
@@ -95,6 +105,7 @@ public partial class IsaPlaygroundViewModel
     private PhotonicAndAlu? _photonicAndAlu;
     private PhotonicZeroFlag? _photonicZeroFlag;
     private PhotonicDataMemory? _photonicDataMemory;
+    private PhotonicAccumulator? _photonicAccumulator;
     private IsaDataMemorySignalMap? _dataMemoryMap;
 
     /// <summary>Test seam (InternalsVisibleTo UnitTests): the photonic ADD ALU while the toggle is on.</summary>
@@ -113,10 +124,19 @@ public partial class IsaPlaygroundViewModel
     internal PhotonicDataMemory? DataMemory => _photonicDataMemory;
 
     /// <summary>
+    /// Test seam (InternalsVisibleTo UnitTests): the photonic accumulator while the
+    /// toggle is on. Named <c>PhotonicAccumulator</c>, not <c>Accumulator</c>, because
+    /// the playground already publishes the machine's ACC value under that name.
+    /// </summary>
+    internal PhotonicAccumulator? PhotonicAccumulator => _photonicAccumulator;
+
+    /// <summary>
     /// The "what runs on light" row (issue #1456): one chip per machine unit —
     /// ALU, Z (zero flag), RAM, ACC, PC — green while that unit is computed by the
-    /// photonic network, grey while it is simulated electronically. ACC and PC are
-    /// always electronic for now; ALU counts as on light when any photonic ALU
+    /// photonic network, grey while it is simulated electronically. PC is always
+    /// electronic for now; the ACC chip lights up while a
+    /// <see cref="PhotonicAccumulator"/> clocks the machine's working register
+    /// (issue #1479); ALU counts as on light when any photonic ALU
     /// half (adder, NOT or AND) is active.
     /// </summary>
     public IReadOnlyList<IsaUnitChipViewModel> UnitChips { get; } = new IsaUnitChipViewModel[]
@@ -138,17 +158,21 @@ public partial class IsaPlaygroundViewModel
         UnitChips[0].IsOnLight = _photonicAlu is not null || _photonicNotAlu is not null || _photonicAndAlu is not null;
         UnitChips[1].IsOnLight = _photonicZeroFlag is not null;
         UnitChips[2].IsOnLight = _photonicDataMemory is not null;
+        UnitChips[3].IsOnLight = _photonicAccumulator is not null;
     }
 
     /// <summary>
     /// True while the built network can run at least one operation on the photonic
     /// chip — the adder signals, the NOT signals, the AND signals, the zero-flag
-    /// signals (A0–A3 in, Z out) or the RAM 4x4 signals (A0/A1, LOAD, D0–D3 in,
-    /// Q0–Q3 out) that let the program's data memory live on light (issue #1446).
+    /// signals (A0–A3 in, Z out), the RAM 4x4 signals (A0/A1, LOAD, D0–D3 in,
+    /// Q0–Q3 out) that let the program's data memory live on light (issue #1446),
+    /// or the accumulator signals (ACC.D0–ACC.D3, ACC.LOAD → ACC.Q0–ACC.Q3) that
+    /// clock the machine's working register on light (issue #1479).
     /// </summary>
     public bool IsAnyPhotonicAvailable =>
         IsPhotonicAddAvailable || IsPhotonicNotAvailable || IsPhotonicAndAvailable
-        || IsPhotonicZeroFlagAvailable || IsPhotonicDataMemoryAvailable;
+        || IsPhotonicZeroFlagAvailable || IsPhotonicDataMemoryAvailable
+        || IsPhotonicAccumulatorAvailable;
 
     /// <summary>
     /// True while the emulator's data RAM lives on the photonic RAM 4x4 network —
@@ -170,24 +194,30 @@ public partial class IsaPlaygroundViewModel
     /// the NOT signals — and the combined label when the network runs both AND and
     /// NOT on light (the Logic Unit 4-bit chip, issue #1295) — and the zero-flag
     /// label when the network only decides <c>JZ</c> on light (the Zero Detect
-    /// 4-bit chip, issue #1322).
+    /// 4-bit chip, issue #1322) — and the three-unit label when the network runs
+    /// the adder, the data RAM and the accumulator on light together (the combined
+    /// ALU + RAM + ACC chip, issue #1479).
     /// </summary>
     public string PhotonicToggleLabel =>
-        Translate(IsPhotonicAddAvailable && IsPhotonicDataMemoryAvailable
-            ? "IsaPlayground.PhotonicAdderDataMemoryToggle"
-            : IsPhotonicAddAvailable
-                || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable && !IsPhotonicZeroFlagAvailable
-                    && !IsPhotonicDataMemoryAvailable)
-                ? "IsaPlayground.PhotonicAdderToggle"
-                : IsPhotonicZeroFlagAvailable && !IsPhotonicAndAvailable && !IsPhotonicNotAvailable
-                    ? "IsaPlayground.PhotonicZeroFlagToggle"
-                    : IsPhotonicAndAvailable && IsPhotonicNotAvailable
-                        ? "IsaPlayground.PhotonicAndNotToggle"
-                        : IsPhotonicAndAvailable
-                            ? "IsaPlayground.PhotonicAndToggle"
-                            : IsPhotonicNotAvailable
-                                ? "IsaPlayground.PhotonicNotToggle"
-                                : "IsaPlayground.PhotonicDataMemoryToggle");
+        Translate(IsPhotonicAddAvailable && IsPhotonicDataMemoryAvailable && IsPhotonicAccumulatorAvailable
+            ? "IsaPlayground.PhotonicAdderDataMemoryAccumulatorToggle"
+            : IsPhotonicAddAvailable && IsPhotonicDataMemoryAvailable
+                ? "IsaPlayground.PhotonicAdderDataMemoryToggle"
+                : IsPhotonicAddAvailable
+                    || (!IsPhotonicNotAvailable && !IsPhotonicAndAvailable && !IsPhotonicZeroFlagAvailable
+                        && !IsPhotonicDataMemoryAvailable && !IsPhotonicAccumulatorAvailable)
+                    ? "IsaPlayground.PhotonicAdderToggle"
+                    : IsPhotonicZeroFlagAvailable && !IsPhotonicAndAvailable && !IsPhotonicNotAvailable
+                        ? "IsaPlayground.PhotonicZeroFlagToggle"
+                        : IsPhotonicAndAvailable && IsPhotonicNotAvailable
+                            ? "IsaPlayground.PhotonicAndNotToggle"
+                            : IsPhotonicAndAvailable
+                                ? "IsaPlayground.PhotonicAndToggle"
+                                : IsPhotonicNotAvailable
+                                    ? "IsaPlayground.PhotonicNotToggle"
+                                    : IsPhotonicDataMemoryAvailable
+                                        ? "IsaPlayground.PhotonicDataMemoryToggle"
+                                        : "IsaPlayground.PhotonicAccumulatorToggle");
 
     /// <summary>
     /// The header title, naming the ALU the machine actually uses so the window
@@ -196,19 +226,23 @@ public partial class IsaPlaygroundViewModel
     /// </summary>
     public string HeaderTitle =>
         Translate(UsePhotonicAdder
-            ? (_photonicAlu is not null && _photonicDataMemory is not null
-                ? "IsaPlayground.TitlePhotonicAdderDataMemory"
-                : _photonicAlu is not null
-                    ? "IsaPlayground.TitlePhotonic"
-                    : _photonicAndAlu is not null && _photonicNotAlu is not null
-                        ? "IsaPlayground.TitlePhotonicAndNot"
-                        : _photonicAndAlu is not null
-                            ? "IsaPlayground.TitlePhotonicAnd"
-                            : _photonicNotAlu is not null
-                                ? "IsaPlayground.TitlePhotonicNot"
-                                : _photonicDataMemory is not null
-                                    ? "IsaPlayground.TitlePhotonicDataMemory"
-                                    : "IsaPlayground.TitlePhotonicZeroFlag")
+            ? (_photonicAlu is not null && _photonicDataMemory is not null && _photonicAccumulator is not null
+                ? "IsaPlayground.TitlePhotonicAdderDataMemoryAccumulator"
+                : _photonicAlu is not null && _photonicDataMemory is not null
+                    ? "IsaPlayground.TitlePhotonicAdderDataMemory"
+                    : _photonicAlu is not null
+                        ? "IsaPlayground.TitlePhotonic"
+                        : _photonicAndAlu is not null && _photonicNotAlu is not null
+                            ? "IsaPlayground.TitlePhotonicAndNot"
+                            : _photonicAndAlu is not null
+                                ? "IsaPlayground.TitlePhotonicAnd"
+                                : _photonicNotAlu is not null
+                                    ? "IsaPlayground.TitlePhotonicNot"
+                                    : _photonicDataMemory is not null
+                                        ? "IsaPlayground.TitlePhotonicDataMemory"
+                                        : _photonicAccumulator is not null
+                                            ? "IsaPlayground.TitlePhotonicAccumulator"
+                                            : "IsaPlayground.TitlePhotonicZeroFlag")
             : "IsaPlayground.Title");
 
     /// <summary>Flipping the toggle resets the machine to power-on state with the chosen ALU.</summary>
@@ -260,6 +294,7 @@ public partial class IsaPlaygroundViewModel
         // 'RAM.' prefix, so the prefixed map is the fallback (issue #1468).
         _dataMemoryMap = ResolveDataMemoryMap(network);
         IsPhotonicDataMemoryAvailable = _dataMemoryMap is not null;
+        IsPhotonicAccumulatorAvailable = CAP_Core.Logic.Isa.PhotonicAccumulator.Accepts(network);
     }
 
     /// <summary>
@@ -287,7 +322,9 @@ public partial class IsaPlaygroundViewModel
     /// taps carry A &amp; B (with B tied to 0), not ~A (issue #1284) — unless the
     /// network exposes the combined logic-unit NOT taps N0–N3, in which case NOT
     /// runs on light through <see cref="IsaAluSignalMap.CombinedLogicUnitNot"/>
-    /// alongside AND (issue #1295).
+    /// alongside AND (issue #1295). The data memory and the accumulator ride the same
+    /// network when it exposes their signals, so on the combined ALU + RAM + ACC chip
+    /// every instruction runs end to end on light (issue #1479).
     /// </summary>
     private IsaEmulator CreateEmulator()
     {
@@ -301,13 +338,17 @@ public partial class IsaPlaygroundViewModel
             _photonicDataMemory = _dataMemoryMap is not null && PhotonicDataMemory.Accepts(network, _dataMemoryMap)
                 ? new PhotonicDataMemory(network, _dataMemoryMap)
                 : null;
+            _photonicAccumulator = CAP_Core.Logic.Isa.PhotonicAccumulator.Accepts(network)
+                ? new CAP_Core.Logic.Isa.PhotonicAccumulator(network)
+                : null;
             var golden = new GoldenIsaAlu();
             var emulator = new IsaEmulator(_assembledWords, new CompositeIsaAlu(
                 _photonicAlu ?? (IIsaAlu)golden,
                 _photonicNotAlu ?? (IIsaAlu)golden,
                 _photonicAndAlu ?? (IIsaAlu)golden),
                 _photonicZeroFlag,
-                _photonicDataMemory);
+                _photonicDataMemory,
+                _photonicAccumulator);
             OnPropertyChanged(nameof(IsPhotonicDataMemoryActive));
             UpdateUnitChips();
             return emulator;
@@ -318,6 +359,7 @@ public partial class IsaPlaygroundViewModel
         _photonicAndAlu = null;
         _photonicZeroFlag = null;
         _photonicDataMemory = null;
+        _photonicAccumulator = null;
         OnPropertyChanged(nameof(IsPhotonicDataMemoryActive));
         UpdateUnitChips();
         return new IsaEmulator(_assembledWords);
@@ -339,135 +381,4 @@ public partial class IsaPlaygroundViewModel
             ? new PhotonicNotAlu(network, IsaAluSignalMap.CombinedLogicUnitNot)
             : null;
     }
-
-    /// <summary>True when the next instruction to execute is an ADD and it will run photonically.</summary>
-    private bool NextStepIsPhotonicAdd() =>
-        UsePhotonicAdder
-        && _photonicAlu is not null
-        && _emulator is { IsHalted: false }
-        && _emulator.ProgramCounter < _assembledWords.Length
-        && IsaInstruction.Decode(_assembledWords[_emulator.ProgramCounter], out _)?.Opcode == IsaOpcode.Add;
-
-    /// <summary>True when the next instruction to execute is a NOT and it will run photonically.</summary>
-    private bool NextStepIsPhotonicNot() =>
-        UsePhotonicAdder
-        && _photonicNotAlu is not null
-        && _emulator is { IsHalted: false }
-        && _emulator.ProgramCounter < _assembledWords.Length
-        && IsaInstruction.Decode(_assembledWords[_emulator.ProgramCounter], out _)?.Opcode == IsaOpcode.Not;
-
-    /// <summary>
-    /// Status line left after a photonic ADD: operands and result in binary, the
-    /// light-travel time of that addition in ps, and the network's gate count.
-    /// </summary>
-    private void ReportPhotonicAdd()
-    {
-        if (_photonicAlu?.LastAddTrace is not { } trace)
-        {
-            return;
-        }
-
-        PhotonicStatusText = string.Format(
-            CultureInfo.InvariantCulture,
-            Translate("IsaPlayground.StatusPhotonicAdd"),
-            ToBinary(trace.A),
-            ToBinary(trace.B),
-            ToBinary(trace.Sum),
-            trace.LightTravelPicoseconds,
-            _photonicGateCount);
-    }
-
-    /// <summary>
-    /// True when the next instruction to execute is an AND and it will run
-    /// photonically; then <paramref name="operandA"/> is ACC and
-    /// <paramref name="operandB"/> the RAM word the AND reads (both captured before
-    /// the step, because the step overwrites ACC with the result).
-    /// </summary>
-    private bool NextStepIsPhotonicAnd(out int operandA, out int operandB)
-    {
-        operandA = 0;
-        operandB = 0;
-        if (!UsePhotonicAdder
-            || _photonicAndAlu is null
-            || _emulator is not { IsHalted: false } emulator
-            || emulator.ProgramCounter >= _assembledWords.Length
-            || IsaInstruction.Decode(_assembledWords[emulator.ProgramCounter], out var address)?.Opcode
-                != IsaOpcode.And)
-        {
-            return false;
-        }
-
-        operandA = emulator.Accumulator;
-        operandB = emulator.Ram[address];
-        return true;
-    }
-
-    /// <summary>
-    /// Status line left after a photonic AND (issue #1284): both operands captured
-    /// before the step, the result (ACC after the step), all in binary, and the
-    /// network's gate count.
-    /// </summary>
-    private void ReportPhotonicAnd(int operandA, int operandB)
-    {
-        if (_emulator is null)
-        {
-            return;
-        }
-
-        PhotonicStatusText = string.Format(
-            CultureInfo.InvariantCulture,
-            Translate("IsaPlayground.StatusPhotonicAnd"),
-            ToBinary(operandA),
-            ToBinary(operandB),
-            ToBinary(_emulator.Accumulator),
-            _photonicGateCount);
-    }
-
-    /// <summary>
-    /// Status line left after a photonic NOT (issue #1275): the operand captured
-    /// before the step, the result (ACC after the step), both in binary, and the
-    /// network's gate count.
-    /// </summary>
-    private void ReportPhotonicNot(int operand)
-    {
-        if (_emulator is null)
-        {
-            return;
-        }
-
-        PhotonicStatusText = string.Format(
-            CultureInfo.InvariantCulture,
-            Translate("IsaPlayground.StatusPhotonicNot"),
-            ToBinary(operand),
-            ToBinary(_emulator.Accumulator),
-            _photonicGateCount);
-    }
-
-    /// <summary>
-    /// Publishes the operand bits of the last photonic ADD (A0–A3 = ACC, B0–B3 =
-    /// RAM[operand], Cin = 0) through the shared provider, so the Logic panel mirrors
-    /// them onto its input toggles and the canvas badges show the addition (issue
-    /// #1240). Golden-model ADDs never reach here — the call sites gate on
-    /// <see cref="NextStepIsPhotonicAdd"/>.
-    /// </summary>
-    private void PublishDrivenInputs()
-    {
-        if (_photonicAlu?.LastAddTrace is not { } trace)
-        {
-            return;
-        }
-
-        var bits = new Dictionary<string, bool>(2 * AccumulatorBits + 1);
-        for (var bit = 0; bit < AccumulatorBits; bit++)
-        {
-            bits[$"A{bit}"] = ((trace.A >> bit) & 1) == 1;
-            bits[$"B{bit}"] = ((trace.B >> bit) & 1) == 1;
-        }
-
-        bits["Cin"] = false;
-        _builtNetworkProvider?.DriveInputs(bits);
-    }
-
-    private static string ToBinary(int value) =>
-        Convert.ToString(value, 2).PadLeft(AccumulatorBits, '0');
 }

@@ -76,6 +76,15 @@ public class CrossingInsertionService
     /// </summary>
     public TimeSpan ChainPassTimeBudget { get; set; } = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Further searches tried, in order, for the wires still blocked after the regular chain
+    /// pass — e.g. an unweighted search with a larger node budget, or a more strongly weighted
+    /// one. Empty by default: the interactive pass stays within its budget; offline bakes add
+    /// them. Each entry is (node budget, heuristic weight).
+    /// </summary>
+    public IReadOnlyList<(int MaxNodesExpanded, double HeuristicWeight)> FallbackChainSearches { get; set; }
+        = Array.Empty<(int, double)>();
+
     /// <summary>Safety cap on crossings inserted in one pass.</summary>
     public int MaxCrossingsPerPass { get; set; } = 8;
 
@@ -207,6 +216,13 @@ public class CrossingInsertionService
                     break;
             }
             ResolvePinPairs(manager, router, settings, clock, cancellationToken);
+            foreach (var (maxNodes, weight) in FallbackChainSearches)
+            {
+                if (cancellationToken.IsCancellationRequested || !manager.Connections.Any(c => c.IsBlockedFallback)) break;
+                var fallback = settings with { MaxNodesExpanded = maxNodes, HeuristicWeight = weight };
+                ConnectBlockedOnce(manager, router, fallback, clock, cancellationToken);
+                ResolvePinPairs(manager, router, fallback, clock, cancellationToken);
+            }
         }
         finally
         {
@@ -228,11 +244,13 @@ public class CrossingInsertionService
             if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
                 return;
             if (!blocked.IsBlockedFallback || !manager.Connections.Contains(blocked)) continue;
-            var placed = _pinPairRerouter.TryResolve(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
-            if (placed == null) continue;
+            var resolution = _pinPairRerouter.TryResolve(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
+            if (resolution == null) continue;
             if (!manager.Connections.Contains(blocked))
                 router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
-            foreach (var crossing in placed)
+            foreach (var crossing in resolution.Dissolved)
+                ComponentRemoved?.Invoke(crossing);
+            foreach (var crossing in resolution.Placed)
                 ComponentAdded?.Invoke(crossing);
         }
     }

@@ -787,6 +787,13 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Repaints the canvas after the toolbar grid-snap toggle flipped
+    /// <see cref="ViewModels.Canvas.GridSnapSettings.IsEnabled"/> (the grid is drawn only while snapping).
+    /// </summary>
+    private void GridSnapToggle_Click(object? sender, RoutedEventArgs e) =>
+        DesignCanvasControl.InvalidateVisual();
+
+    /// <summary>
     /// Opens the analysis dock on the Checks tab after the "Check design" menu entry
     /// ran the validation (the bound command does the checking itself).
     /// </summary>

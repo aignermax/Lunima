@@ -132,7 +132,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 ## 11. Mode solver & FDTD
 
 - [ ] Mode solver dialog opens from Tools and runs against the configured Python environment. `(auto: Solvers/ModeSolver/ModeSolverViewModelTests)`
-- [ ] Mode-probe flyout shows effective index and mode profile for a clicked waveguide. `(manual)`
+- [ ] Mode-probe flyout shows effective index and mode profile for a clicked waveguide; the header (?) help explains n_eff, n_g, MFD and fiber coupling with the guided-crest animation. `(auto: UI/Issue1486ModeProbeHelpFlyoutScreenshotTests)`
 - [ ] FDTD backend selection dialog lists available environments and toggles Tidy3D settings. `(manual)`
 - [ ] Docker setup dialog detects or installs a Python/Nazca environment. `(manual)`
 - [ ] Python environment manager installs/updates interpreters and the Nazca package. `(auto: PythonEnvironmentManager/PythonEnvironmentManagerViewModelTests)`

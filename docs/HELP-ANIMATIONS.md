@@ -81,6 +81,14 @@ approaches both at once; at the bare X it dims by the leaked fraction while a le
 peels off into the crossing arm, through the component it continues straight at full
 brightness. The last frame holds the leaked end state.
 
+`GuidedModeCrestAnimation` (Mode Probe help, #1486): a waveguide cross-section with
+the mode-intensity spot confined in the core (breathing gently), and the same guide
+from the side — a traveling sine wave whose highlighted marker rides one crest along
+the guide while a fainter reference crest in the dashed free-space lane above outruns
+it (phase moves at c/n_eff, slower than c). The guided marker crosses the guide once
+per loop, the free-space crest three times, so the loop is seamless. The lane captions
+(`GuidedLabel`, `FreeSpaceLabel`, `SpotLabel`) are settable for localization.
+
 ## Rules
 
 - One animation per flyout; keep text sections to ≤3 short sentences (enforced by

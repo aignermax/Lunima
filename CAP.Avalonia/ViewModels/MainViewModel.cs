@@ -113,6 +113,15 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public CanvasInteractionViewModel CanvasInteraction { get; }
 
+    /// <summary>Left icon rail: which section (library, hierarchy, PDKs) fills the left pane.</summary>
+    public Shell.LeftRailViewModel LeftRail { get; } = new();
+
+    /// <summary>Status-bar mode and selection fields.</summary>
+    public Shell.StatusBarViewModel StatusBar { get; private set; } = null!;
+
+    /// <summary>Status-bar warning field: blocked connections and the jump to the next one.</summary>
+    public Shell.BlockedConnectionsViewModel BlockedConnections { get; private set; } = null!;
+
     /// <summary>
     /// ViewModel for file operations (save, load, export).
     /// </summary>
@@ -150,6 +159,13 @@ public partial class MainViewModel : ObservableObject
     /// Design Checks of the Two-Chiplets edge-coupler example it opens.
     /// </summary>
     public ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel ConnectChipletsTour { get; }
+
+    /// <summary>
+    /// Step engine for the "Store a number in light" tour (issue #1422). Started
+    /// from the Home screen's fifth tour card; observes the Logic panel of the
+    /// RAM 2x4 example it opens.
+    /// </summary>
+    public ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel StoreNumberTour { get; }
 
     /// <summary>
     /// Design file passed on the command line, resolved by
@@ -334,7 +350,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel? watchComputeTourViewModel = null,
         ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
         ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
+        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -383,6 +400,7 @@ public partial class MainViewModel : ObservableObject
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
         Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
+        Home.StoreNumberTourRequested = StartStoreNumberTourAsync;
         FileOperations.ProjectOpened = Home.OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
@@ -400,6 +418,9 @@ public partial class MainViewModel : ObservableObject
         ConnectChipletsTour = connectChipletsTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel(
                 Canvas, RightPanel.DesignValidation, BottomPanel.Analysis, CommandManager);
+        // The tour must observe the panel instance the user actually clicks.
+        StoreNumberTour = storeNumberTourViewModel
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>
@@ -711,6 +732,7 @@ public partial class MainViewModel : ObservableObject
 
         WireDesignValidation();
         WireHierarchyPanel();
+        WireShell();
         WireFileOperations();
         WireCommandManager();
 
@@ -760,6 +782,18 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private static string? RegistryProcessIdFor(ActiveProcessSelection? selection) =>
         selection == null || selection.IsPlayground ? null : selection.DisplayName;
+
+    private void WireShell()
+    {
+        StatusBar = new Shell.StatusBarViewModel(Canvas, CanvasInteraction, LocalizationService.Instance);
+        BlockedConnections = new Shell.BlockedConnectionsViewModel(Canvas, CanvasInteraction, ViewportControl.NavigateCanvasTo);
+        Tutorial.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(Tutorial.CurrentTargetName) or nameof(Tutorial.IsActive)
+                && Tutorial.IsActive)
+                LeftRail.RevealTourTarget(Tutorial.CurrentTargetName);
+        };
+    }
 
     private void WireHierarchyPanel()
     {
@@ -905,7 +939,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Recomputes the localized <see cref="ActiveProcessLabel"/> and <see cref="IsPlayground"/>
-    /// flag and mirrors the label into the canvas HUD — without re-applying the PDK process
+    /// flag (shown once, in the status bar) — without re-applying the PDK process
     /// lock. Called on process change and on UI language switch so the badge re-reads live.
     /// </summary>
     private void UpdateActiveProcessLabel(CAP_Core.Components.Process.ActiveProcessSelection? p)
@@ -915,9 +949,6 @@ public partial class MainViewModel : ObservableObject
         ActiveProcessLabel = p == null ? loc.Translate("Process.NoneSelected")
             : p.IsPlayground ? loc.Translate("Process.PlaygroundBadge")
             : string.Format(CultureInfo.InvariantCulture, loc.Translate("Process.Prefix"), p.DisplayName);
-        // Mirror into the canvas VM so the status HUD (CanvasOverlayRenderer) can show the
-        // active process in the grid overlay, not only at the bottom of the PDK panel.
-        Canvas.ActiveProcessLabel = ActiveProcessLabel;
     }
 
     // Canvas interaction delegates
@@ -1050,6 +1081,25 @@ public partial class MainViewModel : ObservableObject
             return;
 
         ConnectChipletsTour.Start();
+    }
+
+    /// <summary>
+    /// Starts the "Store a number in light" tour on the shipped RAM 2x4 example
+    /// (Home tour card, issue #1422). The example opens as an untitled copy
+    /// through the same loader the Examples list uses; when the user cancels the
+    /// unsaved-changes prompt (or the example is not installed), the tour does
+    /// not start and the current design stays open.
+    /// </summary>
+    private async Task StartStoreNumberTourAsync()
+    {
+        var ramPath = Home.Examples
+            .FirstOrDefault(example => System.IO.Path.GetFileName(example.FilePath)
+                == ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel.RamExampleFileName)
+            ?.FilePath;
+        if (ramPath == null || !await FileOperations.OpenDesignAsCopyAsync(ramPath))
+            return;
+
+        StoreNumberTour.Start();
     }
 
     /// <summary>

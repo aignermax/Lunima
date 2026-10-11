@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.LogicalTree;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Shouldly;
@@ -28,7 +29,9 @@ public sealed class ToolbarButtonHeightTests
         Dispatcher.UIThread.RunJobs();
         var toolbar = host.Window.FindControl<StackPanel>("MainToolbar").ShouldNotBeNull();
 
-        var buttons = toolbar.Children.OfType<Button>().Where(b => b.IsVisible).ToList();
+        var buttons = toolbar.GetLogicalDescendants().OfType<Button>()
+            .Where(b => b.IsEffectivelyVisible)
+            .ToList();
         foreach (var button in buttons)
             _output.WriteLine($"{ToolTip.GetTip(button) ?? button.Content}: {button.Bounds.Height:F1}");
 

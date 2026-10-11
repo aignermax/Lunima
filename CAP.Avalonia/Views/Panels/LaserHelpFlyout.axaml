@@ -16,65 +16,62 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LaserHelp.Intro}"/>
 
         <!-- light enters the circuit: laser on → pulse into a splitter → strong/weak
              branches glow → the far coupler stays an unlit output. -->
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="110">
                     <!-- Animated pulses, declared first so tracks and pulses slide
                          *under* the splitter box: the input pulse visibly enters the
                          splitter and the two split pulses emerge from it. -->
                     <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="40,55 170,55"
-                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
                                             WindowStart="0.15" WindowEnd="0.5" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="240,45 336,50"
-                                            PulseBrush="#FF6450" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Danger}" PulseDiameter="10"
                                             WindowStart="0.55" WindowEnd="0.9" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="110" PathPoints="240,65 336,60"
-                                            PulseBrush="#00B4B4" PulseDiameter="8"
+                                            PulseBrush="{DynamicResource Brush.Info}" PulseDiameter="8"
                                             WindowStart="0.55" WindowEnd="0.9" IsHitTestVisible="False"/>
                     <!-- Laser source: gray dot at rest; the overlay lights it up with rays. -->
-                    <Ellipse Canvas.Left="16" Canvas.Top="46" Width="18" Height="18" Fill="#9E9E9E"/>
-                    <TextBlock Canvas.Left="2" Canvas.Top="68" Text="{loc:Localize LaserHelp.DiagramOn}"
-                               FontSize="9" Foreground="Gray"/>
+                    <Ellipse Canvas.Left="16" Canvas.Top="46" Width="18" Height="18" Fill="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="68" Text="{loc:Localize LaserHelp.DiagramOn}"/>
                     <!-- The splitter -->
                     <Border Canvas.Left="170" Canvas.Top="28" Width="70" Height="54"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
-                        <TextBlock Text="{loc:Localize LaserHelp.DiagramSplitter}" FontSize="9" Foreground="LightGray"
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Classes="secondary" Text="{loc:Localize LaserHelp.DiagramSplitter}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <!-- Branch labels (power-ramp colors) -->
                     <TextBlock Canvas.Left="272" Canvas.Top="24" Text="{loc:Localize LaserHelp.DiagramStrong}"
-                               FontSize="9" Foreground="#FF6450"/>
+                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Danger}"/>
                     <TextBlock Canvas.Left="272" Canvas.Top="82" Text="{loc:Localize LaserHelp.DiagramWeak}"
-                               FontSize="9" Foreground="#00B4B4"/>
+                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Info}"/>
                     <!-- Unlit coupler on the far side: gray, crossed out — an output. -->
-                    <Ellipse Canvas.Left="336" Canvas.Top="46" Width="18" Height="18" Fill="#9E9E9E"/>
-                    <Line StartPoint="338,62" EndPoint="352,48" Stroke="#DCDCDC" StrokeThickness="1.5"/>
-                    <TextBlock Canvas.Left="306" Canvas.Top="68" Text="{loc:Localize LaserHelp.DiagramOff}"
-                               FontSize="9" Foreground="Gray"/>
+                    <Ellipse Canvas.Left="336" Canvas.Top="46" Width="18" Height="18" Fill="{DynamicResource Brush.Text.Tertiary}"/>
+                    <Line StartPoint="338,62" EndPoint="352,48" Stroke="{DynamicResource Brush.Text.Secondary}" StrokeThickness="1.5"/>
+                    <TextBlock Classes="caption" Canvas.Left="306" Canvas.Top="68" Text="{loc:Localize LaserHelp.DiagramOff}"/>
                     <!-- laser switches on + branch glows -->
                     <ha:LaserInputGlowAnimation Width="368" Height="110" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize LaserHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize LaserHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize LaserHelp.WavelengthPowerTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LaserHelp.WavelengthPowerTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LaserHelp.WavelengthPowerBody}"/>
 
-        <TextBlock Text="{loc:Localize LaserHelp.CwTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LaserHelp.CwTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LaserHelp.CwBody}"/>
 
-        <TextBlock Text="{loc:Localize LaserHelp.CanvasTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Classes="strong" Text="{loc:Localize LaserHelp.CanvasTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LaserHelp.CanvasBody}"/>
     </StackPanel>
 

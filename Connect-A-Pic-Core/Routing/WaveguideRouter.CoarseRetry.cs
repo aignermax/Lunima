@@ -99,7 +99,10 @@ public partial class WaveguideRouter
         }
         // Skip the escalation once the per-wire budget is spent — a factor-8 flood on
         // top of an exhausted factor-4 search only multiplies the blocked wire's cost.
-        if (LastRouteCoarseNodesExpanded >= MaxCoarseRetryNodesPerWire) return null;
+        // A cancelled search reports neither a path nor a proof, so the token is checked
+        // too: otherwise a cancelled route still copies the whole grid a second time.
+        if (cancellationToken.IsCancellationRequested
+            || LastRouteCoarseNodesExpanded >= MaxCoarseRetryNodesPerWire) return null;
         return TryRouteCoarseAStarAtFactor(CoarseRetryCellSizeFactor * 2, bendRadius,
             startX, startY, startAngle, endX, endY, endInputAngle,
             startPin, endPin, cancellationToken).Path;

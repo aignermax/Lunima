@@ -2,7 +2,9 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Core;
 using CAP_Core.Export;
+using CAP.Avalonia.Controls.Rendering;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
@@ -14,10 +16,11 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 public static class GdsPolygonRenderer
 {
     // ── Layer colour palette (static readonly — never allocate per-frame) ───
-    // Add new layers here without touching any other file.
+    // The waveguide layer shares the routed-waveguide color, so a device's geometry visibly
+    // continues into its connections. Add new layers here without touching any other file.
 
-    private static readonly IBrush WaveguideBrush = new SolidColorBrush(Color.FromArgb(180, 100, 160, 220)); // layer 1
-    private static readonly IBrush DefaultBrush   = new SolidColorBrush(Color.FromArgb(120, 160, 160, 160)); // all other layers
+    private static readonly IBrush WaveguideBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Waveguide, 0xD0)); // layer 1
+    private static readonly IBrush DefaultBrush   = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray300, 0x70)); // all other layers
 
     private const int WaveguideLayer = 1;
 
@@ -43,22 +46,41 @@ public static class GdsPolygonRenderer
     public static void DrawGdsPreview(
         DrawingContext context,
         GdsPreviewData previewData,
-        ComponentViewModel comp)
+        ComponentViewModel comp) =>
+        DrawGdsPreview(context, previewData, comp.Component, comp.X, comp.Y, comp.Width, comp.Height);
+
+    /// <summary>
+    /// Draws the GDS preview of a component that has no view model of its own, such as a
+    /// child inside a group; its footprint comes straight from the component.
+    /// </summary>
+    public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component) =>
+        DrawGdsPreview(context, previewData, component, component.PhysicalX, component.PhysicalY,
+            component.WidthMicrometers, component.HeightMicrometers);
+
+    /// <summary>
+    /// Draws the GDS preview of <paramref name="component"/> into its current footprint
+    /// <paramref name="footprint"/> (world coordinates, rotation-swapped like the live bounds).
+    /// </summary>
+    public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component, Rect footprint) =>
+        DrawGdsPreview(context, previewData, component, footprint.X, footprint.Y, footprint.Width, footprint.Height);
+
+    private static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component,
+        double x, double y, double width, double height)
     {
         var result = previewData.Result;
         if (result.Polygons.Count == 0)
             return;
 
-        double centerX = comp.X + comp.Width  / 2.0;
-        double centerY = comp.Y + comp.Height / 2.0;
-        double rotationDegrees = comp.Component.RotationDegrees;
+        double centerX = x + width / 2.0;
+        double centerY = y + height / 2.0;
+        double rotationDegrees = component.RotationDegrees;
 
-        // The rotate command already swapped comp.Width/Height at 90°/270°, but the bitmap
+        // The rotate command already swapped the live width/height at 90°/270°, but the bitmap
         // holds UNROTATED geometry: draw it into the unrotated-size rect and let the rotation
         // transform map it onto the footprint — else the 90° swap is applied twice. For
         // non-cardinal rotations the recorded pre-rotation dims supply the frame.
-        var destRect = GetUnrotatedDestRect(comp.X, comp.Y, comp.Width, comp.Height, rotationDegrees,
-            comp.Component.UnrotatedWidthMicrometers, comp.Component.UnrotatedHeightMicrometers);
+        var destRect = GetUnrotatedDestRect(x, y, width, height, rotationDegrees,
+            component.UnrotatedWidthMicrometers, component.UnrotatedHeightMicrometers);
 
         using (context.PushTransform(BuildRotationMatrix(rotationDegrees, centerX, centerY)))
         {
@@ -68,7 +90,7 @@ public static class GdsPolygonRenderer
                 return;
             }
 
-            // Fallback: rebuild geometry (only during the brief pre-bitmap window)
+            // Fallback: draw the polygons directly until the bitmap is rasterised.
             DrawPolygonsAsGeometry(context, result, destRect.X, destRect.Y, destRect.Width, destRect.Height);
         }
     }

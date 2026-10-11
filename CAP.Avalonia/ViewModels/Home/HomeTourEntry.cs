@@ -11,14 +11,14 @@ namespace CAP.Avalonia.ViewModels.Home;
 /// tour the previous standalone button started.
 /// </summary>
 /// <param name="Number">1-based position in the learning order, shown as the row's number.</param>
-/// <param name="Icon">Emoji glyph shown before the name.</param>
+/// <param name="IconKey">Resource key of the icon shown after the name.</param>
 /// <param name="NameKey">Localization key of the tour's display name.</param>
 /// <param name="DescriptionKey">Localization key of the one-line description under the name.</param>
 /// <param name="TipKey">Localization key of the row's tooltip.</param>
 /// <param name="Command">The command that starts the tour.</param>
 public record HomeTourEntry(
     int Number,
-    string Icon,
+    string IconKey,
     string NameKey,
     string DescriptionKey,
     string TipKey,

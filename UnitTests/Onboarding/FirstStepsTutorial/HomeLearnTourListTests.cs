@@ -7,7 +7,7 @@ using Xunit;
 namespace UnitTests.Onboarding.FirstStepsTutorial;
 
 /// <summary>
-/// Tests for the Home screen's "Learn Lunima" list (issue #1301): the four
+/// Tests for the Home screen's "Learn Lunima" list (issue #1301): the five
 /// guided tours appear as one numbered, data-driven list in learning order,
 /// and each entry carries the existing tour command instance — clicking a row
 /// starts exactly the tour the previous standalone button started.
@@ -38,14 +38,15 @@ public class HomeLearnTourListTests : IDisposable
     }
 
     [Fact]
-    public void TourEntries_HasFourTours_InLearningOrder()
+    public void TourEntries_HasFiveTours_InLearningOrder()
     {
-        _home.TourEntries.Count.ShouldBe(4);
-        _home.TourEntries.Select(e => e.Number).ShouldBe(new[] { 1, 2, 3, 4 });
+        _home.TourEntries.Count.ShouldBe(5);
+        _home.TourEntries.Select(e => e.Number).ShouldBe(new[] { 1, 2, 3, 4, 5 });
         _home.TourEntries.Select(e => e.NameKey).ShouldBe(new[]
         {
             "Home.Learn.FirstSteps",
             "Home.WatchComputeTour",
+            "Home.StoreNumberTour",
             "Home.RunProgramTour",
             "Home.ConnectChipletsTour",
         });
@@ -56,8 +57,9 @@ public class HomeLearnTourListTests : IDisposable
     {
         _home.TourEntries[0].Command.ShouldBeSameAs(_home.LearnTutorialCommand);
         _home.TourEntries[1].Command.ShouldBeSameAs(_home.WatchComputeTourCommand);
-        _home.TourEntries[2].Command.ShouldBeSameAs(_home.RunProgramTourCommand);
-        _home.TourEntries[3].Command.ShouldBeSameAs(_home.ConnectChipletsTourCommand);
+        _home.TourEntries[2].Command.ShouldBeSameAs(_home.StoreNumberTourCommand);
+        _home.TourEntries[3].Command.ShouldBeSameAs(_home.RunProgramTourCommand);
+        _home.TourEntries[4].Command.ShouldBeSameAs(_home.ConnectChipletsTourCommand);
     }
 
     [Theory]
@@ -65,13 +67,15 @@ public class HomeLearnTourListTests : IDisposable
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
+    [InlineData(4)]
     public async Task TourEntryCommand_InvokesTheMatchingTourCallback(int entryIndex)
     {
-        var invoked = new int[4];
+        var invoked = new int[5];
         _home.LearnTutorialRequested = () => { invoked[0]++; return Task.CompletedTask; };
         _home.WatchComputeTourRequested = () => { invoked[1]++; return Task.CompletedTask; };
-        _home.RunProgramTourRequested = () => { invoked[2]++; return Task.CompletedTask; };
-        _home.ConnectChipletsTourRequested = () => { invoked[3]++; return Task.CompletedTask; };
+        _home.StoreNumberTourRequested = () => { invoked[2]++; return Task.CompletedTask; };
+        _home.RunProgramTourRequested = () => { invoked[3]++; return Task.CompletedTask; };
+        _home.ConnectChipletsTourRequested = () => { invoked[4]++; return Task.CompletedTask; };
 
         await ((IAsyncRelayCommand)_home.TourEntries[entryIndex].Command).ExecuteAsync(null);
 
@@ -86,7 +90,7 @@ public class HomeLearnTourListTests : IDisposable
 
         _home.Show();
 
-        _home.TourEntries.Count.ShouldBe(4);
+        _home.TourEntries.Count.ShouldBe(5);
         _home.TourEntries.Select(e => e.Command).ShouldBe(commands);
     }
 }

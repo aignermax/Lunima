@@ -20,7 +20,7 @@ public static class PinScreenSize
     /// (component names, waveguide length/loss labels) so they stop growing once zooming in
     /// would otherwise let them dominate the canvas.
     /// </summary>
-    public const double MaxLabelFontSizePx = 14.0;
+    public const double MaxLabelFontSizePx = 13.0;
 
     /// <summary>
     /// Smallest on-screen font size in pixels a label is ever drawn at. Below this, zooming out
@@ -29,7 +29,7 @@ public static class PinScreenSize
     /// label especially must stay visible; density is instead regulated by overlap-based
     /// thinning, not by hiding individual labels).
     /// </summary>
-    public const double MinLabelFontSizePx = 6.0;
+    public const double MinLabelFontSizePx = 9.0;
 
     /// <summary>
     /// Caps a world-space size so that, after the canvas' zoom transform, it never exceeds

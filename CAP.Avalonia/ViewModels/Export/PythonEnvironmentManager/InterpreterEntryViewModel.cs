@@ -70,22 +70,23 @@ public partial class InterpreterEntryViewModel : ObservableObject
         _                                  => "Unknown",
     };
 
-    /// <summary>Badge foreground colour as a CSS-style hex string.</summary>
-    public string StatusColor => _env?.Status switch
-    {
-        PythonEnvironmentStatus.Healthy    => "#88CC88",
-        PythonEnvironmentStatus.Broken     => "#CC6666",
-        PythonEnvironmentStatus.Creating   => "#CCCC66",
-        PythonEnvironmentStatus.Installing => "#66AACC",
-        _                                  => "#888888",
-    };
+    /// <summary>True when the managed environment passed its health check.</summary>
+    public bool IsHealthy => _env?.Status == PythonEnvironmentStatus.Healthy;
+
+    /// <summary>True when the managed environment failed its health check.</summary>
+    public bool IsBroken => _env?.Status == PythonEnvironmentStatus.Broken;
+
+    /// <summary>True while the managed environment is being created or installed into.</summary>
+    public bool IsInProgress => _env?.Status is PythonEnvironmentStatus.Creating or PythonEnvironmentStatus.Installing;
 
     /// <summary>Notifies the UI that the computed managed properties may have changed.</summary>
     public void RefreshAll()
     {
         OnPropertyChanged(nameof(DisplayText));
         OnPropertyChanged(nameof(StatusBadge));
-        OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(IsHealthy));
+        OnPropertyChanged(nameof(IsBroken));
+        OnPropertyChanged(nameof(IsInProgress));
     }
 
     private static string BuildManagedText(PythonEnvironment e)

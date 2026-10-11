@@ -103,6 +103,13 @@ public partial class HomeViewModel : ObservableObject
     public Func<Task>? WatchComputeTourRequested { get; set; }
 
     /// <summary>
+    /// Callback to start the "Store a number in light" guided tour (issue #1422):
+    /// opens the shipped RAM 2x4 example as an untitled copy and activates the
+    /// tour only when that succeeds.
+    /// </summary>
+    public Func<Task>? StoreNumberTourRequested { get; set; }
+
+    /// <summary>
     /// Callback to start the "Run a program on your chip" guided tour
     /// (issue #1267): opens the shipped 4-bit adder example as an untitled copy
     /// and activates the tour only when that succeeds.
@@ -139,16 +146,19 @@ public partial class HomeViewModel : ObservableObject
     private void RefreshTourEntries()
     {
         TourEntries.Clear();
-        TourEntries.Add(new HomeTourEntry(1, "🎓",
+        TourEntries.Add(new HomeTourEntry(1, "Icon.GraduationCap",
             "Home.Learn.FirstSteps", "Home.Learn.FirstStepsDescription",
             "Home.LearnTutorialTip", LearnTutorialCommand));
-        TourEntries.Add(new HomeTourEntry(2, "⏱",
+        TourEntries.Add(new HomeTourEntry(2, "Icon.Clock",
             "Home.WatchComputeTour", "Home.Learn.WatchComputeDescription",
             "Home.WatchComputeTourTip", WatchComputeTourCommand));
-        TourEntries.Add(new HomeTourEntry(3, "🧮",
+        TourEntries.Add(new HomeTourEntry(3, "Icon.Save",
+            "Home.StoreNumberTour", "Home.Learn.StoreNumberDescription",
+            "Home.StoreNumberTourTip", StoreNumberTourCommand));
+        TourEntries.Add(new HomeTourEntry(4, "Icon.Calculator",
             "Home.RunProgramTour", "Home.Learn.RunProgramDescription",
             "Home.RunProgramTourTip", RunProgramTourCommand));
-        TourEntries.Add(new HomeTourEntry(4, "🔗",
+        TourEntries.Add(new HomeTourEntry(5, "Icon.Link",
             "Home.ConnectChipletsTour", "Home.Learn.ConnectChipletsDescription",
             "Home.ConnectChipletsTourTip", ConnectChipletsTourCommand));
     }
@@ -313,6 +323,13 @@ public partial class HomeViewModel : ObservableObject
     {
         if (WatchComputeTourRequested != null)
             await WatchComputeTourRequested();
+    }
+
+    [RelayCommand]
+    private async Task StoreNumberTour()
+    {
+        if (StoreNumberTourRequested != null)
+            await StoreNumberTourRequested();
     }
 
     [RelayCommand]

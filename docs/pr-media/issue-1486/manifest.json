@@ -1,0 +1,26 @@
+[
+  {
+    "file": "modeprobe-help-en-1-start.png",
+    "caption": "Mode Probe help: a waveguide cross-section with the mode spot confined in the core, and a wave crest creeping along the guide while the free-space reference crest outruns it. (crest near the guide input)"
+  },
+  {
+    "file": "modeprobe-help-en-2-mid.png",
+    "caption": "Mode Probe help: a waveguide cross-section with the mode spot confined in the core, and a wave crest creeping along the guide while the free-space reference crest outruns it. (crest mid-guide)"
+  },
+  {
+    "file": "modeprobe-help-en-3-far.png",
+    "caption": "Mode Probe help: a waveguide cross-section with the mode spot confined in the core, and a wave crest creeping along the guide while the free-space reference crest outruns it. (crest near the guide output)"
+  },
+  {
+    "file": "modeprobe-help-de-1-start.png",
+    "caption": "Mode Probe help: a waveguide cross-section with the mode spot confined in the core, and a wave crest creeping along the guide while the free-space reference crest outruns it. (crest near the guide input)"
+  },
+  {
+    "file": "modeprobe-help-de-2-mid.png",
+    "caption": "Mode Probe help: a waveguide cross-section with the mode spot confined in the core, and a wave crest creeping along the guide while the free-space reference crest outruns it. (crest mid-guide)"
+  },
+  {
+    "file": "modeprobe-help-de-3-far.png",
+    "caption": "Mode Probe help: a waveguide cross-section with the mode spot confined in the core, and a wave crest creeping along the guide while the free-space reference crest outruns it. (crest near the guide output)"
+  }
+]

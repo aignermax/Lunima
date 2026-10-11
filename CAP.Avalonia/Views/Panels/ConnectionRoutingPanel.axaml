@@ -9,14 +9,14 @@
     <!-- Connection Routing: routing style only. The style reshapes the visible canvas curve;
          width/radius are applied automatically from the interconnect defaults (no manual UI). -->
     <StackPanel IsVisible="{Binding CanvasInteraction.IsConnectionSelected}">
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <Border Classes="divider" Margin="0,12,0,8"/>
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Localize Routing.Connection.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Classes="subtitle" Text="{loc:Localize Routing.Connection.Title}" Margin="0,0,0,5" VerticalAlignment="Center"/>
             <!-- Plain-language help: why sharp bends lose light and where the minimum
                  bend radius comes from (the PDK / cross-section). -->
             <controls:HelpFlyoutButton Grid.Column="1"
                                        Title="{loc:Localize BendRadiusHelp.Title}"
-                                       VerticalAlignment="Center" Margin="0,-5,0,0">
+                                       VerticalAlignment="Center">
                 <controls:HelpFlyoutButton.HelpContent>
                     <StackPanel Spacing="8" MaxWidth="400">
                         <StackPanel.Styles>
@@ -31,42 +31,42 @@
                             </Style>
                         </StackPanel.Styles>
 
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.Intro}"/>
 
                         <!-- Diagram: sharp bend leaks, smooth bend keeps the mode. -->
-                        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                                CornerRadius="4" Padding="4">
+                        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                                CornerRadius="{DynamicResource Radius.S}" Padding="4">
                             <Canvas Width="360" Height="90">
                                 <!-- Smooth bend (top). -->
                                 <Path Data="M 20,25 L 120,25 C 180,25 180,65 240,65 L 340,65"
-                                      Stroke="#4FC3F7" StrokeThickness="4"/>
-                                <Ellipse Canvas.Left="168" Canvas.Top="21" Width="14" Height="14" Fill="#FFD54F"/>
-                                <TextBlock Canvas.Left="10" Canvas.Top="72" Text="{loc:Localize BendRadiusHelp.DiagramSmooth}" FontSize="9" Foreground="Gray"/>
+                                      Stroke="{DynamicResource Brush.Info}" StrokeThickness="4"/>
+                                <Ellipse Canvas.Left="168" Canvas.Top="21" Width="14" Height="14" Fill="{DynamicResource Brush.Warning}"/>
+                                <TextBlock Classes="caption" Canvas.Left="10" Canvas.Top="72" Text="{loc:Localize BendRadiusHelp.DiagramSmooth}"/>
                                 <!-- Sharp bend (bottom). -->
                                 <Path Data="M 20,45 L 160,45 L 160,75 L 340,75"
-                                      Stroke="#4FC3F7" StrokeThickness="4"/>
-                                <Ellipse Canvas.Left="162" Canvas.Top="49" Width="8" Height="8" Fill="#FFD54F"/>
-                                <Ellipse Classes="leak" Canvas.Left="166" Canvas.Top="42" Width="5" Height="5" Fill="#FF8A65"/>
-                                <Ellipse Classes="leak" Canvas.Left="166" Canvas.Top="54" Width="5" Height="5" Fill="#FF8A65"/>
-                                <TextBlock Canvas.Left="10" Canvas.Top="82" Text="{loc:Localize BendRadiusHelp.DiagramSharp}" FontSize="9" Foreground="Gray"/>
+                                      Stroke="{DynamicResource Brush.Info}" StrokeThickness="4"/>
+                                <Ellipse Canvas.Left="162" Canvas.Top="49" Width="8" Height="8" Fill="{DynamicResource Brush.Warning}"/>
+                                <Ellipse Classes="leak" Canvas.Left="166" Canvas.Top="42" Width="5" Height="5" Fill="{DynamicResource Brush.Danger}"/>
+                                <Ellipse Classes="leak" Canvas.Left="166" Canvas.Top="54" Width="5" Height="5" Fill="{DynamicResource Brush.Danger}"/>
+                                <TextBlock Classes="caption" Canvas.Left="10" Canvas.Top="82" Text="{loc:Localize BendRadiusHelp.DiagramSharp}"/>
                             </Canvas>
                         </Border>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.LossTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.LossTitle}"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.LossBody}"/>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.PdkTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.PdkTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.PdkBody}"/>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.AutoTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.AutoTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.AutoBody}"/>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.SbendTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.SbendTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.SbendBody}"/>
                     </StackPanel>
                 </controls:HelpFlyoutButton.HelpContent>
@@ -76,16 +76,16 @@
         <!-- Multi-selection (issue #862): the dropdown restyles all selected connections at once. -->
         <TextBlock Text="{Binding BottomPanel.ConnectionRouting.BatchHint}"
                    IsVisible="{Binding BottomPanel.ConnectionRouting.IsBatchSelection}"
-                   Foreground="Gray" Margin="0,0,0,3" TextWrapping="Wrap"/>
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3" TextWrapping="Wrap"/>
 
-        <TextBlock Text="{loc:Localize Routing.Connection.Style}" Foreground="Gray" Margin="0,0,0,3"/>
+        <TextBlock Classes="caption" Text="{loc:Localize Routing.Connection.Style}" Margin="0,0,0,3"/>
         <ComboBox ItemsSource="{Binding BottomPanel.ConnectionRouting.RoutingStyles}"
                   SelectedItem="{Binding BottomPanel.ConnectionRouting.SelectedStyle}"
                   Width="180" Margin="0,0,0,8"/>
         <!-- Names the effective geometry of a direct-styled Auto route (single
              source of truth was the path, not the dropdown — field report). -->
         <TextBlock Text="{Binding BottomPanel.ConnectionRouting.EffectiveStyleText}"
-                   Foreground="#7FB2E5" FontSize="10" Margin="0,0,0,4"
+                   Foreground="{DynamicResource Brush.Accent.Hover}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,4"
                    IsVisible="{Binding BottomPanel.ConnectionRouting.EffectiveStyleText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
     </StackPanel>
 </UserControl>

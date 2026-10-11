@@ -171,6 +171,25 @@ public class TourAnchorTests
         steps[5].TargetName.ShouldBeNull("the closing words have no control to click");
     }
 
+    [Fact]
+    public void StoreNumberTour_EveryStep_AnchorsToItsLogicPanelControl()
+    {
+        var steps = StoreNumberTourSteps();
+
+        steps[0].TargetName.ShouldBe("LogicBuildButton");
+        steps[1].TargetName.ShouldBe("LogicInputRows");
+        steps[2].TargetName.ShouldBe("LogicStepClockButton");
+        steps[3].TargetName.ShouldBe("LogicOutputRows");
+        steps[4].TargetName.ShouldBe("LogicCellInstanceHelpButton");
+    }
+
+    private static IReadOnlyList<TutorialStep> StoreNumberTourSteps()
+    {
+        var logic = new CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.LogicPanelViewModel(
+            new FakeLogicRunClock());
+        return new StoreNumberTourViewModel(logic, MakeDock()).Steps;
+    }
+
     private static IReadOnlyList<TutorialStep> ConnectChipletsTourSteps() =>
         new ConnectChipletsTourViewModel(
             new DesignCanvasViewModel(),

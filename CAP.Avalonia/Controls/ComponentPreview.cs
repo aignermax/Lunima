@@ -30,6 +30,9 @@ public class ComponentPreview : Control
     public static readonly StyledProperty<string?> NazcaFunctionNameProperty =
         AvaloniaProperty.Register<ComponentPreview, string?>(nameof(NazcaFunctionName));
 
+    public static readonly StyledProperty<string?> NazcaParametersProperty =
+        AvaloniaProperty.Register<ComponentPreview, string?>(nameof(NazcaParameters));
+
     public static readonly StyledProperty<string?> GdsFactoryFunctionProperty =
         AvaloniaProperty.Register<ComponentPreview, string?>(nameof(GdsFactoryFunction));
 
@@ -71,6 +74,14 @@ public class ComponentPreview : Control
         set => SetValue(NazcaFunctionNameProperty, value);
     }
 
+    /// <summary>Nazca parameters of the template. Part of the render identity, so the
+    /// thumbnail and a placed instance of the template share one cached render.</summary>
+    public string? NazcaParameters
+    {
+        get => GetValue(NazcaParametersProperty);
+        set => SetValue(NazcaParametersProperty, value);
+    }
+
     /// <summary>Module-qualified gdsfactory factory name for gdsfactory-native components
     /// (e.g. "cspdk.sin300.mmi1x2"); drives the gdsfactory geometry preview (#570).</summary>
     public string? GdsFactoryFunction
@@ -89,6 +100,7 @@ public class ComponentPreview : Control
             PinDefinitionsProperty,
             NazcaModuleNameProperty,
             NazcaFunctionNameProperty,
+            NazcaParametersProperty,
             GdsFactoryFunctionProperty);
     }
 
@@ -130,8 +142,7 @@ public class ComponentPreview : Control
         double offsetX = pad + (availW - drawW) / 2;
         double offsetY = pad + (availH - drawH) / 2;
 
-        var geometry = _service?.TryGetGeometry(
-            new GdsPreviewKey(NazcaModuleName, NazcaFunctionName, null) { GdsFactoryFunction = GdsFactoryFunction });
+        var geometry = _service?.TryGetGeometry(BuildRenderKey());
         if (geometry != null && geometry.Polygons.Count > 0)
             GdsPolygonRenderer.DrawPolygonsAsGeometry(context, geometry, offsetX, offsetY, drawW, drawH);
         else
@@ -139,6 +150,15 @@ public class ComponentPreview : Control
 
         DrawPins(context, offsetX, offsetY, scale);
     }
+
+    /// <summary>
+    /// The render identity of the template, built exactly like
+    /// <see cref="GdsPreviewKey.ForComponent"/> builds it for a placed instance.
+    /// </summary>
+    private GdsPreviewKey BuildRenderKey() =>
+        GdsPreviewKey.IsGdsFactoryNative(GdsFactoryFunction)
+            ? new GdsPreviewKey(NazcaModuleName, null, null) { GdsFactoryFunction = GdsFactoryFunction }
+            : new GdsPreviewKey(NazcaModuleName, NazcaFunctionName, NazcaParameters);
 
     /// <summary>Draws the schematic fallback body (filled rectangle + border).</summary>
     private static void DrawSchematicBox(DrawingContext context, Rect rect)

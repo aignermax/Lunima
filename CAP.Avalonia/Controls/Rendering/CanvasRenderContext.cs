@@ -48,4 +48,13 @@ public sealed class CanvasRenderContext
     /// queue lifetime trivially correct.
     /// </summary>
     public DeferredLabelLayer Labels { get; } = new();
+
+    /// <summary>
+    /// One-shot animation clock (selection glow, blocked-marker pulse). <c>null</c> renders every
+    /// animation in its settled state — tests and offscreen renders need no clock.
+    /// </summary>
+    public CanvasMotion? Motion { get; init; }
+
+    /// <summary>Zoom-dependent pens for this frame.</summary>
+    public CanvasPens Pens => CanvasPens.For(Zoom);
 }

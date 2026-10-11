@@ -14,7 +14,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class GdsExportSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "🐍";
+    public override string Icon => "Icon.FileOutput";
 
     /// <inheritdoc/>
     public override string? Category => "Export";

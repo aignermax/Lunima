@@ -29,6 +29,15 @@ internal static class UiInput
             content.Equals(b.Content as string, StringComparison.Ordinal)
             && (dataContext is null || ReferenceEquals(b.DataContext, dataContext)));
 
+    /// <summary>
+    /// Finds an icon-only Button by its tooltip text, optionally scoped to the row whose
+    /// DataContext is <paramref name="dataContext"/> (e.g. the edit action of one library template).
+    /// </summary>
+    public static Button FindButtonByTip(Window window, string tip, object? dataContext = null) =>
+        Descendants<Button>(window).First(b =>
+            Equals(ToolTip.GetTip(b), tip)
+            && (dataContext is null || ReferenceEquals(b.DataContext, dataContext)));
+
     /// <summary>Window-space point at the given relative position inside <paramref name="control"/>.</summary>
     public static Point PointIn(Window window, Visual control, double relX = 0.5, double relY = 0.5)
     {

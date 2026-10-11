@@ -56,13 +56,39 @@ public class RoutingOrchestratorProgressTests
         const int connectionCount = 6;
         var orchestrator = CreateOrchestratorWithDeferredConnections(connectionCount);
 
+        // Deterministic mid-pass cancellation: the per-connection process-floor provider is
+        // consulted on the routing thread as each connection starts routing, so parking the
+        // routing thread there guarantees the pass is genuinely in flight when Stop is
+        // pressed. Cancelling from the test thread instead races the pass — six straight
+        // waveguides route in microseconds, so on a fast CI machine the pass can complete
+        // (and clear its status) before CancelRouting lands.
+        var routingThreadParked = new ManualResetEventSlim(false);
+        var releaseRouting = new ManualResetEventSlim(false);
+        orchestrator.BuildConnectionProcessFloorProvider = () => (start, end) =>
+        {
+            routingThreadParked.Set();
+            releaseRouting.Wait();
+            return null;
+        };
+
         var task = orchestrator.RecalculateRoutesAsync();
         orchestrator.IsRouting.ShouldBeTrue();
         task.IsCompleted.ShouldBeFalse(
             "routing runs on a background thread — the UI thread must not be blocked");
 
-        orchestrator.CancelRouting();
-        await PumpUntilDone(task);
+        try
+        {
+            routingThreadParked.Wait(TimeSpan.FromSeconds(30)).ShouldBeTrue(
+                "the routing thread must reach the first connection's floor consultation");
+            orchestrator.CancelRouting();
+            releaseRouting.Set();
+
+            await PumpUntilDone(task);
+        }
+        finally
+        {
+            releaseRouting.Set();
+        }
 
         orchestrator.IsRouting.ShouldBeFalse();
         orchestrator.RoutingStatusText.ShouldContain("/" + connectionCount);
@@ -88,8 +114,11 @@ public class RoutingOrchestratorProgressTests
     /// <summary>Pumps the headless dispatcher until the routing task finishes.</summary>
     private static async Task PumpUntilDone(Task task)
     {
+        var deadline = DateTime.UtcNow.AddSeconds(60);
         while (!task.IsCompleted)
         {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException("the routing pass did not finish within 60 s");
             Dispatcher.UIThread.RunJobs();
             await Task.Delay(5);
         }

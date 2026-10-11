@@ -2,81 +2,66 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CAP.Avalonia.ViewModels.PdkResolution"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:res="using:CAP_Core.Export.PdkResolution"
         x:Class="CAP.Avalonia.Views.Dialogs.PdkResolutionCheckDialog"
         x:DataType="vm:PdkResolutionCheckViewModel"
         Title="{loc:Localize PdkCheck.WindowTitle}"
         Width="720" Height="560"
         MinWidth="520" MinHeight="400"
-        WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16" LastChildFill="True">
-
-        <!-- Buttons — always visible at the bottom -->
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
-            <Button Content="{loc:Localize PdkCheck.CopyFailingList}"
-                    Command="{Binding CopyFailingListCommand}"
-                    Background="#3d3d3d" FontSize="11"
-                    IsEnabled="{Binding HasFailures}"
-                    ToolTip.Tip="{loc:Localize PdkCheck.CopyFailingListTip}"/>
-            <Button Content="{loc:Localize PdkCheck.RunCheck}"
-                    Command="{Binding RunCheckCommand}"
-                    MinWidth="100" Padding="12,0" Background="#3d4d6d"
-                    IsEnabled="{Binding !IsRunning}"/>
-            <Button Content="{loc:Localize Common.Close}" MinWidth="70" Padding="12,0" Click="OnCloseClicked"/>
-        </StackPanel>
-
-        <!-- Status line -->
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}"
-                   Foreground="#dddddd" FontSize="11" TextWrapping="Wrap"
-                   Margin="0,8,0,0"/>
-
+    <Grid RowDefinitions="*,Auto">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="10">
+            <StackPanel Spacing="16" Margin="24">
 
-                <TextBlock Text="{loc:Localize PdkCheck.Title}" FontSize="15" FontWeight="SemiBold"
-                           Foreground="LightBlue"/>
-                <TextBlock Text="{loc:Localize PdkCheck.Description}"
-                           Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="title" Text="{loc:Localize PdkCheck.Title}"/>
+                    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:Localize PdkCheck.Description}"/>
+                </StackPanel>
 
-                <Separator Background="#3d3d3d"/>
-
-                <!-- Per-PDK groups -->
                 <ItemsControl ItemsSource="{Binding Pdks}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:PdkResolutionGroupViewModel">
-                            <StackPanel Spacing="4" Margin="0,0,0,12">
+                            <StackPanel Spacing="4" Margin="0,0,0,16">
 
-                                <!-- PDK header -->
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="{Binding PdkName}" Foreground="#aaccff"
-                                               FontSize="12" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding FileName}" Foreground="Gray" FontSize="11"/>
-                                    <TextBlock Text="{Binding Summary}" Foreground="#aaaaaa" FontSize="11"/>
+                                    <TextBlock Classes="subtitle" Text="{Binding PdkName}"/>
+                                    <TextBlock Classes="caption mono" VerticalAlignment="Center" Text="{Binding FileName}"/>
+                                    <TextBlock Classes="caption secondary" VerticalAlignment="Center" Text="{Binding Summary}"/>
                                 </StackPanel>
 
-                                <!-- Load / run-level error -->
-                                <TextBlock Text="{Binding Error}" Foreground="#ff9999" FontSize="11"
+                                <TextBlock Classes="danger" Text="{Binding Error}"
                                            TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
 
-                                <!-- Component rows -->
                                 <ItemsControl ItemsSource="{Binding Rows}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PdkResolutionRowViewModel">
-                                            <Border Padding="4,2" Background="Transparent">
-                                                <Grid ColumnDefinitions="28,180,170,*">
-                                                    <TextBlock Grid.Column="0" Text="{Binding StatusBadge}" FontSize="11"/>
+                                            <Border Padding="4,3" Background="Transparent">
+                                                <Grid ColumnDefinitions="28,180,190,*">
+                                                    <controls:Icon Grid.Column="0" Size="14" VerticalAlignment="Top" Margin="0,1,0,0"
+                                                                   Data="{StaticResource Icon.CircleCheck}"
+                                                                   Foreground="{DynamicResource Brush.Success}"
+                                                                   IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static res:PdkResolutionStatus.Ok}}"/>
+                                                    <controls:Icon Grid.Column="0" Size="14" VerticalAlignment="Top" Margin="0,1,0,0"
+                                                                   Data="{StaticResource Icon.TriangleAlert}"
+                                                                   Foreground="{DynamicResource Brush.Warning}"
+                                                                   IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static res:PdkResolutionStatus.Warning}}"/>
+                                                    <controls:Icon Grid.Column="0" Size="14" VerticalAlignment="Top" Margin="0,1,0,0"
+                                                                   Data="{StaticResource Icon.CircleX}"
+                                                                   Foreground="{DynamicResource Brush.Danger}"
+                                                                   IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static res:PdkResolutionStatus.Error}}"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding ComponentName}"
-                                                               Foreground="White" FontSize="11"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding FunctionPath}"
-                                                               Foreground="#bbbbbb" FontSize="11" FontFamily="Monospace"
+                                                               VerticalAlignment="Top" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="2" Classes="mono secondary"
+                                                               VerticalAlignment="Top"
+                                                               Text="{Binding FunctionPath}"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Grid.Column="3" Text="{Binding Message}"
-                                                               Foreground="{Binding StatusColor}" FontSize="11"
-                                                               TextWrapping="Wrap"/>
+                                                               VerticalAlignment="Top" TextWrapping="Wrap"
+                                                               Classes.success="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static res:PdkResolutionStatus.Ok}}"
+                                                               Classes.warning="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static res:PdkResolutionStatus.Warning}}"
+                                                               Classes.danger="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static res:PdkResolutionStatus.Error}}"/>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -90,5 +75,22 @@
             </StackPanel>
         </ScrollViewer>
 
-    </DockPanel>
+        <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Margin="0,0,16,0" Text="{Binding StatusText}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{loc:Localize PdkCheck.CopyFailingList}"
+                            Command="{Binding CopyFailingListCommand}"
+                            IsEnabled="{Binding HasFailures}"
+                            ToolTip.Tip="{loc:Localize PdkCheck.CopyFailingListTip}"/>
+                    <Button Content="{loc:Localize Common.Close}" Click="OnCloseClicked"/>
+                    <Button Classes="primary" Content="{loc:Localize PdkCheck.RunCheck}"
+                            Command="{Binding RunCheckCommand}"
+                            IsEnabled="{Binding !IsRunning}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

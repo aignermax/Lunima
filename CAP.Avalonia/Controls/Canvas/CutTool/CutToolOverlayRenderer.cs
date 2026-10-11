@@ -25,10 +25,10 @@ public sealed class CutToolOverlayRenderer : ICanvasRenderer
     private const double FreeCutStrokePx = 2.0;
     private const double FreeCutDashPx = 3.0;
 
-    private static readonly Color GuideColor = Color.FromArgb(140, 255, 200, 60);
-    private static readonly IBrush CandidateFill = new SolidColorBrush(Color.FromArgb(90, 255, 200, 60));
-    private static readonly IBrush HoveredFill = new SolidColorBrush(Color.FromRgb(255, 200, 60));
-    private static readonly IBrush MarkerStrokeBrush = new SolidColorBrush(Color.FromRgb(255, 230, 150));
+    private static readonly Color GuideColor = CanvasPalette.WithAlpha(CanvasPalette.Warning, 140);
+    private static readonly IBrush CandidateFill = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Warning, 90));
+    private static readonly IBrush HoveredFill = CanvasPalette.WarningBrush;
+    private static readonly IBrush MarkerStrokeBrush = CanvasPalette.Brush(CanvasPalette.Lighten(CanvasPalette.Warning, 0.5));
 
     private readonly CutToolCandidateComputer _computer = new();
 

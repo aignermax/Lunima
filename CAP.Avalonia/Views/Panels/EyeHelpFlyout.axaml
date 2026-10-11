@@ -13,56 +13,52 @@
         <StackPanel Margin="12" Spacing="8">
 
             <TextBlock Text="{loc:Localize EyeHelp.Title}"
-                       FontWeight="Bold" FontSize="13" Foreground="White"/>
+                       FontWeight="Bold" FontSize="{DynamicResource FontSize.BodyLarge}" Foreground="{DynamicResource Brush.Text.Primary}"/>
 
             <!-- Looping animation: waveform slices stack up into an eye. -->
-            <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
-                    CornerRadius="4" Padding="4">
+            <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                    CornerRadius="{DynamicResource Radius.S}" Padding="4">
                 <Canvas Width="380" Height="90">
                     <!-- Left: the data waveform, cut into bit-length slices. -->
                     <Polyline Points="10,25 40,25 44,65 74,65 78,25 108,25 112,65 142,65"
-                              Stroke="#81C784" StrokeThickness="2"/>
-                    <Line StartPoint="42,15" EndPoint="42,75" Stroke="#666666"
+                              Stroke="{DynamicResource Brush.Success}" StrokeThickness="2"/>
+                    <Line StartPoint="42,15" EndPoint="42,75" Stroke="{DynamicResource Brush.Border.Strong}"
                           StrokeThickness="1" StrokeDashArray="2,2"/>
-                    <Line StartPoint="76,15" EndPoint="76,75" Stroke="#666666"
+                    <Line StartPoint="76,15" EndPoint="76,75" Stroke="{DynamicResource Brush.Border.Strong}"
                           StrokeThickness="1" StrokeDashArray="2,2"/>
-                    <Line StartPoint="110,15" EndPoint="110,75" Stroke="#666666"
+                    <Line StartPoint="110,15" EndPoint="110,75" Stroke="{DynamicResource Brush.Border.Strong}"
                           StrokeThickness="1" StrokeDashArray="2,2"/>
-                    <TextBlock Canvas.Left="14" Canvas.Top="76" Text="{loc:Localize EyeHelp.DiagramSignal}"
-                               FontSize="9" Foreground="Gray"/>
+                    <TextBlock Classes="caption" Canvas.Left="14" Canvas.Top="76" Text="{loc:Localize EyeHelp.DiagramSignal}"/>
                     <!-- Arrow: slices get stacked -->
-                    <Line StartPoint="152,45" EndPoint="200,45" Stroke="#909090" StrokeThickness="2"/>
-                    <Polyline Points="192,39 202,45 192,51" Stroke="#909090" StrokeThickness="2"/>
-                    <TextBlock Canvas.Left="148" Canvas.Top="24" Text="{loc:Localize EyeHelp.DiagramStack}" FontSize="9" Foreground="Gray"/>
+                    <Line StartPoint="152,45" EndPoint="200,45" Stroke="{DynamicResource Brush.Text.Tertiary}" StrokeThickness="2"/>
+                    <Polyline Points="192,39 202,45 192,51" Stroke="{DynamicResource Brush.Text.Tertiary}" StrokeThickness="2"/>
+                    <TextBlock Classes="caption" Canvas.Left="148" Canvas.Top="24" Text="{loc:Localize EyeHelp.DiagramStack}"/>
                     <!-- Right: the eye forms from overlaid slices (animated overlay). -->
                     <ha:EyeStackAnimation Width="380" Height="90" IsHitTestVisible="False"
                                           LoopDuration="0:0:4"/>
-                    <TextBlock Canvas.Left="248" Canvas.Top="76" Text="{loc:Localize EyeHelp.DiagramEye}"
-                               FontSize="9" Foreground="Gray"/>
+                    <TextBlock Classes="caption" Canvas.Left="248" Canvas.Top="76" Text="{loc:Localize EyeHelp.DiagramEye}"/>
                 </Canvas>
             </Border>
 
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize EyeHelp.Intro}"/>
 
-            <TextBlock Text="{loc:Localize EyeHelp.RunTitle}" FontWeight="Bold" FontSize="12"
-                       Foreground="White" Margin="0,4,0,0"/>
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+            <TextBlock Classes="strong" Text="{loc:Localize EyeHelp.RunTitle}" Margin="0,4,0,0"/>
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize EyeHelp.RunBody1}"/>
 
-            <TextBlock Text="{loc:Localize EyeHelp.ReadingTitle}" FontWeight="Bold" FontSize="12"
-                       Foreground="White" Margin="0,4,0,0"/>
+            <TextBlock Classes="strong" Text="{loc:Localize EyeHelp.ReadingTitle}" Margin="0,4,0,0"/>
             <StackPanel Spacing="5">
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                    <Run FontWeight="Bold" Foreground="#4FC3F7" Text="{loc:Localize EyeHelp.QLabel}"/>
+                <TextBlock Classes="secondary" TextWrapping="Wrap">
+                    <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Info}" Text="{loc:Localize EyeHelp.QLabel}"/>
                     <Run Text="{loc:Localize EyeHelp.QBody}"/>
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                    <Run FontWeight="Bold" Foreground="#FF8A65">BER</Run>
+                <TextBlock Classes="secondary" TextWrapping="Wrap">
+                    <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Danger}">BER</Run>
                     <Run Text="{loc:Localize EyeHelp.BerBody}"/>
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                    <Run FontWeight="Bold" Foreground="#FFD54F" Text="{loc:Localize EyeHelp.ThresholdLabel}"/>
+                <TextBlock Classes="secondary" TextWrapping="Wrap">
+                    <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Warning}" Text="{loc:Localize EyeHelp.ThresholdLabel}"/>
                     <Run Text="{loc:Localize EyeHelp.ThresholdBody}"/>
                 </TextBlock>
             </StackPanel>

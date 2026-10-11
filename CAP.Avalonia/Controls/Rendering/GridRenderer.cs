@@ -1,102 +1,134 @@
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using CAP.Avalonia.ViewModels.Canvas;
 
 namespace CAP.Avalonia.Controls.Rendering;
 
 /// <summary>
-/// Renders the background grid, chip boundary, snap grid overlay, and alignment guides.
-/// Operates in two phases: background (screen-space) and world (canvas-space).
+/// Renders the canvas background (chip area and adaptive grid), the chip frame, the snap grid
+/// overlay and alignment guides. Operates in two phases: background (screen space, before the
+/// zoom/pan transform) and world (canvas space).
 /// </summary>
 public sealed class GridRenderer
 {
+    private const double CornerTickPx = 14.0;
+    private const double DimensionFontPx = 11.0;
+    private const double DimensionGapPx = 6.0;
+    private const double SnapDotRadiusPx = 1.25;
+    private const int MaxDotsPerAxis = 200;
+    private const double PinDotRadiusPx = 3.5;
+
+    private static readonly IBrush SnapDotBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.AccentHover, 0x55));
+    private static readonly IBrush GuideDotBrush = CanvasPalette.Brush(CanvasPalette.AccentHover);
+
     /// <summary>
-    /// Renders the minor/major grid lines in screen space (before zoom/pan transform).
+    /// Fills the background and the chip area, then draws the minor/major grid in screen space
+    /// (crisp one-pixel lines at any zoom).
     /// </summary>
     public void RenderBackground(DrawingContext context, CanvasRenderContext rc)
     {
-        DrawGrid(context, rc.Bounds, rc.ViewModel, rc.Zoom);
+        var vm = rc.ViewModel;
+        context.FillRectangle(CanvasPalette.BackgroundBrush, rc.Bounds);
+        context.FillRectangle(CanvasPalette.ChipFillBrush, ChipScreenRect(vm, rc.Zoom));
+        DrawGrid(context, rc.Bounds, vm.PanX, vm.PanY, rc.Zoom);
     }
 
     /// <summary>
-    /// Renders chip boundary, snap grid overlay, and alignment guides in world space.
+    /// Renders chip frame, snap grid overlay, and alignment guides in world space.
     /// Call this inside the zoom/pan transform push.
     /// </summary>
     public void RenderWorld(DrawingContext context, CanvasRenderContext rc)
     {
         var vm = rc.ViewModel;
-        DrawChipBoundary(context, vm);
+        DrawChipFrame(context, vm, rc.Pens, rc.Zoom);
 
         if (vm.GridSnap.IsEnabled)
             DrawSnapGridOverlay(context, vm, rc.Zoom, rc.Bounds);
 
         if (rc.InteractionState.DraggingComponent != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.HasAlignments)
-            DrawAlignmentGuides(context, vm);
+            DrawAlignmentGuides(context, vm, rc.Zoom);
     }
 
-    private static void DrawGrid(DrawingContext context, Rect bounds, DesignCanvasViewModel vm, double zoom)
+    private static Rect ChipWorldRect(DesignCanvasViewModel vm) =>
+        new(vm.ChipMinX, vm.ChipMinY, vm.ChipMaxX - vm.ChipMinX, vm.ChipMaxY - vm.ChipMinY);
+
+    private static Rect ChipScreenRect(DesignCanvasViewModel vm, double zoom)
     {
-        var gridPen = new Pen(new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)), 1);
-        var majorGridPen = new Pen(new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), 1);
-
-        double gridSize = 50 * zoom;
-        double majorGridSize = 250 * zoom;
-        double offsetX = vm.PanX;
-        double offsetY = vm.PanY;
-
-        for (double x = offsetX % gridSize; x < bounds.Width; x += gridSize)
-            context.DrawLine(gridPen, new Point(x, 0), new Point(x, bounds.Height));
-        for (double y = offsetY % gridSize; y < bounds.Height; y += gridSize)
-            context.DrawLine(gridPen, new Point(0, y), new Point(bounds.Width, y));
-
-        for (double x = offsetX % majorGridSize; x < bounds.Width; x += majorGridSize)
-            context.DrawLine(majorGridPen, new Point(x, 0), new Point(x, bounds.Height));
-        for (double y = offsetY % majorGridSize; y < bounds.Height; y += majorGridSize)
-            context.DrawLine(majorGridPen, new Point(0, y), new Point(bounds.Width, y));
+        var world = ChipWorldRect(vm);
+        return new Rect(world.X * zoom + vm.PanX, world.Y * zoom + vm.PanY, world.Width * zoom, world.Height * zoom);
     }
 
-    private static void DrawChipBoundary(DrawingContext context, DesignCanvasViewModel vm)
+    private static void DrawGrid(DrawingContext context, Rect bounds, double panX, double panY, double zoom)
     {
-        var chipRect = new Rect(vm.ChipMinX, vm.ChipMinY,
-            vm.ChipMaxX - vm.ChipMinX, vm.ChipMaxY - vm.ChipMinY);
+        var spacing = AdaptiveGridSpacing.For(zoom);
+        double minorPx = spacing.MinorWorld * zoom;
+        if (spacing.MinorOpacity > 0.02)
+        {
+            var minorColor = CanvasPalette.WithAlpha(CanvasPalette.GridMinor,
+                (byte)(CanvasPalette.GridMinor.A * spacing.MinorOpacity));
+            DrawLineFamily(context, bounds, panX, panY, minorPx, new ImmutablePen(new ImmutableSolidColorBrush(minorColor)),
+                skipEvery: AdaptiveGridSpacing.MinorPerMajor);
+        }
+        DrawLineFamily(context, bounds, panX, panY, minorPx * AdaptiveGridSpacing.MinorPerMajor,
+            new ImmutablePen(new ImmutableSolidColorBrush(CanvasPalette.GridMajor)), skipEvery: 0);
+    }
 
-        context.FillRectangle(new SolidColorBrush(Color.FromArgb(20, 100, 150, 255)), chipRect);
-        context.DrawRectangle(null, new Pen(new SolidColorBrush(Color.FromArgb(150, 100, 150, 255)), 2), chipRect);
+    /// <summary>Draws vertical and horizontal lines every <paramref name="stepPx"/>, snapped to
+    /// pixel centers; with <paramref name="skipEvery"/> &gt; 0 every n-th line (a major line) is left out.</summary>
+    private static void DrawLineFamily(DrawingContext context, Rect bounds, double panX, double panY,
+        double stepPx, IPen pen, int skipEvery)
+    {
+        for (long k = (long)Math.Ceiling(-panX / stepPx); ; k++)
+        {
+            double x = panX + k * stepPx;
+            if (x > bounds.Width) break;
+            if (skipEvery > 0 && k % skipEvery == 0) continue;
+            double px = Math.Floor(x) + 0.5;
+            context.DrawLine(pen, new Point(px, 0), new Point(px, bounds.Height));
+        }
+        for (long k = (long)Math.Ceiling(-panY / stepPx); ; k++)
+        {
+            double y = panY + k * stepPx;
+            if (y > bounds.Height) break;
+            if (skipEvery > 0 && k % skipEvery == 0) continue;
+            double py = Math.Floor(y) + 0.5;
+            context.DrawLine(pen, new Point(0, py), new Point(bounds.Width, py));
+        }
+    }
 
-        DrawCornerMarkers(context, vm);
+    private static void DrawChipFrame(DrawingContext context, DesignCanvasViewModel vm, CanvasPens pens, double zoom)
+    {
+        var chipRect = ChipWorldRect(vm);
+        context.DrawRectangle(null, pens.ChipBorder, chipRect);
+        DrawCornerTicks(context, chipRect, pens.ChipCorner, CornerTickPx / zoom);
 
         var dimText = new FormattedText(
-            $"{vm.ChipMaxX - vm.ChipMinX}µm × {vm.ChipMaxY - vm.ChipMinY}µm",
+            $"{chipRect.Width:0.#} µm × {chipRect.Height:0.#} µm",
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Arial"),
-            12,
-            new SolidColorBrush(Color.FromArgb(150, 100, 150, 255)));
-        context.DrawText(dimText, new Point(vm.ChipMinX + 5, vm.ChipMaxY + 5));
+            CanvasTypography.Ui,
+            DimensionFontPx / zoom,
+            CanvasPalette.TextTertiaryBrush);
+        context.DrawText(dimText, new Point(chipRect.Left, chipRect.Bottom + DimensionGapPx / zoom));
     }
 
-    private static void DrawCornerMarkers(DrawingContext context, DesignCanvasViewModel vm)
+    private static void DrawCornerTicks(DrawingContext context, Rect r, IPen pen, double len)
     {
-        const double CornerSize = 30.0;
-        var pen = new Pen(new SolidColorBrush(Color.FromArgb(200, 100, 150, 255)), 3);
-
-        context.DrawLine(pen, new Point(vm.ChipMinX, vm.ChipMinY + CornerSize), new Point(vm.ChipMinX, vm.ChipMinY));
-        context.DrawLine(pen, new Point(vm.ChipMinX, vm.ChipMinY), new Point(vm.ChipMinX + CornerSize, vm.ChipMinY));
-        context.DrawLine(pen, new Point(vm.ChipMaxX - CornerSize, vm.ChipMinY), new Point(vm.ChipMaxX, vm.ChipMinY));
-        context.DrawLine(pen, new Point(vm.ChipMaxX, vm.ChipMinY), new Point(vm.ChipMaxX, vm.ChipMinY + CornerSize));
-        context.DrawLine(pen, new Point(vm.ChipMinX, vm.ChipMaxY - CornerSize), new Point(vm.ChipMinX, vm.ChipMaxY));
-        context.DrawLine(pen, new Point(vm.ChipMinX, vm.ChipMaxY), new Point(vm.ChipMinX + CornerSize, vm.ChipMaxY));
-        context.DrawLine(pen, new Point(vm.ChipMaxX - CornerSize, vm.ChipMaxY), new Point(vm.ChipMaxX, vm.ChipMaxY));
-        context.DrawLine(pen, new Point(vm.ChipMaxX, vm.ChipMaxY), new Point(vm.ChipMaxX, vm.ChipMaxY - CornerSize));
+        context.DrawLine(pen, new Point(r.Left, r.Top + len), new Point(r.Left, r.Top));
+        context.DrawLine(pen, new Point(r.Left, r.Top), new Point(r.Left + len, r.Top));
+        context.DrawLine(pen, new Point(r.Right - len, r.Top), new Point(r.Right, r.Top));
+        context.DrawLine(pen, new Point(r.Right, r.Top), new Point(r.Right, r.Top + len));
+        context.DrawLine(pen, new Point(r.Left, r.Bottom - len), new Point(r.Left, r.Bottom));
+        context.DrawLine(pen, new Point(r.Left, r.Bottom), new Point(r.Left + len, r.Bottom));
+        context.DrawLine(pen, new Point(r.Right - len, r.Bottom), new Point(r.Right, r.Bottom));
+        context.DrawLine(pen, new Point(r.Right, r.Bottom), new Point(r.Right, r.Bottom - len));
     }
 
     private static void DrawSnapGridOverlay(DrawingContext context, DesignCanvasViewModel vm, double zoom, Rect bounds)
     {
         double gridSize = vm.GridSnap.GridSizeMicrometers;
         if (gridSize <= 0) return;
-
-        var dotBrush = new SolidColorBrush(Color.FromArgb(100, 0, 200, 255));
-        const double DotRadius = 1.5;
 
         double viewMinX = -vm.PanX / zoom;
         double viewMinY = -vm.PanY / zoom;
@@ -108,7 +140,6 @@ public sealed class GridRenderer
         double endX = Math.Min(vm.ChipMaxX, viewMaxX);
         double endY = Math.Min(vm.ChipMaxY, viewMaxY);
 
-        const int MaxDotsPerAxis = 200;
         double stepX = gridSize;
         double stepY = gridSize;
         if ((int)((endX - startX) / gridSize) + 1 > MaxDotsPerAxis)
@@ -116,21 +147,19 @@ public sealed class GridRenderer
         if ((int)((endY - startY) / gridSize) + 1 > MaxDotsPerAxis)
             stepY = (endY - startY) / MaxDotsPerAxis;
 
+        double radius = SnapDotRadiusPx / zoom;
         for (double x = startX; x <= endX; x += stepX)
         {
             for (double y = startY; y <= endY; y += stepY)
-                context.DrawEllipse(dotBrush, null, new Point(x, y), DotRadius, DotRadius);
+                context.DrawEllipse(SnapDotBrush, null, new Point(x, y), radius, radius);
         }
     }
 
-    private static void DrawAlignmentGuides(DrawingContext context, DesignCanvasViewModel vm)
+    private static void DrawAlignmentGuides(DrawingContext context, DesignCanvasViewModel vm, double zoom)
     {
-        var guidePen = new Pen(new SolidColorBrush(Color.FromArgb(180, 0, 255, 255)), 1.5)
-        {
-            DashStyle = new DashStyle(new double[] { 8, 4 }, 0)
-        };
-        var pinDotBrush = new SolidColorBrush(Color.FromArgb(200, 0, 255, 255));
-        const double PinDotRadius = 4.0;
+        var guidePen = new ImmutablePen(new ImmutableSolidColorBrush(CanvasPalette.AccentHover), 1.0 / zoom,
+            new ImmutableDashStyle(new[] { 6.0, 4.0 }, 0));
+        double dotRadius = PinDotRadiusPx / zoom;
 
         foreach (var alignment in vm.AlignmentGuide.HorizontalAlignments)
         {
@@ -138,8 +167,8 @@ public sealed class GridRenderer
             var (draggingX, _) = alignment.DraggingPin.GetAbsolutePosition();
             var (alignedX, _) = alignment.AlignedPin.GetAbsolutePosition();
             context.DrawLine(guidePen, new Point(Math.Min(draggingX, alignedX), y), new Point(Math.Max(draggingX, alignedX), y));
-            context.DrawEllipse(pinDotBrush, null, new Point(draggingX, y), PinDotRadius, PinDotRadius);
-            context.DrawEllipse(pinDotBrush, null, new Point(alignedX, y), PinDotRadius, PinDotRadius);
+            context.DrawEllipse(GuideDotBrush, null, new Point(draggingX, y), dotRadius, dotRadius);
+            context.DrawEllipse(GuideDotBrush, null, new Point(alignedX, y), dotRadius, dotRadius);
         }
 
         foreach (var alignment in vm.AlignmentGuide.VerticalAlignments)
@@ -148,8 +177,8 @@ public sealed class GridRenderer
             var (_, draggingY) = alignment.DraggingPin.GetAbsolutePosition();
             var (_, alignedY) = alignment.AlignedPin.GetAbsolutePosition();
             context.DrawLine(guidePen, new Point(x, Math.Min(draggingY, alignedY)), new Point(x, Math.Max(draggingY, alignedY)));
-            context.DrawEllipse(pinDotBrush, null, new Point(x, draggingY), PinDotRadius, PinDotRadius);
-            context.DrawEllipse(pinDotBrush, null, new Point(x, alignedY), PinDotRadius, PinDotRadius);
+            context.DrawEllipse(GuideDotBrush, null, new Point(x, draggingY), dotRadius, dotRadius);
+            context.DrawEllipse(GuideDotBrush, null, new Point(x, alignedY), dotRadius, dotRadius);
         }
     }
 }
