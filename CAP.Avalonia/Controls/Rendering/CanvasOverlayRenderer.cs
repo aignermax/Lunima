@@ -8,8 +8,8 @@ using CAP.Avalonia.ViewModels.Panels;
 namespace CAP.Avalonia.Controls.Rendering;
 
 /// <summary>
-/// Renders screen-space overlays: the interaction mode chip (top right) and the status line
-/// (bottom left), both as quiet translucent chips in the app's type and colors.
+/// Renders the screen-space interaction-mode chip (top right) as a quiet translucent chip in
+/// the app's type and colors. Zoom, counts and the process live in the window's status bar.
 /// Implements <see cref="ICanvasRenderer"/> and draws in screen space (outside world transform).
 /// </summary>
 public sealed class CanvasOverlayRenderer : ICanvasRenderer
@@ -21,7 +21,6 @@ public sealed class CanvasOverlayRenderer : ICanvasRenderer
     private const double DotRadius = 3.5;
     private const double DotGap = 8.0;
     private const double ModeFontSize = 12.0;
-    private const double StatusFontSize = 11.0;
 
     private static readonly IBrush ChipBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray800, 0xD8));
     private static readonly IPen ChipBorderPen = new Pen(CanvasPalette.Brush(CanvasPalette.Gray700), 1);
@@ -31,7 +30,6 @@ public sealed class CanvasOverlayRenderer : ICanvasRenderer
     public void Render(DrawingContext context, CanvasRenderContext rc)
     {
         DrawModeIndicator(context, rc.Bounds, rc.MainViewModel);
-        DrawStatusInfo(context, rc.Bounds, rc.ViewModel, rc.Zoom);
     }
 
     private static void DrawModeIndicator(DrawingContext context, Rect bounds, MainViewModel? mainVm)
@@ -71,27 +69,4 @@ public sealed class CanvasOverlayRenderer : ICanvasRenderer
         _ => CanvasPalette.AccentBrush,
     };
 
-    private static void DrawStatusInfo(DrawingContext context, Rect bounds, DesignCanvasViewModel vm, double zoom)
-    {
-        // The active fabrication process is shown here (grid HUD) rather than only at the
-        // bottom of the PDK panel; the snap/power key hints were dropped from the HUD because
-        // the full key legend is already displayed under the canvas.
-        string processInfo = string.IsNullOrEmpty(vm.ActiveProcessLabel) ? "" : $"   ·   {vm.ActiveProcessLabel}";
-
-        var loc = LocalizationService.Instance;
-        string zoomLabel = loc.Translate("Canvas.Hud.Zoom");
-        string componentsLabel = loc.Translate("Canvas.Hud.Components");
-        string connectionsLabel = loc.Translate("Canvas.Hud.Connections");
-
-        var text = new FormattedText(
-            $"{zoomLabel} {zoom:P0}   ·   {componentsLabel} {vm.Components.Count}   ·   {connectionsLabel} {vm.Connections.Count}{processInfo}",
-            System.Globalization.CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            CanvasTypography.Ui,
-            StatusFontSize,
-            CanvasPalette.TextSecondaryBrush);
-        var chip = new Rect(Margin, bounds.Height - Margin - ChipHeight, text.Width + ChipPadX * 2, ChipHeight);
-        context.DrawRectangle(ChipBrush, ChipBorderPen, chip, ChipRadius, ChipRadius);
-        context.DrawText(text, new Point(chip.X + ChipPadX, chip.Y + (ChipHeight - text.Height) / 2));
-    }
 }
