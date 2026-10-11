@@ -4,6 +4,7 @@
              xmlns:services="using:CAP.Avalonia.Services"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:behaviors="using:CAP.Avalonia.Behaviors"
              xmlns:conv="using:CAP.Avalonia.Converters"
              x:Class="CAP.Avalonia.Views.HomeView"
              x:DataType="home:HomeViewModel">
@@ -70,22 +71,6 @@
         <Style Selector="controls|Icon.pin.pinned">
             <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}"/>
         </Style>
-
-        <!-- Entrance: the card fades and slides up once when the start screen appears. -->
-        <Style Selector="Border#HomeCard">
-            <Style.Animations>
-                <Animation Duration="0:0:0.22" Easing="CubicEaseOut" FillMode="Both">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="Opacity" Value="0"/>
-                        <Setter Property="TranslateTransform.Y" Value="10"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="Opacity" Value="1"/>
-                        <Setter Property="TranslateTransform.Y" Value="0"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
     </UserControl.Styles>
 
     <!-- Compact centered card over the dimmed editor, laid out wide rather than tall:
@@ -94,6 +79,7 @@
          Disabled while the startup project (CLI arg / reopen preference) loads
          so a click can't interleave with the in-flight load. -->
     <Border x:Name="HomeCard" Classes="overlay" Width="860"
+            behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromY="10"
             HorizontalAlignment="Center" VerticalAlignment="Center"
             IsEnabled="{Binding !IsStartupLoadInProgress}"
             Padding="32,28">
