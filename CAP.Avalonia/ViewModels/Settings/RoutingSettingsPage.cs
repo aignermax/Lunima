@@ -12,7 +12,7 @@ namespace CAP.Avalonia.ViewModels.Settings;
 public class RoutingSettingsPage : LocalizedSettingsPage
 {
     /// <inheritdoc/>
-    public override string Icon => "⤢";
+    public override string Icon => "Icon.Route";
 
     /// <inheritdoc/>
     public override string? Category => "Canvas";

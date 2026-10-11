@@ -10,7 +10,7 @@ public class InterconnectSettingsPage : ISettingsPage
     public string Title => "Interconnects";
 
     /// <inheritdoc/>
-    public string Icon => "〰";
+    public string Icon => "Icon.Cable";
 
     /// <inheritdoc/>
     public string? Category => "Export";

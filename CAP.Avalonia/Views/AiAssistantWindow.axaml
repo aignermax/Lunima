@@ -8,15 +8,13 @@
         Title="{loc:Localize AiAssistant.WindowTitle}"
         Width="440" Height="640"
         MinWidth="340" MinHeight="420"
-        WindowStartupLocation="CenterOwner"
-        Background="#252526"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
 
     <!-- Non-modal tool window hosting the AI Design Assistant chat
          (formerly a right-sidebar section): the user can keep it open
          next to the canvas while the assistant places components. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-        <panels:AiAssistantPanel Margin="14,10"/>
+        <panels:AiAssistantPanel Margin="24"/>
     </ScrollViewer>
 </Window>

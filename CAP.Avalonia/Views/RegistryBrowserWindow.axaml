@@ -8,45 +8,61 @@
         Title="{loc:Localize Registry.WindowTitle}"
         Width="1100" Height="720"
         MinWidth="640" MinHeight="420"
-        WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e"
-        Foreground="White">
+        WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="14" LastChildFill="True">
+    <Window.Styles>
+        <!-- Trust status chips: the registry status decides the semantic color. -->
+        <Style Selector="Border.chip[Tag=verified]"><Setter Property="Background" Value="{DynamicResource Brush.Success.Subtle}"/></Style>
+        <Style Selector="Border.chip[Tag=verified] > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Success}"/></Style>
+        <Style Selector="Border.chip[Tag=demo]"><Setter Property="Background" Value="{DynamicResource Brush.Warning.Subtle}"/></Style>
+        <Style Selector="Border.chip[Tag=demo] > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/></Style>
+        <Style Selector="Border.chip[Tag=disputed]"><Setter Property="Background" Value="{DynamicResource Brush.Danger.Subtle}"/></Style>
+        <Style Selector="Border.chip[Tag=disputed] > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/></Style>
+        <Style Selector="Border.chip[Tag=withdrawn]"><Setter Property="Background" Value="{DynamicResource Brush.Danger.Subtle}"/></Style>
+        <Style Selector="Border.chip[Tag=withdrawn] > TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/></Style>
+        <Style Selector="Border.preview">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Canvas}"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="24" LastChildFill="True">
 
         <!-- Header: title + one-line intro -->
-        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
-            <TextBlock Text="{loc:Localize Registry.Title}" Foreground="DeepSkyBlue"
-                       FontWeight="SemiBold" FontSize="16"/>
-            <TextBlock Text="{loc:Localize Registry.Intro}" Foreground="Gray"
-                       FontSize="11" TextWrapping="Wrap"/>
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,16">
+            <TextBlock Classes="headline" Text="{loc:Localize Registry.Title}"/>
+            <TextBlock Classes="caption" Text="{loc:Localize Registry.Intro}" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Filter bar: free-text search, process + status dropdowns, cache-bypassing refresh -->
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,6">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,12">
             <TextBox Grid.Column="0" Watermark="{loc:Localize Registry.SearchWatermark}"
-                     Text="{Binding SearchText}" FontSize="12"
-                     Background="#252525" BorderBrush="#3e3e3e" Margin="0,0,8,0"/>
+                     Text="{Binding SearchText}" Margin="0,0,8,0"/>
             <ComboBox Grid.Column="1" ItemsSource="{Binding ProcessFilters}"
                       SelectedItem="{Binding SelectedProcessFilter}"
-                      MinWidth="150" FontSize="12" Margin="0,0,8,0"
+                      MinWidth="150" Margin="0,0,8,0"
                       ToolTip.Tip="{loc:Localize Registry.AllProcesses}"/>
             <ComboBox Grid.Column="2" ItemsSource="{Binding StatusFilters}"
                       SelectedItem="{Binding SelectedStatusFilter}"
-                      MinWidth="120" FontSize="12" Margin="0,0,8,0"
+                      MinWidth="120" Margin="0,0,8,0"
                       ToolTip.Tip="{loc:Localize Registry.AllStatuses}"/>
-            <Button Grid.Column="3" Content="{loc:Localize Registry.Refresh}"
-                    Command="{Binding RefreshCommand}" FontSize="12" Background="#3d3d5d"
-                    IsEnabled="{Binding IsLoading, Converter={x:Static BoolConverters.Not}}"/>
+            <Button Grid.Column="3" Command="{Binding RefreshCommand}"
+                    IsEnabled="{Binding IsLoading, Converter={x:Static BoolConverters.Not}}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ctrl:Icon Data="{StaticResource Icon.RefreshCw}"/>
+                    <TextBlock Text="{loc:Localize Registry.Refresh}"/>
+                </StackPanel>
+            </Button>
         </Grid>
 
         <!-- Status line: loading, non-blocking error, offline/cache note -->
-        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,6">
-            <TextBlock Text="{loc:Localize Registry.Loading}" Foreground="Gray" FontSize="11"
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,8">
+            <TextBlock Classes="caption" Text="{loc:Localize Registry.Loading}"
                        IsVisible="{Binding IsLoading}"/>
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="Salmon" FontSize="11" TextWrapping="Wrap"
+            <TextBlock Classes="caption danger" Text="{Binding ErrorMessage}" TextWrapping="Wrap"
                        IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-            <TextBlock Text="{Binding SourceNote}" Foreground="Gold" FontSize="11" TextWrapping="Wrap"
+            <TextBlock Classes="caption warning" Text="{Binding SourceNote}" TextWrapping="Wrap"
                        IsVisible="{Binding SourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         </StackPanel>
 
@@ -55,7 +71,7 @@
 
             <ListBox Grid.Column="0" ItemsSource="{Binding FilteredComponents}"
                      SelectedItem="{Binding SelectedComponent}"
-                     Background="Transparent" Padding="0"
+                     Padding="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -65,53 +81,39 @@
                 <ListBox.Styles>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Padding" Value="4"/>
+                        <Setter Property="CornerRadius" Value="{DynamicResource Radius.L}"/>
                     </Style>
                 </ListBox.Styles>
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="reg:RegistryComponentItemViewModel">
-                        <Border Width="220" Background="#252530" CornerRadius="6"
-                                BorderBrush="#34344a" BorderThickness="1" Padding="10">
-                            <StackPanel Spacing="6">
-                                <!-- Geometry preview (#771): the registry's SVG rendered as native
-                                     geometry. The stylized chip icon stays as placeholder while the
+                        <Border Classes="card" Width="220" Padding="12">
+                            <StackPanel Spacing="8">
+                                <!-- Geometry preview: the registry's SVG rendered as native
+                                     geometry. The chip icon stays as placeholder while the
                                      preview loads, for entries without a published preview, and
                                      whenever the download or parse fails. -->
-                                <Border Height="64" CornerRadius="4" Background="#1b1b24"
-                                        ClipToBounds="True">
+                                <Border Classes="preview" Height="64">
                                     <Panel>
-                                        <Canvas Width="56" Height="40" HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                IsVisible="{Binding PreviewSvg, Converter={x:Static StringConverters.IsNullOrEmpty}}">
-                                            <Rectangle Canvas.Left="8" Canvas.Top="4" Width="40" Height="32"
-                                                       RadiusX="3" RadiusY="3"
-                                                       Stroke="#5d7a9d" StrokeThickness="1.5"/>
-                                            <Rectangle Canvas.Left="0" Canvas.Top="12" Width="8" Height="2" Fill="#5d7a9d"/>
-                                            <Rectangle Canvas.Left="0" Canvas.Top="26" Width="8" Height="2" Fill="#5d7a9d"/>
-                                            <Rectangle Canvas.Left="48" Canvas.Top="19" Width="8" Height="2" Fill="#5d7a9d"/>
-                                            <Ellipse Canvas.Left="24" Canvas.Top="16" Width="8" Height="8"
-                                                     Stroke="#8fbf8f" StrokeThickness="1.5"/>
-                                        </Canvas>
+                                        <ctrl:Icon Data="{StaticResource Icon.Microchip}" Size="24"
+                                                   Foreground="{DynamicResource Brush.Text.Disabled}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   IsVisible="{Binding PreviewSvg, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
                                         <ctrl:RegistryPreviewControl Svg="{Binding PreviewSvg}"
                                             IsVisible="{Binding PreviewSvg, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                     </Panel>
                                 </Border>
-                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold"
-                                           FontSize="12" TextWrapping="Wrap" MaxLines="2"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding ProcessAndPortsText}" Foreground="Gray" FontSize="10"/>
-                                <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <Border Background="{Binding StatusColor}" CornerRadius="3"
-                                            Padding="4,1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Status}" Foreground="White" FontSize="9"/>
+                                <TextBlock Classes="strong" Text="{Binding Name}"
+                                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Classes="caption" Text="{Binding ProcessAndPortsText}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Border Classes="chip" Tag="{Binding Status}">
+                                        <TextBlock Text="{Binding Status}"/>
                                     </Border>
-                                    <Border Background="#7a3d3d" CornerRadius="3" Padding="4,1"
-                                            VerticalAlignment="Center"
-                                            IsVisible="{Binding IsProcessMismatch}">
-                                        <TextBlock Text="{loc:Localize Registry.DifferentProcess}"
-                                                   Foreground="White" FontSize="9"/>
+                                    <Border Classes="chip danger" IsVisible="{Binding IsProcessMismatch}">
+                                        <TextBlock Text="{loc:Localize Registry.DifferentProcess}"/>
                                     </Border>
                                 </StackPanel>
-                                <TextBlock Text="{Binding TiersText}" Foreground="#8fbf8f" FontSize="10"/>
+                                <TextBlock Classes="caption mono" Text="{Binding TiersText}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>
@@ -119,107 +121,110 @@
             </ListBox>
 
             <!-- Empty state when the filters match nothing -->
-            <TextBlock Grid.Column="0" Text="{loc:Localize Registry.NoResults}"
-                       Foreground="Gray" FontSize="12"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       IsVisible="{Binding HasNoResults}"/>
+            <StackPanel Grid.Column="0" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        IsVisible="{Binding HasNoResults}">
+                <ctrl:Icon Data="{StaticResource Icon.Search}" Size="24" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                <TextBlock Classes="secondary" Text="{loc:Localize Registry.NoResults}"/>
+            </StackPanel>
 
             <!-- Detail column for the selected component -->
-            <Border Grid.Column="1" Background="#232328" CornerRadius="6" Padding="12" Margin="8,0,0,0">
+            <Border Grid.Column="1" Classes="card" Margin="12,0,0,0">
                 <Panel>
-                    <TextBlock Text="{loc:Localize Registry.SelectPrompt}" Foreground="Gray" FontSize="11"
-                               TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNull}}"/>
+                    <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNull}}">
+                        <ctrl:Icon Data="{StaticResource Icon.Pointer}" Size="24" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                        <TextBlock Classes="secondary" Text="{loc:Localize Registry.SelectPrompt}"
+                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                    </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   IsVisible="{Binding SelectedComponent, Converter={x:Static ObjectConverters.IsNotNull}}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding SelectedComponent.Name, FallbackValue=''}"
-                                       Foreground="DeepSkyBlue" FontSize="13" FontWeight="SemiBold"
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="title" Text="{Binding SelectedComponent.Name, FallbackValue=''}"
                                        TextWrapping="Wrap"/>
-                            <!-- Larger geometry preview of the selected component (#771). -->
-                            <Border Height="130" CornerRadius="4" Background="#1b1b24"
-                                    ClipToBounds="True" Margin="0,2,0,4"
+                            <!-- Larger geometry preview of the selected component. -->
+                            <Border Classes="preview" Height="130"
                                     IsVisible="{Binding SelectedComponent.PreviewSvg, FallbackValue='', Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                 <ctrl:RegistryPreviewControl
                                     Svg="{Binding SelectedComponent.PreviewSvg, FallbackValue=''}"/>
                             </Border>
-                            <TextBlock Text="{loc:Localize Registry.LoadingDetails}" Foreground="Gray" FontSize="10"
+                            <TextBlock Classes="caption" Text="{loc:Localize Registry.LoadingDetails}"
                                        IsVisible="{Binding Details.IsLoading}"/>
-                            <TextBlock Text="{Binding Details.ErrorMessage}"
-                                       Foreground="Salmon" FontSize="10" TextWrapping="Wrap"
+                            <TextBlock Classes="caption danger" Text="{Binding Details.ErrorMessage}" TextWrapping="Wrap"
                                        IsVisible="{Binding Details.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                            <TextBlock Text="{Binding Details.Description}"
-                                       Foreground="White" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding Details.PortsText}"
-                                       Foreground="Gray" FontSize="10" Margin="0,0,0,4"
+                            <TextBlock Text="{Binding Details.Description}" TextWrapping="Wrap"/>
+                            <TextBlock Classes="caption" Text="{Binding Details.PortsText}"
                                        IsVisible="{Binding Details.PortsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                            <TextBlock Text="{loc:Localize Registry.Parameters}" Foreground="Gray" FontSize="10"
-                                       FontWeight="SemiBold" IsVisible="{Binding Details.HasParameters}"/>
-                            <ItemsControl ItemsSource="{Binding Details.Parameters}" Margin="6,0,0,4">
+                            <TextBlock Classes="label" Text="{loc:Localize Registry.Parameters}" Margin="0,8,0,0"
+                                       IsVisible="{Binding Details.HasParameters}"/>
+                            <ItemsControl ItemsSource="{Binding Details.Parameters}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="x:String">
-                                        <TextBlock Text="{Binding}" Foreground="#b0b0b0"
-                                                   FontFamily="Consolas" FontSize="10"/>
+                                        <TextBlock Classes="caption secondary mono" Text="{Binding}"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <TextBlock Text="{loc:Localize Registry.Artifacts}" Foreground="Gray" FontSize="10"
-                                       FontWeight="SemiBold" IsVisible="{Binding Details.HasArtifacts}"/>
-                            <ItemsControl ItemsSource="{Binding Details.Artifacts}" Margin="6,0,0,4">
+                            <TextBlock Classes="label" Text="{loc:Localize Registry.Artifacts}" Margin="0,8,0,0"
+                                       IsVisible="{Binding Details.HasArtifacts}"/>
+                            <ItemsControl ItemsSource="{Binding Details.Artifacts}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="reg:RegistryArtifactDisplay">
-                                        <StackPanel Margin="0,2">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <TextBlock Text="{Binding Tier}" Foreground="#8fbf8f" FontSize="10"/>
-                                                <TextBlock Text="{Binding File}" Foreground="White" FontSize="10"/>
-                                                <Border Background="{Binding StatusColor}" CornerRadius="3"
-                                                        Padding="3,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Status}" Foreground="White" FontSize="9"/>
+                                        <StackPanel Margin="0,4" Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Classes="caption success" Text="{Binding Tier}"/>
+                                                <TextBlock Classes="caption secondary mono" Text="{Binding File}" TextTrimming="CharacterEllipsis" MaxWidth="120"/>
+                                                <Border Classes="chip" Tag="{Binding Status}">
+                                                    <TextBlock Text="{Binding Status}"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Provenance}" Foreground="Gray" FontSize="9"
-                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Classes="caption" Text="{Binding Provenance}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <TextBlock Foreground="Gray" FontSize="9" Margin="0,2,0,0"
+                            <TextBlock Classes="caption" Margin="0,4,0,0"
                                        IsVisible="{Binding Details.License, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                 <Run Text="{loc:Localize Registry.LicensePrefix}"/><Run Text="{Binding Details.License}"/>
                             </TextBlock>
 
-                            <!-- Download into the local library (#773): adopts the component's real
+                            <!-- Download into the local library: adopts the component's real
                                  simulated/measured S-parameters into a process-bound "Registry" PDK.
                                  Disabled without a usable artifact or when the process mismatches. -->
-                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-                                <Button Content="{loc:Localize Registry.Download}"
-                                        Command="{Binding DownloadCommand}"
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                                <Button Classes="primary" Command="{Binding DownloadCommand}"
                                         ToolTip.Tip="{Binding DownloadUnavailableReason}"
-                                        ToolTip.ShowOnDisabled="True"
-                                        FontSize="11" Background="#3d5d3d"/>
+                                        ToolTip.ShowOnDisabled="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <ctrl:Icon Data="{StaticResource Icon.Download}"/>
+                                        <TextBlock Text="{loc:Localize Registry.Download}"/>
+                                    </StackPanel>
+                                </Button>
                                 <ctrl:HelpFlyoutButton Title="{loc:Localize Registry.DownloadHelpTitle}"
                                                        VerticalAlignment="Center">
                                     <ctrl:HelpFlyoutButton.HelpContent>
-                                        <TextBlock MaxWidth="280" TextWrapping="Wrap" FontSize="11"
+                                        <TextBlock Classes="body" MaxWidth="280" TextWrapping="Wrap"
                                                    Text="{loc:Localize Registry.DownloadHelpContent}"/>
                                     </ctrl:HelpFlyoutButton.HelpContent>
                                 </ctrl:HelpFlyoutButton>
                             </StackPanel>
-                            <Border Background="#7a3d3d" CornerRadius="4" Padding="6"
+                            <Border Background="{DynamicResource Brush.Danger.Subtle}"
+                                    CornerRadius="{DynamicResource Radius.M}" Padding="12"
                                     IsVisible="{Binding PendingDisputedConfirm}">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="{loc:Localize Registry.DisputedWarning}"
-                                               Foreground="White" FontSize="10" TextWrapping="Wrap"/>
-                                    <Button Content="{loc:Localize Registry.DownloadAnyway}"
+                                <StackPanel Spacing="8">
+                                    <TextBlock Classes="caption danger" Text="{loc:Localize Registry.DisputedWarning}"
+                                               TextWrapping="Wrap"/>
+                                    <Button Classes="danger" Content="{loc:Localize Registry.DownloadAnyway}"
                                             Command="{Binding ConfirmDisputedDownloadCommand}"
-                                            FontSize="10" Background="#5d2d2d"
                                             HorizontalAlignment="Left"/>
                                 </StackPanel>
                             </Border>
-                            <TextBlock Text="{Binding DownloadMessage}" Foreground="{Binding DownloadMessageColor}" FontSize="10"
+                            <TextBlock Classes="caption" Text="{Binding DownloadMessage}"
+                                       Classes.danger="{Binding DownloadIsError}"
+                                       Classes.success="{Binding !DownloadIsError}"
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding DownloadMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
