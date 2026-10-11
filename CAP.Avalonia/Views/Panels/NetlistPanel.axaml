@@ -7,28 +7,28 @@
 
     <!-- Hosted as the Netlist tab of the analysis dock (formerly a right-sidebar section). -->
     <StackPanel Margin="10,8">
-        <TextBlock Text="{loc:Localize Netlist.Title}" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"
+        <TextBlock Text="{loc:Localize Netlist.Title}" Foreground="{DynamicResource Brush.Danger}" Margin="0,0,0,5" FontWeight="SemiBold"
                    ToolTip.Tip="{loc:Localize NetlistPanel.TitleTip}"/>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
             <Button Content="{loc:Localize Netlist.Generate}"
                     Command="{Binding RightPanel.Netlist.RefreshCommand}"
-                    MinWidth="80" Margin="0,0,5,0" Padding="8,4" Background="#3d4d4d"
+                    MinWidth="80" Margin="0,0,5,0" Padding="8,4" Background="{DynamicResource Brush.Surface.Hover}"
                     ToolTip.Tip="{loc:Localize NetlistPanel.GenerateTip}"/>
             <Button Content="💾"
                     Command="{Binding RightPanel.Netlist.SaveYamlCommand}"
-                    Width="36" Margin="0,0,5,0" Background="#3d3d5d"
+                    Width="36" Margin="0,0,5,0" Background="{DynamicResource Brush.Accent.Subtle}"
                     ToolTip.Tip="{loc:Localize NetlistPanel.SaveTip}"/>
             <Button Content="📋"
                     Command="{Binding RightPanel.Netlist.CopyYamlCommand}"
-                    Width="36" Background="#3d3d5d"
+                    Width="36" Background="{DynamicResource Brush.Accent.Subtle}"
                     ToolTip.Tip="{loc:Localize NetlistPanel.CopyTip}"/>
         </StackPanel>
         <TextBlock Text="{Binding RightPanel.Netlist.StatusText}"
-                   Foreground="Gray" FontSize="10" Margin="0,0,0,3"
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,3"
                    IsVisible="{Binding RightPanel.Netlist.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <TextBox Text="{Binding RightPanel.Netlist.NetlistYaml, Mode=OneWay}"
                  IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
-                 FontFamily="Consolas,Menlo,monospace" FontSize="10"
+                 FontFamily="Consolas,Menlo,monospace" FontSize="{DynamicResource FontSize.Caption}"
                  MaxHeight="240" Margin="0,5,0,0"
                  IsVisible="{Binding RightPanel.Netlist.HasNetlist}"/>
     </StackPanel>

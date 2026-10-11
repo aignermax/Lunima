@@ -12,15 +12,15 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
                    Text="{loc:Localize LogicPanelTimingHelp.Intro}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimingHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimingHelp.PhysicsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimingHelp.PhysicsBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimingHelp.ClockTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimingHelp.ClockTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimingHelp.ClockBody}"/>
     </StackPanel>
 

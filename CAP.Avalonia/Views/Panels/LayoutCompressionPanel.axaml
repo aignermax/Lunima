@@ -6,27 +6,27 @@
              x:DataType="vm:MainViewModel">
 
     <StackPanel>
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-        <TextBlock Text="{loc:Localize LayoutCompression.Title}" Foreground="Cyan" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
+        <TextBlock Text="{loc:Localize LayoutCompression.Title}" Foreground="{DynamicResource Brush.Info}" Margin="0,0,0,5" FontWeight="SemiBold"/>
         <TextBlock Text="{loc:Localize LayoutCompression.Description}"
-                   Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,8" TextWrapping="Wrap"/>
         <Button Content="{loc:Localize LayoutCompression.CompressButton}"
                 Command="{Binding RightPanel.CompressLayout.CompressLayoutCommand}"
                 Width="160" Margin="0,5,0,5"
-                Background="#3d5d5d"
+                Background="{DynamicResource Brush.Info.Subtle}"
                 IsEnabled="{Binding RightPanel.CompressLayout.IsCompressing, Converter={x:Static BoolConverters.Not}}"/>
 
         <ProgressBar Value="{Binding RightPanel.CompressLayout.CurrentIteration}"
                      Maximum="{Binding RightPanel.CompressLayout.MaxIterations}"
                      Height="4" Margin="0,5,0,5"
                      IsVisible="{Binding RightPanel.CompressLayout.IsCompressing}"
-                     Foreground="Cyan"/>
+                     Foreground="{DynamicResource Brush.Info}"/>
 
         <TextBlock Text="{Binding RightPanel.CompressLayout.StatusText}"
-                   Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.CompressLayout.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <TextBlock Text="{Binding RightPanel.CompressLayout.ResultText}"
-                   Foreground="LightCyan" FontSize="10" Margin="0,5,0,5"
+                   Foreground="{DynamicResource Brush.Info}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,5,0,5"
                    TextWrapping="Wrap"
                    IsVisible="{Binding RightPanel.CompressLayout.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
     </StackPanel>

@@ -11,9 +11,9 @@
          Stretches the route to an exact target length via a meander (frozen afterwards),
          or clears the intent and hands the route back to the normal router. -->
     <StackPanel IsVisible="{Binding BottomPanel.LengthMatching.HasExactlyOneConnection}">
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Localize Routing.LengthMatch.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Text="{loc:Localize Routing.LengthMatch.Title}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
             <!-- Plain-language help: why the geometric length of a waveguide matters
                  (phase accumulation and interference) for non-photonics users. -->
             <controls:HelpFlyoutButton Grid.Column="1"
@@ -21,20 +21,20 @@
                                        VerticalAlignment="Center" Margin="0,-5,0,0">
                 <controls:HelpFlyoutButton.HelpContent>
                     <StackPanel Spacing="8" MaxWidth="400">
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
                                    Text="{loc:Localize Routing.LengthMatch.Help.Intro}"/>
 
-                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.ArrivalTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.ArrivalTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize Routing.LengthMatch.Help.ArrivalBody}"/>
                         <ha:LengthMatchArrivalAnimation Width="336" Height="96" IsHitTestVisible="False"/>
 
-                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.PhaseTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.PhaseTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize Routing.LengthMatch.Help.PhaseBody}"/>
 
-                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.MeanderTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize Routing.LengthMatch.Help.MeanderTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize Routing.LengthMatch.Help.MeanderBody}"/>
                     </StackPanel>
                 </controls:HelpFlyoutButton.HelpContent>
@@ -42,16 +42,16 @@
         </Grid>
 
         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
-            <TextBlock Text="{loc:Localize Routing.LengthMatch.CurrentLength}" Foreground="Gray" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding BottomPanel.LengthMatching.CurrentLengthText}" Foreground="LightGray" VerticalAlignment="Center"/>
+            <TextBlock Text="{loc:Localize Routing.LengthMatch.CurrentLength}" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding BottomPanel.LengthMatching.CurrentLengthText}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <TextBlock Text="{loc:Localize Routing.LengthMatch.TargetLength}" Foreground="Gray" Margin="0,0,0,3"/>
+        <TextBlock Text="{loc:Localize Routing.LengthMatch.TargetLength}" Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3"/>
         <TextBox Text="{Binding BottomPanel.LengthMatching.TargetLengthText}"
                  Watermark="{loc:Localize Routing.LengthMatch.TargetWatermark}"
                  Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-        <TextBlock Text="{loc:Localize Routing.LengthMatch.Tolerance}" Foreground="Gray" Margin="0,0,0,3"/>
+        <TextBlock Text="{loc:Localize Routing.LengthMatch.Tolerance}" Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3"/>
         <TextBox Text="{Binding BottomPanel.LengthMatching.ToleranceText}"
                  Width="180" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
@@ -64,10 +64,10 @@
 
         <!-- Error and success are separate blocks: colored without a converter. -->
         <TextBlock Text="{Binding BottomPanel.LengthMatching.StatusMessage}"
-                   Foreground="#FF8A65" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Foreground="{DynamicResource Brush.Danger}" TextWrapping="Wrap" Margin="0,6,0,0"
                    IsVisible="{Binding BottomPanel.LengthMatching.HasErrorStatus}"/>
         <TextBlock Text="{Binding BottomPanel.LengthMatching.StatusMessage}"
-                   Foreground="LightGreen" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Foreground="{DynamicResource Brush.Success}" TextWrapping="Wrap" Margin="0,6,0,0"
                    IsVisible="{Binding BottomPanel.LengthMatching.HasSuccessStatus}"/>
     </StackPanel>
 </UserControl>

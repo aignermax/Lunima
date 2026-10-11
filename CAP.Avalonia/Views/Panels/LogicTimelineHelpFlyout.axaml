@@ -15,58 +15,58 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
                    Text="{loc:Localize LogicPanelTimelineHelp.Intro}"/>
 
         <!-- arrival time = propagation delay: the badge flips and the step trace
              rises at the instant the pulse reaches each gate. -->
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                 CornerRadius="4" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="124">
                     <!-- Declared first so track and pulse slide *under* the gate boxes. -->
                     <ha:LightPulseAlongPath Width="368" Height="124" PathPoints="8,40 344,40"
-                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
                                             WindowStart="0" WindowEnd="0.75" IsHitTestVisible="False"/>
                     <!-- the chain of three gates -->
                     <Border Canvas.Left="74" Canvas.Top="26" Width="40" Height="28"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <Border Canvas.Left="164" Canvas.Top="26" Width="40" Height="28"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <Border Canvas.Left="254" Canvas.Top="26" Width="40" Height="28"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <!-- the waveform lane -->
                     <Border Canvas.Left="8" Canvas.Top="64" Width="336" Height="56"
-                            Background="#101018" BorderBrush="#3d3d3d" BorderThickness="1" CornerRadius="3"/>
+                            Background="{DynamicResource Brush.Surface.Input}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="3"/>
                     <!-- animated badges, step traces, and time cursor -->
                     <ha:PulseArrivalAnimation Width="368" Height="124" IsHitTestVisible="False"/>
                 </Canvas>
                 <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.PhysicsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimelineHelp.PhysicsBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.OrderTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.OrderTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimelineHelp.OrderBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ClockTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ClockTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimelineHelp.ClockBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ReplayTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.ReplayTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimelineHelp.ReplayBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.WaveformTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelTimelineHelp.WaveformTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelTimelineHelp.WaveformBody}"/>
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray" Margin="0,4,0,0"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,4,0,0"
                    Text="{loc:Localize LogicPanelTimelineHelp.PlaybackBody}"/>
     </StackPanel>
 

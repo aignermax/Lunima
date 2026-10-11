@@ -11,7 +11,7 @@
     <!-- Hosted as the Checks tab of the analysis dock (formerly a right-sidebar section). -->
     <StackPanel Margin="10,8">
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Localize DesignChecks.Title}" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Text="{loc:Localize DesignChecks.Title}" Foreground="{DynamicResource Brush.Danger}" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
             <!-- Plain-language help: why the DRC-lite rules exist (coupling, bend
                  radiation, reflections) and where the limits come from (the PDK). -->
             <controls:HelpFlyoutButton Grid.Column="1"
@@ -19,33 +19,33 @@
                                        VerticalAlignment="Center" Margin="0,-5,0,0">
                 <controls:HelpFlyoutButton.HelpContent>
                     <StackPanel Spacing="8" MaxWidth="400">
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
                                    Text="{loc:Localize DesignChecksHelp.Intro}"/>
 
-                        <TextBlock Text="{loc:Localize DesignChecksHelp.BendTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.BendTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize DesignChecksHelp.BendBody}"/>
 
-                        <TextBlock Text="{loc:Localize DesignChecksHelp.SpacingTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.SpacingTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize DesignChecksHelp.SpacingBody}"/>
 
-                        <TextBlock Text="{loc:Localize DesignChecksHelp.PinsTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.PinsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize DesignChecksHelp.PinsBody}"/>
 
-                        <TextBlock Text="{loc:Localize DesignChecksHelp.BlockedTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.BlockedTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize DesignChecksHelp.BlockedBody}"/>
                         <ha:BlockedWireHelpAnimation Width="336" Height="96" IsHitTestVisible="False"/>
 
-                        <TextBlock Text="{loc:Localize DesignChecksHelp.ChipletTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.ChipletTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize DesignChecksHelp.ChipletBody}"/>
                         <ha:ChipletLinkCouplingAnimation Width="336" Height="88" IsHitTestVisible="False"/>
 
-                        <TextBlock Text="{loc:Localize DesignChecksHelp.SourceTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                        <TextBlock Text="{loc:Localize DesignChecksHelp.SourceTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    Text="{loc:Localize DesignChecksHelp.SourceBody}"/>
                     </StackPanel>
                 </controls:HelpFlyoutButton.HelpContent>
@@ -55,10 +55,10 @@
                 Content="{loc:Localize DesignChecks.Run}"
                 Command="{Binding RunDesignChecksCommand}"
                 HorizontalAlignment="Left" Padding="12,4" Margin="0,5,0,5"
-                Background="#5d3d3d"/>
+                Background="{DynamicResource Brush.Danger.Subtle}"/>
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{Binding RightPanel.DesignValidation.StatusText}"
-                       Foreground="Gray" FontSize="10" Margin="0,0,0,5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5" TextWrapping="Wrap"
                        IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <!-- (?) help for crossing findings (#1391): why a plain X junction fails and
                  how a Crossing 4-Port fixes it. Only offered while a waveguide crossing
@@ -76,19 +76,19 @@
                     IsVisible="{Binding RightPanel.DesignValidation.HasIssues}">
             <Button Content="{loc:Localize DesignChecks.Prev}"
                     Command="{Binding RightPanel.DesignValidation.PreviousIssueCommand}"
-                    MinWidth="70" Margin="0,0,5,0" Background="#3d3d3d"/>
+                    MinWidth="70" Margin="0,0,5,0" Background="{DynamicResource Brush.Surface.Hover}"/>
             <TextBlock Text="{Binding RightPanel.DesignValidation.NavigationText}"
-                       Foreground="White" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Brush.Text.Primary}" VerticalAlignment="Center"
                        Width="50" TextAlignment="Center"/>
             <Button Content="{loc:Localize DesignChecks.Next}"
                     Command="{Binding RightPanel.DesignValidation.NextIssueCommand}"
-                    MinWidth="70" Margin="5,0,0,0" Background="#3d3d3d"/>
+                    MinWidth="70" Margin="5,0,0,0" Background="{DynamicResource Brush.Surface.Hover}"/>
             <!-- One-click fix (issue #1248): only offered on chiplet-interface findings. -->
             <Button x:Name="AlignChipletButton"
                     Content="{loc:Localize DesignChecks.AlignChiplet}"
                     Command="{Binding RightPanel.DesignValidation.AlignChipletCommand}"
                     IsVisible="{Binding RightPanel.DesignValidation.IsCurrentIssueAlignable}"
-                    Margin="10,0,0,0" Padding="12,4" Background="#3d5d3d"/>
+                    Margin="10,0,0,0" Padding="12,4" Background="{DynamicResource Brush.Success.Subtle}"/>
         </StackPanel>
     </StackPanel>
 

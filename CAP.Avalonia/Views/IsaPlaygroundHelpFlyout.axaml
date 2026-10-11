@@ -16,20 +16,20 @@
 
     <StackPanel Spacing="8" MaxWidth="380">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize IsaPlayground.HelpContent}"/>
 
         <TextBlock Text="{loc:Localize IsaPlayground.HelpWhyLightAddsTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize IsaPlayground.HelpWhyLightAddsBody}"/>
 
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                 CornerRadius="4" Padding="4">
             <StackPanel Spacing="2">
                 <isa:CarryRippleAnimation Width="336" Height="100" IsHitTestVisible="False"/>
                 <TextBlock Text="{loc:Localize IsaPlayground.HelpCarryCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"
                            HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>

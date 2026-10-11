@@ -11,13 +11,13 @@
   <Canvas x:Name="RootCanvas" Background="{x:Null}">
 
     <!-- Dim: four rectangles around the spotlight hole -->
-    <Rectangle x:Name="DimTop" Fill="#A0101014" IsHitTestVisible="False"/>
-    <Rectangle x:Name="DimBottom" Fill="#A0101014" IsHitTestVisible="False"/>
-    <Rectangle x:Name="DimLeft" Fill="#A0101014" IsHitTestVisible="False"/>
-    <Rectangle x:Name="DimRight" Fill="#A0101014" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimTop" Fill="{DynamicResource Brush.Scrim}" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimBottom" Fill="{DynamicResource Brush.Scrim}" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimLeft" Fill="{DynamicResource Brush.Scrim}" IsHitTestVisible="False"/>
+    <Rectangle x:Name="DimRight" Fill="{DynamicResource Brush.Scrim}" IsHitTestVisible="False"/>
 
     <!-- Pulsing spotlight outline -->
-    <Border x:Name="Spotlight" BorderBrush="#7fd17f" BorderThickness="2"
+    <Border x:Name="Spotlight" BorderBrush="{DynamicResource Brush.Success}" BorderThickness="2"
             CornerRadius="4" IsHitTestVisible="False">
       <Border.Styles>
         <Style Selector="Border#Spotlight">
@@ -33,7 +33,7 @@
     </Border>
 
     <!-- Arrow pointing from the card at the target -->
-    <Path x:Name="Arrow" Fill="#7fd17f" Data="M0,0 L16,8 L0,16 Z"
+    <Path x:Name="Arrow" Fill="{DynamicResource Brush.Success}" Data="M0,0 L16,8 L0,16 Z"
           RenderTransformOrigin="50%,50%"
           IsHitTestVisible="False"/>
 

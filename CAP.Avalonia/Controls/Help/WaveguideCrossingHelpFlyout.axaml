@@ -12,23 +12,23 @@
          supplies the title. -->
 
     <StackPanel Spacing="8">
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                 CornerRadius="4" Padding="4">
             <ha:WaveguideCrossingHelpAnimation IsHitTestVisible="False"/>
         </Border>
 
         <Grid ColumnDefinitions="*,*">
             <TextBlock Grid.Column="0" Text="{loc:Localize DesignChecks.CrossingHelp.BareXCaption}"
-                       FontSize="9" Foreground="Gray" HorizontalAlignment="Center"/>
+                       FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
             <TextBlock Grid.Column="1" Text="{loc:Localize DesignChecks.CrossingHelp.ComponentCaption}"
-                       FontSize="9" Foreground="Gray" HorizontalAlignment="Center"/>
+                       FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
         </Grid>
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize DesignChecks.CrossingHelp.Body1}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize DesignChecks.CrossingHelp.Body2}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize DesignChecks.CrossingHelp.Body3}"/>
     </StackPanel>
 

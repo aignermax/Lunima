@@ -6,18 +6,18 @@
              x:DataType="vm:MainViewModel">
 
     <StackPanel>
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-        <TextBlock Text="{loc:Localize DimDiag.Title}" Foreground="Salmon" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
+        <TextBlock Text="{loc:Localize DimDiag.Title}" Foreground="{DynamicResource Brush.Danger}" Margin="0,0,0,5" FontWeight="SemiBold"/>
         <Button Content="{loc:Localize DimDiag.CheckButton}"
                 Command="{Binding RightPanel.DimensionDiagnostics.RefreshDiagnosticsCommand}"
                 MinWidth="110" Margin="0,5,0,5" Padding="8,4"
-                Background="#5d3d3d" HorizontalAlignment="Stretch"/>
+                Background="{DynamicResource Brush.Danger.Subtle}" HorizontalAlignment="Stretch"/>
         <TextBlock Text="{loc:Localize DimDiag.Description}"
-                   Foreground="Gray" FontSize="9" Margin="0,0,0,5" TextWrapping="Wrap"/>
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5" TextWrapping="Wrap"/>
         <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
                       IsVisible="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <TextBlock Text="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText}" Foreground="LightGray"
-                       FontFamily="Consolas" FontSize="9" TextWrapping="NoWrap"/>
+            <TextBlock Text="{Binding RightPanel.DimensionDiagnostics.DiagnosticsText}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                       FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="NoWrap"/>
         </ScrollViewer>
     </StackPanel>
 

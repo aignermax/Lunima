@@ -14,22 +14,22 @@
     <StackPanel Spacing="8" MaxWidth="400">
 
         <TextBlock Text="{loc:Localize MonteCarloHelp.ScatterTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize MonteCarloHelp.ScatterBody}"/>
 
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                 CornerRadius="4" Padding="4">
             <StackPanel Spacing="2">
                 <ha:MonteCarloScatterAnimation Width="368" Height="150" IsHitTestVisible="False"/>
                 <TextBlock Text="{loc:Localize MonteCarloHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
         <TextBlock Text="{loc:Localize MonteCarloHelp.YieldTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize MonteCarloHelp.YieldBody}"/>
 
     </StackPanel>

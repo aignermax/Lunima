@@ -15,64 +15,64 @@
         <StackPanel Margin="12" Spacing="8">
 
             <!-- Looping animation: laser → chip → split to two outputs. -->
-            <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+            <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                     CornerRadius="4" Padding="4">
                 <Canvas Width="380" Height="80">
                     <!-- Animated light pulses (in, then split top/bottom). Declared first so
                          tracks and pulses slide *under* the chip box: the pulse visibly
                          enters the circuit and the two split pulses emerge from it. -->
                     <ha:LightPulseAlongPath Width="380" Height="80" IsHitTestVisible="False"
-                                            PathPoints="36,40 195,40" PulseBrush="#FFF176" PulseDiameter="12"
+                                            PathPoints="36,40 195,40" PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="12"
                                             WindowStart="0" WindowEnd="0.5"/>
                     <ha:LightPulseAlongPath Width="380" Height="80" IsHitTestVisible="False"
-                                            PathPoints="195,40 339,22" PulseBrush="#4FC3F7" PulseDiameter="10"
+                                            PathPoints="195,40 339,22" PulseBrush="{DynamicResource Brush.Info}" PulseDiameter="10"
                                             WindowStart="0.5" WindowEnd="1"/>
                     <ha:LightPulseAlongPath Width="380" Height="80" IsHitTestVisible="False"
-                                            PathPoints="195,40 339,58" PulseBrush="#FF8A65" PulseDiameter="10"
+                                            PathPoints="195,40 339,58" PulseBrush="{DynamicResource Brush.Danger}" PulseDiameter="10"
                                             WindowStart="0.5" WindowEnd="1"/>
                     <!-- Laser source -->
-                    <Ellipse Canvas.Left="10" Canvas.Top="30" Width="20" Height="20" Fill="#FFD54F"/>
+                    <Ellipse Canvas.Left="10" Canvas.Top="30" Width="20" Height="20" Fill="{DynamicResource Brush.Warning}"/>
                     <TextBlock Canvas.Left="2" Canvas.Top="54" Text="{loc:Localize TransientHelp.DiagramLightSource}"
-                               FontSize="9" Foreground="Gray"/>
+                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
                     <!-- The user's circuit -->
                     <Border Canvas.Left="150" Canvas.Top="18" Width="90" Height="44"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4">
-                        <TextBlock Text="{loc:Localize TransientHelp.DiagramCircuit}" FontSize="9" Foreground="LightGray"
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Text="{loc:Localize TransientHelp.DiagramCircuit}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <!-- Outputs -->
                     <Ellipse Canvas.Left="338" Canvas.Top="16" Width="12" Height="12"
-                             Fill="Transparent" Stroke="#4FC3F7" StrokeThickness="2"/>
+                             Fill="Transparent" Stroke="{DynamicResource Brush.Info}" StrokeThickness="2"/>
                     <Ellipse Canvas.Left="338" Canvas.Top="52" Width="12" Height="12"
-                             Fill="Transparent" Stroke="#FF8A65" StrokeThickness="2"/>
+                             Fill="Transparent" Stroke="{DynamicResource Brush.Danger}" StrokeThickness="2"/>
                     <TextBlock Canvas.Left="330" Canvas.Top="0" Text="{loc:Localize TransientHelp.DiagramOutputs}"
-                               FontSize="9" Foreground="Gray"/>
+                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
                 </Canvas>
             </Border>
 
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                        Text="{loc:Localize TransientHelp.Intro1}"/>
 
-            <TextBlock Text="{loc:Localize TransientHelp.SourcesTitle}" FontWeight="Bold" FontSize="12"
-                       Foreground="White" Margin="0,4,0,0"/>
+            <TextBlock Text="{loc:Localize TransientHelp.SourcesTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}"
+                       Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
             <StackPanel Spacing="5">
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                    <Run FontWeight="Bold" Foreground="#FFD54F" Text="{loc:Localize TransientHelp.GaussianLabel}"/>
+                <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}">
+                    <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Warning}" Text="{loc:Localize TransientHelp.GaussianLabel}"/>
                     <Run Text="{loc:Localize TransientHelp.GaussianBody}"/>
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                    <Run FontWeight="Bold" Foreground="#81C784" Text="{loc:Localize TransientHelp.CwLabel}"/>
+                <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}">
+                    <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Success}" Text="{loc:Localize TransientHelp.CwLabel}"/>
                     <Run Text="{loc:Localize TransientHelp.CwBody}"/>
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray">
-                    <Run FontWeight="Bold" Foreground="#4FC3F7">PRBS-NRZ</Run>
+                <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}">
+                    <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Info}">PRBS-NRZ</Run>
                     <Run Text="{loc:Localize TransientHelp.PrbsBody}"/>
                 </TextBlock>
             </StackPanel>
 
-            <TextBlock Text="{loc:Localize TransientHelp.ReadingTitle}" FontWeight="Bold" FontSize="12"
-                       Foreground="White" Margin="0,4,0,0"/>
-            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+            <TextBlock Text="{loc:Localize TransientHelp.ReadingTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}"
+                       Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                        Text="{loc:Localize TransientHelp.ReadingBody}"/>
 
         </StackPanel>

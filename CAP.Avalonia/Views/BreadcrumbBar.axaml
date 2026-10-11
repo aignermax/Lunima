@@ -6,26 +6,26 @@
              x:Class="CAP.Avalonia.Views.BreadcrumbBar"
              x:DataType="vm:DesignCanvasViewModel">
 
-  <Border Background="#2d2d30"
-          BorderBrush="#3d3d3d"
+  <Border Background="{DynamicResource Brush.Surface.Hover}"
+          BorderBrush="{DynamicResource Brush.Border.Default}"
           BorderThickness="0,0,0,1"
           Padding="10,5"
           IsVisible="{Binding IsInGroupEditMode}">
     <StackPanel Orientation="Horizontal" Spacing="5">
       <!-- Exit to Root button -->
       <Button Content="{loc:Localize Breadcrumb.Exit}"
-              Background="#3d3d3d"
-              Foreground="LightBlue"
+              Background="{DynamicResource Brush.Surface.Hover}"
+              Foreground="{DynamicResource Brush.Info}"
               Padding="8,4"
               ToolTip.Tip="{loc:Localize Breadcrumb.ExitTip}"
               Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).ExitToRootCommand}" />
 
-      <TextBlock Text="📁" VerticalAlignment="Center" Foreground="LightGray" />
+      <TextBlock Text="📁" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
 
       <!-- Root breadcrumb -->
       <Button Content="{loc:Localize Breadcrumb.Root}"
               Background="Transparent"
-              Foreground="LightGray"
+              Foreground="{DynamicResource Brush.Text.Secondary}"
               Padding="5,2"
               ToolTip.Tip="{loc:Localize Breadcrumb.RootTip}"
               Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).NavigateToBreadcrumbLevelCommand}"
@@ -42,10 +42,10 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate DataType="core:ComponentGroup">
             <StackPanel Orientation="Horizontal" Spacing="5">
-              <TextBlock Text="›" VerticalAlignment="Center" Foreground="LightGray" />
+              <TextBlock Text="›" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
               <Button Content="{Binding GroupName}"
                       Background="Transparent"
-                      Foreground="White"
+                      Foreground="{DynamicResource Brush.Text.Primary}"
                       FontWeight="SemiBold"
                       Padding="5,2"
                       ToolTip.Tip="{Binding Description}"
@@ -59,7 +59,7 @@
       <!-- Current edit indicator -->
       <TextBlock Text="{loc:Localize Breadcrumb.Editing}"
                  VerticalAlignment="Center"
-                 Foreground="Orange"
+                 Foreground="{DynamicResource Brush.Warning}"
                  FontStyle="Italic"
                  Margin="5,0,0,0" />
     </StackPanel>

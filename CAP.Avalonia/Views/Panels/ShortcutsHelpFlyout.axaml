@@ -9,19 +9,19 @@
 
     <StackPanel MaxWidth="380" Spacing="6">
         <TextBlock Text="{loc:Localize StatusBar.ShortcutModesTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White"/>
+                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
         <TextBlock Text="{loc:Localize StatusBar.ShortcutModesBody}"
-                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+                   TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
 
         <TextBlock Text="{loc:Localize StatusBar.ShortcutEditingTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
         <TextBlock Text="{loc:Localize StatusBar.ShortcutEditingBody}"
-                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+                   TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
 
         <TextBlock Text="{loc:Localize StatusBar.ShortcutViewTitle}"
-                   FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
+                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
         <TextBlock Text="{loc:Localize StatusBar.ShortcutViewBody}"
-                   TextWrapping="Wrap" FontSize="11" Foreground="LightGray"/>
+                   TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
     </StackPanel>
 
 </UserControl>

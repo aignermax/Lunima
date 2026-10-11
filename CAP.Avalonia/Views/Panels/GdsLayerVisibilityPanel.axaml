@@ -9,12 +9,12 @@
     <!-- Imported Layers (issue #858): per-layer show/hide + opacity for imported GDS
          geometry. A pure view filter — connectivity and simulation are untouched. -->
     <StackPanel IsVisible="{Binding LayerVisibility.HasLayers}">
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
+        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Localize LayerVis.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
+            <TextBlock Text="{loc:Localize LayerVis.Title}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,0,5" FontWeight="SemiBold"/>
             <Button Grid.Column="1" Content="{loc:Localize LayerVis.ShowAll}"
                     Command="{Binding LayerVisibility.ShowAllLayersCommand}"
-                    FontSize="10" Padding="6,2" Background="#3d3d5d"/>
+                    FontSize="{DynamicResource FontSize.Caption}" Padding="6,2" Background="{DynamicResource Brush.Accent.Subtle}"/>
         </Grid>
         <ItemsControl ItemsSource="{Binding LayerVisibility.Rows}">
             <ItemsControl.ItemTemplate>
@@ -22,10 +22,10 @@
                     <Grid ColumnDefinitions="Auto,*,Auto,90" Margin="0,2,0,2">
                         <CheckBox IsChecked="{Binding IsVisible}" Padding="4,0,0,0"
                                   VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="LightGray"
-                                   FontSize="11" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                        <TextBlock Grid.Column="2" Text="{Binding ShapeCountText}" Foreground="Gray"
-                                   FontSize="10" VerticalAlignment="Center" Margin="4,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                   FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ShapeCountText}" Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                   FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center" Margin="4,0,6,0"/>
                         <Slider Grid.Column="3" Minimum="0" Maximum="100"
                                 Value="{Binding OpacityPercent}"
                                 IsEnabled="{Binding IsVisible}"

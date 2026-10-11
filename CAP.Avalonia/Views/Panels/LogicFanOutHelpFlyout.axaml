@@ -17,84 +17,84 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cfe0ff"
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
                    Text="{loc:Localize LogicPanelFanOutHelp.Intro}"/>
 
         <!-- brightness = power: every split halves it, so the quarter-power branches
              fall below the gate threshold and their badge flips to "?". -->
-        <Border Background="#151515" BorderBrush="#3d3d3d" BorderThickness="1"
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                 CornerRadius="4" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="168">
                     <!-- Declared first so tracks and pulses slide *under* the gate boxes. -->
                     <!-- the bright pulse leaving the driving gate -->
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="44,79 96,79"
-                                            PulseBrush="#FFF176" PulseDiameter="10"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
                                             WindowStart="0" WindowEnd="0.25" IsHitTestVisible="False"/>
                     <!-- the two half-power branches -->
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="96,79 140,39"
-                                            PulseBrush="#80FFF176" PulseDiameter="8"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="8"
                                             WindowStart="0.25" WindowEnd="0.55" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="96,79 140,119"
-                                            PulseBrush="#80FFF176" PulseDiameter="8"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="8"
                                             WindowStart="0.25" WindowEnd="0.55" IsHitTestVisible="False"/>
                     <!-- the four quarter-power leaves -->
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="172,39 206,39 250,14"
-                                            PulseBrush="#40FFF176" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0.55" WindowEnd="0.85" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="172,39 206,39 250,62"
-                                            PulseBrush="#40FFF176" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0.55" WindowEnd="0.85" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="172,119 206,119 250,98"
-                                            PulseBrush="#40FFF176" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0.55" WindowEnd="0.85" IsHitTestVisible="False"/>
                     <ha:LightPulseAlongPath Width="368" Height="168" PathPoints="172,119 206,119 250,144"
-                                            PulseBrush="#40FFF176" PulseDiameter="7"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
                                             WindowStart="0.55" WindowEnd="0.85" IsHitTestVisible="False"/>
                     <!-- the driving gate -->
                     <Border Canvas.Left="8" Canvas.Top="67" Width="36" Height="24"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <!-- the three 1×2 splitters -->
                     <Border Canvas.Left="91" Canvas.Top="74" Width="10" Height="10"
-                            Background="#3d3d5d" BorderBrush="#8d8dbd" BorderThickness="1" CornerRadius="2">
+                            Background="{DynamicResource Brush.Accent.Subtle}" BorderBrush="{DynamicResource Brush.Text.Secondary}" BorderThickness="1" CornerRadius="2">
                         <Border.RenderTransform><RotateTransform Angle="45"/></Border.RenderTransform>
                     </Border>
                     <Border Canvas.Left="201" Canvas.Top="34" Width="10" Height="10"
-                            Background="#3d3d5d" BorderBrush="#8d8dbd" BorderThickness="1" CornerRadius="2">
+                            Background="{DynamicResource Brush.Accent.Subtle}" BorderBrush="{DynamicResource Brush.Text.Secondary}" BorderThickness="1" CornerRadius="2">
                         <Border.RenderTransform><RotateTransform Angle="45"/></Border.RenderTransform>
                     </Border>
                     <Border Canvas.Left="201" Canvas.Top="114" Width="10" Height="10"
-                            Background="#3d3d5d" BorderBrush="#8d8dbd" BorderThickness="1" CornerRadius="2">
+                            Background="{DynamicResource Brush.Accent.Subtle}" BorderBrush="{DynamicResource Brush.Text.Secondary}" BorderThickness="1" CornerRadius="2">
                         <Border.RenderTransform><RotateTransform Angle="45"/></Border.RenderTransform>
                     </Border>
                     <!-- the two half-power receiving gates -->
                     <Border Canvas.Left="140" Canvas.Top="27" Width="32" Height="24"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <Border Canvas.Left="140" Canvas.Top="107" Width="32" Height="24"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <!-- the four quarter-power receiving gates -->
                     <Border Canvas.Left="250" Canvas.Top="4" Width="32" Height="20"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <Border Canvas.Left="250" Canvas.Top="52" Width="32" Height="20"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <Border Canvas.Left="250" Canvas.Top="88" Width="32" Height="20"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <Border Canvas.Left="250" Canvas.Top="134" Width="32" Height="20"
-                            Background="#2a2a3d" BorderBrush="#5d5d8d" BorderThickness="1" CornerRadius="4"/>
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4"/>
                     <!-- animated threshold lines and badges -->
                     <ha:PowerSplitAnimation Width="368" Height="168" IsHitTestVisible="False"/>
                 </Canvas>
                 <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.AnimationCaption}"
-                           Foreground="Gray" FontSize="9" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.PhysicsTitle}" FontWeight="Bold" FontSize="12" Foreground="White"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.PhysicsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelFanOutHelp.PhysicsBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.ExamplesTitle}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="LightGray"
+        <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.ExamplesTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize LogicPanelFanOutHelp.ExamplesBody}"/>
     </StackPanel>
 

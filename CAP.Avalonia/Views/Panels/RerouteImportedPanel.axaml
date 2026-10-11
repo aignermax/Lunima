@@ -9,14 +9,14 @@
          imported routes — on the canvas or inside component groups (the standard GDS
          import groups everything) — or a re-route just ran, so the delta stays readable. -->
     <StackPanel IsVisible="{Binding BottomPanel.RerouteImported.IsPanelVisible}">
-        <Separator Margin="0,20,0,10" Background="#3d3d3d"/>
-        <TextBlock Text="{loc:Localize Routing.Reroute.Title}" Foreground="Orange" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
+        <TextBlock Text="{loc:Localize Routing.Reroute.Title}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,0,5" FontWeight="SemiBold"/>
 
-        <TextBlock Foreground="Gray" Margin="0,0,0,6" TextWrapping="Wrap"
+        <TextBlock Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,6" TextWrapping="Wrap"
                    IsVisible="{Binding BottomPanel.RerouteImported.HasFrozenImportedRoutes}"
                    Text="{Binding BottomPanel.RerouteImported.FrozenCountText}"/>
 
-        <TextBlock Foreground="Gray" Margin="0,0,0,6" TextWrapping="Wrap"
+        <TextBlock Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,6" TextWrapping="Wrap"
                    IsVisible="{Binding BottomPanel.RerouteImported.HasGroupedFrozenRoutes}"
                    Text="{Binding BottomPanel.RerouteImported.GroupedFrozenText}"/>
 
@@ -28,11 +28,11 @@
                     Command="{Binding BottomPanel.RerouteImported.RerouteSelectedCommand}"/>
         </StackPanel>
 
-        <TextBlock Foreground="Gray" Margin="0,0,0,4" TextWrapping="Wrap"
+        <TextBlock Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,4" TextWrapping="Wrap"
                    IsVisible="{Binding BottomPanel.RerouteImported.HasHandEditedFrozenRoutes}"
                    Text="{Binding BottomPanel.RerouteImported.HandEditedKeptText}"/>
 
-        <TextBlock Foreground="LightGreen" TextWrapping="Wrap"
+        <TextBlock Foreground="{DynamicResource Brush.Success}" TextWrapping="Wrap"
                    Text="{Binding BottomPanel.RerouteImported.ResultText}"
                    IsVisible="{Binding BottomPanel.RerouteImported.ResultText,
                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

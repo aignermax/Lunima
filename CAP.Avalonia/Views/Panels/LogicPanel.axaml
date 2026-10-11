@@ -19,14 +19,14 @@
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
         </Style>
         <Style Selector="Button.timeline-event.selected">
-            <Setter Property="Background" Value="#3d3d5d"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
         </Style>
     </UserControl.Styles>
 
     <!-- Hosted as the Logic tab of the analysis dock (formerly a right-sidebar section, #1183). -->
     <StackPanel Margin="10,8">
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Localize LogicPanel.Title}" Foreground="MediumPurple" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Text="{loc:Localize LogicPanel.Title}" Foreground="{DynamicResource Brush.Accent.Hover}" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
             <!-- Plain-language help (#1196): short sections + the light → 0/1
                  threshold animation live in the extracted LogicHelpFlyout. -->
             <controls:HelpFlyoutButton Grid.Column="1"
@@ -38,35 +38,35 @@
             </controls:HelpFlyoutButton>
         </Grid>
 
-        <TextBlock Text="{loc:Localize LogicPanel.Hint}" Foreground="Gray" FontSize="10" TextWrapping="Wrap"/>
+        <TextBlock Text="{loc:Localize LogicPanel.Hint}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"/>
 
         <StackPanel Orientation="Horizontal" Margin="0,8,0,5">
             <Button x:Name="LogicBuildButton" Content="{loc:Localize LogicPanel.Build}"
                     Command="{Binding RightPanel.Logic.BuildNetworkCommand}"
-                    Width="150" Padding="8,4" Background="#3d5d3d"
+                    Width="150" Padding="8,4" Background="{DynamicResource Brush.Success.Subtle}"
                     IsEnabled="{Binding RightPanel.Logic.IsProcessing, Converter={x:Static BoolConverters.Not}}"/>
             <Button Content="{loc:Localize Common.Cancel}"
                     Command="{Binding RightPanel.Logic.CancelCommand}"
-                    Width="70" Padding="8,4" Margin="5,0,0,0" Background="#5d3d3d"
+                    Width="70" Padding="8,4" Margin="5,0,0,0" Background="{DynamicResource Brush.Danger.Subtle}"
                     IsVisible="{Binding RightPanel.Logic.IsProcessing}"/>
         </StackPanel>
         <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,5"
                      IsVisible="{Binding RightPanel.Logic.IsProcessing}"/>
-        <TextBlock Text="{Binding RightPanel.Logic.WavelengthText}" Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+        <TextBlock Text="{Binding RightPanel.Logic.WavelengthText}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.Logic.WavelengthText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        <TextBlock Text="{Binding RightPanel.Logic.StatusText}" Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,5"
+        <TextBlock Text="{Binding RightPanel.Logic.StatusText}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.Logic.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
         <!-- Optical fan-out warnings (#996): non-blocking, the idealized logic result
              stays available — the warning marks where a physical implementation would
              need splitters and level restoration. -->
         <Border IsVisible="{Binding RightPanel.Logic.HasFanOutWarnings}"
-                Background="#2a2413" BorderBrush="#8a6d1f" BorderThickness="1"
+                Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Warning}" BorderThickness="1"
                 CornerRadius="4" Padding="6" Margin="0,0,0,5">
             <StackPanel Spacing="3">
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.Title}"
-                               Foreground="#e6c860" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                     <!-- Education piece: why the half-/full-adder examples duplicate
                          their XOR ladders instead of splitting one output. Short
@@ -84,36 +84,36 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="logic:LogicFanOutWarningViewModel">
                             <StackPanel Spacing="1">
-                                <TextBlock Text="{Binding WarningText}" Foreground="#e6c860"
-                                           FontSize="10" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding WarningText}" Foreground="{DynamicResource Brush.Warning}"
+                                           FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"/>
                                 <!-- Quantitative level report (#1011): the ideal-split arithmetic
                                      and one verdict per receiving input. -->
-                                <TextBlock Text="{Binding SplitLine}" Foreground="#d8b44a"
-                                           FontSize="10" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding SplitLine}" Foreground="{DynamicResource Brush.Warning}"
+                                           FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"/>
                                 <ItemsControl ItemsSource="{Binding VerdictLines}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
-                                            <TextBlock Text="{Binding}" Foreground="#d8b44a"
-                                                       FontSize="10" TextWrapping="Wrap" Margin="10,0,0,0"/>
+                                            <TextBlock Text="{Binding}" Foreground="{DynamicResource Brush.Warning}"
+                                                       FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" Margin="10,0,0,0"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <TextBlock Text="{Binding LinkNote}" IsVisible="{Binding IsLinkWarning}"
-                                           Foreground="#a89040" FontSize="10" TextWrapping="Wrap" FontStyle="Italic"/>
+                                           Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" FontStyle="Italic"/>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <TextBlock Text="{loc:Localize LogicPanel.FanOutWarning.PhysicsNote}"
                            IsVisible="{Binding RightPanel.Logic.HasSplitFanOutWarnings}"
-                           Foreground="#a89040" FontSize="10" TextWrapping="Wrap" FontStyle="Italic"/>
+                           Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" FontStyle="Italic"/>
             </StackPanel>
         </Border>
 
         <!-- The assembled network: one toggle per unconnected gate input, one live
              0/1 indicator per gate output -->
         <StackPanel IsVisible="{Binding RightPanel.Logic.HasNetwork}">
-            <TextBlock Text="{loc:Localize LogicPanel.Inputs}" Foreground="Gray" FontSize="10" Margin="0,5,0,2"/>
+            <TextBlock Text="{loc:Localize LogicPanel.Inputs}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,5,0,2"/>
             <!-- Bus view (#1068): indexed families (A0–A3) collapse into a bus header
                  line showing the decimal value with an editable quick-set field; plain
                  names keep their single toggle. -->
@@ -121,22 +121,22 @@
                 <ItemsControl.DataTemplates>
                     <DataTemplate x:DataType="logic:LogicNetworkInputViewModel">
                         <CheckBox Content="{Binding PinName}" IsChecked="{Binding IsOn}"
-                                  Foreground="LightGray" FontSize="11" Margin="0,1"/>
+                                  Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,1"/>
                     </DataTemplate>
                     <DataTemplate x:DataType="bus:LogicSignalBusInputViewModel">
                         <StackPanel Margin="0,1">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="11"
-                                           Foreground="#cfe0ff" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}"
+                                           Foreground="{DynamicResource Brush.Text.Primary}" VerticalAlignment="Center"/>
                                 <TextBox Text="{Binding ValueText}" Width="56" Margin="8,0,0,0"
-                                         FontFamily="Consolas" FontSize="11" Padding="4,1"
+                                         FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" Padding="4,1"
                                          VerticalAlignment="Center"/>
                             </StackPanel>
                             <ItemsControl ItemsSource="{Binding Members}" Margin="14,0,0,0">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="logic:LogicNetworkInputViewModel">
                                         <CheckBox Content="{Binding PinName}" IsChecked="{Binding IsOn}"
-                                                  Foreground="LightGray" FontSize="11" Margin="0,1"/>
+                                                  Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,1"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -146,7 +146,7 @@
             </ItemsControl>
 
             <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,2">
-                <TextBlock Text="{loc:Localize LogicPanel.Outputs}" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Localize LogicPanel.Outputs}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center"/>
                 <!-- What is a cell instance? (#1411): one template, stamped N times,
                      each copy keeping its own registers — shown only when the built
                      network actually contains cell groups. -->
@@ -163,29 +163,29 @@
                 <ItemsControl.DataTemplates>
                     <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
                         <StackPanel Orientation="Horizontal" Margin="0,1">
-                            <TextBlock Text="{Binding PinName}" Foreground="LightGray" FontSize="11" Width="110" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                       Foreground="LightGreen" IsVisible="{Binding IsOne}"/>
-                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                       Foreground="Gray" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
-                            <TextBlock Text="{Binding DelayText}" Foreground="Gray" FontSize="10"
+                            <TextBlock Text="{Binding PinName}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" Width="110" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                       Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                       Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                            <TextBlock Text="{Binding DelayText}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}"
                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
                     </DataTemplate>
                     <DataTemplate x:DataType="bus:LogicSignalBusOutputViewModel">
                         <StackPanel Margin="0,1">
-                            <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="11"
-                                       FontWeight="SemiBold" Foreground="#cfe0ff"/>
+                            <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}"
+                                       FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}"/>
                             <ItemsControl ItemsSource="{Binding Members}" Margin="14,0,0,0">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
                                         <StackPanel Orientation="Horizontal" Margin="0,1">
-                                            <TextBlock Text="{Binding PinName}" Foreground="LightGray" FontSize="11" Width="96" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                                       Foreground="LightGreen" IsVisible="{Binding IsOne}"/>
-                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                                       Foreground="Gray" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
-                                            <TextBlock Text="{Binding DelayText}" Foreground="Gray" FontSize="10"
+                                            <TextBlock Text="{Binding PinName}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" Width="96" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                       Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                            <TextBlock Text="{Binding DelayText}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}"
                                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                                         </StackPanel>
                                     </DataTemplate>
@@ -203,10 +203,10 @@
                                     Background="Transparent" Padding="2,0"
                                     HorizontalContentAlignment="Left" HorizontalAlignment="Stretch">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding ChevronText}" FontFamily="Consolas" FontSize="11"
-                                               Foreground="#cfe0ff" Width="14" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="11"
-                                               FontWeight="SemiBold" Foreground="#cfe0ff" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ChevronText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}"
+                                               Foreground="{DynamicResource Brush.Text.Primary}" Width="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding HeaderText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <ItemsControl ItemsSource="{Binding Members}" Margin="14,0,0,0"
@@ -214,12 +214,12 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="logic:LogicNetworkOutputViewModel">
                                         <StackPanel Orientation="Horizontal" Margin="0,1">
-                                            <TextBlock Text="{Binding DisplayName}" Foreground="LightGray" FontSize="11" Width="96" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                                       Foreground="LightGreen" IsVisible="{Binding IsOne}"/>
-                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                                       Foreground="Gray" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
-                                            <TextBlock Text="{Binding DelayText}" Foreground="Gray" FontSize="10"
+                                            <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" Width="96" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                       Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                                            <TextBlock Text="{Binding BitText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                            <TextBlock Text="{Binding DelayText}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}"
                                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                                         </StackPanel>
                                     </DataTemplate>
@@ -240,21 +240,21 @@
                  toggles stay live. -->
             <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,2"
                   IsVisible="{Binding RightPanel.Logic.HasRegisters}">
-                <TextBlock Text="{loc:Localize LogicPanel.Registers}" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Localize LogicPanel.Registers}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
                     <Button x:Name="LogicStepClockButton" Content="{loc:Localize LogicPanel.StepClock}"
                             Command="{Binding RightPanel.Logic.StepClockCommand}"
-                            Padding="6,2" FontSize="10"/>
+                            Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"/>
                     <Button x:Name="LogicRunStopButton" Content="{Binding RightPanel.Logic.RunStopText}"
                             Command="{Binding RightPanel.Logic.ToggleRunCommand}"
-                            Padding="6,2" FontSize="10"/>
+                            Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"/>
                     <ComboBox ItemsSource="{Binding RightPanel.Logic.RunIntervalOptions}"
                               SelectedItem="{Binding RightPanel.Logic.SelectedRunInterval}"
                               DisplayMemberBinding="{Binding Label}"
-                              FontSize="10" VerticalAlignment="Center"/>
+                              FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center"/>
                     <Button Content="{loc:Localize LogicPanel.ResetRegisters}"
                             Command="{Binding RightPanel.Logic.ResetRegistersCommand}"
-                            Padding="6,2" FontSize="10"/>
+                            Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"/>
                 </StackPanel>
             </Grid>
             <ItemsControl ItemsSource="{Binding RightPanel.Logic.RegisterStates}"
@@ -262,10 +262,10 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="logic:LogicRegisterStateViewModel">
                         <StackPanel Orientation="Horizontal" Margin="0,1">
-                            <TextBlock Text="{Binding GateName}" Foreground="LightGray" FontSize="11"
+                            <TextBlock Text="{Binding GateName}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}"
                                        Width="110" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding BitsText}" FontFamily="Consolas" FontSize="12"
-                                       FontWeight="Bold" Foreground="#e6c860" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding BitsText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Body}"
+                                       FontWeight="Bold" Foreground="{DynamicResource Brush.Warning}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -276,7 +276,7 @@
                  your computer compute" view on the way to the animated light
                  propagation of the north star. -->
             <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,2">
-                <TextBlock Text="{loc:Localize LogicPanel.Timeline}" Foreground="Gray" FontSize="10" VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Localize LogicPanel.Timeline}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center"/>
                 <!-- Short sections plus the pulse-arrival animation live in the
                      extracted LogicTimelineHelpFlyout (#1206). -->
                 <controls:HelpFlyoutButton Grid.Column="1"
@@ -295,19 +295,19 @@
                         IsVisible="{Binding RightPanel.Logic.HasTimelineEvents}">
                 <Button Content="{Binding RightPanel.Logic.PlayPauseText}"
                         Command="{Binding RightPanel.Logic.TogglePlaybackCommand}"
-                        Padding="6,2" FontSize="10"/>
+                        Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"/>
                 <Button Content="{loc:Localize LogicPanel.ReplayPrev}"
                         Command="{Binding RightPanel.Logic.PreviousTimelineEventCommand}"
-                        Padding="6,2" FontSize="10"/>
+                        Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"/>
                 <Button Content="{loc:Localize LogicPanel.ReplayNext}"
                         Command="{Binding RightPanel.Logic.NextTimelineEventCommand}"
-                        Padding="6,2" FontSize="10"/>
-                <TextBlock Text="{Binding RightPanel.Logic.ReplayTimeText}" Foreground="#e6c860"
-                           FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0"
+                        Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"/>
+                <TextBlock Text="{Binding RightPanel.Logic.ReplayTimeText}" Foreground="{DynamicResource Brush.Warning}"
+                           FontSize="{DynamicResource FontSize.Caption}" VerticalAlignment="Center" Margin="4,0,0,0"
                            IsVisible="{Binding RightPanel.Logic.IsReplayActive}"/>
                 <Button Content="{loc:Localize LogicPanel.ReplayExit}"
                         Command="{Binding RightPanel.Logic.ExitReplayCommand}"
-                        Padding="6,2" FontSize="10"
+                        Padding="6,2" FontSize="{DynamicResource FontSize.Caption}"
                         IsVisible="{Binding RightPanel.Logic.IsReplayActive}"/>
             </StackPanel>
             <ItemsControl ItemsSource="{Binding RightPanel.Logic.TimelineEvents}"
@@ -322,36 +322,36 @@
                                 <!-- Clock-step boundary (#1110): the divider label rides on the
                                      first row a Step appended, so the timeline reads
                                      "inputs settled → clock → registers committed → outputs rippled". -->
-                                <TextBlock Text="{Binding ClockBoundaryText}" Foreground="#e6c860"
-                                           FontFamily="Consolas" FontSize="10" FontWeight="Bold"
+                                <TextBlock Text="{Binding ClockBoundaryText}" Foreground="{DynamicResource Brush.Warning}"
+                                           FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold"
                                            Margin="0,4,0,0"
                                            IsVisible="{Binding HasClockBoundary}"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,1">
-                                    <TextBlock Text="{Binding TimeText}" Foreground="#cfe0ff"
-                                               FontFamily="Consolas" FontSize="11" Width="70" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding GatePinText}" Foreground="LightGray"
-                                               FontFamily="Consolas" FontSize="11" Width="110" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding TransitionText}" FontFamily="Consolas" FontSize="11" FontWeight="Bold"
-                                               Foreground="LightGreen" IsVisible="{Binding IsRising}"/>
-                                    <TextBlock Text="{Binding TransitionText}" FontFamily="Consolas" FontSize="11" FontWeight="Bold"
-                                               Foreground="Gray" IsVisible="{Binding IsRising, Converter={x:Static BoolConverters.Not}}"/>
+                                    <TextBlock Text="{Binding TimeText}" Foreground="{DynamicResource Brush.Text.Primary}"
+                                               FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" Width="70" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding GatePinText}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                                               FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" Width="110" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding TransitionText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold"
+                                               Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding IsRising}"/>
+                                    <TextBlock Text="{Binding TransitionText}" FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold"
+                                               Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding IsRising, Converter={x:Static BoolConverters.Not}}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="{loc:Localize LogicPanel.TimelineEmpty}" Foreground="Gray" FontSize="10"
+            <TextBlock Text="{loc:Localize LogicPanel.TimelineEmpty}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}"
                        FontStyle="Italic" TextWrapping="Wrap"
                        IsVisible="{Binding RightPanel.Logic.HasTimelineEvents, Converter={x:Static BoolConverters.Not}}"/>
 
             <!-- Waveform strip (#1129, rung 5 visualizer): the same timeline drawn as
                  per-signal 0/1 lanes — one trace per named signal, a vertical line per
                  clock boundary, a cursor at the replayed instant. Read-only. -->
-            <TextBlock Text="{loc:Localize LogicPanel.Waveforms}" Foreground="Gray" FontSize="10"
+            <TextBlock Text="{loc:Localize LogicPanel.Waveforms}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}"
                        Margin="0,8,0,2"
                        IsVisible="{Binding RightPanel.Logic.HasWaveform}"/>
-            <Border Background="#141414" CornerRadius="3"
+            <Border Background="{DynamicResource Brush.Surface.Input}" CornerRadius="3"
                     IsVisible="{Binding RightPanel.Logic.HasWaveform}">
                 <controls:LogicWaveformStrip Waveform="{Binding RightPanel.Logic.Waveform}"/>
             </Border>
@@ -360,8 +360,8 @@
                  to an output limits how fast the circuit can clock. -->
             <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0"
                   IsVisible="{Binding RightPanel.Logic.CriticalPathText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                <TextBlock Text="{Binding RightPanel.Logic.CriticalPathText}" Foreground="#cfe0ff"
-                           FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding RightPanel.Logic.CriticalPathText}" Foreground="{DynamicResource Brush.Text.Primary}"
+                           FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
                 <controls:HelpFlyoutButton Grid.Column="1"
                                            Title="{loc:Localize LogicPanelTimingHelp.Title}"
                                            VerticalAlignment="Center" Margin="4,0,0,0">

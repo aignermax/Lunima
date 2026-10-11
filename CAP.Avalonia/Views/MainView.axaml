@@ -11,28 +11,28 @@
         <ScrollViewer DockPanel.Dock="Top"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled"
-                      Background="#2d2d2d"
+                      Background="{DynamicResource Brush.Surface.Raised}"
                       Height="40">
             <StackPanel Orientation="Horizontal">
                 <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
                 <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
                 <Button Content="{loc:Localize MainView.ResetZoom}" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
                 <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
-                           VerticalAlignment="Center" Margin="10,0" Foreground="White"/>
-                <Border Width="1" Background="#555" Margin="5,5"/>
+                           VerticalAlignment="Center" Margin="10,0" Foreground="{DynamicResource Brush.Text.Primary}"/>
+                <Border Width="1" Background="{DynamicResource Brush.Border.Strong}" Margin="5,5"/>
                 <Button Content="{loc:Localize MainView.Simulate}" Command="{Binding RunSimulationCommand}" Width="100" Margin="5"/>
             </StackPanel>
         </ScrollViewer>
 
         <!-- Status Bar -->
-        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface.Panel}" Height="25">
             <Grid ColumnDefinitions="Auto,Auto,*">
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}"
-                           VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
+                           VerticalAlignment="Center" Margin="10,0" Foreground="{DynamicResource Brush.Text.Secondary}"/>
                 <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
                         Command="{Binding Canvas.StopRoutingCommand}"
                         IsVisible="{Binding Canvas.IsRouting}"
-                        VerticalAlignment="Center" Margin="6,0,0,0" FontSize="11"
+                        VerticalAlignment="Center" Margin="6,0,0,0" FontSize="{DynamicResource FontSize.Caption}"
                         ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
             </Grid>
         </Border>

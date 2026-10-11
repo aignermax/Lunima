@@ -12,22 +12,22 @@
         <DockPanel Margin="0,0,0,8">
             <TextBlock DockPanel.Dock="Left"
                        Text="{loc:Localize AiAssistant.Title}"
-                       Foreground="#7EC8E3"
+                       Foreground="{DynamicResource Brush.Info}"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"/>
             <Button DockPanel.Dock="Right"
                     Content="{loc:Localize AiAssistant.Clear}"
                     Command="{Binding RightPanel.AiAssistant.ClearHistoryCommand}"
-                    FontSize="10" Padding="6,2"
-                    Background="#3d3d3d" Foreground="Gray"
+                    FontSize="{DynamicResource FontSize.Caption}" Padding="6,2"
+                    Background="{DynamicResource Brush.Surface.Hover}" Foreground="{DynamicResource Brush.Text.Tertiary}"
                     HorizontalAlignment="Right"/>
         </DockPanel>
 
         <TextBlock Text="{loc:Localize AiAssistant.Description}"
-                   Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
         <!-- Chat history -->
-        <Border Background="#1a1a1a" BorderBrush="#3d3d3d" BorderThickness="1"
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                 CornerRadius="4" Margin="0,0,0,8">
             <ScrollViewer Height="220"
                           VerticalScrollBarVisibility="Auto"
@@ -40,11 +40,11 @@
                                     Background="{Binding MessageBackground}">
                                 <StackPanel>
                                     <TextBlock Text="{Binding RoleLabel}"
-                                               FontSize="9" FontWeight="SemiBold"
-                                               Foreground="Gray" Margin="0,0,0,3"/>
+                                               FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3"/>
                                     <SelectableTextBlock Text="{Binding Content}"
-                                                         Foreground="White"
-                                                         FontSize="11"
+                                                         Foreground="{DynamicResource Brush.Text.Primary}"
+                                                         FontSize="{DynamicResource FontSize.Caption}"
                                                          TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
@@ -56,13 +56,13 @@
 
         <!-- Typing indicator -->
         <TextBlock Text="{loc:Localize AiAssistant.Thinking}"
-                   Foreground="Gray" FontSize="10" FontStyle="Italic"
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" FontStyle="Italic"
                    Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
 
         <!-- Status text -->
         <TextBlock Text="{Binding RightPanel.AiAssistant.StatusText}"
-                   Foreground="Gray" FontSize="10" Margin="0,0,0,5"
+                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.AiAssistant.StatusText,
                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
@@ -72,20 +72,20 @@
                      x:Name="UserInputTextBox"
                      Text="{Binding RightPanel.AiAssistant.UserInput}"
                      Watermark="{loc:Localize AiAssistant.InputPlaceholder}"
-                     Background="#1e1e1e" Foreground="White" BorderBrush="#3e3e3e"
+                     Background="{DynamicResource Brush.Surface.Panel}" Foreground="{DynamicResource Brush.Text.Primary}" BorderBrush="{DynamicResource Brush.Border.Default}"
                      TextWrapping="Wrap" AcceptsReturn="False"
-                     FontSize="11" Margin="0,0,5,0"
+                     FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,5,0"
                      IsEnabled="{Binding RightPanel.AiAssistant.IsTyping,
                                  Converter={x:Static BoolConverters.Not}}"/>
             <Button Grid.Column="1"
                     Content="{loc:Localize AiAssistant.Send}"
                     Command="{Binding RightPanel.AiAssistant.SendMessageCommand}"
-                    Background="#2d5d7d" Foreground="White"
+                    Background="{DynamicResource Brush.Info.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}"
                     Width="50" Margin="0,0,4,0"/>
             <Button Grid.Column="2"
                     Content="✕"
                     Command="{Binding RightPanel.AiAssistant.CancelRequestCommand}"
-                    Background="#5d2d2d" Foreground="White"
+                    Background="{DynamicResource Brush.Danger.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}"
                     Width="28"
                     ToolTip.Tip="{loc:Localize AiPanel.CancelTip}"
                     IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
@@ -97,8 +97,8 @@
                 Command="{Binding OpenAiSettingsCommand}"
                 HorizontalAlignment="Stretch"
                 Margin="0,5,0,0" Padding="6,4"
-                Background="#3d3d5d" Foreground="#7EC8E3"
-                FontSize="11"
+                Background="{DynamicResource Brush.Accent.Subtle}" Foreground="{DynamicResource Brush.Info}"
+                FontSize="{DynamicResource FontSize.Caption}"
                 IsVisible="{Binding RightPanel.AiAssistant.IsApiKeySet,
                             Converter={x:Static BoolConverters.Not}}"
                 ToolTip.Tip="{loc:Localize AiPanel.SetApiKeyTip}"/>

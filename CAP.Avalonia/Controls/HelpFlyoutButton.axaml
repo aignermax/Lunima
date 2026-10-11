@@ -13,8 +13,8 @@
     <Button x:Name="HelpButton"
             Width="22" Height="22" Padding="0"
             CornerRadius="11"
-            Background="#333338"
-            BorderBrush="#5a5a60"
+            Background="{DynamicResource Brush.Surface.Hover}"
+            BorderBrush="{DynamicResource Brush.Border.Strong}"
             BorderThickness="1"
             HorizontalContentAlignment="Center"
             VerticalContentAlignment="Center"
@@ -22,21 +22,21 @@
 
         <Button.Styles>
             <Style Selector="Button:pointerover /template/ ContentPresenter">
-                <Setter Property="Background" Value="#45454c"/>
+                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
             </Style>
         </Button.Styles>
 
-        <TextBlock Text="?" FontSize="12" FontWeight="Bold" Foreground="#cfcfd6"/>
+        <TextBlock Text="?" FontSize="{DynamicResource FontSize.Body}" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Primary}"/>
 
         <Button.Flyout>
             <Flyout Placement="Bottom" ShowMode="Standard">
-                <Border Background="#1a1a1a" BorderBrush="#3d3d3d" BorderThickness="1"
+                <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
                         CornerRadius="6" MaxWidth="440" MaxHeight="460">
                     <ScrollViewer MaxWidth="440" MaxHeight="460">
                         <StackPanel Margin="14" Spacing="8">
                             <TextBlock x:Name="TitleText"
                                        Text="{Binding Title, ElementName=Root}"
-                                       FontWeight="Bold" FontSize="13" Foreground="White"
+                                       FontWeight="Bold" FontSize="{DynamicResource FontSize.BodyLarge}" Foreground="{DynamicResource Brush.Text.Primary}"
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding Title, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <ContentPresenter x:Name="ContentHost"
