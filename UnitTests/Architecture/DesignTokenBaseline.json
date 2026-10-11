@@ -15,25 +15,13 @@
     "HexColors": 36,
     "SmallFonts": 4
   },
-  "CAP.Avalonia/Views/PortMappingDialog.axaml": {
-    "HexColors": 10,
-    "SmallFonts": 2
-  },
   "CAP.Avalonia/Views/ProcessManagementWindow.axaml": {
     "HexColors": 24,
     "SmallFonts": 16
   },
-  "CAP.Avalonia/Views/ProcessSelectionDialog.axaml": {
-    "HexColors": 4,
-    "SmallFonts": 0
-  },
   "CAP.Avalonia/Views/RegistryBrowserWindow.axaml": {
     "HexColors": 21,
     "SmallFonts": 18
-  },
-  "CAP.Avalonia/Views/RenameDialog.axaml": {
-    "HexColors": 2,
-    "SmallFonts": 0
   },
   "CAP.Avalonia/Views/SettingsWindow.axaml": {
     "HexColors": 19,

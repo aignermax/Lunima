@@ -2,68 +2,47 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vmp="using:CAP.Avalonia.ViewModels.Process"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
+        xmlns:controls="using:CAP.Avalonia.Controls"
         x:Class="CAP.Avalonia.Views.ProcessSelectionDialog"
         x:Name="DialogRoot"
         x:DataType="vmp:ProcessSelectionViewModel"
         x:CompileBindings="True"
         Title="{loc:Localize ProcessSelection.Title}"
-        Width="460" Height="380"
+        Width="460" Height="400"
         MinWidth="360" MinHeight="280"
-        Background="#1e1e1e"
-        Foreground="White"
         WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16">
+    <DockPanel Margin="{DynamicResource Padding.Dialog}">
 
-        <!-- Heading -->
-        <TextBlock DockPanel.Dock="Top"
+        <TextBlock DockPanel.Dock="Top" Classes="title"
                    Text="{loc:Localize ProcessSelection.Title}"
-                   FontWeight="SemiBold"
-                   FontSize="15"
-                   Foreground="LightBlue"
                    Margin="0,0,0,4"/>
-
-        <!-- Explanation -->
-        <TextBlock DockPanel.Dock="Top"
+        <TextBlock DockPanel.Dock="Top" Classes="caption"
                    Text="{loc:Localize ProcessSelection.Explanation}"
-                   Foreground="#bbbbbb"
-                   FontSize="11"
                    TextWrapping="Wrap"
-                   Margin="0,0,0,12"/>
+                   Margin="0,0,0,16"/>
 
-        <!-- Process choices: one entry per derived process group, plus a trailing
-             Playground option (issue #570). The Playground item is visually marked
-             with a warning glyph since it produces a non-manufacturable design.
-             A single click on an entry confirms it immediately and closes the
-             dialog (issue #778); Escape cancels, Enter confirms the keyboard
-             selection. -->
+        <!-- One entry per derived process group plus a trailing Playground option, marked
+             because it produces a non-manufacturable design. A single click confirms and
+             closes; Escape cancels, Enter confirms the keyboard selection. -->
         <ListBox ItemsSource="{Binding Choices}"
                  SelectedItem="{Binding SelectedChoice, Mode=TwoWay}"
-                 Background="Transparent"
                  BorderThickness="0">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vmp:ProcessChoiceItem">
-                    <Border Background="#252526"
-                            CornerRadius="4"
-                            Padding="10,8"
-                            Margin="0,2"
+                    <Border Classes="card interactive" Padding="12,10" Margin="0,2"
                             Tapped="OnChoiceTapped">
                         <StackPanel Spacing="2">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="⚠"
-                                           Foreground="#FFA500"
-                                           FontSize="13"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsPlayground}"/>
-                                <TextBlock Text="{Binding Title}"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           FontSize="13"/>
+                                <controls:Icon Data="{StaticResource Icon.TriangleAlert}"
+                                               Size="{DynamicResource IconSize.Small}"
+                                               Foreground="{DynamicResource Brush.Warning}"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding IsPlayground}"/>
+                                <TextBlock Classes="strong" Text="{Binding Title}"
+                                           FontSize="{DynamicResource FontSize.BodyLarge}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding Subtitle}"
-                                       Foreground="Gray"
-                                       FontSize="11"
-                                       TextWrapping="Wrap"/>
+                            <TextBlock Classes="caption" Text="{Binding Subtitle}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
                 </DataTemplate>
