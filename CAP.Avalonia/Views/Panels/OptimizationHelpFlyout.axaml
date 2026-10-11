@@ -14,28 +14,24 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock Text="{loc:Localize OptimizeHelp.WhatTitle}"
-                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize OptimizeHelp.WhatTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize OptimizeHelp.WhatBody}"/>
 
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <ha:HillClimbAnimation Width="368" Height="150" IsHitTestVisible="False"/>
-                <TextBlock Text="{loc:Localize OptimizeHelp.AnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize OptimizeHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize OptimizeHelp.BudgetSeedTitle}"
-                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize OptimizeHelp.BudgetSeedTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize OptimizeHelp.BudgetSeedBody}"/>
 
-        <TextBlock Text="{loc:Localize OptimizeHelp.LocalTitle}"
-                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize OptimizeHelp.LocalTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize OptimizeHelp.LocalBody}"/>
 
     </StackPanel>

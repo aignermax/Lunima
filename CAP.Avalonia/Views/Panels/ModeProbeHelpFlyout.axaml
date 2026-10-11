@@ -15,26 +15,23 @@
 
             <!-- Looping animation: confined mode spot + guided crest slower than free space. -->
             <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                    CornerRadius="4" Padding="4" HorizontalAlignment="Left">
+                    CornerRadius="{DynamicResource Radius.S}" Padding="4" HorizontalAlignment="Left">
                 <ha:GuidedModeCrestAnimation
                     GuidedLabel="{loc:Localize ModeProbeHelp.AnimGuidedLabel}"
                     FreeSpaceLabel="{loc:Localize ModeProbeHelp.AnimFreeLabel}"
                     SpotLabel="{loc:Localize ModeProbeHelp.AnimSpotLabel}"/>
             </Border>
 
-            <TextBlock Text="{loc:Localize ModeProbeHelp.GuidedTitle}"
-                       FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+            <TextBlock Classes="strong" Text="{loc:Localize ModeProbeHelp.GuidedTitle}"/>
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize ModeProbeHelp.GuidedBody}"/>
 
-            <TextBlock Text="{loc:Localize ModeProbeHelp.GroupTitle}"
-                       FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+            <TextBlock Classes="strong" Text="{loc:Localize ModeProbeHelp.GroupTitle}" Margin="0,4,0,0"/>
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize ModeProbeHelp.GroupBody}"/>
 
-            <TextBlock Text="{loc:Localize ModeProbeHelp.MfdTitle}"
-                       FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+            <TextBlock Classes="strong" Text="{loc:Localize ModeProbeHelp.MfdTitle}" Margin="0,4,0,0"/>
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize ModeProbeHelp.MfdBody}"/>
 
         </StackPanel>

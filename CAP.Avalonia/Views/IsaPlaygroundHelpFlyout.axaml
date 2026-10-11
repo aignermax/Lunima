@@ -19,13 +19,12 @@
         <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize IsaPlayground.HelpContent}"/>
 
-        <TextBlock Text="{loc:Localize IsaPlayground.HelpWhyLightAddsTitle}"
-                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+        <TextBlock Classes="strong" Text="{loc:Localize IsaPlayground.HelpWhyLightAddsTitle}" Margin="0,4,0,0"/>
         <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
                    Text="{loc:Localize IsaPlayground.HelpWhyLightAddsBody}"/>
 
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <isa:CarryRippleAnimation Width="336" Height="100" IsHitTestVisible="False"/>
                 <TextBlock Text="{loc:Localize IsaPlayground.HelpCarryCaption}"

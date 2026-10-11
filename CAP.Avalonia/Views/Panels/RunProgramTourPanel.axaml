@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.RunProgramTourPanel"
              x:DataType="vm:RunProgramTourViewModel">
@@ -10,37 +11,29 @@
        ISA playground stay fully interactive. Hosted by the anchored overlay in
        MainWindow (build/open steps) and in IsaPlaygroundWindow (playground
        steps) — the engine decides via ShowCardInMainWindow/ShowCardInPlayground. -->
-  <Border Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Success}" BorderThickness="1"
-          CornerRadius="6" Padding="12" Width="340"
-          BoxShadow="0 4 12 0 #99000000">
+  <Border Classes="overlay" Padding="12" Width="340">
     <StackPanel Spacing="8">
 
       <!-- Header: progress + close -->
       <DockPanel>
-        <Button DockPanel.Dock="Right" Content="✕" Padding="4,0"
-                Background="Transparent" Foreground="{DynamicResource Brush.Text.Secondary}"
-                Command="{Binding SkipCommand}"
-                ToolTip.Tip="{loc:Localize Tutorial.Skip}"/>
-        <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource Brush.Accent.Hover}" FontSize="{DynamicResource FontSize.Caption}"
+        <Button DockPanel.Dock="Right" Classes="ghost icon" Command="{Binding SkipCommand}"
+                ToolTip.Tip="{loc:Localize Tutorial.Skip}">
+          <controls:Icon Data="{StaticResource Icon.X}"/>
+        </Button>
+        <TextBlock Classes="label" Text="{Binding ProgressText}"
                    VerticalAlignment="Center"/>
       </DockPanel>
 
       <!-- Current step -->
-      <TextBlock Text="{Binding CurrentTitle}" FontWeight="SemiBold" FontSize="{DynamicResource FontSize.Subtitle}"
-                 TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Primary}"/>
-      <TextBlock Text="{Binding CurrentBody}" TextWrapping="Wrap"
-                 Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Body}"/>
+      <TextBlock Classes="subtitle" Text="{Binding CurrentTitle}" TextWrapping="Wrap"/>
+      <TextBlock Classes="secondary" Text="{Binding CurrentBody}" TextWrapping="Wrap"/>
 
       <!-- Actions -->
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="{loc:Localize Tutorial.Skip}"
-                Command="{Binding SkipCommand}"
-                Background="Transparent" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}"
-                Padding="8,4"/>
-        <Button Content="{loc:Localize Tutorial.Next}"
-                Command="{Binding NextCommand}"
-                Background="{DynamicResource Brush.Success.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="{DynamicResource FontSize.Caption}"
-                Padding="10,4"/>
+        <Button Classes="ghost" Content="{loc:Localize Tutorial.Skip}"
+                Command="{Binding SkipCommand}"/>
+        <Button Classes="primary" Content="{loc:Localize Tutorial.Next}"
+                Command="{Binding NextCommand}"/>
       </StackPanel>
     </StackPanel>
   </Border>

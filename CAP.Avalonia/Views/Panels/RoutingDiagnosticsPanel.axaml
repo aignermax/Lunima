@@ -1,42 +1,40 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.RoutingDiagnosticsPanel"
              x:DataType="vm:MainViewModel">
 
     <StackPanel>
-        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
-        <TextBlock Text="{loc:Localize RoutingDiag.Title}" Foreground="{DynamicResource Brush.Danger}" Margin="0,0,0,5" FontWeight="SemiBold"/>
-        <Button Content="{loc:Localize RoutingDiag.AnalyzeButton}"
-                Command="{Binding RightPanel.RoutingDiagnostics.RunDiagnosticsCommand}"
-                MinWidth="110" Margin="0,5,0,5" Padding="8,4"
-                Background="{DynamicResource Brush.Danger.Subtle}" HorizontalAlignment="Stretch"
+        <Border Classes="divider" Margin="0,12,0,8"/>
+        <TextBlock Classes="subtitle" Text="{loc:Localize RoutingDiag.Title}" Margin="0,0,0,5"/>
+        <Button Classes="primary" Content="{loc:Localize RoutingDiag.AnalyzeButton}"
+                Command="{Binding RightPanel.RoutingDiagnostics.RunDiagnosticsCommand}" Margin="0,5,0,5" HorizontalAlignment="Stretch"
                 IsEnabled="{Binding RightPanel.RoutingDiagnostics.IsAnalyzing, Converter={x:Static BoolConverters.Not}}"/>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
             <Button Content="{loc:Localize RoutingDiag.ExportJson}"
-                    Command="{Binding RightPanel.RoutingDiagnostics.ExportPathsJsonCommand}"
-                    MinWidth="100" Margin="0,0,5,0" Padding="8,4" Background="{DynamicResource Brush.Accent.Subtle}"/>
-            <Button Content="📋"
-                    Command="{Binding RightPanel.RoutingDiagnostics.CopyPathsJsonToClipboardCommand}"
-                    Width="36" Background="{DynamicResource Brush.Accent.Subtle}" ToolTip.Tip="{loc:Localize RoutingDiag.CopyTip}"/>
+                    Command="{Binding RightPanel.RoutingDiagnostics.ExportPathsJsonCommand}" Margin="0,0,5,0"/>
+            <Button Classes="icon"
+                    Command="{Binding RightPanel.RoutingDiagnostics.CopyPathsJsonToClipboardCommand}" ToolTip.Tip="{loc:Localize RoutingDiag.CopyTip}">
+                <controls:Icon Data="{StaticResource Icon.Copy}"/>
+            </Button>
         </StackPanel>
-        <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.StatusText}"
-                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,3"
+        <TextBlock Classes="caption" Text="{Binding RightPanel.RoutingDiagnostics.StatusText}" Margin="0,0,0,3"
                    IsVisible="{Binding RightPanel.RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,5"
                     IsVisible="{Binding RightPanel.RoutingDiagnostics.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <TextBlock Text="{loc:Localize RoutingDiag.Valid}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+            <TextBlock Classes="caption" Text="{loc:Localize RoutingDiag.Valid}"/>
             <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.ValidConnections}" Foreground="{DynamicResource Brush.Success}"/>
             <TextBlock Text="/" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
             <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.TotalConnections}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-            <TextBlock Text="{loc:Localize RoutingDiag.Issues}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+            <TextBlock Classes="caption" Text="{loc:Localize RoutingDiag.Issues}"/>
             <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.IssueCount}" Foreground="{DynamicResource Brush.Danger}"/>
         </StackPanel>
         <ScrollViewer MaxHeight="150" Margin="0,5,0,0"
                       IsVisible="{Binding RightPanel.RoutingDiagnostics.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <TextBlock Text="{Binding RightPanel.RoutingDiagnostics.ResultText}" Foreground="{DynamicResource Brush.Text.Secondary}"
-                       FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="NoWrap"/>
+            <TextBlock Classes="mono" Text="{Binding RightPanel.RoutingDiagnostics.ResultText}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                       FontSize="{DynamicResource FontSize.Caption}" TextWrapping="NoWrap"/>
         </ScrollViewer>
     </StackPanel>
 

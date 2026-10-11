@@ -64,6 +64,20 @@
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
 
+  <!-- Result areas: add Classes="fade-in" and Classes.shown="{Binding HasResult}" so the block
+       fades in (Motion.Normal-ish, 150 ms) when its results arrive -->
+  <Style Selector=":is(Control).fade-in">
+    <Setter Property="Opacity" Value="0"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=":is(Control).fade-in.shown">
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+
   <!-- Chips -->
   <Style Selector="Border.chip">
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Pill}"/>

@@ -13,22 +13,20 @@
 
     <StackPanel Spacing="8">
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <ha:WaveguideCrossingHelpAnimation IsHitTestVisible="False"/>
         </Border>
 
         <Grid ColumnDefinitions="*,*">
-            <TextBlock Grid.Column="0" Text="{loc:Localize DesignChecks.CrossingHelp.BareXCaption}"
-                       FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
-            <TextBlock Grid.Column="1" Text="{loc:Localize DesignChecks.CrossingHelp.ComponentCaption}"
-                       FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
+            <TextBlock Classes="caption" Grid.Column="0" Text="{loc:Localize DesignChecks.CrossingHelp.BareXCaption}" HorizontalAlignment="Center"/>
+            <TextBlock Classes="caption" Grid.Column="1" Text="{loc:Localize DesignChecks.CrossingHelp.ComponentCaption}" HorizontalAlignment="Center"/>
         </Grid>
 
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize DesignChecks.CrossingHelp.Body1}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize DesignChecks.CrossingHelp.Body2}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize DesignChecks.CrossingHelp.Body3}"/>
     </StackPanel>
 

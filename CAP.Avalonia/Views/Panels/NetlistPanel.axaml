@@ -1,30 +1,31 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.NetlistPanel"
              x:DataType="vm:MainViewModel">
 
     <!-- Hosted as the Netlist tab of the analysis dock (formerly a right-sidebar section). -->
-    <StackPanel Margin="10,8">
-        <TextBlock Text="{loc:Localize Netlist.Title}" Foreground="{DynamicResource Brush.Danger}" Margin="0,0,0,5" FontWeight="SemiBold"
+    <StackPanel Margin="{DynamicResource Padding.Panel}">
+        <TextBlock Classes="subtitle" Text="{loc:Localize Netlist.Title}" Margin="0,0,0,5"
                    ToolTip.Tip="{loc:Localize NetlistPanel.TitleTip}"/>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-            <Button Content="{loc:Localize Netlist.Generate}"
-                    Command="{Binding RightPanel.Netlist.RefreshCommand}"
-                    MinWidth="80" Margin="0,0,5,0" Padding="8,4" Background="{DynamicResource Brush.Surface.Hover}"
+            <Button Classes="primary" Content="{loc:Localize Netlist.Generate}"
+                    Command="{Binding RightPanel.Netlist.RefreshCommand}" Margin="0,0,5,0"
                     ToolTip.Tip="{loc:Localize NetlistPanel.GenerateTip}"/>
-            <Button Content="💾"
-                    Command="{Binding RightPanel.Netlist.SaveYamlCommand}"
-                    Width="36" Margin="0,0,5,0" Background="{DynamicResource Brush.Accent.Subtle}"
-                    ToolTip.Tip="{loc:Localize NetlistPanel.SaveTip}"/>
-            <Button Content="📋"
+            <Button Classes="icon"
+                    Command="{Binding RightPanel.Netlist.SaveYamlCommand}" Margin="0,0,5,0"
+                    ToolTip.Tip="{loc:Localize NetlistPanel.SaveTip}">
+                <controls:Icon Data="{StaticResource Icon.Save}"/>
+            </Button>
+            <Button Classes="icon"
                     Command="{Binding RightPanel.Netlist.CopyYamlCommand}"
-                    Width="36" Background="{DynamicResource Brush.Accent.Subtle}"
-                    ToolTip.Tip="{loc:Localize NetlistPanel.CopyTip}"/>
+                    ToolTip.Tip="{loc:Localize NetlistPanel.CopyTip}">
+                <controls:Icon Data="{StaticResource Icon.Copy}"/>
+            </Button>
         </StackPanel>
-        <TextBlock Text="{Binding RightPanel.Netlist.StatusText}"
-                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,3"
+        <TextBlock Classes="caption" Text="{Binding RightPanel.Netlist.StatusText}" Margin="0,0,0,3"
                    IsVisible="{Binding RightPanel.Netlist.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <TextBox Text="{Binding RightPanel.Netlist.NetlistYaml, Mode=OneWay}"
                  IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"

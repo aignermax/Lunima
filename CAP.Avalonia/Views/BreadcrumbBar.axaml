@@ -14,9 +14,6 @@
     <StackPanel Orientation="Horizontal" Spacing="5">
       <!-- Exit to Root button -->
       <Button Content="{loc:Localize Breadcrumb.Exit}"
-              Background="{DynamicResource Brush.Surface.Hover}"
-              Foreground="{DynamicResource Brush.Info}"
-              Padding="8,4"
               ToolTip.Tip="{loc:Localize Breadcrumb.ExitTip}"
               Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).ExitToRootCommand}" />
 
@@ -25,8 +22,6 @@
       <!-- Root breadcrumb -->
       <Button Content="{loc:Localize Breadcrumb.Root}"
               Background="Transparent"
-              Foreground="{DynamicResource Brush.Text.Secondary}"
-              Padding="5,2"
               ToolTip.Tip="{loc:Localize Breadcrumb.RootTip}"
               Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).NavigateToBreadcrumbLevelCommand}"
               CommandParameter="{x:Null}" />
@@ -45,9 +40,7 @@
               <TextBlock Text="›" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
               <Button Content="{Binding GroupName}"
                       Background="Transparent"
-                      Foreground="{DynamicResource Brush.Text.Primary}"
                       FontWeight="SemiBold"
-                      Padding="5,2"
                       ToolTip.Tip="{Binding Description}"
                       Command="{Binding $parent[UserControl].((vm:DesignCanvasViewModel)DataContext).NavigateToBreadcrumbLevelCommand}"
                       CommandParameter="{Binding}" />

@@ -14,12 +14,12 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.Intro}"/>
 
         <!-- light → 0/1: strong pulse crosses the threshold, weak one stays below. -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="96">
                     <!-- Declared first so track and pulses slide *under* the gate box. -->
@@ -32,7 +32,7 @@
                     <!-- the gate -->
                     <Border Canvas.Left="110" Canvas.Top="20" Width="70" Height="40"
                             Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
-                        <TextBlock Text="{loc:Localize LogicPanelHelp.DiagramGate}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                        <TextBlock Classes="secondary" Text="{loc:Localize LogicPanelHelp.DiagramGate}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <!-- output waveguide to the power bar -->
@@ -45,29 +45,28 @@
                     <!-- animated bar fill + 0/1 badge -->
                     <ha:LogicThresholdAnimation Width="368" Height="96" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize LogicPanelHelp.AnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize LogicPanelHelp.AnimationCaption}" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.InputsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.InputsTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.InputsBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.BusTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.BusTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.BusBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.RegisterTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.RegisterTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.RegisterBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.RestorationTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.RestorationTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.RestorationBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelHelp.RunResetTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelHelp.RunResetTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelHelp.RunResetBody}"/>
     </StackPanel>
 

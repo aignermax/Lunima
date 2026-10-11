@@ -13,23 +13,20 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock Text="{loc:Localize MonteCarloHelp.ScatterTitle}"
-                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize MonteCarloHelp.ScatterTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize MonteCarloHelp.ScatterBody}"/>
 
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <ha:MonteCarloScatterAnimation Width="368" Height="150" IsHitTestVisible="False"/>
-                <TextBlock Text="{loc:Localize MonteCarloHelp.AnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize MonteCarloHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize MonteCarloHelp.YieldTitle}"
-                   FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize MonteCarloHelp.YieldTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize MonteCarloHelp.YieldBody}"/>
 
     </StackPanel>

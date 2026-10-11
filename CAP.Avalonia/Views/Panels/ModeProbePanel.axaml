@@ -9,17 +9,15 @@
 
   <!-- Non-modal mode-slice probe flyout (issue #691). Opens at the canvas click
        point; the user keeps full access to the canvas while it is shown. -->
-  <Border Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Border.Strong}" BorderThickness="1"
-          CornerRadius="6" Padding="10" Width="300"
-          BoxShadow="0 4 12 0 #99000000">
+  <Border Classes="overlay" Padding="10" Width="300">
     <StackPanel Spacing="6">
 
       <!-- Header -->
       <DockPanel>
-        <Button DockPanel.Dock="Right" Content="✕" Padding="4,0"
-                Background="Transparent" Foreground="{DynamicResource Brush.Text.Secondary}"
-                Command="{Binding CloseCommand}"
-                ToolTip.Tip="{loc:Localize ModeProbe.CloseTip}"/>
+        <Button DockPanel.Dock="Right" Classes="ghost icon" Command="{Binding CloseCommand}"
+                ToolTip.Tip="{loc:Localize ModeProbe.CloseTip}">
+          <controls:Icon Data="{StaticResource Icon.X}"/>
+        </Button>
         <controls:HelpFlyoutButton DockPanel.Dock="Right" Margin="0,0,4,0"
                                    VerticalAlignment="Center"
                                    Title="{loc:Localize ModeProbeHelp.Title}">
@@ -34,7 +32,7 @@
 
       <!-- Interference-region notice (MMI etc.) -->
       <Border Background="{DynamicResource Brush.Warning.Subtle}" BorderBrush="{DynamicResource Brush.Warning}" BorderThickness="1"
-              CornerRadius="4" Padding="8"
+              CornerRadius="{DynamicResource Radius.S}" Padding="8"
               IsVisible="{Binding IsInterferenceRegion}">
         <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Brush.Warning}" FontSize="{DynamicResource FontSize.Caption}"
                    Text="{loc:Localize ModeProbe.InterferenceNotice}"/>
@@ -46,13 +44,12 @@
         <!-- Cross-section provenance -->
         <TextBlock Text="{Binding CrossSectionText}" Foreground="{DynamicResource Brush.Accent.Hover}" FontSize="{DynamicResource FontSize.Caption}"/>
         <Border Background="{DynamicResource Brush.Warning.Subtle}" BorderBrush="{DynamicResource Brush.Warning}" BorderThickness="1"
-                CornerRadius="4" Padding="6"
+                CornerRadius="{DynamicResource Radius.S}" Padding="6"
                 IsVisible="{Binding IsGeometryAssumed}">
           <StackPanel Spacing="2">
             <TextBlock Text="{loc:Localize ModeProbe.GeometryAssumed}" Foreground="{DynamicResource Brush.Warning}"
                        FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding GeometrySourceText}" Foreground="{DynamicResource Brush.Text.Secondary}"
-                       FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap"/>
+            <TextBlock Classes="secondary" Text="{Binding GeometrySourceText}" TextWrapping="Wrap"/>
           </StackPanel>
         </Border>
 
@@ -92,7 +89,7 @@
 
           <!-- Fiber overlap (grating/edge couplers only) -->
           <Border Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Info}" BorderThickness="1"
-                  CornerRadius="4" Padding="6"
+                  CornerRadius="{DynamicResource Radius.S}" Padding="6"
                   IsVisible="{Binding ShowFiberOverlap}">
             <StackPanel Spacing="3">
               <TextBlock Text="{loc:Localize ModeProbe.FiberOverlap}" Foreground="{DynamicResource Brush.Accent.Hover}"
@@ -118,7 +115,7 @@
       </StackPanel>
 
       <!-- Status / errors -->
-      <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}"
+      <TextBlock Classes="secondary" Text="{Binding StatusText}"
                  TextWrapping="Wrap"
                  IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
     </StackPanel>

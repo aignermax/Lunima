@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CAP.Avalonia.ViewModels"
              xmlns:ai="using:CAP.Avalonia.ViewModels.AI"
+             xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              x:Class="CAP.Avalonia.Views.Panels.AiAssistantPanel"
              x:DataType="vm:MainViewModel">
@@ -18,17 +19,14 @@
             <Button DockPanel.Dock="Right"
                     Content="{loc:Localize AiAssistant.Clear}"
                     Command="{Binding RightPanel.AiAssistant.ClearHistoryCommand}"
-                    FontSize="{DynamicResource FontSize.Caption}" Padding="6,2"
-                    Background="{DynamicResource Brush.Surface.Hover}" Foreground="{DynamicResource Brush.Text.Tertiary}"
                     HorizontalAlignment="Right"/>
         </DockPanel>
 
-        <TextBlock Text="{loc:Localize AiAssistant.Description}"
-                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+        <TextBlock Classes="caption" Text="{loc:Localize AiAssistant.Description}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
         <!-- Chat history -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Margin="0,0,0,8">
+                CornerRadius="{DynamicResource Radius.S}" Margin="0,0,0,8">
             <ScrollViewer Height="220"
                           VerticalScrollBarVisibility="Auto"
                           x:Name="ChatScrollViewer">
@@ -36,12 +34,10 @@
                               Margin="6">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="ai:AiChatMessage">
-                            <Border Margin="0,3" Padding="8,6" CornerRadius="4"
+                            <Border Margin="0,3" Padding="8,6" CornerRadius="{DynamicResource Radius.S}"
                                     Background="{Binding MessageBackground}">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding RoleLabel}"
-                                               FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3"/>
+                                    <TextBlock Classes="caption" Text="{Binding RoleLabel}" FontWeight="SemiBold" Margin="0,0,0,3"/>
                                     <SelectableTextBlock Text="{Binding Content}"
                                                          Foreground="{DynamicResource Brush.Text.Primary}"
                                                          FontSize="{DynamicResource FontSize.Caption}"
@@ -55,14 +51,12 @@
         </Border>
 
         <!-- Typing indicator -->
-        <TextBlock Text="{loc:Localize AiAssistant.Thinking}"
-                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" FontStyle="Italic"
+        <TextBlock Classes="caption" Text="{loc:Localize AiAssistant.Thinking}" FontStyle="Italic"
                    Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
 
         <!-- Status text -->
-        <TextBlock Text="{Binding RightPanel.AiAssistant.StatusText}"
-                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5"
+        <TextBlock Classes="caption" Text="{Binding RightPanel.AiAssistant.StatusText}" Margin="0,0,0,5"
                    IsVisible="{Binding RightPanel.AiAssistant.StatusText,
                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
@@ -77,18 +71,16 @@
                      FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,5,0"
                      IsEnabled="{Binding RightPanel.AiAssistant.IsTyping,
                                  Converter={x:Static BoolConverters.Not}}"/>
-            <Button Grid.Column="1"
+            <Button Grid.Column="1" Classes="primary"
                     Content="{loc:Localize AiAssistant.Send}"
                     Command="{Binding RightPanel.AiAssistant.SendMessageCommand}"
-                    Background="{DynamicResource Brush.Info.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}"
-                    Width="50" Margin="0,0,4,0"/>
-            <Button Grid.Column="2"
-                    Content="✕"
+                    Margin="0,0,4,0"/>
+            <Button Classes="icon" Grid.Column="2"
                     Command="{Binding RightPanel.AiAssistant.CancelRequestCommand}"
-                    Background="{DynamicResource Brush.Danger.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}"
-                    Width="28"
                     ToolTip.Tip="{loc:Localize AiPanel.CancelTip}"
-                    IsVisible="{Binding RightPanel.AiAssistant.IsTyping}"/>
+                    IsVisible="{Binding RightPanel.AiAssistant.IsTyping}">
+                <controls:Icon Data="{StaticResource Icon.X}"/>
+            </Button>
         </Grid>
 
         <!-- API-key shortcut: visible only when no key is configured yet.
@@ -96,9 +88,7 @@
         <Button Content="{loc:Localize AiAssistant.SetApiKey}"
                 Command="{Binding OpenAiSettingsCommand}"
                 HorizontalAlignment="Stretch"
-                Margin="0,5,0,0" Padding="6,4"
-                Background="{DynamicResource Brush.Accent.Subtle}" Foreground="{DynamicResource Brush.Info}"
-                FontSize="{DynamicResource FontSize.Caption}"
+                Margin="0,5,0,0"
                 IsVisible="{Binding RightPanel.AiAssistant.IsApiKeySet,
                             Converter={x:Static BoolConverters.Not}}"
                 ToolTip.Tip="{loc:Localize AiPanel.SetApiKeyTip}"/>

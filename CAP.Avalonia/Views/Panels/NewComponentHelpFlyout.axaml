@@ -13,12 +13,12 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="{DynamicResource FontSize.Caption}"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize NewComponent.HelpBody}"/>
 
         <!-- code → component → canvas: one pulse per arrow per loop half. -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="88">
                     <!-- code editor sketch -->
@@ -60,32 +60,27 @@
                                             PulseBrush="{DynamicResource Brush.Accent}" PulseDiameter="6"
                                             WindowStart="0.5" WindowEnd="1" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize NewComponent.HelpAnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize NewComponent.HelpAnimationCaption}" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize NewComponent.GdsFactoryExample}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"/>
+        <TextBlock Classes="secondary" Text="{loc:Localize NewComponent.GdsFactoryExample}" FontWeight="SemiBold"/>
         <Grid ColumnDefinitions="*,Auto">
             <TextBox Grid.Column="0" x:Name="GdsFactoryExampleBox" IsReadOnly="True"
                      Text="import gdsfactory as gf&#10;component = gf.components.mmi1x2()"
                      AcceptsReturn="True" TextWrapping="NoWrap"
                      FontFamily="Consolas, Cascadia Mono, Courier New, monospace" FontSize="{DynamicResource FontSize.Caption}"
                      Background="{DynamicResource Brush.Surface.Input}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyGdsFactoryExample"
-                    FontSize="{DynamicResource FontSize.Caption}" Padding="6,1" Margin="4,0,0,0" VerticalAlignment="Top"
-                    Background="{DynamicResource Brush.Accent.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}" BorderThickness="0"/>
+            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyGdsFactoryExample" Margin="4,0,0,0" VerticalAlignment="Top" BorderThickness="0"/>
         </Grid>
-        <TextBlock Text="{loc:Localize NewComponent.NazcaExample}" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{DynamicResource FontSize.Caption}" FontWeight="SemiBold"/>
+        <TextBlock Classes="secondary" Text="{loc:Localize NewComponent.NazcaExample}" FontWeight="SemiBold"/>
         <Grid ColumnDefinitions="*,Auto">
             <TextBox Grid.Column="0" x:Name="NazcaExampleBox" IsReadOnly="True"
                      Text="import nazca as nd&#10;&#10;def component():&#10;    with nd.Cell(name='my_component') as c:&#10;        nd.strt(length=20, width=0.5).put(0)&#10;        nd.Pin('a0').put(0, 0, 180)&#10;        nd.Pin('b0').put(20, 0, 0)&#10;    return c"
                      AcceptsReturn="True" TextWrapping="NoWrap"
                      FontFamily="Consolas, Cascadia Mono, Courier New, monospace" FontSize="{DynamicResource FontSize.Caption}"
                      Background="{DynamicResource Brush.Surface.Input}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyNazcaExample"
-                    FontSize="{DynamicResource FontSize.Caption}" Padding="6,1" Margin="4,0,0,0" VerticalAlignment="Top"
-                    Background="{DynamicResource Brush.Accent.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}" BorderThickness="0"/>
+            <Button Grid.Column="1" Content="{loc:Localize Context.Copy}" Click="OnCopyNazcaExample" Margin="4,0,0,0" VerticalAlignment="Top" BorderThickness="0"/>
         </Grid>
     </StackPanel>
 

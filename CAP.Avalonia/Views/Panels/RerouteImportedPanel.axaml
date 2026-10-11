@@ -9,8 +9,8 @@
          imported routes — on the canvas or inside component groups (the standard GDS
          import groups everything) — or a re-route just ran, so the delta stays readable. -->
     <StackPanel IsVisible="{Binding BottomPanel.RerouteImported.IsPanelVisible}">
-        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
-        <TextBlock Text="{loc:Localize Routing.Reroute.Title}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,0,5" FontWeight="SemiBold"/>
+        <Border Classes="divider" Margin="0,12,0,8"/>
+        <TextBlock Classes="subtitle" Text="{loc:Localize Routing.Reroute.Title}" Margin="0,0,0,5"/>
 
         <TextBlock Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,6" TextWrapping="Wrap"
                    IsVisible="{Binding BottomPanel.RerouteImported.HasFrozenImportedRoutes}"

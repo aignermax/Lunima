@@ -17,13 +17,13 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize PdkHelp.Intro}"/>
 
         <!-- a process belongs to its chiplet: A snaps onto chiplet A, B is rejected
              there and lands on chiplet B; seated components let light flow. -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="124">
                     <!-- Chiplet A (process A, green frame) with its component slot. -->
@@ -31,15 +31,13 @@
                             Background="{DynamicResource Brush.Surface.Raised}" BorderBrush="{DynamicResource Brush.Success}" BorderThickness="1" CornerRadius="4"/>
                     <Rectangle Canvas.Left="60" Canvas.Top="66" Width="26" Height="26"
                                Stroke="{DynamicResource Brush.Success}" StrokeThickness="1" StrokeDashArray="3,2" RadiusX="3" RadiusY="3"/>
-                    <TextBlock Canvas.Left="16" Canvas.Top="108" Text="{loc:Localize PdkHelp.DiagramChipletA}"
-                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="caption" Canvas.Left="16" Canvas.Top="108" Text="{loc:Localize PdkHelp.DiagramChipletA}"/>
                     <!-- Chiplet B (process B, orange frame) with its component slot. -->
                     <Border Canvas.Left="212" Canvas.Top="52" Width="140" Height="52"
                             Background="{DynamicResource Brush.Surface.Raised}" BorderBrush="{DynamicResource Brush.Warning}" BorderThickness="1" CornerRadius="4"/>
                     <Rectangle Canvas.Left="256" Canvas.Top="66" Width="26" Height="26"
                                Stroke="{DynamicResource Brush.Warning}" StrokeThickness="1" StrokeDashArray="3,2" RadiusX="3" RadiusY="3"/>
-                    <TextBlock Canvas.Left="212" Canvas.Top="108" Text="{loc:Localize PdkHelp.DiagramChipletB}"
-                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="caption" Canvas.Left="212" Canvas.Top="108" Text="{loc:Localize PdkHelp.DiagramChipletB}"/>
                     <!-- Waveguide pulses on the chiplet surfaces (over the chiplet
                          backgrounds, under the moving components in the overlay):
                          light only flows once the matching component sits on the
@@ -53,21 +51,20 @@
                     <!-- moving components, the rejection cross and the red flash -->
                     <pdk:ChipletProcessAnimation Width="368" Height="124" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize PdkHelp.AnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize PdkHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize PdkHelp.WhatIsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize PdkHelp.WhatIsTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize PdkHelp.WhatIsBody}"/>
 
-        <TextBlock Text="{loc:Localize PdkHelp.ProcessTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize PdkHelp.ProcessTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize PdkHelp.ProcessBody}"/>
 
-        <TextBlock Text="{loc:Localize PdkHelp.NoMixTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize PdkHelp.NoMixTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize PdkHelp.NoMixBody}"/>
     </StackPanel>
 

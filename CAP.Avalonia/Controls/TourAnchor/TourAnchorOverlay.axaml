@@ -18,7 +18,7 @@
 
     <!-- Pulsing spotlight outline -->
     <Border x:Name="Spotlight" BorderBrush="{DynamicResource Brush.Success}" BorderThickness="2"
-            CornerRadius="4" IsHitTestVisible="False">
+            CornerRadius="{DynamicResource Radius.S}" IsHitTestVisible="False">
       <Border.Styles>
         <Style Selector="Border#Spotlight">
           <Style.Animations>

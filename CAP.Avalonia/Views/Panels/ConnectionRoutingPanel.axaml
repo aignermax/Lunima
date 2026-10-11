@@ -9,14 +9,14 @@
     <!-- Connection Routing: routing style only. The style reshapes the visible canvas curve;
          width/radius are applied automatically from the interconnect defaults (no manual UI). -->
     <StackPanel IsVisible="{Binding CanvasInteraction.IsConnectionSelected}">
-        <Separator Margin="0,20,0,10" Background="{DynamicResource Brush.Surface.Hover}"/>
+        <Border Classes="divider" Margin="0,12,0,8"/>
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Localize Routing.Connection.Title}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,0,5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Classes="subtitle" Text="{loc:Localize Routing.Connection.Title}" Margin="0,0,0,5" VerticalAlignment="Center"/>
             <!-- Plain-language help: why sharp bends lose light and where the minimum
                  bend radius comes from (the PDK / cross-section). -->
             <controls:HelpFlyoutButton Grid.Column="1"
                                        Title="{loc:Localize BendRadiusHelp.Title}"
-                                       VerticalAlignment="Center" Margin="0,-5,0,0">
+                                       VerticalAlignment="Center">
                 <controls:HelpFlyoutButton.HelpContent>
                     <StackPanel Spacing="8" MaxWidth="400">
                         <StackPanel.Styles>
@@ -31,42 +31,42 @@
                             </Style>
                         </StackPanel.Styles>
 
-                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
+                        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.Intro}"/>
 
                         <!-- Diagram: sharp bend leaks, smooth bend keeps the mode. -->
                         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                                CornerRadius="4" Padding="4">
+                                CornerRadius="{DynamicResource Radius.S}" Padding="4">
                             <Canvas Width="360" Height="90">
                                 <!-- Smooth bend (top). -->
                                 <Path Data="M 20,25 L 120,25 C 180,25 180,65 240,65 L 340,65"
                                       Stroke="{DynamicResource Brush.Info}" StrokeThickness="4"/>
                                 <Ellipse Canvas.Left="168" Canvas.Top="21" Width="14" Height="14" Fill="{DynamicResource Brush.Warning}"/>
-                                <TextBlock Canvas.Left="10" Canvas.Top="72" Text="{loc:Localize BendRadiusHelp.DiagramSmooth}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                <TextBlock Classes="caption" Canvas.Left="10" Canvas.Top="72" Text="{loc:Localize BendRadiusHelp.DiagramSmooth}"/>
                                 <!-- Sharp bend (bottom). -->
                                 <Path Data="M 20,45 L 160,45 L 160,75 L 340,75"
                                       Stroke="{DynamicResource Brush.Info}" StrokeThickness="4"/>
                                 <Ellipse Canvas.Left="162" Canvas.Top="49" Width="8" Height="8" Fill="{DynamicResource Brush.Warning}"/>
                                 <Ellipse Classes="leak" Canvas.Left="166" Canvas.Top="42" Width="5" Height="5" Fill="{DynamicResource Brush.Danger}"/>
                                 <Ellipse Classes="leak" Canvas.Left="166" Canvas.Top="54" Width="5" Height="5" Fill="{DynamicResource Brush.Danger}"/>
-                                <TextBlock Canvas.Left="10" Canvas.Top="82" Text="{loc:Localize BendRadiusHelp.DiagramSharp}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                <TextBlock Classes="caption" Canvas.Left="10" Canvas.Top="82" Text="{loc:Localize BendRadiusHelp.DiagramSharp}"/>
                             </Canvas>
                         </Border>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.LossTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.LossTitle}"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.LossBody}"/>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.PdkTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.PdkTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.PdkBody}"/>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.AutoTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.AutoTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.AutoBody}"/>
 
-                        <TextBlock Text="{loc:Localize BendRadiusHelp.SbendTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                        <TextBlock Classes="strong" Text="{loc:Localize BendRadiusHelp.SbendTitle}" Margin="0,4,0,0"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="{loc:Localize BendRadiusHelp.SbendBody}"/>
                     </StackPanel>
                 </controls:HelpFlyoutButton.HelpContent>
@@ -78,7 +78,7 @@
                    IsVisible="{Binding BottomPanel.ConnectionRouting.IsBatchSelection}"
                    Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3" TextWrapping="Wrap"/>
 
-        <TextBlock Text="{loc:Localize Routing.Connection.Style}" Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,0,3"/>
+        <TextBlock Classes="caption" Text="{loc:Localize Routing.Connection.Style}" Margin="0,0,0,3"/>
         <ComboBox ItemsSource="{Binding BottomPanel.ConnectionRouting.RoutingStyles}"
                   SelectedItem="{Binding BottomPanel.ConnectionRouting.SelectedStyle}"
                   Width="180" Margin="0,0,0,8"/>

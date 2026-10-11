@@ -13,13 +13,13 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize SpectrumCoherentHelp.Intro}"/>
 
         <!-- ΔL → fringes: the longer arm delays its wave; the swept wavelength turns
              that delay into a pulsing output. -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="150">
                     <!-- input + splitter -->
@@ -38,17 +38,16 @@
                     <Line StartPoint="268,68" EndPoint="336,68" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="2"/>
                     <!-- labels (language-neutral symbols) -->
                     <TextBlock Canvas.Left="145" Canvas.Top="62" Text="ΔL" FontSize="{DynamicResource FontSize.Caption}" FontWeight="Bold" Foreground="{DynamicResource Brush.Info}"/>
-                    <TextBlock Canvas.Left="4" Canvas.Top="132" Text="λ →" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="caption" Canvas.Left="4" Canvas.Top="132" Text="λ →"/>
                     <!-- animated wavefronts, output glow, fringe curve + marker -->
                     <ha:MziFringeAnimation Width="368" Height="150" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize SpectrumCoherentHelp.AnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize SpectrumCoherentHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize SpectrumCoherentHelp.FsrTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize SpectrumCoherentHelp.FsrTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize SpectrumCoherentHelp.FsrBody}"/>
     </StackPanel>
 

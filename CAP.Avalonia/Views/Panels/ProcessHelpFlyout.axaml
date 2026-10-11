@@ -11,39 +11,38 @@
 
     <StackPanel Spacing="8">
 
-        <TextBlock Text="{loc:Localize ProcessManagement.WhatIsProcess}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize ProcessManagement.WhatIsProcess}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize ProcessManagement.HelpIntro}"/>
 
         <!-- Fabrication layer-stack animation (cross-section, builds bottom→top). -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <Canvas Width="360" Height="112">
-                <TextBlock Canvas.Left="2" Canvas.Top="2" Text="{loc:Localize ProcessManagement.ChipBuiltLayers}"
-                           FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="2" Text="{loc:Localize ProcessManagement.ChipBuiltLayers}"/>
                 <ha:LayerStackAnimation Width="360" Height="112" IsHitTestVisible="False"
                                         LoopDuration="0:0:5"/>
-                <TextBlock Canvas.Left="306" Canvas.Top="84" Text="{loc:Localize ProcessManagement.LayerSubstrate}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                <TextBlock Classes="caption" Canvas.Left="306" Canvas.Top="84" Text="{loc:Localize ProcessManagement.LayerSubstrate}"/>
                 <TextBlock Canvas.Left="306" Canvas.Top="70" Text="{loc:Localize ProcessManagement.LayerCore}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Success}"/>
                 <TextBlock Canvas.Left="306" Canvas.Top="56" Text="{loc:Localize ProcessManagement.LayerCladding}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Accent.Hover}"/>
                 <TextBlock Canvas.Left="306" Canvas.Top="42" Text="{loc:Localize ProcessManagement.LayerMetal}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Warning}"/>
             </Canvas>
         </Border>
 
-        <TextBlock Text="{loc:Localize ProcessManagement.LayersHeading}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize ProcessManagement.LayersHeading}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize ProcessManagement.HelpLayersBody}"/>
 
-        <TextBlock Text="{loc:Localize ProcessManagement.CrossSectionsHeading}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize ProcessManagement.CrossSectionsHeading}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize ProcessManagement.HelpCrossSectionsBody}"/>
 
-        <TextBlock Text="{loc:Localize ProcessManagement.Materials}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize ProcessManagement.Materials}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize ProcessManagement.HelpMaterialsBody}"/>
 
-        <TextBlock Text="{loc:Localize ProcessManagement.ElectricalRoutingHeading}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize ProcessManagement.ElectricalRoutingHeading}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize ProcessManagement.HelpElectricalBody}"/>
 
     </StackPanel>

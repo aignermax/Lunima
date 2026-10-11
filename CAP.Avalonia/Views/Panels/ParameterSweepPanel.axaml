@@ -9,39 +9,38 @@
 
     <!-- Parameter Sweep tab of the analysis dock: sweeps the selected component's
          slider parameter over a range and lists the resulting output powers. -->
-    <StackPanel Margin="10,8">
-        <TextBlock Text="{loc:Localize Sweep.Title}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,0,5" FontWeight="SemiBold"/>
+    <StackPanel Margin="{DynamicResource Padding.Panel}">
+        <TextBlock Classes="subtitle" Text="{loc:Localize Sweep.Title}" Margin="0,0,0,5"/>
 
         <!-- Empty state: the sweep needs a component with a tunable slider parameter. -->
-        <TextBlock Text="{loc:Localize Sweep.NoSliderHint}"
-                   Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" MaxWidth="420"
+        <TextBlock Classes="caption" Text="{loc:Localize Sweep.NoSliderHint}" TextWrapping="Wrap" MaxWidth="420"
                    HorizontalAlignment="Left"
                    IsVisible="{Binding !CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=True}"/>
 
         <StackPanel IsVisible="{Binding CanvasInteraction.SelectedComponent.HasSliders, FallbackValue=False}">
             <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                <TextBlock Text="{loc:Localize Sweep.Start}" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center" Width="45"/>
+                <TextBlock Classes="caption" Text="{loc:Localize Sweep.Start}" VerticalAlignment="Center" Width="45"/>
                 <NumericUpDown Value="{Binding RightPanel.Sweep.StartValue}"
                                Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
                                Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
                                Increment="10" Width="130" FormatString="F0"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                <TextBlock Text="{loc:Localize Sweep.End}" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center" Width="45"/>
+                <TextBlock Classes="caption" Text="{loc:Localize Sweep.End}" VerticalAlignment="Center" Width="45"/>
                 <NumericUpDown Value="{Binding RightPanel.Sweep.EndValue}"
                                Minimum="{Binding CanvasInteraction.SelectedComponent.SliderMin}"
                                Maximum="{Binding CanvasInteraction.SelectedComponent.SliderMax}"
                                Increment="10" Width="130" FormatString="F0"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                <TextBlock Text="{loc:Localize Sweep.Steps}" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center" Width="45"/>
+                <TextBlock Classes="caption" Text="{loc:Localize Sweep.Steps}" VerticalAlignment="Center" Width="45"/>
                 <NumericUpDown Value="{Binding RightPanel.Sweep.StepCount}"
                                Minimum="2" Maximum="100"
                                Increment="1" Width="130" FormatString="F0"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                <Button Content="{loc:Localize Sweep.Run}" Command="{Binding RightPanel.Sweep.RunSweepCommand}"
-                        Width="120" Background="{DynamicResource Brush.Success.Subtle}"
+                <Button Classes="primary" Content="{loc:Localize Sweep.Run}" Command="{Binding RightPanel.Sweep.RunSweepCommand}"
+                        Width="120"
                         IsEnabled="{Binding RightPanel.Sweep.IsSweeping, Converter={x:Static BoolConverters.Not}}"/>
                 <!-- Plain-language help (#1352): what a sweep re-simulates and how to
                      read the curve (sensitivity, cos² fringe, quadrature point). Same
@@ -53,15 +52,14 @@
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
             </StackPanel>
-            <TextBlock Text="{Binding RightPanel.Sweep.StatusText}" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" Margin="0,0,0,5"
+            <TextBlock Classes="caption" Text="{Binding RightPanel.Sweep.StatusText}" Margin="0,0,0,5"
                        IsVisible="{Binding RightPanel.Sweep.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             <ScrollViewer MaxHeight="200" Margin="0,5,0,0"
                           IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                <TextBlock Text="{Binding RightPanel.Sweep.ResultText}" Foreground="{DynamicResource Brush.Success}"
-                           FontFamily="Consolas" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="NoWrap"/>
+                <TextBlock Classes="mono" Text="{Binding RightPanel.Sweep.ResultText}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                           FontSize="{DynamicResource FontSize.Caption}" TextWrapping="NoWrap"/>
             </ScrollViewer>
-            <Button Content="{loc:Localize Sweep.ExportCsv}" Command="{Binding RightPanel.Sweep.ExportCsvCommand}"
-                    Width="100" Margin="0,5,0,0" Background="{DynamicResource Brush.Accent.Subtle}"
+            <Button Content="{loc:Localize Sweep.ExportCsv}" Command="{Binding RightPanel.Sweep.ExportCsvCommand}" Margin="0,5,0,0"
                     IsVisible="{Binding RightPanel.Sweep.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         </StackPanel>
     </StackPanel>

@@ -17,13 +17,13 @@
 
     <StackPanel Spacing="8" MaxWidth="400">
 
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Primary}"
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelFanOutHelp.Intro}"/>
 
         <!-- brightness = power: every split halves it, so the quarter-power branches
              fall below the gate threshold and their badge flips to "?". -->
         <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                CornerRadius="4" Padding="4">
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
             <StackPanel Spacing="2">
                 <Canvas Width="368" Height="168">
                     <!-- Declared first so tracks and pulses slide *under* the gate boxes. -->
@@ -84,17 +84,16 @@
                     <!-- animated threshold lines and badges -->
                     <ha:PowerSplitAnimation Width="368" Height="168" IsHitTestVisible="False"/>
                 </Canvas>
-                <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.AnimationCaption}"
-                           Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{DynamicResource FontSize.Caption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Classes="caption" Text="{loc:Localize LogicPanelFanOutHelp.AnimationCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.PhysicsTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelFanOutHelp.PhysicsTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelFanOutHelp.PhysicsBody}"/>
 
-        <TextBlock Text="{loc:Localize LogicPanelFanOutHelp.ExamplesTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-        <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+        <TextBlock Classes="strong" Text="{loc:Localize LogicPanelFanOutHelp.ExamplesTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
                    Text="{loc:Localize LogicPanelFanOutHelp.ExamplesBody}"/>
     </StackPanel>
 

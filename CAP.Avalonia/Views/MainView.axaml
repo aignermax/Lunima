@@ -14,13 +14,13 @@
                       Background="{DynamicResource Brush.Surface.Raised}"
                       Height="40">
             <StackPanel Orientation="Horizontal">
-                <Button Content="+" Command="{Binding ZoomInCommand}" Width="40" Margin="5"/>
-                <Button Content="-" Command="{Binding ZoomOutCommand}" Width="40" Margin="5"/>
-                <Button Content="{loc:Localize MainView.ResetZoom}" Command="{Binding ResetZoomCommand}" Width="60" Margin="5"/>
+                <Button Content="+" Command="{Binding ZoomInCommand}" Margin="5"/>
+                <Button Content="-" Command="{Binding ZoomOutCommand}" Margin="5"/>
+                <Button Content="{loc:Localize MainView.ResetZoom}" Command="{Binding ResetZoomCommand}" Margin="5"/>
                 <TextBlock Text="{Binding ZoomLevel, StringFormat=Zoom: {0:P0}}"
                            VerticalAlignment="Center" Margin="10,0" Foreground="{DynamicResource Brush.Text.Primary}"/>
                 <Border Width="1" Background="{DynamicResource Brush.Border.Strong}" Margin="5,5"/>
-                <Button Content="{loc:Localize MainView.Simulate}" Command="{Binding RunSimulationCommand}" Width="100" Margin="5"/>
+                <Button Content="{loc:Localize MainView.Simulate}" Command="{Binding RunSimulationCommand}" Margin="5"/>
             </StackPanel>
         </ScrollViewer>
 
@@ -32,7 +32,7 @@
                 <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
                         Command="{Binding Canvas.StopRoutingCommand}"
                         IsVisible="{Binding Canvas.IsRouting}"
-                        VerticalAlignment="Center" Margin="6,0,0,0" FontSize="{DynamicResource FontSize.Caption}"
+                        VerticalAlignment="Center" Margin="6,0,0,0"
                         ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
             </Grid>
         </Border>

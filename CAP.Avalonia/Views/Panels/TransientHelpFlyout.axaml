@@ -16,7 +16,7 @@
 
             <!-- Looping animation: laser → chip → split to two outputs. -->
             <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-                    CornerRadius="4" Padding="4">
+                    CornerRadius="{DynamicResource Radius.S}" Padding="4">
                 <Canvas Width="380" Height="80">
                     <!-- Animated light pulses (in, then split top/bottom). Declared first so
                          tracks and pulses slide *under* the chip box: the pulse visibly
@@ -32,12 +32,11 @@
                                             WindowStart="0.5" WindowEnd="1"/>
                     <!-- Laser source -->
                     <Ellipse Canvas.Left="10" Canvas.Top="30" Width="20" Height="20" Fill="{DynamicResource Brush.Warning}"/>
-                    <TextBlock Canvas.Left="2" Canvas.Top="54" Text="{loc:Localize TransientHelp.DiagramLightSource}"
-                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="54" Text="{loc:Localize TransientHelp.DiagramLightSource}"/>
                     <!-- The user's circuit -->
                     <Border Canvas.Left="150" Canvas.Top="18" Width="90" Height="44"
                             Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
-                        <TextBlock Text="{loc:Localize TransientHelp.DiagramCircuit}" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+                        <TextBlock Classes="secondary" Text="{loc:Localize TransientHelp.DiagramCircuit}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <!-- Outputs -->
@@ -45,34 +44,31 @@
                              Fill="Transparent" Stroke="{DynamicResource Brush.Info}" StrokeThickness="2"/>
                     <Ellipse Canvas.Left="338" Canvas.Top="52" Width="12" Height="12"
                              Fill="Transparent" Stroke="{DynamicResource Brush.Danger}" StrokeThickness="2"/>
-                    <TextBlock Canvas.Left="330" Canvas.Top="0" Text="{loc:Localize TransientHelp.DiagramOutputs}"
-                               FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                    <TextBlock Classes="caption" Canvas.Left="330" Canvas.Top="0" Text="{loc:Localize TransientHelp.DiagramOutputs}"/>
                 </Canvas>
             </Border>
 
-            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize TransientHelp.Intro1}"/>
 
-            <TextBlock Text="{loc:Localize TransientHelp.SourcesTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}"
-                       Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
+            <TextBlock Classes="strong" Text="{loc:Localize TransientHelp.SourcesTitle}" Margin="0,4,0,0"/>
             <StackPanel Spacing="5">
-                <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}">
+                <TextBlock Classes="secondary" TextWrapping="Wrap">
                     <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Warning}" Text="{loc:Localize TransientHelp.GaussianLabel}"/>
                     <Run Text="{loc:Localize TransientHelp.GaussianBody}"/>
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}">
+                <TextBlock Classes="secondary" TextWrapping="Wrap">
                     <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Success}" Text="{loc:Localize TransientHelp.CwLabel}"/>
                     <Run Text="{loc:Localize TransientHelp.CwBody}"/>
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}">
+                <TextBlock Classes="secondary" TextWrapping="Wrap">
                     <Run FontWeight="Bold" Foreground="{DynamicResource Brush.Info}">PRBS-NRZ</Run>
                     <Run Text="{loc:Localize TransientHelp.PrbsBody}"/>
                 </TextBlock>
             </StackPanel>
 
-            <TextBlock Text="{loc:Localize TransientHelp.ReadingTitle}" FontWeight="Bold" FontSize="{DynamicResource FontSize.Body}"
-                       Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,4,0,0"/>
-            <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource FontSize.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"
+            <TextBlock Classes="strong" Text="{loc:Localize TransientHelp.ReadingTitle}" Margin="0,4,0,0"/>
+            <TextBlock Classes="secondary" TextWrapping="Wrap"
                        Text="{loc:Localize TransientHelp.ReadingBody}"/>
 
         </StackPanel>
