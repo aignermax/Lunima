@@ -326,13 +326,7 @@ public static class ComponentGroupRenderer
         if (!IsLabelShown(bounds, groupName, scale))
             return;
 
-        var labelText = new FormattedText(
-            groupName,
-            CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            CanvasTypography.UiMedium,
-            LabelFontSize,
-            isLabelHovered ? LabelHoverTextBrush : LabelTextBrush);
+        var labelText = CreateLabelText(groupName, isLabelHovered ? LabelHoverTextBrush : LabelTextBrush);
 
         var labelBg = new Rect(bounds.X, bounds.Y - LabelOffset, labelText.Width + 10, LabelHeight);
         var transform = Matrix.CreateTranslation(-bounds.X, -bounds.Y) * Matrix.CreateScale(scale, scale)
@@ -348,6 +342,10 @@ public static class ComponentGroupRenderer
     }
 
     private const double LabelFontSize = 11;
+
+    private static FormattedText CreateLabelText(string groupName, IBrush foreground) =>
+        new(groupName, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            CanvasTypography.UiMedium, LabelFontSize, foreground);
     private const double LabelHeight = 18;
     private const double LabelOffset = 20;
 

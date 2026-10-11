@@ -24,8 +24,8 @@ public sealed class PathfindingOverlayRenderer : ICanvasRenderer
         var grid = vm.Router.PathfindingGrid;
         if (grid == null) return;
 
-        var componentBlockedBrush = new SolidColorBrush(Color.FromArgb(80, 255, 50, 50));
-        var waveguideBlockedBrush = new SolidColorBrush(Color.FromArgb(80, 50, 100, 255));
+        var componentBlockedBrush = CanvasPalette.DangerSubtleBrush;
+        var waveguideBlockedBrush = CanvasPalette.AccentSubtleBrush;
         double cellSize = grid.CellSizeMicrometers;
 
         double viewMinX = -vm.PanX / zoom;
@@ -79,7 +79,7 @@ public sealed class PathfindingOverlayRenderer : ICanvasRenderer
 
     private static void DrawAStarPaths(DrawingContext context, DesignCanvasViewModel vm, PathfindingGrid grid, double cellSize)
     {
-        var astarPathBrush = new SolidColorBrush(Color.FromArgb(150, 255, 165, 0));
+        var astarPathBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Warning, 150));
         foreach (var conn in vm.Connections)
         {
             var gridPath = conn.Connection.RoutedPath?.DebugGridPath;
@@ -101,9 +101,9 @@ public sealed class PathfindingOverlayRenderer : ICanvasRenderer
             $"Grid: {grid.Width}x{grid.Height} cells, {grid.CellSizeMicrometers}µm/cell, {grid.GetBlockedCellCount()} blocked | A* paths: {totalAstarPaths}",
             System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Arial"),
+            CanvasTypography.Ui,
             10,
-            Brushes.Yellow);
+            CanvasPalette.WarningBrush);
         context.DrawText(infoText, new Point(grid.MinX + 10, grid.MinY + 10));
     }
 }

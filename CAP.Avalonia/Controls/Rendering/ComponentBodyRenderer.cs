@@ -19,6 +19,9 @@ internal static class ComponentBodyRenderer
     /// <summary>Corner radius in world units (~2 µm); capped by the footprint so tiny parts stay boxes.</summary>
     private const double CornerRadiusWorld = 2.0;
     private const double MaxCornerFraction = 0.18;
+
+    /// <summary>Below this on-screen radius rounding is invisible, so the cheaper plain rectangle is drawn.</summary>
+    private const double MinVisibleRadiusPx = 0.75;
     private const double AccentEdgePx = 2.0;
     private const double AccentEdgeMaxFraction = 0.25;
     private const double AccentEdgeMinScreenPx = 14.0;
@@ -42,6 +45,8 @@ internal static class ComponentBodyRenderer
         }
 
         double radius = Math.Min(CornerRadiusWorld, MaxCornerFraction * Math.Min(rect.Width, rect.Height));
+        if (radius * rc.Zoom < MinVisibleRadiusPx)
+            radius = 0;
         if (state.IsSelected)
             DrawGlow(context, rect, radius, rc.Zoom, state.GlowProgress);
 

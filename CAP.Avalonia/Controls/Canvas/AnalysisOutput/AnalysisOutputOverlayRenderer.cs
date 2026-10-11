@@ -25,13 +25,13 @@ public sealed class AnalysisOutputOverlayRenderer : ICanvasRenderer
     private const double OutlineStrokePx = 1.5;
     private const string TagText = "OUT";
 
-    private static readonly Color Amber = Color.FromRgb(229, 192, 123);
+    private static readonly Color Amber = CanvasPalette.Warning;
     private static readonly IBrush GlowStroke = new SolidColorBrush(Color.FromArgb(230, Amber.R, Amber.G, Amber.B));
     private static readonly IBrush GlowFill = new SolidColorBrush(Color.FromArgb(28, Amber.R, Amber.G, Amber.B));
-    private static readonly IBrush TagBackground = new SolidColorBrush(Color.FromArgb(220, 40, 40, 40));
+    private static readonly IBrush TagBackground = CanvasPalette.SurfaceBrush;
     private static readonly IBrush TagForeground = new SolidColorBrush(Amber);
     private static readonly IBrush OutlineStroke = new SolidColorBrush(Color.FromArgb(170, Amber.R, Amber.G, Amber.B));
-    private static readonly Typeface TagTypeface = new("Arial", weight: FontWeight.Bold);
+    private static readonly Typeface TagTypeface = CanvasTypography.UiSemiBold;
 
     /// <inheritdoc/>
     public void Render(DrawingContext context, CanvasRenderContext rc)

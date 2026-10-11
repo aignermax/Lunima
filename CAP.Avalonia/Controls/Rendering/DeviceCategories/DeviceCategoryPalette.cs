@@ -11,7 +11,7 @@ namespace CAP.Avalonia.Controls.Rendering.DeviceCategories;
 public static class DeviceCategoryPalette
 {
     /// <summary>Strength of the category tint mixed into the body fill.</summary>
-    private const double BodyTint = 0.08;
+    private const double BodyTint = 0.05;
 
     /// <summary>Strength of the category tint for the far-zoom block, where the color carries the layout.</summary>
     private const double LodTint = 0.45;
