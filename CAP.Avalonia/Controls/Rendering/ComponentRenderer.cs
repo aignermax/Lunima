@@ -118,7 +118,7 @@ public sealed class ComponentRenderer : ICanvasRenderer
             : (isDimmed ? BodyFillBrushDimmed : BodyFillBrush);
         context.FillRectangle(fillBrush, rect);
 
-        var previewData = rc.GdsPreviewRenderService?.TryGetPreview(comp);
+        var previewData = rc.GdsPreviewRenderService?.TryGetPreview(comp.Component);
         if (previewData != null)
             GdsPolygonRenderer.DrawGdsPreview(context, previewData, comp);
     }
@@ -208,6 +208,8 @@ public sealed class ComponentRenderer : ICanvasRenderer
         else
         {
             context.FillRectangle(isDimmed ? BodyFillBrushDimmed : BodyFillBrush, childRect);
+            if (rc.GdsPreviewRenderService?.TryGetPreview(child) is { } childPreview)
+                GdsPolygonRenderer.DrawGdsPreview(context, childPreview, child);
         }
         context.DrawRectangle(isDimmed ? NeutralBorderPenDimmed : NeutralBorderPen, childRect);
 

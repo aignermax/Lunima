@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CAP.Avalonia.ViewModels.Canvas;
+using CAP_Core.Components.Core;
 using CAP_Core.Export;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
@@ -43,22 +44,34 @@ public static class GdsPolygonRenderer
     public static void DrawGdsPreview(
         DrawingContext context,
         GdsPreviewData previewData,
-        ComponentViewModel comp)
+        ComponentViewModel comp) =>
+        DrawGdsPreview(context, previewData, comp.Component, comp.X, comp.Y, comp.Width, comp.Height);
+
+    /// <summary>
+    /// Draws the GDS preview of a component that has no view model of its own, such as a
+    /// child inside a group; its footprint comes straight from the component.
+    /// </summary>
+    public static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component) =>
+        DrawGdsPreview(context, previewData, component, component.PhysicalX, component.PhysicalY,
+            component.WidthMicrometers, component.HeightMicrometers);
+
+    private static void DrawGdsPreview(DrawingContext context, GdsPreviewData previewData, Component component,
+        double x, double y, double width, double height)
     {
         var result = previewData.Result;
         if (result.Polygons.Count == 0)
             return;
 
-        double centerX = comp.X + comp.Width  / 2.0;
-        double centerY = comp.Y + comp.Height / 2.0;
-        double rotationDegrees = comp.Component.RotationDegrees;
+        double centerX = x + width / 2.0;
+        double centerY = y + height / 2.0;
+        double rotationDegrees = component.RotationDegrees;
 
-        // The rotate command already swapped comp.Width/Height at 90°/270°, but the bitmap
+        // The rotate command already swapped the live width/height at 90°/270°, but the bitmap
         // holds UNROTATED geometry: draw it into the unrotated-size rect and let the rotation
         // transform map it onto the footprint — else the 90° swap is applied twice. For
         // non-cardinal rotations the recorded pre-rotation dims supply the frame.
-        var destRect = GetUnrotatedDestRect(comp.X, comp.Y, comp.Width, comp.Height, rotationDegrees,
-            comp.Component.UnrotatedWidthMicrometers, comp.Component.UnrotatedHeightMicrometers);
+        var destRect = GetUnrotatedDestRect(x, y, width, height, rotationDegrees,
+            component.UnrotatedWidthMicrometers, component.UnrotatedHeightMicrometers);
 
         using (context.PushTransform(BuildRotationMatrix(rotationDegrees, centerX, centerY)))
         {
@@ -68,7 +81,7 @@ public static class GdsPolygonRenderer
                 return;
             }
 
-            // Fallback: rebuild geometry (only during the brief pre-bitmap window)
+            // Fallback: draw the polygons directly until the bitmap is rasterised.
             DrawPolygonsAsGeometry(context, result, destRect.X, destRect.Y, destRect.Width, destRect.Height);
         }
     }
