@@ -6,6 +6,7 @@
       FluentOverrides.axaml  Fluent resource keys mapped onto the tokens
       Icons.axaml            line icon geometry for controls:Icon
       Typography / Controls / Containers — the style classes views use
+      Shell.axaml            main-window chrome: toolbar, rail, panes, docks, status bar
   -->
   <Styles.Resources>
     <ResourceDictionary>
@@ -19,4 +20,5 @@
   <StyleInclude Source="avares://CAP.Avalonia/Styles/Typography.axaml"/>
   <StyleInclude Source="avares://CAP.Avalonia/Styles/Controls.axaml"/>
   <StyleInclude Source="avares://CAP.Avalonia/Styles/Containers.axaml"/>
+  <StyleInclude Source="avares://CAP.Avalonia/Styles/Shell.axaml"/>
 </Styles>

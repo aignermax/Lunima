@@ -9,52 +9,51 @@
              x:DataType="vm:MainViewModel">
 
     <StackPanel>
-        <TextBlock Text="{loc:Localize Properties.SelectedComponent}" Foreground="LightBlue" Margin="0,0,0,5" FontWeight="SemiBold"/>
-
-        <!-- Empty state -->
-        <TextBlock Foreground="Gray" FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"
-                   Text="{loc:Localize Properties.EmptyState}"
-                   IsVisible="{Binding !RightPanel.HasSelectedComponentEditor}"/>
+        <!-- Nothing selected: what this panel is for, in one sentence. -->
+        <Border Classes="empty-state" Margin="0,32,0,0" IsVisible="{Binding !StatusBar.HasSelection}">
+            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                <controls:Icon Data="{StaticResource Icon.MousePointerClick}" Size="24"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="240"
+                           Text="{loc:Localize Properties.EmptyStateShort}"/>
+            </StackPanel>
+        </Border>
 
         <!-- Name / position / size readout. Bound to the canonical canvas selection so the
              group name is correct and the position updates live while the component is dragged. -->
-        <StackPanel IsVisible="{Binding RightPanel.HasSelectedComponentEditor}">
-            <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.DisplayName, FallbackValue='None'}"
-                       Foreground="White" FontWeight="SemiBold"/>
-            <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
-                        IsVisible="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}">
-                <TextBlock Text="{loc:Localize Properties.Type}" Foreground="Gray"/>
-                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName}"
-                           Foreground="#aaaaaa" FontStyle="Italic"/>
-            </StackPanel>
+        <StackPanel IsVisible="{Binding RightPanel.HasSelectedComponentEditor}" Spacing="2">
+            <TextBlock Classes="label" Text="{loc:Localize Properties.SelectedComponent}"/>
+            <TextBlock Classes="subtitle" TextTrimming="CharacterEllipsis"
+                       Text="{Binding CanvasInteraction.SelectedComponent.DisplayName, FallbackValue='-'}"/>
+            <TextBlock Classes="caption" Text="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName}"
+                       IsVisible="{Binding CanvasInteraction.SelectedComponent.ComponentTypeName, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}"/>
 
-            <TextBlock Text="{loc:Localize Properties.Position}" Foreground="Gray" Margin="0,10,0,3"/>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="X: " Foreground="Gray"/>
-                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"
-                           Foreground="White"/>
-                <TextBlock Text=" µm    Y: " Foreground="Gray"/>
-                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"
-                           Foreground="White"/>
-                <TextBlock Text=" µm" Foreground="Gray"/>
-            </StackPanel>
-
-            <TextBlock Text="{loc:Localize Properties.Dimensions}" Foreground="Gray" Margin="0,8,0,3"/>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"
-                           Foreground="White"/>
-                <TextBlock Text=" × " Foreground="Gray"/>
-                <TextBlock Text="{Binding CanvasInteraction.SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"
-                           Foreground="White"/>
-                <TextBlock Text=" µm" Foreground="Gray"/>
-            </StackPanel>
+            <Grid ColumnDefinitions="72,*" RowDefinitions="Auto,Auto" Margin="0,12,0,0">
+                <TextBlock Grid.Row="0" Classes="label" VerticalAlignment="Center"
+                           Text="{loc:Localize Properties.PositionLabel}"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Classes="mono">
+                    <Run Text="X "/><Run Text="{Binding CanvasInteraction.SelectedComponent.X, StringFormat={}{0:F1}, FallbackValue='-'}"/>
+                    <Run Text="   "/>
+                    <Run Text="Y "/><Run Text="{Binding CanvasInteraction.SelectedComponent.Y, StringFormat={}{0:F1}, FallbackValue='-'}"/>
+                    <Run Text=" µm"/>
+                </TextBlock>
+                <TextBlock Grid.Row="1" Classes="label" VerticalAlignment="Center" Margin="0,8,0,0"
+                           Text="{loc:Localize Properties.Size}"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Margin="0,8,0,0">
+                    <Run Text="{Binding CanvasInteraction.SelectedComponent.Width, StringFormat={}{0:F0}, FallbackValue='-'}"/>
+                    <Run Text=" × "/>
+                    <Run Text="{Binding CanvasInteraction.SelectedComponent.Height, StringFormat={}{0:F0}, FallbackValue='-'}"/>
+                    <Run Text=" µm"/>
+                </TextBlock>
+            </Grid>
 
             <!-- Manual light-source mark: imported GDS cells can't be recognized by name —
                  the toggle gives them the laser editor and the simulation-source role. -->
             <ToggleSwitch Content="{loc:Localize Properties.MarkAsLightSource}"
                           IsChecked="{Binding CanvasInteraction.SelectedComponent.IsUserMarkedLightSource, Mode=TwoWay, FallbackValue=False}"
                           IsVisible="{Binding CanvasInteraction.SelectedComponent.ShowLightSourceMarkToggle, FallbackValue=False}"
-                          FontSize="11" Margin="0,8,0,0"
+                          Margin="0,8,0,0"
                           ToolTip.Tip="{loc:Localize Properties.MarkAsLightSourceTip}"/>
         </StackPanel>
 
@@ -62,17 +61,17 @@
              Name/position/size are shown by the readout above, so the templates
              only carry component-specific controls. -->
         <ContentControl Content="{Binding RightPanel.SelectedComponentEditor}"
-                        Margin="0,4,0,0"
+                        Margin="0,16,0,0"
                         IsVisible="{Binding RightPanel.HasSelectedComponentEditor}">
             <ContentControl.Resources>
                 <!-- ONA Analyzer: just an "open window" button -->
                 <DataTemplate x:Key="OnaAnalyzerTpl" x:DataType="editors:OnaAnalyzerEditorViewModel">
                     <StackPanel>
                         <TextBlock Text="{loc:Localize SelectedProps.OnaDescription}"
-                                   Foreground="Gray" FontSize="10" Margin="0,2,0,8" TextWrapping="Wrap"/>
+                                   Classes="caption" Margin="0,2,0,8" TextWrapping="Wrap"/>
                         <Button Content="{loc:Localize SelectedProps.OpenOnaSweep}"
                                 Command="{Binding OpenSweepCommand}"
-                                Width="180" HorizontalAlignment="Left" Background="#3d5d5d"/>
+                                HorizontalAlignment="Left"/>
                     </StackPanel>
                 </DataTemplate>
 
@@ -82,18 +81,16 @@
                      only — the GDS layout/geometry is never touched by these values. -->
                 <DataTemplate x:Key="ParamsTpl" x:DataType="editors:ParametricParametersEditorViewModel">
                     <StackPanel>
-                        <TextBlock Text="{loc:Localize SelectedProps.SimulationParams}"
-                                   Foreground="LightBlue" FontSize="11" FontWeight="SemiBold" Margin="0,6,0,0"/>
+                        <TextBlock Classes="label" Text="{loc:Localize SelectedProps.SimulationParams}"/>
                         <TextBlock Text="{loc:Localize SelectedProps.SimulationParamsHint}"
-                                   Foreground="Gray" FontSize="9" TextWrapping="Wrap" Margin="0,1,0,2"/>
+                                   Classes="caption" TextWrapping="Wrap" Margin="0,2,0,4"/>
                         <ItemsControl ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="editors:ParameterRowViewModel">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,4,0,2">
-                                            <TextBlock Text="{Binding Label}" Foreground="Gray" FontSize="10"/>
-                                            <TextBlock Foreground="Gray" FontSize="10"
-                                                       IsVisible="{Binding HasUnit}">
+                                            <TextBlock Classes="caption" Text="{Binding Label}"/>
+                                            <TextBlock Classes="caption" IsVisible="{Binding HasUnit}">
                                                 <Run Text=" ["/><Run Text="{Binding Unit}"/><Run Text="]"/>
                                             </TextBlock>
                                         </StackPanel>
@@ -119,7 +116,7 @@
                 <!-- Slider-driven components (phase shifter, tunable coupler) -->
                 <DataTemplate x:Key="SliderTpl" x:DataType="editors:SliderEditorViewModel">
                     <StackPanel>
-                        <TextBlock Text="{Binding SliderLabel}" Foreground="Gray" FontSize="10" Margin="0,4,0,2"/>
+                        <TextBlock Text="{Binding SliderLabel}" Classes="caption" Margin="0,4,0,2"/>
                         <Grid ColumnDefinitions="*,80">
                             <Slider Grid.Column="0"
                                     Minimum="{Binding Min}" Maximum="{Binding Max}"
@@ -146,7 +143,7 @@
                         <!-- Laser on/off (#690): a coupler with its laser off is listen-only,
                              i.e. an output. Shares LaserConfig with the canvas laser icon. -->
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,2">
-                            <TextBlock Text="{loc:Localize SelectedProps.Laser}" Foreground="Gray" FontSize="10"
+                            <TextBlock Text="{loc:Localize SelectedProps.Laser}" Classes="caption"
                                        VerticalAlignment="Center"/>
                             <!-- Plain-language help (#907, migrated to the extracted
                                  LaserHelpFlyout in #1220): what wavelength/power mean, why
@@ -162,20 +159,20 @@
                         </StackPanel>
                         <ToggleSwitch IsChecked="{Binding LaserConfig.IsEnabled, Mode=TwoWay}"
                                       OnContent="{loc:Localize SelectedProps.LaserOn}" OffContent="{loc:Localize SelectedProps.LaserOff}"
-                                      FontSize="11" Margin="0,0,0,4"/>
-                        <TextBlock Text="{loc:Localize SelectedProps.Wavelength}" Foreground="Gray" FontSize="10" Margin="0,4,0,2"/>
+                                      Margin="0,0,0,4"/>
+                        <TextBlock Text="{loc:Localize SelectedProps.Wavelength}" Classes="caption" Margin="0,4,0,2"/>
                         <ComboBox ItemsSource="{Binding WavelengthOptions}"
                                   SelectedValue="{Binding LaserConfig.WavelengthNm, Mode=TwoWay}"
                                   SelectedValueBinding="{Binding WavelengthNm}"
                                   DisplayMemberBinding="{Binding Label}"
                                   IsEnabled="{Binding LaserConfig.IsEnabled}"
                                   HorizontalAlignment="Stretch" Margin="0,0,0,6"/>
-                        <TextBlock Text="{loc:Localize SelectedProps.InputPower}" Foreground="Gray" FontSize="10" Margin="0,0,0,2"/>
+                        <TextBlock Text="{loc:Localize SelectedProps.InputPower}" Classes="caption" Margin="0,0,0,2"/>
                         <Slider Minimum="0" Maximum="1"
                                 Value="{Binding LaserConfig.InputPower, Mode=TwoWay}"
                                 IsEnabled="{Binding LaserConfig.IsEnabled}"
                                 TickFrequency="0.1" IsSnapToTickEnabled="True"/>
-                        <TextBlock Foreground="#cccccc" FontSize="10">
+                        <TextBlock Classes="caption mono">
                             <Run Text="{loc:Localize SelectedProps.Power}"/>
                             <Run Text="{Binding LaserConfig.InputPower, StringFormat={}{0:F2}}"/>
                         </TextBlock>
@@ -183,12 +180,11 @@
                         <!-- Realistic source spectrum (#819): line shape + FWHM linewidth.
                              "Ideal" keeps today's single-wavelength behaviour. -->
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,8,0,2">
-                            <TextBlock Text="{loc:Localize SelectedProps.LineShape}" Foreground="Gray" FontSize="10"
+                            <TextBlock Text="{loc:Localize SelectedProps.LineShape}" Classes="caption"
                                        VerticalAlignment="Center"/>
-                            <Button Content="?" Padding="6,1" FontSize="10" FontWeight="Bold"
-                                    Background="Transparent" Foreground="#7FB2E5" BorderThickness="0"
-                                    VerticalAlignment="Center"
+                            <Button Classes="rowAction" VerticalAlignment="Center"
                                     ToolTip.Tip="{loc:Localize SelectedProps.LineShapeHint}">
+                                <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
                                 <Button.Flyout>
                                     <Flyout>
                                         <!-- Short text + animated spectrum sweep (#1152). -->
@@ -204,26 +200,25 @@
                                   IsEnabled="{Binding LaserConfig.IsEnabled}"
                                   HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
                         <StackPanel IsVisible="{Binding LaserConfig.IsSpectralShape}">
-                            <TextBlock Text="{loc:Localize SelectedProps.Linewidth}" Foreground="Gray" FontSize="10" Margin="0,2,0,2"/>
+                            <TextBlock Text="{loc:Localize SelectedProps.Linewidth}" Classes="caption" Margin="0,2,0,2"/>
                             <Grid ColumnDefinitions="*,30">
                                 <NumericUpDown Grid.Column="0"
                                                Value="{Binding LaserConfig.LinewidthFwhmNm, Mode=TwoWay}"
                                                Minimum="0.1" Maximum="50" Increment="0.5"
                                                FormatString="F1" ShowButtonSpinner="False"
                                                IsEnabled="{Binding LaserConfig.IsEnabled}"/>
-                                <TextBlock Grid.Column="1" Text="nm" Foreground="Gray" FontSize="10"
+                                <TextBlock Grid.Column="1" Text="nm" Classes="caption"
                                            VerticalAlignment="Center" Margin="6,0,0,0"/>
                             </Grid>
                             <TextBlock Text="{loc:Localize SelectedProps.LinewidthHint}"
-                                       Foreground="Gray" FontSize="9" TextWrapping="Wrap" Margin="0,2,0,2"/>
+                                       Classes="caption" TextWrapping="Wrap" Margin="0,2,0,2"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,2">
-                            <TextBlock Text="{loc:Localize SelectedProps.Rin}" Foreground="Gray" FontSize="10"
+                            <TextBlock Text="{loc:Localize SelectedProps.Rin}" Classes="caption"
                                        VerticalAlignment="Center"/>
-                            <Button Content="?" Padding="6,1" FontSize="10" FontWeight="Bold"
-                                    Background="Transparent" Foreground="#7FB2E5" BorderThickness="0"
-                                    VerticalAlignment="Center"
+                            <Button Classes="rowAction" VerticalAlignment="Center"
                                     ToolTip.Tip="{loc:Localize SelectedProps.RinHint}">
+                                <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
                                 <Button.Flyout>
                                     <Flyout>
                                         <!-- Short text + animated power-wobble trace (#1152). -->
@@ -236,7 +231,7 @@
                                 Value="{Binding LaserConfig.RinDbPerHz, Mode=TwoWay}"
                                 IsEnabled="{Binding LaserConfig.IsEnabled}"
                                 TickFrequency="5" IsSnapToTickEnabled="True"/>
-                        <TextBlock Foreground="#cccccc" FontSize="10">
+                        <TextBlock Classes="caption mono">
                             <Run Text="{Binding LaserConfig.RinDbPerHz, StringFormat={}{0:F0}}"/>
                             <Run Text="dB/Hz"/>
                         </TextBlock>
@@ -248,9 +243,9 @@
                      component's S-matrix is fixed rather than suspecting a broken editor. -->
                 <DataTemplate x:Key="GenericTpl" x:DataType="editors:GenericComponentEditorViewModel">
                     <StackPanel>
-                        <TextBlock Text="{Binding NazcaFunction}" Foreground="#888" FontSize="9" Margin="0,2,0,4"/>
+                        <TextBlock Classes="caption mono" Text="{Binding NazcaFunction}" Margin="0,0,0,4"/>
                         <TextBlock Text="{loc:Localize SelectedProps.NoSimulationParams}"
-                                   Foreground="Gray" FontSize="9" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                   Classes="caption" TextWrapping="Wrap" Margin="0,0,0,4"/>
                     </StackPanel>
                 </DataTemplate>
             </ContentControl.Resources>

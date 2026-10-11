@@ -19,6 +19,7 @@ internal class ScreenshotTestApp : Application
     public override void Initialize()
     {
         RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+        CAP.Avalonia.Behaviors.RevealOnShowBehavior.AnimationsEnabled = false;
         Styles.Add(new FluentTheme());
         Styles.Add(new StyleInclude(new Uri("avares://CAP.Avalonia/Styles/"))
         {

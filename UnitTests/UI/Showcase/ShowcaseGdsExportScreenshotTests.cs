@@ -77,8 +77,7 @@ public class ShowcaseGdsExportScreenshotTests
         ShowcaseCircuit.FitView(window, vm);
 
         var exportButton = UiInput.Descendants<Button>(window).First(b =>
-            (b.Content as TextBlock)?.Text ==
-            LocalizationService.Instance.Translate("Toolbar.ExportButton"));
+            Equals(ToolTip.GetTip(b), LocalizationService.Instance.Translate("Toolbar.ExportTip")));
         exportButton.Flyout.ShouldNotBeNull("the Export button must carry the format flyout");
         exportButton.Flyout!.ShowAt(exportButton);
         UiInput.RunJobs();

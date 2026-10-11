@@ -3,13 +3,12 @@
         xmlns:vm="using:CAP.Avalonia.ViewModels"
         xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
         xmlns:diagnostics="using:CAP.Avalonia.ViewModels.Diagnostics"
-        xmlns:creation="using:CAP_Core.Components.Creation"
         xmlns:controls="using:CAP.Avalonia.Controls"
+        xmlns:converters="using:CAP.Avalonia.Converters"
         xmlns:tour="using:CAP.Avalonia.Controls.TourAnchor"
         xmlns:views="using:CAP.Avalonia.Views"
         xmlns:behaviors="using:CAP.Avalonia.Behaviors"
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
-        xmlns:vmTrash="using:CAP.Avalonia.ViewModels.Panels.PdkTrash"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
@@ -22,502 +21,411 @@
         <KeyBinding Gesture="F12" Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}" />
     </Window.KeyBindings>
 
-    <Window.Styles>
-        <!-- Compact left-panel group lists: the Fluent ListBoxItem default padding/min-height
-             adds a lot of dead space between rows. Scoped via the compactList class so other
-             list boxes keep the default chrome. -->
-        <Style Selector="ListBox.compactList">
-            <Setter Property="Padding" Value="0"/>
-        </Style>
-        <Style Selector="ListBox.compactList ListBoxItem">
-            <Setter Property="MinHeight" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0"/>
-        </Style>
-        <!-- One height for every main-toolbar button: text buttons (Import, Export, Tools)
-             and larger-glyph buttons (AI, Settings) otherwise grow with their content and
-             stand taller than the icon buttons. -->
-        <Style Selector="StackPanel#MainToolbar > Button">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="8,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-    </Window.Styles>
-
     <Grid>
     <DockPanel>
-        <!-- Toolbar -->
-        <ScrollViewer DockPanel.Dock="Top"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled"
-                      Background="#2d2d2d"
-                      Height="40">
-            <StackPanel x:Name="MainToolbar" Orientation="Horizontal">
-                <!-- Home -->
-                <Button Command="{Binding ShowHomeCommand}"
-                        Width="36" Margin="10,2,2,2" Background="#3d3d3d"
-                        ToolTip.Tip="{loc:Localize Home.ToolbarTip}">
-                    <PathIcon Data="M8,1.5 L15,7.5 L13.5,7.5 L13.5,14 L9.5,14 L9.5,10 L6.5,10 L6.5,14 L2.5,14 L2.5,7.5 L1,7.5 Z"
-                              Width="16" Height="16" Foreground="LightBlue"/>
-                </Button>
+        <!-- ══ Toolbar ═══════════════════════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Top" Classes="toolbar" Height="44" Padding="8,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <ScrollViewer Grid.Column="0"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="MainToolbar" Orientation="Horizontal" Spacing="2"
+                                VerticalAlignment="Center">
+                        <Button Classes="toolbar" Command="{Binding ShowHomeCommand}"
+                                ToolTip.Tip="{loc:Localize Home.ToolbarTip}">
+                            <controls:Icon Data="{StaticResource Icon.House}"/>
+                        </Button>
 
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
+                        <Border Classes="divider"/>
 
-                <!-- Mode Buttons — icon-only, tooltips name the mode and its shortcut -->
-                <TextBlock Text="{loc:Localize Toolbar.ModeLabel}" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="White"/>
-                <Button Command="{Binding SetSelectModeCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.SelectModeTip}">
-                    <PathIcon Data="M5,2 L5,13.5 L8,10.8 L9.8,14.6 L11.7,13.7 L9.9,10 L13.5,9.6 Z"
-                              Width="16" Height="16" Foreground="LightBlue"/>
-                </Button>
-                <Button Command="{Binding SetConnectModeCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.ConnectModeTip}">
-                    <PathIcon Data="M2,10 L5,10 L5,13 L2,13 Z M11,3 L14,3 L14,6 L11,6 Z M4.6,11.2 L11.2,4.6 L12.4,5.8 L5.8,12.4 Z"
-                              Width="16" Height="16" Foreground="Orange"/>
-                </Button>
-                <Button Command="{Binding SetDeleteModeCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.DeleteModeTip}">
-                    <PathIcon Data="M3,4.4 L4.4,3 L8,6.6 L11.6,3 L13,4.4 L9.4,8 L13,11.6 L11.6,13 L8,9.4 L4.4,13 L3,11.6 L6.6,8 Z"
-                              Width="16" Height="16" Foreground="Red"/>
-                </Button>
-                <Button Command="{Binding SetProbeModeCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.ProbeModeTip}">
-                    <!-- magnifier-over-wave icon -->
-                    <PathIcon Data="M6.5,2 A4.5,4.5 0 1 0 6.5,11 A4.5,4.5 0 1 0 6.5,2 Z M6.5,3.5 A3,3 0 1 1 6.5,9.5 A3,3 0 1 1 6.5,3.5 Z M10.2,10.2 L14,14 L12.9,15.1 L9.1,11.3 Z M4.5,6.5 Q5.5,5 6.5,6.5 Q7.5,8 8.5,6.5"
-                              Width="16" Height="16" Foreground="#8FD3A7"/>
-                </Button>
-                <Button Command="{Binding SetCutModeCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.CutModeTip}">
-                    <!-- scissors icon -->
-                    <PathIcon Data="M4,2.5 A1.8,1.8 0 1 0 4,6.1 A1.8,1.8 0 1 0 4,2.5 Z M4,3.6 A0.7,0.7 0 1 1 4,5 A0.7,0.7 0 1 1 4,3.6 Z M4,9.9 A1.8,1.8 0 1 0 4,13.5 A1.8,1.8 0 1 0 4,9.9 Z M4,11 A0.7,0.7 0 1 1 4,12.4 A0.7,0.7 0 1 1 4,11 Z M5.6,5.6 L13.5,12.2 L12.2,13 L7,9.2 Z M5.6,10.4 L13.5,3.8 L12.2,3 L7,6.8 Z"
-                              Width="16" Height="16" Foreground="Gold"/>
-                </Button>
+                        <!-- Canvas modes: one segmented group, the active mode carries .active -->
+                        <Button Classes="toolbar" Command="{Binding SetSelectModeCommand}"
+                                Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Select}"
+                                ToolTip.Tip="{loc:Localize Toolbar.SelectModeTip}">
+                            <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding SetConnectModeCommand}"
+                                Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Connect}"
+                                ToolTip.Tip="{loc:Localize Toolbar.ConnectModeTip}">
+                            <controls:Icon Data="{StaticResource Icon.Spline}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding SetDeleteModeCommand}"
+                                Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Delete}"
+                                ToolTip.Tip="{loc:Localize Toolbar.DeleteModeTip}">
+                            <controls:Icon Data="{StaticResource Icon.Eraser}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding SetProbeModeCommand}"
+                                Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Probe}"
+                                ToolTip.Tip="{loc:Localize Toolbar.ProbeModeTip}">
+                            <controls:Icon Data="{StaticResource Icon.ScanSearch}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding SetCutModeCommand}"
+                                Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Cut}"
+                                ToolTip.Tip="{loc:Localize Toolbar.CutModeTip}">
+                            <controls:Icon Data="{StaticResource Icon.Scissors}"/>
+                        </Button>
 
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
+                        <Border Classes="divider"/>
 
-                <!-- Zoom Controls -->
-                <Button Content="+" Command="{Binding ZoomInCommand}" Width="30" Margin="2"/>
-                <Button Content="-" Command="{Binding ZoomOutCommand}" Width="30" Margin="2"/>
-                <Button x:Name="ZoomToFitButton" Click="ZoomToFitButton_Click"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.ZoomToFitTip}">
-                    <PathIcon Data="M2,2 L6,2 L6,4 L4,4 L4,6 L2,6 Z M10,2 L14,2 L14,6 L12,6 L12,4 L10,4 Z M2,10 L4,10 L4,12 L6,12 L6,14 L2,14 Z M12,10 L14,10 L14,14 L10,14 L10,12 L12,12 Z M6.5,6.5 L9.5,6.5 L9.5,9.5 L6.5,9.5 Z"
-                              Width="16" Height="16" Foreground="White"/>
-                </Button>
+                        <!-- View -->
+                        <Button Classes="toolbar" Command="{Binding ZoomOutCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.ZoomOutTip}">
+                            <controls:Icon Data="{StaticResource Icon.ZoomOut}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding ZoomInCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.ZoomInTip}">
+                            <controls:Icon Data="{StaticResource Icon.ZoomIn}"/>
+                        </Button>
+                        <Button x:Name="ZoomToFitButton" Classes="toolbar" Click="ZoomToFitButton_Click"
+                                ToolTip.Tip="{loc:Localize Toolbar.ZoomToFitTip}">
+                            <controls:Icon Data="{StaticResource Icon.Scan}"/>
+                        </Button>
+                        <ToggleButton x:Name="GridSnapToggle" Classes="toolbar"
+                                      IsChecked="{Binding Canvas.GridSnap.IsEnabled, Mode=TwoWay}"
+                                      Click="GridSnapToggle_Click"
+                                      ToolTip.Tip="{loc:Localize Toolbar.GridSnapTip}">
+                            <controls:Icon Data="{StaticResource Icon.Grid3x3}"/>
+                        </ToggleButton>
 
-                <!-- Simulation — icon-only (play triangle), next to Fit per field feedback -->
-                <Button x:Name="RunSimulationButton" Command="{Binding RunSimulationCommand}"
-                        Width="36" Margin="2" Background="#3d5d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.RunSimulationTip}">
-                    <PathIcon Data="M4.5,2.5 L13.5,8 L4.5,13.5 Z"
-                              Width="16" Height="16" Foreground="LightGreen"/>
-                </Button>
+                        <Border Classes="divider"/>
 
-                <!-- Simulation mode: CW vs Transient. Run (L) executes the active mode. -->
-                <ComboBox Width="120" Margin="2" VerticalAlignment="Center"
-                          SelectedIndex="{Binding SimulationModeIndex}"
-                          ToolTip.Tip="{loc:Localize Toolbar.SimulationModeTip}">
-                    <ComboBoxItem>CW</ComboBoxItem>
-                    <ComboBoxItem>Transient</ComboBoxItem>
-                </ComboBox>
+                        <!-- Simulate: the one primary action of the toolbar -->
+                        <Button x:Name="RunSimulationButton" Classes="toolbar primary"
+                                Command="{Binding RunSimulationCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.RunSimulationTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <controls:Icon Data="{StaticResource Icon.Play}" Size="14"/>
+                                <TextBlock Text="{loc:Localize Toolbar.Run}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <ComboBox Classes="toolbar" Width="104" Margin="4,0,0,0"
+                                  SelectedIndex="{Binding SimulationModeIndex}"
+                                  ToolTip.Tip="{loc:Localize Toolbar.SimulationModeTip}">
+                            <ComboBoxItem>CW</ComboBoxItem>
+                            <ComboBoxItem>Transient</ComboBoxItem>
+                        </ComboBox>
 
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
+                        <Border Classes="divider"/>
 
-                <!-- Undo/Redo -->
-                <Button Content="↶" Command="{Binding UndoCommand}"
-                        Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.UndoTip}"/>
-                <Button Content="↷" Command="{Binding RedoCommand}"
-                        Width="30" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.RedoTip}"/>
+                        <!-- Edit -->
+                        <Button Classes="toolbar" Command="{Binding UndoCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.UndoTip}">
+                            <controls:Icon Data="{StaticResource Icon.Undo2}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding RedoCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.RedoTip}">
+                            <controls:Icon Data="{StaticResource Icon.Redo2}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding CreateGroupCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.CreateGroupTip}">
+                            <controls:Icon Data="{StaticResource Icon.Group}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding UngroupCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.UngroupTip}">
+                            <controls:Icon Data="{StaticResource Icon.Ungroup}"/>
+                        </Button>
 
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
+                        <Border Classes="divider"/>
 
-                <!-- Group/Ungroup — icon-only, the tooltips carry the label -->
-                <Button Command="{Binding CreateGroupCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.CreateGroupTip}">
-                    <PathIcon Data="M4,4 L12,4 L12,12 L4,12 Z M6,6 L10,6 L10,10 L6,10 Z"
-                              Width="16" Height="16" Foreground="LightBlue"/>
-                </Button>
+                        <!-- File -->
+                        <Button Classes="toolbar" Command="{Binding NewProjectCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.NewProjectTip}">
+                            <controls:Icon Data="{StaticResource Icon.FilePlus}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding LoadDesignCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.LoadDesignTip}">
+                            <controls:Icon Data="{StaticResource Icon.FolderOpen}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding SaveDesignCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.SaveDesignTip}">
+                            <controls:Icon Data="{StaticResource Icon.Save}"/>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding SaveDesignAsCommand}"
+                                ToolTip.Tip="{loc:Localize Toolbar.SaveDesignAsTip}">
+                            <controls:Icon Data="{StaticResource Icon.FilePen}"/>
+                        </Button>
 
-                <Button Command="{Binding UngroupCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.UngroupTip}">
-                    <PathIcon Data="M4,4 L6,4 L6,6 L4,6 Z M10,4 L12,4 L12,6 L10,6 Z M4,10 L6,10 L6,12 L4,12 Z M10,10 L12,10 L12,12 L10,12 Z"
-                              Width="16" Height="16" Foreground="Orange"/>
-                </Button>
+                        <Border Classes="divider"/>
 
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
+                        <!-- Import / export / tools -->
+                        <Button Classes="toolbar" Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
+                                ToolTip.Tip="{loc:Localize GdsImport.OpenTip}">
+                            <controls:Icon Data="{StaticResource Icon.FileInput}"/>
+                        </Button>
+                        <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
+                        <Button Classes="toolbar menu" ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <controls:Icon Data="{StaticResource Icon.FileOutput}"/>
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <StackPanel Classes="menu" MinWidth="260">
+                                        <TextBlock Classes="label menuHeader" Text="{loc:Localize Toolbar.ChooseExportFormat}"/>
+                                        <ItemsControl ItemsSource="{Binding ExportMenu.Formats}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Classes="menuItem"
+                                                            Command="{Binding ExportCommand}"
+                                                            ToolTip.Tip="{Binding Description}">
+                                                        <Grid ColumnDefinitions="Auto,*">
+                                                            <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FileOutput}"/>
+                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                                <TextBlock Classes="strong" Text="{Binding Name}"/>
+                                                                <TextBlock Classes="caption" Text="{Binding Description}"
+                                                                           TextWrapping="Wrap" MaxWidth="220"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <!-- Checking precedes tapeout export, so the design checks live here too. -->
+                                        <Separator Classes="menu"/>
+                                        <Button Classes="menuItem"
+                                                Command="{Binding RunDesignChecksCommand}"
+                                                Click="CheckDesignMenuItem_Click"
+                                                ToolTip.Tip="{loc:Localize Toolbar.CheckDesignTip}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.CircleCheck}"/>
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <TextBlock Classes="strong" Text="{loc:Localize Toolbar.CheckDesign}"/>
+                                                    <TextBlock Classes="caption" Text="{loc:Localize Toolbar.CheckDesignDescription}"
+                                                               TextWrapping="Wrap" MaxWidth="220"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="menuItem"
+                                                Click="CheckOpenEblMenuItem_Click"
+                                                ToolTip.Tip="{loc:Localize Toolbar.CheckOpenEblTip}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FlaskConical}"/>
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <TextBlock Classes="strong" Text="{loc:Localize Toolbar.CheckOpenEbl}"/>
+                                                    <TextBlock Classes="caption" Text="{loc:Localize Toolbar.CheckOpenEblDescription}"
+                                                               TextWrapping="Wrap" MaxWidth="220"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
 
-                <!-- File Operations -->
-                <Button Content="📄" Command="{Binding NewProjectCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.NewProjectTip}"/>
-                <Button Content="📂" Command="{Binding LoadDesignCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.LoadDesignTip}"/>
-                <Button Content="💾" Command="{Binding SaveDesignCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.SaveDesignTip}"/>
-                <Button Content="💾+" Command="{Binding SaveDesignAsCommand}"
-                        Width="50" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.SaveDesignAsTip}"/>
-                <!-- GDS import as the Export button's sibling — same command as the
-                     library panel's GDS button (#808), so the tooltip reuses its text. -->
-                <Button MinWidth="95" Margin="2" Background="#3d3d3d"
-                        Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
-                        ToolTip.Tip="{loc:Localize GdsImport.OpenTip}">
-                    <Button.Content>
-                        <TextBlock Text="{loc:Localize Toolbar.ImportButton}"/>
-                    </Button.Content>
-                </Button>
-                <!-- Unified Export flyout — add formats via IExportFormat + ExportMenuViewModel, no axaml changes needed -->
-                <Button MinWidth="95" Margin="2" Background="#3d4d3d"
-                        ToolTip.Tip="{loc:Localize Toolbar.ExportTip}">
-                    <Button.Content>
-                        <TextBlock Text="{loc:Localize Toolbar.ExportButton}"/>
-                    </Button.Content>
-                    <Button.Flyout>
-                        <Flyout Placement="BottomEdgeAlignedLeft">
-                            <StackPanel MinWidth="240" Margin="6">
-                                <TextBlock Text="{loc:Localize Toolbar.ChooseExportFormat}" Foreground="Gray"
-                                           FontSize="11" Margin="0,0,0,8"/>
-                                <ItemsControl ItemsSource="{Binding ExportMenu.Formats}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Left"
-                                                    Margin="0,2" Padding="10,3"
-                                                    Command="{Binding ExportCommand}"
-                                                    Background="{Binding Background}"
-                                                    ToolTip.Tip="{Binding Description}">
-                                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                                    <TextBlock Text="{Binding Icon}" FontSize="15"
-                                                               VerticalAlignment="Center"/>
-                                                    <StackPanel VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   Foreground="White"
-                                                                   FontWeight="SemiBold"
-                                                                   FontSize="12"/>
-                                                        <TextBlock Text="{Binding Description}"
-                                                                   Foreground="#aaaaaa"
-                                                                   FontSize="9"
-                                                                   TextWrapping="Wrap"
-                                                                   MaxWidth="180"/>
-                                                    </StackPanel>
+                        <Button x:Name="ToolsMenuButton" Classes="toolbar menu"
+                                ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <controls:Icon Data="{StaticResource Icon.Wrench}"/>
+                                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronDown}"/>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <StackPanel Classes="menu" MinWidth="250">
+                                        <!-- Load PDK + format help share one row: the help opens the
+                                             PDK JSON documentation the loader expects. -->
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Button Grid.Column="0" Classes="menuItem"
+                                                    Command="{Binding LoadPdkCommand}"
+                                                    ToolTip.Tip="{loc:Localize Toolbar.LoadPdkTip}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Package}"/>
+                                                    <TextBlock Text="{loc:Localize Toolbar.LoadPdk}"/>
                                                 </StackPanel>
                                             </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <!-- Check design (DRC-lite): same command as the Design Checks
-                                     tab button; also opens the analysis dock on the Checks tab.
-                                     Lives in the Export menu because checking precedes tapeout export. -->
-                                <Separator Margin="0,6,0,2" Background="#3d3d3d"/>
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Command="{Binding RunDesignChecksCommand}"
-                                        Click="CheckDesignMenuItem_Click"
-                                        ToolTip.Tip="{loc:Localize Toolbar.CheckDesignTip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="🔍" FontSize="15"
-                                                   VerticalAlignment="Center"/>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{loc:Localize Toolbar.CheckDesign}"
-                                                       Foreground="White"
-                                                       FontWeight="SemiBold"
-                                                       FontSize="12"/>
-                                            <TextBlock Text="{loc:Localize Toolbar.CheckDesignDescription}"
-                                                       Foreground="#aaaaaa"
-                                                       FontSize="9"
-                                                       TextWrapping="Wrap"
-                                                       MaxWidth="180"/>
-                                        </StackPanel>
+                                            <Button Grid.Column="1" Classes="ghost icon" Margin="4,0,0,0"
+                                                    Command="{Binding OpenPdkHelpCommand}"
+                                                    ToolTip.Tip="{loc:Localize Toolbar.PdkHelpTip}">
+                                                <controls:Icon Data="{StaticResource Icon.CircleHelp}"/>
+                                            </Button>
+                                        </Grid>
+                                        <Button Classes="menuItem"
+                                                Command="{Binding OpenPdkOffsetEditorCommand}"
+                                                ToolTip.Tip="{loc:Localize Toolbar.PdkOffsetEditorTip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Ruler}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.PdkOffsetEditor}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Classes="menuItem" Click="OpenModeSolverDialog_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Waves}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.ComputeModes}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Classes="menuItem" Click="OpenPdkResolutionCheckDialog_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Search}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.CheckPdks}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Classes="menuItem" Click="OpenRegistryBrowser_Click"
+                                                ToolTip.Tip="{loc:Localize Registry.OpenTip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Globe}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.ComponentRegistry}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="IsaPlaygroundToolButton" Classes="menuItem"
+                                                Click="OpenIsaPlayground_Click"
+                                                ToolTip.Tip="{loc:Localize Toolbar.IsaPlaygroundTip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Cpu}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.IsaPlayground}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Separator Classes="menu"/>
+                                        <Button Classes="menuItem"
+                                                Command="{Binding BottomPanel.ElementLock.UnlockAllCommand}"
+                                                ToolTip.Tip="{loc:Localize Toolbar.UnlockAllTip}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.LockOpen}"/>
+                                                <TextBlock Text="{loc:Localize Toolbar.UnlockAll}"/>
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
-                                </Button>
-                                <!-- openEBL submission check (#1361): exports the design to GDS and runs
-                                     the official openEBL submission + verification checks on it.
-                                     Lives in the Export menu because checking precedes tapeout export. -->
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#4d3d5d"
-                                        Click="CheckOpenEblMenuItem_Click"
-                                        ToolTip.Tip="{loc:Localize Toolbar.CheckOpenEblTip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="🧪" FontSize="15"
-                                                   VerticalAlignment="Center"/>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEbl}"
-                                                       Foreground="White"
-                                                       FontWeight="SemiBold"
-                                                       FontSize="12"/>
-                                            <TextBlock Text="{loc:Localize Toolbar.CheckOpenEblDescription}"
-                                                       Foreground="#aaaaaa"
-                                                       FontSize="9"
-                                                       TextWrapping="Wrap"
-                                                       MaxWidth="180"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+
+                        <Border Classes="divider"/>
+
+                        <!-- AI Design Assistant — own tool window -->
+                        <Button Classes="toolbar" Click="OpenAiAssistant_Click"
+                                ToolTip.Tip="{loc:Localize Toolbar.AiAssistantTip}">
+                            <controls:Icon Data="{StaticResource Icon.Sparkles}"/>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Button Grid.Column="1" Classes="toolbar" Margin="8,0,0,0" VerticalAlignment="Center"
+                        Command="{Binding OpenSettingsWindowCommand}"
+                        ToolTip.Tip="{loc:Localize Toolbar.SettingsTip}">
+                    <controls:Icon Data="{StaticResource Icon.Settings}"/>
                 </Button>
-
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
-
-                <!-- Tools -->
-                <Button x:Name="ToolsMenuButton"
-                        MinWidth="80" Margin="2" Background="#3d3d5d"
-                        ToolTip.Tip="{loc:Localize Toolbar.ToolsTip}">
-                    <Button.Content>
-                        <TextBlock Text="{loc:Localize Toolbar.ToolsButton}"/>
-                    </Button.Content>
-                    <Button.Flyout>
-                        <Flyout Placement="BottomEdgeAlignedLeft">
-                            <StackPanel MinWidth="230" Margin="6">
-                                <!-- Load PDK + format help share one row: the ❓ opens the
-                                     PDK JSON documentation the loader expects. -->
-                                <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                    <Button Grid.Column="0" HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Left"
-                                            Padding="10,3"
-                                            Background="#3d3d5d"
-                                            Command="{Binding LoadPdkCommand}"
-                                            ToolTip.Tip="{loc:Localize Toolbar.LoadPdkTip}">
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <TextBlock Text="📦" FontSize="15" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{loc:Localize Toolbar.LoadPdk}"
-                                                       Foreground="White" FontSize="12"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1" Width="32" Margin="4,0,0,0" Padding="2,7"
-                                            Background="#3d3d5d"
-                                            Command="{Binding OpenPdkHelpCommand}"
-                                            ToolTip.Tip="{loc:Localize Toolbar.PdkHelpTip}"
-                                            Content="❓"/>
-                                </Grid>
-
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Command="{Binding OpenPdkOffsetEditorCommand}"
-                                        ToolTip.Tip="{loc:Localize Toolbar.PdkOffsetEditorTip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="📐" FontSize="15" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{loc:Localize Toolbar.PdkOffsetEditor}"
-                                                   Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Click="OpenModeSolverDialog_Click">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="📡" FontSize="15" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{loc:Localize Toolbar.ComputeModes}"
-                                                   Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Click="OpenPdkResolutionCheckDialog_Click">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="🔎" FontSize="15" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{loc:Localize Toolbar.CheckPdks}"
-                                                   Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-                                <!-- Component Registry browser window (#656): same window as the
-                                     🌐 button in the Component Library header. -->
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Click="OpenRegistryBrowser_Click"
-                                        ToolTip.Tip="{loc:Localize Registry.OpenTip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="🌐" FontSize="15" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{loc:Localize Toolbar.ComponentRegistry}"
-                                                   Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- ISA playground (#1194): write & step through 4-bit assembly
-                                     programs against the golden-model machine. -->
-                                <Button x:Name="IsaPlaygroundToolButton"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Click="OpenIsaPlayground_Click"
-                                        ToolTip.Tip="{loc:Localize Toolbar.IsaPlaygroundTip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="🧮" FontSize="15" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{loc:Localize Toolbar.IsaPlayground}"
-                                                   Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- Unlock All (components & connections) — replaces the former
-                                     "Lock Elements" properties-panel section (issue: drop that
-                                     section, keep the unlock-all function reachable here). -->
-                                <Button HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Left"
-                                        Margin="0,2" Padding="10,3"
-                                        Background="#3d3d5d"
-                                        Command="{Binding BottomPanel.ElementLock.UnlockAllCommand}"
-                                        ToolTip.Tip="{loc:Localize Toolbar.UnlockAllTip}">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <TextBlock Text="🔓" FontSize="15" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{loc:Localize Toolbar.UnlockAll}"
-                                                   Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
-
-                <!-- AI Design Assistant — own tool window (formerly a right-sidebar section) -->
-                <Button Click="OpenAiAssistant_Click"
-                        Width="36" Margin="2" Background="#3d3d5d"
-                        ToolTip.Tip="{loc:Localize Toolbar.AiAssistantTip}">
-                    <TextBlock Text="🤖" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Button>
-
-                <Separator Width="1" Background="Gray" Margin="10,5"/>
-
-                <!-- Settings -->
-                <Button Command="{Binding OpenSettingsWindowCommand}"
-                        Width="36" Margin="2" Background="#3d3d3d" ToolTip.Tip="{loc:Localize Toolbar.SettingsTip}">
-                    <TextBlock Text="⚙" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Button>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- Status Bar -->
-        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Height="25">
-            <DockPanel LastChildFill="True">
-                <!-- Active process indicator (issue #570): persistent, low-clutter home in the
-                     status bar (right) rather than the crowded top toolbar. Green = a real
-                     process; amber = Playground (not manufacturable); "No process selected" until
-                     one is chosen via File → New. MinWidth reserves a fixed right-hand column
-                     so the badge can never slide over the shortcut hints (#1162). -->
-                <Border DockPanel.Dock="Right" x:Name="ActiveProcessIndicator"
-                        MinWidth="170"
-                        Margin="6,3" Padding="8,1" CornerRadius="3" VerticalAlignment="Center"
-                        Background="#2d4d2d" Classes.playground="{Binding IsPlayground}"
-                        ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
-                    <Border.Styles>
-                        <Style Selector="Border.playground">
-                            <Setter Property="Background" Value="#5d4510"/>
-                        </Style>
-                    </Border.Styles>
-                    <TextBlock Text="{Binding ActiveProcessLabel}"
-                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
-                               Foreground="White" FontSize="10" VerticalAlignment="Center"/>
-                </Border>
-                <!-- Full keyboard-shortcut reference (#1162): moved off the status bar into
-                     this (?) flyout — the bar itself shows only the hints relevant to the
-                     current canvas mode, which always fits. -->
+            </Grid>
+        </Border>
+        <!-- ══ Status bar: fixed fields ═══════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Bottom" Classes="statusbar" Height="26">
+            <DockPanel x:Name="StatusBarRoot" LastChildFill="True">
+                <!-- Full keyboard-shortcut reference; the bar itself carries no cheat sheet. -->
                 <controls:HelpFlyoutButton DockPanel.Dock="Right" VerticalAlignment="Center"
-                                           Margin="0,0,2,0"
+                                           Margin="4,0,8,0"
                                            Title="{loc:Localize StatusBar.ShortcutsFlyoutTitle}">
                     <controls:HelpFlyoutButton.HelpContent>
                         <panels:ShortcutsHelpFlyout/>
                     </controls:HelpFlyoutButton.HelpContent>
                 </controls:HelpFlyoutButton>
-                <!-- Grid (not StackPanel) so a long status text is ellipsized by its column
-                     instead of pushing the hints under the badge (#1162). -->
-                <Grid ColumnDefinitions="Auto,Auto,*">
-                    <TextBlock Grid.Column="0" Text="{Binding StatusText}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" Margin="10,0" Foreground="LightGray"/>
-                    <!-- Stop for a full re-route (#1278): visible only while routing runs,
-                         cancels the pass; already-routed wires keep their routes. -->
-                    <Button Grid.Column="1" Content="{loc:Localize Routing.Status.Stop}"
-                            Command="{Binding Canvas.StopRoutingCommand}"
-                            IsVisible="{Binding Canvas.IsRouting}"
-                            VerticalAlignment="Center" Margin="6,0,0,0" FontSize="11"
-                            ToolTip.Tip="{loc:Localize Routing.Status.StopTip}"/>
-                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="20,0,0,0"
-                               Foreground="Gray" TextTrimming="CharacterEllipsis"
-                               Text="{Binding CanvasInteraction.ModeShortcutHints}"/>
-                </Grid>
+                <!-- Active process: fixed right-hand column so it never covers other fields.
+                     Dot: green = real process, amber = Playground (not manufacturable). -->
+                <Border DockPanel.Dock="Right" x:Name="ActiveProcessIndicator"
+                        Classes="chip processChip" MinWidth="170" Margin="4,0"
+                        Classes.playground="{Binding IsPlayground}"
+                        Classes.none="{Binding FileOperations.ActiveProcess, Converter={x:Static ObjectConverters.IsNull}}"
+                        ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <Ellipse Classes="processDot" Width="6" Height="6" VerticalAlignment="Center"/>
+                        <TextBlock Classes="statusText" Text="{Binding ActiveProcessLabel}"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="260"/>
+                    </StackPanel>
+                </Border>
+                <Border DockPanel.Dock="Right" Classes="statusDivider"/>
+                <StackPanel DockPanel.Dock="Right" Classes="statusField"
+                            ToolTip.Tip="{loc:Localize StatusBar.ZoomTip}">
+                    <controls:Icon Data="{StaticResource Icon.ZoomIn}"/>
+                    <TextBlock Classes="statusText mono" MinWidth="36"
+                               Text="{Binding ViewportControl.ZoomLevel, StringFormat={}{0:P0}}"/>
+                </StackPanel>
+                <!-- Blocked / unrouted connections: hidden at 0, click walks through them. -->
+                <Button DockPanel.Dock="Right" x:Name="BlockedConnectionsChip" Classes="statusChip danger"
+                        Margin="4,0"
+                        IsVisible="{Binding BlockedConnections.HasBlocked}"
+                        Command="{Binding BlockedConnections.SelectNextBlockedCommand}"
+                        ToolTip.Tip="{loc:Localize StatusBar.BlockedTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <controls:Icon Data="{StaticResource Icon.TriangleAlert}"/>
+                        <TextBlock VerticalAlignment="Center">
+                            <Run Text="{Binding BlockedConnections.BlockedCount}"/>
+                            <Run Text="{loc:Localize StatusBar.BlockedSuffix}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+                <!-- Stop for a full re-route: visible only while routing runs. -->
+                <Button DockPanel.Dock="Right" x:Name="StopRoutingButton" Classes="statusChip" Margin="4,0"
+                        Command="{Binding Canvas.StopRoutingCommand}"
+                        IsVisible="{Binding Canvas.IsRouting}"
+                        ToolTip.Tip="{loc:Localize Routing.Status.StopTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <controls:Icon Data="{StaticResource Icon.CircleStop}"/>
+                        <TextBlock Text="{loc:Localize Routing.Status.Stop}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <StackPanel DockPanel.Dock="Left" x:Name="StatusBarModeField" Classes="statusField"
+                            Margin="8,0,0,0"
+                            ToolTip.Tip="{Binding CanvasInteraction.ModeShortcutHints}">
+                    <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
+                    <TextBlock Classes="statusText strong" Text="{Binding StatusBar.ModeLabel}"/>
+                </StackPanel>
+                <Border DockPanel.Dock="Left" Classes="statusDivider"/>
+                <StackPanel DockPanel.Dock="Left" Classes="statusField"
+                            ToolTip.Tip="{loc:Localize StatusBar.SelectionTip}">
+                    <controls:Icon Data="{StaticResource Icon.SquareDashed}"/>
+                    <TextBlock Classes="statusText" Text="{Binding StatusBar.SelectionSummary}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="280"/>
+                </StackPanel>
+                <Border DockPanel.Dock="Left" Classes="statusDivider"/>
+                <TextBlock Classes="statusText muted" Text="{Binding StatusText}" Margin="8,0"
+                           TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
 
-        <!-- Error Console Panel (collapsible, above status bar, toggled via F12) -->
-        <Border DockPanel.Dock="Bottom" Background="#161616" BorderThickness="0,1,0,0" BorderBrush="#3d3d3d">
+        <!-- ══ Error console (collapsible, F12) ═════════════════════════════════ -->
+        <Border DockPanel.Dock="Bottom" Classes="dockFrame">
             <StackPanel>
-                <!-- Header bar: always visible, click to toggle -->
-                <DockPanel Height="26" Background="#252526">
-                    <!-- Action buttons on the right -->
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
-                        <Button Content="📋"
+                <DockPanel Classes="dockHeader">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2"
+                                VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Button Classes="headerIcon"
                                 Command="{Binding BottomPanel.ErrorConsole.CopyAllCommand}"
-                                Width="28" Height="20" Margin="2,0" Padding="0"
-                                Background="#3d3d3d" Foreground="LightGray"
-                                FontSize="11"
-                                ToolTip.Tip="{loc:Localize ErrorConsole.CopyAllTip}"/>
-                        <Button Content="✕"
+                                ToolTip.Tip="{loc:Localize ErrorConsole.CopyAllTip}">
+                            <controls:Icon Data="{StaticResource Icon.Copy}"/>
+                        </Button>
+                        <Button Classes="headerIcon"
                                 Command="{Binding BottomPanel.ErrorConsole.ClearCommand}"
-                                Width="24" Height="20" Margin="2,0" Padding="0"
-                                Background="#3d3d3d" Foreground="LightGray"
-                                FontSize="11"
-                                ToolTip.Tip="{loc:Localize ErrorConsole.ClearTip}"/>
+                                ToolTip.Tip="{loc:Localize ErrorConsole.ClearTip}">
+                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                        </Button>
                     </StackPanel>
-                    <!-- Toggle button fills remaining space -->
-                    <Button Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}"
-                            Background="Transparent"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Left"
-                            Height="26" Padding="8,0"
+                    <Button Classes="dockToggle"
+                            Command="{Binding BottomPanel.ErrorConsole.ToggleCommand}"
                             ToolTip.Tip="{loc:Localize ErrorConsole.ToggleTip}">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="▶" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
-                                       IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible, Converter={x:Static BoolConverters.Not}}"/>
-                            <TextBlock Text="▼" Foreground="Gray" FontSize="9" VerticalAlignment="Center"
-                                       IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}"/>
-                            <TextBlock Text="{loc:Localize ErrorConsole.Title}" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                            <!-- Error badge -->
-                            <Border Background="#5d2020" CornerRadius="8" Padding="5,1"
-                                    IsVisible="{Binding BottomPanel.ErrorConsole.HasErrors}">
-                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.ErrorCount}"
-                                           Foreground="#FF6B6B" FontSize="10" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronRight}"
+                                           Classes.open="{Binding BottomPanel.ErrorConsole.IsVisible}"/>
+                            <controls:Icon Data="{StaticResource Icon.Terminal}"/>
+                            <TextBlock Classes="dockTitle" Text="{loc:Localize ErrorConsole.Title}"/>
+                            <Border Classes="chip danger" IsVisible="{Binding BottomPanel.ErrorConsole.HasErrors}">
+                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.ErrorCount}"/>
                             </Border>
-                            <!-- Warning badge -->
-                            <Border Background="#5d4510" CornerRadius="8" Padding="5,1"
-                                    IsVisible="{Binding BottomPanel.ErrorConsole.HasWarnings}">
-                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.WarningCount}"
-                                           Foreground="#FFD93D" FontSize="10" VerticalAlignment="Center"/>
+                            <Border Classes="chip warning" IsVisible="{Binding BottomPanel.ErrorConsole.HasWarnings}">
+                                <TextBlock Text="{Binding BottomPanel.ErrorConsole.WarningCount}"/>
                             </Border>
                         </StackPanel>
                     </Button>
                 </DockPanel>
 
-                <!-- Content area: only shown when IsVisible is true -->
-                <Border IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}" Height="180" Background="#161616">
+                <Border Classes="dockBody" IsVisible="{Binding BottomPanel.ErrorConsole.IsVisible}" Height="180"
+                        behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromY="8">
                     <ListBox x:Name="ErrorConsoleListBox"
+                             Classes="console"
                              ItemsSource="{Binding BottomPanel.ErrorConsole.DisplayEntries}"
-                             Background="Transparent"
-                             BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
                              ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="diagnostics:LogDisplayEntry">
-                                <TextBlock Text="{Binding Text}"
+                                <TextBlock Classes="mono" Text="{Binding Text}"
                                            Foreground="{Binding Color}"
-                                           FontFamily="Consolas, Courier New, monospace"
-                                           FontSize="11"
-                                           Padding="4,1"
+                                           FontSize="{DynamicResource FontSize.Caption}"
                                            TextWrapping="NoWrap"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -526,604 +434,442 @@
             </StackPanel>
         </Border>
 
-        <!-- Analysis Dock Panel (collapsible, above the Error Console, #570/#535) -->
+        <!-- Analysis Dock Panel (collapsible, above the Error Console) -->
         <panels:AnalysisDockPanel DockPanel.Dock="Bottom"/>
 
-        <!-- Left Panel - Hierarchy + Component Library -->
-        <Grid DockPanel.Dock="Left" ColumnDefinitions="*,Auto" Name="LeftPanelGrid">
-            <Border Grid.Column="0"
-                    Name="LeftPanelBorder"
-                    MinWidth="200" MaxWidth="800"
-                    Background="#252526">
-                <Grid>
-                    <!-- All content rows are star-sized so the splitters only redistribute a
-                         FIXED total (the panel height): dragging one grows a neighbour's share
-                         and shrinks the other, but nothing can ever be pushed past the window
-                         edge. (Mixing px + star let the px Hierarchy row grow unbounded once its
-                         px neighbour hit its minimum.) The star weights set the initial split. -->
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="240*" MinHeight="60"/>  <!-- Hierarchy -->
-                        <RowDefinition Height="5"/>
-                        <RowDefinition Height="160*" MinHeight="34"/>  <!-- Saved Groups -->
-                        <RowDefinition Height="5"/>
-                        <RowDefinition Height="320*" MinHeight="80"/>  <!-- Component Library -->
-                        <RowDefinition Height="5"/>
-                        <RowDefinition Height="150*" MinHeight="34"/>  <!-- PDK Management -->
-                    </Grid.RowDefinitions>
-                <!-- Hierarchy Panel -->
-                <views:HierarchyPanel Grid.Row="0"
-                                      DataContext="{Binding LeftPanel.HierarchyPanel}"/>
-
-                <!-- Splitter: Hierarchy / Saved Groups -->
-                <GridSplitter Grid.Row="1"
-                              Background="#3d3d3d"
-                              ResizeDirection="Rows"
-                              HorizontalAlignment="Stretch"/>
-
-                <!-- Saved Groups rubric (own resizable section, like Hierarchy) -->
-                <DockPanel Grid.Row="2">
-                    <TextBlock DockPanel.Dock="Top" Text="{loc:Localize LeftPanel.SavedGroups}"
-                               FontWeight="Bold" Margin="10,6,10,4" Foreground="White"
-                               ToolTip.Tip="{loc:Localize LeftPanel.SavedGroupsTip}"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Margin="5,1">
-                            <!-- Only shown when empty; the list (and the PDK Macros label) carry the rest -->
-                            <TextBlock Text="{Binding LeftPanel.ComponentLibrary.StatusText}"
-                                       FontSize="10" Foreground="Gray" Margin="0,0,0,2"
-                                       IsVisible="{Binding LeftPanel.ComponentLibrary.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                            <!-- User Groups (no label: this is the default/first list) -->
-                            <ListBox x:Name="UserGroupsListBox"
-                                     Classes="compactList"
-                                     behaviors:LibraryDragBehavior.IsEnabled="True"
-                                     ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
-                                     SelectionChanged="OnUserGroupsSelectionChanged"
-                                     Background="Transparent"
-                                     MaxHeight="150">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
-                                        <Border Margin="0,1" Cursor="Hand"
-                                                ToolTip.Tip="{Binding Template.Description}"
-                                                PointerEntered="OnGroupItemPointerEntered"
-                                                PointerExited="OnGroupItemPointerExited"
-                                                Background="Transparent"
-                                                ClipToBounds="False">
-                                            <Border.ContextMenu>
-                                                <ContextMenu>
-                                                    <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding RenameCommand}"/>
-                                                    <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteCommand}"/>
-                                                </ContextMenu>
-                                            </Border.ContextMenu>
-                                            <Grid>
-                                            <StackPanel Orientation="Horizontal">
-                                                <!-- Preview box with component count and size info -->
-                                                <Border Width="40" Height="26"
-                                                        Background="#1e1e1e"
-                                                        BorderBrush="#3e3e3e"
-                                                        BorderThickness="1"
-                                                        CornerRadius="3"
-                                                        Margin="0,0,5,0">
-                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Template.ComponentCount}"
-                                                                   FontSize="12" FontWeight="Bold"
-                                                                   Foreground="#4CAF50"
-                                                                   HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="{loc:Localize LeftPanel.CompAbbrev}" FontSize="7"
-                                                                   Foreground="Gray"
-                                                                   HorizontalAlignment="Center"
-                                                                   Margin="0,-2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
-                                                    <TextBlock FontSize="9" Foreground="Gray">
-                                                        <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="×"/>
-                                                        <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="μm"/>
-                                                    </TextBlock>
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- Delete button (visible on hover) -->
-                                            <Button IsVisible="{Binding IsHovered}"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Width="18" Height="18"
-                                                    Padding="0"
-                                                    Margin="0,-6,-6,0"
-                                                    Background="#D32F2F"
-                                                    CornerRadius="9"
-                                                    Command="{Binding DeleteCommand}"
-                                                    ToolTip.Tip="{loc:Localize LeftPanel.DeleteSavedGroupTip}">
-                                                <PathIcon Data="M 4,4 L 10,10 M 4,10 L 10,4"
-                                                          Width="10" Height="10"
-                                                          Foreground="White"/>
-                                            </Button>
-                                        </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-
-                            <!-- PDK Groups -->
-                            <TextBlock Text="{loc:Localize LeftPanel.PdkMacros}" Foreground="Orange" FontWeight="SemiBold"
-                                       FontSize="10" Margin="0,5,0,2"
-                                       IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
-                            <ListBox x:Name="PdkGroupsListBox"
-                                     Classes="compactList"
-                                     behaviors:LibraryDragBehavior.IsEnabled="True"
-                                     ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
-                                     SelectionChanged="OnPdkGroupsSelectionChanged"
-                                     Background="Transparent"
-                                     MaxHeight="150">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
-                                        <Border Margin="0,1" Cursor="Hand"
-                                                ToolTip.Tip="{Binding Template.Description}"
-                                                PointerEntered="OnGroupItemPointerEntered"
-                                                PointerExited="OnGroupItemPointerExited"
-                                                Background="Transparent"
-                                                ClipToBounds="False">
-                                            <Border.ContextMenu>
-                                                <ContextMenu>
-                                                    <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding RenameCommand}"/>
-                                                    <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteCommand}"/>
-                                                </ContextMenu>
-                                            </Border.ContextMenu>
-                                            <Grid>
-                                            <StackPanel Orientation="Horizontal">
-                                                <!-- Preview box with component count and size info -->
-                                                <Border Width="40" Height="26"
-                                                        Background="#1e1e1e"
-                                                        BorderBrush="#3e3e3e"
-                                                        BorderThickness="1"
-                                                        CornerRadius="3"
-                                                        Margin="0,0,5,0">
-                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Template.ComponentCount}"
-                                                                   FontSize="12" FontWeight="Bold"
-                                                                   Foreground="#4CAF50"
-                                                                   HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="{loc:Localize LeftPanel.CompAbbrev}" FontSize="7"
-                                                                   Foreground="Gray"
-                                                                   HorizontalAlignment="Center"
-                                                                   Margin="0,-2,0,0"/>
-                                                    </StackPanel>
-                                                </Border>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Template.Name}" FontWeight="SemiBold" FontSize="11" Foreground="White"/>
-                                                    <TextBlock FontSize="9" Foreground="Gray">
-                                                        <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="×"/>
-                                                        <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
-                                                        <Run Text="μm"/>
-                                                    </TextBlock>
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- Delete button (visible on hover) -->
-                                            <Button IsVisible="{Binding IsHovered}"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Width="18" Height="18"
-                                                    Padding="0"
-                                                    Margin="0,-6,-6,0"
-                                                    Background="#D32F2F"
-                                                    CornerRadius="9"
-                                                    Command="{Binding DeleteCommand}"
-                                                    ToolTip.Tip="{loc:Localize LeftPanel.DeleteSavedGroupTip}">
-                                                <PathIcon Data="M 4,4 L 10,10 M 4,10 L 10,4"
-                                                          Width="10" Height="10"
-                                                          Foreground="White"/>
-                                            </Button>
-                                        </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+        <!-- ══ Left: icon rail + one full-height pane ═════════════════════════════ -->
+        <Grid DockPanel.Dock="Left" ColumnDefinitions="320,Auto" Name="LeftPanelGrid">
+            <Border Grid.Column="0" Name="LeftPanelBorder" Classes="sidePanel left"
+                    MinWidth="248" MaxWidth="800">
+                <DockPanel>
+                    <Border DockPanel.Dock="Left" Classes="rail">
+                        <StackPanel Spacing="4">
+                            <Button Classes="rail" Command="{Binding LeftRail.ShowLibraryCommand}"
+                                    Classes.active="{Binding LeftRail.IsLibraryActive}"
+                                    ToolTip.Tip="{loc:Localize LeftPanel.ComponentLibrary}"
+                                    ToolTip.Placement="Right">
+                                <controls:Icon Data="{StaticResource Icon.Shapes}" Size="18"/>
+                            </Button>
+                            <Button Classes="rail" Command="{Binding LeftRail.ShowHierarchyCommand}"
+                                    Classes.active="{Binding LeftRail.IsHierarchyActive}"
+                                    ToolTip.Tip="{loc:Localize Hierarchy.Title}"
+                                    ToolTip.Placement="Right">
+                                <controls:Icon Data="{StaticResource Icon.ListTree}" Size="18"/>
+                            </Button>
+                            <Button Classes="rail" Command="{Binding LeftRail.ShowPdksCommand}"
+                                    Classes.active="{Binding LeftRail.IsPdksActive}"
+                                    ToolTip.Tip="{loc:Localize LeftRail.Pdks}"
+                                    ToolTip.Placement="Right">
+                                <controls:Icon Data="{StaticResource Icon.Package}" Size="18"/>
+                            </Button>
                         </StackPanel>
-                    </ScrollViewer>
-                </DockPanel>
+                    </Border>
 
-                <!-- Splitter: Saved Groups / Component Library -->
-                <GridSplitter Grid.Row="3"
-                              Background="#3d3d3d"
-                              ResizeDirection="Rows"
-                              HorizontalAlignment="Stretch"/>
+                    <Panel>
+                        <!-- ── Library (default): saved groups + components, one scroll ── -->
+                        <DockPanel Classes="railPane" IsVisible="{Binding LeftRail.IsLibraryActive}"
+                                   behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                            <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                                    <!-- Online, community-shared counterpart to this local library -->
+                                    <Button Classes="headerIcon" Click="OpenRegistryBrowser_Click"
+                                            ToolTip.Tip="{loc:Localize Registry.OpenTip}">
+                                        <controls:Icon Data="{StaticResource Icon.Globe}"/>
+                                    </Button>
+                                    <Button Classes="headerIcon" Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
+                                            ToolTip.Tip="{loc:Localize GdsImport.OpenTip}">
+                                        <controls:Icon Data="{StaticResource Icon.FileInput}"/>
+                                    </Button>
+                                    <Button Classes="headerIcon" Command="{Binding LeftPanel.OpenNewComponentCommand}"
+                                            ToolTip.Tip="{loc:Localize LeftPanel.NewComponentTip}">
+                                        <controls:Icon Data="{StaticResource Icon.Plus}"/>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Classes="paneTitle" Text="{loc:Localize LeftPanel.ComponentLibrary}"/>
+                            </DockPanel>
+                            <TextBox DockPanel.Dock="Top" Classes="search" Margin="12,0,12,8"
+                                     Watermark="{loc:Localize LeftPanel.SearchWatermark}"
+                                     Text="{Binding LeftPanel.SearchText}">
+                                <TextBox.InnerLeftContent>
+                                    <controls:Icon Data="{StaticResource Icon.Search}" Size="14"
+                                                   Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                                   Margin="8,0,0,0"/>
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
 
-                <!-- Component Library -->
-                <DockPanel Grid.Row="4">
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="10,6,10,4">
-                        <TextBlock Grid.Column="0" Text="{loc:Localize LeftPanel.ComponentLibrary}"
-                                   FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                        <!-- Opens the Component Registry browser window (#656) — the online,
-                             community-shared counterpart to this local library. -->
-                        <Button Grid.Column="1" Content="🌐" Click="OpenRegistryBrowser_Click"
-                                Padding="6,0" Margin="0,0,4,0" Background="#2a3a4a"
-                                ToolTip.Tip="{loc:Localize Registry.OpenTip}"/>
-                        <!-- Imports a GDS layout as canvas components (#808) — the command lives
-                             on MainViewModel.GdsImport, not on LeftPanelViewModel. -->
-                        <Button Grid.Column="2" Content="GDS" Command="{Binding GdsImport.OpenGdsImportDialogCommand}"
-                                Padding="6,0" Margin="0,0,4,0" Background="#3a3a4a" FontSize="10"
-                                ToolTip.Tip="{loc:Localize GdsImport.OpenTip}"/>
-                        <Button Grid.Column="3" Content="+" Command="{Binding LeftPanel.OpenNewComponentCommand}"
-                                Padding="8,0" FontWeight="Bold" Background="#2a4a2a"
-                                ToolTip.Tip="{loc:Localize LeftPanel.NewComponentTip}"/>
-                    </Grid>
-                    <TextBox DockPanel.Dock="Top" Watermark="{loc:Localize LeftPanel.SearchWatermark}"
-                             Text="{Binding LeftPanel.SearchText}"
-                             Margin="10,0,10,6" FontSize="11"
-                             Background="#1e1e1e" Foreground="White"
-                             BorderBrush="#3e3e3e"/>
-                    <TextBlock DockPanel.Dock="Top" Text="{loc:Localize LeftPanel.PlaceHint}"
-                               FontSize="10" Margin="10,0,10,5" Foreground="Gray" TextWrapping="Wrap"/>
+                            <!-- Online-registry hit line under the local hits: visible only while
+                                 it has something to say, styled as a link so it is never mistaken
+                                 for a placeable local template. -->
+                            <Button DockPanel.Dock="Bottom" Classes="link" Margin="12,6,12,8"
+                                    HorizontalAlignment="Left"
+                                    Click="OpenRegistrySearchHint_Click"
+                                    IsVisible="{Binding LeftPanel.RegistrySearchHintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    ToolTip.Tip="{loc:Localize Registry.SearchHintTip}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <controls:Icon Data="{StaticResource Icon.Globe}" Size="12"/>
+                                    <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Text.Link}"
+                                               Text="{Binding LeftPanel.RegistrySearchHintText}"/>
+                                </StackPanel>
+                            </Button>
 
-                    <!-- Online-registry link row under the local hits (#772): a subtle
-                         🌐 line — hit count once the registry index is loaded, neutral
-                         prompt before that — so it can never be mistaken for a placeable
-                         local template. Visible only while it has something to say. -->
-                    <Button DockPanel.Dock="Bottom" Click="OpenRegistrySearchHint_Click"
-                            IsVisible="{Binding LeftPanel.RegistrySearchHintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                            Background="Transparent" BorderThickness="0" Padding="0" Margin="10,2"
-                            HorizontalContentAlignment="Left" Cursor="Hand"
-                            ToolTip.Tip="{loc:Localize Registry.SearchHintTip}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <TextBlock Text="🌐" FontSize="10" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding LeftPanel.RegistrySearchHintText}"
-                                       Foreground="#7a9ec9" FontSize="10" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <ScrollViewer x:Name="ComponentLibraryScroll"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
-                        <ListBox x:Name="ComponentLibraryList"
-                                 ItemsSource="{Binding LeftPanel.FilteredTemplates}"
-                                 Classes="compactList"
-                                 behaviors:LibraryDragBehavior.IsEnabled="True"
-                                 SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
-                                 Background="Transparent" Foreground="White"
-                                 Margin="5,0"
-                                 controls:ComponentPreview.RenderService="{Binding GdsPreviewRenderService}">
-                            <ListBox.Styles>
-                                <!-- Inline edit/delete icons on a custom component appear only on
-                                     hover or when the row is selected — keeps the palette clean
-                                     but discoverable (no hidden-only context menu). -->
-                                <!-- Default hidden via STYLE (not an inline Opacity, which would
-                                     out-prioritise the hover setter and stay invisible). -->
-                                <Style Selector="ListBoxItem StackPanel.itemActions">
-                                    <Setter Property="Opacity" Value="0"/>
-                                </Style>
-                                <Style Selector="ListBoxItem:pointerover StackPanel.itemActions">
-                                    <Setter Property="Opacity" Value="1"/>
-                                </Style>
-                                <Style Selector="ListBoxItem:selected StackPanel.itemActions">
-                                    <Setter Property="Opacity" Value="1"/>
-                                </Style>
-                            </ListBox.Styles>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vmLib:ComponentTemplate">
-                                    <DockPanel Margin="0,1" HorizontalAlignment="Stretch">
-                                        <!-- Right margin keeps the hover icons off the row's right
-                                             edge (mirrors the preview's 6px gap on the left). -->
-                                        <StackPanel Classes="itemActions" DockPanel.Dock="Right" Orientation="Horizontal"
-                                                    VerticalAlignment="Center" Margin="0,0,6,0">
-                                            <Button Content="✏" Click="TemplateEditComponent_Click"
-                                                    FontSize="11" Padding="4,0" MinWidth="0"
-                                                    Background="Transparent" BorderThickness="0" Foreground="#c9c9c9"
-                                                    ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}"/>
-                                            <!-- ✕ only where there is something to delete or restore:
-                                                 IsDeletable is false for bundled components AND for fork
-                                                 components identical to their bundled original. -->
-                                            <Button Content="✕" Click="TemplateDeleteComponent_Click"
-                                                    IsVisible="{Binding IsDeletable}"
-                                                    FontSize="11" Padding="4,0" MinWidth="0" Margin="2,0,0,0"
-                                                    Background="Transparent" BorderThickness="0" Foreground="#e08a8a"
-                                                    ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}"/>
+                            <ScrollViewer x:Name="ComponentLibraryScroll"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
+                                <StackPanel Margin="0,0,0,8">
+                                    <!-- Saved groups: a collapsible category of the library -->
+                                    <ToggleButton x:Name="SavedGroupsToggle" Classes="sectionHeader" IsChecked="True"
+                                                  ToolTip.Tip="{loc:Localize LeftPanel.SavedGroupsTip}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronRight}"
+                                                           Classes.open="{Binding #SavedGroupsToggle.IsChecked}"/>
+                                            <TextBlock Classes="label" Text="{loc:Localize LeftPanel.SavedGroups}"/>
                                         </StackPanel>
-                                        <controls:ComponentPreview DockPanel.Dock="Left"
-                                            Width="56" Height="36"
-                                            WidthMicrometers="{Binding WidthMicrometers}"
-                                            HeightMicrometers="{Binding HeightMicrometers}"
-                                            PinDefinitions="{Binding PinDefinitions}"
-                                            NazcaModuleName="{Binding NazcaModuleName}"
-                                            NazcaFunctionName="{Binding NazcaFunctionName}"
-                                            NazcaParameters="{Binding NazcaParameters}"
-                                            GdsFactoryFunction="{Binding GdsFactoryFunction}"
-                                            Margin="0,0,6,0"/>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"/>
-                                                <!-- User-global S-matrix override badge: signals that this template's
-                                                     S-matrix has been replaced by an imported override that applies
-                                                     to every project the user opens. -->
-                                                <TextBlock Text="📊"
-                                                           FontSize="11"
-                                                           VerticalAlignment="Center"
-                                                           Margin="4,0,0,0"
-                                                           IsVisible="{Binding HasUserGlobalSMatrixOverride}"
-                                                           ToolTip.Tip="{loc:Localize LeftPanel.SMatrixOverrideTip}"/>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Category}" FontSize="9" Foreground="Gray"/>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </ScrollViewer>
+                                    </ToggleButton>
+                                    <StackPanel IsVisible="{Binding #SavedGroupsToggle.IsChecked}" Margin="8,0,8,4">
+                                        <TextBlock Classes="caption" Margin="8,0,8,4" TextWrapping="Wrap"
+                                                   Text="{Binding LeftPanel.ComponentLibrary.StatusText}"
+                                                   IsVisible="{Binding LeftPanel.ComponentLibrary.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                        <ListBox x:Name="UserGroupsListBox"
+                                                 Classes="library"
+                                                 behaviors:LibraryDragBehavior.IsEnabled="True"
+                                                 ItemsSource="{Binding LeftPanel.ComponentLibrary.UserGroups}"
+                                                 SelectionChanged="OnUserGroupsSelectionChanged">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                                                    <Border Classes="libraryRow"
+                                                            ToolTip.Tip="{Binding Template.Description}"
+                                                            PointerEntered="OnGroupItemPointerEntered"
+                                                            PointerExited="OnGroupItemPointerExited">
+                                                        <Border.ContextMenu>
+                                                            <ContextMenu>
+                                                                <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding RenameCommand}"/>
+                                                                <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteCommand}"/>
+                                                            </ContextMenu>
+                                                        </Border.ContextMenu>
+                                                        <DockPanel>
+                                                            <Button DockPanel.Dock="Right" Classes="rowAction danger"
+                                                                    IsVisible="{Binding IsHovered}"
+                                                                    Command="{Binding DeleteCommand}"
+                                                                    ToolTip.Tip="{loc:Localize LeftPanel.DeleteSavedGroupTip}">
+                                                                <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                            </Button>
+                                                            <Border DockPanel.Dock="Left" Classes="thumb">
+                                                                <controls:Icon Data="{StaticResource Icon.Group}"/>
+                                                            </Border>
+                                                            <StackPanel VerticalAlignment="Center" Spacing="1">
+                                                                <TextBlock Classes="rowTitle" Text="{Binding Template.Name}"/>
+                                                                <TextBlock Classes="caption">
+                                                                    <Run Text="{Binding Template.ComponentCount}"/>
+                                                                    <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                                                    <Run Text=" · "/>
+                                                                    <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                                    <Run Text="×"/>
+                                                                    <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                                    <Run Text="µm"/>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                        </DockPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                        <TextBlock Classes="label" Margin="8,8,8,4" Text="{loc:Localize LeftPanel.PdkMacros}"
+                                                   IsVisible="{Binding LeftPanel.ComponentLibrary.PdkGroups.Count}"/>
+                                        <ListBox x:Name="PdkGroupsListBox"
+                                                 Classes="library"
+                                                 behaviors:LibraryDragBehavior.IsEnabled="True"
+                                                 ItemsSource="{Binding LeftPanel.ComponentLibrary.PdkGroups}"
+                                                 SelectionChanged="OnPdkGroupsSelectionChanged">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                                                    <Border Classes="libraryRow"
+                                                            ToolTip.Tip="{Binding Template.Description}"
+                                                            PointerEntered="OnGroupItemPointerEntered"
+                                                            PointerExited="OnGroupItemPointerExited">
+                                                        <Border.ContextMenu>
+                                                            <ContextMenu>
+                                                                <MenuItem Header="{loc:Localize Common.Rename}" Command="{Binding RenameCommand}"/>
+                                                                <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteCommand}"/>
+                                                            </ContextMenu>
+                                                        </Border.ContextMenu>
+                                                        <DockPanel>
+                                                            <Button DockPanel.Dock="Right" Classes="rowAction danger"
+                                                                    IsVisible="{Binding IsHovered}"
+                                                                    Command="{Binding DeleteCommand}"
+                                                                    ToolTip.Tip="{loc:Localize LeftPanel.DeleteSavedGroupTip}">
+                                                                <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                            </Button>
+                                                            <Border DockPanel.Dock="Left" Classes="thumb">
+                                                                <controls:Icon Data="{StaticResource Icon.Boxes}"/>
+                                                            </Border>
+                                                            <StackPanel VerticalAlignment="Center" Spacing="1">
+                                                                <TextBlock Classes="rowTitle" Text="{Binding Template.Name}"/>
+                                                                <TextBlock Classes="caption">
+                                                                    <Run Text="{Binding Template.ComponentCount}"/>
+                                                                    <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                                                    <Run Text=" · "/>
+                                                                    <Run Text="{Binding Template.WidthMicrometers, StringFormat={}{0:F0}}"/>
+                                                                    <Run Text="×"/>
+                                                                    <Run Text="{Binding Template.HeightMicrometers, StringFormat={}{0:F0}}"/>
+                                                                    <Run Text="µm"/>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                        </DockPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
+
+                                    <Border Classes="divider" Height="1" Margin="12,4,12,4"/>
+                                    <TextBlock Classes="label" Margin="16,8,16,2" Text="{loc:Localize LeftPanel.Components}"/>
+                                    <TextBlock Classes="caption" Margin="16,0,16,6" TextWrapping="Wrap"
+                                               Text="{loc:Localize LeftPanel.PlaceHint}"/>
+                                    <ListBox x:Name="ComponentLibraryList"
+                                             Classes="library" Margin="8,0"
+                                             ItemsSource="{Binding LeftPanel.FilteredTemplates}"
+                                             behaviors:LibraryDragBehavior.IsEnabled="True"
+                                             SelectedItem="{Binding CanvasInteraction.SelectedTemplate}"
+                                             controls:ComponentPreview.RenderService="{Binding GdsPreviewRenderService}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                                                <DockPanel>
+                                                    <!-- Edit/delete appear on hover or selection only: the palette
+                                                         stays calm but the actions remain discoverable. -->
+                                                    <StackPanel Classes="itemActions" DockPanel.Dock="Right"
+                                                                Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                                        <Button Classes="rowAction" Click="TemplateEditComponent_Click"
+                                                                ToolTip.Tip="{loc:Localize LeftPanel.EditComponentTip}">
+                                                            <controls:Icon Data="{StaticResource Icon.Pencil}"/>
+                                                        </Button>
+                                                        <!-- Only where there is something to delete or restore. -->
+                                                        <Button Classes="rowAction danger" Click="TemplateDeleteComponent_Click"
+                                                                IsVisible="{Binding IsDeletable}"
+                                                                ToolTip.Tip="{loc:Localize LeftPanel.DeleteComponentTip}">
+                                                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                        </Button>
+                                                    </StackPanel>
+                                                    <Border DockPanel.Dock="Left" Classes="previewFrame">
+                                                        <controls:ComponentPreview
+                                                            Width="52" Height="32"
+                                                            WidthMicrometers="{Binding WidthMicrometers}"
+                                                            HeightMicrometers="{Binding HeightMicrometers}"
+                                                            PinDefinitions="{Binding PinDefinitions}"
+                                                            NazcaModuleName="{Binding NazcaModuleName}"
+                                                            NazcaFunctionName="{Binding NazcaFunctionName}"
+                                                            NazcaParameters="{Binding NazcaParameters}"
+                                                            GdsFactoryFunction="{Binding GdsFactoryFunction}"/>
+                                                    </Border>
+                                                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <TextBlock Classes="rowTitle" Text="{Binding Name}"/>
+                                                            <!-- User-global S-matrix override: applies to every project. -->
+                                                            <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="12"
+                                                                           Foreground="{DynamicResource Brush.Info}"
+                                                                           VerticalAlignment="Center"
+                                                                           IsVisible="{Binding HasUserGlobalSMatrixOverride}"
+                                                                           ToolTip.Tip="{loc:Localize LeftPanel.SMatrixOverrideTip}"/>
+                                                        </StackPanel>
+                                                        <TextBlock Classes="caption" Text="{Binding Category}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </DockPanel>
+
+                        <!-- ── Hierarchy ── -->
+                        <Border Classes="railPane" IsVisible="{Binding LeftRail.IsHierarchyActive}"
+                                behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                            <views:HierarchyPanel DataContext="{Binding LeftPanel.HierarchyPanel}"/>
+                        </Border>
+
+                        <!-- ── PDKs ── -->
+                        <DockPanel Classes="railPane" IsVisible="{Binding LeftRail.IsPdksActive}"
+                                   behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                            <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                                    <Button Classes="headerIcon" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
+                                            ToolTip.Tip="{loc:Localize LeftPanel.EnableAllPdksTip}">
+                                        <controls:Icon Data="{StaticResource Icon.SquareCheckBig}"/>
+                                    </Button>
+                                    <Button Classes="headerIcon" Command="{Binding LeftPanel.PdkManager.DisableAllCommand}"
+                                            ToolTip.Tip="{loc:Localize LeftPanel.DisableAllPdksTip}">
+                                        <controls:Icon Data="{StaticResource Icon.Square}"/>
+                                    </Button>
+                                    <!-- Recover deleted PDKs / removed components from user-pdks/.trash -->
+                                    <Button Classes="headerIcon" Command="{Binding LeftPanel.PdkTrash.OpenCommand}"
+                                            ToolTip.Tip="{loc:Localize LeftPanel.TrashTip}">
+                                        <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                        <Button.Flyout>
+                                            <Flyout Placement="Bottom">
+                                                <panels:PdkTrashPanel DataContext="{Binding LeftPanel.PdkTrash}"/>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Classes="headerIcon" Click="PdkCreate_Click"
+                                            ToolTip.Tip="{loc:Localize LeftPanel.CreatePdkTip}">
+                                        <controls:Icon Data="{StaticResource Icon.Plus}"/>
+                                    </Button>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Classes="paneTitle" Text="{loc:Localize LeftRail.Pdks}"/>
+                                    <!-- What a PDK is, what its process defines, and why a component
+                                         only seats on a chiplet of its own process. -->
+                                    <controls:HelpFlyoutButton Title="{loc:Localize PdkHelp.Title}" VerticalAlignment="Center">
+                                        <controls:HelpFlyoutButton.HelpContent>
+                                            <panels:PdkHelpFlyout/>
+                                        </controls:HelpFlyoutButton.HelpContent>
+                                    </controls:HelpFlyoutButton>
+                                </StackPanel>
+                            </DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Classes="caption" Margin="16,0,16,8" TextWrapping="Wrap"
+                                       Text="{Binding LeftPanel.PdkManager.StatusText}"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl Margin="8,0,8,8" ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
+                                            <Border Classes="pdkRow">
+                                                <DockPanel>
+                                                    <StackPanel Classes="itemActions" DockPanel.Dock="Right"
+                                                                Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                                        <!-- Bundled PDKs save as a custom fork; design-scoped sets have no file. -->
+                                                        <Button Classes="rowAction" IsVisible="{Binding !IsDesignScoped}"
+                                                                Click="PdkEditProcess_Click"
+                                                                ToolTip.Tip="{loc:Localize LeftPanel.EditPdkTip}">
+                                                            <controls:Icon Data="{StaticResource Icon.Pencil}"/>
+                                                        </Button>
+                                                        <Button Classes="rowAction danger" IsVisible="{Binding CanDelete}"
+                                                                Click="PdkDelete_Click"
+                                                                ToolTip.Tip="{loc:Localize LeftPanel.DeletePdkTip}">
+                                                            <controls:Icon Data="{StaticResource Icon.Trash2}"/>
+                                                        </Button>
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="1">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <CheckBox IsChecked="{Binding IsEnabled}"
+                                                                      Content="{Binding Name}"
+                                                                      IsEnabled="{Binding !IsLockedByProcess}"/>
+                                                            <controls:Icon Data="{StaticResource Icon.Lock}" Size="12"
+                                                                           Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                                                           VerticalAlignment="Center"
+                                                                           IsVisible="{Binding IsLockedByProcess}"
+                                                                           ToolTip.Tip="{loc:Localize LeftPanel.PdkLockedTip}"/>
+                                                        </StackPanel>
+                                                        <TextBlock Classes="caption" Margin="28,0,0,0">
+                                                            <Run Text="{Binding SourceBadge}"/>
+                                                            <Run Text=" · "/>
+                                                            <Run Text="{Binding ComponentCount}"/>
+                                                            <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Panel>
                 </DockPanel>
+            </Border>
 
-                <!-- Splitter: Component Library / PDK Management -->
-                <GridSplitter Grid.Row="5"
-                              Background="#3d3d3d"
-                              ResizeDirection="Rows"
-                              HorizontalAlignment="Stretch"/>
+            <GridSplitter Grid.Column="1" Classes="shellSplitter"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+        </Grid>
 
-                <!-- PDK Management rubric (own resizable section, like Hierarchy) -->
-                <DockPanel Grid.Row="6">
-                    <DockPanel DockPanel.Dock="Top" Margin="10,6,10,4">
-                        <!-- Opens CreateCustomPdkWindow directly, no "New Component" detour
-                             (issue #700 follow-up, LC-T2) -->
-                        <Button DockPanel.Dock="Right" Content="+" Click="PdkCreate_Click"
-                                Width="22" Height="22" Padding="0" FontSize="14" FontWeight="Bold"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                Background="#3d3d3d" Foreground="White"
-                                ToolTip.Tip="{loc:Localize LeftPanel.CreatePdkTip}"/>
-                        <!-- Small trash button: recover deleted PDKs / removed components from
-                             user-pdks/.trash (PDK-lifecycle follow-up). Opens a compact flyout. -->
-                        <Button DockPanel.Dock="Right" Content="🗑" Command="{Binding LeftPanel.PdkTrash.OpenCommand}"
-                                Width="22" Height="22" Padding="0" FontSize="12" Margin="0,0,4,0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                Background="#3d3d3d" Foreground="#c9c9c9"
-                                ToolTip.Tip="{loc:Localize LeftPanel.TrashTip}">
-                            <Button.Flyout>
-                                <Flyout Placement="Bottom">
-                                    <panels:PdkTrashPanel DataContext="{Binding LeftPanel.PdkTrash}"/>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
-                        <!-- DockPanel places each subsequent Dock="Right" child further left, so
-                             the visual order is: Title, EnableAll, DisableAll, Trash, "+". -->
-                        <Button DockPanel.Dock="Right" Content="☐" Command="{Binding LeftPanel.PdkManager.DisableAllCommand}"
-                                Width="22" Height="22" Padding="0" FontSize="12" Margin="0,0,4,0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                Background="#3d3d3d" Foreground="#c9c9c9"
-                                ToolTip.Tip="{loc:Localize LeftPanel.DisableAllPdksTip}"/>
-                        <Button DockPanel.Dock="Right" Content="☑" Command="{Binding LeftPanel.PdkManager.EnableAllCommand}"
-                                Width="22" Height="22" Padding="0" FontSize="12" Margin="0,0,4,0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                Background="#3d3d3d" Foreground="#c9c9c9"
-                                ToolTip.Tip="{loc:Localize LeftPanel.EnableAllPdksTip}"/>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="{loc:Localize LeftPanel.PdkMgmt}" VerticalAlignment="Center"
-                                       FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis"/>
-                            <!-- Plain-language help (#907, migrated in #1229): what a PDK is, what its
-                                 process defines (layers, bend radius, spacing), and why a component only
-                                 seats on a chiplet of its own process. -->
-                            <controls:HelpFlyoutButton Grid.Column="1" Margin="6,0,0,0" Title="{loc:Localize PdkHelp.Title}"
-                                                       VerticalAlignment="Center">
-                                <controls:HelpFlyoutButton.HelpContent>
-                                    <panels:PdkHelpFlyout/>
-                                </controls:HelpFlyoutButton.HelpContent>
-                            </controls:HelpFlyoutButton>
-                        </Grid>
+        <!-- ══ Right: properties of the current selection only ════════════════════ -->
+        <Grid DockPanel.Dock="Right" ColumnDefinitions="Auto,*" Name="RightPanelGrid">
+            <GridSplitter Grid.Column="0" Classes="shellSplitter"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+
+            <Border Grid.Column="1" Name="RightPanelBorder" Classes="sidePanel right"
+                    MinWidth="200" MaxWidth="800">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+                        <TextBlock Classes="paneTitle" Text="{loc:Localize RightPanel.Properties}"/>
                     </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Margin="5">
-                            <TextBlock Text="{Binding LeftPanel.PdkManager.StatusText}"
-                                       FontSize="10" Foreground="LightGray" Margin="0,0,0,5"/>
-
-                            <!-- PDK Filter List -->
-                            <ItemsControl ItemsSource="{Binding LeftPanel.PdkManager.LoadedPdks}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vmLib:PdkInfoViewModel">
-                                        <StackPanel Margin="0,3">
-                                            <StackPanel Orientation="Horizontal">
-                                                <CheckBox IsChecked="{Binding IsEnabled}"
-                                                          Content="{Binding Name}"
-                                                          FontSize="10"
-                                                          Margin="0,0,5,0"
-                                                          IsEnabled="{Binding !IsLockedByProcess}"/>
-                                                <TextBlock Text="🔒" FontSize="9" VerticalAlignment="Center"
-                                                           IsVisible="{Binding IsLockedByProcess}"
-                                                           ToolTip.Tip="{loc:Localize LeftPanel.PdkLockedTip}"/>
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-                                                <TextBlock Text="{Binding SourceBadge}"
-                                                           FontSize="9" Foreground="Gray" Margin="0,0,5,0"/>
-                                                <TextBlock FontSize="9" Foreground="Gray" Margin="0,0,5,0">
-                                                    <Run Text="{Binding ComponentCount}"/><Run Text=" "/><Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
-                                                </TextBlock>
-                                                <!-- Edits this PDK's own fabrication process (layer
-                                                     stack, cross-sections, materials). Bundled PDKs stay
-                                                     read-only: saving there implicitly writes a custom
-                                                     fork copy instead of touching the bundled file.
-                                                     Design-scoped sets (#830) have no file to fork or
-                                                     overwrite, so the button stays hidden for them. -->
-                                                <Button Content="✏" IsVisible="{Binding !IsDesignScoped}"
-                                                        Click="PdkEditProcess_Click"
-                                                        FontSize="11" Padding="5,1" MinWidth="0" Background="#3d3d3d" Foreground="#c9c9c9"
-                                                        ToolTip.Tip="{loc:Localize LeftPanel.EditPdkTip}"/>
-                                                <!-- Moves this custom PDK's file to user-pdks/.trash after a
-                                                     confirm prompt (LC-T5). Bundled PDKs are read-only and have
-                                                     no Delete button. Design-scoped sets (#830) live in the open
-                                                     .lun design — nothing on disk to trash and their lifecycle
-                                                     belongs to the design, so no Delete button either. -->
-                                                <Button Content="✕" IsVisible="{Binding CanDelete}"
-                                                        Click="PdkDelete_Click"
-                                                        FontSize="11" Padding="5,1" MinWidth="0" Background="#3d3d3d" Foreground="#e08a8a" Margin="4,0,0,0"
-                                                        ToolTip.Tip="{loc:Localize LeftPanel.DeletePdkTip}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
+                        <StackPanel Margin="16,4,16,16">
+                            <!-- Whole-design tools live on their own surfaces (analysis dock,
+                                 AI Assistant window); this sidebar shows the selection only. -->
+                            <panels:SelectedComponentPropertiesPanel/>
+                            <panels:ConnectionRoutingPanel/>
+                            <panels:LengthMatchingPanel/>
+                            <panels:GdsLayerVisibilityPanel/>
+                            <panels:RerouteImportedPanel/>
+                            <panels:TruthTablePanel/>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
-                </Grid>
-            </Border>
-
-            <!-- GridSplitter for resizing left panel -->
-            <GridSplitter Grid.Column="1"
-                          Width="4"
-                          Background="#3d3d3d"
-                          ResizeDirection="Columns"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"/>
-        </Grid>
-
-        <!-- Right Panel - Properties -->
-        <Grid DockPanel.Dock="Right" ColumnDefinitions="Auto,*" Name="RightPanelGrid">
-            <!-- GridSplitter for resizing right panel -->
-            <GridSplitter Grid.Column="0"
-                          Width="4"
-                          Background="#3d3d3d"
-                          ResizeDirection="Columns"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"/>
-
-            <Border Grid.Column="1"
-                    Name="RightPanelBorder"
-                    MinWidth="200" MaxWidth="800"
-                    Background="#252526">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="{loc:Localize RightPanel.Properties}"
-                           FontWeight="Bold" Margin="10" Foreground="White"/>
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Margin="10">
-                    <!-- Selection properties ONLY: the sidebar shows what the current
-                         selection is and how to edit it. Whole-design tools live on
-                         their own surfaces (analysis dock tabs, AI Assistant window). -->
-                    <panels:SelectedComponentPropertiesPanel/>
-
-                    <!-- Connection Routing (selected connection's routing style) -->
-                    <panels:ConnectionRoutingPanel/>
-
-                    <!-- Length Matching (exact target length for one selected connection) -->
-                    <panels:LengthMatchingPanel/>
-
-                    <!-- Imported Layers (per-layer show/hide + opacity for imported GDS, issue #858) -->
-                    <panels:GdsLayerVisibilityPanel/>
-
-                    <!-- Re-route imported (frozen) routes -->
-                    <panels:RerouteImportedPanel/>
-
-                    <!-- Truth Table Panel (logic-gate behavior of the selected group) -->
-                    <panels:TruthTablePanel/>
-
-                </StackPanel>
-                </ScrollViewer>
-            </DockPanel>
             </Border>
         </Grid>
 
-        <!-- Main Canvas with Edit Mode Banner -->
+        <!-- ══ Canvas with banners ════════════════════════════════════════════════ -->
         <DockPanel>
-            <!-- Update Banner -->
-            <Border DockPanel.Dock="Top"
-                    Background="#21463A"
-                    IsVisible="{Binding Update.UpdateAvailable}"
-                    Padding="14,10"
-                    BorderBrush="#3F8F73"
-                    BorderThickness="0,0,0,2">
-                <Grid ColumnDefinitions="*,Auto"
-                      RowDefinitions="Auto,Auto,Auto">
-                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-                        <TextBlock Text="{Binding Update.LatestVersionText}"
-                                   Foreground="White"
-                                   FontWeight="Bold"
-                                   FontSize="14"/>
-                        <TextBlock Text="{Binding Update.StatusText}"
-                                   Foreground="#D4F2E6"
-                                   FontSize="11"
-                                   TextWrapping="Wrap"
+            <!-- Update banner -->
+            <Border DockPanel.Dock="Top" Classes="banner success"
+                    IsVisible="{Binding Update.UpdateAvailable}">
+                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                    <controls:Icon Grid.Column="0" Data="{StaticResource Icon.Download}"
+                                   Foreground="{DynamicResource Brush.Success}"
+                                   VerticalAlignment="Top" Margin="0,2,12,0"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="strong" Text="{Binding Update.LatestVersionText}"/>
+                        <TextBlock Classes="secondary" Text="{Binding Update.StatusText}" TextWrapping="Wrap"
                                    IsVisible="{Binding Update.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
-
-                    <StackPanel Grid.Row="0" Grid.Column="1"
-                                Orientation="Horizontal"
-                                Spacing="8"
-                                HorizontalAlignment="Right">
-                        <Button Content="{loc:Localize Update.SkipVersion}"
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Classes="ghost" Content="{loc:Localize Update.SkipVersion}"
                                 Command="{Binding Update.SkipThisVersionCommand}"
-                                Background="#6A4A32"
-                                Foreground="White"
-                                Padding="14,6"
                                 IsEnabled="{Binding Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                         <Button Content="{loc:Localize Update.Skip}"
                                 Command="{Binding Update.RemindLaterCommand}"
-                                Background="#355248"
-                                Foreground="White"
-                                Padding="14,6"
                                 IsEnabled="{Binding Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
-                        <Button Content="{loc:Localize Update.Download}"
+                        <Button Classes="primary" Content="{loc:Localize Update.Download}"
                                 Command="{Binding Update.InstallUpdateCommand}"
-                                Background="#8FD3A7"
-                                Foreground="#163227"
-                                FontWeight="SemiBold"
-                                Padding="16,6"
                                 IsEnabled="{Binding Update.IsDownloading, Converter={x:Static BoolConverters.Not}}"/>
                     </StackPanel>
-
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
-                               Margin="0,8,0,0"
+                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Classes="caption"
+                               Margin="0,8,0,0" TextWrapping="Wrap" MaxHeight="72"
                                Text="{Binding Update.ReleaseNotes}"
-                               Foreground="#C5E8DB"
-                               FontSize="11"
-                               TextWrapping="Wrap"
-                               MaxHeight="72"
                                IsVisible="{Binding Update.ReleaseNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                    <ProgressBar Grid.Row="2" Grid.ColumnSpan="2"
-                                 Margin="0,10,0,0"
+                    <ProgressBar Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                 Margin="0,8,0,0" Height="4" Minimum="0" Maximum="1"
                                  Value="{Binding Update.DownloadProgress}"
-                                 Minimum="0"
-                                 Maximum="1"
-                                 Height="6"
                                  IsVisible="{Binding Update.IsDownloading}"/>
                 </Grid>
             </Border>
 
-            <!-- Edit Mode Banner (only visible when in edit mode) -->
-            <Border DockPanel.Dock="Top"
-                    Background="#FF6B35"
-                    IsVisible="{Binding Canvas.IsInGroupEditMode}"
-                    Padding="12,8"
-                    BorderBrush="#FF4520"
-                    BorderThickness="0,0,0,2">
+            <!-- Group edit mode banner -->
+            <Border DockPanel.Dock="Top" Classes="banner warning"
+                    IsVisible="{Binding Canvas.IsInGroupEditMode}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
-                    <!-- Icon and Label -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                        <TextBlock Text="✏️" FontSize="16" VerticalAlignment="Center"/>
-                        <TextBlock Text="{loc:Localize EditMode.Title}" FontWeight="Bold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Text="—" Foreground="#FFB399" Margin="5,0" VerticalAlignment="Center"/>
-                        <TextBlock Foreground="White" FontSize="12" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <controls:Icon Data="{StaticResource Icon.Pencil}" Foreground="{DynamicResource Brush.Warning}"/>
+                        <TextBlock Classes="strong warning" Text="{loc:Localize EditMode.Title}" VerticalAlignment="Center"/>
+                        <TextBlock Classes="secondary" VerticalAlignment="Center">
                             <Run Text="{loc:Localize EditMode.Editing}"/>
                             <Run Text="{Binding Canvas.CurrentEditGroup.GroupName}" FontWeight="SemiBold"/>
                         </TextBlock>
                     </StackPanel>
-
-                    <!-- Exit Button -->
                     <Button Grid.Column="2"
                             Content="{loc:Localize EditMode.ExitButton}"
                             Command="{Binding Canvas.ExitToRootCommand}"
-                            Background="White"
-                            Foreground="#FF6B35"
-                            FontWeight="SemiBold"
-                            Padding="16,6"
-                            BorderThickness="0"
-                            CornerRadius="3"
-                            Cursor="Hand"
                             ToolTip.Tip="{loc:Localize EditMode.ExitTip}"/>
                 </Grid>
             </Border>
 
-            <!-- Design Canvas with floating mode-probe flyout overlay (issue #691) -->
+            <!-- Design canvas with the floating mode-probe flyout overlay -->
             <Panel>
             <controls:DesignCanvas x:Name="DesignCanvasControl"
                                    ViewModel="{Binding Canvas}"
@@ -1132,49 +878,31 @@
                 <controls:DesignCanvas.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="{loc:Localize Context.EditComponent}" Command="{Binding CanvasInteraction.OpenSelectedComponentSettingsCommand}">
-                        <MenuItem.Icon>
-                            <TextBlock Text="⚙️" FontSize="14"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Settings}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Context.Copy}" Command="{Binding CopySelectedCommand}" InputGesture="Ctrl+C">
-                        <MenuItem.Icon>
-                            <TextBlock Text="📋" FontSize="14"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Copy}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.Paste}" Command="{Binding PasteSelectedCommand}" InputGesture="Ctrl+V">
-                        <MenuItem.Icon>
-                            <TextBlock Text="📄" FontSize="14"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.ClipboardPaste}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Context.CreateGroup}" Command="{Binding CreateGroupCommand}" InputGesture="Ctrl+G">
-                        <MenuItem.Icon>
-                            <PathIcon Data="M4,4 L12,4 L12,12 L4,12 Z M6,6 L10,6 L10,10 L6,10 Z"
-                                      Width="16" Height="16" Foreground="LightBlue"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Group}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.Ungroup}" Command="{Binding UngroupCommand}" InputGesture="Ctrl+Shift+G">
-                        <MenuItem.Icon>
-                            <PathIcon Data="M4,4 L6,4 L6,6 L4,6 Z M10,4 L12,4 L12,6 L10,6 Z M4,10 L6,10 L6,12 L4,12 Z M10,10 L12,10 L12,12 L10,12 Z"
-                                      Width="16" Height="16" Foreground="Orange"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Ungroup}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.RenameGroup}" Command="{Binding CanvasInteraction.RenameGroupCommand}">
-                        <MenuItem.Icon>
-                            <TextBlock Text="✏️" FontSize="14"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Pencil}"/></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="{loc:Localize Context.SaveAsPrefab}" Command="{Binding CanvasInteraction.SaveGroupAsCommand}">
-                        <MenuItem.Icon>
-                            <TextBlock Text="💾" FontSize="14"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Bookmark}"/></MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Localize Common.Delete}" Command="{Binding DeleteSelectedCommand}" InputGesture="Delete">
-                        <MenuItem.Icon>
-                            <TextBlock Text="🗑️" FontSize="14"/>
-                        </MenuItem.Icon>
+                        <MenuItem.Icon><controls:Icon Data="{StaticResource Icon.Trash2}"/></MenuItem.Icon>
                     </MenuItem>
                 </ContextMenu>
             </controls:DesignCanvas.ContextMenu>
@@ -1191,9 +919,8 @@
         </DockPanel>
     </DockPanel>
 
-    <!-- First-steps tutorial overlay (#1080, anchored #1167): the card docks to the
-         control the current step acts on — spotlight, arrow, card beside it;
-         non-modal so the canvas stays interactive -->
+    <!-- Guided-tour overlays: the card docks to the control the current step acts on —
+         spotlight, arrow, card beside it; non-modal so the canvas stays interactive. -->
     <tour:TourAnchorOverlay IsVisible="{Binding Tutorial.IsActive, FallbackValue=False}"
                                 TargetName="{Binding Tutorial.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
@@ -1201,8 +928,6 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- "Watch it compute" tour overlay (#1143, anchored #1167): same anchored
-         spotlight, watching the Logic panel while the Counter example runs -->
     <tour:TourAnchorOverlay IsVisible="{Binding WatchTour.IsActive, FallbackValue=False}"
                                 TargetName="{Binding WatchTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
@@ -1210,9 +935,8 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- "Run a program on your chip" tour overlay (#1267): hosts the card for
-         the steps that anchor in this window (Logic Build, Tools menu); the
-         playground steps are hosted by the overlay in IsaPlaygroundWindow -->
+    <!-- Hosts the steps that anchor in this window (Logic Build, Tools menu); the
+         playground steps are hosted by the overlay in IsaPlaygroundWindow. -->
     <tour:TourAnchorOverlay IsVisible="{Binding RunProgramTour.ShowCardInMainWindow, FallbackValue=False}"
                                 TargetName="{Binding RunProgramTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
@@ -1220,8 +944,6 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- "Connect two chiplets" tour overlay (#1288): every step anchors in this
-         window — canvas, toolbar Run button, Design Checks tab of the dock -->
     <tour:TourAnchorOverlay IsVisible="{Binding ConnectChipletsTour.IsActive, FallbackValue=False}"
                                 TargetName="{Binding ConnectChipletsTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
@@ -1229,8 +951,6 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- "Store a number in light" tour overlay (#1422): same anchored spotlight,
-         watching the Logic panel while the RAM 2x4 example stores and reads a word -->
     <tour:TourAnchorOverlay IsVisible="{Binding StoreNumberTour.IsActive, FallbackValue=False}"
                                 TargetName="{Binding StoreNumberTour.CurrentTargetName}">
         <tour:TourAnchorOverlay.Card>
@@ -1238,9 +958,9 @@
         </tour:TourAnchorOverlay.Card>
     </tour:TourAnchorOverlay>
 
-    <!-- Home screen overlay: compact centered card over the dimmed editor,
-         shown until a project is opened/created; reopenable via the Home button -->
-    <Border IsVisible="{Binding Home.IsHomeVisible}" Background="#B3141414">
+    <!-- Home screen overlay: compact centered card over the dimmed editor, shown until a
+         project is opened/created; reopenable via the Home button. -->
+    <Border IsVisible="{Binding Home.IsHomeVisible}" Background="{DynamicResource Brush.Scrim}">
         <views:HomeView DataContext="{Binding Home}"/>
     </Border>
     </Grid>
