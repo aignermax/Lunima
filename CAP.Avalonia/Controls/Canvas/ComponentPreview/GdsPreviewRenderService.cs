@@ -72,6 +72,24 @@ public sealed class GdsPreviewRenderService
     public Func<string?, string?, string?>? InlineNazcaCodeLookup { get; set; }
 
     /// <summary>
+    /// Resolves a placed component's core/metal preview layer roles from its fabrication
+    /// process (issue #1494). Called on the UI thread when a canvas preview is requested.
+    /// Unset (or returning null), every component falls back to the demo-PDK roles
+    /// (<see cref="GdsPreviewLayerRoles.Default"/>).
+    /// </summary>
+    public Func<Component, GdsPreviewLayerRoles?>? LayerRolesLookup
+    {
+        get => _layerRolesLookup;
+        set { _layerRolesLookup = value; _layerRolesByFunction.Clear(); }
+    }
+
+    private Func<Component, GdsPreviewLayerRoles?>? _layerRolesLookup;
+
+    // TryGetPreview runs per component per frame and the process lookup scans the library,
+    // so resolve once per (gdsfactory, nazca) function pair — the inputs the lookup keys on.
+    private readonly Dictionary<(string?, string?), GdsPreviewLayerRoles> _layerRolesByFunction = new();
+
+    /// <summary>
     /// Initializes the service with the shared Nazca preview back-end and a
     /// default disk cache.
     /// </summary>
@@ -117,23 +135,38 @@ public sealed class GdsPreviewRenderService
 
         var (width, height) = GdsPolygonRenderer.GetUnrotatedSize(
             component.RotationDegrees, component.WidthMicrometers, component.HeightMicrometers);
-        var previewKey = BuildPreviewKey(key, width, height);
+        var roles = ResolveLayerRoles(component);
+        var previewKey = BuildPreviewKey(key, width, height, roles);
         if (_cache.TryGet(previewKey, out var cached) && cached != null)
             return cached;
 
-        var data = new GdsPreviewData(geometry, width, height);
+        var data = new GdsPreviewData(geometry, width, height) { LayerRoles = roles };
         _cache.Set(previewKey, data);
         ScheduleRasterization(previewKey, data);
         return data;
     }
 
+    private GdsPreviewLayerRoles ResolveLayerRoles(Component component)
+    {
+        if (_layerRolesLookup == null)
+            return GdsPreviewLayerRoles.Default;
+        var functionKey = (component.GdsFactoryFunction, component.NazcaFunctionName);
+        if (!_layerRolesByFunction.TryGetValue(functionKey, out var roles))
+            _layerRolesByFunction[functionKey] = roles = _layerRolesLookup(component) ?? GdsPreviewLayerRoles.Default;
+        return roles;
+    }
+
     /// <summary>
     /// Builds the bitmap-cache key: the render identity plus the UNROTATED footprint. The
     /// cached bitmap holds unrotated geometry, so keying on the live (rotation-swapped) size
-    /// would rasterise again on every rotation and with a distorted aspect ratio.
+    /// would rasterise again on every rotation and with a distorted aspect ratio. The layer
+    /// roles are part of the key: the same geometry under two processes must not share one
+    /// (wrongly coloured) rasterised bitmap (issue #1494).
     /// </summary>
-    internal static string BuildPreviewKey(GdsPreviewKey key, double unrotatedWidth, double unrotatedHeight) =>
-        string.Create(CultureInfo.InvariantCulture, $"{key.Hash()}|{unrotatedWidth:F2}|{unrotatedHeight:F2}");
+    internal static string BuildPreviewKey(GdsPreviewKey key, double unrotatedWidth, double unrotatedHeight,
+        GdsPreviewLayerRoles? roles = null) =>
+        string.Create(CultureInfo.InvariantCulture,
+            $"{key.Hash()}|{unrotatedWidth:F2}|{unrotatedHeight:F2}|{(roles ?? GdsPreviewLayerRoles.Default).Signature}");
 
     /// <summary>
     /// Rasterises the preview outside the render pass; until the bitmap is ready the canvas
@@ -146,7 +179,7 @@ public sealed class GdsPreviewRenderService
         {
             Dispatcher.UIThread.Post(() =>
             {
-                var bitmap = GdsPolygonRenderer.RasterizeToBitmap(data.Result, bitmapW, bitmapH);
+                var bitmap = GdsPolygonRenderer.RasterizeToBitmap(data.Result, bitmapW, bitmapH, data.LayerRoles);
                 if (bitmap == null) return;
                 _cache.Set(previewKey, data with { Bitmap = bitmap });
                 OnPreviewLoaded?.Invoke();

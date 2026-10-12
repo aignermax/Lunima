@@ -10,15 +10,11 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// metal reads as copper; every other layer (trenches, labels, pins) stays faint. Polygons that
 /// merely fill the cell's bounding box (outline / floorplan layers) are skipped, because the
 /// component body already draws the footprint and a full-cell slab would bury the core.
+/// Which layers play the core/metal roles comes from <see cref="GdsPreviewLayerRoles"/> —
+/// derived from the component's fabrication process, defaulting to the demo PDK's layers.
 /// </summary>
 internal static class GdsPreviewLayerStyle
 {
-    /// <summary>Core layers of the bundled PDKs: 1 = deep-etch / Si core, 3 = shallow-etch core.</summary>
-    private static readonly HashSet<int> CoreLayers = [1, 3];
-
-    /// <summary>Metal / heater layer of the bundled demo PDK.</summary>
-    private const int MetalLayer = 10;
-
     /// <summary>A polygon covering at least this share of the cell's bounding box is an outline.</summary>
     private const double FootprintFillShare = 0.95;
 
@@ -30,25 +26,36 @@ internal static class GdsPreviewLayerStyle
     private static readonly IBrush MetalBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Copper, MetalAlpha));
     private static readonly IBrush OtherBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray300, OtherAlpha));
 
-    /// <summary>Fill brush for a polygon on <paramref name="layer"/>.</summary>
-    public static IBrush BrushFor(int layer) =>
-        CoreLayers.Contains(layer) ? CoreBrush
-        : layer == MetalLayer ? MetalBrush
+    /// <summary>Fill brush for a polygon on <paramref name="layer"/> under the default (demo PDK) roles.</summary>
+    public static IBrush BrushFor(int layer) => BrushFor(layer, GdsPreviewLayerRoles.Default);
+
+    /// <summary>Fill brush for a polygon on <paramref name="layer"/> under <paramref name="roles"/>.</summary>
+    public static IBrush BrushFor(int layer, GdsPreviewLayerRoles roles) =>
+        roles.CoreLayers.Contains(layer) ? CoreBrush
+        : roles.MetalLayers.Contains(layer) ? MetalBrush
         : OtherBrush;
 
     /// <summary>
-    /// The polygons to paint, in paint order: footprint-filling outlines dropped, cores last.
+    /// The polygons to paint, in paint order, under the default (demo PDK) roles:
+    /// footprint-filling outlines dropped, cores last.
     /// </summary>
-    public static IEnumerable<NazcaPreviewPolygon> InDrawOrder(NazcaPreviewResult result)
+    public static IEnumerable<NazcaPreviewPolygon> InDrawOrder(NazcaPreviewResult result) =>
+        InDrawOrder(result, GdsPreviewLayerRoles.Default);
+
+    /// <summary>
+    /// The polygons to paint, in paint order under <paramref name="roles"/>:
+    /// footprint-filling outlines dropped, cores last.
+    /// </summary>
+    public static IEnumerable<NazcaPreviewPolygon> InDrawOrder(NazcaPreviewResult result, GdsPreviewLayerRoles roles)
     {
         double cellArea = (result.XMax - result.XMin) * (result.YMax - result.YMin);
-        var visible = result.Polygons.Where(p => !FillsFootprint(p, cellArea)).ToList();
-        return visible.Where(p => !CoreLayers.Contains(p.Layer))
-            .Concat(visible.Where(p => CoreLayers.Contains(p.Layer)));
+        var visible = result.Polygons.Where(p => !FillsFootprint(p, cellArea, roles)).ToList();
+        return visible.Where(p => !roles.CoreLayers.Contains(p.Layer))
+            .Concat(visible.Where(p => roles.CoreLayers.Contains(p.Layer)));
     }
 
-    private static bool FillsFootprint(NazcaPreviewPolygon polygon, double cellArea) =>
-        !CoreLayers.Contains(polygon.Layer) && cellArea > 0 && Area(polygon) >= FootprintFillShare * cellArea;
+    private static bool FillsFootprint(NazcaPreviewPolygon polygon, double cellArea, GdsPreviewLayerRoles roles) =>
+        !roles.CoreLayers.Contains(polygon.Layer) && cellArea > 0 && Area(polygon) >= FootprintFillShare * cellArea;
 
     private static double Area(NazcaPreviewPolygon polygon)
     {

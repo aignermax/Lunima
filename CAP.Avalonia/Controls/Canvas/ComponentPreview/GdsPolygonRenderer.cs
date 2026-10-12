@@ -90,7 +90,8 @@ public static class GdsPolygonRenderer
             }
 
             // Fallback: draw the polygons directly until the bitmap is rasterised.
-            DrawPolygonsAsGeometry(context, result, destRect.X, destRect.Y, destRect.Width, destRect.Height);
+            DrawPolygonsAsGeometry(context, result, destRect.X, destRect.Y, destRect.Width, destRect.Height,
+                previewData.LayerRoles);
         }
     }
 
@@ -100,7 +101,10 @@ public static class GdsPolygonRenderer
     /// Must be called on the UI thread.
     /// Returns <c>null</c> if the bbox is degenerate or bitmap creation fails.
     /// </summary>
-    internal static RenderTargetBitmap? RasterizeToBitmap(NazcaPreviewResult result, int width, int height)
+    /// <param name="roles">Core/metal layer assignment of the component's process;
+    /// null falls back to the demo-PDK roles.</param>
+    internal static RenderTargetBitmap? RasterizeToBitmap(NazcaPreviewResult result, int width, int height,
+        GdsPreviewLayerRoles? roles = null)
     {
         double bboxW = result.XMax - result.XMin;
         double bboxH = result.YMax - result.YMin;
@@ -109,15 +113,16 @@ public static class GdsPolygonRenderer
 
         double scaleX = width  / bboxW;
         double scaleY = height / bboxH;
+        var effectiveRoles = roles ?? GdsPreviewLayerRoles.Default;
 
         try
         {
             var bitmap = new RenderTargetBitmap(new PixelSize(width, height));
             using var ctx = bitmap.CreateDrawingContext();
-            foreach (var poly in GdsPreviewLayerStyle.InDrawOrder(result))
+            foreach (var poly in GdsPreviewLayerStyle.InDrawOrder(result, effectiveRoles))
             {
                 var geo = BuildPolygonGeometry(poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, 0, 0);
-                ctx.DrawGeometry(GdsPreviewLayerStyle.BrushFor(poly.Layer), null, geo);
+                ctx.DrawGeometry(GdsPreviewLayerStyle.BrushFor(poly.Layer, effectiveRoles), null, geo);
             }
             return bitmap;
         }
@@ -216,7 +221,8 @@ public static class GdsPolygonRenderer
         DrawingContext context,
         NazcaPreviewResult result,
         double compX, double compY,
-        double compWidth, double compHeight)
+        double compWidth, double compHeight,
+        GdsPreviewLayerRoles? roles = null)
     {
         double bboxW = result.XMax - result.XMin;
         double bboxH = result.YMax - result.YMin;
@@ -225,11 +231,12 @@ public static class GdsPolygonRenderer
 
         double scaleX = compWidth  / bboxW;
         double scaleY = compHeight / bboxH;
+        var effectiveRoles = roles ?? GdsPreviewLayerRoles.Default;
 
-        foreach (var poly in GdsPreviewLayerStyle.InDrawOrder(result))
+        foreach (var poly in GdsPreviewLayerStyle.InDrawOrder(result, effectiveRoles))
         {
             var geo = BuildPolygonGeometry(poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, compX, compY);
-            context.DrawGeometry(GdsPreviewLayerStyle.BrushFor(poly.Layer), null, geo);
+            context.DrawGeometry(GdsPreviewLayerStyle.BrushFor(poly.Layer, effectiveRoles), null, geo);
         }
     }
 
