@@ -204,11 +204,11 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
-    public void MainViewModel_ExportMenu_HasSixFormatsInExpectedOrder()
+    public void MainViewModel_ExportMenu_HasSevenFormatsInExpectedOrder()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
 
-        vm.ExportMenu.Formats.Count.ShouldBe(6);
+        vm.ExportMenu.Formats.Count.ShouldBe(7);
         vm.ExportMenu.Formats.Select(f => f.Name).ShouldBe(new[]
         {
             "Nazca → GDS (Python)",
@@ -217,7 +217,24 @@ public class ExportMenuViewModelTests
             "PhotonTorch",
             "Verilog-A / SPICE",
             "Netlist (YAML)",
+            "Netlist (YAML) → Clipboard",
         });
+    }
+
+    [Fact]
+    public async Task NetlistClipboardEntry_CopiesTheYaml_AndReportsInTheStatusBar()
+    {
+        var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins(), "Waveguide");
+        string? copied = null;
+        vm.RightPanel.Netlist.CopyToClipboard = text => { copied = text; return Task.CompletedTask; };
+
+        var entry = vm.ExportMenu.Formats.OfType<NetlistClipboardExportFormat>().Single();
+        await entry.ExportCommand.ExecuteAsync(null);
+
+        copied.ShouldNotBeNull();
+        copied.ShouldContain("instances:");
+        vm.StatusText.ShouldBe("Netlist copied to clipboard");
     }
 }
 
