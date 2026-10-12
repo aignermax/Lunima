@@ -26,7 +26,7 @@ public sealed record GdsPreviewLayerRoles(IReadOnlySet<int> CoreLayers, IReadOnl
     /// cache key so the same geometry under two processes never shares a wrongly
     /// coloured bitmap.
     /// </summary>
-    public string Signature =>
+    public string Signature { get; } =
         "core:" + string.Join(',', CoreLayers.OrderBy(layer => layer))
         + "|metal:" + string.Join(',', MetalLayers.OrderBy(layer => layer));
 

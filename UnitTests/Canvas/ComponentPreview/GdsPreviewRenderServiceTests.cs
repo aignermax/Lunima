@@ -129,6 +129,29 @@ public sealed class GdsPreviewRenderServiceTests
     }
 
     [Fact]
+    public async Task TryGetPreview_ResolvesLayerRolesOncePerFunction_NotPerFrame()
+    {
+        var mock = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        mock.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Ok());
+        var diskDir = Path.Combine(Path.GetTempPath(), "lunima-roles-" + Guid.NewGuid().ToString("N"));
+        int lookups = 0;
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache(diskDir))
+        {
+            LayerRolesLookup = _ => { lookups++; return null; },
+        };
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi").Component;
+
+        svc.TryGetPreview(comp);
+        await svc.WaitForPendingAsync();
+        for (int frame = 0; frame < 5; frame++)
+            svc.TryGetPreview(comp).ShouldNotBeNull();
+
+        lookups.ShouldBe(1);
+        try { Directory.Delete(diskDir, true); } catch { }
+    }
+
+    [Fact]
     public async Task TryGetPreview_WithoutLayerRolesLookup_FallsBackToDefaultRoles()
     {
         var mock = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);

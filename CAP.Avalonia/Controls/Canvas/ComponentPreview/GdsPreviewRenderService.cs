@@ -77,7 +77,17 @@ public sealed class GdsPreviewRenderService
     /// Unset (or returning null), every component falls back to the demo-PDK roles
     /// (<see cref="GdsPreviewLayerRoles.Default"/>).
     /// </summary>
-    public Func<Component, GdsPreviewLayerRoles?>? LayerRolesLookup { get; set; }
+    public Func<Component, GdsPreviewLayerRoles?>? LayerRolesLookup
+    {
+        get => _layerRolesLookup;
+        set { _layerRolesLookup = value; _layerRolesByFunction.Clear(); }
+    }
+
+    private Func<Component, GdsPreviewLayerRoles?>? _layerRolesLookup;
+
+    // TryGetPreview runs per component per frame and the process lookup scans the library,
+    // so resolve once per (gdsfactory, nazca) function pair — the inputs the lookup keys on.
+    private readonly Dictionary<(string?, string?), GdsPreviewLayerRoles> _layerRolesByFunction = new();
 
     /// <summary>
     /// Initializes the service with the shared Nazca preview back-end and a
@@ -125,7 +135,7 @@ public sealed class GdsPreviewRenderService
 
         var (width, height) = GdsPolygonRenderer.GetUnrotatedSize(
             component.RotationDegrees, component.WidthMicrometers, component.HeightMicrometers);
-        var roles = LayerRolesLookup?.Invoke(component) ?? GdsPreviewLayerRoles.Default;
+        var roles = ResolveLayerRoles(component);
         var previewKey = BuildPreviewKey(key, width, height, roles);
         if (_cache.TryGet(previewKey, out var cached) && cached != null)
             return cached;
@@ -134,6 +144,16 @@ public sealed class GdsPreviewRenderService
         _cache.Set(previewKey, data);
         ScheduleRasterization(previewKey, data);
         return data;
+    }
+
+    private GdsPreviewLayerRoles ResolveLayerRoles(Component component)
+    {
+        if (_layerRolesLookup == null)
+            return GdsPreviewLayerRoles.Default;
+        var functionKey = (component.GdsFactoryFunction, component.NazcaFunctionName);
+        if (!_layerRolesByFunction.TryGetValue(functionKey, out var roles))
+            _layerRolesByFunction[functionKey] = roles = _layerRolesLookup(component) ?? GdsPreviewLayerRoles.Default;
+        return roles;
     }
 
     /// <summary>
