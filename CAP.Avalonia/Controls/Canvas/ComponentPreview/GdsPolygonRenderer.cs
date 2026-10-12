@@ -4,7 +4,6 @@ using Avalonia.Media.Imaging;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
-using CAP.Avalonia.Controls.Rendering;
 
 namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
@@ -15,20 +14,20 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 /// </summary>
 public static class GdsPolygonRenderer
 {
-    // ── Layer colour palette (static readonly — never allocate per-frame) ───
-    // The waveguide layer shares the routed-waveguide color, so a device's geometry visibly
-    // continues into its connections. Add new layers here without touching any other file.
+    /// <summary>Lower bound on bitmap dimensions to avoid zero-size bitmaps.</summary>
+    internal const int MinBitmapPixels = 16;
 
-    private static readonly IBrush WaveguideBrush = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Waveguide, 0xD0)); // layer 1
-    private static readonly IBrush DefaultBrush   = CanvasPalette.Brush(CanvasPalette.WithAlpha(CanvasPalette.Gray300, 0x70)); // all other layers
-
-    private const int WaveguideLayer = 1;
+    /// <summary>Pixel budget for the longer side of a canvas preview bitmap.</summary>
+    internal const int TargetBitmapLongSidePixels = 768;
 
     /// <summary>
-    /// Bitmap width/height used when rasterising a preview at exact pixel dimensions.
-    /// Used as a lower bound to avoid zero-size bitmaps.
+    /// Lower bound on the raster density. Waveguide cores are ~0.5 µm wide, so one pixel per
+    /// micrometer already blurs them; long devices still get at least this density.
     /// </summary>
-    private const int MinBitmapPixels = 16;
+    private const double MinPixelsPerMicrometer = 1.0;
+
+    /// <summary>Upper bound on the raster density, so tiny cells don't get oversized bitmaps.</summary>
+    private const double MaxPixelsPerMicrometer = 8.0;
 
     // ── Public API ─────────────────────────────────────────────────────────
 
@@ -115,10 +114,10 @@ public static class GdsPolygonRenderer
         {
             var bitmap = new RenderTargetBitmap(new PixelSize(width, height));
             using var ctx = bitmap.CreateDrawingContext();
-            foreach (var poly in result.Polygons)
+            foreach (var poly in GdsPreviewLayerStyle.InDrawOrder(result))
             {
                 var geo = BuildPolygonGeometry(poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, 0, 0);
-                ctx.DrawGeometry(GetBrushForLayer(poly.Layer), null, geo);
+                ctx.DrawGeometry(GdsPreviewLayerStyle.BrushFor(poly.Layer), null, geo);
             }
             return bitmap;
         }
@@ -126,6 +125,22 @@ public static class GdsPolygonRenderer
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Pixel size of the canvas preview bitmap for a footprint of
+    /// <paramref name="widthMicrometers"/> × <paramref name="heightMicrometers"/>: the longer
+    /// side gets <see cref="TargetBitmapLongSidePixels"/>, with the density clamped between
+    /// <see cref="MinPixelsPerMicrometer"/> and <see cref="MaxPixelsPerMicrometer"/>.
+    /// </summary>
+    internal static (int Width, int Height) GetBitmapSize(double widthMicrometers, double heightMicrometers)
+    {
+        double longSide = Math.Max(widthMicrometers, heightMicrometers);
+        double density = longSide > 0
+            ? Math.Clamp(TargetBitmapLongSidePixels / longSide, MinPixelsPerMicrometer, MaxPixelsPerMicrometer)
+            : MinPixelsPerMicrometer;
+        return (Math.Max(MinBitmapPixels, (int)Math.Ceiling(widthMicrometers * density)),
+                Math.Max(MinBitmapPixels, (int)Math.Ceiling(heightMicrometers * density)));
     }
 
     // ── Internal helpers (internal for unit-testing transform math) ─────────
@@ -211,10 +226,10 @@ public static class GdsPolygonRenderer
         double scaleX = compWidth  / bboxW;
         double scaleY = compHeight / bboxH;
 
-        foreach (var poly in result.Polygons)
+        foreach (var poly in GdsPreviewLayerStyle.InDrawOrder(result))
         {
             var geo = BuildPolygonGeometry(poly.Vertices, result.XMin, result.YMax, scaleX, scaleY, compX, compY);
-            context.DrawGeometry(GetBrushForLayer(poly.Layer), null, geo);
+            context.DrawGeometry(GdsPreviewLayerStyle.BrushFor(poly.Layer), null, geo);
         }
     }
 
@@ -236,10 +251,4 @@ public static class GdsPolygonRenderer
         if (!first) ctx.EndFigure(true);
         return geo;
     }
-
-    internal static IBrush GetBrushForLayer(int layer) => layer switch
-    {
-        WaveguideLayer => WaveguideBrush,
-        _              => DefaultBrush,
-    };
 }

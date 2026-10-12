@@ -210,4 +210,39 @@ public sealed class GdsPolygonRendererTests
         maxX.ShouldBe(compX + compW, tolerance: 1e-9);
         maxY.ShouldBe(compY + compH, tolerance: 1e-9);
     }
+
+    [Fact]
+    public void GetBitmapSize_resolvesSubMicrometerCoresOnSmallCells()
+    {
+        var (width, height) = GdsPolygonRenderer.GetBitmapSize(80, 55);
+
+        (width / 80.0).ShouldBeGreaterThanOrEqualTo(8, "a 0.5 µm core needs several pixels per micrometer");
+        ((double)width / height).ShouldBe(80.0 / 55.0, tolerance: 0.05);
+    }
+
+    [Fact]
+    public void GetBitmapSize_capsTheLongSideOfLargeCells()
+    {
+        var (width, height) = GdsPolygonRenderer.GetBitmapSize(500, 60);
+
+        width.ShouldBe(GdsPolygonRenderer.TargetBitmapLongSidePixels);
+        height.ShouldBeLessThan(width);
+    }
+
+    [Fact]
+    public void GetBitmapSize_keepsAtLeastOnePixelPerMicrometerOnHugeCells()
+    {
+        var (width, _) = GdsPolygonRenderer.GetBitmapSize(5000, 100);
+
+        width.ShouldBe(5000);
+    }
+
+    [Fact]
+    public void GetBitmapSize_neverReturnsAZeroSizeBitmap()
+    {
+        var (width, height) = GdsPolygonRenderer.GetBitmapSize(0, 0);
+
+        width.ShouldBe(GdsPolygonRenderer.MinBitmapPixels);
+        height.ShouldBe(GdsPolygonRenderer.MinBitmapPixels);
+    }
 }
