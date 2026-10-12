@@ -91,6 +91,63 @@ public sealed class GdsPreviewRenderServiceTests
     }
 
     [Fact]
+    public void BuildPreviewKey_DifferentLayerRoles_ProduceDifferentKeys()
+    {
+        // Same geometry under two processes: the rasterised bitmaps differ in colour, so
+        // they must not share one cache entry (issue #1494).
+        var key = new GdsPreviewKey("m", "f", null);
+        var cornerstoneRoles = new GdsPreviewLayerRoles(
+            new HashSet<int> { 203 }, new HashSet<int> { 39, 41 });
+
+        GdsPreviewRenderService.BuildPreviewKey(key, 4, 2, cornerstoneRoles)
+            .ShouldNotBe(GdsPreviewRenderService.BuildPreviewKey(key, 4, 2, GdsPreviewLayerRoles.Default));
+        GdsPreviewRenderService.BuildPreviewKey(key, 4, 2, cornerstoneRoles)
+            .ShouldBe(GdsPreviewRenderService.BuildPreviewKey(key, 4, 2, cornerstoneRoles));
+    }
+
+    [Fact]
+    public async Task TryGetPreview_AttachesRolesFromLayerRolesLookup()
+    {
+        var mock = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        mock.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Ok());
+        var diskDir = Path.Combine(Path.GetTempPath(), "lunima-roles-" + Guid.NewGuid().ToString("N"));
+        var roles = new GdsPreviewLayerRoles(new HashSet<int> { 203 }, new HashSet<int> { 39 });
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache(diskDir))
+        {
+            LayerRolesLookup = _ => roles,
+        };
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi").Component;
+
+        svc.TryGetPreview(comp);
+        await svc.WaitForPendingAsync();
+        var preview = svc.TryGetPreview(comp);
+
+        preview.ShouldNotBeNull();
+        preview.LayerRoles.ShouldBeSameAs(roles);
+        try { Directory.Delete(diskDir, true); } catch { }
+    }
+
+    [Fact]
+    public async Task TryGetPreview_WithoutLayerRolesLookup_FallsBackToDefaultRoles()
+    {
+        var mock = new Mock<NazcaComponentPreviewService>("python", "script.py", (TimeSpan?)null, (ProcessLaunchFactory?)null);
+        mock.Setup(s => s.RenderAsync(It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Ok());
+        var diskDir = Path.Combine(Path.GetTempPath(), "lunima-roles-" + Guid.NewGuid().ToString("N"));
+        var svc = new GdsPreviewRenderService(mock.Object, new GdsPreviewDiskCache(diskDir));
+        var comp = TestComponentFactory.CreateComponentViewModel(nazcaFunctionName: "demo.mmi").Component;
+
+        svc.TryGetPreview(comp);
+        await svc.WaitForPendingAsync();
+        var preview = svc.TryGetPreview(comp);
+
+        preview.ShouldNotBeNull();
+        preview.LayerRoles.Signature.ShouldBe(GdsPreviewLayerRoles.Default.Signature);
+        try { Directory.Delete(diskDir, true); } catch { }
+    }
+
+    [Fact]
     public async Task GetGeometry_GdsFactoryKey_RendersViaGdsFactoryServiceNotNazca()
     {
         // A gdsfactory-native render identity must be resolved by the gdsfactory preview

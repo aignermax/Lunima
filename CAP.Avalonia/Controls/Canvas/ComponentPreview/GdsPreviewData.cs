@@ -23,4 +23,11 @@ public sealed record GdsPreviewData(
     /// directly instead of rebuilding geometry.
     /// </summary>
     public RenderTargetBitmap? Bitmap { get; init; }
+
+    /// <summary>
+    /// Core/metal layer assignment this preview is drawn and rasterised with — derived
+    /// from the component's fabrication process (issue #1494), the demo-PDK default
+    /// when the process cannot be resolved.
+    /// </summary>
+    public GdsPreviewLayerRoles LayerRoles { get; init; } = GdsPreviewLayerRoles.Default;
 }

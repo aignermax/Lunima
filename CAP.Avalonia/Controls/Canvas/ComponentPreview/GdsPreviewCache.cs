@@ -2,7 +2,8 @@ namespace CAP.Avalonia.Controls.Canvas.ComponentPreview;
 
 /// <summary>
 /// Process-lifetime LRU cache for GDS preview data.
-/// Key format: <c>"{nazcaFunctionName}|{width:F2}|{height:F2}"</c>.
+/// Key format: <c>"{render-identity hash}|{width:F2}|{height:F2}|{layer-role signature}"</c>
+/// (see <see cref="GdsPreviewRenderService.BuildPreviewKey"/>).
 /// A <c>null</c> value means the fetch succeeded but yielded no polygons (or
 /// failed), so no retry should be attempted for that template in this session.
 /// </summary>
