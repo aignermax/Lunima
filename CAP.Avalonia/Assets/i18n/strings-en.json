@@ -1435,6 +1435,7 @@
   "Status.TemplateCorrupted": "Template '{0}' could not be loaded - file may be corrupted",
   "Status.TemplateLoadFailed": "Failed to load template '{0}': {1}",
   "Status.Undone": "Undone: {0}",
+  "Status.ZoomedToFit": "Zoomed to fit all components",
   "StatusBar.ActiveProcessTip": "The fabrication process this design is locked to (set via File → New). Amber = Playground: not manufacturable.",
   "StatusBar.BlockedSuffix": "blocked",
   "StatusBar.BlockedTip": "Connections the router could only draw as a blocked fallback. Click to select and center the next one.",

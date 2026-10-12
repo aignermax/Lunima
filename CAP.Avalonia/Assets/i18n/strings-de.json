@@ -1435,6 +1435,7 @@
   "Status.TemplateCorrupted": "Vorlage '{0}' konnte nicht geladen werden – Datei ist möglicherweise beschädigt",
   "Status.TemplateLoadFailed": "Vorlage '{0}' konnte nicht geladen werden: {1}",
   "Status.Undone": "Rückgängig gemacht: {0}",
+  "Status.ZoomedToFit": "Auf alle Komponenten eingepasst",
   "StatusBar.ActiveProcessTip": "Der Fertigungsprozess, an den dieses Design gebunden ist (gesetzt über Datei → Neu). Bernstein = Playground: nicht fertigbar.",
   "StatusBar.BlockedSuffix": "blockiert",
   "StatusBar.BlockedTip": "Verbindungen, die der Router nur als blockierten Notbehelf zeichnen konnte. Klicken wählt die nächste aus und zentriert sie.",
