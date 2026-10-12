@@ -1886,6 +1886,10 @@ public partial class FileOperationsViewModel : ObservableObject
     /// </summary>
     private void RebuildCrossingRecords()
     {
+        // Designs saved before chain crossings carried their flag: adopt them whether or not
+        // adaptive insertion is on, so their pieces are no longer frozen.
+        CAP_Core.Routing.CrossingInsertion.ChainCrossingMaintenance.AdoptLegacyChainCrossings(
+            _canvas.Components.Select(vm => vm.Component), _canvas.ConnectionManager);
         var crossing = _canvas.ConnectionManager.CrossingInsertion;
         if (crossing == null)
             return;

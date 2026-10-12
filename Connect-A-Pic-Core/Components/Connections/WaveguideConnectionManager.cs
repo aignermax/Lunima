@@ -242,6 +242,31 @@ public partial class WaveguideConnectionManager
     }
 
     /// <summary>
+    /// Removes every connection with an end on the component or on anything nested in it —
+    /// what deleting a group needs, since its wires end at the leaf pins inside it. Crossings
+    /// touching the scope are dissolved first. No route recalculation is triggered.
+    /// </summary>
+    public void RemoveConnectionsForComponentTree(Component component)
+    {
+        var scope = new ComponentWireScope(component);
+        // A crossing placed by crossing-aware routing hands its wires back instead of taking them
+        // along — whether or not adaptive crossing insertion is switched on.
+        var recorded = CrossingInsertion?.Records.Select(r => r.CrossingComponent).ToHashSet() ?? new HashSet<Component>();
+        if (ChainCrossingMaintenance.DissolveForDeletion(component, this, _router, recorded))
+            return;
+        CrossingInsertion?.DissolveForScope(scope, this, _router);
+
+        List<WaveguideConnection> removed;
+        lock (_connectionsSync)
+        {
+            removed = Connections.Where(scope.Touches).ToList();
+            Connections.RemoveAll(scope.Touches);
+        }
+        foreach (var connection in removed)
+            _router.PathfindingGrid?.RemoveWaveguideObstacle(connection.Id);
+    }
+
+    /// <summary>
     /// Removes all connections for a component without triggering route recalculation.
     /// Caller is responsible for triggering RecalculateAllTransmissionsAsync().
     /// </summary>
@@ -395,7 +420,11 @@ public partial class WaveguideConnectionManager
         // the insertion pass re-inserts a crossing only if it is still beneficial.
         if (CrossingInsertion != null && !_isCrossingPassRunning)
         {
-            timings.CrossingDissolution = MeasurePass(() => CrossingInsertion.DissolveStaleRecords(this, _router));
+            timings.CrossingDissolution = MeasurePass(() =>
+            {
+                CrossingInsertion.DissolveStaleRecords(this, _router);
+                CrossingInsertion.DissolveStaleChains(this, _router);
+            });
         }
 
         RouteAllConnections(timings, progressCallback, cancellationToken);

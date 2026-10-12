@@ -80,18 +80,30 @@ public class CrossingRecordRegistry
     /// that component are restored unsplit.
     /// </summary>
     public void DissolveForComponent(
-        Component component, WaveguideConnectionManager manager, WaveguideRouter router)
+        Component component, WaveguideConnectionManager manager, WaveguideRouter router) =>
+        DissolveWhere(c => Touches(c, component), crossing => crossing == component, manager, router);
+
+    /// <summary>
+    /// Dissolves all crossings touching a component or anything nested in it (a group being
+    /// deleted), or lying inside it. Originals not connected into the scope are restored unsplit.
+    /// </summary>
+    public void DissolveForScope(
+        ComponentWireScope scope, WaveguideConnectionManager manager, WaveguideRouter router) =>
+        DissolveWhere(scope.Touches, scope.Contains, manager, router);
+
+    private void DissolveWhere(
+        Func<WaveguideConnection, bool> touches, Func<Component, bool> isRemovedCrossing,
+        WaveguideConnectionManager manager, WaveguideRouter router)
     {
         var affected = _records
-            .Where(r => r.AllSubConnections.Any(c => Touches(c, component)) ||
-                        r.CrossingComponent == component)
+            .Where(r => r.AllSubConnections.Any(touches) || isRemovedCrossing(r.CrossingComponent))
             .ToList();
 
         foreach (var record in affected)
         {
             var survivors = new List<WaveguideConnection>();
-            if (!Touches(record.OriginalA, component)) survivors.Add(record.OriginalA);
-            if (!Touches(record.OriginalB, component)) survivors.Add(record.OriginalB);
+            if (!touches(record.OriginalA)) survivors.Add(record.OriginalA);
+            if (!touches(record.OriginalB)) survivors.Add(record.OriginalB);
             Dissolve(record, manager, router, survivors);
         }
     }
