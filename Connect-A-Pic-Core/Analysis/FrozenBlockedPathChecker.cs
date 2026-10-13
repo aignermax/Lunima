@@ -83,7 +83,7 @@ public class FrozenBlockedPathChecker
     /// Returns the midpoint of the first segment, or the group's pin midpoint when the
     /// path has no segments, or (0, 0) when neither exists.
     /// </summary>
-    private static (double X, double Y) GetLocation(FrozenWaveguidePath frozen)
+    internal static (double X, double Y) GetLocation(FrozenWaveguidePath frozen)
     {
         if (frozen.Path?.Segments is { Count: > 0 } segments)
         {
@@ -106,7 +106,7 @@ public class FrozenBlockedPathChecker
     /// Formats a pin as "ComponentId.PinName"; pin-less frozen paths (e.g. imported
     /// route outlines) get a generic label.
     /// </summary>
-    private static string FormatPin(PhysicalPin? pin)
+    internal static string FormatPin(PhysicalPin? pin)
     {
         return pin is null
             ? "(unpinned route end)"

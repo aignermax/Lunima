@@ -122,7 +122,13 @@ public enum DesignIssueType
     /// foundry verification (e.g. openEBL "Overlapping component"). Pairs that only
     /// touch at a shared pin or endpoint are not crossings.
     /// </summary>
-    WaveguideCrossing
+    WaveguideCrossing,
+
+    /// <summary>
+    /// A frozen group path (any nesting depth) runs through the footprint of a component
+    /// other than its own endpoint components.
+    /// </summary>
+    WaveguideThroughComponent
 }
 
 /// <summary>

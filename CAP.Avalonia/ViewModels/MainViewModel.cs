@@ -1422,6 +1422,10 @@ public partial class MainViewModel : ObservableObject
             var pdkSourceByComponent = Canvas.Components.ToDictionary(
                 c => c.Component,
                 c => c.TemplatePdkSource ?? CanvasInteraction.PlacementContext.ResolveComponentPdkSource(c.Component));
+            // Group children carry no template snapshot of their own; the PDK check walks
+            // them at every nesting depth, so resolve them through the live library too.
+            foreach (var nested in groups.SelectMany(g => g.GetAllComponentsRecursive()))
+                pdkSourceByComponent.TryAdd(nested, CanvasInteraction.PlacementContext.ResolveComponentPdkSource(nested));
 
             // Under a real process lock the allowed set is the lock-derived membership; without one
             // (Playground/no selection) nothing is locked, so GetProcessCompatiblePdkNames() equals

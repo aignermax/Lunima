@@ -1,4 +1,5 @@
 using System.Globalization;
+using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
 using CAP_Core.Routing;
@@ -23,6 +24,10 @@ public class DesignValidator
     private readonly ComponentPdkCompatibilityChecker _pdkCompatibilityChecker = new();
     private readonly ComponentFootprintOverlapChecker _footprintOverlapChecker = new();
     private readonly FrozenBlockedPathChecker _frozenBlockedPathChecker = new();
+    private readonly UnconnectedPinChecker _unconnectedPinChecker = new();
+    private readonly FrozenPathFlagChecker _frozenPathFlagChecker = new();
+    private readonly FrozenPathFootprintChecker _frozenPathFootprintChecker = new();
+    private readonly FrozenPathMinWidthChecker _frozenPathMinWidthChecker = new();
 
     /// <summary>
     /// Validates all provided waveguide connections and returns any issues found.
@@ -67,6 +72,7 @@ public class DesignValidator
         var issues = Validate(connectionList);
         issues.AddRange(_overlapDetector.DetectOverlaps(connectionList, groups));
         issues.AddRange(_frozenBlockedPathChecker.Check(groups));
+        issues.AddRange(_frozenPathFlagChecker.Check(groups));
         return issues;
     }
 
@@ -143,8 +149,10 @@ public class DesignValidator
 
         var connectionList = connections.ToList();
         var issues = Validate(connectionList, groups);
-        issues.AddRange(ValidateUnconnectedPins(components, connectionList, externalPortPins));
-        issues.AddRange(_footprintOverlapChecker.DetectOverlaps(components));
+        var placedItems = groups.Cast<Component>().Concat(components).ToList();
+        issues.AddRange(ValidateUnconnectedPins(placedItems, connectionList, externalPortPins));
+        issues.AddRange(_footprintOverlapChecker.DetectOverlaps(placedItems));
+        issues.AddRange(_frozenPathFootprintChecker.Check(placedItems));
         return issues;
     }
 
@@ -206,6 +214,9 @@ public class DesignValidator
         var issues = Validate(connectionList, groups, components, externalPortPins);
         issues.AddRange(_chipletInterfaceChecker.Check(connectionList, wavelengthNm));
 
+        issues.AddRange(_frozenPathMinWidthChecker.Check(
+            groups, minWaveguideWidthRules, connectionDrcRuleProvider));
+
         if (connectionDrcRuleProvider is not null)
         {
             issues.AddRange(_perConnectionDrcChecker.Check(
@@ -227,8 +238,10 @@ public class DesignValidator
     }
 
     /// <summary>
-    /// Checks every optical pin on the provided components and reports any that have no
-    /// waveguide connection and are not listed as external ports.
+    /// Checks every optical pin on the provided components — group children at any depth
+    /// included, see <see cref="UnconnectedPinChecker"/> — and reports any that have no
+    /// waveguide connection (top-level or frozen inside a group), are not listed as
+    /// external ports, and are not exposed as a top-level group's interface pin.
     /// </summary>
     /// <param name="components">All placed components whose optical pins are checked.</param>
     /// <param name="connections">Regular waveguide connections; endpoint pins are considered connected.</param>
@@ -239,41 +252,7 @@ public class DesignValidator
         IEnumerable<WaveguideConnection> connections,
         IEnumerable<PhysicalPin>? externalPortPins = null)
     {
-        ArgumentNullException.ThrowIfNull(components);
-        ArgumentNullException.ThrowIfNull(connections);
-
-        var connectedPins = new HashSet<PhysicalPin>(
-            connections.SelectMany(c => new[] { c.StartPin, c.EndPin }).OfType<PhysicalPin>());
-        var externalPortPinSet = new HashSet<PhysicalPin>(externalPortPins ?? Array.Empty<PhysicalPin>());
-
-        var issues = new List<DesignIssue>();
-
-        foreach (var component in components)
-        {
-            foreach (var pin in component.PhysicalPins)
-            {
-                if (pin.MatterType != MatterType.Light)
-                    continue;
-                if (connectedPins.Contains(pin))
-                    continue;
-                if (externalPortPinSet.Contains(pin))
-                    continue;
-
-                var (x, y) = pin.GetAbsolutePosition();
-                issues.Add(new DesignIssue(
-                    DesignIssueType.UnconnectedPin,
-                    connection: null,
-                    x,
-                    y,
-                    string.Create(
-                        CultureInfo.InvariantCulture,
-                        $"Unconnected pin: {FormatPinName(pin)} at ({x}, {y})"),
-                    localizationKey: "DesignChecks.UnconnectedPin",
-                    localizationArgs: new object[] { FormatPinName(pin), x, y }));
-            }
-        }
-
-        return issues;
+        return _unconnectedPinChecker.Check(components, connections, externalPortPins);
     }
 
     /// <summary>
@@ -429,21 +408,29 @@ public class DesignValidator
 
         foreach (var component in components)
         {
-            double right  = component.PhysicalX + component.WidthMicrometers;
-            double bottom = component.PhysicalY + component.HeightMicrometers;
+            var bounds = PlacedBoundsOf(component);
+            if (bounds is not var (left, top, right, bottom)) continue;
 
-            bool outOfBounds = component.PhysicalX < 0
-                || component.PhysicalY < 0
+            bool outOfBounds = left < 0
+                || top < 0
                 || right  > chipWidthMicrometers
                 || bottom > chipHeightMicrometers;
 
             if (!outOfBounds) continue;
 
-            double centerX = component.PhysicalX + component.WidthMicrometers / 2;
-            double centerY = component.PhysicalY + component.HeightMicrometers / 2;
+            double centerX = (left + right) / 2;
+            double centerY = (top + bottom) / 2;
+            if (component is ComponentGroup)
+            {
+                // A group can span the whole chip: point at the violated edge instead of its middle.
+                centerX = left < 0 ? left : right > chipWidthMicrometers ? right : centerX;
+                centerY = top < 0 ? top : bottom > chipHeightMicrometers ? bottom : centerY;
+            }
             double wMm = chipWidthMicrometers  / 1000.0;
             double hMm = chipHeightMicrometers / 1000.0;
-            string name = component.HumanReadableName ?? component.Identifier;
+            string name = component is ComponentGroup { GroupName: { Length: > 0 } groupName }
+                ? groupName
+                : component.HumanReadableName ?? component.Identifier;
 
             issues.Add(new DesignIssue(
                 DesignIssueType.OutOfBounds,
@@ -460,6 +447,22 @@ public class DesignValidator
         }
 
         return issues;
+    }
+
+    /// <summary>
+    /// The placed extent checked against the chip: a component's own rectangle, or for a
+    /// group the hull of every nested leaf footprint and frozen path (a group's origin
+    /// need not coincide with its minimum child corner); null for an empty group.
+    /// </summary>
+    private static (double Left, double Top, double Right, double Bottom)? PlacedBoundsOf(Component component)
+    {
+        if (component is ComponentGroup group)
+            return DesignHierarchy.GeometryBoundsOf(group);
+
+        return (component.PhysicalX,
+                component.PhysicalY,
+                component.PhysicalX + component.WidthMicrometers,
+                component.PhysicalY + component.HeightMicrometers);
     }
 
     /// <summary>
