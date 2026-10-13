@@ -479,6 +479,14 @@ public partial class MainViewModel : ObservableObject
                 FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
         FileOperations.MetalRoutingSpecProvider = metalSpecProvider;
         GdsFactoryExport.MetalRoutingSpecProvider = metalSpecProvider;
+        // Process companion layers (cladding / trench / keep-out bands) of routed waveguides:
+        // the canvas renderer and the Nazca export both read this one per-connection source.
+        var companionLayers = new Services.WaveguideCompanions.WaveguideCompanionLayerProvider(
+            () => LeftPanel.AllTemplates,
+            () => LeftPanel.GetLoadedPdkDrafts(),
+            () => CAP_DataAccess.Components.ComponentDraftMapper.WaveguideCompanionSpecResolver.FromActiveProcess(
+                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames()));
+        _canvas.WaveguideCompanionSpecProvider = companionLayers.Resolve;
         // Minimum waveguide bend radius (#574): an in-canvas bend-handle drag (and its undo/redo
         // command) must not shrink a bend below what the active process allows. Same
         // active-process + live-member lookup as the metal spec; falls back to the absolute

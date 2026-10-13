@@ -128,6 +128,7 @@ public partial class ProcessManagementViewModel : ObservableObject
         Replace(Layers, process.Layers);
         Replace(Xsections, process.Xsections);
         Replace(Materials, process.Materials);
+        LoadCompanionLayers(process);
         // Preserve the fields ToProcess() doesn't rebuild from the grids (issue #733 review,
         // Finding 2) so a later ToProcess() call emits them unchanged instead of silently
         // dropping them.
@@ -238,6 +239,7 @@ public partial class ProcessManagementViewModel : ObservableObject
         Materials = Materials.ToList(),
         AllowedAngles = new List<int>(_passThroughAllowedAngles),
         ElectricalBridgeRequired = MetalMayCrossPhotonic ? null : true,
+        WaveguideCompanionLayers = CompanionLayersForSave(),
     };
 
     /// <summary>
@@ -450,6 +452,7 @@ public partial class ProcessManagementViewModel : ObservableObject
             process.Xsections = Xsections.Where(x => _ownedRows.Contains(x)).ToList();
             process.Materials = Materials.Where(m => _ownedRows.Contains(m)).ToList();
             process.ElectricalBridgeRequired = MetalMayCrossPhotonic ? null : true;
+            process.WaveguideCompanionLayers = CompanionLayersForSave();
             draft.Process = process;
 
             _pdkSaver.SaveToFile(draft, path);

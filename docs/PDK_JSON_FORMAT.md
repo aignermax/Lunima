@@ -124,6 +124,7 @@ New Design. Declare the block so your PDK participates in that grouping:
 | `allowedAngles` | No | Allowed placement/connection angles in degrees |
 | `minWaveguideSpacingUm` | No | Foundry minimum edge-to-edge waveguide gap in µm; consumed by the DRC-lite spacing rule via `GetMinWaveguideSpacingMicrometersOrDefault` (falls back to a conservative default when absent) |
 | `drcSource` | No | Provenance of the process-level DRC values — the foundry document/table/script they were taken from |
+| `waveguideCompanionLayers` | No | Cladding / trench / keep-out bands drawn along every routed waveguide of this process — see below |
 
 ### Cross-Section Fields (`process.xsections[]`)
 
@@ -138,6 +139,54 @@ New Design. Declare the block so your PDK participates in that grouping:
 | `layers` | No | Names of the `process.layers` entries this cross-section is drawn on |
 | `description` | No | Human-readable description |
 | `drcSource` | No | Provenance of the DRC values (`minWidthUm`, `minRadiusUm`) — the foundry document/table/script they were taken from |
+
+### Waveguide Companion Layers (`process.waveguideCompanionLayers[]`)
+
+Many processes draw more than the waveguide core: a trench or cladding opening around
+it, or a keep-out band other structures must respect. Imported GDS cells carry these
+polygons; Lunima's own routed waveguides get them from this list. It is the JSON form of a
+Nazca xsection's non-core layers (`nd.add_layer2xsection(xsection, layer, growx=…)`).
+
+```json
+"waveguideCompanionLayers": [
+  { "name": "SHALLOW_TRENCH", "layer": 2, "datatype": 0, "role": "Trench", "offsetUm": 8 }
+]
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Band name |
+| `layer`, `datatype` | Yes | GDS layer/datatype the band is drawn on |
+| `role` | No | `"Cladding"`, `"Trench"` (default) or `"KeepOut"` |
+| `offsetUm` | One of | Growth beyond each core edge in µm (Nazca `growx`); band width = core + 2 × offset |
+| `widthUm` | One of | Absolute band width in µm, centered on the core |
+| `description` | No | Provenance of the value |
+
+Declare exactly one of `offsetUm` / `widthUm`; an entry with neither, both, or a negative
+value is ignored. Where the bands show up:
+
+- **Canvas:** a translucent envelope under every routed waveguide, in the same per-layer
+  color as imported polygons on that layer. Bands of neighbouring wires merge like the mask
+  union. The Imported Layers panel lists the band layers, so they can be hidden or faded.
+- **Nazca / GDS export:** one xsection per distinct band set (`LUNIMA_WG_COMPANIONS_n`);
+  every routed straight, arc and styled curve is drawn a second time through it, so the GDS
+  carries the bands on their own layers. Imported geometry (as-drawn polygons, source-layer
+  tags), metal traces and components (crossings included) keep only their own polygons.
+- **Design checks:** only `KeepOut` bands count. Two different wires need a core gap of at
+  least the sum of their keep-out offsets (on top of `minWaveguideSpacingUm`). Pairs at a
+  crossing of the two wires are exempt. `Cladding` and `Trench` bands may touch or merge.
+
+A route between two processes (chiplets) carries the bands of both endpoint processes.
+The process editor (Process Management window → "Waveguide companion layers") edits the
+same list.
+
+Shipped defaults:
+
+| PDK / process | Companion layers | Why |
+|---------------|------------------|-----|
+| Demo SOI 220nm (`demo-pdk.json`) | `SHALLOW_TRENCH` 2/0, Trench, 8 µm each side | The demo components are Nazca demofab shallow-etch cells; demofab's `Shallow` xsection draws `ShallowTrench` (2/0) with `growx=8` |
+| CornerStone SiN 300nm | none | Light-field strip process: only the core (203/0) is drawn |
+| SiEPIC EBeam SOI 220nm | none | Strip waveguide on Si 1/0; the EBeam export already wraps each waveguide in its own cell with DevRec |
 
 The bundled `cornerstone-sin-pdk.json` shows the DRC fields filled from the public
 CORNERSTONE SiN 300nm documents (MPW-13 Design Guidelines §5.4 Table 4, pre-DRC script),

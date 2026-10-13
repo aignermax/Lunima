@@ -89,6 +89,16 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper.DTOs
         [JsonPropertyName("drcSource")]
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public string? DrcSource { get; set; }
+
+        /// <summary>
+        /// Companion layers (cladding / trench / keep-out bands) drawn along every routed
+        /// optical waveguide of this process — the non-core layers of the Nazca xsection
+        /// Lunima routes on. Null or empty: routes are drawn on the core layer only.
+        /// Nullable so PDKs written before this field existed round-trip byte-identically.
+        /// </summary>
+        [JsonPropertyName("waveguideCompanionLayers")]
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<ProcessCompanionLayer>? WaveguideCompanionLayers { get; set; }
     }
 
     /// <summary>A single GDS layer in the process stack.</summary>

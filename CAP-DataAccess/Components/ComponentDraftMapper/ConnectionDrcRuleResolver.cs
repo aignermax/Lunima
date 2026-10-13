@@ -51,7 +51,11 @@ namespace CAP_DataAccess.Components.ComponentDraftMapper
                 startProcess?.MinWaveguideSpacingUm ?? 0,
                 endProcess?.MinWaveguideSpacingUm ?? 0);
 
-            return new ConnectionDrcRules(widthRules, minSpacing);
+            return new ConnectionDrcRules(widthRules, minSpacing)
+            {
+                Companions = WaveguideCompanionSpecResolver.ResolveForEndpointPdkNames(
+                    startPdkName, endPdkName, loadedPdks) ?? CAP_Core.Routing.WaveguideCompanions.WaveguideCompanionSpec.Empty,
+            };
         }
 
         /// <summary>Finds the process definition of the named loaded PDK (null when unknown).</summary>

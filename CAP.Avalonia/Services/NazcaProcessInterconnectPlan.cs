@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using CAP.Avalonia.Services.WaveguideCompanions;
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
@@ -65,8 +66,15 @@ internal sealed class NazcaProcessInterconnectPlan
             plan.RegisterFrozen(pathVm.Path);
 
         plan.AssignNames();
+        plan.Companions = NazcaCompanionXsectionPlan.Build(canvas);
         return plan;
     }
+
+    /// <summary>
+    /// The companion-layer xsections (cladding / trench / keep-out bands) of this export;
+    /// routed optical segments are drawn a second time through them.
+    /// </summary>
+    public NazcaCompanionXsectionPlan Companions { get; private set; } = NazcaCompanionXsectionPlan.Empty;
 
     /// <summary>
     /// True when the canvas carries at least two distinct stamped process stacks

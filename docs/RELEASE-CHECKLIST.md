@@ -197,6 +197,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] GDS layer mapping in exported files matches the active process. `(auto: Export/SimpleNazcaExporterConnectionSourceLayerTests)`
 - [ ] PDK offset editor calibrates component pin offsets against a reference GDS. `(auto: PdkOffsetEditorViewModelTests)`
 - [ ] Component outline polygons render and export correctly. `(auto: Controls/Canvas/ComponentPreview/GdsPolygonRendererTests)`
+- [ ] Waveguide companion layers: a demo-PDK design shows a translucent 8 µm trench band (2/0) around every routed waveguide, the band layer can be hidden in the Imported Layers panel, the exported GDS carries the band polygons along straights and arcs, and the Process Management window lists/edits the bands. `(auto: SimpleNazcaExporterCompanionLayerTests, CompanionLayerGdsExportTests, WaveguideCompanionBandScreenshotTests, ProcessManagementCompanionLayerTests; manual: canvas look)`
+- [ ] A process `KeepOut` band makes Design Checks flag two wires whose keep-out bands overlap (not at their crossing); shipped examples gain no findings. `(auto: WaveguideSpacingKeepOutTests, ExampleCompanionKeepOutDrcTests)`
 - [ ] GDS coordinate comparison tool reports differences between two exports. `(manual)`
 
 ## 15. AI design assistant
