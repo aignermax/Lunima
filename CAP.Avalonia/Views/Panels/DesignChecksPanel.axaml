@@ -55,6 +55,18 @@
                 Classes="primary" Content="{loc:Localize DesignChecks.Run}"
                 Command="{Binding RunDesignChecksCommand}"
                 HorizontalAlignment="Left" Margin="0,5,0,5"/>
+        <!-- Unconnected pins are informational hints (spare ports and unused MMI outputs
+             are often left open on purpose), so they stay hidden unless asked for. -->
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,5">
+            <CheckBox x:Name="ShowUnconnectedPinsToggle"
+                      Content="{loc:Localize DesignChecks.ShowUnconnectedPins}"
+                      ToolTip.Tip="{loc:Localize DesignChecks.ShowUnconnectedPins.Tip}"
+                      IsChecked="{Binding RightPanel.DesignValidation.ShowUnconnectedPins}"/>
+            <!-- How many hints the toggle would reveal; the status line shows the current issue. -->
+            <TextBlock Classes="caption secondary" VerticalAlignment="Center"
+                       Text="{Binding RightPanel.DesignValidation.HiddenHintCount, StringFormat='({0})'}"
+                       IsVisible="{Binding RightPanel.DesignValidation.HasHiddenHints}"/>
+        </StackPanel>
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="caption" Text="{Binding RightPanel.DesignValidation.StatusText}" Margin="0,0,0,5" TextWrapping="Wrap"
                        IsVisible="{Binding RightPanel.DesignValidation.StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

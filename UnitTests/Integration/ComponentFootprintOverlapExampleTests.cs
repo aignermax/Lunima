@@ -37,10 +37,12 @@ public class ComponentFootprintOverlapExampleTests
         // into AND0's footprint — the #1304 kill-review mutation that passed DRC-lite.
         not0.MoveGroup(0, -120);
 
+        // Groups are compared child by child, so every clashing (AND0 child, NOT0 child)
+        // pair is reported — and nothing else.
         var issues = FootprintIssuesOf(canvas);
-        issues.Count.ShouldBe(1, "only the (AND0, NOT0) pair may overlap after the shove");
-        issues[0].Description.ShouldContain("AND0");
-        issues[0].Description.ShouldContain("NOT0");
+        issues.ShouldNotBeEmpty("the shove must be reported");
+        issues.ShouldAllBe(i => i.Description.Contains("'AND0/") && i.Description.Contains("'NOT0/"),
+            "only children of the (AND0, NOT0) pair may overlap after the shove");
     }
 
     [Fact]

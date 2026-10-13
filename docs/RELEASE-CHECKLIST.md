@@ -100,6 +100,8 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
+- [ ] Design Checks see inside groups at any depth: open "Logic Gate RAM 2x4", run checks → blocked paths inside cells are listed as "Blocked path in group 'CELLx'…" and Next zooms onto them; the groups holding them show a red dashed outline with a "!" badge and the blocked path draws red without entering the group. `(auto: Analysis/Hierarchy/*, ExampleNestedDesignCheckTests, GroupBrokenPathMarkerTests)`
+- [ ] Unconnected pins are hints, not issues: hidden by default, the "Show unconnected pins" toggle in the Checks tab shows them (count in brackets) after the real problems. `(auto: DesignChecksPanelNestedTests, DesignValidationMenuCommandTests)`
 
 ## 7. Simulation & S-matrix
 

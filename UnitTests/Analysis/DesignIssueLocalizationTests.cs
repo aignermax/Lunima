@@ -87,6 +87,32 @@ public class DesignIssueLocalizationTests
         DesignIssueFormatter.Format(issue, CreateLocalization("en")).ShouldBe(issue.Description);
     }
 
+    [Theory]
+    [InlineData(true, "DesignChecks.InvalidGeometry.InGroup")]
+    [InlineData(false, "DesignChecks.BendRadiusBelowProcessMinimum.InGroup")]
+    public void FrozenPathFlag_InGroupKey_ResolvesEverywhere(bool invalidGeometry, string expectedKey)
+    {
+        var path = new RoutedPath
+        {
+            IsInvalidGeometry = invalidGeometry,
+            ViolatesProcessMinBendRadius = !invalidGeometry,
+        };
+        path.Segments.Add(new StraightSegment(0, 0, 100, 0, 0));
+        var group = new CAP_Core.Components.Core.ComponentGroup("G");
+        group.InternalPaths.Add(new CAP_Core.Components.Core.FrozenWaveguidePath { Path = path });
+
+        var issue = new CAP_Core.Analysis.Hierarchy.FrozenPathFlagChecker().Check(new[] { group }).Single();
+
+        issue.LocalizationKey.ShouldBe(expectedKey);
+        foreach (var code in AllLanguages)
+        {
+            LocalizationResourceLoader.Load(code).ContainsKey(expectedKey).ShouldBeTrue(
+                $"key '{expectedKey}' missing in strings-{code}.json");
+        }
+        DesignIssueFormatter.Format(issue, CreateLocalization("en")).ShouldBe(issue.Description);
+        DesignIssueFormatter.Format(issue, CreateLocalization("de")).ShouldNotBe(issue.Description);
+    }
+
     [Fact]
     public void Format_IssueWithoutKey_FallsBackToDescription()
     {

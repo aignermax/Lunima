@@ -46,7 +46,26 @@ public partial class DesignValidationViewModel : ObservableObject
     private bool _hasWaveguideCrossingIssue;
 
     /// <summary>
-    /// The list of design issues found during the last validation run.
+    /// When false (default) informational hints — unconnected pins, which are routinely
+    /// left open on purpose (unused coupler/MMI outputs, spare ports) — are kept out of
+    /// <see cref="Issues"/> and only counted in the status line.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showUnconnectedPins;
+
+    /// <summary>Number of hint findings of the last run currently hidden from <see cref="Issues"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasHiddenHints))]
+    private int _hiddenHintCount;
+
+    /// <summary>True when the last run found hints that are currently hidden.</summary>
+    public bool HasHiddenHints => HiddenHintCount > 0;
+
+    private readonly List<DesignIssue> _allIssues = new();
+
+    /// <summary>
+    /// The design issues of the last validation run that are currently shown (hints only
+    /// when <see cref="ShowUnconnectedPins"/> is on).
     /// </summary>
     public ObservableCollection<DesignIssue> Issues { get; } = new();
 
@@ -177,6 +196,8 @@ public partial class DesignValidationViewModel : ObservableObject
     /// </summary>
     private void BeginValidation()
     {
+        _allIssues.Clear();
+        HiddenHintCount = 0;
         Issues.Clear();
         CurrentIndex = -1;
         IsCurrentIssueAlignable = false;
@@ -190,14 +211,33 @@ public partial class DesignValidationViewModel : ObservableObject
     /// </summary>
     private void CommitIssues(IReadOnlyList<DesignIssue> issues)
     {
-        foreach (var issue in issues)
+        _allIssues.Clear();
+        _allIssues.AddRange(issues);
+        ShowFilteredIssues();
+    }
+
+    partial void OnShowUnconnectedPinsChanged(bool value) => ShowFilteredIssues();
+
+    /// <summary>
+    /// Rebuilds <see cref="Issues"/> from the last run honouring
+    /// <see cref="ShowUnconnectedPins"/>, and refreshes the status / navigation surface.
+    /// Problems are listed before hints so "next issue" visits real problems first.
+    /// </summary>
+    private void ShowFilteredIssues()
+    {
+        Issues.Clear();
+        CurrentIndex = -1;
+        IsCurrentIssueAlignable = false;
+        var visible = _allIssues
+            .Where(i => ShowUnconnectedPins || i.Severity != DesignIssueSeverity.Hint)
+            .OrderByDescending(i => i.Severity);
+        foreach (var issue in visible)
             Issues.Add(issue);
 
+        HiddenHintCount = _allIssues.Count - Issues.Count;
         HasIssues = Issues.Count > 0;
         HasWaveguideCrossingIssue = Issues.Any(i => i.Type == DesignIssueType.WaveguideCrossing);
-        StatusText = Issues.Count == 0
-            ? "No issues found"
-            : $"{Issues.Count} issue(s) found";
+        StatusText = FormatStatus();
 
         OnPropertyChanged(nameof(NavigationText));
 
@@ -205,6 +245,23 @@ public partial class DesignValidationViewModel : ObservableObject
         {
             NavigateToIssue(0);
         }
+    }
+
+    /// <summary>
+    /// "N issue(s) found" counts problems only; shown hints and hidden hints are reported
+    /// separately so an open spare port never reads as a design error.
+    /// </summary>
+    private string FormatStatus()
+    {
+        int problems = Issues.Count(i => i.Severity != DesignIssueSeverity.Hint);
+        int shownHints = Issues.Count - problems;
+        var status = problems == 0 ? "No issues found" : $"{problems} issue(s) found";
+        var localization = Services.Localization.LocalizationService.Instance;
+        if (shownHints > 0)
+            status += " · " + string.Format(localization.Translate("DesignChecks.ShownHints"), shownHints);
+        if (HiddenHintCount > 0)
+            status += " · " + string.Format(localization.Translate("DesignChecks.HiddenHints"), HiddenHintCount);
+        return status;
     }
 
     /// <summary>
