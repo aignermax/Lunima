@@ -37,7 +37,9 @@ internal static class AgentBridgeFeatureExtensions
             sp.GetRequiredService<DesignCanvasViewModel>(),
             sp.GetRequiredService<CommandManager>(),
             () => sp.GetService<MainViewModel>()?.FileOperations,
-            sp.GetRequiredService<ExampleDesignsService>()));
+            sp.GetRequiredService<ExampleDesignsService>(),
+            () => sp.GetService<MainViewModel>()?.LeftPanel.AllTemplates.ToList()
+                  ?? (IReadOnlyList<CAP.Avalonia.ViewModels.Library.ComponentTemplate>)Array.Empty<CAP.Avalonia.ViewModels.Library.ComponentTemplate>()));
         services.AddSingleton(sp => new CanvasSnapshotRenderer(() => sp.GetService<MainViewModel>()));
 
         services.AddTransient<IAgentBridgeTool, GetDesignSummaryTool>();
