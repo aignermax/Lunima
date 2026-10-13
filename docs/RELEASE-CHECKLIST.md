@@ -94,7 +94,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Toggle simulation mode (CW / Transient) from the toolbar combo box. `(auto: SimulationModeTests)`
 - [ ] Simulation converges for looped circuits or emits a readable non-convergence message. `(auto: NonConvergentCircuitMessageFormatterTests)`
 - [ ] Passivity warnings surface when components produce unphysical gain. `(auto: LightCalculation/SingleHopPassivityCheckerTests)`
-- [ ] S-matrix performance diagnostics show aggregate stats for the current design. `(manual)`
+- [ ] Run never toggles: pressing Run (L) with the power overlay showing re-runs and keeps the overlay; the eye button beside Run (and P) shows/hides it. `(auto: MainViewModelWorkspaceTests)`
+- [ ] Workspace switch (Layout / Optics / Logic / System) next to Run: one click or Ctrl+1–4 switches; Run's label names the action ("Run checks" / "Simulate" / "Run logic" / "Run system"); the CW/Transient choice and the eye button appear only where they apply. `(auto: WorkspaceViewModelTests, UiFlowWorkspaceSwitchTests)`
+- [ ] Run per workspace: Layout opens Design Checks with results; Optics simulates (CW overlay or Transient tab); Logic builds the network, then each Run steps the clock; System runs the chiplet checks + whole-system CW and shows the chiplet/link strip (process per chiplet, link loss in dB). `(auto: MainViewModelWorkspaceTests)`
+- [ ] Dock tabs follow the workspace; "⋯ → Show all tabs" in the dock header brings every tab back; a tab opened by a tour/menu is shown even outside its workspace. `(auto: WorkspaceViewModelTests)`
+- [ ] Workspace is saved in the .lun and restored on open; files without one open by content: chiplet links → System, gate groups → Logic, light source → Optics, otherwise Layout (check the Two Chiplets, Logic Gate and MZI examples). `(auto: WorkspaceDefaultsTests, MainViewModelWorkspaceTests)`
+- [ ] (?) beside the workspace switch explains the four workspaces in a few sentences each. `(manual)`
 
 ## 8. Parameter sweep
 
@@ -115,6 +120,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Component dimension diagnostics detect out-of-bounds geometry. `(auto: ComponentDimensionValidatorTests)`
 - [ ] Layout compression panel shrinks the design within constraints. `(auto: LayoutCompressorTests)`
 - [ ] Analysis output panel shows designated outputs and persists them. `(auto: AnalysisOutput/AnalysisOutputPanelViewModelTests)`
+- [ ] Empty optical tabs explain themselves: with no light source, Spectrum / Monte Carlo / Transient / Eye show one sentence + "Place a light source" (arms placement of a grating/edge coupler); with a source but no picked output, Transient / Eye offer "Pick on canvas". `(auto: AnalysisReadinessViewModelTests, MainViewModelWorkspaceTests)`
 - [ ] Logic panel lives in the analysis dock's Logic tab: builds the logic network of the loaded design, toggles inputs, steps/runs the clock, and shows timeline + waveform lanes. `(auto: WatchComputeTourViewModelTests, WatchTourCounterExampleTests)`
 
 ## 10. Component-specific tools & properties

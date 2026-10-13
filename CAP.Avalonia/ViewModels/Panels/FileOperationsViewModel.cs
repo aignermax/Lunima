@@ -203,6 +203,18 @@ public partial class FileOperationsViewModel : ObservableObject
     public Action? CoherentModeRestoredAfterLoad { get; set; }
 
     /// <summary>
+    /// Supplies the active workspace for the .lun file on save (null = not stored).
+    /// </summary>
+    public Func<string?>? CaptureWorkspaceForSave { get; set; }
+
+    /// <summary>
+    /// Called after a load with the file's stored workspace (null when absent) and after
+    /// File → New with null, once the canvas holds the new design, so the workspace switch
+    /// can restore it or choose a content-based default.
+    /// </summary>
+    public Action<string?>? RestoreWorkspace { get; set; }
+
+    /// <summary>
     /// File dialog service for showing open/save dialogs.
     /// </summary>
     public IFileDialogService? FileDialogService { get; set; }
@@ -519,6 +531,7 @@ public partial class FileOperationsViewModel : ObservableObject
             designData.CoherentPropagationPhase = _canvas.ConnectionManager.EnableCoherentPropagationPhase
                 ? true
                 : null;
+            designData.Workspace = CaptureWorkspaceForSave?.Invoke();
 
             var json = JsonSerializer.Serialize(designData, new JsonSerializerOptions
             {
@@ -1377,6 +1390,7 @@ public partial class FileOperationsViewModel : ObservableObject
                 // Auto zoom-to-fit after loading
                 ZoomToFitAfterLoad?.Invoke(900, 800);
 
+                RestoreWorkspace?.Invoke(designData.Workspace);
                 ProjectOpened?.Invoke();
                 return true;
             }
@@ -1467,6 +1481,7 @@ public partial class FileOperationsViewModel : ObservableObject
         // Rebuild hierarchy
         RebuildHierarchy?.Invoke();
 
+        RestoreWorkspace?.Invoke(null);
         ProjectOpened?.Invoke();
         return true;
     }

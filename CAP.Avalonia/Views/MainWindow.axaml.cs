@@ -612,30 +612,11 @@ public partial class MainWindow : Window
                 break;
             case Key.P:
                 if (!ctrlPressed)
-                {
-                    var canvasVm = mainVm.Canvas;
-                    if (!canvasVm.ShowPowerFlow)
-                    {
-                        if (canvasVm.PowerFlowVisualizer.CurrentResult == null)
-                            mainVm.RunSimulationCommand.Execute(null);
-                        else
-                        {
-                            canvasVm.ShowPowerFlow = true;
-                            canvasVm.PowerFlowVisualizer.IsEnabled = true;
-                        }
-                        mainVm.StatusText = "Power flow overlay: ON (auto-updates on changes)";
-                    }
-                    else
-                    {
-                        canvasVm.ShowPowerFlow = false;
-                        canvasVm.PowerFlowVisualizer.IsEnabled = false;
-                        mainVm.StatusText = "Power flow overlay: OFF";
-                    }
-                }
+                    mainVm.TogglePowerOverlayCommand.Execute(null);
                 break;
             case Key.L:
                 if (!ctrlPressed)
-                    mainVm.RunSimulationCommand.Execute(null);
+                    mainVm.RunWorkspaceCommand.Execute(null);
                 break;
             default:
                 return; // Don't mark as handled for unrecognized keys

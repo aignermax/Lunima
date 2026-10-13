@@ -65,7 +65,7 @@ public class Issue693WalkthroughScreenshotTests
         var analysis = vm.BottomPanel.Analysis;
         SeedTransientResult(analysis.Transient);
         SeedEyeResult(analysis.Eye);
-        analysis.IsVisible = true;
+        analysis.OpenTransient();
         analysis.SetDockHeight(320);
 
         var dock = new AnalysisDockPanel { DataContext = vm };

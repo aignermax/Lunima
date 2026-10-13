@@ -31,6 +31,8 @@ public sealed class ToolbarButtonHeightTests
 
         var buttons = toolbar.GetLogicalDescendants().OfType<Button>()
             .Where(b => b.IsEffectivelyVisible)
+            // The (?) help glyph beside the workspace switch is a deliberately small inline pill.
+            .Where(b => !b.Classes.Contains("help"))
             .ToList();
         foreach (var button in buttons)
             _output.WriteLine($"{ToolTip.GetTip(button) ?? button.Content}: {button.Bounds.Height:F1}");

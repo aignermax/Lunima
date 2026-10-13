@@ -396,6 +396,7 @@ public partial class MainViewModel : ObservableObject
         Home.OpenProjectRequested = async () => await FileOperations.LoadDesignCommand.ExecuteAsync(null);
         Home.OpenProjectFromPathRequested = FileOperations.LoadDesignFromPathAsync;
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
+        WorkspaceSwitch = InitializeWorkspaces();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
@@ -1031,6 +1032,8 @@ public partial class MainViewModel : ObservableObject
         if (!await FileOperations.TryNewProjectAsync())
             return;
 
+        // The tour's Run step expects the CW power-flow overlay.
+        WorkspaceSwitch.Current = ViewModels.Workspaces.Workspace.Optics;
         Tutorial.Start();
     }
 
@@ -1317,15 +1320,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Toggle off if overlay is already showing
-        if (Canvas.ShowPowerFlow)
-        {
-            Canvas.ShowPowerFlow = false;
-            Canvas.PowerFlowVisualizer.IsEnabled = false;
-            StatusText = LocalizationService.Instance.Translate("Status.SimulationOverlayOff");
-            return;
-        }
-
+        // Run always runs: the overlay has its own toggle (TogglePowerOverlay, P).
         await ExecuteSimulation();
     }
 
@@ -1346,11 +1341,6 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusText = string.Format(LocalizationService.Instance.Translate("Status.SimulationComplete"),
                              result.LightSourceCount, result.ConnectionCount, result.WavelengthSummary);
-
-                if (result.SystemMatrix != null)
-                {
-                    RightPanel.SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
-                }
             }
             else
             {
@@ -1595,6 +1585,13 @@ public class DesignFileData
     /// fringes. Null in files saved before the mode existed — loads as off.
     /// </summary>
     public bool? CoherentPropagationPhase { get; set; }
+
+    /// <summary>
+    /// The workspace (Layout / Optics / Logic / System) the design was last saved in.
+    /// Null in files saved before workspaces existed — the design then opens in a
+    /// content-based default (see <c>WorkspaceDefaults</c>).
+    /// </summary>
+    public string? Workspace { get; set; }
 }
 
 /// <summary>
