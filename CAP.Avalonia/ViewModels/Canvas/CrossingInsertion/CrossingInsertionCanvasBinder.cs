@@ -29,6 +29,13 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
     public CrossingInsertionService Service { get; }
 
     /// <summary>
+    /// Records what the re-routes after each edit change on the router-placed crossings, so
+    /// undoing the edit restores them; attach it to the undo history with
+    /// <see cref="CrossingUndoJournal.Attach"/>.
+    /// </summary>
+    public CrossingUndoJournal UndoJournal { get; }
+
+    /// <summary>
     /// Creates the binder and attaches crossing insertion to the given canvas.
     /// </summary>
     /// <param name="canvas">The design canvas whose connection manager gets the crossing pass.</param>
@@ -59,6 +66,8 @@ public class CrossingInsertionCanvasBinder : System.ComponentModel.INotifyProper
         // attached for maintenance right away, but places crossings only once the user
         // enables crossing insertion (Settings → Routing → Crossings).
         canvas.ConnectionManager.CrossingMaintenance = Service;
+        UndoJournal = new CrossingUndoJournal(canvas, OnCrossingAdded, OnCrossingRemoved);
+        Service.ChangeRecorded = UndoJournal.Record;
     }
 
     /// <summary>

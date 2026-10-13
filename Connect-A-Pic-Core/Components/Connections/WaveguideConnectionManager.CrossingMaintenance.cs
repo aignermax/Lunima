@@ -90,6 +90,19 @@ public partial class WaveguideConnectionManager
     }
 
     /// <summary>
+    /// Puts the connections back into <paramref name="order"/>; connections not in it follow
+    /// in their current order. Routing order decides which wire gets the space first, so an
+    /// exact undo restores it along with the wires.
+    /// </summary>
+    public void RestoreConnectionOrder(IReadOnlyList<WaveguideConnection> order)
+    {
+        List<WaveguideConnection> present;
+        lock (_connectionsSync)
+            present = order.Where(Connections.Contains).ToList();
+        ReorderConnections(present);
+    }
+
+    /// <summary>
     /// Removes every routing-placed crossing: the wires through them merge pin to pin and route
     /// again on the next pass (with new crossings only where adaptive insertion is on and one
     /// is needed). User-placed crossings stay. Returns the crossings removed.

@@ -120,24 +120,30 @@ public class CrossingRecordRegistry
     /// crossing pass re-evaluates them from scratch — the crossing is re-inserted
     /// only if it is still geometrically valid and beneficial.
     /// </summary>
-    public void DissolveStaleRecords(WaveguideConnectionManager manager, WaveguideRouter router)
+    /// <param name="onDissolved">Receives each dissolved record with the exact undo and the originals it put back.</param>
+    public void DissolveStaleRecords(
+        WaveguideConnectionManager manager, WaveguideRouter router,
+        Action<CrossingRecord, Action, List<WaveguideConnection>>? onDissolved = null)
     {
         foreach (var record in _records.Where(r => r.HaveAnchorsMoved()).ToList())
         {
-            Dissolve(record, manager, router,
+            var (undo, added) = Dissolve(record, manager, router,
                 new List<WaveguideConnection> { record.OriginalA, record.OriginalB });
+            onDissolved?.Invoke(record, undo, added);
         }
     }
 
     /// <summary>
     /// Removes the record's sub-connections and crossing component, restores the
-    /// given survivors into the connection list, and notifies the host.
+    /// given survivors into the connection list, and notifies the host. Returns the exact
+    /// undo and the survivors it added.
     /// </summary>
-    private void Dissolve(
+    private (Action Undo, List<WaveguideConnection> Added) Dissolve(
         CrossingRecord record, WaveguideConnectionManager manager, WaveguideRouter router,
         List<WaveguideConnection> survivors)
     {
         _records.Remove(record);
+        var added = new List<WaveguideConnection>();
         lock (manager.SyncRoot)
         {
             foreach (var sub in record.AllSubConnections)
@@ -150,14 +156,38 @@ public class CrossingRecordRegistry
 
             foreach (var survivor in survivors)
             {
-                if (!manager.Connections.Contains(survivor))
-                    manager.Connections.Add(survivor);
+                if (manager.Connections.Contains(survivor)) continue;
+                manager.Connections.Add(survivor);
+                added.Add(survivor);
             }
         }
 
         // Notify AFTER the connection list is consistent again, so hosts
         // (e.g. the canvas binder) can sync their view of the connections.
         ComponentRemoved?.Invoke(record.CrossingComponent);
+        return (() => Restore(record, added, manager, router), added);
+    }
+
+    /// <summary>Exact undo of <see cref="Dissolve"/>: the subs and the crossing come back, the survivors leave.</summary>
+    private void Restore(
+        CrossingRecord record, List<WaveguideConnection> survivors, WaveguideConnectionManager manager, WaveguideRouter router)
+    {
+        lock (manager.SyncRoot)
+        {
+            foreach (var survivor in survivors)
+            {
+                router.PathfindingGrid?.RemoveWaveguideObstacle(survivor.Id);
+                manager.Connections.Remove(survivor);
+            }
+            router.AddComponentObstacle(record.CrossingComponent);
+            foreach (var sub in record.AllSubConnections)
+            {
+                manager.Connections.Add(sub);
+                if (sub.IsPathValid && sub.RoutedPath != null)
+                    router.PathfindingGrid?.AddWaveguideObstacle(sub.Id, sub.RoutedPath.Segments, manager.WaveguideWidthMicrometers);
+            }
+        }
+        _records.Add(record);
     }
 
     private static bool Touches(WaveguideConnection connection, Component component) =>
