@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.WorkspaceRail.SourcesQuickSection"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Optics workspace: where light enters and leaves, on top of the full library. -->
+    <StackPanel IsVisible="{Binding IsSourcesQuickSectionVisible}" Margin="0,0,0,4">
+        <ToggleButton x:Name="SourcesQuickToggle" Classes="sectionHeader" IsChecked="True"
+                      AutomationProperties.Name="{loc:Localize LeftRail.Sources}"
+                      ToolTip.Tip="{loc:Localize LeftRail.SourcesTip}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronRight}"
+                               Classes.open="{Binding #SourcesQuickToggle.IsChecked}"/>
+                <TextBlock Classes="label" Text="{loc:Localize LeftRail.Sources}"/>
+            </StackPanel>
+        </ToggleButton>
+        <!-- Capped: a PDK set with many fiber couplers must not push the library off screen. -->
+        <ListBox x:Name="SourcesQuickList" Classes="library" Margin="8,0" MaxHeight="240"
+                 IsVisible="{Binding #SourcesQuickToggle.IsChecked}"
+                 ItemsSource="{Binding SourcesQuickSection.Items}"
+                 behaviors:LibraryDragBehavior.IsEnabled="True"
+                 SelectionChanged="OnSourcesSelectionChanged">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vmLib:ComponentTemplate">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Left" Classes="thumb">
+                            <controls:Icon Data="{StaticResource Icon.Zap}"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center" Spacing="1">
+                            <TextBlock Classes="rowTitle" Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding Name}"/>
+                            <TextBlock Classes="caption" Text="{Binding Category}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <Border Classes="divider" Height="1" Margin="12,6,12,0"/>
+    </StackPanel>
+</UserControl>

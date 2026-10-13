@@ -12,6 +12,7 @@ Every view uses the shared design system in `CAP.Avalonia/Styles/`. It is includ
 | `Controls.axaml` | Button / input variants |
 | `Containers.axaml` | `Border` surface classes, chips, lists, splitters |
 | `Shell.axaml` | Main-window chrome: toolbar groups, flyout `menuItem`s, left `rail` + `paneHeader`, library rows, dock frames and `dockTabs`, status-bar `statusField` / `statusChip`, canvas `banner`s |
+| `Workspace.axaml` | Workspace identity: `wsAccentLine`, `wsCanvasTint`, `wsChip`, `Button.wsRun`, active switch segment — all from `Brush.Workspace.Current.*`; cross-fade unless the root has `.reduceMotion` |
 
 `UnitTests/Architecture/DesignTokenGuardTests` fails when a view adds a hex color or a font
 size below 11. Remaining literals in not-yet-migrated views are listed in
@@ -28,6 +29,10 @@ migrate a file, lower or remove its entry.
    may use the `compact` class (24 px). Never set `Height`/`Padding` on a button to resize it.
 4. **Color means state.** The accent marks the primary action, selection and focus. Green / amber
    / red / cyan only signal success / warning / danger / info. Headings are neutral.
+   The one exception is **workspace identity** (`Brush.Workspace.{Layout|Optics|Logic|System}.*`,
+   published as `Brush.Workspace.Current.*` by `WorkspaceAccentBehavior`, styled in
+   `Workspace.axaml`): the active workspace's hue marks only its switch segment, the line under
+   the toolbar, the faint canvas tint and edge, the status-bar chip and Run — never state.
 5. **One primary action per surface** (`Button.primary`). Everything else is secondary (no
    class), `ghost`, or `danger` for destructive actions.
 6. **Icons, not emoji.** Use `<controls:Icon Data="{StaticResource Icon.Save}"/>`

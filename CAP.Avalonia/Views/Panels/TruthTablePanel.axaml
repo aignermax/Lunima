@@ -8,9 +8,10 @@
              x:Class="CAP.Avalonia.Views.Panels.TruthTablePanel"
              x:DataType="vm:MainViewModel">
 
-    <!-- The gate section exists only while exactly one group is selected: the sidebar
-         shows properties of the selection, so an empty hint has no place here. -->
-    <StackPanel Spacing="4" IsVisible="{Binding RightPanel.TruthTable.IsGroupSelected}">
+    <!-- The gate section exists only while exactly one group is selected — the sidebar
+         shows properties of the selection, so an empty hint has no place here — and only in
+         the Logic and System workspaces, where groups are read as gates. -->
+    <StackPanel Spacing="4" IsVisible="{Binding IsGateSectionVisible}">
         <Border Classes="divider" Margin="0,12,0,8"/>
 
         <StackPanel Spacing="4" IsVisible="{Binding !RightPanel.MakeGate.IsActive}">

@@ -405,6 +405,7 @@ public partial class MainViewModel : ObservableObject
         Home.OpenProjectFromPathRequested = FileOperations.LoadDesignFromPathAsync;
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
         WorkspaceSwitch = InitializeWorkspaces();
+        InitializeWorkspaceContext();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;

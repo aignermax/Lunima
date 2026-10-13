@@ -6,13 +6,15 @@ using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Process;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace CAP.Avalonia.ViewModels.Workspaces;
 
 /// <summary>One chiplet (top-level group) of a multi-chiplet design and its process.</summary>
 /// <param name="Name">The chiplet's group name.</param>
 /// <param name="ProcessName">The fabrication process it is bound to, or a "no process" label.</param>
-public sealed record ChipletSummaryRow(string Name, string ProcessName);
+/// <param name="Group">The chiplet's top-level group, used to select and show it; null in hand-built rows.</param>
+public sealed record ChipletSummaryRow(string Name, string ProcessName, ComponentGroup? Group = null);
 
 /// <summary>One cross-chiplet edge-coupler link and its simulated coupling loss.</summary>
 /// <param name="Label">"Chiplet A ↔ Chiplet B".</param>
@@ -45,6 +47,17 @@ public partial class SystemOverviewViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasLinks;
 
+    /// <summary>Selects a chiplet on the canvas and brings it into view (left rail Chiplets panel).</summary>
+    public Action<ComponentGroup>? ChipletActivated { get; set; }
+
+    /// <summary>Selects and shows the chiplet of <paramref name="row"/>.</summary>
+    [RelayCommand]
+    private void ActivateChiplet(ChipletSummaryRow? row)
+    {
+        if (row?.Group is { } group)
+            ChipletActivated?.Invoke(group);
+    }
+
     /// <summary>Recomputes the chiplet and link rows.</summary>
     /// <param name="topLevelComponents">The design's top-level components.</param>
     /// <param name="connections">The design's canvas connections.</param>
@@ -65,7 +78,7 @@ public partial class SystemOverviewViewModel : ObservableObject
         {
             var process = resolveProcess(group)?.DisplayName
                           ?? LocalizationService.Instance.Translate("Workspace.System.NoProcess");
-            Chiplets.Add(new ChipletSummaryRow(group.GroupName, process));
+            Chiplets.Add(new ChipletSummaryRow(group.GroupName, process, group));
         }
 
         Links.Clear();

@@ -140,7 +140,8 @@ public partial class MainViewModel
     private bool IsPlacementAllowed(Library.ComponentTemplate template) =>
         CanvasInteraction.PlacementContext.CheckPlacementAt(template.PdkSource, null).IsAllowed;
 
-    /// <summary>Recomputes the System workspace's chiplet and link overview.</summary>
+    /// <summary>Recomputes the System workspace's chiplet and link overview (also the Chiplets pane's refresh button).</summary>
+    [RelayCommand]
     public void RefreshSystemOverview()
     {
         var context = CanvasInteraction.PlacementContext;

@@ -7,6 +7,7 @@
       Icons.axaml            line icon geometry for controls:Icon
       Typography / Controls / Containers — the style classes views use
       Shell.axaml            main-window chrome: toolbar, rail, panes, docks, status bar
+      Workspace.axaml        the active workspace's hue on switch, accent line, canvas, chip, Run
   -->
   <Styles.Resources>
     <ResourceDictionary>
@@ -21,4 +22,5 @@
   <StyleInclude Source="avares://CAP.Avalonia/Styles/Controls.axaml"/>
   <StyleInclude Source="avares://CAP.Avalonia/Styles/Containers.axaml"/>
   <StyleInclude Source="avares://CAP.Avalonia/Styles/Shell.axaml"/>
+  <StyleInclude Source="avares://CAP.Avalonia/Styles/Workspace.axaml"/>
 </Styles>

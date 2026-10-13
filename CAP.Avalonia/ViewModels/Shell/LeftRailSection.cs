@@ -11,4 +11,10 @@ public enum LeftRailSection
 
     /// <summary>Loaded PDKs: enable/disable, edit, create, trash.</summary>
     Pdks,
+
+    /// <summary>Saved gates, gate examples and "Make gate from selection" (Logic default).</summary>
+    Gates,
+
+    /// <summary>The design's chiplets with their process (System default).</summary>
+    Chiplets,
 }

@@ -1940,5 +1940,19 @@
   "MakeGateHelp.Title": "How a group becomes a gate",
   "Toolbar.CheckPdksTip": "Checks that every loaded PDK's components resolve in its Python/Nazca package — for PDK authors before exporting GDS.",
   "Toolbar.ComputeModesTip": "Solves the guided modes of a waveguide cross-section (effective index, mode profile) — for checking widths and layer stacks before layout.",
-  "TruthTable.NoThresholdGap": "No gap between the output powers — no threshold separates 0 from 1."
+  "TruthTable.NoThresholdGap": "No gap between the output powers — no threshold separates 0 from 1.",
+  "LeftRail.Gates": "Gates",
+  "LeftRail.Gates.ShowLibrary": "Show all components ›",
+  "LeftRail.Gates.ShowLibraryTip": "Open the full component library",
+  "LeftRail.Gates.MakeGate": "Make gate from selection",
+  "LeftRail.Gates.MakeGateTip": "Groups the selected parts if needed, then opens the Make-gate steps: pin roles, simulate, threshold, save.",
+  "LeftRail.Gates.Saved": "Saved gates",
+  "LeftRail.Gates.SavedEmpty": "No saved gates yet. Make a gate from a selection and save it to the library — it appears here, ready to drag in.",
+  "LeftRail.Gates.Examples": "Starter gates",
+  "LeftRail.Gates.ExamplesHint": "Shipped gate examples; each opens as an untitled copy.",
+  "LeftRail.Chiplets.RefreshTip": "Refresh the chiplet list",
+  "LeftRail.Chiplets.SelectTip": "Select this chiplet and center the canvas on it",
+  "LeftRail.Sources": "Sources & detectors",
+  "LeftRail.SourcesTip": "Where light enters and leaves the circuit: fiber couplers, lasers, detectors and terminators",
+  "Workspace.HelpTools": "Select, Connect, Delete and Cut work in every workspace. Probe lives in Layout and Optics, gate tools in Logic and System. The left rail opens each workspace's own panel first; every panel stays one click away."
 }
