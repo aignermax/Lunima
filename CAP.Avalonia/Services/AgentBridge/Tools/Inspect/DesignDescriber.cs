@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Routing;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
 
@@ -51,9 +52,15 @@ public static class DesignDescriber
             bounds);
     }
 
-    /// <summary>Describes one connection; <paramref name="isCrossingPiece"/> comes from the crossing registry.</summary>
+    /// <summary>
+    /// Describes one connection. A piece of a recorded crossing (<paramref name="isCrossingPiece"/>,
+    /// from the crossing registry) and a piece docked on any crossing component — chain
+    /// crossings carry no record — both count as crossing pieces.
+    /// </summary>
     public static ConnectionInfo Describe(WaveguideConnection connection, bool isCrossingPiece)
     {
+        isCrossingPiece |= CrossingComponentCatalog.IsCrossing(connection.StartPin.ParentComponent)
+            || CrossingComponentCatalog.IsCrossing(connection.EndPin.ParentComponent);
         var blocked = connection.IsBlockedFallback;
         return new ConnectionInfo(
             connection.Id.ToString(),
