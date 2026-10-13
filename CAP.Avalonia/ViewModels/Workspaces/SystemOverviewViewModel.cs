@@ -115,7 +115,9 @@ public partial class SystemOverviewViewModel : ObservableObject
     {
         var outline = DieAssembly.OutlineOf(die);
         var size = DieFrameRenderer.FormatSize(outline.Width, outline.Height, CultureInfo.CurrentCulture);
-        int pdkCount = die.Die!.EnabledPdkNames?.Count ?? binding?.MemberPdkNames.Count ?? 0;
+        if (binding == null)
+            return size;
+        int pdkCount = die.Die!.EnabledPdkNames?.Count ?? binding.MemberPdkNames.Count;
         return string.Format(CultureInfo.CurrentCulture,
             LocalizationService.Instance.Translate("Workspace.System.DieDetail"), size, pdkCount);
     }

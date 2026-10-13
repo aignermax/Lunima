@@ -99,6 +99,17 @@ public static class DieLinkGeometry
         return Math.Max(0.0, (ex - sx) * Math.Cos(radians) + (ey - sy) * Math.Sin(radians));
     }
 
+    /// <summary>
+    /// Coupling loss of the link in dB at <paramref name="wavelengthNm"/> — the same model the
+    /// simulation applies; null when the facets do not face each other (no coupling).
+    /// </summary>
+    public static double? LossDecibels(WaveguideConnection link, double wavelengthNm)
+    {
+        const double DecibelsPerFieldDecade = 20.0;
+        double field = CAP_Core.Analysis.ChipletEdgeCouplerCoupling.FieldFactor(link, wavelengthNm);
+        return field <= 0 ? null : Math.Max(0.0, -DecibelsPerFieldDecade * Math.Log10(field));
+    }
+
     /// <summary>The facet offset perpendicular to the link axis.</summary>
     public static double LateralOffset(WaveguideConnection link)
     {

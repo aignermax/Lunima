@@ -317,9 +317,13 @@ public partial class DesignCanvasViewModel : ObservableObject
         => Placement.CanMoveComponentTo(component, x, y);
 
     public void MoveComponent(ComponentViewModel component, double deltaX, double deltaY)
-        => Placement.MoveComponent(component, deltaX, deltaY,
+    {
+        Placement.MoveComponent(component, deltaX, deltaY,
             Groups.IsInGroupEditMode, Groups.CurrentEditGroup,
             Groups.UpdateExternalPinPositions, Routing.RecalculateRoutesAsync);
+        if (component.Component is ComponentGroup { IsDie: true })
+            RefreshFacetLinkPaths();
+    }
 
     /// <summary>
     /// Shifts the routed geometry of connections internal to <paramref name="selection"/> by

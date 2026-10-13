@@ -160,6 +160,7 @@ and never appear in the process picker.
 | `rawCodeBackend` | No | Export backend the `rawCode` targets: `"nazca"` (GDS imports) or `"gdsfactory"` |
 | `widthMicrometers` | Yes | Component bounding box width in µm |
 | `heightMicrometers` | Yes | Component bounding box height in µm |
+| `modeFieldDiameterMicrometers` | No | Edge couplers only: mode-field diameter (1/e² intensity) at the facet in µm. Die-to-die links use it for the coupling loss including spot-size mismatch; omitted = 3 µm |
 | `nazcaOriginOffsetX` | Yes* | Nazca cell origin measured from the bounding box **left** edge (µm) = `-XMin` of the Nazca bbox |
 | `nazcaOriginOffsetY` | Yes* | Nazca cell origin measured from the bounding box **top** edge (µm) = `YMax` of the Nazca bbox |
 | `pins` | Yes | List of optical port definitions |

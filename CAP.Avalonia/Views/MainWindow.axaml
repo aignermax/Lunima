@@ -915,12 +915,14 @@
                             <!-- Whole-design tools live on their own surfaces (analysis dock,
                                  AI Assistant window); this sidebar shows the selection only. -->
                             <panels:DiePropertiesPanel/>
-                            <panels:SelectedComponentPropertiesPanel/>
-                            <panels:ConnectionRoutingPanel/>
-                            <panels:LengthMatchingPanel/>
+                            <!-- A die's own section replaces the generic group readouts. -->
+                            <panels:SelectedComponentPropertiesPanel IsVisible="{Binding !DieProperties.IsVisible}"/>
+                            <!-- A die-to-die link is free-space coupling: no routing style, no length. -->
+                            <panels:ConnectionRoutingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
+                            <panels:LengthMatchingPanel IsVisible="{Binding !DieLinkProperties.IsVisible}"/>
                             <panels:GdsLayerVisibilityPanel/>
                             <panels:RerouteImportedPanel/>
-                            <panels:TruthTablePanel/>
+                            <panels:TruthTablePanel IsVisible="{Binding !DieProperties.IsVisible}"/>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

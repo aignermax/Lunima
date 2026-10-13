@@ -45,6 +45,7 @@ public sealed class DieLinkDragSnap
         Current = suppressSnap ? null : DieLinkSnapper.Plan(die, rawDx, rawDy, canvas.Dies.RootDies);
         var (moveX, moveY) = Current is { } snap ? (snap.DeltaX, snap.DeltaY) : (rawDx, rawDy);
         canvas.MoveComponent(dragged, moveX, moveY);
+        canvas.RefreshFacetLinkPaths();
         return true;
     }
 

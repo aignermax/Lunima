@@ -1669,7 +1669,7 @@
   "ConnectChipletsTour.Step3Title": "Einen Die verschieben",
   "ConnectChipletsTour.Step4Body": "Drücken Sie im Tab „Design Checks“ auf „Design-Prüfungen ausführen“ — der Checker meldet den Facettenspalt. Starten Sie die Simulation erneut: Die empfangene Leistung ist gesunken.",
   "ConnectChipletsTour.Step4Title": "Die Warnung sehen",
-  "ConnectChipletsTour.Step5Body": "Drücken Sie beim Befund auf „Chiplet ausrichten“. Der Die rastet wieder in Stoßkopplung ein und die Prüfung ist sauber — starten Sie die Simulation erneut und die Leistung ist zurück.",
+  "ConnectChipletsTour.Step5Body": "Ziehen Sie den Die zurück zum Partner: die gegenüberliegenden Kantenkoppler rasten bei 2 µm Spalt ein und die Prüfung ist wieder sauber. Oder drücken Sie beim Befund auf „Chiplet ausrichten“. Starten Sie die Simulation erneut und die Leistung ist zurück.",
   "ConnectChipletsTour.Step5Title": "Mit einem Klick reparieren",
   "ConnectChipletsTour.Step6Body": "Im Facettenspalt weitet sich der Strahl auf, bevor er den nächsten Die erreicht — darum wird weniger Licht eingefangen; Ausrichtung zählt im Mikrometerbereich. Die Gaußstrahl-Animation in der Design-Checks-Hilfe zeigt das. Drücken Sie auf „Weiter“, um die Tour zu beenden.",
   "ConnectChipletsTour.Step6Title": "Warum ein Spalt Licht kostet",
@@ -2005,7 +2005,7 @@
   "Dies.Properties.Delete": "Löschen",
   "Dies.Properties.DeleteTip": "Den Die samt Inhalt löschen (rückgängig machbar)",
   "Dies.Help.Title": "Dies und Die-zu-Die-Verbindungen",
-  "Dies.Help.DiesBody": "Jeder Die ist ein eigener Chip mit einem Prozess und eigenen PDKs – z. B. SiN-Logik neben einem InP-Verstärkerdie. Licht wechselt über gegenüberliegende Kantenkoppler zwischen den Dies.",
+  "Dies.Help.DiesBody": "Jeder Die ist ein eigener Chip mit einem Prozess und eigenen PDKs: SiN-Logik neben einem InP-Verstärkerdie, zum Beispiel. Licht wechselt nur über gegenüberliegende Kantenkoppler zwischen den Dies.",
   "Dies.Help.LinkTitle": "Spalt und Versatz kosten Licht",
   "Dies.Help.LinkBody": "Der Strahl weitet sich im Luftspalt auf und verfehlt bei seitlichem Versatz die andere Facette. Einen Die zum Nachbarn ziehen: gegenüberliegende Koppler rasten bei 2 µm Spalt ein und die Verbindung entsteht. Mit Alt frei platzieren.",
   "Dies.Properties.SizeMm": "Größe (mm)",
@@ -2016,5 +2016,11 @@
   "Dies.Link.MediumTip": "Brechungsindex im Spalt: 1,00 = Luft, ~1,45 = indexangepasster Kleber.",
   "Dies.Link.Offset": "Seitlicher Versatz",
   "Dies.Link.Loss": "Koppelverlust",
-  "Dies.Status.Linked": "Dies verbunden ({0} Kantenkopplerpaar(e))."
+  "Dies.Status.Linked": "Dies verbunden ({0} Kantenkopplerpaar(e)).",
+  "Dies.Export.Name": "Nazca → eine Datei pro Die",
+  "Dies.Export.Description": "Jeder Die der Baugruppe als eigenes Nazca-Skript und GDS in Die-Koordinaten – eine Datei pro Foundry-Lauf",
+  "Dies.Export.NoDies": "Dieses Design ist ein einzelner Chip – bitte den normalen Nazca-Export verwenden.",
+  "Examples.TwoDiesSoiSin.Description": "Zwei Prozesse, eine Verbindung: ein SOI-Die speist über gegenüberliegende Kantenkoppler einen SiN-Die – Spalt und Modenfeld-Fehlanpassung bestimmen den Verlust.",
+  "ConnectChipletsTour.NewDieTitle": "Einen eigenen Die anlegen",
+  "ConnectChipletsTour.NewDieBody": "Im Chiplets-Panel „Neuer Die“ drücken, Prozess (z. B. CornerStone SiN) und Größe wählen – der Die erscheint neben den anderen mit eigenem Rahmen und eigenen PDKs. Einen Kantenkoppler nahe der Kante ablegen: er rastet mit der Facette nach außen ein."
 }

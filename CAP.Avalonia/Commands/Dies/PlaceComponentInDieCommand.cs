@@ -16,21 +16,26 @@ public sealed class PlaceComponentInDieCommand : IUndoableCommand
     private readonly DesignCanvasViewModel _canvas;
     private readonly ComponentGroup _die;
     private readonly string _templateName;
+    private readonly CAP_Core.Components.Process.ActiveProcessSelection? _adoptedProcess;
 
-    private PlaceComponentInDieCommand(DesignCanvasViewModel canvas, ComponentGroup die, Component component, string templateName)
+    private PlaceComponentInDieCommand(DesignCanvasViewModel canvas, ComponentGroup die, Component component,
+        string templateName, CAP_Core.Components.Process.ActiveProcessSelection? adoptedProcess)
     {
         _canvas = canvas;
         _die = die;
         PlacedComponent = component;
         _templateName = templateName;
+        _adoptedProcess = die.ProcessBinding == null ? adoptedProcess : null;
     }
 
     /// <summary>
     /// Creates the command for <paramref name="template"/> centered at (<paramref name="x"/>,
-    /// <paramref name="y"/>), or null when the die has no free room for it.
+    /// <paramref name="y"/>), or null when the die has no free room for it. A die without a
+    /// process adopts <paramref name="partProcess"/> (the part's process) with its first part.
     /// </summary>
     public static PlaceComponentInDieCommand? TryCreate(
-        DesignCanvasViewModel canvas, ComponentGroup die, ComponentTemplate template, double x, double y)
+        DesignCanvasViewModel canvas, ComponentGroup die, ComponentTemplate template, double x, double y,
+        CAP_Core.Components.Process.ActiveProcessSelection? partProcess = null)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(die);
@@ -45,7 +50,7 @@ public sealed class PlaceComponentInDieCommand : IUndoableCommand
         if (EdgeCouplerFacet.IsEdgeCoupler(component)
             && DieEdgeSnapper.Plan(component, DieAssembly.OutlineOf(die), die.Die!.EdgeZoneMicrometers) is { } snap)
             DieEdgeSnapper.Apply(component, snap);
-        return new PlaceComponentInDieCommand(canvas, die, component, template.Name);
+        return new PlaceComponentInDieCommand(canvas, die, component, template.Name, partProcess);
     }
 
     /// <summary>The part placed by this command.</summary>
@@ -62,6 +67,8 @@ public sealed class PlaceComponentInDieCommand : IUndoableCommand
     {
         if (!_die.ChildComponents.Contains(PlacedComponent))
             _die.AddChild(PlacedComponent);
+        if (_adoptedProcess != null)
+            _die.ProcessBinding = _adoptedProcess;
         AfterChange();
     }
 
@@ -69,6 +76,8 @@ public sealed class PlaceComponentInDieCommand : IUndoableCommand
     public void Undo()
     {
         _die.RemoveChild(PlacedComponent);
+        if (_adoptedProcess != null)
+            _die.ProcessBinding = null;
         AfterChange();
     }
 

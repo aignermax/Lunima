@@ -655,6 +655,7 @@
           "angleDegrees": 0
         }
       ],
+      "modeFieldDiameterMicrometers": 3,
       "sMatrix": {
         "wavelengthNm": 1550,
         "connections": [

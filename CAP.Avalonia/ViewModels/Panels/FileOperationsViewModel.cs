@@ -1765,8 +1765,10 @@ public partial class FileOperationsViewModel : ObservableObject
             vm.Y = vm.Component.PhysicalY;
             vm.NotifyDimensionsChanged();
         }
-        if (_canvas.Dies.IsAssemblyRoot)
-            _canvas.Dies.ApplyScopeBounds();
+        if (!_canvas.Dies.IsAssemblyRoot)
+            return;
+        _canvas.Dies.ApplyScopeBounds();
+        _canvas.RefreshFacetLinkPaths();
     }
 
     /// <summary>

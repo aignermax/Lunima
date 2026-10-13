@@ -98,6 +98,6 @@ public sealed class CreateDieCommand : IUndoableCommand
     private void RefreshScope()
     {
         _canvas.Dies.ApplyScopeBounds();
-        _canvas.RepaintRequested?.Invoke();
+        _canvas.NotifyDiesChanged();
     }
 }

@@ -500,7 +500,11 @@ public partial class CanvasInteractionViewModel : ObservableObject
             return;
         }
 
-        var cmd = Commands.Dies.PlaceComponentInDieCommand.TryCreate(_canvas, die, template, x, y);
+        var partProcess = PlacementContext.ProcessCatalog
+            .Where(g => g.MemberPdkNames.Contains(template.PdkSource ?? "", StringComparer.OrdinalIgnoreCase))
+            .Select(CAP_Core.Components.Process.ActiveProcessSelection.ForGroup)
+            .FirstOrDefault();
+        var cmd = Commands.Dies.PlaceComponentInDieCommand.TryCreate(_canvas, die, template, x, y, partProcess);
         if (cmd == null)
         {
             UpdateStatus?.Invoke($"No free space on {die.GroupName} for {template.Name}");

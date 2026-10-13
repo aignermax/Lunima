@@ -522,6 +522,7 @@ public partial class MainViewModel : ObservableObject
         ExportMenu = new ExportMenuViewModel(new IExportFormat[]
         {
             new NazcaExportFormat(FileOperations.ExportNazcaCommand),
+            new DieFilesExportFormat(FileOperations.ExportDieFilesCommand),
             GdsFactoryExportFormat,
             new SaxExportFormat(FileOperations.ExportSaxCommand),
             PhotonTorchExportFormat,

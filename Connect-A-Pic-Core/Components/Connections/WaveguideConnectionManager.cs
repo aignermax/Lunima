@@ -607,6 +607,9 @@ public partial class WaveguideConnectionManager
         // This ensures new/re-routed connections route around existing infrastructure.
         foreach (var connection in validConnections)
         {
+            // A die-to-die facet link may carry no geometry yet (it is never routed).
+            if (connection.RoutedPath is not { Segments: not null })
+                continue;
             grid.AddWaveguideObstacle(
                 connection.Id,
                 connection.RoutedPath!.Segments,

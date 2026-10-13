@@ -206,14 +206,15 @@ public class ExportMenuViewModelTests
     }
 
     [Fact]
-    public void MainViewModel_ExportMenu_HasSevenFormatsInExpectedOrder()
+    public void MainViewModel_ExportMenu_HasEightFormatsInExpectedOrder()
     {
         var vm = MainViewModelTestHelper.CreateMainViewModel();
 
-        vm.ExportMenu.Formats.Count.ShouldBe(7);
+        vm.ExportMenu.Formats.Count.ShouldBe(8);
         vm.ExportMenu.Formats.Select(f => f.Name).ShouldBe(new[]
         {
             "Nazca → GDS (Python)",
+            "Nazca → one file per die",
             "Whole layout → GDS",
             "SAX (Simphony)",
             "PhotonTorch",

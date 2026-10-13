@@ -15,6 +15,7 @@ public partial class DesignCanvasViewModel
     /// <summary>Notifies <see cref="DiesChanged"/> listeners and repaints the canvas.</summary>
     public void NotifyDiesChanged()
     {
+        RefreshFacetLinkPaths();
         DiesChanged?.Invoke();
         RepaintRequested?.Invoke();
     }
@@ -38,6 +39,34 @@ public partial class DesignCanvasViewModel
             ResyncGroupPinViewModels(vm, die);
             vm.NotifyDimensionsChanged();
         }
+    }
+
+    /// <summary>
+    /// Die-to-die facet links are never routed and carry no waveguide: each keeps a
+    /// zero-length marker segment on its start facet (no propagation loss — the free-space
+    /// coupling model owns the link's transmission), refreshed here whenever dies move, so
+    /// the link has persistable geometry and every routing pass leaves it alone.
+    /// </summary>
+    public void RefreshFacetLinkPaths()
+    {
+        foreach (var connectionVm in Connections.Where(c => c.Connection.IsCrossChipletFacetLink))
+        {
+            var connection = connectionVm.Connection;
+            var (x1, y1) = connection.StartPin.GetAbsolutePosition();
+            if (connection.RoutedPath is { Segments.Count: 1 } existing
+                && IsAt(existing.Segments[0].StartPoint, x1, y1) && IsAt(existing.Segments[0].EndPoint, x1, y1))
+                continue;
+            var path = new CAP_Core.Routing.RoutedPath();
+            path.Segments.Add(new CAP_Core.Routing.StraightSegment(x1, y1, x1, y1, connection.StartPin.GetAbsoluteAngle()));
+            connection.ReplaceRoutedPath(path);
+            connectionVm.NotifyPathChanged();
+        }
+    }
+
+    private static bool IsAt((double X, double Y) point, double x, double y)
+    {
+        const double ToleranceMicrometers = 1e-6;
+        return Math.Abs(point.X - x) < ToleranceMicrometers && Math.Abs(point.Y - y) < ToleranceMicrometers;
     }
 
     /// <summary>Replaces the pin view models of a group with one per current external pin.</summary>

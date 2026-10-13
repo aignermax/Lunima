@@ -1595,6 +1595,49 @@
           "type": 0
         }
       ]
+    },
+    {
+      "name": "Edge Coupler",
+      "category": "I/O",
+      "nazcaFunction": "cs_sin300_edge_coupler",
+      "widthMicrometers": 200.0,
+      "heightMicrometers": 10.0,
+      "nazcaOriginOffsetX": 0.0,
+      "nazcaOriginOffsetY": 5.0,
+      "pins": [
+        {
+          "name": "o1",
+          "offsetXMicrometers": 0.0,
+          "offsetYMicrometers": 5.0,
+          "angleDegrees": 180.0
+        },
+        {
+          "name": "o2",
+          "offsetXMicrometers": 200.0,
+          "offsetYMicrometers": 5.0,
+          "angleDegrees": 0.0
+        }
+      ],
+      "modeFieldDiameterMicrometers": 3.5,
+      "sMatrix": {
+        "wavelengthNm": 1550,
+        "connections": [
+          {
+            "fromPin": "o1",
+            "toPin": "o2",
+            "magnitude": 0.944,
+            "phaseDegrees": 0
+          },
+          {
+            "fromPin": "o2",
+            "toPin": "o1",
+            "magnitude": 0.944,
+            "phaseDegrees": 0
+          }
+        ]
+      },
+      "rawCode": "import nazca as nd\n\n\ndef component():\n    with nd.Cell(name='cs_sin300_edge_coupler') as c:\n        # Inverse taper spot-size converter: 0.25 um tip at the facet (x = 0),\n        # widening to the 1.2 um routing waveguide over 200 um.\n        nd.Polygon(points=[(0, -0.125), (200, -0.6), (200, 0.6), (0, 0.125)], layer=(203, 0)).put(0, 0, 0)\n        nd.Pin('o1').put(0, 0, 180)\n        nd.Pin('o2').put(200, 0, 0)\n    return c\n",
+      "rawCodeBackend": "nazca"
     }
   ]
 }

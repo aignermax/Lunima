@@ -1669,7 +1669,7 @@
   "ConnectChipletsTour.Step3Title": "Move a die",
   "ConnectChipletsTour.Step4Body": "In the Design Checks tab, press 'Run Design Checks' — the checker flags the facet gap. Re-run the simulation and the received power has dropped.",
   "ConnectChipletsTour.Step4Title": "See the warning",
-  "ConnectChipletsTour.Step5Body": "Press 'Align chiplet' on the finding. The die snaps back into butt-coupling and the checks come back clean — run the simulation again to see the power return.",
+  "ConnectChipletsTour.Step5Body": "Drag the die back toward its partner: the facing edge couplers snap together at a 2 µm gap and the checks come back clean. Or press 'Align chiplet' on the finding. Run the simulation again to see the power return.",
   "ConnectChipletsTour.Step5Title": "Fix it with one click",
   "ConnectChipletsTour.Step6Body": "Across a facet gap the beam widens before it reaches the next die, so less light is captured — alignment matters at the micrometre scale. The Gaussian-beam animation in the Design Checks help shows this. Press 'Next' to finish the tour.",
   "ConnectChipletsTour.Step6Title": "Why a gap costs light",
@@ -2005,7 +2005,7 @@
   "Dies.Properties.Delete": "Delete",
   "Dies.Properties.DeleteTip": "Delete the die with everything on it (undoable)",
   "Dies.Help.Title": "Dies and die-to-die links",
-  "Dies.Help.DiesBody": "Each die is its own chip with one process and its own PDKs — e.g. SiN logic next to an InP gain die. Light crosses between dies at edge couplers that face each other.",
+  "Dies.Help.DiesBody": "Each die is its own chip with one process and its own PDKs: SiN logic next to an InP gain die, for example. Light crosses between dies only at edge couplers that face each other.",
   "Dies.Help.LinkTitle": "Gap and offset cost light",
   "Dies.Help.LinkBody": "The beam spreads across the air gap and misses the other facet when shifted sideways. Drag a die toward its neighbour: facing couplers snap together at a 2 µm gap and the link is created. Alt-drag places freely.",
   "Dies.Properties.SizeMm": "Size (mm)",
@@ -2016,5 +2016,11 @@
   "Dies.Link.MediumTip": "Refractive index filling the gap: 1.00 = air, ~1.45 = index-matching adhesive.",
   "Dies.Link.Offset": "Lateral offset",
   "Dies.Link.Loss": "Coupling loss",
-  "Dies.Status.Linked": "Linked the dies ({0} edge-coupler pair(s))."
+  "Dies.Status.Linked": "Linked the dies ({0} edge-coupler pair(s)).",
+  "Dies.Export.Name": "Nazca → one file per die",
+  "Dies.Export.Description": "Each die of the assembly as its own Nazca script and GDS, in die-local coordinates — one file per foundry run",
+  "Dies.Export.NoDies": "This design is a single chip — use the regular Nazca export.",
+  "Examples.TwoDiesSoiSin.Description": "Two processes, one link: an SOI die feeds a SiN die through facing edge couplers — gap and spot-size mismatch set the loss.",
+  "ConnectChipletsTour.NewDieTitle": "Add a die of your own",
+  "ConnectChipletsTour.NewDieBody": "In the Chiplets panel press 'New die', pick a process (e.g. CornerStone SiN) and a size — the die appears next to the others with its own frame and PDKs. Drop an Edge Coupler near its edge: it snaps on, facet facing out."
 }

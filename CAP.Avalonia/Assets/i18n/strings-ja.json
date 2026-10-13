@@ -1669,7 +1669,7 @@
   "ConnectChipletsTour.Step3Title": "ダイを動かす",
   "ConnectChipletsTour.Step4Body": "「デザインチェック」タブで「デザインチェックを実行」を押すと、チェッカーがファセットギャップを指摘します。シミュレーションを再実行すると、受信パワーが低下しています。",
   "ConnectChipletsTour.Step4Title": "警告を見る",
-  "ConnectChipletsTour.Step5Body": "指摘項目の「チップレットを整列」を押してください。ダイがバットカップリングに戻り、チェックはクリーンになります。シミュレーションを再実行するとパワーが戻ります。",
+  "ConnectChipletsTour.Step5Body": "ダイを相手の方へドラッグして戻してください。向かい合うエッジカプラが 2 µm ギャップでスナップし、チェックはクリーンに戻ります。指摘項目の「チップレットを整列」でも可能です。シミュレーションを再実行するとパワーが戻ります。",
   "ConnectChipletsTour.Step5Title": "ワンクリックで修正",
   "ConnectChipletsTour.Step6Body": "ファセットギャップの間にビームは広がり、次のダイに届く前に取り込まれる光が減ります。マイクロメートル単位の位置合わせが重要です。デザインチェックのヘルプにあるガウシアンビームのアニメーションがこれを示しています。「次へ」を押してツアーを終了します。",
   "ConnectChipletsTour.Step6Title": "なぜギャップで光が失われるのか",
@@ -2005,7 +2005,7 @@
   "Dies.Properties.Delete": "削除",
   "Dies.Properties.DeleteTip": "ダイを中身ごと削除（元に戻せます）",
   "Dies.Help.Title": "ダイとダイ間リンク",
-  "Dies.Help.DiesBody": "各ダイは 1 つのプロセスと独自の PDK を持つ別のチップです（例：SiN ロジックと InP 利得ダイ）。光は向かい合うエッジカプラを通ってダイ間を移動します。",
+  "Dies.Help.DiesBody": "各ダイは 1 つのプロセスと独自の PDK を持つ別のチップです（SiN ロジックと InP 利得ダイなど）。光は向かい合うエッジカプラを通ってのみダイ間を移動します。",
   "Dies.Help.LinkTitle": "ギャップとずれで光が失われる",
   "Dies.Help.LinkBody": "ビームは空気ギャップで広がり、横ずれすると相手のファセットを外れます。ダイを隣へドラッグすると、向かい合うカプラが 2 µm ギャップでスナップしリンクが作成されます。Alt ドラッグで自由配置。",
   "Dies.Properties.SizeMm": "サイズ (mm)",
@@ -2016,5 +2016,11 @@
   "Dies.Link.MediumTip": "ギャップの屈折率：1.00 = 空気、約 1.45 = 屈折率整合接着剤。",
   "Dies.Link.Offset": "横ずれ",
   "Dies.Link.Loss": "結合損失",
-  "Dies.Status.Linked": "ダイをリンクしました（エッジカプラ {0} 組）。"
+  "Dies.Status.Linked": "ダイをリンクしました（エッジカプラ {0} 組）。",
+  "Dies.Export.Name": "Nazca → ダイごとに 1 ファイル",
+  "Dies.Export.Description": "アセンブリの各ダイを独立した Nazca スクリプトと GDS（ダイ座標）として出力。ファウンドリごとに 1 ファイル",
+  "Dies.Export.NoDies": "この設計は単一チップです。通常の Nazca エクスポートを使用してください。",
+  "Examples.TwoDiesSoiSin.Description": "2 つのプロセス、1 つのリンク：SOI ダイが向かい合うエッジカプラを介して SiN ダイへ光を送ります。ギャップとモードサイズ不整合が損失を決めます。",
+  "ConnectChipletsTour.NewDieTitle": "自分のダイを追加する",
+  "ConnectChipletsTour.NewDieBody": "Chiplets パネルで「新しいダイ」を押し、プロセス（例：CornerStone SiN）とサイズを選びます。ダイが独自の枠と PDK を持って隣に現れます。端の近くにエッジカプラを置くと、ファセットを外向きにしてスナップします。"
 }
