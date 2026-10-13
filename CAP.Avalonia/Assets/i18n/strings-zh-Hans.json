@@ -1448,6 +1448,8 @@
   "Status.CutModePrompt": "剪切模式：单击高亮交点或波导以插入交叉器",
   "Status.DragDropPlace": "松开以放置：{0}",
   "Status.CutNoCrossingCell": "没有可用的交叉器组件 — 请先加载包含交叉单元的 PDK",
+  "Status.CrossingMoved": "已沿波导移动交叉器",
+  "Status.CrossingMoveBlocked": "无法将交叉器移到此处 — 它会与组件或其他波导重叠",
   "Status.ExitedGroupEditMode": "已退出分组编辑模式",
   "Status.FrozenPathDeleted": "已删除导入的布线几何",
   "Status.FrozenPathSelected": "已选择导入的布线几何：{0}µm",

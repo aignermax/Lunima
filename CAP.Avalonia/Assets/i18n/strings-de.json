@@ -1448,6 +1448,8 @@
   "Status.CutModePrompt": "Schneiden-Modus: Markierten Kreuzungspunkt oder einen Wellenleiter anklicken, um eine Kreuzung einzufügen",
   "Status.DragDropPlace": "Zum Platzieren loslassen: {0}",
   "Status.CutNoCrossingCell": "Keine Kreuzungskomponente verfügbar — zuerst ein PDK mit Kreuzungszelle laden",
+  "Status.CrossingMoved": "Kreuzung entlang ihres Wellenleiters verschoben",
+  "Status.CrossingMoveBlocked": "Kreuzung kann dort nicht hin — sie würde eine Komponente oder einen anderen Wellenleiter überlappen",
   "Status.ExitedGroupEditMode": "Gruppenbearbeitungsmodus verlassen",
   "Status.FrozenPathDeleted": "Importierte Routen-Geometrie gelöscht",
   "Status.FrozenPathSelected": "Importierte Routen-Geometrie ausgewählt: {0}µm",

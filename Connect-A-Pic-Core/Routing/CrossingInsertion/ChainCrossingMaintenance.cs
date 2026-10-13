@@ -141,18 +141,38 @@ public static class ChainCrossingMaintenance
     }
 
     /// <summary>
-    /// Deleting a chain crossing keeps both wires through it: they merge pin to pin and are
-    /// routed again (crossing each other without a crossing component is no valid layout).
-    /// False when <paramref name="crossing"/> is no chain crossing or lacks its four pieces.
+    /// Deleting a crossing keeps the wires through it. A chain crossing's two wires merge pin
+    /// to pin and are routed again (crossing each other without a crossing component is no
+    /// valid layout). A user-placed crossing hands its wires back too: a single wire through it
+    /// (a Cut-tool split) merges and keeps its exact straight geometry; two wires merge and are
+    /// returned in <paramref name="rerouteInPlace"/> for the caller to route again without
+    /// disturbing the chains they dock onto; a piece without its counterpart leaves with the
+    /// crossing. False (nothing changed) when <paramref name="crossing"/> is no crossing, has a
+    /// record (the record restores its originals), or its pieces do not meet its ports.
     /// </summary>
     public static bool DissolveForDeletion(
         Component crossing, WaveguideConnectionManager manager, WaveguideRouter router,
-        IReadOnlySet<Component> recordedCrossings)
+        IReadOnlySet<Component> recordedCrossings, out List<WaveguideConnection> rerouteInPlace)
     {
-        if (router.PathfindingGrid == null || !IsTemporaryCrossing(crossing) || recordedCrossings.Contains(crossing)) return false;
-        if (!ChainDissolver.TryDissolve(crossing, manager, router, out var merged, out _)) return false;
-        foreach (var connection in merged)
-            Reroute(connection, router);
+        rerouteInPlace = new List<WaveguideConnection>();
+        if (router.PathfindingGrid == null || !CrossingComponentCatalog.IsCrossing(crossing) || recordedCrossings.Contains(crossing))
+            return false;
+        if (ChainDissolver.TryDissolve(crossing, manager, router, out var merged, out _))
+        {
+            if (IsTemporaryCrossing(crossing))
+            {
+                foreach (var connection in merged)
+                    Reroute(connection, router);
+            }
+            else
+            {
+                rerouteInPlace = merged;
+            }
+            return true;
+        }
+        if (IsTemporaryCrossing(crossing) || !ChainDissolver.TryDissolveBroken(crossing, manager, router, out _, out var dropped))
+            return false;
+        RemoveDropped(dropped, manager, router);
         return true;
     }
 

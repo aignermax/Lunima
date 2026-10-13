@@ -1448,6 +1448,8 @@
   "Status.CutModePrompt": "Modo cortar: haga clic en una intersección resaltada o en una guía de onda para insertar un cruce",
   "Status.DragDropPlace": "Suelte para colocar: {0}",
   "Status.CutNoCrossingCell": "No hay componente de cruce disponible — cargue primero un PDK con una celda de cruce",
+  "Status.CrossingMoved": "Cruce desplazado a lo largo de su guía de onda",
+  "Status.CrossingMoveBlocked": "No se puede mover el cruce ahí — se solaparía con un componente u otra guía de onda",
   "Status.ExitedGroupEditMode": "Modo de edición de grupo cerrado",
   "Status.FrozenPathDeleted": "Geometría de ruta importada eliminada",
   "Status.FrozenPathSelected": "Geometría de ruta importada seleccionada: {0}µm",
