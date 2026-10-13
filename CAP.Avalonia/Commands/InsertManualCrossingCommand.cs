@@ -13,9 +13,11 @@ namespace CAP.Avalonia.Commands;
 /// centers the PDK crossing on the intersection, removes the original connection and
 /// docks its two halves onto the crossing's through ports. Unlike adaptive crossings,
 /// the component is deliberate user intent: <c>IsInsertedCrossing</c>
-/// stays false, so the adaptive pass never dissolves or moves it. Undo removes the
-/// crossing and restores the original connection object — its fine-tuning
-/// (bend-radius overrides, segment shifts) survives untouched.
+/// stays false, so the adaptive pass never dissolves or moves it. The halves keep the cut
+/// wire's exact geometry (see <see cref="ManualCrossingRouteSplitter"/>), so cutting any wire —
+/// including a piece of a routing-placed crossing chain — never re-routes it or takes the
+/// chain out. Undo removes the crossing and restores the original connection object — its
+/// fine-tuning (bend-radius overrides, segment shifts) survives untouched.
 /// </summary>
 public class InsertManualCrossingCommand : IUndoableCommand
 {
@@ -27,6 +29,7 @@ public class InsertManualCrossingCommand : IUndoableCommand
 
     private ComponentViewModel? _componentViewModel;
     private List<WaveguideConnection>? _subConnections;
+    private List<CrossingRecord> _releasedRecords = new();
     private bool _failed;
 
     /// <summary>Creates the command for one candidate and a fresh crossing instance.</summary>
@@ -47,6 +50,18 @@ public class InsertManualCrossingCommand : IUndoableCommand
         _errorConsole = errorConsole;
     }
 
+    /// <summary>
+    /// False when the last <see cref="Execute"/> was a safe no-op: the connection is no longer
+    /// in the design, or the crossing lacks a port the split needs.
+    /// </summary>
+    public bool Succeeded => !_failed && _subConnections != null;
+
+    /// <summary>The crossing component this command inserts.</summary>
+    public Component Crossing => _crossingInstance.Component;
+
+    /// <summary>The routing pass the last Execute/Undo started; completes when the design is routed.</summary>
+    public Task RerouteTask { get; private set; } = Task.CompletedTask;
+
     /// <inheritdoc/>
     public string Description => $"Insert crossing into {_original.StartPin.Name}–{_original.EndPin.Name}";
 
@@ -61,9 +76,8 @@ public class InsertManualCrossingCommand : IUndoableCommand
         _componentViewModel = _canvas.AddComponent(
             crossing, _crossingInstance.TemplateName, _crossingInstance.TemplatePdkSource);
 
-        RemoveConnection(_original);
-        foreach (var sub in _subConnections!)
-            _canvas.RestoreConnectionAndViewModel(sub);
+        ReleaseRecordsOfDockedCrossings();
+        Swap(new[] { _original }, _subConnections!);
 
         _canvas.InvalidateSimulation();
         FireAndForgetReroute();
@@ -74,11 +88,13 @@ public class InsertManualCrossingCommand : IUndoableCommand
     {
         if (_failed || _subConnections == null || _componentViewModel == null) return;
 
-        foreach (var sub in _subConnections)
-            RemoveConnection(sub);
-        _canvas.RemoveComponent(_componentViewModel);
+        Swap(_subConnections, new[] { _original });
+        _canvas.Router.RemoveComponentObstacle(_crossingInstance.Component);
+        CrossingCanvasSync.RemoveCrossing(_canvas, _crossingInstance.Component);
 
-        _canvas.RestoreConnectionAndViewModel(_original);
+        foreach (var record in _releasedRecords)
+            _canvas.ConnectionManager.CrossingService?.RestoreRecord(record);
+        _releasedRecords = new List<CrossingRecord>();
         _canvas.InvalidateSimulation();
         FireAndForgetReroute();
     }
@@ -115,7 +131,40 @@ public class InsertManualCrossingCommand : IUndoableCommand
             CrossingPlacement.CreateSubConnection(_original, _original.StartPin, entry),
             CrossingPlacement.CreateSubConnection(_original, exit, _original.EndPin),
         };
+        KeepCutGeometry(entry, exit);
         return true;
+    }
+
+    /// <summary>
+    /// Hands the halves the cut wire's own route. Where the route cannot be cut cleanly (no
+    /// straight under the crossing, a blocked placeholder) the halves stay route-less and the
+    /// next pass routes them.
+    /// </summary>
+    private void KeepCutGeometry(PhysicalPin entry, PhysicalPin exit)
+    {
+        if (!ManualCrossingRouteSplitter.TrySplit(_original, _candidate.IntersectionPoint, entry, exit, out var before, out var after))
+            return;
+        _subConnections![0].RestoreCachedPath(before);
+        _subConnections[1].RestoreCachedPath(after);
+        foreach (var sub in _subConnections)
+            sub.IsRouteFrozen = _original.IsRouteFrozen;
+    }
+
+    /// <summary>
+    /// A wire cut next to a routing-placed crossing that still has a record (an isolated
+    /// detour crossing) would have its record restore the pre-split originals over the cut:
+    /// the record is handed to chain bookkeeping first and put back on undo.
+    /// </summary>
+    private void ReleaseRecordsOfDockedCrossings()
+    {
+        _releasedRecords = new List<CrossingRecord>();
+        var service = _canvas.ConnectionManager.CrossingService;
+        if (service == null) return;
+        foreach (var crossing in new[] { _original.StartPin.ParentComponent, _original.EndPin.ParentComponent })
+        {
+            if (crossing != null && service.ReleaseRecord(crossing) is { } record)
+                _releasedRecords.Add(record);
+        }
     }
 
     private void CenterCrossingOnIntersection(Component crossing)
@@ -124,12 +173,18 @@ public class InsertManualCrossingCommand : IUndoableCommand
         crossing.PhysicalY = _candidate.IntersectionPoint.Y - crossing.HeightMicrometers / 2.0;
     }
 
-    private void RemoveConnection(WaveguideConnection connection)
+    /// <summary>
+    /// Swaps the wires in the manager and their view-models. A swap whose added wires keep
+    /// their geometry leaves the blocked wires' verdicts alone, so the follow-up pass does not
+    /// re-search the whole design for a cut that changed no geometry.
+    /// </summary>
+    private void Swap(IReadOnlyCollection<WaveguideConnection> removed, IReadOnlyCollection<WaveguideConnection> added)
     {
-        _canvas.ConnectionManager.RemoveConnectionDeferred(connection);
-        var vm = _canvas.Connections.FirstOrDefault(c => c.Connection == connection);
-        if (vm != null)
+        _canvas.ConnectionManager.SwapConnections(removed, added);
+        foreach (var vm in _canvas.Connections.Where(c => removed.Contains(c.Connection)).ToList())
             _canvas.Connections.Remove(vm);
+        foreach (var connection in added.Where(c => !_canvas.Connections.Any(vm => vm.Connection == c)))
+            _canvas.Connections.Add(new WaveguideConnectionViewModel(connection));
     }
 
     /// <summary>
@@ -140,7 +195,7 @@ public class InsertManualCrossingCommand : IUndoableCommand
     /// </summary>
     private void FireAndForgetReroute()
     {
-        _ = ObserveRerouteAsync();
+        RerouteTask = ObserveRerouteAsync();
     }
 
     private async Task ObserveRerouteAsync()
