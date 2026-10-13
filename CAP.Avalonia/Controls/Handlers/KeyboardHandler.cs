@@ -101,7 +101,7 @@ public sealed class KeyboardHandler
                 e.Handled = true;
                 break;
             case Key.L:
-                mainVm.RunSimulationCommand.Execute(null);
+                mainVm.RunWorkspaceCommand.Execute(null);
                 e.Handled = true;
                 break;
             case Key.V when !ctrl:
@@ -141,29 +141,8 @@ public sealed class KeyboardHandler
         }
     }
 
-    private void HandlePKey(MainViewModel mainVm)
-    {
-        var vm = _getViewModel();
-        if (vm == null) return;
-
-        if (!vm.ShowPowerFlow)
-        {
-            if (vm.PowerFlowVisualizer.CurrentResult == null)
-                mainVm.RunSimulationCommand.Execute(null);
-            else
-            {
-                vm.ShowPowerFlow = true;
-                vm.PowerFlowVisualizer.IsEnabled = true;
-            }
-            mainVm.StatusText = LocalizationService.Instance.Translate("Overlay.PowerFlowOn");
-        }
-        else
-        {
-            vm.ShowPowerFlow = false;
-            vm.PowerFlowVisualizer.IsEnabled = false;
-            mainVm.StatusText = LocalizationService.Instance.Translate("Overlay.PowerFlowOff");
-        }
-    }
+    private static void HandlePKey(MainViewModel mainVm) =>
+        mainVm.TogglePowerOverlayCommand.Execute(null);
 
     private void HandleEscapeKey(MainViewModel mainVm)
     {

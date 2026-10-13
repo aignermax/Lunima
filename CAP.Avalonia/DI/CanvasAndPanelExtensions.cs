@@ -31,7 +31,10 @@ internal static class CanvasAndPanelExtensions
     {
         services.AddSingleton(sp =>
         {
-            var canvas = new DesignCanvasViewModel();
+            var canvas = new DesignCanvasViewModel
+            {
+                CommandManager = sp.GetRequiredService<Commands.CommandManager>(),
+            };
 
             // Restore the user's last choice, then persist any further toggle (Settings →
             // Routing → Enable Diagonal) — the checkbox otherwise silently reverted to off

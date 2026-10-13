@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP.Avalonia.Commands;
 
@@ -57,9 +58,12 @@ public class DeleteComponentCommand : IUndoableCommand
         // Store connections that will be deleted, normalized to pre-split originals
         // (two subs of the same crossing dedupe to one original).
         _deletedConnections.Clear();
-        var crossing = _canvas.ConnectionManager.CrossingInsertion;
+        var crossing = _canvas.ConnectionManager.CrossingService;
         // A group's wires end at the pins of the components nested in it.
         var scope = new ComponentWireScope(_component);
+        // Wires through routing-placed crossings leave whole, so undo restores whole wires.
+        if (!ChainCrossingMaintenance.IsTemporaryCrossing(_component))
+            _canvas.DissolveInsertedCrossingChains(scope.Touches);
         foreach (var connVm in _canvas.Connections.ToList())
         {
             if (scope.Touches(connVm.Connection))

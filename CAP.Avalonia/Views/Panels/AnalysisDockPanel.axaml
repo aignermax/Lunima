@@ -5,6 +5,7 @@
              xmlns:controls="using:CAP.Avalonia.Controls"
              xmlns:behaviors="using:CAP.Avalonia.Behaviors"
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ws="using:CAP.Avalonia.ViewModels.Workspaces"
              x:Class="CAP.Avalonia.Views.Panels.AnalysisDockPanel"
              x:DataType="vm:MainViewModel">
 
@@ -21,6 +22,22 @@
                     PointerReleased="ResizeGrip_PointerReleased"/>
 
             <DockPanel Classes="dockHeader">
+                <!-- Overflow: the workspace shows only its tabs; experts can show every tab. -->
+                <Button x:Name="DockOverflowButton" DockPanel.Dock="Right" Classes="ghost icon"
+                        Margin="0,0,4,0" VerticalAlignment="Center"
+                        ToolTip.Tip="{loc:Localize AnalysisDock.MoreTip}">
+                    <controls:Icon Data="{StaticResource Icon.Ellipsis}"/>
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedRight">
+                            <StackPanel Classes="menu" MinWidth="220">
+                                <CheckBox x:Name="ShowAllTabsCheckBox"
+                                          IsChecked="{Binding BottomPanel.Analysis.ShowAllTabs}"
+                                          Content="{loc:Localize AnalysisDock.ShowAllTabs}"
+                                          ToolTip.Tip="{loc:Localize AnalysisDock.ShowAllTabsTip}"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <!-- What an S-matrix is and why light splits/recombines as it propagates. -->
                 <controls:HelpFlyoutButton DockPanel.Dock="Right"
                                            Title="{loc:Localize SMatrixHelp.Title}"
@@ -96,8 +113,15 @@
             <Border Classes="dockBody" IsVisible="{Binding BottomPanel.Analysis.IsVisible}"
                     behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromY="8">
                 <StackPanel>
-                    <!-- Shared analysis output: every tab evaluates THIS coupler. -->
+                    <!-- Shared analysis output: every tab evaluates THIS coupler. Only where
+                         optical tabs are shown (Optics/System workspaces or "show all tabs"). -->
                     <Border Classes="dockToolbar">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="WorkspaceSwitch.IsOpticalWorkspace"/>
+                                <Binding Path="BottomPanel.Analysis.ShowAllTabs"/>
+                            </MultiBinding>
+                        </Border.IsVisible>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:Icon Data="{StaticResource Icon.Target}" Size="14"
                                            Foreground="{DynamicResource Brush.Text.Tertiary}"
@@ -122,100 +146,188 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- System workspace: the chiplets and their cross-chiplet links. -->
+                    <Border x:Name="SystemOverviewStrip" Classes="dockToolbar"
+                            IsVisible="{Binding WorkspaceSwitch.IsSystem}">
+                        <WrapPanel Orientation="Horizontal">
+                            <controls:Icon Data="{StaticResource Icon.Boxes}" Size="14" Margin="0,0,8,0"
+                                           Foreground="{DynamicResource Brush.Text.Tertiary}"
+                                           VerticalAlignment="Center"/>
+                            <TextBlock Classes="caption" VerticalAlignment="Center" Margin="0,0,8,0"
+                                       Text="{loc:Localize Workspace.System.Chiplets}"
+                                       IsVisible="{Binding SystemOverview.HasChiplets}"/>
+                            <ItemsControl ItemsSource="{Binding SystemOverview.Chiplets}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="ws:ChipletSummaryRow">
+                                        <Border Classes="chip info">
+                                            <TextBlock>
+                                                <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{Binding ProcessName}"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="caption" VerticalAlignment="Center" Margin="16,0,8,0"
+                                       Text="{loc:Localize Workspace.System.Links}"
+                                       IsVisible="{Binding SystemOverview.HasLinks}"/>
+                            <ItemsControl ItemsSource="{Binding SystemOverview.Links}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="ws:ChipletLinkRow">
+                                        <Border Classes="chip success" Classes.warning="{Binding IsOverBudget}">
+                                            <TextBlock>
+                                                <Run Text="{Binding Label}"/>
+                                                <Run Text="  "/>
+                                                <Run Text="{Binding LossText}" FontWeight="SemiBold"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Text="{loc:Localize Workspace.System.NoChiplets}"
+                                       IsVisible="{Binding !SystemOverview.HasChiplets}"/>
+                        </WrapPanel>
+                    </Border>
+
                     <!-- Content height is user-adjustable via the grip. -->
                     <TabControl Classes="dockTabs"
                                 Height="{Binding BottomPanel.Analysis.DockHeight}"
                                 SelectedIndex="{Binding BottomPanel.Analysis.SelectedTabIndex}">
-                        <TabItem Header="{loc:Localize AnalysisDock.TabTransient}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabTransient}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Transient}">
                             <ScrollViewer Classes="tabPage">
                                 <StackPanel>
+                                <!-- Why the tab is empty and the one-click fix, above the settings. -->
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.Transient.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.NeedsLightSource}"
+                                                             IconData="{StaticResource Icon.Lightbulb}"
+                                                             Message="{loc:Localize Readiness.NoLightSource}"
+                                                             ActionText="{loc:Localize Readiness.PlaceLightSource}"
+                                                             ActionIconData="{StaticResource Icon.Plus}"
+                                                             ActionCommand="{Binding BottomPanel.Analysis.Readiness.PlaceLightSourceCommand}"/>
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.NeedsOutputPick}"
+                                                             IconData="{StaticResource Icon.Target}"
+                                                             Message="{loc:Localize Readiness.NoOutputPicked}"
+                                                             ActionText="{loc:Localize AnalysisDock.PickOutput}"
+                                                             ActionIconData="{StaticResource Icon.Crosshair}"
+                                                             ActionCommand="{Binding BottomPanel.Analysis.Readiness.PickOutputCommand}"/>
+                                </StackPanel>
                                 <panels:TimeDomainPanel/>
-                                <Border Classes="empty-state" VerticalAlignment="Top"
-                                        IsVisible="{Binding !BottomPanel.Analysis.Transient.HasResult}">
-                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
-                                                       HorizontalAlignment="Center"
-                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
-                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
-                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.Transient.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.IsReadyForTimeDomain}"
+                                                             IconData="{StaticResource Icon.ChartLine}"
+                                                             Message="{loc:Localize AnalysisDock.EmptyState}"/>
+                                </StackPanel>
                                 </StackPanel>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabEyeBer}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabEyeBer}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.EyeBer}">
                             <ScrollViewer Classes="tabPage">
                                 <StackPanel>
+                                <!-- Why the tab is empty and the one-click fix, above the settings. -->
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.Eye.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.NeedsLightSource}"
+                                                             IconData="{StaticResource Icon.Lightbulb}"
+                                                             Message="{loc:Localize Readiness.NoLightSource}"
+                                                             ActionText="{loc:Localize Readiness.PlaceLightSource}"
+                                                             ActionIconData="{StaticResource Icon.Plus}"
+                                                             ActionCommand="{Binding BottomPanel.Analysis.Readiness.PlaceLightSourceCommand}"/>
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.NeedsOutputPick}"
+                                                             IconData="{StaticResource Icon.Target}"
+                                                             Message="{loc:Localize Readiness.NoOutputPicked}"
+                                                             ActionText="{loc:Localize AnalysisDock.PickOutput}"
+                                                             ActionIconData="{StaticResource Icon.Crosshair}"
+                                                             ActionCommand="{Binding BottomPanel.Analysis.Readiness.PickOutputCommand}"/>
+                                </StackPanel>
                                 <panels:EyeDiagramPanel/>
-                                <Border Classes="empty-state" VerticalAlignment="Top"
-                                        IsVisible="{Binding !BottomPanel.Analysis.Eye.HasResult}">
-                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
-                                                       HorizontalAlignment="Center"
-                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
-                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
-                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.Eye.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.IsReadyForTimeDomain}"
+                                                             IconData="{StaticResource Icon.ChartLine}"
+                                                             Message="{loc:Localize AnalysisDock.EmptyState}"/>
+                                </StackPanel>
                                 </StackPanel>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabSpectrum}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabSpectrum}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Spectrum}">
                             <ScrollViewer Classes="tabPage">
                                 <StackPanel>
+                                <!-- Why the tab is empty and the one-click fix, above the settings. -->
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.Spectrum.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.NeedsLightSource}"
+                                                             IconData="{StaticResource Icon.Lightbulb}"
+                                                             Message="{loc:Localize Readiness.NoLightSource}"
+                                                             ActionText="{loc:Localize Readiness.PlaceLightSource}"
+                                                             ActionIconData="{StaticResource Icon.Plus}"
+                                                             ActionCommand="{Binding BottomPanel.Analysis.Readiness.PlaceLightSourceCommand}"/>
+                                </StackPanel>
                                 <panels:WavelengthSpectrumPanel/>
-                                <Border Classes="empty-state" VerticalAlignment="Top"
-                                        IsVisible="{Binding !BottomPanel.Analysis.Spectrum.HasResult}">
-                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
-                                                       HorizontalAlignment="Center"
-                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
-                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
-                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.Spectrum.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.HasLightSource}"
+                                                             IconData="{StaticResource Icon.ChartLine}"
+                                                             Message="{loc:Localize AnalysisDock.EmptyState}"/>
+                                </StackPanel>
                                 </StackPanel>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabMonteCarlo}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabMonteCarlo}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.MonteCarlo}">
                             <ScrollViewer Classes="tabPage">
                                 <StackPanel>
+                                <!-- Why the tab is empty and the one-click fix, above the settings. -->
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.MonteCarlo.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.NeedsLightSource}"
+                                                             IconData="{StaticResource Icon.Lightbulb}"
+                                                             Message="{loc:Localize Readiness.NoLightSource}"
+                                                             ActionText="{loc:Localize Readiness.PlaceLightSource}"
+                                                             ActionIconData="{StaticResource Icon.Plus}"
+                                                             ActionCommand="{Binding BottomPanel.Analysis.Readiness.PlaceLightSourceCommand}"/>
+                                </StackPanel>
                                 <panels:MonteCarloPanel/>
-                                <Border Classes="empty-state" VerticalAlignment="Top"
-                                        IsVisible="{Binding !BottomPanel.Analysis.MonteCarlo.HasResult}">
-                                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                                        <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="24"
-                                                       HorizontalAlignment="Center"
-                                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
-                                        <TextBlock Classes="secondary" HorizontalAlignment="Center"
-                                                   Text="{loc:Localize AnalysisDock.EmptyState}"/>
-                                    </StackPanel>
-                                </Border>
+                                <StackPanel IsVisible="{Binding !BottomPanel.Analysis.MonteCarlo.HasResult}">
+                                    <controls:EmptyStateHint IsVisible="{Binding BottomPanel.Analysis.Readiness.HasLightSource}"
+                                                             IconData="{StaticResource Icon.ChartLine}"
+                                                             Message="{loc:Localize AnalysisDock.EmptyState}"/>
+                                </StackPanel>
                                 </StackPanel>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabOptimization}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabOptimization}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Optimization}">
                             <ScrollViewer Classes="tabPage">
                                 <panels:CircuitOptimizationPanel/>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabSweep}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabSweep}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Sweep}">
                             <ScrollViewer Classes="tabPage">
                                 <panels:ParameterSweepPanel/>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabChecks}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabChecks}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Checks}">
                             <ScrollViewer Classes="tabPage">
                                 <panels:DesignChecksPanel/>
                             </ScrollViewer>
                         </TabItem>
-                        <TabItem Header="{loc:Localize AnalysisDock.TabNetlist}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabNetlist}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Netlist}">
                             <ScrollViewer Classes="tabPage">
                                 <panels:NetlistPanel/>
                             </ScrollViewer>
                         </TabItem>
                         <!-- Logic: whole-design build, toggle, step/run clock, timeline. -->
-                        <TabItem Header="{loc:Localize AnalysisDock.TabLogic}">
+                        <TabItem Header="{loc:Localize AnalysisDock.TabLogic}"
+                                 IsVisible="{Binding BottomPanel.Analysis.Tabs.Logic}">
                             <ScrollViewer Classes="tabPage">
                                 <panels:LogicPanel/>
                             </ScrollViewer>

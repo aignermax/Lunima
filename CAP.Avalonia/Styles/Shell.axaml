@@ -56,6 +56,36 @@
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
 
+  <!-- Workspace switch: one segmented group of text buttons, the active one carries .active -->
+  <Style Selector="Border.segmented">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.Base}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
+    <Setter Property="Padding" Value="2"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Button.toolbar.segment">
+    <Setter Property="Padding" Value="10,0"/>
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+  </Style>
+  <Style Selector="Button.toolbar.segment.active">
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+
+  <!-- Keyboard hint inside a button, e.g. the "L" on Run -->
+  <Style Selector="Border.keyHint">
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.S}"/>
+    <Setter Property="Padding" Value="4,0"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Pressed}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Border.keyHint > TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+  </Style>
+
   <!-- Chevrons: 12 px, rotate a quarter turn when their section opens -->
   <Style Selector="controls|Icon.chevron">
     <Setter Property="Size" Value="12"/>

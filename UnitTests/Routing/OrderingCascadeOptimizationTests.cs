@@ -87,6 +87,10 @@ public class OrderingCascadeOptimizationTests
         var (stoppedManager, _, stoppedWires) = CreateSingleFileCorridorFixture();
         var (fullManager, _, fullWires) = CreateSingleFileCorridorFixture();
         fullManager.MaxNonImprovingOrderingAttempts = 100;
+        // A plain recalculation does not retry wires that already failed with unchanged pins;
+        // re-routing them explicitly runs the full cascade again.
+        foreach (var blocked in fullWires.Where(w => w.IsBlockedFallback))
+            fullManager.RequestReroute(blocked);
         fullManager.RecalculateAllTransmissions();
 
         fullManager.LastOrderingEarlyStopped.ShouldBeFalse();

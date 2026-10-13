@@ -147,6 +147,13 @@ public partial class MainViewModel : ObservableObject
     public ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel WatchTour { get; }
 
     /// <summary>
+    /// Step engine for the "Your first gate" tour. Started from the Home screen's
+    /// second tour card; observes the canvas, the Make-gate steps and the Logic
+    /// panel while the gate-kit example it opens becomes a NAND gate.
+    /// </summary>
+    public ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel FirstGateTour { get; }
+
+    /// <summary>
     /// Step engine for the "Run a program on your chip" tour (issue #1267).
     /// Started from the Home screen's third tour card; observes the Logic panel
     /// and the ISA playground of the 4-bit adder example it opens.
@@ -351,7 +358,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
         ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null,
+        ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -396,6 +404,7 @@ public partial class MainViewModel : ObservableObject
         Home.OpenProjectRequested = async () => await FileOperations.LoadDesignCommand.ExecuteAsync(null);
         Home.OpenProjectFromPathRequested = FileOperations.LoadDesignFromPathAsync;
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
+        WorkspaceSwitch = InitializeWorkspaces();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
@@ -421,6 +430,12 @@ public partial class MainViewModel : ObservableObject
         // The tour must observe the panel instance the user actually clicks.
         StoreNumberTour = storeNumberTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        // The gate tour observes the Make-gate steps and Logic panel the window shows.
+        FirstGateTour = firstGateTourViewModel
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(
+                Canvas, RightPanel.MakeGate, RightPanel.Logic);
+        Home.FirstGateTourRequested = StartFirstGateTourAsync;
+        WireMakeGate();
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>
@@ -612,6 +627,7 @@ public partial class MainViewModel : ObservableObject
         {
             RightPanel.Sweep.ConfigureForComponent(comp, Canvas);
             RightPanel.TruthTable.ConfigureForSelection(comp, Canvas);
+            RightPanel.MakeGate.ConfigureForSelection(comp, Canvas);
             BottomPanel.Analysis.Optimization.RefreshFromCanvas();
             LeftPanel.HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
@@ -1031,6 +1047,8 @@ public partial class MainViewModel : ObservableObject
         if (!await FileOperations.TryNewProjectAsync())
             return;
 
+        // The tour's Run step expects the CW power-flow overlay.
+        WorkspaceSwitch.Current = ViewModels.Workspaces.Workspace.Optics;
         Tutorial.Start();
     }
 
@@ -1317,15 +1335,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Toggle off if overlay is already showing
-        if (Canvas.ShowPowerFlow)
-        {
-            Canvas.ShowPowerFlow = false;
-            Canvas.PowerFlowVisualizer.IsEnabled = false;
-            StatusText = LocalizationService.Instance.Translate("Status.SimulationOverlayOff");
-            return;
-        }
-
+        // Run always runs: the overlay has its own toggle (TogglePowerOverlay, P).
         await ExecuteSimulation();
     }
 
@@ -1346,11 +1356,6 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusText = string.Format(LocalizationService.Instance.Translate("Status.SimulationComplete"),
                              result.LightSourceCount, result.ConnectionCount, result.WavelengthSummary);
-
-                if (result.SystemMatrix != null)
-                {
-                    RightPanel.SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
-                }
             }
             else
             {
@@ -1595,6 +1600,13 @@ public class DesignFileData
     /// fringes. Null in files saved before the mode existed — loads as off.
     /// </summary>
     public bool? CoherentPropagationPhase { get; set; }
+
+    /// <summary>
+    /// The workspace (Layout / Optics / Logic / System) the design was last saved in.
+    /// Null in files saved before workspaces existed — the design then opens in a
+    /// content-based default (see <c>WorkspaceDefaults</c>).
+    /// </summary>
+    public string? Workspace { get; set; }
 }
 
 /// <summary>

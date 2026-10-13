@@ -5,6 +5,7 @@ using CAP_Core.Components.Process;
 using CAP_DataAccess.Components.ComponentDraftMapper;
 using Moq;
 using Shouldly;
+using UnitTests.Helpers;
 using Xunit;
 
 namespace UnitTests.Components;
@@ -59,10 +60,10 @@ public partial class MultiProcessChipletJourneyTests
             .ShouldNotBeNull("Step 6: chiplet A identity survives");
         var loadedB = loadedGroups.SingleOrDefault(g => g.Identifier == design.ChipletB.Identifier)
             .ShouldNotBeNull("Step 6: chiplet B identity survives");
-        loadedA.ExternalPins.Select(p => p.Name).OrderBy(n => n).ShouldBe(
+        loadedA.ExternalPins.Select(GroupPinLookup.ExposedId).OrderBy(n => n).ShouldBe(
             MultiProcessChipletJourneyDesign.ChipletAPinNames.OrderBy(n => n),
             "Step 6: chiplet A keeps its exposed pins");
-        loadedB.ExternalPins.Select(p => p.Name).OrderBy(n => n).ShouldBe(
+        loadedB.ExternalPins.Select(GroupPinLookup.ExposedId).OrderBy(n => n).ShouldBe(
             MultiProcessChipletJourneyDesign.ChipletBPinNames.OrderBy(n => n),
             "Step 6: chiplet B keeps its exposed pins");
 

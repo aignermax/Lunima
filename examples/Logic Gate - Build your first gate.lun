@@ -1,0 +1,189 @@
+{
+  "FormatVersion": "2.0",
+  "Components": [
+    {
+      "TemplateName": "2x2 MMI Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 95,
+      "Y": 97.5,
+      "Identifier": "combine",
+      "Rotation": 0,
+      "SliderValue": 0,
+      "SliderValues": {
+        "0": 0,
+        "1": 50
+      },
+      "HumanReadableName": "2x2 MMI Coupler"
+    },
+    {
+      "TemplateName": "Phase Shifter",
+      "PdkSource": "Demo PDK",
+      "X": 95,
+      "Y": 207.5,
+      "Identifier": "phase",
+      "Rotation": 0,
+      "SliderValue": 135,
+      "SliderValues": {
+        "0": 135
+      },
+      "HumanReadableName": "Phase Shifter"
+    },
+    {
+      "TemplateName": "2x2 MMI Coupler",
+      "PdkSource": "Demo PDK",
+      "X": 645,
+      "Y": 97.5,
+      "Identifier": "recombine",
+      "Rotation": 0,
+      "SliderValue": 0,
+      "SliderValues": {
+        "0": 0,
+        "1": 50
+      },
+      "HumanReadableName": "2x2 MMI Coupler"
+    },
+    {
+      "TemplateName": "Straight Waveguide 100\u00B5m",
+      "PdkSource": "Demo PDK",
+      "X": 915,
+      "Y": 118.5,
+      "Identifier": "output",
+      "Rotation": 0,
+      "SliderValue": 0,
+      "SliderValues": {
+        "0": 0
+      },
+      "HumanReadableName": "Straight Waveguide 100\u00B5m"
+    }
+  ],
+  "Connections": [
+    {
+      "StartComponentIndex": 1,
+      "StartPinName": "out",
+      "EndComponentIndex": 2,
+      "EndPinName": "in2",
+      "StartComponentId": "phase",
+      "EndComponentId": "recombine",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 595,
+          "StartY": 237.5,
+          "EndX": 610,
+          "EndY": 237.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        },
+        {
+          "Type": "Bend",
+          "StartX": 610,
+          "StartY": 237.5,
+          "EndX": 620,
+          "EndY": 227.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": -90,
+          "CenterX": 610,
+          "CenterY": 227.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": -90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 620,
+          "StartY": 227.5,
+          "EndX": 620,
+          "EndY": 141.5,
+          "StartAngleDegrees": -90,
+          "EndAngleDegrees": -90
+        },
+        {
+          "Type": "Bend",
+          "StartX": 620,
+          "StartY": 141.5,
+          "EndX": 630,
+          "EndY": 131.5,
+          "StartAngleDegrees": -90,
+          "EndAngleDegrees": 0,
+          "CenterX": 630,
+          "CenterY": 141.5,
+          "RadiusMicrometers": 10,
+          "SweepAngleDegrees": 90
+        },
+        {
+          "Type": "Straight",
+          "StartX": 630,
+          "StartY": 131.5,
+          "EndX": 645,
+          "EndY": 131.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10,
+      "IsRouteFrozen": true
+    },
+    {
+      "StartComponentIndex": 2,
+      "StartPinName": "out1",
+      "EndComponentIndex": 3,
+      "EndPinName": "a0",
+      "StartComponentId": "recombine",
+      "EndComponentId": "output",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 895,
+          "StartY": 123.5,
+          "EndX": 915,
+          "EndY": 123.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10,
+      "IsRouteFrozen": true
+    },
+    {
+      "StartComponentIndex": 0,
+      "StartPinName": "out1",
+      "EndComponentIndex": 2,
+      "EndPinName": "in1",
+      "StartComponentId": "combine",
+      "EndComponentId": "recombine",
+      "CachedSegments": [
+        {
+          "Type": "Straight",
+          "StartX": 345,
+          "StartY": 123.5,
+          "EndX": 645,
+          "EndY": 123.5,
+          "StartAngleDegrees": 0,
+          "EndAngleDegrees": 0
+        }
+      ],
+      "IsPlaceholderGeometry": false,
+      "WidthMicrometers": 0.5,
+      "BendRadiusMicrometers": 10,
+      "IsRouteFrozen": true
+    }
+  ],
+  "Metadata": {
+    "PdkVersions": {},
+    "Authorship": {
+      "Created": "2026-08-16",
+      "Modified": "2026-10-13T08:28:13.2458259Z"
+    }
+  },
+  "ChipWidthMicrometers": 5000,
+  "ChipHeightMicrometers": 5000,
+  "ActiveProcess": {
+    "DisplayName": "Playground",
+    "IsPlayground": true,
+    "DesignWavelengthNm": 1550,
+    "MemberPdkNames": []
+  }
+}

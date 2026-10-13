@@ -17,6 +17,7 @@ using CAP_Core.Tiles;
 using Moq;
 using Shouldly;
 using Xunit;
+using UnitTests.Helpers;
 
 namespace UnitTests.Components;
 
@@ -52,8 +53,10 @@ public class GroupReuseHierarchyJourneyTests : IDisposable
     private const double WaveguideLength = 100;
     private const double WaveguidePinOffsetY = 2.5;
 
+    // Ctrl+G names the four free coupler ports by direction (GroupPinNamer); the
+    // lookups below still address them by the component pin they expose.
     private static readonly string[] GroupPinNames =
-        { "combine_out1", "combine_out2", "split_in1", "split_in2" };
+        { "IN1", "IN2", "OUT1", "OUT2" };
 
     private readonly ComponentTemplate _couplerTemplate;
     private readonly ComponentTemplate _waveguideTemplate;
@@ -149,7 +152,7 @@ public class GroupReuseHierarchyJourneyTests : IDisposable
         }
 
         // Connectability proof: hook a probe waveguide to the still-free "split_in2" port.
-        var probeTarget = group.ExternalPins.Single(p => p.Name == "split_in2").InternalPin!;
+        var probeTarget = GroupPinLookup.Find(group, "split_in2").InternalPin!;
         var (probePinX, probePinY) = probeTarget.GetAbsolutePosition();
         Place("probe", _waveguideTemplate,
             probePinX - WaveguideLength - WireGapMicrometers, probePinY - WaveguidePinOffsetY);
@@ -190,13 +193,13 @@ public class GroupReuseHierarchyJourneyTests : IDisposable
             instance.ExternalPins.Count.ShouldBe(4,
                 $"Step 3: prefab instance {index} must expose the four external pins");
 
-            var inputPin = instance.ExternalPins.Single(p => p.Name == "split_in1").InternalPin!;
+            var inputPin = GroupPinLookup.Find(instance, "split_in1").InternalPin!;
             var (inX, inY) = inputPin.GetAbsolutePosition();
             Place($"src{index}", _waveguideTemplate,
                 inX - WaveguideLength - WireGapMicrometers, inY - WaveguidePinOffsetY);
             Wire(GetPin(FindComponent($"src{index}"), "b0"), inputPin);
 
-            var outputPin = instance.ExternalPins.Single(p => p.Name == "combine_out2").InternalPin!;
+            var outputPin = GroupPinLookup.Find(instance, "combine_out2").InternalPin!;
             var (outX, outY) = outputPin.GetAbsolutePosition();
             Place($"det{index}", _waveguideTemplate,
                 outX + WireGapMicrometers, outY - WaveguidePinOffsetY);

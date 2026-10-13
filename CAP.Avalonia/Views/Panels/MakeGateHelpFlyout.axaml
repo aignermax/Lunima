@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:ha="using:CAP.Avalonia.Controls.HelpAnimations"
+             x:Class="CAP.Avalonia.Views.Panels.MakeGateHelpFlyout">
+
+    <!-- Help of the Make-gate steps: short sections (text budget, all five locales)
+         plus two looping diagrams reused from the Truth Table and Logic help —
+         the pin roles (inputs A/B and the always-on BIAS meet in a coupler, the
+         output Y reads bright or dark) and the threshold (a bright pulse fills the
+         output bar past the dashed threshold = 1, a weak one stays below = 0). -->
+
+    <StackPanel Spacing="8" MaxWidth="400">
+
+        <TextBlock Classes="caption secondary" TextWrapping="Wrap"
+                   Text="{loc:Localize MakeGateHelp.Intro}"/>
+
+        <!-- roles: in / bias / out -->
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="112">
+                    <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,26 150,40"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
+                                            WindowStart="0" WindowEnd="0.3" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,86 150,72"
+                                            PulseBrush="{DynamicResource Brush.Info}" PulseDiameter="10"
+                                            WindowStart="0" WindowEnd="0.3" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,56 150,56"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
+                                            WindowStart="0" WindowEnd="0.3" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,26 150,40"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
+                                            WindowStart="0.58" WindowEnd="0.88" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,86 150,72"
+                                            PulseBrush="{DynamicResource Brush.Info}" PulseDiameter="10"
+                                            WindowStart="0.58" WindowEnd="0.88" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="112" PathPoints="12,56 150,56"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
+                                            WindowStart="0.58" WindowEnd="0.88" IsHitTestVisible="False"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="12" Text="A"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="42" Text="BIAS"/>
+                    <TextBlock Classes="caption" Canvas.Left="2" Canvas.Top="72" Text="B"/>
+                    <Border Canvas.Left="150" Canvas.Top="29" Width="80" Height="54"
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Classes="secondary" Text="{loc:Localize TruthTableHelp.DiagramCoupler}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Line StartPoint="230,56" EndPoint="306,56" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="2"/>
+                    <TextBlock Classes="caption" Canvas.Left="250" Canvas.Top="36" Text="Y"/>
+                    <ha:InterferenceOutputAnimation Width="368" Height="112" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Classes="caption" Text="{loc:Localize MakeGateHelp.RolesCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Classes="strong" Text="{loc:Localize MakeGateHelp.RolesTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize MakeGateHelp.RolesBody}"/>
+
+        <!-- threshold: bright pulse crosses the dashed line (1), weak one stays below (0) -->
+        <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                CornerRadius="{DynamicResource Radius.S}" Padding="4">
+            <StackPanel Spacing="2">
+                <Canvas Width="368" Height="96">
+                    <ha:LightPulseAlongPath Width="368" Height="96" PathPoints="12,40 104,40"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="10"
+                                            WindowStart="0" WindowEnd="0.2" IsHitTestVisible="False"/>
+                    <ha:LightPulseAlongPath Width="368" Height="96" PathPoints="12,40 104,40"
+                                            PulseBrush="{DynamicResource Brush.Warning}" PulseDiameter="7"
+                                            WindowStart="0.55" WindowEnd="0.7" IsHitTestVisible="False"/>
+                    <Border Canvas.Left="110" Canvas.Top="20" Width="70" Height="40"
+                            Background="{DynamicResource Brush.Surface.Hover}" BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1" CornerRadius="4">
+                        <TextBlock Classes="secondary" Text="{loc:Localize LogicPanelHelp.DiagramGate}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Line StartPoint="180,40" EndPoint="240,40" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="2"/>
+                    <Rectangle Canvas.Left="244" Canvas.Top="8" Width="24" Height="64"
+                               Fill="{DynamicResource Brush.Surface.Input}" Stroke="{DynamicResource Brush.Border.Strong}"/>
+                    <Line StartPoint="240,28" EndPoint="272,28" Stroke="{DynamicResource Brush.Warning}" StrokeThickness="1.5"
+                          StrokeDashArray="4,3"/>
+                    <ha:LogicThresholdAnimation Width="368" Height="96" IsHitTestVisible="False"/>
+                </Canvas>
+                <TextBlock Classes="caption" Text="{loc:Localize MakeGateHelp.ThresholdCaption}" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Classes="strong" Text="{loc:Localize MakeGateHelp.ThresholdTitle}"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize MakeGateHelp.ThresholdBody}"/>
+
+        <TextBlock Classes="strong" Text="{loc:Localize MakeGateHelp.MarginTitle}" Margin="0,4,0,0"/>
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize MakeGateHelp.MarginBody}"/>
+    </StackPanel>
+
+</UserControl>

@@ -82,8 +82,11 @@ public class ResponsivenessBudgetTests
         "UndoCommand",
         "RedoCommand",
         "RunSimulationCommand",
+        "RunWorkspaceCommand",
+        "TogglePowerOverlayCommand",
         "RunDesignChecksCommand",
         "ShowHomeCommand",
+        "MakeGateCommand",
     };
 
     /// <summary>

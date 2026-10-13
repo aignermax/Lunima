@@ -47,15 +47,19 @@ public class NandGameTruthTableJourneyTests : IDisposable
     private const string CombinerIdentifier = "combine";
     private const string OutputIdentifier = "out";
     private const string GroupName = "OR Gate";
-    private const string InputPinA = "combine_in1";
-    private const string InputPinB = "combine_in2";
-    private const string OutputPinY = "out_b0";
+    // Ctrl+G names the free ports by direction (GroupPinNamer): the combiner's in1/in2
+    // face west (IN1, IN2 top to bottom); facing east, the output waveguide's b0 sits
+    // higher (OUT1) than the combiner's spare out2 (OUT2).
+    private const string InputPinA = "IN1";
+    private const string InputPinB = "IN2";
+    private const string OutputPinY = "OUT1";
+    private const string SpareCombinerPin = "OUT2";
 
     // Creation order of the group's external pins: the combiner's free ports first
     // (out1 is occupied by the internal route to the output waveguide), then the
     // waveguide's free output port.
     private static readonly string[] ExpectedExternalPins =
-        { InputPinA, InputPinB, "combine_out2", OutputPinY };
+        { InputPinA, InputPinB, SpareCombinerPin, OutputPinY };
 
     private readonly string _designFilePath =
         Path.Combine(Path.GetTempPath(), $"nand_truth_table_{Guid.NewGuid():N}.lun");

@@ -23,6 +23,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Start Lunima without a command-line file → Home screen appears with recent projects and example tiles. `(manual)`
 - [ ] Open an example project from the Home screen → design loads and canvas is usable; gate groups sit apart with their pins on their bodies. `(auto: HomeExamplesTests, LogicExamplesLayoutTests)`
 - [ ] Home guided tours: first steps (place → connect → simulate), "Watch it compute" (Counter), and "Run a program on your chip" (4-bit adder → ISA playground → photonic multiply) each start from the Home card and advance only on the real user actions. `(auto: TutorialViewModelTests, WatchComputeTourViewModelTests, RunProgramTourViewModelTests)`
+- [ ] Home "Learn Lunima" → "Your first gate" (second entry, before "Watch it compute") opens the gate kit (four loose, wired NAND parts) and walks 7 steps: group → Make gate… → Simulate → pick NAND (automatic threshold) → Save as gate → Open in Logic + Build; every step advances on the real action. `(auto: FirstGateTourViewModelTests, HomeLearnTourListTests, MakeGateScreenshotTests)`
 - [ ] Golden-design regression gate — every example in `UnitTests/Regression/golden/manifest.json` loads, re-routes, passes DRC-lite, and matches its pinned simulation reference. `(auto: GoldenDesignTests)`
 - [ ] Create a new project → an empty canvas with the chosen process / playground is shown. `(auto: FileOperationsProjectLifecycleTests)`
 - [ ] Reopen the last project on startup → previous file opens automatically if preference is enabled. `(auto: HomeReopenLastProjectTests)`
@@ -46,7 +47,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Select, drag, rotate, and delete selected components. `(auto: RotateComponentCommandTests, DeleteComponentCommandTests)`
 - [ ] Box-select multiple components and move them as a group. `(auto: BoxSelectionSyncTests)`
 - [ ] Undo/redo covers placement, move, rotate, delete, and route edits. `(auto: UndoRedoIntegrationTests)`
-- [ ] Canvas context menu offers Edit, Copy, Paste, Group, Ungroup, Rename, Save as Prefab, Delete. `(auto: CanvasContextMenuComponentSettingsTests)`
+- [ ] Canvas context menu offers Edit, Copy, Paste, Group, Make gate…, Ungroup, Rename, Save as Prefab, Delete; "Make gate…" on loose parts groups them first, then opens the Make-gate steps. `(auto: CanvasContextMenuComponentSettingsTests; manual for Make gate…)`
 - [ ] Grid snap settings (from Settings) affect placement and movement. `(auto: GridSnapSettingsTests)`
 - [ ] Alignment guides appear when dragging a component near another. `(auto: AlignmentGuideViewModelTests)`
 - [ ] Probe mode opens the mode-probe flyout at the clicked location. `(manual)`
@@ -60,6 +61,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] PDK enable/disable toggles filter the visible components. `(auto: PdkManagerViewModelTests)`
 - [ ] Drag a component from the library and drop it onto the canvas → instance is placed. `(manual)`
 - [ ] Load a custom PDK JSON from the Tools flyout → new components appear in the library. `(auto: PdkLoaderTests)`
+- [ ] Tools flyout: "Compute Modes for Waveguide…" and "Check PDKs against Python…" show a tooltip saying what they do and for whom (all five languages). `(manual)`
 - [ ] Create a custom PDK via the left-panel `+` button → PDK file is written and selectable. `(auto: CreateCustomPdkFlowTests)`
 - [ ] Delete a custom PDK and restore it from the trash panel. `(auto: PdkTrashViewModelTests)`
 - [ ] Edit a PDK's process / layers / materials (forks bundled PDKs as custom). `(manual)`
@@ -69,6 +71,10 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 ## 5. Groups, hierarchy & reusable blocks
 
 - [ ] Create a group from selected components with `Ctrl + G`. `(auto: GroupingWorkflowTests)`
+- [ ] A new group's external pins read by direction — IN1, IN2… (west, top to bottom), OUT1… (east), N…/S… (north/south), E… (electrical) — while saved files keep their pin names. `(auto: GroupPinNamerTests)`
+- [ ] The right panel's gate section (truth table) appears only while exactly one group is selected; nothing renders otherwise. `(auto: TruthTablePanelRenderTests)`
+- [ ] "Make gate…" in the gate section: role chips (in/out/bias/–) with suggested roles and short names, Simulate shows power bars, picking NAND/AND/OR/NOR/XOR/NOT moves the threshold midway between the levels with the margin in dB (overlap warning for a wrong function, manual override + "Use suggested"), Save as gate renames the pins (undoable), Save to library adds it under Saved Groups, then "Open in Logic ›" opens the Logic tab; (?) help animates roles and threshold. `(auto: MakeGateViewModelTests, GatePinRoleSuggesterTests, GateThresholdAdvisorTests, MakeGateScreenshotTests)`
+- [ ] Plain truth-table extraction shows the automatic threshold suggestion (largest power step, margin in dB) with "Use" and an "Open in Logic ›" link. `(auto: GateLinkingTests)`
 - [ ] Ungroup a group with `Ctrl + Shift + G`. `(auto: GroupingWorkflowTests)`
 - [ ] Rename a group via context menu and see the change in the Hierarchy panel. `(auto: HierarchyRenameTests)`
 - [ ] Save a group as a prefab → it appears in the Saved Groups list. `(auto: SaveGroupAsPrefabCommandTests)`
@@ -83,6 +89,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Manual bend handles adjust waveguide shape. `(auto: SegmentShiftCommandTests, BendRadiusCommandTests)`
 - [ ] Bend radius cannot be reduced below the active process minimum. `(auto: BendRadiusCommandTests)`
 - [ ] Crossing-insertion routes around existing components automatically. `(auto: CrossingInsertionCanvasBinderTests, InsertManualCrossingCommandTests)`
+- [ ] Router-placed crossings are temporary: moving a wire end takes its chain out even with adaptive insertion off; user-placed crossings stay. `(auto: TemporaryCrossingTests, AdaptiveCrossingRerouteTests)`
+- [ ] Tools → Clean Up Crossings removes every router-placed crossing, re-routes the wires and is undoable. `(auto: CleanUpCrossingsCommandTests)`
+- [ ] A wire that cannot be routed with its pins stays red and is not retried on every recalculation. `(auto: UnroutableWireTests)`
 - [ ] Connection style panel changes curve type, width, radius, and freeze state. `(auto: ConnectionRoutingViewModelShapeTests, ConnectionRoutingStyleEffectTests)`
 - [ ] Frozen routes persist through save/load. `(auto: Serialization/LockStatePersistenceTests)`
 - [ ] Metal routing (electrical traces) exports with process-defined layers and widths. `(auto: MetalRouting/ElectricalConnectionExportTests)`
@@ -94,7 +103,12 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Toggle simulation mode (CW / Transient) from the toolbar combo box. `(auto: SimulationModeTests)`
 - [ ] Simulation converges for looped circuits or emits a readable non-convergence message. `(auto: NonConvergentCircuitMessageFormatterTests)`
 - [ ] Passivity warnings surface when components produce unphysical gain. `(auto: LightCalculation/SingleHopPassivityCheckerTests)`
-- [ ] S-matrix performance diagnostics show aggregate stats for the current design. `(manual)`
+- [ ] Run never toggles: pressing Run (L) with the power overlay showing re-runs and keeps the overlay; the eye button beside Run (and P) shows/hides it. `(auto: MainViewModelWorkspaceTests)`
+- [ ] Workspace switch (Layout / Optics / Logic / System) next to Run: one click or Ctrl+1–4 switches; Run's label names the action ("Run checks" / "Simulate" / "Run logic" / "Run system"); the CW/Transient choice and the eye button appear only where they apply. `(auto: WorkspaceViewModelTests, UiFlowWorkspaceSwitchTests)`
+- [ ] Run per workspace: Layout opens Design Checks with results; Optics simulates (CW overlay or Transient tab); Logic builds the network, then each Run steps the clock; System runs the chiplet checks + whole-system CW and shows the chiplet/link strip (process per chiplet, link loss in dB). `(auto: MainViewModelWorkspaceTests)`
+- [ ] Dock tabs follow the workspace; "⋯ → Show all tabs" in the dock header brings every tab back; a tab opened by a tour/menu is shown even outside its workspace. `(auto: WorkspaceViewModelTests)`
+- [ ] Workspace is saved in the .lun and restored on open; files without one open by content: chiplet links → System, gate groups → Logic, light source → Optics, otherwise Layout (check the Two Chiplets, Logic Gate and MZI examples). `(auto: WorkspaceDefaultsTests, MainViewModelWorkspaceTests)`
+- [ ] (?) beside the workspace switch explains the four workspaces in a few sentences each. `(manual)`
 
 ## 8. Parameter sweep
 
@@ -115,7 +129,9 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Component dimension diagnostics detect out-of-bounds geometry. `(auto: ComponentDimensionValidatorTests)`
 - [ ] Layout compression panel shrinks the design within constraints. `(auto: LayoutCompressorTests)`
 - [ ] Analysis output panel shows designated outputs and persists them. `(auto: AnalysisOutput/AnalysisOutputPanelViewModelTests)`
+- [ ] Empty optical tabs explain themselves: with no light source, Spectrum / Monte Carlo / Transient / Eye show one sentence + "Place a light source" (arms placement of a grating/edge coupler); with a source but no picked output, Transient / Eye offer "Pick on canvas". `(auto: AnalysisReadinessViewModelTests, MainViewModelWorkspaceTests)`
 - [ ] Logic panel lives in the analysis dock's Logic tab: builds the logic network of the loaded design, toggles inputs, steps/runs the clock, and shows timeline + waveform lanes. `(auto: WatchComputeTourViewModelTests, WatchTourCounterExampleTests)`
+- [ ] Logic tab empty state lists the groups that are not gates yet, each with "Make gate…" that selects the group and opens the Make-gate steps. `(auto: GateLinkingTests)`
 
 ## 10. Component-specific tools & properties
 
@@ -178,6 +194,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] AI tools registry exposes fit-to-view and other canvas operations. `(auto: AI/FitToViewToolTests, AI/AiToolRegistryTests)`
 - [ ] AI grid service applies tool results to the design model. `(auto: AI/AiGridServiceTests)`
 - [ ] AI settings page configures the API key / endpoint. `(manual)`
+- [ ] Agent bridge (MCP): off by default; Settings → Agent bridge (MCP) → enable shows "Listening on http://127.0.0.1:39271/mcp"; the copied `claude mcp add …` command connects Claude Code, `list_connections` lists the open design's blocked routes, and an agent `move_component` is reverted by Ctrl+Z. Requests without the token get 401. `(auto: AgentBridge/*Tests; manual: real Claude Code connect on Windows, Linux, macOS)`
 
 ## 16. Component registry (online)
 

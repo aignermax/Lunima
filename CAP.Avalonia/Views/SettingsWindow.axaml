@@ -6,6 +6,7 @@
         xmlns:vmExport="using:CAP.Avalonia.ViewModels.Export"
         xmlns:vmAi="using:CAP.Avalonia.ViewModels.AI"
         xmlns:vmSolvers="using:CAP.Avalonia.ViewModels.Solvers"
+        xmlns:vmAgent="using:CAP.Avalonia.ViewModels.Settings.AgentBridge"
         xmlns:vmPyEnv="using:CAP.Avalonia.ViewModels.Export.PythonEnvironmentManager"
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
@@ -272,6 +273,68 @@
 
                             <TextBlock Classes="caption" Text="{Binding StatusText}" Margin="0,8,0,0"
                                        IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- Agent bridge (MCP) — local server for external AI agents such as Claude Code -->
+                    <DataTemplate DataType="{x:Type vmAgent:AgentBridgeSettingsViewModel}">
+                        <StackPanel>
+                            <TextBlock Classes="headline" Text="{loc:Localize Settings.AgentBridge.Title}"/>
+                            <TextBlock Classes="caption" Text="{loc:Localize Settings.AgentBridge.Description}"
+                                       TextWrapping="Wrap" Margin="0,4,0,8"/>
+
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.Enable}"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Classes="caption mono" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" VerticalAlignment="Top"
+                                                  IsChecked="{Binding IsEnabled}"/>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.Port}"
+                                               VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                        <NumericUpDown Value="{Binding Port}" Minimum="1024" Maximum="65535"
+                                                       Increment="1" Width="130" FormatString="F0"/>
+                                        <Button Content="{loc:Localize Settings.AgentBridge.ApplyPort}"
+                                                Command="{Binding ApplyPortCommand}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.Token}"/>
+                                    <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                                        <TextBox Classes="mono" Text="{Binding Token}" IsReadOnly="True" PasswordChar="•"/>
+                                        <Button Grid.Column="2" Content="{loc:Localize Settings.AgentBridge.Copy}"
+                                                Command="{Binding CopyTokenCommand}"/>
+                                        <Button Grid.Column="4" Content="{loc:Localize Settings.AgentBridge.RegenerateToken}"
+                                                Command="{Binding RegenerateTokenCommand}"/>
+                                    </Grid>
+                                    <TextBlock Classes="caption" Text="{loc:Localize Settings.AgentBridge.SecurityNote}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="setting">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.ConnectCommand}"/>
+                                    <Grid ColumnDefinitions="*,8,Auto">
+                                        <TextBox Classes="mono" Text="{Binding ConnectCommandText, Mode=OneWay}"
+                                                 IsReadOnly="True" TextWrapping="Wrap"/>
+                                        <Button Grid.Column="2" Classes="primary" VerticalAlignment="Top"
+                                                Content="{loc:Localize Settings.AgentBridge.Copy}"
+                                                Command="{Binding CopyConnectCommandCommand}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Classes="caption success" Text="{Binding FeedbackText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       IsVisible="{Binding FeedbackText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </DataTemplate>
 

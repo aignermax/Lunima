@@ -48,7 +48,7 @@ public class Issue1101HelpFlyoutRenderTests
         Window? window = null;
         try
         {
-            var vm = MainViewModelTestHelper.CreateMainViewModel();
+            var vm = TruthTablePanelRenderTests.CreateMainViewModelWithSelectedGroup();
             var panel = new TruthTablePanel { DataContext = vm };
             window = new Window { Width = 460, Height = 700, Content = panel };
             window.Show();

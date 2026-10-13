@@ -20,6 +20,7 @@ using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using Moq;
 using Shouldly;
+using UnitTests.Helpers;
 using Xunit;
 
 namespace UnitTests.Components;
@@ -97,12 +98,12 @@ public partial class MultiProcessChipletJourneyTests : IDisposable
 
         design.ChipletA.ChildComponents.Count.ShouldBe(2, "Step 1: chiplet A owns coupler + MMI");
         design.ChipletA.InternalPaths.Count.ShouldBe(1, "Step 1: the coupler→MMI wire freezes into chiplet A");
-        design.ChipletA.ExternalPins.Select(p => p.Name).OrderBy(n => n).ShouldBe(
+        design.ChipletA.ExternalPins.Select(GroupPinLookup.ExposedId).OrderBy(n => n).ShouldBe(
             MultiProcessChipletJourneyDesign.ChipletAPinNames.OrderBy(n => n),
             "Step 1: chiplet A exposes the free coupler ports and both MMI outputs");
         design.ChipletB.ChildComponents.Count.ShouldBe(2, "Step 1: chiplet B owns Y-branch + taper");
         design.ChipletB.InternalPaths.Count.ShouldBe(1, "Step 1: the Y-branch→taper wire freezes into chiplet B");
-        design.ChipletB.ExternalPins.Select(p => p.Name).OrderBy(n => n).ShouldBe(
+        design.ChipletB.ExternalPins.Select(GroupPinLookup.ExposedId).OrderBy(n => n).ShouldBe(
             MultiProcessChipletJourneyDesign.ChipletBPinNames.OrderBy(n => n),
             "Step 1: chiplet B exposes the combiner input, the free arm and the output");
 

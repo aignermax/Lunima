@@ -71,7 +71,7 @@ public class TruthTablePanelRenderTests
         Window? window = null;
         try
         {
-            var vm = MainViewModelTestHelper.CreateMainViewModel();
+            var vm = CreateMainViewModelWithSelectedGroup();
             var panel = new TruthTablePanel { DataContext = vm };
             window = new Window { Width = 460, Height = 700, Content = panel };
             window.Show();
@@ -101,12 +101,13 @@ public class TruthTablePanelRenderTests
         }
     }
 
-    /// <summary>Without a selected group the panel shows the hint text.</summary>
+    /// <summary>
+    /// Without exactly one selected group the gate section is hidden entirely — the
+    /// properties sidebar shows the selection, not an empty hint.
+    /// </summary>
     [AvaloniaFact]
-    public void TruthTablePanel_NoGroupSelected_ShowsHint()
+    public void TruthTablePanel_NoGroupSelected_IsHidden()
     {
-        var previous = LocalizationService.Instance.ActiveLanguageCode;
-        LocalizationService.Instance.SetLanguage(TestLanguage);
         Window? window = null;
         try
         {
@@ -116,20 +117,28 @@ public class TruthTablePanelRenderTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            var hint = LocalizationService.Instance.Translate("TruthTable.NoGroupSelected");
-            panel.GetVisualDescendants().OfType<TextBlock>()
-                .Any(t => t.Text == hint)
-                .ShouldBeTrue("the panel must explain that exactly one group needs to be selected");
-            panel.GetVisualDescendants().OfType<CheckBox>()
+            panel.GetVisualDescendants().OfType<Control>()
+                .Where(c => c is TextBlock or CheckBox or Button)
                 .Where(c => c.IsEffectivelyVisible)
-                .ShouldBeEmpty("no group selected — no pin checkboxes rendered");
+                .ShouldBeEmpty("no group selected — the gate section renders nothing");
         }
         finally
         {
             window?.Close();
             Dispatcher.UIThread.RunJobs();
-            LocalizationService.Instance.SetLanguage(previous);
         }
+    }
+
+    /// <summary>A canvas with the combiner group selected and the panel configured for it.</summary>
+    internal static CAP.Avalonia.ViewModels.MainViewModel CreateMainViewModelWithSelectedGroup()
+    {
+        var canvas = new CAP.Avalonia.ViewModels.Canvas.DesignCanvasViewModel();
+        var groupVm = canvas.AddComponent(LogicGateFixtureFactory.CreateCombinerGroup());
+        var vm = MainViewModelTestHelper.CreateMainViewModel(canvas: canvas);
+        canvas.Selection.SelectSingle(groupVm);
+        vm.RightPanel.TruthTable.ConfigureForSelection(groupVm, canvas);
+        vm.RightPanel.MakeGate.ConfigureForSelection(groupVm, canvas);
+        return vm;
     }
 
     /// <summary>With a group selected the panel lists its external pins as checkboxes.</summary>

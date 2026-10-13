@@ -35,11 +35,20 @@ internal static class ChainDissolver
     /// </param>
     public static WaveguideConnection? TryDissolveChain(
         WaveguideConnection piece, WaveguideConnectionManager manager, WaveguideRouter router,
-        out List<Component> dissolved, out Action undo, Func<Component, bool>? dissolvable = null)
+        out List<Component> dissolved, out Action undo, Func<Component, bool>? dissolvable = null) =>
+        TryDissolveChain(piece, manager, router, out dissolved, out undo, out _, dissolvable);
+
+    /// <inheritdoc cref="TryDissolveChain(WaveguideConnection, WaveguideConnectionManager, WaveguideRouter, out List{Component}, out Action, Func{Component, bool}?)"/>
+    /// <param name="redo">Repeats the whole dissolution after <paramref name="undo"/>.</param>
+    public static WaveguideConnection? TryDissolveChain(
+        WaveguideConnection piece, WaveguideConnectionManager manager, WaveguideRouter router,
+        out List<Component> dissolved, out Action undo, out Action redo, Func<Component, bool>? dissolvable = null)
     {
         dissolved = new List<Component>();
         var undos = new List<Action>();
+        var redos = new List<Action>();
         undo = () => { for (int i = undos.Count - 1; i >= 0; i--) undos[i](); };
+        redo = () => { foreach (var step in redos) step(); };
         var current = piece;
         for (int i = 0; i < MaxCrossingsPerChain; i++)
         {
@@ -47,12 +56,13 @@ internal static class ChainDissolver
             var crossing = startCrossing ?? CrossingAt(current.EndPin, dissolvable);
             if (crossing == null) return current;
             var outerPin = startCrossing == null ? current.StartPin : current.EndPin;
-            if (!TryDissolve(crossing, manager, router, out var merged, out var undoOne))
+            if (!TryDissolve(crossing, manager, router, out var merged, out var undoOne, out var redoOne))
             {
                 undo();
                 return null;
             }
             undos.Add(undoOne);
+            redos.Add(redoOne);
             dissolved.Add(crossing);
             var next = merged.FirstOrDefault(m => m.StartPin == outerPin || m.EndPin == outerPin);
             if (next == null)
@@ -76,51 +86,122 @@ internal static class ChainDissolver
     /// (nothing changed) when the crossing does not have the regular four docked pieces.
     /// </summary>
     internal static bool TryDissolve(Component crossing, WaveguideConnectionManager manager, WaveguideRouter router,
-                                    out List<WaveguideConnection> merged, out Action undo)
+                                    out List<WaveguideConnection> merged, out Action undo) =>
+        TryDissolve(crossing, manager, router, out merged, out undo, out _);
+
+    /// <inheritdoc cref="TryDissolve(Component, WaveguideConnectionManager, WaveguideRouter, out List{WaveguideConnection}, out Action)"/>
+    /// <param name="redo">Repeats the dissolution after <paramref name="undo"/> (a no-op on failure).</param>
+    internal static bool TryDissolve(Component crossing, WaveguideConnectionManager manager, WaveguideRouter router,
+                                    out List<WaveguideConnection> merged, out Action undo, out Action redo)
     {
         merged = new List<WaveguideConnection>();
         undo = () => { };
+        redo = () => { };
         var pieces = new List<WaveguideConnection>();
-        var pairs = new List<(WaveguideConnection In, WaveguideConnection Out, PhysicalPin Entry, PhysicalPin Exit)>();
+        var pairs = ThroughPairs(crossing, manager);
+        if (pairs.Count != 2) return false;
+
+        foreach (var pair in pairs)
+        {
+            var connection = MergePair(pair);
+            if (connection == null) return false;
+            merged.Add(connection);
+            pieces.Add(pair.In);
+            pieces.Add(pair.Out);
+        }
+        (undo, redo) = Commit(crossing, pieces, merged, manager, router);
+        return true;
+    }
+
+    /// <summary>
+    /// Takes out a crossing that lost one of its pieces (a wire through it was deleted): a
+    /// still complete through-pair merges into one wire with its geometry, every other piece
+    /// docked at the crossing is dropped — it belonged to the deleted wire. False (nothing
+    /// changed) when every port still has a piece.
+    /// </summary>
+    internal static bool TryDissolveBroken(Component crossing, WaveguideConnectionManager manager, WaveguideRouter router,
+                                          out List<WaveguideConnection> merged, out List<WaveguideConnection> dropped)
+    {
+        merged = new List<WaveguideConnection>();
+        dropped = new List<WaveguideConnection>();
+        var docked = manager.Connections
+            .Where(c => c.StartPin.ParentComponent == crossing || c.EndPin.ParentComponent == crossing).ToList();
+        if (crossing.PhysicalPins.All(port => docked.Any(c => c.StartPin == port || c.EndPin == port)))
+            return false;
+
+        var kept = new List<WaveguideConnection>();
+        foreach (var pair in ThroughPairs(crossing, manager))
+        {
+            var connection = MergePair(pair);
+            if (connection == null) continue;
+            merged.Add(connection);
+            kept.Add(pair.In);
+            kept.Add(pair.Out);
+        }
+        dropped = docked.Except(kept).ToList();
+        Commit(crossing, docked, merged, manager, router);
+        return true;
+    }
+
+    /// <summary>The crossing's straight-through pairs whose two pieces are both docked and routed.</summary>
+    private static List<ThroughPair> ThroughPairs(Component crossing, WaveguideConnectionManager manager)
+    {
+        var pairs = new List<ThroughPair>();
         foreach (var entry in crossing.PhysicalPins)
         {
             var exit = CrossingComponentCatalog.StraightThroughExit(entry);
             var into = Docked(entry, manager, end: true);
             var outOf = exit == null ? null : Docked(exit, manager, end: false);
             if (into == null || outOf == null || into.RoutedPath == null || outOf.RoutedPath == null) continue;
-            pairs.Add((into, outOf, entry, exit!));
+            pairs.Add(new ThroughPair(into, outOf, entry, exit!));
         }
-        if (pairs.Count != 2) return false;
+        return pairs;
+    }
 
-        foreach (var (into, outOf, entry, exit) in pairs)
-        {
-            var path = MergedPath(into.RoutedPath!, entry, exit, outOf.RoutedPath!);
-            if (path == null) return false;
-            var connection = CrossingPlacement.CreateSubConnection(into, into.StartPin, outOf.EndPin);
-            connection.RestoreCachedPath(path);
-            connection.IsRouteFrozen = into.IsRouteFrozen && outOf.IsRouteFrozen;
-            merged.Add(connection);
-            pieces.Add(into);
-            pieces.Add(outOf);
-        }
+    /// <summary>One wire through the crossing: the piece in, the piece out, and their ports.</summary>
+    private sealed record ThroughPair(WaveguideConnection In, WaveguideConnection Out, PhysicalPin Entry, PhysicalPin Exit);
 
+    /// <summary>The pair as one connection keeping its exact geometry, or null when the pieces do not meet the ports.</summary>
+    private static WaveguideConnection? MergePair(ThroughPair pair)
+    {
+        var path = MergedPath(pair.In.RoutedPath!, pair.Entry, pair.Exit, pair.Out.RoutedPath!);
+        if (path == null) return null;
+        var connection = CrossingPlacement.CreateSubConnection(pair.In, pair.In.StartPin, pair.Out.EndPin);
+        connection.RestoreCachedPath(path);
+        connection.IsRouteFrozen = pair.In.IsRouteFrozen && pair.Out.IsRouteFrozen;
+        return connection;
+    }
+
+    /// <summary>
+    /// Swaps the pieces for the merged wires and takes the crossing off the grid; returns the
+    /// exact undo and a redo that repeats the swap with the merged wires' current routes.
+    /// </summary>
+    private static (Action Undo, Action Redo) Commit(
+        Component crossing, List<WaveguideConnection> pieces, List<WaveguideConnection> merged,
+        WaveguideConnectionManager manager, WaveguideRouter router)
+    {
         var grid = router.PathfindingGrid!;
         var added = merged.ToList();
-        lock (manager.SyncRoot)
+        void Apply()
         {
-            foreach (var p in pieces)
+            lock (manager.SyncRoot)
             {
-                grid.RemoveWaveguideObstacle(p.Id);
-                manager.Connections.Remove(p);
-            }
-            router.RemoveComponentObstacle(crossing);
-            foreach (var m in added)
-            {
-                manager.Connections.Add(m);
-                grid.AddWaveguideObstacle(m.Id, m.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
+                foreach (var p in pieces)
+                {
+                    grid.RemoveWaveguideObstacle(p.Id);
+                    manager.Connections.Remove(p);
+                }
+                router.RemoveComponentObstacle(crossing);
+                foreach (var m in added)
+                {
+                    manager.Connections.Add(m);
+                    if (m.IsPathValid && m.RoutedPath != null)
+                        grid.AddWaveguideObstacle(m.Id, m.RoutedPath.Segments, manager.WaveguideWidthMicrometers);
+                }
             }
         }
-        undo = () =>
+        Apply();
+        return (() =>
         {
             lock (manager.SyncRoot)
             {
@@ -130,14 +211,13 @@ internal static class ChainDissolver
                     manager.Connections.Remove(m);
                 }
                 router.AddComponentObstacle(crossing);
-                foreach (var p in pieces)
+                foreach (var p in pieces.Where(p => p.RoutedPath != null))
                 {
                     manager.Connections.Add(p);
                     grid.AddWaveguideObstacle(p.Id, p.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
                 }
             }
-        };
-        return true;
+        }, Apply);
     }
 
     /// <summary>The single connection that ends (or starts) at the port, or null.</summary>

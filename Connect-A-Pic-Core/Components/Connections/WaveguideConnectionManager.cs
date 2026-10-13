@@ -119,6 +119,7 @@ public partial class WaveguideConnectionManager
 
     public WaveguideConnection AddConnection(PhysicalPin startPin, PhysicalPin endPin)
     {
+        NoteWireSetChanged();
         var connection = new WaveguideConnection
         {
             StartPin = startPin,
@@ -208,6 +209,7 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public WaveguideConnection AddConnectionDeferred(PhysicalPin startPin, PhysicalPin endPin)
     {
+        NoteWireSetChanged();
         var connection = new WaveguideConnection
         {
             StartPin = startPin,
@@ -248,13 +250,14 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public void RemoveConnectionsForComponentTree(Component component)
     {
+        NoteWireSetChanged();
         var scope = new ComponentWireScope(component);
         // A crossing placed by crossing-aware routing hands its wires back instead of taking them
         // along — whether or not adaptive crossing insertion is switched on.
-        var recorded = CrossingInsertion?.Records.Select(r => r.CrossingComponent).ToHashSet() ?? new HashSet<Component>();
+        var recorded = CrossingService?.Records.Select(r => r.CrossingComponent).ToHashSet() ?? new HashSet<Component>();
         if (ChainCrossingMaintenance.DissolveForDeletion(component, this, _router, recorded))
             return;
-        CrossingInsertion?.DissolveForScope(scope, this, _router);
+        CrossingService?.DissolveForScope(scope, this, _router);
 
         List<WaveguideConnection> removed;
         lock (_connectionsSync)
@@ -272,9 +275,10 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public void RemoveConnectionsForComponent(Component component)
     {
+        NoteWireSetChanged();
         // Dissolve any crossings touching this component first so their crossing
         // components and sub-connections are cleaned up (no orphaned crossings).
-        CrossingInsertion?.DissolveForComponent(component, this, _router);
+        CrossingService?.DissolveForComponent(component, this, _router);
 
         var router = _router;
         var connectionsToRemove = SnapshotConnections()
@@ -301,11 +305,12 @@ public partial class WaveguideConnectionManager
 
     public void RemoveConnection(WaveguideConnection connection)
     {
+        NoteWireSetChanged();
         // If the connection is part of an inserted crossing, dissolve the crossing:
         // the crossing component and all four sub-connections are removed and the
         // other original connection is restored unsplit.
-        if (CrossingInsertion != null &&
-            CrossingInsertion.TryDissolveForConnection(connection, this, _router))
+        if (CrossingService != null &&
+            CrossingService.TryDissolveForConnection(connection, this, _router))
         {
             if (Connections.Count > 0)
             {
@@ -343,8 +348,9 @@ public partial class WaveguideConnectionManager
     /// </summary>
     public void RemoveConnectionDeferred(WaveguideConnection connection)
     {
-        if (CrossingInsertion != null &&
-            CrossingInsertion.TryDissolveForConnection(connection, this, _router))
+        NoteWireSetChanged();
+        if (CrossingService != null &&
+            CrossingService.TryDissolveForConnection(connection, this, _router))
         {
             return;
         }
@@ -362,6 +368,7 @@ public partial class WaveguideConnectionManager
 
     public void AddExistingConnection(WaveguideConnection connection)
     {
+        NoteWireSetChanged();
         lock (_connectionsSync)
         {
             if (!Connections.Contains(connection))
@@ -376,7 +383,8 @@ public partial class WaveguideConnectionManager
         // Drop crossing bookkeeping with the design: stale records must never
         // resurrect dissolved originals into a fresh/loaded design (File → New,
         // project load, group-edit canvas swap).
-        CrossingInsertion?.Reset();
+        CrossingService?.Reset();
+        UnroutableWires.Clear();
         lock (_connectionsSync)
         {
             Connections.Clear();
@@ -414,18 +422,10 @@ public partial class WaveguideConnectionManager
     {
         var totalWatch = System.Diagnostics.Stopwatch.StartNew();
         var timings = new RoutingPassTimingsBuilder();
+        BeginUnroutablePass();
 
-        // Re-evaluate existing crossings first: when a net endpoint moved, the
-        // crossing is dissolved so its originals are routed from scratch below and
-        // the insertion pass re-inserts a crossing only if it is still beneficial.
-        if (CrossingInsertion != null && !_isCrossingPassRunning)
-        {
-            timings.CrossingDissolution = MeasurePass(() =>
-            {
-                CrossingInsertion.DissolveStaleRecords(this, _router);
-                CrossingInsertion.DissolveStaleChains(this, _router);
-            });
-        }
+        if (!_isCrossingPassRunning)
+            timings.CrossingDissolution = MeasurePass(DissolveStaleCrossings);
 
         RouteAllConnections(timings, progressCallback, cancellationToken);
         timings.CrossingInsertion = MeasurePass(() => RunCrossingInsertionPass(cancellationToken));
@@ -448,6 +448,7 @@ public partial class WaveguideConnectionManager
                 timings.ContentionRepairAccepts = LastContentionRepairAcceptCount;
             }
         }
+        RememberPersistentCascadeFailures(cancellationToken);
 
         totalWatch.Stop();
         LastRoutingPassTimings = timings.Build(
@@ -553,6 +554,7 @@ public partial class WaveguideConnectionManager
 
         var validConnections = new List<WaveguideConnection>();
         var invalidConnections = new List<WaveguideConnection>();
+        var retriedBlocked = new HashSet<WaveguideConnection>();
 
         // Snapshot: this loop runs on the routing thread while UI commands (ungroup,
         // undo/redo) may add or remove connections — see _connectionsSync.
@@ -560,6 +562,18 @@ public partial class WaveguideConnectionManager
         {
             if (cancellationToken.IsCancellationRequested)
                 return (false, 0);
+
+            // A wire proven unroutable keeps its placeholder line, which is no geometry: it
+            // neither walls in other wires nor counts as a sibling they could cross.
+            if (IsKnownUnroutable(connection))
+                continue;
+            if (IsSettledPiece(connection))
+            {
+                validConnections.Add(connection);
+                continue;
+            }
+            if (!_wireSetChangedThisPass && IsBlockedAtUnchangedPins(connection))
+                retriedBlocked.Add(connection);
 
             // A joint drag of BOTH connected components is a pure translation: shift the
             // existing route (with all manual bend edits) to the new pin positions BEFORE
@@ -605,6 +619,14 @@ public partial class WaveguideConnectionManager
             connection.RecalculateTransmission(_router, cancellationToken: cancellationToken);
             RefreshStyledObstacleCollision(connection, router);
             progressCallback?.Invoke();
+            bool provenUnroutable = retriedBlocked.Contains(connection) && IsBlockedAtUnchangedPins(connection);
+            if (provenUnroutable)
+                UnroutableWires.Remember(connection);
+            // Neither a wire that failed again with unchanged pins (an earlier pass already
+            // failed on it) nor a wire just taken out of its crossings (it needs a crossing,
+            // which the crossing pass places, or stays blocked) is a reason to re-route the
+            // whole design through the ordering cascade.
+            bool cascadeWorthy = !provenUnroutable && !_rerouteAfterDissolution.Contains(connection);
 
             // Register ALL paths with valid geometry as obstacles, including blocked fallbacks.
             // This ensures all routes (A* and Manhattan) are visible to subsequent routing.
@@ -619,11 +641,11 @@ public partial class WaveguideConnectionManager
                 // full re-route with ordering strategies gets a chance to untangle it.
                 // Blocked fallbacks are otherwise NOT counted as failures here: they have
                 // valid geometry and are registered as obstacles.
-                if (CrossesAnyRoutedSibling(connection, routedSoFar))
+                if (cascadeWorthy && CrossesAnyRoutedSibling(connection, routedSoFar))
                     failedCount++;
                 routedSoFar.Add(connection);
             }
-            else
+            else if (cascadeWorthy)
             {
                 // Only count connections with NO valid path as failures
                 failedCount++;
@@ -694,6 +716,7 @@ public partial class WaveguideConnectionManager
     {
         // Clear all waveguide obstacles from previous routing
         router.PathfindingGrid!.ClearAllWaveguideObstacles();
+        RegisterCascadeKeptObstacles(router.PathfindingGrid);
 
         int failedCount = 0;
         var failedConnections = new List<WaveguideConnection>();

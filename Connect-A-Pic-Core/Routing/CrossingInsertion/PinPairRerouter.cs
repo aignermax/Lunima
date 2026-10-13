@@ -26,6 +26,9 @@ public sealed class PinPairRerouter
     /// <summary>Largest distance (µm) between pins whose wires count as pin neighbours.</summary>
     public const double NeighbourPinRadiusMicrometers = 12.0;
 
+    /// <summary>Crossings a lifted neighbour may gain: the one with the freed wire.</summary>
+    private const int SwapCrossingAllowance = 1;
+
     private readonly CrossingChainInserter _inserter;
 
     /// <summary>Creates the rerouter on top of the chain inserter that connects each wire.</summary>
@@ -58,7 +61,8 @@ public sealed class PinPairRerouter
 
         var dissolveUndos = new List<Action>();
         var dissolved = new List<Component>();
-        var neighbours = WholeWires(candidates, manager, router, dissolveUndos, dissolved);
+        var allowances = new Dictionary<WaveguideConnection, int>();
+        var neighbours = WholeWires(candidates, manager, router, dissolveUndos, dissolved, allowances);
         if (neighbours == null)
         {
             UndoAll(dissolveUndos);
@@ -71,7 +75,7 @@ public sealed class PinPairRerouter
         foreach (bool reserveLeads in new[] { true, false })
         {
             var undos = new List<Action>();
-            var placed = TrySwap(blocked, lifted, reserveLeads, manager, router, crossingFactory, settings, cancellationToken, undos);
+            var placed = TrySwap(blocked, lifted, allowances, reserveLeads, manager, router, crossingFactory, settings, cancellationToken, undos);
             if (placed == null) continue;
             LastUndo = () =>
             {
@@ -90,7 +94,8 @@ public sealed class PinPairRerouter
     /// neighbour. Returns the placed crossings, or null after undoing the attempt completely.
     /// </summary>
     private List<Component>? TrySwap(
-        WaveguideConnection blocked, List<(WaveguideConnection Connection, RoutedPath Path)> lifted, bool reserveLeads,
+        WaveguideConnection blocked, List<(WaveguideConnection Connection, RoutedPath Path)> lifted,
+        IReadOnlyDictionary<WaveguideConnection, int> allowances, bool reserveLeads,
         WaveguideConnectionManager manager, WaveguideRouter router, Func<Component?> crossingFactory,
         CrossingRouteSettings settings, CancellationToken cancellationToken, List<Action> undos)
     {
@@ -100,13 +105,13 @@ public sealed class PinPairRerouter
             ? PinLeadReservation.Reserve(router.PathfindingGrid!, lifted.Select(l => l.Connection), blocked,
                 (a, b) => IsNear(a, b), manager.WaveguideWidthMicrometers)
             : null;
-        bool connected = TryConnect(blocked, manager, router, crossingFactory, settings, cancellationToken, undos, placed);
+        bool connected = TryConnect(blocked, int.MaxValue, manager, router, crossingFactory, settings, cancellationToken, undos, placed);
         leads?.Release();
         foreach (var (neighbour, _) in lifted)
         {
             if (!connected) break;
             ReturnAsPlaceholder(neighbour, manager);
-            connected = TryConnect(neighbour, manager, router, crossingFactory, settings, cancellationToken, undos, placed);
+            connected = TryConnect(neighbour, allowances.GetValueOrDefault(neighbour) + SwapCrossingAllowance, manager, router, crossingFactory, settings, cancellationToken, undos, placed);
         }
         if (connected) return placed;
 
@@ -121,7 +126,7 @@ public sealed class PinPairRerouter
     /// </summary>
     private static List<WaveguideConnection>? WholeWires(
         List<WaveguideConnection> candidates, WaveguideConnectionManager manager, WaveguideRouter router,
-        List<Action> undos, List<Component> dissolved)
+        List<Action> undos, List<Component> dissolved, Dictionary<WaveguideConnection, int> allowances)
     {
         var whole = new List<WaveguideConnection>();
         foreach (var candidate in candidates)
@@ -133,10 +138,12 @@ public sealed class PinPairRerouter
                 whole.Add(candidate);
                 continue;
             }
-            var merged = ChainDissolver.TryDissolveChain(candidate, manager, router, out var gone, out var undo);
+            var merged = ChainDissolver.TryDissolveChain(
+                candidate, manager, router, out var gone, out var undo, ChainCrossingMaintenance.IsTemporaryCrossing);
             undos.Add(undo);
             if (merged == null) return null;
             dissolved.AddRange(gone);
+            allowances[merged] = gone.Count;
             whole.Add(merged);
         }
         return whole.Where(manager.Connections.Contains).Distinct().ToList();
@@ -173,13 +180,25 @@ public sealed class PinPairRerouter
         return dx * dx + dy * dy <= NeighbourPinRadiusMicrometers * NeighbourPinRadiusMicrometers;
     }
 
+    /// <summary>
+    /// Connects one wire through the chain inserter. A connection that needs more than
+    /// <paramref name="maxCrossings"/> crossings is undone and counts as failed: a lifted
+    /// neighbour may come back with one crossing more than it had (where it now crosses the
+    /// freed wire), never with more — otherwise swapping pin order would push the blocked
+    /// wire's crossings onto a wire that was fine.
+    /// </summary>
     private bool TryConnect(
-        WaveguideConnection wire, WaveguideConnectionManager manager, WaveguideRouter router,
+        WaveguideConnection wire, int maxCrossings, WaveguideConnectionManager manager, WaveguideRouter router,
         Func<Component?> crossingFactory, CrossingRouteSettings settings, CancellationToken cancellationToken,
         List<Action> undos, List<Component> placed)
     {
         var crossings = _inserter.TryInsert(wire, manager, router, crossingFactory, settings, cancellationToken);
         if (crossings == null || _inserter.LastUndo == null) return false;
+        if (crossings.Count > maxCrossings)
+        {
+            _inserter.LastUndo();
+            return false;
+        }
         undos.Add(_inserter.LastUndo);
         placed.AddRange(crossings);
         return true;

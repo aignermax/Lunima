@@ -3,6 +3,7 @@ using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.Services;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Components.GroupPins;
 using CAP_Core.Routing;
 
 namespace CAP.Avalonia.Commands;
@@ -205,25 +206,23 @@ public class CreateGroupCommand : IUndoableCommand
             occupiedPins.Add(conn.EndPin);
         }
 
-        // Expose all unoccupied pins as external pins
-        foreach (var comp in _components)
+        // Expose all unoccupied pins as external pins, named by where they point
+        // (IN1/IN2… west, OUT1… east, see GroupPinNamer) so a gate's interface reads
+        // like one. Only new groups get these names; saved files keep theirs.
+        var exposedPins = _components
+            .SelectMany(comp => comp.PhysicalPins)
+            .Where(pin => !occupiedPins.Contains(pin))
+            .Select(pin => CreateExternalPin(pin, _createdGroup))
+            .ToList();
+        var pinNames = new GroupPinNamer().AssignNames(exposedPins
+            .Select(groupPin => new GroupPinCandidate(
+                groupPin.RelativeX, groupPin.RelativeY, groupPin.AngleDegrees,
+                groupPin.InternalPin.MatterType == MatterType.Electricity))
+            .ToList());
+        for (var i = 0; i < exposedPins.Count; i++)
         {
-            foreach (var pin in comp.PhysicalPins)
-            {
-                if (!occupiedPins.Contains(pin))
-                {
-                    var (pinX, pinY) = pin.GetAbsolutePosition();
-                    var groupPin = new GroupPin
-                    {
-                        Name = $"{pin.ParentComponent.Identifier}_{pin.Name}",
-                        InternalPin = pin,
-                        RelativeX = pinX - _createdGroup.PhysicalX,
-                        RelativeY = pinY - _createdGroup.PhysicalY,
-                        AngleDegrees = pin.GetAbsoluteAngle()
-                    };
-                    _createdGroup.AddExternalPin(groupPin);
-                }
-            }
+            exposedPins[i].Name = pinNames[i];
+            _createdGroup.AddExternalPin(exposedPins[i]);
         }
 
         try
@@ -344,4 +343,17 @@ public class CreateGroupCommand : IUndoableCommand
         _canvas.InvalidateSimulation();
     }
 
+    /// <summary>Creates the (still unnamed) external group pin exposing <paramref name="pin"/>.</summary>
+    private static GroupPin CreateExternalPin(PhysicalPin pin, ComponentGroup group)
+    {
+        var (pinX, pinY) = pin.GetAbsolutePosition();
+        return new GroupPin
+        {
+            Name = pin.Name,
+            InternalPin = pin,
+            RelativeX = pinX - group.PhysicalX,
+            RelativeY = pinY - group.PhysicalY,
+            AngleDegrees = pin.GetAbsoluteAngle()
+        };
+    }
 }

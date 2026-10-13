@@ -1,5 +1,6 @@
 using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP.Avalonia.Commands;
 
@@ -30,7 +31,7 @@ public class DeleteConnectionCommand : IUndoableCommand
         if (_target.IsLocked)
             return;
 
-        var crossing = _canvas.ConnectionManager.CrossingInsertion;
+        var crossing = _canvas.ConnectionManager.CrossingService;
         var targetVm = _canvas.Connections.FirstOrDefault(c => c.Connection == _target);
 
         // Only act if the connection still exists somewhere (canvas VM, manager,
@@ -40,6 +41,15 @@ public class DeleteConnectionCommand : IUndoableCommand
             || crossing?.IsCrossingConnection(_target) == true;
         if (!exists)
             return;
+
+        // A piece of a routing-placed crossing chain stands for its whole wire: the chain
+        // goes first, so no crossing is left behind and undo restores a whole wire.
+        if (ChainCrossingMaintenance.DocksOnTemporaryCrossing(_target)
+            && _canvas.DissolveInsertedCrossingChainOf(_target) is { } wire)
+        {
+            _target = wire;
+            targetVm = _canvas.Connections.FirstOrDefault(c => c.Connection == _target);
+        }
 
         // Undo must restore the pre-split original, not a crossing sub-connection.
         var restoreTarget = crossing?.ResolveToOriginal(_target) ?? _target;

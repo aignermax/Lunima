@@ -120,6 +120,12 @@ public partial class RightPanelViewModel : ObservableObject
     public TruthTableViewModel TruthTable { get; }
 
     /// <summary>
+    /// ViewModel for the guided "Make gate" steps that replace the plain truth table
+    /// while active (pin roles → simulate → threshold → save as gate).
+    /// </summary>
+    public ViewModels.Analysis.LogicAnalysis.MakeGate.MakeGateViewModel MakeGate { get; } = new();
+
+    /// <summary>
     /// ViewModel for the Logic panel (toggle network inputs, live gate outputs of the
     /// loaded design).
     /// </summary>
