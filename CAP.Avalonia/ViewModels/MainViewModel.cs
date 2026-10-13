@@ -72,6 +72,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _activeProcessLabel = LocalizationService.Instance.Translate("Process.NoneSelected");
 
+    /// <summary>Tooltip of the process chip; in a die assembly it lists every die with its process.</summary>
+    [ObservableProperty]
+    private string _activeProcessTip = LocalizationService.Instance.Translate("StatusBar.ActiveProcessTip");
+
     /// <summary>
     /// True when the active process is Playground (mixing PDKs allowed, chip not
     /// manufacturable). Drives the warning styling on the toolbar indicator chip.
@@ -468,7 +472,7 @@ public partial class MainViewModel : ObservableObject
         // Shared by the placement guards below AND the metal-spec providers, so placement and
         // export agree on membership.
         Func<IReadOnlyCollection<string>?> getLiveMemberPdkNames = () =>
-            FileOperations.ActiveProcess is { } activeProcess ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess) : null;
+            CanvasScopeProcess is { } activeProcess ? LeftPanel.ResolveLiveMemberPdkNames(activeProcess) : null;
 
         // Electrical metal routing spec (#682): trace width / layers / crossing policy come
         // from the active process's metal cross-section; both exporters share one provider.
@@ -476,7 +480,7 @@ public partial class MainViewModel : ObservableObject
         // xsection / bridge policy reaches the export (review Finding 0).
         Func<CAP_Core.Routing.MetalRouting.MetalRoutingSpec> metalSpecProvider = () =>
             CAP_DataAccess.Components.ComponentDraftMapper.MetalRoutingSpecFactory.FromActiveProcess(
-                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
+                CanvasScopeProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
         FileOperations.MetalRoutingSpecProvider = metalSpecProvider;
         GdsFactoryExport.MetalRoutingSpecProvider = metalSpecProvider;
         // Minimum waveguide bend radius (#574): an in-canvas bend-handle drag (and its undo/redo
@@ -485,7 +489,7 @@ public partial class MainViewModel : ObservableObject
         // minimum when no process is resolvable (playground / no declared optical minimum).
         Func<double> resolveMinBendRadiusMicrometers = () =>
             CAP_DataAccess.Components.ComponentDraftMapper.WaveguideBendRadiusResolver.Resolve(
-                FileOperations.ActiveProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
+                CanvasScopeProcess, LeftPanel.GetLoadedPdkDrafts(), getLiveMemberPdkNames());
         CanvasInteraction.GetMinBendRadiusMicrometers = resolveMinBendRadiusMicrometers;
         // The same process minimum floors the automatic routing and the styled curves:
         // the orchestrator refreshes the router before every routing pass, so AUTO cannot
@@ -628,7 +632,7 @@ public partial class MainViewModel : ObservableObject
 
         // Monte-Carlo fabrication variance: the sigma inputs pre-fill from the
         // tolerances declared by the active PDK process.
-        BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider = () => FileOperations.ActiveProcess;
+        BottomPanel.Analysis.MonteCarlo.ActiveProcessProvider = () => ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess;
         BottomPanel.Analysis.MonteCarlo.RefreshTolerancesFromProcess();
         FileOperations.PropertyChanged += (s, e) =>
         {
@@ -651,7 +655,7 @@ public partial class MainViewModel : ObservableObject
         ModeProbe = modeProbe;
         if (ModeProbe != null)
         {
-            ModeProbe.GetActiveProcessFingerprint = () => FileOperations.ActiveProcess?.Fingerprint;
+            ModeProbe.GetActiveProcessFingerprint = () => (ScopeDie?.ProcessBinding ?? FileOperations.ActiveProcess)?.Fingerprint;
             ModeProbe.GetSimulationWavelengthNm = () =>
                 Canvas.Components.FirstOrDefault(c => c.IsLightSource)?.LaserConfig?.WavelengthNm;
             CanvasInteraction.ProbeRequested = (target, canvasX, canvasY) =>
@@ -993,6 +997,9 @@ public partial class MainViewModel : ObservableObject
     {
         var loc = LocalizationService.Instance;
         IsPlayground = p?.IsPlayground == true;
+        ActiveProcessTip = loc.Translate("StatusBar.ActiveProcessTip");
+        if (TryDescribeDieProcesses())
+            return;
         ActiveProcessLabel = p == null ? loc.Translate("Process.NoneSelected")
             : p.IsPlayground ? loc.Translate("Process.PlaygroundBadge")
             : string.Format(CultureInfo.InvariantCulture, loc.Translate("Process.Prefix"), p.DisplayName);
@@ -1470,7 +1477,10 @@ public partial class MainViewModel : ObservableObject
             // trash-deleted while its placed instances were kept, as PdkDelete_Click promises) gets
             // flagged — with a "not loaded" wording instead of a process-mismatch message that would
             // reference a process that doesn't exist (PR #739 review, both directions).
-            var processLockActive = FileOperations.ActiveProcess is { IsPlayground: false };
+            // The design-level process governs single-die designs only; inside a die its own
+            // process does, and at an assembly's root each die checks its parts itself.
+            var scopeProcess = CanvasScopeProcess;
+            var processLockActive = scopeProcess is { IsPlayground: false };
             var compatiblePdkNames = LeftPanel.PdkManager.GetProcessCompatiblePdkNames();
 
             // DRC-lite per connection (issue #936): each connection's width and spacing
@@ -1500,7 +1510,7 @@ public partial class MainViewModel : ObservableObject
             IReadOnlyList<CAP_Core.Analysis.WaveguideMinWidthRule>? minWaveguideWidthRules = null;
             if (processLockActive)
             {
-                var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(FileOperations.ActiveProcess!)
+                var memberProcess = LeftPanel.ResolveLiveMemberPdkNames(scopeProcess!)
                     .Select(name => drcDrafts.FirstOrDefault(
                         d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase))?.Process)
                     .FirstOrDefault(p => p is not null);

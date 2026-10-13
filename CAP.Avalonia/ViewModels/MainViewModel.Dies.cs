@@ -25,6 +25,44 @@ public partial class MainViewModel
     /// <summary>The Chiplets panel's New die flyout.</summary>
     public NewDieViewModel NewDie { get; private set; } = null!;
 
+    /// <summary>
+    /// The process that bounds the canvas as a whole (routing floor, metal spec, canvas-wide
+    /// design-check limits): the open die's process inside a die, none at the root of a die
+    /// assembly (each die answers for its own parts), the design-level process otherwise.
+    /// </summary>
+    public ActiveProcessSelection? CanvasScopeProcess =>
+        Canvas.Dies.ActiveDie is { } die ? die.ProcessBinding
+        : Canvas.Dies.IsAssemblyRoot ? null
+        : FileOperations.ActiveProcess;
+
+    /// <summary>
+    /// Status-bar process chip for a die assembly: the open or selected die's process, else
+    /// the number of distinct processes with every die → process in the tooltip. False (and
+    /// nothing changed) for a single-die design.
+    /// </summary>
+    private bool TryDescribeDieProcesses()
+    {
+        var loc = Services.Localization.LocalizationService.Instance;
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        string ProcessName(ComponentGroup d) => d.ProcessBinding?.DisplayName ?? loc.Translate("Workspace.System.NoProcess");
+        if (ScopeDie is { } die)
+        {
+            ActiveProcessLabel = string.Format(culture, loc.Translate("Status.DieProcess"), die.GroupName, ProcessName(die));
+            IsPlayground = die.ProcessBinding is not { IsPlayground: false };
+            return true;
+        }
+        var dies = Canvas.Dies.RootDies;
+        if (dies.Count == 0)
+            return false;
+        var processes = dies.Select(ProcessName).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        ActiveProcessLabel = processes.Count == 1
+            ? string.Format(culture, loc.Translate("Process.Prefix"), processes[0])
+            : string.Format(culture, loc.Translate("Status.ProcessCount"), processes.Count);
+        ActiveProcessTip = string.Join(Environment.NewLine, dies.Select(d => $"{d.GroupName} → {ProcessName(d)}"));
+        IsPlayground = dies.Any(d => d.ProcessBinding is not { IsPlayground: false });
+        return true;
+    }
+
     /// <summary>The die the user currently works with: the open die, or the die selected on the assembly.</summary>
     public ComponentGroup? ScopeDie =>
         Canvas.Dies.ActiveDie
@@ -129,5 +167,6 @@ public partial class MainViewModel
             LeftPanel.ApplyDieScope(die.ProcessBinding, die.Die?.EnabledPdkNames);
         else if (hadScope)
             RefreshProcessIndicator();
+        UpdateActiveProcessLabel(FileOperations.ActiveProcess);
     }
 }

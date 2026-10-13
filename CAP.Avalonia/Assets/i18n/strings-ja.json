@@ -2023,5 +2023,8 @@
   "Examples.TwoDiesSoiSin.Description": "2 つのプロセス、1 つのリンク：SOI ダイが向かい合うエッジカプラを介して SiN ダイへ光を送ります。ギャップとモードサイズ不整合が損失を決めます。",
   "ConnectChipletsTour.NewDieTitle": "自分のダイを追加する",
   "ConnectChipletsTour.NewDieBody": "Chiplets パネルで「新しいダイ」を押し、プロセス（例：CornerStone SiN）とサイズを選びます。ダイが独自の枠と PDK を持って隣に現れます。端の近くにエッジカプラを置くと、ファセットを外向きにしてスナップします。",
-  "Dies.Context.NewDie": "隣に新しいダイ"
+  "Dies.Context.NewDie": "隣に新しいダイ",
+  "DesignChecks.PdkDieProcessMismatch": "'{0}' は '{1}' に属しますが、ダイ '{2}'（{3}）では有効ではありません。",
+  "Status.ProcessCount": "{0} 個のプロセス",
+  "Status.DieProcess": "ダイ '{0}': {1}"
 }

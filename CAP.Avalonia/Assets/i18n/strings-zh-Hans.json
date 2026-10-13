@@ -2023,5 +2023,8 @@
   "Examples.TwoDiesSoiSin.Description": "两种工艺，一条连接：SOI 裸片通过相对的端面耦合器为 SiN 裸片供光——间隙与模场失配决定损耗。",
   "ConnectChipletsTour.NewDieTitle": "添加你自己的裸片",
   "ConnectChipletsTour.NewDieBody": "在 Chiplets 面板中按“新建裸片”，选择工艺（如 CornerStone SiN）和尺寸——裸片会带着自己的边框和 PDK 出现在旁边。在边缘附近放下端面耦合器：它会吸附上去，端面朝外。",
-  "Dies.Context.NewDie": "在旁边新建裸片"
+  "Dies.Context.NewDie": "在旁边新建裸片",
+  "DesignChecks.PdkDieProcessMismatch": "“{0}”属于“{1}”，该 PDK 未在裸片“{2}”（{3}）上启用。",
+  "Status.ProcessCount": "{0} 种工艺",
+  "Status.DieProcess": "裸片“{0}”：{1}"
 }

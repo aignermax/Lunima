@@ -2023,5 +2023,8 @@
   "Examples.TwoDiesSoiSin.Description": "Two processes, one link: an SOI die feeds a SiN die through facing edge couplers — gap and spot-size mismatch set the loss.",
   "ConnectChipletsTour.NewDieTitle": "Add a die of your own",
   "ConnectChipletsTour.NewDieBody": "In the Chiplets panel press 'New die', pick a process (e.g. CornerStone SiN) and a size — the die appears next to the others with its own frame and PDKs. Drop an Edge Coupler near its edge: it snaps on, facet facing out.",
-  "Dies.Context.NewDie": "New die next to the others"
+  "Dies.Context.NewDie": "New die next to the others",
+  "DesignChecks.PdkDieProcessMismatch": "'{0}' belongs to '{1}', which is not enabled on die '{2}' ({3}).",
+  "Status.ProcessCount": "{0} processes",
+  "Status.DieProcess": "Die '{0}': {1}"
 }

@@ -385,7 +385,7 @@
                         Classes="chip processChip" MinWidth="170" Margin="4,0"
                         Classes.playground="{Binding IsPlayground}"
                         Classes.none="{Binding FileOperations.ActiveProcess, Converter={x:Static ObjectConverters.IsNull}}"
-                        ToolTip.Tip="{loc:Localize StatusBar.ActiveProcessTip}">
+                        ToolTip.Tip="{Binding ActiveProcessTip}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <Ellipse Classes="processDot" Width="6" Height="6" VerticalAlignment="Center"/>
                         <TextBlock Classes="statusText" Text="{Binding ActiveProcessLabel}"
