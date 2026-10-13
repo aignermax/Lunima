@@ -249,10 +249,12 @@ public partial class CrossingInsertionService
             if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
                 return;
             if (!blocked.IsBlockedFallback || !manager.Connections.Contains(blocked)) continue;
+            var before = Snapshot(manager);
             var resolution = _pinPairRerouter.TryResolve(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
             if (resolution == null) continue;
             if (!manager.Connections.Contains(blocked))
                 router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
+            Report(manager, before, _pinPairRerouter.LastUndo, resolution.Placed, resolution.Dissolved);
             NotifyRemoved(resolution.Dissolved);
             foreach (var crossing in resolution.Placed)
                 ComponentAdded?.Invoke(crossing);
@@ -269,9 +271,11 @@ public partial class CrossingInsertionService
         {
             if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
                 return false;
+            var before = Snapshot(manager);
             var placed = _chainInserter.TryInsert(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
             if (placed == null) continue;
             connectedAny = true;
+            Report(manager, before, _chainInserter.LastUndo, placed, Array.Empty<Component>());
             // A chain replaced the wire by its pieces; a crossing-free route kept it.
             if (!manager.Connections.Contains(blocked))
                 router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
@@ -428,6 +432,8 @@ public partial class CrossingInsertionService
         }
 
         _registry.Add(record);
+        ChangeRecorded?.Invoke(new CrossingChange(new[] { crossing }, Array.Empty<Component>(),
+            record.AllSubConnections.ToList(), UndoDetourCrossing(record, manager, router)));
 
         // Notify AFTER the sub-connections replaced the originals, so hosts
         // (e.g. the canvas binder) see a consistent connection list.

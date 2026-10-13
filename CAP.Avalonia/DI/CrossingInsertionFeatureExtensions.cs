@@ -28,6 +28,8 @@ internal static class CrossingInsertionFeatureExtensions
             var binder = new CrossingInsertionCanvasBinder(
                 sp.GetRequiredService<DesignCanvasViewModel>(),
                 () => CreateCrossingInstance(sp));
+            // Undoing an edit also reverts what its re-route did to router-placed crossings.
+            binder.UndoJournal.Attach(sp.GetRequiredService<Commands.CommandManager>());
 
             // Restore the user's last choice, then persist any further toggle (Settings →
             // Routing → Crossings) via the same PropertyChanged convention used for the

@@ -21,6 +21,19 @@ public class CommandManager : INotifyPropertyChanged
     public event EventHandler? StateChanged;
 
     /// <summary>
+    /// Raised before a command runs (execute or redo), with the history entry it belongs to —
+    /// the earlier command it merges into, if any. Side effects that follow (e.g. what the
+    /// re-route after the edit changes) are attributed to that entry.
+    /// </summary>
+    public event Action<IUndoableCommand>? Executing;
+
+    /// <summary>Raised before a command is undone, so its attributed side effects can be reverted first.</summary>
+    public event Action<IUndoableCommand>? Undoing;
+
+    /// <summary>Raised after the whole history was dropped.</summary>
+    public event Action? HistoryCleared;
+
+    /// <summary>
     /// Gets whether there are commands that can be undone.
     /// </summary>
     public bool CanUndo => _undoStack.Count > 0;
@@ -55,12 +68,18 @@ public class CommandManager : INotifyPropertyChanged
     /// </summary>
     public void ExecuteCommand(IUndoableCommand command)
     {
+        // Decided up front so side effects of the execution are attributed to the history
+        // entry that will own them.
+        var mergeTarget = _undoStack.Count > 0
+                          && _undoStack.Last!.Value is IMergeableCommand candidate
+                          && candidate.CanMergeWith(command)
+            ? candidate
+            : null;
+        Executing?.Invoke(mergeTarget ?? command);
         command.Execute();
 
         // Try to merge with the last command
-        if (_undoStack.Count > 0 &&
-            _undoStack.Last!.Value is IMergeableCommand lastMergeable &&
-            lastMergeable.CanMergeWith(command))
+        if (mergeTarget is { } lastMergeable)
         {
             lastMergeable.MergeWith(command);
         }
@@ -99,6 +118,7 @@ public class CommandManager : INotifyPropertyChanged
         var command = _undoStack.Last!.Value;
         _undoStack.RemoveLast();
 
+        Undoing?.Invoke(command);
         command.Undo();
         _redoStack.Push(command);
 
@@ -123,6 +143,7 @@ public class CommandManager : INotifyPropertyChanged
             return false;
 
         var command = _redoStack.Pop();
+        Executing?.Invoke(command);
         command.Execute();
         _undoStack.AddLast(command);
 
@@ -144,6 +165,7 @@ public class CommandManager : INotifyPropertyChanged
     {
         _undoStack.Clear();
         _redoStack.Clear();
+        HistoryCleared?.Invoke();
 
         NotifyPropertyChanged(nameof(CanUndo));
         NotifyPropertyChanged(nameof(CanRedo));

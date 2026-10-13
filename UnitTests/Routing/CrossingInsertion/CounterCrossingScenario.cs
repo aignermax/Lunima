@@ -40,8 +40,27 @@ internal sealed class CounterCrossingScenario
         {
             IsEnabled = adaptive,
         };
+        var commands = new CAP.Avalonia.Commands.CommandManager();
+        binder.UndoJournal.Attach(commands);
+        canvas.CommandManager = commands;
         return new CounterCrossingScenario(canvas, binder);
     }
+
+    /// <summary>The undo history the canvas and the crossing journal share.</summary>
+    public CAP.Avalonia.Commands.CommandManager Commands => Canvas.CommandManager!;
+
+    /// <summary>Moves <paramref name="group"/> through the undo history, like a drag on the canvas.</summary>
+    public async Task MoveWithCommandAsync(ComponentViewModel group)
+    {
+        Commands.ExecuteCommand(new CAP.Avalonia.Commands.MoveComponentCommand(
+            Canvas, group, group.X, group.Y, group.X, group.Y + MoveDistanceMicrometers));
+        await Canvas.RecalculateRoutesAsync();
+    }
+
+    /// <summary>What the undo tests compare: crossings, connections, blocked wires and components.</summary>
+    public (int Crossings, int Connections, int Blocked, HashSet<Component> Components) State() =>
+        (Crossings().Count, Manager.Connections.Count, BlockedCount(),
+         Canvas.Components.Select(vm => vm.Component).ToHashSet());
 
     public List<Component> Crossings() =>
         Canvas.Components.Select(vm => vm.Component).Where(CrossingComponentCatalog.IsCrossing).ToList();

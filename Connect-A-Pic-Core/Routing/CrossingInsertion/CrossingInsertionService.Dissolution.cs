@@ -15,7 +15,8 @@ public partial class CrossingInsertionService
     /// through a leftover crossing forever.
     /// </summary>
     public void DissolveStaleRecords(WaveguideConnectionManager manager, WaveguideRouter router) =>
-        _registry.DissolveStaleRecords(manager, router);
+        _registry.DissolveStaleRecords(manager, router, (record, undo, added) =>
+            ChangeRecorded?.Invoke(new CrossingChange(Array.Empty<Component>(), new[] { record.CrossingComponent }, added, undo)));
 
     /// <summary>
     /// Takes out every routing-placed crossing chain whose wire end moved, so the wire routes
@@ -38,7 +39,7 @@ public partial class CrossingInsertionService
         var recorded = RecordedCrossings();
         var removed = ChainCrossingMaintenance.DissolveStaleChains(
             manager, router, isStale, c => ChainCrossingMaintenance.IsTemporaryCrossing(c) && !recorded.Contains(c),
-            _dissolvedChains.Add);
+            chain => { _dissolvedChains.Add(chain); ReportDissolved(chain); });
         NotifyRemoved(removed);
     }
 
@@ -57,6 +58,7 @@ public partial class CrossingInsertionService
         {
             if (cancellationToken.IsCancellationRequested) break;
             if (!DissolvedChainRepair.TryRestore(chain, manager, router, cancellationToken)) continue;
+            ReportRestored(chain, manager, router);
             foreach (var crossing in chain.Crossings)
                 ComponentAdded?.Invoke(crossing);
         }
