@@ -3,6 +3,7 @@ using CAP.Avalonia.Commands;
 using CAP.Avalonia.Services;
 using CAP.Avalonia.Services.AgentBridge.Hosting;
 using CAP.Avalonia.Services.AgentBridge.Protocol;
+using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Tools;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
@@ -58,11 +59,15 @@ internal static class AgentBridgeFeatureExtensions
         {
             var preferences = sp.GetRequiredService<UserPreferencesService>();
             return new McpHttpEndpoint(
-                sp.GetRequiredService<McpJsonRpcDispatcher>(), preferences.GetOrCreateAgentBridgeToken);
+                sp.GetRequiredService<McpJsonRpcDispatcher>(), preferences.GetRequiredAgentBridgeToken);
         });
         services.AddSingleton<McpHttpServer>();
         services.AddSingleton<AgentBridgeHost>();
+        services.AddSingleton(sp => new ClaudeCodeRegistrar(sp.GetRequiredService<CAP_Core.Export.ProcessLaunchFactory>()));
+        services.AddSingleton<ClaudeCodeConnector>();
         services.AddTransient<AgentBridgeSettingsViewModel>();
+        services.AddSingleton(sp => new ClaudeCodeConnectPromptViewModel(
+            sp.GetRequiredService<UserPreferencesService>(), sp.GetRequiredService<ClaudeCodeConnector>(), AppVersion()));
 
         return services;
     }

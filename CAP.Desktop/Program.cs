@@ -1,13 +1,14 @@
 using System.Globalization;
 using Avalonia;
 using CAP.Avalonia;
+using CAP.Avalonia.Services.AgentBridge.Registration;
 
 namespace CAP.Desktop;
 
 class Program
 {
     [STAThread]
-    public static void Main(string[] args)
+    public static int Main(string[] args)
     {
         // Fix de-DE (and any locale that uses ',' as decimal separator) slider-serialization bug:
         // force numeric parse/format on all threads to use '.' so exported values round-trip
@@ -17,7 +18,11 @@ class Program
         // path needs to be locale-independent.
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 
-        BuildAvaloniaApp()
+        // Installer hooks (MSI "Connect Claude Code" feature): run headless and exit.
+        if (AgentBridgeCommandLine.IsRegistrationCommand(args))
+            return AgentBridgeCommandLine.RunAsync(args).GetAwaiter().GetResult();
+
+        return BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
     }
 

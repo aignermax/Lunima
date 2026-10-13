@@ -154,6 +154,12 @@ public partial class MainViewModel : ObservableObject
     public ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel FirstGateTour { get; }
 
     /// <summary>
+    /// The dismissible "Connect Claude Code" info bar (null in headless contexts without the
+    /// agent bridge). Checked once after startup, next to the update check.
+    /// </summary>
+    public ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? ClaudeConnectPrompt { get; }
+
+    /// <summary>
     /// Step engine for the "Run a program on your chip" tour (issue #1267).
     /// Started from the Home screen's third tour card; observes the Logic panel
     /// and the ISA playground of the 4-bit adder example it opens.
@@ -359,7 +365,8 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null,
+        ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -374,6 +381,7 @@ public partial class MainViewModel : ObservableObject
         ChipSize = chipSize;
         _canvas.SimulationRequested = async () => await ExecuteSimulation();
         Update = updateViewModel;
+        ClaudeConnectPrompt = claudeConnectPrompt;
 
         // Wire panel ViewModels (injected via DI)
         LeftPanel = leftPanel;
@@ -768,6 +776,8 @@ public partial class MainViewModel : ObservableObject
     {
         await Task.Delay(2000);
         await Update.CheckForUpdatesOnStartupAsync();
+        if (ClaudeConnectPrompt != null)
+            await ClaudeConnectPrompt.CheckOnStartupAsync();
     }
 
     private void WireCommandManager()

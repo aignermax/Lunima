@@ -144,4 +144,17 @@ public class UserPreferences
     /// first read, when a random token is generated and persisted.
     /// </summary>
     public string AgentBridgeToken { get; set; } = "";
+
+    /// <summary>
+    /// Whether the agent bridge requires <see cref="AgentBridgeToken"/> as a bearer token.
+    /// Off by default: the server only binds 127.0.0.1 and rejects non-loopback Host/Origin
+    /// headers, and a same-user process could read the token from this file anyway.
+    /// </summary>
+    public bool AgentBridgeRequireToken { get; set; }
+
+    /// <summary>
+    /// App version for which the user answered "Not now" to the "Connect Claude Code"
+    /// prompt; the prompt stays hidden until the next version. Null when never dismissed.
+    /// </summary>
+    public string? ClaudeCodePromptDismissedVersion { get; set; }
 }

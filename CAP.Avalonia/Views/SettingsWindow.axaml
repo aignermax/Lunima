@@ -296,6 +296,20 @@
                             </Border>
                             <Border Classes="setting">
                                 <Grid ColumnDefinitions="*,24,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.ConnectClaude}"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Classes="caption" Text="{loc:Localize Settings.AgentBridge.ConnectClaudeHint}"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Classes="primary" VerticalAlignment="Top"
+                                            Content="{loc:Localize Settings.AgentBridge.ConnectClaudeButton}"
+                                            Command="{Binding ConnectClaudeCodeCommand}"
+                                            IsEnabled="{Binding IsConnecting, Converter={x:Static BoolConverters.Not}}"/>
+                                </Grid>
+                            </Border>
+                            <Border Classes="setting">
+                                <Grid ColumnDefinitions="*,24,Auto">
                                     <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.Port}"
                                                VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
@@ -308,8 +322,17 @@
                             </Border>
                             <Border Classes="setting">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.Token}"/>
-                                    <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                                    <Grid ColumnDefinitions="*,24,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Classes="strong" Text="{loc:Localize Settings.AgentBridge.RequireToken}"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Classes="caption" Text="{loc:Localize Settings.AgentBridge.RequireTokenHint}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" VerticalAlignment="Top"
+                                                      IsChecked="{Binding RequireToken}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,8,Auto,8,Auto" IsVisible="{Binding RequireToken}">
                                         <TextBox Classes="mono" Text="{Binding Token}" IsReadOnly="True" PasswordChar="•"/>
                                         <Button Grid.Column="2" Content="{loc:Localize Settings.AgentBridge.Copy}"
                                                 Command="{Binding CopyTokenCommand}"/>
@@ -317,7 +340,7 @@
                                                 Command="{Binding RegenerateTokenCommand}"/>
                                     </Grid>
                                     <TextBlock Classes="caption" Text="{loc:Localize Settings.AgentBridge.SecurityNote}"
-                                               TextWrapping="Wrap"/>
+                                               TextWrapping="Wrap" IsVisible="{Binding RequireToken}"/>
                                 </StackPanel>
                             </Border>
                             <Border Classes="setting">
@@ -333,7 +356,8 @@
                                 </StackPanel>
                             </Border>
 
-                            <TextBlock Classes="caption success" Text="{Binding FeedbackText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                            <TextBlock Classes="caption" Text="{Binding FeedbackText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Classes.success="{Binding !IsFeedbackError}" Classes.danger="{Binding IsFeedbackError}"
                                        IsVisible="{Binding FeedbackText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         </StackPanel>
                     </DataTemplate>

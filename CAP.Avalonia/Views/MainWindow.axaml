@@ -919,6 +919,35 @@
                 </Grid>
             </Border>
 
+            <!-- "Connect Claude Code" offer: Claude Code installed, Lunima not registered yet -->
+            <Border DockPanel.Dock="Top" Classes="banner"
+                    IsVisible="{Binding ClaudeConnectPrompt.IsVisible, FallbackValue=False}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <controls:Icon Grid.Column="0" Data="{StaticResource Icon.Terminal}"
+                                   Foreground="{DynamicResource Brush.Accent}"
+                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="strong" Text="{loc:Localize AgentBridge.Prompt.Title}"/>
+                        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize AgentBridge.Prompt.Body}"
+                                   IsVisible="{Binding ClaudeConnectPrompt.ResultText, Converter={x:Static StringConverters.IsNullOrEmpty}, FallbackValue=True}"/>
+                        <SelectableTextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding ClaudeConnectPrompt.ResultText}"
+                                             IsVisible="{Binding ClaudeConnectPrompt.ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Classes="ghost" Content="{loc:Localize AgentBridge.Prompt.NotNow}"
+                                Command="{Binding ClaudeConnectPrompt.NotNowCommand}"
+                                IsVisible="{Binding !ClaudeConnectPrompt.IsDone, FallbackValue=True}"/>
+                        <Button Classes="primary" Content="{loc:Localize AgentBridge.Prompt.Connect}"
+                                Command="{Binding ClaudeConnectPrompt.ConnectCommand}"
+                                IsEnabled="{Binding !ClaudeConnectPrompt.IsConnecting, FallbackValue=True}"
+                                IsVisible="{Binding !ClaudeConnectPrompt.IsDone, FallbackValue=True}"/>
+                        <Button Content="{loc:Localize AgentBridge.Prompt.Close}"
+                                Command="{Binding ClaudeConnectPrompt.CloseCommand}"
+                                IsVisible="{Binding ClaudeConnectPrompt.IsDone, FallbackValue=False}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <!-- Group edit mode banner -->
             <Border DockPanel.Dock="Top" Classes="banner warning"
                     IsVisible="{Binding Canvas.IsInGroupEditMode}">

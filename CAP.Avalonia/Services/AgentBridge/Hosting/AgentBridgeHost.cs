@@ -37,9 +37,30 @@ public sealed class AgentBridgeHost
     public static string EndpointUrl(int port) =>
         string.Create(CultureInfo.InvariantCulture, $"http://127.0.0.1:{port}{McpHttpEndpoint.EndpointPath}");
 
-    /// <summary>The <c>claude mcp add</c> command that connects Claude Code to the bridge.</summary>
-    public static string ClaudeCodeConnectCommand(int port, string token) =>
-        $"claude mcp add --transport http lunima {EndpointUrl(port)} --header \"Authorization: Bearer {token}\"";
+    /// <summary>Name under which Claude Code knows the bridge (<c>claude mcp add … lunima …</c>).</summary>
+    public const string McpServerName = "lunima";
+
+    /// <summary>
+    /// Arguments of <c>claude mcp add</c> that register the bridge for the current user. The
+    /// <c>Authorization</c> header is only added when a token is required (<paramref name="token"/> not null).
+    /// </summary>
+    public static IReadOnlyList<string> ClaudeCodeAddArguments(int port, string? token)
+    {
+        var arguments = new List<string>
+        {
+            "mcp", "add", "--scope", "user", "--transport", "http", McpServerName, EndpointUrl(port),
+        };
+        if (!string.IsNullOrEmpty(token))
+            arguments.AddRange(new[] { "--header", $"Authorization: Bearer {token}" });
+        return arguments;
+    }
+
+    /// <summary>The copy-paste <c>claude mcp add</c> command that connects Claude Code to the bridge.</summary>
+    public static string ClaudeCodeConnectCommand(int port, string? token) =>
+        "claude " + string.Join(" ", ClaudeCodeAddArguments(port, token).Select(QuoteIfNeeded));
+
+    private static string QuoteIfNeeded(string argument) =>
+        argument.Contains(' ') ? $"\"{argument}\"" : argument;
 
     /// <summary>
     /// Brings the server in line with the persisted settings: starts it when enabled,
@@ -71,7 +92,6 @@ public sealed class AgentBridgeHost
     {
         try
         {
-            _preferences.GetOrCreateAgentBridgeToken();
             _server.Start(port);
             LastError = null;
         }
