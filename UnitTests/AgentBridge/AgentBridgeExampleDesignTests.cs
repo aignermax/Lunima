@@ -52,6 +52,8 @@ public class AgentBridgeExampleDesignTests
         var expectedBlocked = session.Canvas.Connections.Count(c => c.Connection.IsBlockedFallback);
         summary.GetProperty("blocked_count").GetInt32().ShouldBe(expectedBlocked);
         blocked.GetProperty("count").GetInt32().ShouldBe(expectedBlocked);
+        // The example ships chain crossings, which carry no crossing record.
+        summary.GetProperty("crossing_piece_count").GetInt32().ShouldBeGreaterThan(0);
         foreach (var connection in blocked.GetProperty("connections").EnumerateArray())
         {
             connection.GetProperty("blocked").GetBoolean().ShouldBeTrue();
