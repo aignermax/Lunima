@@ -44,7 +44,6 @@ public class PanelScreenshotTests
             Save(dir, "monte-carlo", new MonteCarloPanel { DataContext = vm }, PanelWidth);
             Save(dir, "logic", new LogicPanel { DataContext = vm }, PanelWidth);
             Save(dir, "design-checks", new DesignChecksPanel { DataContext = vm }, PanelWidth);
-            Save(dir, "netlist", new NetlistPanel { DataContext = vm }, PanelWidth);
             Save(dir, "parameter-sweep", new ParameterSweepPanel { DataContext = vm }, PanelWidth);
             Save(dir, "truth-table", new TruthTablePanel { DataContext = vm }, SidebarWidth);
             Save(dir, "routing-diagnostics", new RoutingDiagnosticsPanel { DataContext = vm }, SidebarWidth);

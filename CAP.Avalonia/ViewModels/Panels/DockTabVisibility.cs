@@ -16,7 +16,6 @@ public partial class DockTabVisibility : ObservableObject
     [ObservableProperty] private bool _optimization = true;
     [ObservableProperty] private bool _sweep = true;
     [ObservableProperty] private bool _checks = true;
-    [ObservableProperty] private bool _netlist = true;
     [ObservableProperty] private bool _logic = true;
 
     /// <summary>Sets every flag from <paramref name="isShown"/>.</summary>
@@ -29,7 +28,6 @@ public partial class DockTabVisibility : ObservableObject
         Optimization = isShown(AnalysisDockTab.Optimization);
         Sweep = isShown(AnalysisDockTab.Sweep);
         Checks = isShown(AnalysisDockTab.Checks);
-        Netlist = isShown(AnalysisDockTab.Netlist);
         Logic = isShown(AnalysisDockTab.Logic);
     }
 
@@ -43,7 +41,6 @@ public partial class DockTabVisibility : ObservableObject
         AnalysisDockTab.Optimization => Optimization,
         AnalysisDockTab.Sweep => Sweep,
         AnalysisDockTab.Checks => Checks,
-        AnalysisDockTab.Netlist => Netlist,
         AnalysisDockTab.Logic => Logic,
         _ => false,
     };

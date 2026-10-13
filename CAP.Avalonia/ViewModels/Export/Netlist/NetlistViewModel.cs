@@ -8,9 +8,9 @@ using CommunityToolkit.Mvvm.Input;
 namespace CAP.Avalonia.ViewModels.Export.Netlist;
 
 /// <summary>
-/// ViewModel for the Netlist panel (issue #687): derives a gdsfactory YAML netlist
-/// from the current design, shows it read-only, and offers copy-to-clipboard and
-/// save-to-file. Persona Mirko's bridge into the gdsfactory/SAX ecosystem.
+/// Netlist export (issue #687): derives a gdsfactory YAML netlist
+/// from the current design for the toolbar Export menu ("Netlist (YAML)" file and
+/// "→ Clipboard"). Persona Mirko's bridge into the gdsfactory/SAX ecosystem.
 /// </summary>
 public partial class NetlistViewModel : ObservableObject
 {

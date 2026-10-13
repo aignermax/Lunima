@@ -110,7 +110,7 @@ public partial class RightPanelViewModel : ObservableObject
     public AiAssistantViewModel AiAssistant { get; }
 
     /// <summary>
-    /// ViewModel for the Netlist panel (gdsfactory YAML view/export, issue #687).
+    /// Netlist export (gdsfactory YAML, issue #687) behind the toolbar Export menu entries.
     /// </summary>
     public Export.Netlist.NetlistViewModel Netlist { get; }
 

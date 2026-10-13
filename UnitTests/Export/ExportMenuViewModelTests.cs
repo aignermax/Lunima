@@ -1,3 +1,5 @@
+using CAP.Avalonia.Services;
+using CAP.Avalonia.Services.Localization;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Export.Formats;
 using CommunityToolkit.Mvvm.Input;
@@ -234,7 +236,32 @@ public class ExportMenuViewModelTests
 
         copied.ShouldNotBeNull();
         copied.ShouldContain("instances:");
-        vm.StatusText.ShouldBe("Netlist copied to clipboard");
+        vm.StatusText.ShouldBe(LocalizationService.Instance.Translate("Netlist.Copied"));
+    }
+
+    [Fact]
+    public async Task NetlistFileEntry_SavesTheYaml_AndReportsInTheStatusBar()
+    {
+        var vm = MainViewModelTestHelper.CreateMainViewModel();
+        vm.Canvas.AddComponent(TestComponentFactory.CreateStraightWaveGuideWithPhysicalPins(), "Waveguide");
+        var file = Path.Combine(Path.GetTempPath(), $"netlist_{Guid.NewGuid():N}.yml");
+        var dialogs = new Mock<IFileDialogService>();
+        dialogs.Setup(d => d.ShowSaveFileDialogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(file);
+        vm.RightPanel.Netlist.FileDialogService = dialogs.Object;
+        try
+        {
+            var entry = vm.ExportMenu.Formats.OfType<NetlistExportFormat>().Single();
+            await entry.ExportCommand.ExecuteAsync(null);
+
+            File.ReadAllText(file).ShouldContain("instances:");
+            vm.StatusText.ShouldBe(string.Format(
+                LocalizationService.Instance.Translate("Netlist.Exported"), Path.GetFileName(file)));
+        }
+        finally
+        {
+            File.Delete(file);
+        }
     }
 }
 

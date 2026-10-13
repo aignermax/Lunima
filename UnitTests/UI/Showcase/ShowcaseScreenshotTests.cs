@@ -94,27 +94,19 @@ public class ShowcaseScreenshotTests
         });
     }
 
-    /// <summary>The netlist view: the real right-panel Netlist section next to the generated
-    /// gdsfactory YAML — instances on the left, connections/ports on the right.</summary>
+    /// <summary>The generated gdsfactory YAML netlist (Export → Netlist) — instances on the
+    /// left, connections/ports on the right.</summary>
     private static Window BuildNetlistWindow(MainViewModel vm)
     {
         var yaml = vm.RightPanel.Netlist.NetlistYaml;
         int connectionsAt = yaml.IndexOf("connections:", StringComparison.Ordinal);
-        var panel = new NetlistPanel
-        {
-            DataContext = vm,
-            Margin = new global::Avalonia.Thickness(10, 0, 10, 10),
-            Width = 330,
-        };
-        var grid = new AvGrid { ColumnDefinitions = new ColumnDefinitions("350,*,*") };
-        grid.Children.Add(panel);
-        AvGrid.SetColumn(panel, 0);
+        var grid = new AvGrid { ColumnDefinitions = new ColumnDefinitions("*,*") };
         var instancesPane = YamlPane(yaml[..Math.Max(connectionsAt, 0)]);
         var connectionsPane = YamlPane(yaml[Math.Max(connectionsAt, 0)..]);
         grid.Children.Add(instancesPane);
         grid.Children.Add(connectionsPane);
-        AvGrid.SetColumn(instancesPane, 1);
-        AvGrid.SetColumn(connectionsPane, 2);
+        AvGrid.SetColumn(instancesPane, 0);
+        AvGrid.SetColumn(connectionsPane, 1);
 
         return new Window
         {

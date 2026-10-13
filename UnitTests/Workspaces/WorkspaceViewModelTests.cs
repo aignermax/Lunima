@@ -25,18 +25,18 @@ public class WorkspaceViewModelTests
         Enum.GetValues<AnalysisDockTab>().Where(dock.Tabs.IsShown);
 
     [Fact]
-    public void StartsInLayout_ShowingChecksAndNetlist()
+    public void StartsInLayout_ShowingChecks()
     {
         var dock = MakeDock();
         var vm = new WorkspaceViewModel(dock);
 
         vm.Current.ShouldBe(Workspace.Layout);
-        ShownTabs(dock).ShouldBe([AnalysisDockTab.Checks, AnalysisDockTab.Netlist], ignoreOrder: true);
+        ShownTabs(dock).ShouldBe([AnalysisDockTab.Checks]);
         dock.SelectedTabIndex.ShouldBe((int)AnalysisDockTab.Checks);
     }
 
     [Theory]
-    [InlineData(Workspace.Layout, new[] { AnalysisDockTab.Checks, AnalysisDockTab.Netlist })]
+    [InlineData(Workspace.Layout, new[] { AnalysisDockTab.Checks })]
     [InlineData(Workspace.Optics, new[]
     {
         AnalysisDockTab.Spectrum, AnalysisDockTab.MonteCarlo, AnalysisDockTab.Optimization,
@@ -45,7 +45,7 @@ public class WorkspaceViewModelTests
     [InlineData(Workspace.Logic, new[] { AnalysisDockTab.Logic })]
     [InlineData(Workspace.System, new[]
     {
-        AnalysisDockTab.Checks, AnalysisDockTab.Logic, AnalysisDockTab.Spectrum, AnalysisDockTab.Netlist,
+        AnalysisDockTab.Checks, AnalysisDockTab.Logic, AnalysisDockTab.Spectrum,
     })]
     public void Select_ShowsOnlyTheWorkspaceTabs(Workspace workspace, AnalysisDockTab[] expected)
     {
