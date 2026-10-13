@@ -127,7 +127,7 @@ public class LogicAcrossTwoChipletsExampleTests : IClassFixture<LogicAcrossTwoCh
     [Fact]
     public void DesignChecks_RunClean_OnTheShippedFile()
     {
-        var validation = new DesignValidationViewModel();
+        var validation = new DesignValidationViewModel { ShowUnconnectedPins = true };
         var groups = _fixture.Canvas.Components.Select(vm => vm.Component).OfType<ComponentGroup>().ToArray();
         validation.RunValidation(
             _fixture.Canvas.ConnectionManager.Connections,

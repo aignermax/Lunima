@@ -132,6 +132,18 @@ public enum DesignIssueType
 }
 
 /// <summary>
+/// Severity of a <see cref="DesignIssue"/>, lowest first.
+/// </summary>
+public enum DesignIssueSeverity
+{
+    /// <summary>Informational: often intentional (e.g. an open spare port); never a design error.</summary>
+    Hint,
+
+    /// <summary>A design problem the user should fix or consciously accept.</summary>
+    Problem
+}
+
+/// <summary>
 /// Represents a single design issue found during validation.
 /// Contains the affected connection and location for navigation.
 /// </summary>
@@ -175,6 +187,20 @@ public class DesignIssue
     /// Format arguments for <see cref="LocalizationKey"/>, in placeholder order.
     /// </summary>
     public IReadOnlyList<object>? LocalizationArgs { get; }
+
+    /// <summary>
+    /// How serious the finding is; derived from <see cref="Type"/>. Only
+    /// <see cref="DesignIssueSeverity.Hint"/> findings are informational — every other
+    /// finding counts as a design problem.
+    /// </summary>
+    public DesignIssueSeverity Severity => SeverityOf(Type);
+
+    /// <summary>
+    /// Severity of an issue type: an unconnected pin is an informational hint, since unused
+    /// coupler/MMI outputs and spare ports are routinely left open on purpose.
+    /// </summary>
+    public static DesignIssueSeverity SeverityOf(DesignIssueType type) =>
+        type == DesignIssueType.UnconnectedPin ? DesignIssueSeverity.Hint : DesignIssueSeverity.Problem;
 
     /// <summary>
     /// Creates a new design issue with an associated connection.

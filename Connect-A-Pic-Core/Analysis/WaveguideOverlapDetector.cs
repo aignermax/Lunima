@@ -96,7 +96,7 @@ public class WaveguideOverlapDetector
         {
             if (hierarchical.Frozen.Path?.Segments is { Count: > 0 } segs)
             {
-                var label = $"Group '{hierarchical.GroupIdentifierPath}' frozen path";
+                var label = $"Group '{hierarchical.GroupPath}' frozen path";
                 var (midX, midY) = GetSegmentsMid(segs);
                 paths.Add(new PathDescriptor(segs, label, null, midX, midY));
             }

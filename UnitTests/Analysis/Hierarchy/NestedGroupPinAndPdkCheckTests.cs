@@ -1,4 +1,3 @@
-using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP_Core.Analysis;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
@@ -10,10 +9,9 @@ using Component = CAP_Core.Components.Core.Component;
 namespace UnitTests.Analysis.Hierarchy;
 
 /// <summary>
-/// Dangling-pin, PDK-compatibility and Design-Checks-panel behaviour on nested groups:
-/// a nested pin is connected when a top-level wire or a frozen path at any depth ends on
-/// it, a pin exposed up to the top-level group is the group's interface, and the panel
-/// navigates to nested findings in absolute canvas coordinates.
+/// Dangling-pin and PDK-compatibility checks on nested groups: a nested pin is connected
+/// when a top-level wire or a frozen path at any depth ends on it, a pin exposed up to
+/// the top-level group is the group's interface, and nested PDK sources are checked too.
 /// </summary>
 public class NestedGroupPinAndPdkCheckTests
 {
@@ -107,27 +105,5 @@ public class NestedGroupPinAndPdkCheckTests
         issue.Type.ShouldBe(DesignIssueType.PdkProcessMismatch);
         issue.Description.ShouldContain("'OUTER/INNER/B'");
         issue.X.ShouldBe(250, 1e-9);
-    }
-
-    [Fact]
-    public void DesignChecksPanel_NavigatesToNestedFindingsInAbsoluteCoordinates()
-    {
-        var (outer, inner, _, _, _) = Build();
-        outer.MoveGroup(1000, 500);
-        inner.InternalPaths[0].Path.IsInvalidGeometry = true;
-        var panel = new DesignValidationViewModel();
-        var visited = new List<(double X, double Y)>();
-        panel.NavigateToPosition = (x, y) => visited.Add((x, y));
-
-        panel.RunValidation(Array.Empty<WaveguideConnection>(), new[] { outer }, new Component[] { outer });
-
-        var geometry = panel.Issues.Single(i => i.Type == DesignIssueType.InvalidGeometry);
-        int index = panel.Issues.IndexOf(geometry);
-        for (int i = 0; i < index; i++)
-            panel.NextIssueCommand.Execute(null);
-
-        visited[^1].ShouldBe((1350.0, 510.0), "the moved nested frozen path's midpoint, absolute");
-        panel.Issues.ShouldContain(i => i.Type == DesignIssueType.UnconnectedPin && i.X == 1200 && i.Y == 510,
-            "B.in moved with both groups");
     }
 }

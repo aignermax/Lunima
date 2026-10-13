@@ -36,6 +36,14 @@ internal static class NestedDesignBuilder
         var group = new ComponentGroup(name) { Identifier = name };
         foreach (var child in children)
             group.AddChild(child);
+
+        // Like the canvas' group command: the origin sits on the minimum child corner.
+        if (children.Length > 0)
+        {
+            group.PhysicalX = children.Min(c => c.PhysicalX + ((c as ComponentGroup)?.MinChildOffsetX ?? 0));
+            group.PhysicalY = children.Min(c => c.PhysicalY + ((c as ComponentGroup)?.MinChildOffsetY ?? 0));
+            group.UpdateGroupBounds();
+        }
         return group;
     }
 

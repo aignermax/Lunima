@@ -1,5 +1,7 @@
+using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Analysis;
 
@@ -25,44 +27,30 @@ public class FrozenBlockedPathChecker
     {
         ArgumentNullException.ThrowIfNull(groups);
 
-        var issues = new List<DesignIssue>();
-        foreach (var group in groups)
-        {
-            CheckGroup(group, groupIdentifierPath: null, issues);
-        }
-        return issues;
+        return DesignHierarchy.From(groups.Cast<Component>()).FrozenPaths
+            .Where(p => p.Frozen.Path?.IsBlockedFallback == true)
+            .Select(p => CreateIssue(p.Frozen, p.GroupPath))
+            .ToList();
     }
 
     /// <summary>
-    /// Checks one group's frozen paths and recurses into nested child groups,
-    /// accumulating the identifier path ("OUTER/INNER") for readable locations.
+    /// True when <paramref name="group"/> or any group nested in it holds a frozen path
+    /// the router could not route (blocked fallback) or left with invalid bend geometry —
+    /// the canvas marks such a group so the breakage is visible without entering it.
     /// </summary>
-    private static void CheckGroup(
-        ComponentGroup group,
-        string? groupIdentifierPath,
-        List<DesignIssue> issues)
+    public static bool ContainsBrokenPath(ComponentGroup group)
     {
-        var path = groupIdentifierPath is null
-            ? group.Identifier
-            : $"{groupIdentifierPath}/{group.Identifier}";
+        ArgumentNullException.ThrowIfNull(group);
 
-        foreach (var frozen in group.InternalPaths)
-        {
-            if (frozen.Path?.IsBlockedFallback != true)
-                continue;
-            issues.Add(CreateIssue(frozen, path));
-        }
-
-        foreach (var childGroup in group.ChildComponents.OfType<ComponentGroup>())
-        {
-            CheckGroup(childGroup, path, issues);
-        }
+        if (group.InternalPaths.Any(p => p.Path is { IsBlockedFallback: true } or { IsInvalidGeometry: true }))
+            return true;
+        return group.ChildComponents.OfType<ComponentGroup>().Any(ContainsBrokenPath);
     }
 
     /// <summary>
     /// Builds the issue for one blocked frozen path. The location is the midpoint of
     /// the first segment (frozen paths are stored in absolute coordinates); the
-    /// description names the group path and both endpoint pins when available.
+    /// description names the group's name path ("RAM/CELL1") and both endpoint pins when available.
     /// </summary>
     private static DesignIssue CreateIssue(FrozenWaveguidePath frozen, string groupPath)
     {

@@ -60,8 +60,8 @@ public class FrozenPathFlagChecker
             connection: null,
             x,
             y,
-            $"{rule.EnglishPrefix} in group '{path.GroupIdentifierPath}': {startName} to {endName}",
+            $"{rule.EnglishPrefix} in group '{path.GroupPath}': {startName} to {endName}",
             localizationKey: rule.LocalizationKey,
-            localizationArgs: new object[] { path.GroupIdentifierPath, startName, endName });
+            localizationArgs: new object[] { path.GroupPath, startName, endName });
     }
 }

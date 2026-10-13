@@ -117,7 +117,7 @@ public class WaveguideSpacingDetector
             if (frozen.Path?.Segments is not { Count: > 0 } frozenSegments)
                 continue;
 
-            var label = $"Group '{hierarchical.GroupIdentifierPath}' frozen path";
+            var label = $"Group '{hierarchical.GroupPath}' frozen path";
             double halfWidth = frozen.WidthMicrometers / 2.0;
 
             for (int i = 0; i < frozenSegments.Count; i++)

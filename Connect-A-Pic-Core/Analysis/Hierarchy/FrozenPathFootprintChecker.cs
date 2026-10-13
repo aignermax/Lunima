@@ -123,8 +123,8 @@ public class FrozenPathFootprintChecker
             connection: null,
             x,
             y,
-            $"Frozen waveguide in group '{path.GroupIdentifierPath}' passes through component '{componentName}'",
+            $"Frozen waveguide in group '{path.GroupPath}' passes through component '{componentName}'",
             localizationKey: "DesignChecks.WaveguideThroughComponent",
-            localizationArgs: new object[] { path.GroupIdentifierPath, componentName });
+            localizationArgs: new object[] { path.GroupPath, componentName });
     }
 }

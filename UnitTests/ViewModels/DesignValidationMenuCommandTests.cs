@@ -26,7 +26,14 @@ public class DesignValidationMenuCommandTests
         // land only after the returned task completes — ExecuteAsync, not Execute.
         await vm.RunDesignChecksCommand.ExecuteAsync(null);
 
-        var issues = vm.RightPanel.DesignValidation.Issues;
+        // Unconnected pins are informational hints: hidden by default, never "issues".
+        var panel = vm.RightPanel.DesignValidation;
+        panel.Issues.ShouldBeEmpty();
+        panel.HasIssues.ShouldBeFalse();
+        panel.HiddenHintCount.ShouldBe(2);
+
+        panel.ShowUnconnectedPins = true;
+        var issues = panel.Issues;
         issues.Count.ShouldBe(2, "both optical pins of the placed waveguide are unconnected");
         issues.ShouldAllBe(i => i.Type == DesignIssueType.UnconnectedPin);
         issues.ShouldContain(i => i.Description.Contains($"{comp.Identifier}.in"));

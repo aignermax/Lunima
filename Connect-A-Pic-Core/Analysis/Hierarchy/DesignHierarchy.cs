@@ -6,15 +6,15 @@ namespace CAP_Core.Analysis.Hierarchy;
 
 /// <summary>
 /// One frozen waveguide path found anywhere in a group hierarchy, together with the
-/// group that owns it and that group's identifier path ("OUTER/INNER").
+/// group that owns it and that group's name path ("OUTER/INNER").
 /// </summary>
 /// <param name="Frozen">The frozen path (stored in absolute coordinates).</param>
 /// <param name="Owner">The group whose <see cref="ComponentGroup.InternalPaths"/> hold the path.</param>
-/// <param name="GroupIdentifierPath">Identifier path of <paramref name="Owner"/>, outermost first.</param>
+/// <param name="GroupPath">Name path of <paramref name="Owner"/> itself, outermost first (see <see cref="DesignHierarchy.PathOf"/>).</param>
 public sealed record HierarchicalFrozenPath(
     FrozenWaveguidePath Frozen,
     ComponentGroup Owner,
-    string GroupIdentifierPath);
+    string GroupPath);
 
 /// <summary>
 /// Flattened view of a design's group hierarchy for the design checks: every leaf
@@ -68,12 +68,20 @@ public sealed class DesignHierarchy
     {
         ArgumentNullException.ThrowIfNull(component);
 
-        var names = new List<string>();
-        for (var group = component.ParentGroup as ComponentGroup; group != null; group = group.ParentGroup)
-            names.Add(string.IsNullOrWhiteSpace(group.GroupName) ? group.Identifier : group.GroupName);
+        return component.ParentGroup is ComponentGroup parent ? PathOf(parent) : null;
+    }
 
-        if (names.Count == 0)
-            return null;
+    /// <summary>
+    /// Name path of <paramref name="group"/> itself, outermost first ("RAM/CELL1"); a
+    /// group without a name contributes its identifier.
+    /// </summary>
+    public static string PathOf(ComponentGroup group)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+
+        var names = new List<string>();
+        for (var current = group; current != null; current = current.ParentGroup)
+            names.Add(string.IsNullOrWhiteSpace(current.GroupName) ? current.Identifier : current.GroupName);
         names.Reverse();
         return string.Join("/", names);
     }
@@ -149,19 +157,11 @@ public sealed class DesignHierarchy
         }
 
         _groups.Add(group);
-        var identifierPath = IdentifierPathOf(group);
+        var groupPath = PathOf(group);
         foreach (var frozen in group.InternalPaths)
-            _frozenPaths.Add(new HierarchicalFrozenPath(frozen, group, identifierPath));
+            _frozenPaths.Add(new HierarchicalFrozenPath(frozen, group, groupPath));
         foreach (var child in group.ChildComponents)
             Visit(child);
     }
 
-    private static string IdentifierPathOf(ComponentGroup group)
-    {
-        var identifiers = new List<string>();
-        for (var current = group; current != null; current = current.ParentGroup)
-            identifiers.Add(current.Identifier);
-        identifiers.Reverse();
-        return string.Join("/", identifiers);
-    }
 }
