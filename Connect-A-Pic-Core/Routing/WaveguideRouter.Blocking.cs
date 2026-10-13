@@ -9,12 +9,15 @@ namespace CAP_Core.Routing;
 public partial class WaveguideRouter
 {
     /// <summary>
-    /// Checks if any segment in a path passes through blocked cells.
+    /// Checks if any segment in a path passes through blocked cells. Breakout reservations
+    /// do not count: they hold room for routes, and a cluster wire's own route runs right
+    /// through its pin's reservation.
     /// </summary>
     public bool IsPathBlocked(IEnumerable<PathSegment> segments)
     {
         if (PathfindingGrid == null) return false;
-        return IsPathBlocked(segments, PathfindingGrid.IsBlocked);
+        var grid = PathfindingGrid;
+        return IsPathBlocked(segments, (gx, gy) => grid.IsBlocked(gx, gy) && !grid.IsBreakoutReservedCell(gx, gy));
     }
 
     /// <summary>

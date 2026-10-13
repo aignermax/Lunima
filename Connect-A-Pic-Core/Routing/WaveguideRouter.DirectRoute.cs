@@ -58,6 +58,7 @@ public partial class WaveguideRouter
         if (!candidate.IsValid
             || PathIntersectionDetector.HasSelfIntersection(candidate)
             || IsDirectCandidateBlockedByComponents(candidate.Segments, startPin, endPin, bendRadius)
+            || RunsThroughBreakoutReservation(candidate.Segments)
             || DirectCandidateConflictsWithSibling(candidate, startPin, endPin, bendRadius))
         {
             return null;

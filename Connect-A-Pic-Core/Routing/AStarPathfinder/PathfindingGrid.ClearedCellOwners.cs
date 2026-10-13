@@ -31,4 +31,27 @@ public partial class PathfindingGrid
         }
         return owners;
     }
+
+    /// <summary>
+    /// Every registered waveguide with its exact geometry whose cell bounding box overlaps
+    /// the given physical box (µm) — the candidates a new route in that box can cross.
+    /// </summary>
+    internal List<(Guid Owner, RoutedPath Path)> WaveguidesNear(double minX, double minY, double maxX, double maxY)
+    {
+        var (gx1, gy1) = PhysicalToGrid(minX, minY);
+        var (gx2, gy2) = PhysicalToGrid(maxX, maxY);
+        var result = new List<(Guid, RoutedPath)>();
+        lock (_waveguideCellsLock)
+        {
+            foreach (var (owner, bounds) in _waveguideCellBounds)
+            {
+                if (bounds.MaxX < gx1 || bounds.MinX > gx2 || bounds.MaxY < gy1 || bounds.MinY > gy2) continue;
+                if (!_waveguideGeometry.TryGetValue(owner, out var geometry)) continue;
+                var path = new RoutedPath();
+                path.Segments.AddRange(geometry);
+                result.Add((owner, path));
+            }
+        }
+        return result;
+    }
 }
