@@ -56,6 +56,14 @@
   <Style Selector="Button.toolbar.primary.wsRun:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
   </Style>
+  <!-- Run engaged (simulation on): the pressed-in toggle look, in the workspace hue -->
+  <Style Selector="Button.toolbar.primary.wsRun.active /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.toolbar.primary.wsRun.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Subtle}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
   <Style Selector="Button.wsRun Border.keyHint">
     <Setter Property="Background" Value="{DynamicResource Brush.Workspace.KeyHint}"/>
   </Style>

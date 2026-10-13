@@ -109,7 +109,24 @@ public class PinAlignmentHelper
     /// <returns>Tuple containing horizontal and vertical alignments.</returns>
     public (List<HorizontalAlignment> horizontal, List<VerticalAlignment> vertical) FindAllAlignments(
         Component draggingComponent,
-        IEnumerable<Component> otherComponents)
+        IEnumerable<Component> otherComponents) =>
+        FindAllAlignments(draggingComponent, otherComponents, 0, 0);
+
+    /// <summary>
+    /// Finds both horizontal and vertical alignments as if the dragging component stood
+    /// shifted by (<paramref name="offsetX"/>, <paramref name="offsetY"/>) — for drags that
+    /// preview a target (a ghost) without moving the component yet. Alignment coordinates are
+    /// the aligned pins' (target) coordinates, as in the unshifted overload.
+    /// </summary>
+    /// <param name="draggingComponent">The component being dragged.</param>
+    /// <param name="otherComponents">All other components on the canvas.</param>
+    /// <param name="offsetX">Hypothetical X shift (µm) of the dragging component.</param>
+    /// <param name="offsetY">Hypothetical Y shift (µm) of the dragging component.</param>
+    public (List<HorizontalAlignment> horizontal, List<VerticalAlignment> vertical) FindAllAlignments(
+        Component draggingComponent,
+        IEnumerable<Component> otherComponents,
+        double offsetX,
+        double offsetY)
     {
         if (draggingComponent == null)
             throw new ArgumentNullException(nameof(draggingComponent));
@@ -124,12 +141,13 @@ public class PinAlignmentHelper
 
             foreach (var draggingPin in draggingPins)
             {
-                var (draggingX, draggingY) = draggingPin.GetAbsolutePosition();
+                var (pinX, pinY) = draggingPin.GetAbsolutePosition();
+                double draggingX = pinX + offsetX, draggingY = pinY + offsetY;
 
                 foreach (var otherPin in otherComp.PhysicalPins)
                 {
                     // Skip if pins don't point at each other (must be ~180° apart)
-                    if (!ArePinsOpposing(draggingPin, otherPin))
+                    if (!ArePinsOpposing(draggingPin, otherPin, offsetX, offsetY))
                         continue;
 
                     var (otherX, otherY) = otherPin.GetAbsolutePosition();
@@ -163,7 +181,7 @@ public class PinAlignmentHelper
     /// AND if they geometrically point at each other's locations.
     /// This ensures we only snap when the pin actually "sees" the other component.
     /// </summary>
-    private bool ArePinsOpposing(PhysicalPin pin1, PhysicalPin pin2)
+    private static bool ArePinsOpposing(PhysicalPin pin1, PhysicalPin pin2, double offsetX, double offsetY)
     {
         // Get absolute angles (including component rotation)
         double angle1 = pin1.GetAbsoluteAngle();
@@ -182,9 +200,9 @@ public class PinAlignmentHelper
         var (x1, y1) = pin1.GetAbsolutePosition();
         var (x2, y2) = pin2.GetAbsolutePosition();
 
-        // Calculate the angle from pin1 to pin2
-        double dx = x2 - x1;
-        double dy = y2 - y1;
+        // Calculate the angle from pin1 (at its shifted position) to pin2
+        double dx = x2 - (x1 + offsetX);
+        double dy = y2 - (y1 + offsetY);
         double angleToTarget = Math.Atan2(dy, dx) * 180.0 / Math.PI;
 
         // Normalize to 0-360 range

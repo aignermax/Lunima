@@ -89,6 +89,45 @@ public class WorkspaceViewModelTests
         vm.IsOpticalWorkspace.ShouldBeTrue("System runs the CW simulation too");
     }
 
+    [Theory]
+    [InlineData(Workspace.Optics, true)]
+    [InlineData(Workspace.System, true)]
+    [InlineData(Workspace.Layout, false)]
+    [InlineData(Workspace.Logic, false)]
+    public void RunIsAToggle_OnlyWhereItSimulatesLight(Workspace workspace, bool toggles)
+    {
+        var vm = new WorkspaceViewModel(MakeDock()) { Current = workspace };
+        string offLabel = vm.RunLabel;
+
+        vm.IsSimulationOn = true;
+
+        vm.IsRunActive.ShouldBe(toggles);
+        if (toggles)
+        {
+            vm.RunLabel.ShouldNotBe(offLabel, "the pressed Run names its state, e.g. \"Simulation on\"");
+            vm.RunTip.ShouldContain("(L, P)");
+        }
+        else
+        {
+            vm.RunLabel.ShouldBe(offLabel, "Run checks / Run logic never become a toggle");
+        }
+    }
+
+    [Fact]
+    public void RunActive_RaisesLabelChanges_WhenTheSimulationTurnsOff()
+    {
+        var vm = new WorkspaceViewModel(MakeDock()) { Current = Workspace.Optics, IsSimulationOn = true };
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        vm.IsSimulationOn = false;
+
+        vm.IsRunActive.ShouldBeFalse();
+        changed.ShouldContain(nameof(WorkspaceViewModel.IsRunActive));
+        changed.ShouldContain(nameof(WorkspaceViewModel.RunLabel));
+        changed.ShouldContain(nameof(WorkspaceViewModel.RunTip));
+    }
+
     [Fact]
     public void ShowAllTabs_ShowsEveryTab_AndKeepsSelection()
     {

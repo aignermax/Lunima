@@ -346,6 +346,7 @@ public class DesignCanvas : Control
 
     private void InitGestures()
     {
+        var componentDrag = new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c);
         _gestureRecognizers =
         [
             // First: a bend-radius handle grab must win over selection / component drag (#574).
@@ -357,9 +358,10 @@ public class DesignCanvas : Control
             new CutToolGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             new ConnectionGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             new PlacementGestureRecognizer(_interactionState, InvalidateVisual),
-            // A crossing with wires slides along one of them; Shift frees the drag (component drag below).
-            new CrossingAxisDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
-            new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c),
+            // A crossing with wires slides along one of them; Shift (at the press or mid-drag)
+            // hands the gesture to the component drag below for a free move.
+            new CrossingAxisDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, componentDrag),
+            componentDrag,
             // Canvas-level frozen paths (#856): components win when overlapping, but a
             // click on imported route geometry must beat the selection box below.
             new FrozenPathDragGestureRecognizer(InvalidateVisual, () => Zoom),

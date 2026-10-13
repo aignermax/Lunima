@@ -46,7 +46,8 @@ public sealed class GridRenderer
         if (vm.GridSnap.IsEnabled)
             DrawSnapGridOverlay(context, vm, rc.Zoom, rc.Bounds);
 
-        if (rc.InteractionState.DraggingComponent != null && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.HasAlignments)
+        if ((rc.InteractionState.DraggingComponent != null || rc.InteractionState.CrossingAxisDrag != null)
+            && vm.AlignmentGuide.IsEnabled && vm.AlignmentGuide.HasAlignments)
             DrawAlignmentGuides(context, vm, rc.Zoom);
     }
 

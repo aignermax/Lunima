@@ -132,28 +132,22 @@
                             </controls:HelpFlyoutButton.HelpContent>
                         </controls:HelpFlyoutButton>
 
-                        <!-- Run: the one primary action; its label names what the workspace runs. -->
+                        <!-- Run: the one primary action; its label names what the workspace runs.
+                             In Optics/System it is a toggle: pressed (active) while the simulation is on. -->
                         <Button x:Name="RunSimulationButton" Classes="toolbar primary wsRun"
+                                Classes.active="{Binding WorkspaceSwitch.IsRunActive}"
                                 Command="{Binding RunWorkspaceCommand}"
                                 ToolTip.Tip="{Binding WorkspaceSwitch.RunTip}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <controls:Icon Data="{StaticResource Icon.Play}" Size="14"/>
+                                <controls:Icon Data="{StaticResource Icon.Play}" Size="14"
+                                               IsVisible="{Binding !WorkspaceSwitch.IsRunActive}"/>
+                                <controls:Icon Data="{StaticResource Icon.Square}" Size="14"
+                                               IsVisible="{Binding WorkspaceSwitch.IsRunActive}"/>
                                 <TextBlock Text="{Binding WorkspaceSwitch.RunLabel}" VerticalAlignment="Center"/>
                                 <Border Classes="keyHint">
                                     <TextBlock Text="L"/>
                                 </Border>
                             </StackPanel>
-                        </Button>
-                        <!-- Power-flow overlay on/off (P): separate from Run, so Run always runs. -->
-                        <Button x:Name="PowerOverlayToggle" Classes="toolbar" Margin="2,0,0,0"
-                                Classes.active="{Binding Canvas.ShowPowerFlow}"
-                                Command="{Binding TogglePowerOverlayCommand}"
-                                IsVisible="{Binding WorkspaceSwitch.IsOpticalWorkspace}"
-                                ToolTip.Tip="{loc:Localize Toolbar.PowerOverlayTip}">
-                            <Panel>
-                                <controls:Icon Data="{StaticResource Icon.Eye}" IsVisible="{Binding Canvas.ShowPowerFlow}"/>
-                                <controls:Icon Data="{StaticResource Icon.EyeOff}" IsVisible="{Binding !Canvas.ShowPowerFlow}"/>
-                            </Panel>
                         </Button>
                         <ComboBox Classes="toolbar" Width="104" Margin="4,0,0,0"
                                   SelectedIndex="{Binding SimulationModeIndex}"
