@@ -30,5 +30,10 @@ public static class ProcessDefinitionCloner
         ElectricalBridgeRequired = source.ElectricalBridgeRequired,
         MinWaveguideSpacingUm = source.MinWaveguideSpacingUm,
         DrcSource = source.DrcSource,
+        WaveguideCompanionLayers = source.WaveguideCompanionLayers?.Select(c => new ProcessCompanionLayer
+        {
+            Name = c.Name, Layer = c.Layer, Datatype = c.Datatype, Role = c.Role,
+            OffsetUm = c.OffsetUm, WidthUm = c.WidthUm, Description = c.Description,
+        }).ToList(),
     };
 }

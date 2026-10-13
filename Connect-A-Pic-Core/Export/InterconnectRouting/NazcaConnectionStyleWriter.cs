@@ -36,9 +36,15 @@ public static class NazcaConnectionStyleWriter
     /// tuple and wins over <paramref name="gdsLayer"/>: manufacturing needs the original
     /// layer back, not the process default.
     /// </param>
+    /// <param name="xsectionName">
+    /// Optional Nazca xsection to draw the primitive through instead of a layer — used to
+    /// emit the same curve a second time on the process companion layers. Wins over both
+    /// layer arguments.
+    /// </param>
     /// <returns>A single Python line, or null for segment-exported styles.</returns>
     public static string? Format(
-        WaveguideConnection connection, int? gdsLayer = null, (int Layer, int DataType)? sourceLayer = null)
+        WaveguideConnection connection, int? gdsLayer = null, (int Layer, int DataType)? sourceLayer = null,
+        string? xsectionName = null)
     {
         if (connection.Type is WaveguideType.Auto or WaveguideType.Bend ||
             connection.StartPin == null || connection.EndPin == null)
@@ -58,7 +64,9 @@ public static class NazcaConnectionStyleWriter
             ?? connection.EndPin.WaveguideWidthMicrometers
             ?? connection.WidthMicrometers;
         string w = widthUm.ToString("F2", ci);
-        string layer = sourceLayer is { } s
+        string layer = xsectionName != null
+            ? $", xs='{xsectionName}'"
+            : sourceLayer is { } s
             ? $", layer=({s.Layer.ToString(ci)}, {s.DataType.ToString(ci)})"
             : gdsLayer.HasValue ? $", layer={gdsLayer.Value}" : string.Empty;
         string primitive = FormatPrimitive(connection.Type, geometry, w, layer, ci);

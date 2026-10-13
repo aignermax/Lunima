@@ -79,6 +79,7 @@ public class DesignCanvas : Control
 
     private readonly GridRenderer _gridRenderer;
     private readonly PathfindingOverlayRenderer _pathfindingOverlayRenderer;
+    private readonly WaveguideCompanionBandRenderer _companionBandRenderer = new();
     private readonly WaveguideConnectionRenderer _waveguideConnectionRenderer;
     private readonly CanvasFrozenPathRenderer _canvasFrozenPathRenderer;
     private readonly BendHandleRenderer _bendHandleRenderer;
@@ -182,6 +183,8 @@ public class DesignCanvas : Control
         {
             _gridRenderer.RenderWorld(context, rc);
             _pathfindingOverlayRenderer.Render(context, rc);
+            // Process companion bands (trench / cladding / keep-out) sit under the cores.
+            _companionBandRenderer.Render(context, rc);
             _waveguideConnectionRenderer.Render(context, rc);
             // Canvas-level pin-less frozen paths (#856) draw with the other waveguide
             // geometry, below components, exactly like group-internal frozen paths.
