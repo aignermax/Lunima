@@ -15,8 +15,8 @@ using Xunit;
 namespace UnitTests.UI;
 
 /// <summary>
-/// Visual documentation of the workspace switch: the toolbar (switch, Run label, overlay
-/// eye) and the analysis dock in each of Layout / Optics / Logic / System, the System
+/// Visual documentation of the workspace switch: the toolbar (switch, Run label and its
+/// pressed "Simulation on" state) and the analysis dock in each of Layout / Optics / Logic / System, the System
 /// chiplet strip, the self-explaining empty tabs and the "show all tabs" override.
 /// Opt-in (UI_SHOT_DIR); PNGs land in <c>docs/pr-media/workspaces/</c> with
 /// <c>CAP_UPDATE_PR_MEDIA=1</c>, otherwise in a temp directory.

@@ -1345,7 +1345,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Run always runs: the overlay has its own toggle (TogglePowerOverlay, P).
+        // Always runs; the on/off toggle lives in RunWorkspace / TogglePowerOverlay (L, P).
         await ExecuteSimulation();
     }
 

@@ -47,6 +47,14 @@
     <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/>
   </Style>
+  <!-- Run as an engaged toggle (simulation on): pressed-in look, accent outline -->
+  <Style Selector="Button.toolbar.primary.active /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.toolbar.primary.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
   <Style Selector="Button.toolbar:disabled /template/ ContentPresenter#PART_ContentPresenter,
                    ToggleButton.toolbar:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderBrush" Value="Transparent"/>
