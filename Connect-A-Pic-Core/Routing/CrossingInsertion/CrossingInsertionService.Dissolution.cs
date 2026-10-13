@@ -107,6 +107,20 @@ public partial class CrossingInsertionService
         return removed;
     }
 
+    /// <summary>
+    /// Hands a recorded crossing over to chain bookkeeping before the user edits its pieces
+    /// (cuts one, moves the crossing): its pieces are ordinary connections already, but a
+    /// record would restore the pre-split originals over the edit. Returns the dropped record
+    /// so an undo can put it back with <see cref="RestoreRecord"/>; null without a record.
+    /// </summary>
+    public CrossingRecord? ReleaseRecord(Component crossing)
+    {
+        var record = _registry.Records.FirstOrDefault(r => r.CrossingComponent == crossing);
+        if (record != null)
+            _registry.Forget(crossing);
+        return record;
+    }
+
     private void NotifyRemoved(IEnumerable<Component> removed)
     {
         foreach (var crossing in removed)

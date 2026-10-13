@@ -252,11 +252,15 @@ public partial class WaveguideConnectionManager
     {
         NoteWireSetChanged();
         var scope = new ComponentWireScope(component);
-        // A crossing placed by crossing-aware routing hands its wires back instead of taking them
-        // along — whether or not adaptive crossing insertion is switched on.
+        // A deleted crossing hands its wires back instead of taking them along — whether routing
+        // or the user placed it, and whether or not adaptive crossing insertion is switched on.
         var recorded = CrossingService?.Records.Select(r => r.CrossingComponent).ToHashSet() ?? new HashSet<Component>();
-        if (ChainCrossingMaintenance.DissolveForDeletion(component, this, _router, recorded))
+        if (ChainCrossingMaintenance.DissolveForDeletion(component, this, _router, recorded, out var rerouteInPlace))
+        {
+            foreach (var wire in rerouteInPlace)
+                RerouteInPlace(wire);
             return;
+        }
         CrossingService?.DissolveForScope(scope, this, _router);
 
         List<WaveguideConnection> removed;
@@ -449,6 +453,7 @@ public partial class WaveguideConnectionManager
             }
         }
         RememberPersistentCascadeFailures(cancellationToken);
+        PruneReroutesInPlace();
 
         totalWatch.Stop();
         LastRoutingPassTimings = timings.Build(

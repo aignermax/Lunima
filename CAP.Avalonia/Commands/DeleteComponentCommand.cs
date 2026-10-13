@@ -61,8 +61,9 @@ public class DeleteComponentCommand : IUndoableCommand
         var crossing = _canvas.ConnectionManager.CrossingService;
         // A group's wires end at the pins of the components nested in it.
         var scope = new ComponentWireScope(_component);
-        // Wires through routing-placed crossings leave whole, so undo restores whole wires.
-        if (!ChainCrossingMaintenance.IsTemporaryCrossing(_component))
+        // Wires through routing-placed crossings leave whole, so undo restores whole wires. A
+        // deleted crossing itself hands its wires back, so the chains next to it stay.
+        if (!CrossingComponentCatalog.IsCrossing(_component))
             _canvas.DissolveInsertedCrossingChains(scope.Touches);
         foreach (var connVm in _canvas.Connections.ToList())
         {
