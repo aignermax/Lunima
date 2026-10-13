@@ -379,7 +379,7 @@ public partial class MainViewModel : ObservableObject
         GdsPreviewRenderService = gdsPreviewRenderService;
         ErrorConsole = errorConsoleService;
         ChipSize = chipSize;
-        _canvas.SimulationRequested = async () => await ExecuteSimulation();
+        InitializeLiveSimulation();
         Update = updateViewModel;
         ClaudeConnectPrompt = claudeConnectPrompt;
 
@@ -418,7 +418,7 @@ public partial class MainViewModel : ObservableObject
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
         Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
         Home.StoreNumberTourRequested = StartStoreNumberTourAsync;
-        FileOperations.ProjectOpened = Home.OnProjectOpened;
+        FileOperations.ProjectOpened = OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
         // The tour must observe the panel instance the user actually clicks.
@@ -1350,17 +1350,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Runs simulation without toggle logic (used by auto-resimulation).
+    /// Runs the CW simulation without toggle logic. <paramref name="isLiveRun"/> marks a
+    /// re-run of the switched-on simulation after a design change: a cancelled live run
+    /// applies nothing, a live run that cannot simulate (no light source, no connections,
+    /// blocked circuit) switches the simulation off instead of leaving a stale overlay,
+    /// and a live run that finds a simulation already running is re-queued.
     /// </summary>
-    private async Task ExecuteSimulation()
+    private async Task ExecuteSimulation(CancellationToken cancellationToken = default, bool isLiveRun = false)
     {
-        if (IsSimulating) return;
+        if (IsSimulating)
+        {
+            _liveRunDeferred |= isLiveRun;
+            return;
+        }
         IsSimulating = true;
 
         try
         {
             StatusText = LocalizationService.Instance.Translate("Status.RunningSimulation");
-            var result = await Simulation.RunAsync(Canvas);
+            var result = await Simulation.RunAsync(Canvas, cancellationToken);
 
             if (result.Success)
             {
@@ -1369,26 +1377,32 @@ public partial class MainViewModel : ObservableObject
             }
             else
             {
-                StatusText = result.ErrorMessage ?? "Simulation failed";
+                ReportSimulationFailure(result.ErrorMessage ?? "Simulation failed", isLiveRun);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Superseded by a newer live run, which reports its own outcome.
         }
         catch (CAP_Core.LightCalculation.NonConvergentCircuitException ex)
         {
             // Physics guard (round-4): non-passive data / resonant loop — surface the
             // already-localized guard message instead of a raw exception string.
             var message = Analysis.NonConvergentCircuitMessageFormatter.Format(ex);
-            StatusText = message;
+            ReportSimulationFailure(message, isLiveRun);
             BottomPanel.ErrorConsole.Log($"Simulation blocked: {message}", CAP_Contracts.Logger.LogLevel.Error, ex);
         }
         catch (Exception ex)
         {
-            StatusText = string.Format(LocalizationService.Instance.Translate("Status.SimulationError"), ex.Message);
+            ReportSimulationFailure(
+                string.Format(LocalizationService.Instance.Translate("Status.SimulationError"), ex.Message), isLiveRun);
             BottomPanel.ErrorConsole.Log($"Simulation failed: {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
 
         }
         finally
         {
             IsSimulating = false;
+            RequeueDeferredLiveRun();
         }
     }
 
