@@ -184,6 +184,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] AI tools registry exposes fit-to-view and other canvas operations. `(auto: AI/FitToViewToolTests, AI/AiToolRegistryTests)`
 - [ ] AI grid service applies tool results to the design model. `(auto: AI/AiGridServiceTests)`
 - [ ] AI settings page configures the API key / endpoint. `(manual)`
+- [ ] Agent bridge (MCP): off by default; Settings → Agent bridge (MCP) → enable shows "Listening on http://127.0.0.1:39271/mcp"; the copied `claude mcp add …` command connects Claude Code, `list_connections` lists the open design's blocked routes, and an agent `move_component` is reverted by Ctrl+Z. Requests without the token get 401. `(auto: AgentBridge/*Tests; manual: real Claude Code connect on Windows, Linux, macOS)`
 
 ## 16. Component registry (online)
 

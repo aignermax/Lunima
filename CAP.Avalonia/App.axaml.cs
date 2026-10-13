@@ -35,6 +35,7 @@ public partial class App : Application
     {
         services.AddUpdateFeature();
         services.AddAiAssistantFeature();
+        services.AddAgentBridgeFeature();
         services.AddExportFeature();
         services.AddPythonEnvFeature();
         services.AddCoreServices();
@@ -70,6 +71,10 @@ public partial class App : Application
         // crossing-insertion service into the canvas — must happen before the first
         // routing pass, independent of whether any ViewModel happens to reference it.
         services.GetRequiredService<ViewModels.Canvas.CrossingInsertion.CrossingInsertionCanvasBinder>();
+
+        // Starts the local MCP agent bridge when the user enabled it in Settings (opt-in;
+        // a disabled bridge opens no socket).
+        services.GetRequiredService<Services.AgentBridge.Hosting.AgentBridgeHost>().ApplySettings();
     }
 
     public override void OnFrameworkInitializationCompleted()
