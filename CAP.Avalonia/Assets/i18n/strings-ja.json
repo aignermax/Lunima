@@ -1434,6 +1434,8 @@
   "Status.CutModePrompt": "カットモード: ハイライトされた交差点または導波路をクリックしてクロッシングを挿入します",
   "Status.DragDropPlace": "ドロップして配置: {0}",
   "Status.CutNoCrossingCell": "クロッシング部品がありません — まずクロッシングセルを含むPDKを読み込んでください",
+  "Status.CrossingMoved": "クロッシングを導波路に沿って移動しました",
+  "Status.CrossingMoveBlocked": "そこにはクロッシングを移動できません — 部品または別の導波路と重なります",
   "Status.ExitedGroupEditMode": "グループ編集モードを終了しました",
   "Status.FrozenPathDeleted": "インポートした配線ジオメトリを削除しました",
   "Status.FrozenPathSelected": "インポートした配線ジオメトリを選択しました: {0}µm",
