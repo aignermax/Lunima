@@ -96,15 +96,14 @@ public sealed class CutSpotFinder
     private CutSpot BuildSpot(string kind, WaveguideConnection cut, StraightSegment segment,
         (double X, double Y) point, WaveguideConnection? through, PhysicalPin? guidePin)
     {
-        var run = _supply.RequiredRunMicrometers;
-        var candidate = _finder.TryCreateFreeCandidate(cut, segment, point, run, _supply.Footprint);
-        if (candidate != null)
-            return new CutSpot(kind, cut, candidate.IntersectionPoint, through, guidePin, candidate, null);
-
-        var reason = _finder.TryCreateFreeCandidate(cut, segment, point, run) == null
-            ? "not on a straight, axis-aligned run long enough for the crossing"
-            : "the crossing's footprint would overlap other geometry";
-        return new CutSpot(kind, cut, point, through, guidePin, null, reason);
+        var candidate = _finder.TryCreateFreeCandidate(cut, segment, point, _supply.RequiredRunMicrometers);
+        if (candidate == null)
+            return new CutSpot(kind, cut, point, through, guidePin, null,
+                "not on a straight, axis-aligned run long enough for the crossing");
+        if (!_supply.IsFootprintClear(candidate.IntersectionPoint, cut, through))
+            return new CutSpot(kind, cut, candidate.IntersectionPoint, through, guidePin, null,
+                "the crossing's footprint would overlap other geometry");
+        return new CutSpot(kind, cut, candidate.IntersectionPoint, through, guidePin, candidate, null);
     }
 
     private static double DistanceToSegment(StraightSegment segment, (double X, double Y) point)

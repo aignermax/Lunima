@@ -1329,7 +1329,7 @@
   "Settings.AgentBridge.ApplyPort": "应用",
   "Settings.AgentBridge.ClaudeConnected": "Claude Code 已连接。开始新的 Claude Code 会话（或运行 /mcp）即可加载 Lunima 工具；使用期间请保持桥接开启。",
   "Settings.AgentBridge.ClaudeFailed": "Claude Code 无法注册桥接：{0}",
-  "Settings.AgentBridge.ClaudeNotFound": "未找到 Claude Code CLI (claude)。桥接已开启 — 请在终端中运行下方命令进行连接。",
+  "Settings.AgentBridge.ClaudeNotFound": "未找到 Claude Code CLI (claude)。桥接已开启 — 请在终端中运行上方命令进行连接。",
   "Settings.AgentBridge.ConnectClaude": "连接 Claude Code",
   "Settings.AgentBridge.ConnectClaudeButton": "连接",
   "Settings.AgentBridge.ConnectClaudeHint": "一步开启桥接并为你的用户账户在 Claude Code 中注册。需要 Claude Code CLI (claude)。",

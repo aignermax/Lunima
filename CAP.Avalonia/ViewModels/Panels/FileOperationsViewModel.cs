@@ -404,7 +404,14 @@ public partial class FileOperationsViewModel : ObservableObject
         }
     }
 
-    private async Task SaveToFile(string filePath)
+    /// <summary>
+    /// Saves the open design to <paramref name="filePath"/> (no dialog) and makes it the current
+    /// file — the scripted counterpart of Save As, used by the agent bridge.
+    /// </summary>
+    /// <returns>True when the file was written.</returns>
+    public Task<bool> SaveDesignToPathAsync(string filePath) => SaveToFile(filePath);
+
+    private async Task<bool> SaveToFile(string filePath)
     {
         try
         {
@@ -555,11 +562,13 @@ public partial class FileOperationsViewModel : ObservableObject
             {
                 UpdateStatus?.Invoke($"Saved to {Path.GetFileName(filePath)}");
             }
+            return true;
         }
         catch (Exception ex)
         {
             _errorConsole?.LogError($"Failed to save design: {ex.Message}", ex);
             UpdateStatus?.Invoke($"Save failed: {ex.Message}");
+            return false;
         }
     }
 

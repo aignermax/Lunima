@@ -1329,7 +1329,7 @@
   "Settings.AgentBridge.ApplyPort": "Apply",
   "Settings.AgentBridge.ClaudeConnected": "Claude Code is connected. Start a new Claude Code session (or run /mcp) to load the Lunima tools; keep the bridge on while you use them.",
   "Settings.AgentBridge.ClaudeFailed": "Claude Code could not register the bridge: {0}",
-  "Settings.AgentBridge.ClaudeNotFound": "The Claude Code CLI (claude) was not found. The bridge is on — run the command below in a terminal to connect.",
+  "Settings.AgentBridge.ClaudeNotFound": "The Claude Code CLI (claude) was not found. The bridge is on — run the command above in a terminal to connect.",
   "Settings.AgentBridge.ConnectClaude": "Connect Claude Code",
   "Settings.AgentBridge.ConnectClaudeButton": "Connect",
   "Settings.AgentBridge.ConnectClaudeHint": "Turns the bridge on and registers it with Claude Code for your user account in one step. Needs the Claude Code CLI (claude).",

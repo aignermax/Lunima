@@ -1329,7 +1329,7 @@
   "Settings.AgentBridge.ApplyPort": "適用",
   "Settings.AgentBridge.ClaudeConnected": "Claude Code が接続されました。新しい Claude Code セッションを開始する (または /mcp を実行する) と Lunima のツールが読み込まれます。使用中はブリッジをオンのままにしてください。",
   "Settings.AgentBridge.ClaudeFailed": "Claude Code はブリッジを登録できませんでした: {0}",
-  "Settings.AgentBridge.ClaudeNotFound": "Claude Code CLI (claude) が見つかりませんでした。ブリッジはオンです。接続するには下のコマンドをターミナルで実行してください。",
+  "Settings.AgentBridge.ClaudeNotFound": "Claude Code CLI (claude) が見つかりませんでした。ブリッジはオンです。接続するには上のコマンドをターミナルで実行してください。",
   "Settings.AgentBridge.ConnectClaude": "Claude Code を接続",
   "Settings.AgentBridge.ConnectClaudeButton": "接続",
   "Settings.AgentBridge.ConnectClaudeHint": "ブリッジをオンにし、あなたのユーザーアカウント用に Claude Code へ一度に登録します。Claude Code CLI (claude) が必要です。",

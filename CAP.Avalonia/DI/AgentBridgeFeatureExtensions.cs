@@ -7,6 +7,9 @@ using CAP.Avalonia.Services.AgentBridge.Registration;
 using CAP.Avalonia.Services.AgentBridge.Tools;
 using CAP.Avalonia.Services.AgentBridge.Tools.Edit;
 using CAP.Avalonia.Services.AgentBridge.Tools.Inspect;
+using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Cut;
+using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Geometry;
+using CAP.Avalonia.Services.AgentBridge.Tools.Repair.Suggest;
 using CAP.Avalonia.Services.AgentBridge.Tools.Session;
 using CAP.Avalonia.Services.AgentBridge.Transport;
 using CAP.Avalonia.Services.AiTools;
@@ -53,6 +56,14 @@ internal static class AgentBridgeFeatureExtensions
         services.AddTransient<IAgentBridgeTool, UndoTool>();
         services.AddTransient<IAgentBridgeTool, LoadExampleTool>();
         services.AddTransient<IAgentBridgeTool, ScreenshotTool>();
+        services.AddTransient<IAgentBridgeTool, SaveDesignTool>();
+        services.AddTransient<IAgentBridgeTool, GetConnectionGeometryTool>();
+        services.AddTransient<IAgentBridgeTool, ShiftSegmentTool>();
+        services.AddTransient<IAgentBridgeTool, ListCutCandidatesTool>();
+        services.AddTransient<IAgentBridgeTool, InsertCrossingTool>();
+        services.AddTransient<IAgentBridgeTool, MoveCrossingAlongAxisTool>();
+        services.AddTransient<IAgentBridgeTool, SuggestFixesTool>();
+        services.AddTransient<IAgentBridgeTool, ApplySuggestionTool>();
         services.AddSingleton<AgentToolCatalog>();
 
         services.AddSingleton(sp => new McpJsonRpcDispatcher(
