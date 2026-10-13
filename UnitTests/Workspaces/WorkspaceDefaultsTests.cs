@@ -70,6 +70,8 @@ public class WorkspaceDefaultsTests
 
     [Theory]
     [InlineData("Two Chiplets - Edge-Coupler Link.lun", Workspace.System)]
+    [InlineData("Logic Gate Across Two Chiplets.lun", Workspace.System)]
+    [InlineData("EBeam Add-Drop Ring.lun", Workspace.Optics)]
     [InlineData("Mach-Zehnder Interferometer.lun", Workspace.Optics)]
     [InlineData("EBeam Mach-Zehnder Interferometer.lun", Workspace.Optics)]
     [InlineData("Logic Gate NOT-NAND.lun", Workspace.Logic)]
