@@ -129,9 +129,6 @@ public partial class Component : ICloneable
     [JsonIgnore]
     public string? TemplateName { get; set; }
 
-    /// <summary>Edge couplers: facet mode-field diameter (µm) from the PDK, re-applied from the template; null = default mode.</summary>
-    [JsonIgnore] public double? ModeFieldDiameterMicrometers { get; set; }
-
     /// <summary>
     /// gdsfactory factory name for gdsfactory-backend PDK components (e.g.
     /// "cspdk.sin300.mmi1x2"); null for Nazca components. When set, the gdsfactory export
