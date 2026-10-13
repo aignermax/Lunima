@@ -1,3 +1,4 @@
+using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Process;
 using Component = CAP_Core.Components.Core.Component;
@@ -19,7 +20,10 @@ public class ComponentPdkCompatibilityChecker
     /// <summary>
     /// Checks every component's PDK against the enabled set and returns one issue per conflict.
     /// </summary>
-    /// <param name="components">All placed components to check.</param>
+    /// <param name="components">
+    /// All placed components to check; group children are checked at any nesting depth,
+    /// so the map should carry their sources too (a child without an entry is exempt).
+    /// </param>
     /// <param name="pdkSourceByComponent">
     /// Each component's resolved PDK source name (or null for built-in/unresolved components,
     /// which are exempt). Resolution is a caller concern — this method only judges names.
@@ -50,7 +54,8 @@ public class ComponentPdkCompatibilityChecker
         var enabled = new HashSet<string>(enabledPdkNames, StringComparer.OrdinalIgnoreCase);
         var issues = new List<DesignIssue>();
 
-        foreach (var component in components)
+        var hierarchy = DesignHierarchy.From(components);
+        foreach (var component in hierarchy.Groups.Cast<Component>().Concat(hierarchy.Leaves))
         {
             pdkSourceByComponent.TryGetValue(component, out var pdkSource);
             if (SingleProcessPolicy.IsExempt(pdkSource, processAgnosticPdkNames)) continue;
@@ -58,7 +63,7 @@ public class ComponentPdkCompatibilityChecker
 
             double centerX = component.PhysicalX + component.WidthMicrometers / 2;
             double centerY = component.PhysicalY + component.HeightMicrometers / 2;
-            string name = component.HumanReadableName ?? component.Identifier;
+            string name = DesignHierarchy.QualifyName(component, component.HumanReadableName ?? component.Identifier);
 
             issues.Add(new DesignIssue(
                 DesignIssueType.PdkProcessMismatch,

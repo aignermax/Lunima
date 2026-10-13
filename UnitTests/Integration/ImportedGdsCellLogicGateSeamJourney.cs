@@ -46,9 +46,12 @@ public sealed class ImportedGdsCellLogicGateSeamJourney : IDisposable
     public const string ImportedIdentifier = "imported";
     public const string ImportedCellName = "wg";
     public const string GroupName = "OR Gate";
-    public const string InputPinA = "combine_in1";
-    public const string InputPinB = "combine_in2";
-    public const string OutputPinY = "out_b0";
+    // Ctrl+G names the free ports by direction (GroupPinNamer): west IN1/IN2 top to
+    // bottom, east OUT1 (the output waveguide) above OUT2 (the spare combiner port).
+    public const string InputPinA = "IN1";
+    public const string InputPinB = "IN2";
+    public const string OutputPinY = "OUT1";
+    public const string SpareCombinerPin = "OUT2";
 
     private readonly string _root =
         Path.Combine(Path.GetTempPath(), "lunima-gds-logic-seam-" + Guid.NewGuid().ToString("N"));

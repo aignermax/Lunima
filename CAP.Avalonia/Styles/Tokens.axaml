@@ -47,6 +47,10 @@
   <SolidColorBrush x:Key="Brush.Surface.Raised" Color="{StaticResource Color.Gray800}"/>
   <SolidColorBrush x:Key="Brush.Surface.Hover" Color="{StaticResource Color.Gray750}"/>
   <SolidColorBrush x:Key="Brush.Surface.Pressed" Color="{StaticResource Color.Gray700}"/>
+  <!-- Resting background of buttons that fade to Surface.Hover: the hover colour at zero alpha.
+       Fading from Transparent (#00FFFFFF, transparent white) passes through a light grey and
+       flashes on hover in and out; fading only the alpha does not. -->
+  <SolidColorBrush x:Key="Brush.Surface.HoverClear" Color="#00232833"/>
   <SolidColorBrush x:Key="Brush.Surface.Overlay" Color="{StaticResource Color.Gray800}"/>
   <SolidColorBrush x:Key="Brush.Surface.Input" Color="{StaticResource Color.Gray950}"/>
   <SolidColorBrush x:Key="Brush.Scrim" Color="{StaticResource Color.Scrim}"/>
@@ -79,6 +83,71 @@
   <SolidColorBrush x:Key="Brush.Danger.Subtle" Color="{StaticResource Color.DangerSubtle}"/>
   <SolidColorBrush x:Key="Brush.Info" Color="{StaticResource Color.Info}"/>
   <SolidColorBrush x:Key="Brush.Info.Subtle" Color="{StaticResource Color.InfoSubtle}"/>
+
+  <!-- ── Workspace hues ───────────────────────────────────────────────────────
+       Identity only, never state: each workspace (Layout / Optics / Logic / System) owns one
+       calm hue for its switch segment, the accent line under the toolbar, the canvas tint and
+       edge, the status-bar chip and the Run button. Layout steel, Optics cyan (light),
+       Logic violet, System copper (package / assembly). Dark-theme hues carry dark text on
+       Run (≥ 7:1); light-theme hues are deepened for white text (≥ 4.5:1). The canvas tint
+       stays at ~6 % alpha so waveguides and power-flow colors keep their contrast.
+       WorkspaceAccentBehavior copies the active set onto Brush.Workspace.Current.*. -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.Accent" Color="#8AA0C6"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.AccentHover" Color="#A3B6D6"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.Subtle" Color="#2E8AA0C6"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.CanvasTint" Color="#0F8AA0C6"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.CanvasEdge" Color="#668AA0C6"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.OnAccent" Color="#0B0D11"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.Accent" Color="#38C6D4"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.AccentHover" Color="#62D5E0"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.Subtle" Color="#2E38C6D4"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.CanvasTint" Color="#0F38C6D4"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.CanvasEdge" Color="#6638C6D4"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.OnAccent" Color="#0B0D11"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.Accent" Color="#B092F7"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.AccentHover" Color="#C4AEFA"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.Subtle" Color="#2EB092F7"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.CanvasTint" Color="#0FB092F7"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.CanvasEdge" Color="#66B092F7"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.OnAccent" Color="#0B0D11"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.Accent" Color="#E0A066"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.AccentHover" Color="#EAB98A"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.Subtle" Color="#2EE0A066"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.CanvasTint" Color="#0FE0A066"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.CanvasEdge" Color="#66E0A066"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.OnAccent" Color="#0B0D11"/>
+      <SolidColorBrush x:Key="Brush.Workspace.KeyHint" Color="#2E000000"/>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.Accent" Color="#4A5F86"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.AccentHover" Color="#5A709A"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.Subtle" Color="#244A5F86"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.CanvasTint" Color="#0D4A5F86"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.CanvasEdge" Color="#664A5F86"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Layout.OnAccent" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.Accent" Color="#0B7C89"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.AccentHover" Color="#108D9B"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.Subtle" Color="#240B7C89"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.CanvasTint" Color="#0D0B7C89"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.CanvasEdge" Color="#660B7C89"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Optics.OnAccent" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.Accent" Color="#6A49C9"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.AccentHover" Color="#7A5BD6"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.Subtle" Color="#246A49C9"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.CanvasTint" Color="#0D6A49C9"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.CanvasEdge" Color="#666A49C9"/>
+      <SolidColorBrush x:Key="Brush.Workspace.Logic.OnAccent" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.Accent" Color="#9A5718"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.AccentHover" Color="#AD6524"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.Subtle" Color="#249A5718"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.CanvasTint" Color="#0D9A5718"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.CanvasEdge" Color="#669A5718"/>
+      <SolidColorBrush x:Key="Brush.Workspace.System.OnAccent" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="Brush.Workspace.KeyHint" Color="#33FFFFFF"/>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
 
   <!-- ── Typography ───────────────────────────────────────────────────────── -->
   <FontFamily x:Key="Font.Ui">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>

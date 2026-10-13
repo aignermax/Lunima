@@ -188,6 +188,9 @@ public sealed class ComponentRenderer : ICanvasRenderer
             else
                 ComponentGroupRenderer.RenderGroupBorder(context, bounds, isHovered, rc.Pens);
 
+            if (GroupBrokenPathMarkerRenderer.NeedsMarker(group))
+                GroupBrokenPathMarkerRenderer.Render(context, bounds, rc.Pens);
+
             ComponentGroupRenderer.RenderGroupNameLabel(context, bounds, group.GroupName, false,
                 rc.InteractionState.HoveredGroupLabel == group, rc.Zoom);
             ComponentGroupRenderer.RenderGroupLockIcon(context, group,

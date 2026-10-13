@@ -1,0 +1,82 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Workspace identity: the active workspace's hue (Brush.Workspace.Current.*, published by
+    WorkspaceAccentBehavior on the window root) on the switch segment, the accent line under
+    the toolbar, the canvas tint + edge, the status-bar chip and Run. Hues cross-fade in
+    Motion.Normal unless the root carries .reduceMotion.
+  -->
+
+  <!-- Accent line under the toolbar -->
+  <Style Selector="Border.wsAccentLine">
+    <Setter Property="Height" Value="2"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="IsHitTestVisible" Value="False"/>
+  </Style>
+
+  <!-- Canvas: very faint tint plus a hairline edge; never intercepts input -->
+  <Style Selector="Border.wsCanvasTint">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.CanvasTint}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Workspace.Current.CanvasEdge}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="IsHitTestVisible" Value="False"/>
+  </Style>
+
+  <!-- Status-bar chip naming the workspace -->
+  <Style Selector="Border.wsChip">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Subtle}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Pill}"/>
+    <Setter Property="Padding" Value="8,1"/>
+    <Setter Property="Margin" Value="8,0,4,0"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Border.wsChip Ellipse">
+    <Setter Property="Fill" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+  </Style>
+  <Style Selector="Border.wsChip TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+
+  <!-- Active segment of the workspace switch -->
+  <Style Selector="Button.toolbar.segment.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Subtle}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+  </Style>
+
+  <!-- Run: the workspace's one primary action, in its hue -->
+  <Style Selector="Button.toolbar.primary.wsRun">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Workspace.Current.OnAccent}"/>
+  </Style>
+  <Style Selector="Button.toolbar.primary.wsRun:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.AccentHover}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Workspace.Current.OnAccent}"/>
+  </Style>
+  <Style Selector="Button.toolbar.primary.wsRun:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+  </Style>
+  <!-- Run engaged (simulation on): the pressed-in toggle look, in the workspace hue -->
+  <Style Selector="Button.toolbar.primary.wsRun.active /template/ ContentPresenter#PART_ContentPresenter,
+                   Button.toolbar.primary.wsRun.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.Current.Subtle}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Workspace.Current.Accent}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+  <Style Selector="Button.wsRun Border.keyHint">
+    <Setter Property="Background" Value="{DynamicResource Brush.Workspace.KeyHint}"/>
+  </Style>
+
+  <!-- Cross-fade on switch (skipped under reduced motion) -->
+  <Style Selector=":is(Panel).wsRoot:not(.reduceMotion) Border.wsAccentLine,
+                   :is(Panel).wsRoot:not(.reduceMotion) Border.wsCanvasTint,
+                   :is(Panel).wsRoot:not(.reduceMotion) Border.wsChip">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.2"/>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+      </Transitions>
+    </Setter>
+  </Style>
+</Styles>

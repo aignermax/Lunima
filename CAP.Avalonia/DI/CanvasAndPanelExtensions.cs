@@ -31,7 +31,10 @@ internal static class CanvasAndPanelExtensions
     {
         services.AddSingleton(sp =>
         {
-            var canvas = new DesignCanvasViewModel();
+            var canvas = new DesignCanvasViewModel
+            {
+                CommandManager = sp.GetRequiredService<Commands.CommandManager>(),
+            };
 
             // Restore the user's last choice, then persist any further toggle (Settings →
             // Routing → Enable Diagonal) — the checkbox otherwise silently reverted to off
@@ -62,6 +65,17 @@ internal static class CanvasAndPanelExtensions
             // Resolved lazily: the left panel itself shows previews through this service.
             previews.InlineNazcaCodeLookup = (module, function) =>
                 InlineNazcaCode.Find(sp.GetRequiredService<LeftPanelViewModel>().AllTemplates, module, function);
+            // Core/metal preview roles follow the component's process (#1494): the same
+            // component → PDK source → loaded PDK draft chain the process binding uses.
+            previews.LayerRolesLookup = component =>
+            {
+                var library = sp.GetRequiredService<LeftPanelViewModel>();
+                var pdkName = ComponentPdkSourceResolver.Resolve(component, library.AllTemplates);
+                var process = library.GetLoadedPdkDrafts()
+                    .FirstOrDefault(draft => string.Equals(draft.Name, pdkName, StringComparison.OrdinalIgnoreCase))
+                    ?.Process;
+                return GdsPreviewLayerRoles.FromProcess(process);
+            };
             return previews;
         });
 

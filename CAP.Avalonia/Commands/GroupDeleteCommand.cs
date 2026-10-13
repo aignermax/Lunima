@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP.Avalonia.Commands;
 
@@ -30,9 +31,9 @@ public class GroupDeleteCommand : IUndoableCommand
         // Snapshot each component and its connections before deletion
         foreach (var comp in components)
         {
+            var scope = new ComponentWireScope(comp.Component);
             var connections = canvas.Connections
-                .Where(c => c.Connection.StartPin.ParentComponent == comp.Component ||
-                            c.Connection.EndPin.ParentComponent == comp.Component)
+                .Where(c => scope.Touches(c.Connection))
                 .Select(c => (c.Connection, c))
                 .ToList();
 
@@ -55,25 +56,30 @@ public class GroupDeleteCommand : IUndoableCommand
     {
         _removedComponents.Clear();
 
-        // Remove all components (RemoveComponent also removes their connections)
+        // Remove all components (DeleteComponent also removes their connections)
+        var crossing = _canvas.ConnectionManager.CrossingService;
         foreach (var data in _deletedComponents)
         {
             // Skip locked components
             if (data.Component.IsLocked)
                 continue;
 
-            // Snapshot connections that still exist (may have been removed by prior deletion)
+            // Snapshot connections that still exist (may have been removed by prior deletion).
+            // Crossing sub-connections are kept as their pre-split originals: deleting dissolves
+            // the crossing, so restoring the subs would resurrect pins of a removed crossing.
             data.Connections.Clear();
+            var scope = new ComponentWireScope(data.Component);
+            if (!ChainCrossingMaintenance.IsTemporaryCrossing(data.Component))
+                _canvas.DissolveInsertedCrossingChains(scope.Touches);
             foreach (var connVm in _canvas.Connections.ToList())
             {
-                if (connVm.Connection.StartPin.ParentComponent == data.Component ||
-                    connVm.Connection.EndPin.ParentComponent == data.Component)
-                {
-                    data.Connections.Add((connVm.Connection, connVm));
-                }
+                if (!scope.Touches(connVm.Connection)) continue;
+                var original = crossing?.ResolveToOriginal(connVm.Connection) ?? connVm.Connection;
+                if (data.Connections.All(c => c.Connection != original))
+                    data.Connections.Add((original, connVm));
             }
 
-            _canvas.RemoveComponent(data.ViewModel);
+            _canvas.DeleteComponent(data.ViewModel);
             _removedComponents.Add(data);
         }
     }
@@ -89,20 +95,7 @@ public class GroupDeleteCommand : IUndoableCommand
             data.ViewModel = _canvas.AddComponent(data.Component, data.TemplateName, data.TemplatePdkSource);
         }
 
-        // Re-add connections (deduplicate by connection identity)
-        var restoredConnections = new HashSet<WaveguideConnection>();
-        foreach (var data in _removedComponents)
-        {
-            foreach (var (connection, _) in data.Connections)
-            {
-                if (restoredConnections.Add(connection))
-                {
-                    _canvas.ConnectionManager.AddExistingConnection(connection);
-                    var connVm = new WaveguideConnectionViewModel(connection);
-                    _canvas.Connections.Add(connVm);
-                }
-            }
-        }
+        _canvas.RestoreConnections(_removedComponents.SelectMany(d => d.Connections.Select(c => c.Connection)));
 
         _ = _canvas.RecalculateRoutesAsync();
         _canvas.InvalidateSimulation();

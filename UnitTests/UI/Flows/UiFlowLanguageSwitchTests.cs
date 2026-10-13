@@ -29,15 +29,22 @@ public class UiFlowLanguageSwitchTests
         using var host = new UiFlowTestHost();
         try
         {
-            // The toolbar Run label is a plain {loc:Localize Toolbar.Run} TextBlock.
+            // The Run label names the workspace action (a new design opens in Layout).
             var runLabel = UiInput.Descendants<TextBlock>(host.Window)
-                .First(t => t.Text == "Run");
+                .First(t => t.Text == "Run checks");
+            var layoutSegment = UiInput.Descendants<Button>(host.Window)
+                .First(b => Equals(b.Content, "Layout"));
+            var opticsSegment = UiInput.Descendants<Button>(host.Window)
+                .First(b => Equals(b.Content, "Optics"));
 
             LocalizationService.Instance.SetLanguage("es");
             UiInput.RunJobs();
 
-            runLabel.Text.ShouldBe("Simular",
+            runLabel.Text.ShouldBe("Comprobar",
+                "the workspace-dependent Run label must re-read live on a language switch");
+            opticsSegment.Content.ShouldBe("Óptica",
                 "an open window's {loc:Localize} bindings must re-read live on a language switch");
+            layoutSegment.Content.ShouldBe("Diseño");
         }
         finally
         {

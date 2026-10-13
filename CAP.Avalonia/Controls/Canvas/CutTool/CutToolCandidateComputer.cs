@@ -120,28 +120,15 @@ public sealed class CutToolCandidateComputer
     }
 
     /// <summary>
-    /// Connections the tool may split: sub-connections of an active adaptive crossing are
-    /// excluded structurally — a connection whose start or end pin docks on a component
-    /// flagged <see cref="Component.IsInsertedCrossing"/> is never eligible, regardless of
-    /// whether the adaptive service is currently running. Without this structural check,
-    /// disabling the adaptive feature (or loading a design before its registry rebuilds)
-    /// would offer the adaptive crossing's own stub connections as cuttable, and undoing that
-    /// insertion would dissolve a crossing the Cut tool never created.
-    /// Internal so <see cref="CAP.Avalonia.Gestures.CutToolGestureRecognizer"/> can reuse the
-    /// exact same eligibility filter for the free-cut fallback.
+    /// Connections the tool may split: every optical wire on the canvas, including the pieces
+    /// docked on a crossing, routing-placed or user-placed. A cut keeps the piece's geometry and
+    /// first hands a recorded crossing over to chain bookkeeping (see
+    /// <see cref="InsertManualCrossingCommand"/>), so neither the cut nor its undo dissolves the
+    /// crossing next to it. Internal so <see cref="CAP.Avalonia.Gestures.CutToolGestureRecognizer"/>
+    /// and <see cref="CutAtPoint"/> reuse the exact same eligibility filter.
     /// </summary>
-    internal static IEnumerable<WaveguideConnection> CollectEligibleConnections(DesignCanvasViewModel canvas)
-    {
-        var crossing = canvas.ConnectionManager.CrossingInsertion;
-        return canvas.Connections
-            .Select(vm => vm.Connection)
-            .Where(c => crossing == null || crossing.ResolveToOriginal(c) == c)
-            .Where(c => !DocksOnInsertedCrossing(c));
-    }
-
-    private static bool DocksOnInsertedCrossing(WaveguideConnection connection) =>
-        connection.StartPin.ParentComponent?.IsInsertedCrossing == true ||
-        connection.EndPin.ParentComponent?.IsInsertedCrossing == true;
+    internal static IEnumerable<WaveguideConnection> CollectEligibleConnections(DesignCanvasViewModel canvas) =>
+        canvas.Connections.Select(vm => vm.Connection).Where(c => !c.IsElectrical);
 
     /// <summary>Drops connections with no segment anywhere near the viewport, so the expensive
     /// guide/segment intersection sweep never runs against off-screen geometry.</summary>

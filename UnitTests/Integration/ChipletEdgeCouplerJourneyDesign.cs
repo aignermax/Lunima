@@ -7,6 +7,7 @@ using CAP_DataAccess.Components.ComponentDraftMapper;
 using CAP_DataAccess.Components.ComponentDraftMapper.DTOs;
 using Shouldly;
 using UnitTests.Components;
+using UnitTests.Helpers;
 
 namespace UnitTests.Integration;
 
@@ -66,7 +67,7 @@ public sealed class ChipletEdgeCouplerJourneyDesign
 
     /// <summary>The connectable canvas-side pin behind a group's exposed pin.</summary>
     public static PhysicalPin ExposedPin(ComponentGroup group, string pinName) =>
-        group.ExternalPins.Single(p => p.Name == pinName).InternalPin!;
+        GroupPinLookup.Find(group, pinName).InternalPin!;
 
     /// <summary>
     /// Builds the full composition: both chiplets grouped, chiplet B aligned so its

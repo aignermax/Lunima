@@ -349,6 +349,18 @@ public partial class DesignCanvasViewModel : ObservableObject
         return vm;
     }
 
+    /// <summary>
+    /// Deletes a component together with every wire to it or to anything nested in it. Unlike
+    /// <see cref="RemoveComponent"/> (which ungrouping also uses while the group still lists its
+    /// children), a deleted group takes the wires to its gates' pins along.
+    /// </summary>
+    public void DeleteComponent(ComponentViewModel component)
+    {
+        ConnectionManager.RemoveConnectionsForComponentTree(component.Component);
+        SyncConnectionViewModels();
+        RemoveComponent(component);
+    }
+
     public void RemoveComponent(ComponentViewModel component)
     {
         Router.RemoveComponentObstacle(component.Component);

@@ -147,6 +147,19 @@ public partial class MainViewModel : ObservableObject
     public ViewModels.Onboarding.FirstStepsTutorial.WatchComputeTourViewModel WatchTour { get; }
 
     /// <summary>
+    /// Step engine for the "Your first gate" tour. Started from the Home screen's
+    /// second tour card; observes the canvas, the Make-gate steps and the Logic
+    /// panel while the gate-kit example it opens becomes a NAND gate.
+    /// </summary>
+    public ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel FirstGateTour { get; }
+
+    /// <summary>
+    /// The dismissible "Connect Claude Code" info bar (null in headless contexts without the
+    /// agent bridge). Checked once after startup, next to the update check.
+    /// </summary>
+    public ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? ClaudeConnectPrompt { get; }
+
+    /// <summary>
     /// Step engine for the "Run a program on your chip" tour (issue #1267).
     /// Started from the Home screen's third tour card; observes the Logic panel
     /// and the ISA playground of the 4-bit adder example it opens.
@@ -351,7 +364,9 @@ public partial class MainViewModel : ObservableObject
         ViewModels.Logic.IsaPlayground.IsaPlaygroundViewModel? isaPlayground = null,
         ViewModels.Onboarding.FirstStepsTutorial.RunProgramTourViewModel? runProgramTourViewModel = null,
         ViewModels.Onboarding.FirstStepsTutorial.ConnectChipletsTourViewModel? connectChipletsTourViewModel = null,
-        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null)
+        ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel? storeNumberTourViewModel = null,
+        ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel? firstGateTourViewModel = null,
+        ViewModels.Settings.AgentBridge.ClaudeCodeConnectPromptViewModel? claudeConnectPrompt = null)
     {
         _urlLauncher = urlLauncher ?? Services.PlatformShellLauncher.CreateDefault();
         // Injected for activation: constructing the binder wires the adaptive
@@ -364,8 +379,9 @@ public partial class MainViewModel : ObservableObject
         GdsPreviewRenderService = gdsPreviewRenderService;
         ErrorConsole = errorConsoleService;
         ChipSize = chipSize;
-        _canvas.SimulationRequested = async () => await ExecuteSimulation();
+        InitializeLiveSimulation();
         Update = updateViewModel;
+        ClaudeConnectPrompt = claudeConnectPrompt;
 
         // Wire panel ViewModels (injected via DI)
         LeftPanel = leftPanel;
@@ -396,12 +412,14 @@ public partial class MainViewModel : ObservableObject
         Home.OpenProjectRequested = async () => await FileOperations.LoadDesignCommand.ExecuteAsync(null);
         Home.OpenProjectFromPathRequested = FileOperations.LoadDesignFromPathAsync;
         Home.OpenExampleRequested = FileOperations.OpenDesignAsCopyAsync;
+        WorkspaceSwitch = InitializeWorkspaces();
+        InitializeWorkspaceContext();
         Home.LearnTutorialRequested = StartTutorialOnFreshDesignAsync;
         Home.WatchComputeTourRequested = StartWatchComputeTourAsync;
         Home.RunProgramTourRequested = StartRunProgramTourAsync;
         Home.ConnectChipletsTourRequested = StartConnectChipletsTourAsync;
         Home.StoreNumberTourRequested = StartStoreNumberTourAsync;
-        FileOperations.ProjectOpened = Home.OnProjectOpened;
+        FileOperations.ProjectOpened = OnProjectOpened;
 
         Tutorial = tutorialViewModel ?? new ViewModels.Onboarding.FirstStepsTutorial.TutorialViewModel(canvas);
         // The tour must observe the panel instance the user actually clicks.
@@ -421,6 +439,12 @@ public partial class MainViewModel : ObservableObject
         // The tour must observe the panel instance the user actually clicks.
         StoreNumberTour = storeNumberTourViewModel
             ?? new ViewModels.Onboarding.FirstStepsTutorial.StoreNumberTourViewModel(RightPanel.Logic, BottomPanel.Analysis);
+        // The gate tour observes the Make-gate steps and Logic panel the window shows.
+        FirstGateTour = firstGateTourViewModel
+            ?? new ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel(
+                Canvas, RightPanel.MakeGate, RightPanel.Logic);
+        Home.FirstGateTourRequested = StartFirstGateTourAsync;
+        WireMakeGate();
 
         // Keep the window title in sync with the open file and dirty state
         FileOperations.PropertyChanged += (_, e) =>
@@ -502,8 +526,9 @@ public partial class MainViewModel : ObservableObject
             new SaxExportFormat(FileOperations.ExportSaxCommand),
             PhotonTorchExportFormat,
             VerilogAExportFormat,
-            // Circuit-topology netlist (gdsfactory YAML, #687) — same save flow as the panel.
-            new NetlistExportFormat(RightPanel.Netlist.SaveYamlCommand),
+            // Circuit-topology netlist (gdsfactory YAML): the only place it is exported from.
+            new NetlistExportFormat(new AsyncRelayCommand(SaveNetlistAsync)),
+            new NetlistClipboardExportFormat(new AsyncRelayCommand(CopyNetlistToClipboardAsync)),
         });
 
         // Wire up status callbacks
@@ -611,6 +636,7 @@ public partial class MainViewModel : ObservableObject
         {
             RightPanel.Sweep.ConfigureForComponent(comp, Canvas);
             RightPanel.TruthTable.ConfigureForSelection(comp, Canvas);
+            RightPanel.MakeGate.ConfigureForSelection(comp, Canvas);
             BottomPanel.Analysis.Optimization.RefreshFromCanvas();
             LeftPanel.HierarchyPanel.SyncSelectionFromCanvas(comp);
         };
@@ -751,6 +777,8 @@ public partial class MainViewModel : ObservableObject
     {
         await Task.Delay(2000);
         await Update.CheckForUpdatesOnStartupAsync();
+        if (ClaudeConnectPrompt != null)
+            await ClaudeConnectPrompt.CheckOnStartupAsync();
     }
 
     private void WireCommandManager()
@@ -773,6 +801,20 @@ public partial class MainViewModel : ObservableObject
     {
         StatusText = text;
         BottomPanel.SetStatus(text);
+    }
+
+    /// <summary>Saves the netlist from the Export menu and reports the outcome in the status bar.</summary>
+    private async Task SaveNetlistAsync()
+    {
+        await RightPanel.Netlist.SaveYamlCommand.ExecuteAsync(null);
+        UpdateStatusText(RightPanel.Netlist.StatusText);
+    }
+
+    /// <summary>Copies the netlist from the Export menu and reports the outcome in the status bar.</summary>
+    private async Task CopyNetlistToClipboardAsync()
+    {
+        await RightPanel.Netlist.CopyYamlCommand.ExecuteAsync(null);
+        UpdateStatusText(RightPanel.Netlist.StatusText);
     }
 
     /// <summary>
@@ -1023,6 +1065,8 @@ public partial class MainViewModel : ObservableObject
         if (!await FileOperations.TryNewProjectAsync())
             return;
 
+        // The tour's Run step expects the CW power-flow overlay.
+        WorkspaceSwitch.Current = ViewModels.Workspaces.Workspace.Optics;
         Tutorial.Start();
     }
 
@@ -1309,63 +1353,64 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Toggle off if overlay is already showing
-        if (Canvas.ShowPowerFlow)
-        {
-            Canvas.ShowPowerFlow = false;
-            Canvas.PowerFlowVisualizer.IsEnabled = false;
-            StatusText = LocalizationService.Instance.Translate("Status.SimulationOverlayOff");
-            return;
-        }
-
+        // Always runs; the on/off toggle lives in RunWorkspace / TogglePowerOverlay (L, P).
         await ExecuteSimulation();
     }
 
     /// <summary>
-    /// Runs simulation without toggle logic (used by auto-resimulation).
+    /// Runs the CW simulation without toggle logic. <paramref name="isLiveRun"/> marks a
+    /// re-run of the switched-on simulation after a design change: a cancelled live run
+    /// applies nothing, a live run that cannot simulate (no light source, no connections,
+    /// blocked circuit) switches the simulation off instead of leaving a stale overlay,
+    /// and a live run that finds a simulation already running is re-queued.
     /// </summary>
-    private async Task ExecuteSimulation()
+    private async Task ExecuteSimulation(CancellationToken cancellationToken = default, bool isLiveRun = false)
     {
-        if (IsSimulating) return;
+        if (IsSimulating)
+        {
+            _liveRunDeferred |= isLiveRun;
+            return;
+        }
         IsSimulating = true;
 
         try
         {
             StatusText = LocalizationService.Instance.Translate("Status.RunningSimulation");
-            var result = await Simulation.RunAsync(Canvas);
+            var result = await Simulation.RunAsync(Canvas, cancellationToken);
 
             if (result.Success)
             {
                 StatusText = string.Format(LocalizationService.Instance.Translate("Status.SimulationComplete"),
                              result.LightSourceCount, result.ConnectionCount, result.WavelengthSummary);
-
-                if (result.SystemMatrix != null)
-                {
-                    RightPanel.SMatrixPerformance.AnalyzeMatrix(result.SystemMatrix);
-                }
             }
             else
             {
-                StatusText = result.ErrorMessage ?? "Simulation failed";
+                ReportSimulationFailure(result.ErrorMessage ?? "Simulation failed", isLiveRun);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Superseded by a newer live run, which reports its own outcome.
         }
         catch (CAP_Core.LightCalculation.NonConvergentCircuitException ex)
         {
             // Physics guard (round-4): non-passive data / resonant loop — surface the
             // already-localized guard message instead of a raw exception string.
             var message = Analysis.NonConvergentCircuitMessageFormatter.Format(ex);
-            StatusText = message;
+            ReportSimulationFailure(message, isLiveRun);
             BottomPanel.ErrorConsole.Log($"Simulation blocked: {message}", CAP_Contracts.Logger.LogLevel.Error, ex);
         }
         catch (Exception ex)
         {
-            StatusText = string.Format(LocalizationService.Instance.Translate("Status.SimulationError"), ex.Message);
+            ReportSimulationFailure(
+                string.Format(LocalizationService.Instance.Translate("Status.SimulationError"), ex.Message), isLiveRun);
             BottomPanel.ErrorConsole.Log($"Simulation failed: {ex.Message}", CAP_Contracts.Logger.LogLevel.Error, ex);
 
         }
         finally
         {
             IsSimulating = false;
+            RequeueDeferredLiveRun();
         }
     }
 
@@ -1409,6 +1454,10 @@ public partial class MainViewModel : ObservableObject
             var pdkSourceByComponent = Canvas.Components.ToDictionary(
                 c => c.Component,
                 c => c.TemplatePdkSource ?? CanvasInteraction.PlacementContext.ResolveComponentPdkSource(c.Component));
+            // Group children carry no template snapshot of their own; the PDK check walks
+            // them at every nesting depth, so resolve them through the live library too.
+            foreach (var nested in groups.SelectMany(g => g.GetAllComponentsRecursive()))
+                pdkSourceByComponent.TryAdd(nested, CanvasInteraction.PlacementContext.ResolveComponentPdkSource(nested));
 
             // Under a real process lock the allowed set is the lock-derived membership; without one
             // (Playground/no selection) nothing is locked, so GetProcessCompatiblePdkNames() equals
@@ -1587,6 +1636,13 @@ public class DesignFileData
     /// fringes. Null in files saved before the mode existed — loads as off.
     /// </summary>
     public bool? CoherentPropagationPhase { get; set; }
+
+    /// <summary>
+    /// The workspace (Layout / Optics / Logic / System) the design was last saved in.
+    /// Null in files saved before workspaces existed — the design then opens in a
+    /// content-based default (see <c>WorkspaceDefaults</c>).
+    /// </summary>
+    public string? Workspace { get; set; }
 }
 
 /// <summary>

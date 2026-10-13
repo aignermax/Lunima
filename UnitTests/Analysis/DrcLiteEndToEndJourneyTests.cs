@@ -33,7 +33,7 @@ public class DrcLiteEndToEndJourneyTests
             "the real router must degrade under the Cornerstone 30 µm floor — no test-side flag stuffing");
 
         // ── Journey step 2: run the panel command headless ──
-        var panel = new DesignValidationViewModel();
+        var panel = new DesignValidationViewModel { ShowUnconnectedPins = true };
         panel.RunValidation(
             broken.Connections,
             allComponents: broken.Components,
@@ -93,7 +93,7 @@ public class DrcLiteEndToEndJourneyTests
 
         // ── Journey step 4: repair the design and re-run — zero findings ──
         var fixedDesign = DrcLiteJourneyDesign.BuildFixed();
-        var fixedPanel = new DesignValidationViewModel();
+        var fixedPanel = new DesignValidationViewModel { ShowUnconnectedPins = true };
         fixedPanel.RunValidation(
             fixedDesign.Connections,
             allComponents: fixedDesign.Components,
@@ -112,7 +112,7 @@ public class DrcLiteEndToEndJourneyTests
         demo.Components.SelectMany(c => c.PhysicalPins).ShouldAllBe(
             p => p.WaveguideWidthMicrometers == null && p.Layer == null);
 
-        var demoPanel = new DesignValidationViewModel();
+        var demoPanel = new DesignValidationViewModel { ShowUnconnectedPins = true };
         demoPanel.RunValidation(
             demo.Connections,
             allComponents: demo.Components,

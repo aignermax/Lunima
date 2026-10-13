@@ -29,7 +29,7 @@ public class ImportedGdsCellLogicGateSeamTests : IDisposable
     private const double PowerTolerance = 1e-6;
 
     private static readonly string[] ExpectedExternalPins =
-        { Journey.InputPinA, Journey.InputPinB, "combine_out2", Journey.OutputPinY };
+        { Journey.InputPinA, Journey.InputPinB, Journey.SpareCombinerPin, Journey.OutputPinY };
 
     private readonly Journey _journey = new();
 

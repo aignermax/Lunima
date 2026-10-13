@@ -1,12 +1,14 @@
+using CAP_Core.Analysis.Hierarchy;
 using CAP_Core.Components.Connections;
 using CAP_Core.Components.Core;
 using CAP_Core.Routing;
+using Component = CAP_Core.Components.Core.Component;
 
 namespace CAP_Core.Analysis;
 
 /// <summary>
 /// Detects overlapping waveguide paths in a design, including regular connections
-/// that cross frozen paths inside ComponentGroups.
+/// that cross frozen paths inside ComponentGroups at any nesting depth.
 /// </summary>
 public class WaveguideOverlapDetector
 {
@@ -90,16 +92,13 @@ public class WaveguideOverlapDetector
             }
         }
 
-        foreach (var group in groups)
+        foreach (var hierarchical in DesignHierarchy.From(groups.Cast<Component>()).FrozenPaths)
         {
-            foreach (var frozen in group.InternalPaths)
+            if (hierarchical.Frozen.Path?.Segments is { Count: > 0 } segs)
             {
-                if (frozen.Path?.Segments is { Count: > 0 } segs)
-                {
-                    var label = $"Group '{group.Identifier}' frozen path";
-                    var (midX, midY) = GetSegmentsMid(segs);
-                    paths.Add(new PathDescriptor(segs, label, null, midX, midY));
-                }
+                var label = $"Group '{hierarchical.GroupPath}' frozen path";
+                var (midX, midY) = GetSegmentsMid(segs);
+                paths.Add(new PathDescriptor(segs, label, null, midX, midY));
             }
         }
 

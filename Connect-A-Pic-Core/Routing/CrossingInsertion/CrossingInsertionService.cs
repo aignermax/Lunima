@@ -11,7 +11,7 @@ namespace CAP_Core.Routing.CrossingInsertion;
 /// real PDK crossing component and splits both connections into
 /// sub-connections docked at the crossing ports.
 /// </summary>
-public class CrossingInsertionService
+public partial class CrossingInsertionService
 {
     private readonly CrossingRecordRegistry _registry = new();
     private readonly CrossingInserter _inserter = new();
@@ -118,14 +118,6 @@ public class CrossingInsertionService
     public void RestoreRecord(CrossingRecord record) => _registry.Add(record);
 
     /// <summary>
-    /// Dissolves every crossing whose net endpoints moved since placement, so the
-    /// next routing + crossing pass re-evaluates them instead of forcing the nets
-    /// through a leftover crossing forever.
-    /// </summary>
-    public void DissolveStaleRecords(WaveguideConnectionManager manager, WaveguideRouter router) =>
-        _registry.DissolveStaleRecords(manager, router);
-
-    /// <summary>
     /// Runs one crossing-insertion pass over all routed connections.
     /// Called by <see cref="WaveguideConnectionManager"/> after routing completes.
     /// </summary>
@@ -210,6 +202,7 @@ public class CrossingInsertionService
         var clock = System.Diagnostics.Stopwatch.StartNew();
         try
         {
+            RestoreDissolvedChains(manager, router, cancellationToken);
             for (int pass = 0; pass < MaxChainPasses && !cancellationToken.IsCancellationRequested; pass++)
             {
                 if (!ConnectBlockedOnce(manager, router, settings, clock, cancellationToken))
@@ -218,7 +211,7 @@ public class CrossingInsertionService
             ResolvePinPairs(manager, router, settings, clock, cancellationToken);
             foreach (var (maxNodes, weight) in FallbackChainSearches)
             {
-                if (cancellationToken.IsCancellationRequested || !manager.Connections.Any(c => c.IsBlockedFallback)) break;
+                if (cancellationToken.IsCancellationRequested || !manager.Connections.Any(c => IsChainCandidate(c, manager))) break;
                 var fallback = settings with { MaxNodesExpanded = maxNodes, HeuristicWeight = weight };
                 ConnectBlockedOnce(manager, router, fallback, clock, cancellationToken);
                 ResolvePinPairs(manager, router, fallback, clock, cancellationToken);
@@ -226,10 +219,22 @@ public class CrossingInsertionService
         }
         finally
         {
+            bool searchedAll = !cancellationToken.IsCancellationRequested && clock.Elapsed <= ChainPassTimeBudget;
             foreach (var stillBlocked in blockedWires.Where(c => manager.Connections.Contains(c) && c.IsBlockedFallback))
+            {
                 router.PathfindingGrid!.AddWaveguideObstacle(stillBlocked.Id, stillBlocked.RoutedPath!.Segments, manager.WaveguideWidthMicrometers);
+                if (searchedAll)
+                    manager.UnroutableWires.MarkChainSearchExhausted(stillBlocked);
+            }
         }
     }
+
+    /// <summary>
+    /// A blocked wire the chain pass still tries: one already proven unroutable whose chain
+    /// search failed with the same pins is skipped until a pin moves.
+    /// </summary>
+    private static bool IsChainCandidate(WaveguideConnection connection, WaveguideConnectionManager manager) =>
+        connection.IsBlockedFallback && !manager.UnroutableWires.IsChainSearchExhausted(connection);
 
     /// <summary>
     /// For every wire still blocked, swaps the routing order with its pin neighbours
@@ -239,17 +244,18 @@ public class CrossingInsertionService
         WaveguideConnectionManager manager, WaveguideRouter router, CrossingRouteSettings settings,
         System.Diagnostics.Stopwatch clock, CancellationToken cancellationToken)
     {
-        foreach (var blocked in manager.Connections.Where(c => c.IsBlockedFallback).ToList())
+        foreach (var blocked in manager.Connections.Where(c => IsChainCandidate(c, manager)).ToList())
         {
             if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
                 return;
             if (!blocked.IsBlockedFallback || !manager.Connections.Contains(blocked)) continue;
+            var before = Snapshot(manager);
             var resolution = _pinPairRerouter.TryResolve(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
             if (resolution == null) continue;
             if (!manager.Connections.Contains(blocked))
                 router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
-            foreach (var crossing in resolution.Dissolved)
-                ComponentRemoved?.Invoke(crossing);
+            Report(manager, before, _pinPairRerouter.LastUndo, resolution.Placed, resolution.Dissolved);
+            NotifyRemoved(resolution.Dissolved);
             foreach (var crossing in resolution.Placed)
                 ComponentAdded?.Invoke(crossing);
         }
@@ -261,13 +267,15 @@ public class CrossingInsertionService
         System.Diagnostics.Stopwatch clock, CancellationToken cancellationToken)
     {
         bool connectedAny = false;
-        foreach (var blocked in manager.Connections.Where(c => c.IsBlockedFallback).ToList())
+        foreach (var blocked in manager.Connections.Where(c => IsChainCandidate(c, manager)).ToList())
         {
             if (cancellationToken.IsCancellationRequested || clock.Elapsed > ChainPassTimeBudget)
                 return false;
+            var before = Snapshot(manager);
             var placed = _chainInserter.TryInsert(blocked, manager, router, CrossingComponentFactory, settings, cancellationToken);
             if (placed == null) continue;
             connectedAny = true;
+            Report(manager, before, _chainInserter.LastUndo, placed, Array.Empty<Component>());
             // A chain replaced the wire by its pieces; a crossing-free route kept it.
             if (!manager.Connections.Contains(blocked))
                 router.PathfindingGrid!.RemoveWaveguideObstacle(blocked.Id);
@@ -286,15 +294,6 @@ public class CrossingInsertionService
     public bool TryDissolveForConnection(
         WaveguideConnection removedConnection, WaveguideConnectionManager manager, WaveguideRouter router) =>
         _registry.TryDissolveForConnection(removedConnection, manager, router);
-
-    /// <summary>
-    /// Dissolves all crossings whose sub-connections touch the given component
-    /// (e.g. because the component is being deleted). Originals not connected to
-    /// that component are restored unsplit.
-    /// </summary>
-    public void DissolveForComponent(
-        Component component, WaveguideConnectionManager manager, WaveguideRouter router) =>
-        _registry.DissolveForComponent(component, manager, router);
 
     private bool TryInsertForConnection(
         WaveguideConnection connection, WaveguideConnectionManager manager, WaveguideRouter router,
@@ -433,6 +432,8 @@ public class CrossingInsertionService
         }
 
         _registry.Add(record);
+        ChangeRecorded?.Invoke(new CrossingChange(new[] { crossing }, Array.Empty<Component>(),
+            record.AllSubConnections.ToList(), UndoDetourCrossing(record, manager, router)));
 
         // Notify AFTER the sub-connections replaced the originals, so hosts
         // (e.g. the canvas binder) see a consistent connection list.

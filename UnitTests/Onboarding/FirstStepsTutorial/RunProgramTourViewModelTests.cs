@@ -79,7 +79,7 @@ public class RunProgramTourViewModelTests
         tour.Start();
 
         dock.IsVisible.ShouldBeTrue("the Logic panel lives in the analysis dock (#1183)");
-        dock.SelectedTabIndex.ShouldBe(8, "the Logic tab is the last tab of the analysis dock");
+        dock.SelectedTabIndex.ShouldBe(7, "the Logic tab is the last tab of the analysis dock");
     }
 
     [Fact]

@@ -110,7 +110,7 @@ public partial class RightPanelViewModel : ObservableObject
     public AiAssistantViewModel AiAssistant { get; }
 
     /// <summary>
-    /// ViewModel for the Netlist panel (gdsfactory YAML view/export, issue #687).
+    /// Netlist export (gdsfactory YAML, issue #687) behind the toolbar Export menu entries.
     /// </summary>
     public Export.Netlist.NetlistViewModel Netlist { get; }
 
@@ -118,6 +118,12 @@ public partial class RightPanelViewModel : ObservableObject
     /// ViewModel for the Truth Table panel (logic-gate behavior of a selected group).
     /// </summary>
     public TruthTableViewModel TruthTable { get; }
+
+    /// <summary>
+    /// ViewModel for the guided "Make gate" steps that replace the plain truth table
+    /// while active (pin roles → simulate → threshold → save as gate).
+    /// </summary>
+    public ViewModels.Analysis.LogicAnalysis.MakeGate.MakeGateViewModel MakeGate { get; } = new();
 
     /// <summary>
     /// ViewModel for the Logic panel (toggle network inputs, live gate outputs of the

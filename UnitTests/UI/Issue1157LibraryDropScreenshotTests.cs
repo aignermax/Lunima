@@ -39,8 +39,8 @@ public class Issue1157LibraryDropScreenshotTests
         try
         {
             var listBoxes = window.GetVisualDescendants().OfType<ListBox>().ToList();
-            listBoxes.Count(l => LibraryDragBehavior.GetIsEnabled(l)).ShouldBe(3,
-                "component library + user groups + PDK groups must all be drag sources");
+            listBoxes.Count(l => LibraryDragBehavior.GetIsEnabled(l)).ShouldBe(5,
+                "component library + user groups + PDK groups + Optics sources quick section + saved gates must all be drag sources");
 
             var canvas = window.GetVisualDescendants().OfType<DesignCanvas>().First();
             DragDrop.GetAllowDrop(canvas).ShouldBeTrue("the canvas must accept library drops");

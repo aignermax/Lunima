@@ -91,11 +91,14 @@ public partial class LogicPanelViewModel : ObservableObject
         _canvas = canvas;
         _canvas.Components.CollectionChanged += OnDesignEdited;
         _canvas.Connections.CollectionChanged += OnDesignEdited;
+        RefreshGateCandidates();
     }
 
     /// <summary>A design edit discards the shown network and its canvas badges.</summary>
     private void OnDesignEdited(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (ReferenceEquals(sender, _canvas?.Components))
+            RefreshGateCandidates();
         if (!HasNetwork)
             return;
         ClearNetwork();

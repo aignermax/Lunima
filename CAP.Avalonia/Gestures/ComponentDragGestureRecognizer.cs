@@ -106,21 +106,37 @@ public class ComponentDragGestureRecognizer : IGestureRecognizer
         if (ctrl) { canvas.Selection.AddToSelection(_state.DraggingComponent!); _state.DraggingComponent = null; return; }
         if (alt) { canvas.Selection.RemoveFromSelection(_state.DraggingComponent!); _state.DraggingComponent = null; return; }
 
-        if (!canvas.Selection.SelectedComponents.Contains(_state.DraggingComponent))
-        {
-            canvas.Selection.SelectSingle(_state.DraggingComponent!);
-            canvas.SelectedComponent = _state.DraggingComponent;
-        }
-
+        var target = _state.DraggingComponent!;
+        SelectIfNeeded(target, canvas);
         mainVm?.CanvasClicked(canvasPoint.X, canvasPoint.Y);
-        if (canvas.Selection.SelectedComponents.Count > 1) mainVm?.StartGroupMove(canvas.Selection.SelectedComponents);
-        else mainVm?.StartMoveComponent(_state.DraggingComponent);
+        BeginMove(target, canvas, mainVm);
+    }
 
-        _state.DragStartX = _state.DraggingComponent!.X;
-        _state.DragStartY = _state.DraggingComponent.Y;
+    /// <summary>
+    /// Starts an ordinary (free) move of <paramref name="target"/> — selected alone unless it
+    /// is already part of the selection — as if it had been pressed: the following pointer
+    /// moves and the release run through this recognizer. Lets another gesture hand over a
+    /// drag mid-way (a crossing's axis drag when Shift frees it).
+    /// </summary>
+    public void BeginMove(ComponentViewModel target, DesignCanvasViewModel canvas, MainViewModel? mainVm)
+    {
+        _state.DraggingComponent = target;
+        SelectIfNeeded(target, canvas);
+        if (canvas.Selection.SelectedComponents.Count > 1) mainVm?.StartGroupMove(canvas.Selection.SelectedComponents);
+        else mainVm?.StartMoveComponent(target);
+
+        _state.DragStartX = target.X;
+        _state.DragStartY = target.Y;
         _state.GroupDragStartPositions.Clear();
         foreach (var c in canvas.Selection.SelectedComponents) _state.GroupDragStartPositions[c] = (c.X, c.Y);
         _invalidate();
+    }
+
+    private static void SelectIfNeeded(ComponentViewModel target, DesignCanvasViewModel canvas)
+    {
+        if (canvas.Selection.SelectedComponents.Contains(target)) return;
+        canvas.Selection.SelectSingle(target);
+        canvas.SelectedComponent = target;
     }
 
     /// <inheritdoc/>

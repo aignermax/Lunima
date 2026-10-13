@@ -176,6 +176,12 @@ namespace CAP_Core.LightCalculation
         private static void AddComponentSMatrix(
             Component component, double waveLength, List<SMatrix> result)
         {
+            // Geometry-only components (pin-less GDS cells: logos, pads) carry no light. Their
+            // empty S-matrix adds nothing, and interpolating it between wavelength stops breaks
+            // the sweeps (the norm of a 0×0 matrix is undefined).
+            if (component.PhysicalPins.Count == 0)
+                return;
+
             if (component.WaveLengthToSMatrixMap.Count > 0)
             {
                 // Use WavelengthInterpolator: exact match → linear interpolation → nearest-neighbour

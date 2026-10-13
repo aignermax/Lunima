@@ -24,12 +24,14 @@ public static class CrossingRecordRebuilder
         WaveguideConnectionManager manager,
         IEnumerable<Component> components)
     {
+        var componentList = components.ToList();
+        ChainCrossingMaintenance.AdoptLegacyChainCrossings(componentList, manager);
         int rebuilt = 0;
         var recordedCrossings = service.Records
             .Select(r => r.CrossingComponent)
             .ToHashSet();
 
-        foreach (var component in components)
+        foreach (var component in componentList)
         {
             if (!component.IsInsertedCrossing || recordedCrossings.Contains(component))
                 continue;
@@ -56,6 +58,10 @@ public static class CrossingRecordRebuilder
         var north = FindSingleDockedConnection(crossing, connections, 270);
         var south = FindSingleDockedConnection(crossing, connections, 90);
         if (west == null || east == null || north == null || south == null)
+            return null;
+        // A crossing in a chain docks onto its neighbour: its "originals" would end at another
+        // crossing's port. Chains are kept adaptive by ChainCrossingMaintenance instead.
+        if (new[] { west, east, north, south }.Any(d => CrossingComponentCatalog.IsCrossing(OuterPin(d.Value.Sub, crossing).ParentComponent)))
             return null;
 
         var originalA = CreateOriginal(crossing, west.Value.Sub, east.Value.Sub);

@@ -53,14 +53,14 @@ public class SimulationCoordinatorTests
     }
 
     [Fact]
-    public void InvalidateSimulation_RaisesShowPowerFlowChanged_WithFalse()
+    public void InvalidateSimulation_WhenOverlayActive_KeepsTheSimulationOn()
     {
         bool? newValue = null;
         _coordinator.ShowPowerFlowChanged += (value, force) => newValue = value;
 
         _coordinator.InvalidateSimulation(wasShowingOverlay: true);
 
-        newValue.ShouldBe(false);
+        newValue.ShouldBeNull("hiding the overlay would switch the live simulation off before it re-runs");
     }
 
     [Fact]

@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             x:Class="CAP.Avalonia.Controls.EmptyStateHint"
+             x:Name="Root">
+
+    <!-- Reusable empty state for analysis tabs: one plain sentence saying why nothing is
+         shown yet and (optionally) the one button that fixes it, on a single compact row. -->
+    <Border Classes="empty-state" Padding="16,10" VerticalAlignment="Top">
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+            <controls:Icon Data="{Binding IconData, ElementName=Root}" Size="20"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+            <TextBlock Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520"
+                       Text="{Binding Message, ElementName=Root}"/>
+            <Button x:Name="ActionButton" Classes="compact" VerticalAlignment="Center"
+                    Command="{Binding ActionCommand, ElementName=Root}"
+                    IsVisible="{Binding ActionText, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:Icon Data="{Binding ActionIconData, ElementName=Root}" Size="12"
+                                   IsVisible="{Binding ActionIconData, ElementName=Root, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <TextBlock Text="{Binding ActionText, ElementName=Root}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -47,6 +47,31 @@ public class LogicGateAndFromNandExampleTests
     private static readonly string[] Biases = { "BIAS", "BIAS2" };
     private static readonly string[] Outputs = { "Y" };
 
+    /// <summary>
+    /// The NAND stage's output climbs to the inverter coupler through the gap between the
+    /// two phase shifters. It must turn up before the inverter's phase shifter starts — a
+    /// riser over its first microns lies on top of its waveguide core in the layout.
+    /// </summary>
+    [Fact]
+    public async Task NandOutputRiser_StaysClearOfTheInverterPhaseShifter()
+    {
+        const double minClearanceMicrometers = 5;
+        var group = await LoadGateGroup();
+        var phaseInv = group.ChildComponents.Single(c => c.Identifier == "phase_inv");
+        var riser = group.InternalPaths.Single(p =>
+            p.StartPin?.ParentComponent?.Identifier == "phase_nand" &&
+            p.EndPin?.ParentComponent?.Identifier == "recombine");
+        double top = phaseInv.PhysicalY, bottom = phaseInv.PhysicalY + phaseInv.HeightMicrometers;
+
+        var besidePhaseInv = riser.Path.Segments
+            .Where(s => Math.Max(s.StartPoint.Y, s.EndPoint.Y) > top && Math.Min(s.StartPoint.Y, s.EndPoint.Y) < bottom)
+            .ToList();
+
+        besidePhaseInv.ShouldNotBeEmpty();
+        besidePhaseInv.Max(s => Math.Max(s.StartPoint.X, s.EndPoint.X))
+            .ShouldBeLessThanOrEqualTo(phaseInv.PhysicalX - minClearanceMicrometers);
+    }
+
     [Fact]
     public async Task Example_LoadsAsSingleGroup_WithCleanExternalPins()
     {

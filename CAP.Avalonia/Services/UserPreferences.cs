@@ -129,4 +129,32 @@ public class UserPreferences
     /// On by default — the smooth direct route is what a photonics designer expects.
     /// </summary>
     public bool PreferDirectStyledRoutes { get; set; } = true;
+
+    /// <summary>
+    /// Whether the local MCP agent bridge server runs. Off by default — it lets a local
+    /// AI agent inspect and edit the open design, so the user has to opt in.
+    /// </summary>
+    public bool AgentBridgeEnabled { get; set; }
+
+    /// <summary>Loopback TCP port of the agent bridge. 0 means "use the default port".</summary>
+    public int AgentBridgePort { get; set; }
+
+    /// <summary>
+    /// Per-install bearer token the agent bridge requires on every request. Empty until
+    /// first read, when a random token is generated and persisted.
+    /// </summary>
+    public string AgentBridgeToken { get; set; } = "";
+
+    /// <summary>
+    /// Whether the agent bridge requires <see cref="AgentBridgeToken"/> as a bearer token.
+    /// Off by default: the server only binds 127.0.0.1 and rejects non-loopback Host/Origin
+    /// headers, and a same-user process could read the token from this file anyway.
+    /// </summary>
+    public bool AgentBridgeRequireToken { get; set; }
+
+    /// <summary>
+    /// App version for which the user answered "Not now" to the "Connect Claude Code"
+    /// prompt; the prompt stays hidden until the next version. Null when never dismissed.
+    /// </summary>
+    public string? ClaudeCodePromptDismissedVersion { get; set; }
 }

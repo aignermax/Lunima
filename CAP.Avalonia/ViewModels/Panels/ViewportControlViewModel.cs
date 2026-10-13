@@ -99,6 +99,8 @@ public partial class ViewportControlViewModel : ObservableObject
         ZoomLevel = zoom;
         _canvas.PanX = panX;
         _canvas.PanY = panY;
-        UpdateStatus?.Invoke($"Zoom to fit: {zoom:P0}");
+        // No percentage here: the status bar shows the live zoom, and a number in the message
+        // would go stale with the next zoom step.
+        UpdateStatus?.Invoke(Services.Localization.LocalizationService.Instance.Translate("Status.ZoomedToFit"));
     }
 }

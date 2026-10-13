@@ -113,6 +113,10 @@ public class LogicExamplesSweepTests
         foreach (var entry in doc.RootElement.GetProperty("examples").EnumerateArray())
         {
             var file = entry.GetProperty("file").GetString()!;
+            // The gate kit ships loose, ungrouped parts on purpose — the "Your first
+            // gate" tour turns them into a gate; FirstGateKitExampleTests covers it.
+            if (file == CAP.Avalonia.ViewModels.Onboarding.FirstStepsTutorial.FirstGateTourViewModel.GateKitExampleFileName)
+                continue;
             if (file.StartsWith(LogicExampleFilePrefix, StringComparison.OrdinalIgnoreCase))
                 data.Add(file);
         }

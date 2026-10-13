@@ -34,6 +34,7 @@
     </UserControl.Styles>
 
     <Button x:Name="HelpButton" Classes="ghost help"
+            AutomationProperties.Name="{Binding Title, ElementName=Root, FallbackValue=Help}"
             ToolTip.Tip="{Binding Title, ElementName=Root, FallbackValue=Help}">
         <controls:Icon Data="{StaticResource Icon.CircleHelp}" Size="16"/>
 

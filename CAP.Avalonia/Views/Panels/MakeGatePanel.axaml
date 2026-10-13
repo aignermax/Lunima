@@ -1,0 +1,183 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             xmlns:mg="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.MakeGate"
+             xmlns:panels="using:CAP.Avalonia.Views.Panels"
+             x:Class="CAP.Avalonia.Views.Panels.MakeGatePanel"
+             x:DataType="mg:MakeGateViewModel">
+
+    <UserControl.Styles>
+        <!-- Role chips: radio-style pills, one per role; the parent StackPanel groups them. -->
+        <Style Selector="RadioButton.roleChip">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSize.Caption}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="chipBorder" Background="Transparent"
+                            BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
+                            CornerRadius="{DynamicResource Radius.S}" Padding="6,1" Margin="0,0,3,0">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.roleChip:pointerover /template/ Border#chipBorder">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface.Hover}"/>
+        </Style>
+        <Style Selector="RadioButton.roleChip:checked /template/ Border#chipBorder">
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Subtle}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+        </Style>
+        <Style Selector="RadioButton.roleChip:checked">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Hover}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Guided "Make gate" steps (replaces the plain truth table while open):
+         1 Pins (role chips + short names) → 2 Simulate (power bars) → 3 Threshold
+         (automatic from the intended function, margin in dB, manual override) →
+         4 Save as gate / to library → Open in Logic. Non-modal. -->
+    <StackPanel Spacing="4">
+        <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Classes="subtitle" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       Text="{loc:Localize MakeGate.Title}"/>
+            <controls:HelpFlyoutButton Grid.Column="1" Title="{loc:Localize MakeGateHelp.Title}"
+                                       VerticalAlignment="Center">
+                <controls:HelpFlyoutButton.HelpContent>
+                    <panels:MakeGateHelpFlyout/>
+                </controls:HelpFlyoutButton.HelpContent>
+            </controls:HelpFlyoutButton>
+            <Button Grid.Column="2" Classes="ghost icon" Command="{Binding CloseCommand}"
+                    ToolTip.Tip="{loc:Localize MakeGate.CloseTip}" VerticalAlignment="Center">
+                <controls:Icon Data="{StaticResource Icon.X}"/>
+            </Button>
+        </Grid>
+
+        <!-- 1 · Pins -->
+        <TextBlock Classes="label" Text="{loc:Localize MakeGate.StepPins}" Margin="0,4,0,0"/>
+        <ItemsControl x:Name="MakeGatePinList" ItemsSource="{Binding Pins}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mg:GatePinRowViewModel">
+                    <Grid ColumnDefinitions="64,*" Margin="0,1">
+                        <TextBox Text="{Binding Name}" Classes="compact" FontSize="{DynamicResource FontSize.Caption}"
+                                 VerticalAlignment="Center" ToolTip.Tip="{Binding PinName}"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                            <RadioButton Classes="roleChip" Content="{loc:Localize MakeGate.RoleIn}" IsChecked="{Binding IsInput}"/>
+                            <RadioButton Classes="roleChip" Content="{loc:Localize MakeGate.RoleOut}" IsChecked="{Binding IsOutput}"/>
+                            <RadioButton Classes="roleChip" Content="{loc:Localize MakeGate.RoleBias}" IsChecked="{Binding IsBias}"/>
+                            <RadioButton Classes="roleChip" Content="{loc:Localize MakeGate.RoleUnused}" IsChecked="{Binding IsUnused}"/>
+                            <TextBlock Classes="caption" Text="{Binding PinName}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="2,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 2 · Simulate -->
+        <TextBlock Classes="label" Text="{loc:Localize MakeGate.StepSimulate}" Margin="0,6,0,0"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Name="MakeGateSimulateButton" Content="{loc:Localize MakeGate.Simulate}"
+                    Command="{Binding SimulateCommand}"
+                    IsEnabled="{Binding IsProcessing, Converter={x:Static BoolConverters.Not}}"/>
+            <Button Content="{loc:Localize Common.Cancel}" Command="{Binding CancelSimulationCommand}"
+                    IsVisible="{Binding IsProcessing}"/>
+        </StackPanel>
+        <ProgressBar IsIndeterminate="True" Height="3" IsVisible="{Binding IsProcessing}"/>
+        <TextBlock Classes="caption" Text="{Binding StatusText}" TextWrapping="Wrap"
+                   IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- 3 · Threshold -->
+        <StackPanel Spacing="4" IsVisible="{Binding HasResult}">
+            <TextBlock Classes="label" Text="{loc:Localize MakeGate.StepThreshold}" Margin="0,6,0,0"/>
+            <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Classes="caption" Text="{loc:Localize MakeGate.Function}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <ComboBox x:Name="MakeGateFunctionPicker" Grid.Column="1" ItemsSource="{Binding Functions}"
+                          SelectedItem="{Binding SelectedFunction}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="mg:GateFunctionOption">
+                            <TextBlock Text="{Binding DisplayName}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="0,2,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="mg:GateResultRowViewModel">
+                        <Grid ColumnDefinitions="40,22,124,40,14,14" Margin="0,1">
+                            <TextBlock Classes="mono caption" Text="{Binding InputBitsText}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Classes="caption" Text="{Binding OutputName}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                            <!-- power bar with the threshold marker on it -->
+                            <Canvas Grid.Column="2" Width="120" Height="10" VerticalAlignment="Center">
+                                <Border Width="120" Height="10" CornerRadius="2"
+                                        Background="{DynamicResource Brush.Surface.Hover}"/>
+                                <Border Width="{Binding BarWidth}" Height="10" CornerRadius="2"
+                                        Background="{DynamicResource Brush.Success}" IsVisible="{Binding IsOne}"/>
+                                <Border Width="{Binding BarWidth}" Height="10" CornerRadius="2"
+                                        Background="{DynamicResource Brush.Text.Tertiary}"
+                                        IsVisible="{Binding IsOne, Converter={x:Static BoolConverters.Not}}"/>
+                                <Border Canvas.Left="{Binding ThresholdMarkerX}" Canvas.Top="-2" Width="2" Height="14"
+                                        Background="{DynamicResource Brush.Warning}"/>
+                            </Canvas>
+                            <TextBlock Grid.Column="3" Classes="mono caption" Text="{Binding PowerText}"
+                                       VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                            <TextBlock Grid.Column="4" Classes="mono caption" Text="{Binding BitText}" FontWeight="Bold"
+                                       VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                            <controls:Icon Grid.Column="5" Data="{StaticResource Icon.TriangleAlert}" Size="11"
+                                           Foreground="{DynamicResource Brush.Warning}" HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding Matches, Converter={x:Static BoolConverters.Not}}"
+                                           ToolTip.Tip="{loc:Localize MakeGate.RowMismatchTip}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="caption" Text="{loc:Localize MakeGate.Threshold}" VerticalAlignment="Center"/>
+                <NumericUpDown x:Name="MakeGateThreshold" Value="{Binding Threshold}" ShowButtonSpinner="False"
+                               Minimum="0.001" Maximum="0.999" Increment="0.01" FormatString="F3" Width="80"/>
+                <Button Classes="ghost" Content="{loc:Localize MakeGate.UseSuggested}"
+                        Command="{Binding UseSuggestedThresholdCommand}"
+                        IsVisible="{Binding CanUseSuggestedThreshold}"/>
+            </StackPanel>
+            <TextBlock Classes="caption" Text="{Binding SuggestionText}" TextWrapping="Wrap"
+                       IsVisible="{Binding !HasOverlap}"/>
+            <TextBlock Classes="caption" Text="{Binding SuggestionText}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Brush.Warning}" IsVisible="{Binding HasOverlap}"/>
+            <TextBlock Classes="caption" Text="{Binding MatchText}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Brush.Success}" IsVisible="{Binding MatchesFunction}"/>
+            <TextBlock Classes="caption" Text="{Binding MatchText}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Brush.Warning}">
+                <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="!MatchesFunction"/>
+                        <Binding Path="MatchText" Converter="{x:Static StringConverters.IsNotNullOrEmpty}"/>
+                    </MultiBinding>
+                </TextBlock.IsVisible>
+            </TextBlock>
+
+            <!-- 4 · Save -->
+            <TextBlock Classes="label" Text="{loc:Localize MakeGate.StepSave}" Margin="0,6,0,0"/>
+            <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Classes="caption" Text="{loc:Localize MakeGate.GateName}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox Grid.Column="1" Text="{Binding GateName}" Classes="compact"/>
+            </Grid>
+            <WrapPanel Orientation="Horizontal">
+                <Button x:Name="MakeGateSaveButton" Classes="primary" Content="{loc:Localize MakeGate.Save}"
+                        Command="{Binding SaveCommand}" Margin="0,4,8,0"/>
+                <Button Content="{loc:Localize MakeGate.SaveToLibrary}" Command="{Binding SaveToLibraryCommand}"
+                        ToolTip.Tip="{loc:Localize MakeGate.SaveToLibraryTip}" Margin="0,4,8,0"/>
+            </WrapPanel>
+            <Button x:Name="MakeGateOpenLogicButton" Classes="link" Content="{loc:Localize MakeGate.OpenInLogic}"
+                    Command="{Binding OpenInLogicCommand}" IsVisible="{Binding IsSaved}"
+                    ToolTip.Tip="{loc:Localize MakeGate.OpenInLogicTip}" Margin="0,4,0,0"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

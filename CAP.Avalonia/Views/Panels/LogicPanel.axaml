@@ -6,6 +6,7 @@
              xmlns:loc="using:CAP.Avalonia.Services.Localization"
              xmlns:logic="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis"
              xmlns:bus="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.BusView"
+             xmlns:mg="using:CAP.Avalonia.ViewModels.Analysis.LogicAnalysis.MakeGate"
              x:Class="CAP.Avalonia.Views.Panels.LogicPanel"
              x:DataType="vm:MainViewModel">
 
@@ -60,6 +61,24 @@
                 <controls:Icon Data="{StaticResource Icon.Binary}" Size="24" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center"/>
                 <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"
                            Text="{loc:Localize LogicPanel.Empty}"/>
+                <!-- Groups that are not gates yet: one click back to the Make-gate steps. -->
+                <StackPanel Spacing="4" IsVisible="{Binding RightPanel.Logic.HasGateCandidates}" HorizontalAlignment="Center">
+                    <TextBlock Classes="caption" TextAlignment="Center" Text="{loc:Localize LogicPanel.GateCandidates}"/>
+                    <ItemsControl x:Name="LogicGateCandidates" ItemsSource="{Binding RightPanel.Logic.GateCandidates}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="mg:LogicGateCandidateViewModel">
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource Brush.Text.Secondary}" MaxWidth="220"/>
+                                    <Button Grid.Column="1" Classes="ghost" Margin="8,0,0,0"
+                                            Content="{loc:Localize MakeGate.Open}"
+                                            Command="{Binding MakeGateCommand}"
+                                            ToolTip.Tip="{loc:Localize LogicPanel.MakeGateTip}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
         </Border>
 

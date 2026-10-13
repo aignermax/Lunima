@@ -7,6 +7,7 @@ using CAP.Avalonia.ViewModels.Diagnostics;
 using CAP.Avalonia.ViewModels.Export;
 using CAP.Avalonia.ViewModels.Library;
 using CAP.Avalonia.ViewModels.Panels;
+using CAP_Core.Analysis;
 using CAP_Core.Analysis.LogicAnalysis;
 using CAP_Core.Components.Core;
 using CAP_Core.Export;
@@ -126,7 +127,7 @@ public class LogicAcrossTwoChipletsExampleTests : IClassFixture<LogicAcrossTwoCh
     [Fact]
     public void DesignChecks_RunClean_OnTheShippedFile()
     {
-        var validation = new DesignValidationViewModel();
+        var validation = new DesignValidationViewModel { ShowUnconnectedPins = true };
         var groups = _fixture.Canvas.Components.Select(vm => vm.Component).OfType<ComponentGroup>().ToArray();
         validation.RunValidation(
             _fixture.Canvas.ConnectionManager.Connections,
@@ -135,9 +136,17 @@ public class LogicAcrossTwoChipletsExampleTests : IClassFixture<LogicAcrossTwoCh
             externalPortPins: groups.SelectMany(g => g.PhysicalPins),
             wavelengthNm: LogicAcrossChipletLinkJourneyDesign.WavelengthNm);
 
-        validation.Issues.ShouldBeEmpty(
-            "the shipped example must pass Design Checks clean (the link is aligned): " +
-            string.Join("; ", validation.Issues.Select(i => i.ToString())));
+        // Design Checks walk into the chiplets' gates: the only findings are the gates'
+        // unterminated MMI discard ports (combine/recombine/invert .out2), which the
+        // top-level check reports the same way on an ungrouped gate.
+        var unexpected = validation.Issues
+            .Where(i => i.Type != DesignIssueType.UnconnectedPin || !i.Description.Contains(".out2 "))
+            .ToList();
+        unexpected.ShouldBeEmpty(
+            "the shipped example must otherwise pass Design Checks clean (the link is aligned): " +
+            string.Join("; ", unexpected.Select(i => i.Description)));
+        validation.Issues.Count(i => i.Type == DesignIssueType.UnconnectedPin).ShouldBe(5,
+            "NOT: combine.out2 + recombine.out2; AND: combine/recombine/invert .out2");
     }
 
     /// <summary>Loads a design file through the real load path onto a fresh canvas.</summary>

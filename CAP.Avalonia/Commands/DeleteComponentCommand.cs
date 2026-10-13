@@ -2,6 +2,7 @@ using CAP.Avalonia.ViewModels.Canvas;
 using CAP_Core.Components;
 using CAP_Core.Components.Core;
 using CAP_Core.Components.Connections;
+using CAP_Core.Routing.CrossingInsertion;
 
 namespace CAP.Avalonia.Commands;
 
@@ -57,14 +58,16 @@ public class DeleteComponentCommand : IUndoableCommand
         // Store connections that will be deleted, normalized to pre-split originals
         // (two subs of the same crossing dedupe to one original).
         _deletedConnections.Clear();
-        var crossing = _canvas.ConnectionManager.CrossingInsertion;
+        var crossing = _canvas.ConnectionManager.CrossingService;
+        // A group's wires end at the pins of the components nested in it.
+        var scope = new ComponentWireScope(_component);
+        // Wires through routing-placed crossings leave whole, so undo restores whole wires. A
+        // deleted crossing itself hands its wires back, so the chains next to it stay.
+        if (!CrossingComponentCatalog.IsCrossing(_component))
+            _canvas.DissolveInsertedCrossingChains(scope.Touches);
         foreach (var connVm in _canvas.Connections.ToList())
         {
-            // Check if connection is to regular pins or to GroupPins (ExternalPins)
-            bool startConnected = IsPinConnectedToComponent(connVm.Connection.StartPin, _component);
-            bool endConnected = IsPinConnectedToComponent(connVm.Connection.EndPin, _component);
-
-            if (startConnected || endConnected)
+            if (scope.Touches(connVm.Connection))
             {
                 var original = crossing?.ResolveToOriginal(connVm.Connection) ?? connVm.Connection;
                 if (!_deletedConnections.Contains(original))
@@ -72,7 +75,7 @@ public class DeleteComponentCommand : IUndoableCommand
             }
         }
 
-        _canvas.RemoveComponent(_componentViewModel);
+        _canvas.DeleteComponent(_componentViewModel);
     }
 
     public void Undo()
@@ -93,41 +96,12 @@ public class DeleteComponentCommand : IUndoableCommand
 
         // Re-add connections. Dissolution may already have restored a survivor
         // original — both the manager and the VM list guard against duplicates.
-        foreach (var connection in _deletedConnections)
-        {
-            _canvas.ConnectionManager.AddExistingConnection(connection);
-            if (!_canvas.Connections.Any(c => c.Connection == connection))
-                _canvas.Connections.Add(new WaveguideConnectionViewModel(connection));
-        }
+        _canvas.RestoreConnections(_deletedConnections);
 
         // Recalculate routes asynchronously (grid is rebuilt inside RecalculateRoutesAsync)
         _ = _canvas.RecalculateRoutesAsync();
 
         // Invalidate simulation so power flow overlay updates with restored circuit
         _canvas.InvalidateSimulation();
-    }
-
-    /// <summary>
-    /// Checks if a PhysicalPin is connected to a component.
-    /// For ComponentGroups, also checks if the pin belongs to a GroupPin's InternalPin.
-    /// </summary>
-    private static bool IsPinConnectedToComponent(PhysicalPin pin, Component component)
-    {
-        // Direct connection to component's physical pin
-        if (pin.ParentComponent == component)
-            return true;
-
-        // Check if component is a ComponentGroup and pin is from a GroupPin's InternalPin
-        if (component is ComponentGroup group)
-        {
-            // Check if any ExternalPin's InternalPin matches this pin
-            foreach (var externalPin in group.ExternalPins)
-            {
-                if (externalPin.InternalPin == pin)
-                    return true;
-            }
-        }
-
-        return false;
     }
 }

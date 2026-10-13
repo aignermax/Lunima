@@ -32,7 +32,7 @@ public class FrozenBlockedPathCheckerTests
         blocked.Count.ShouldBe(1);
         blocked[0].Connection.ShouldBeNull();
         blocked[0].LocalizationKey.ShouldBe("DesignChecks.BlockedPath.InGroup");
-        blocked[0].Description.ShouldContain(group.Identifier);
+        blocked[0].Description.ShouldContain("'CELL0'");
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public class FrozenBlockedPathCheckerTests
             Array.Empty<WaveguideConnection>(), new[] { outer });
 
         var blocked = issues.Single(i => i.Type == DesignIssueType.BlockedPath);
-        blocked.Description.ShouldContain("outer_group/inner_group");
-        blocked.LocalizationArgs.ShouldBe(new object[] { "outer_group/inner_group", "(unpinned route end)", "(unpinned route end)" });
+        blocked.Description.ShouldContain("'CELL0/REG00'");
+        blocked.LocalizationArgs.ShouldBe(new object[] { "CELL0/REG00", "(unpinned route end)", "(unpinned route end)" });
     }
 
     [Fact]

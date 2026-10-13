@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CAP.Avalonia.Controls.Canvas.AnalysisOutput;
 using CAP.Avalonia.Controls.Canvas.BendHandles;
+using CAP.Avalonia.Controls.Canvas.CrossingDrag;
 using CAP.Avalonia.Controls.Canvas.CutTool;
 using CAP.Avalonia.Controls.Canvas.LibraryDrop;
 using CAP.Avalonia.Controls.Canvas.SegmentShiftHandles;
@@ -87,6 +88,7 @@ public class DesignCanvas : Control
     private readonly AnalysisOutputOverlayRenderer _analysisOutputRenderer;
     private readonly PreviewRenderer _previewRenderer;
     private readonly CutToolOverlayRenderer _cutToolOverlayRenderer;
+    private readonly CrossingAxisDragOverlayRenderer _crossingAxisDragRenderer;
     private readonly CanvasOverlayRenderer _overlayRenderer;
 
     // ── Input Handlers ─────────────────────────────────────────────────────
@@ -120,6 +122,7 @@ public class DesignCanvas : Control
         _analysisOutputRenderer = new AnalysisOutputOverlayRenderer();
         _previewRenderer = new PreviewRenderer();
         _cutToolOverlayRenderer = new CutToolOverlayRenderer();
+        _crossingAxisDragRenderer = new CrossingAxisDragOverlayRenderer();
         _overlayRenderer = new CanvasOverlayRenderer();
         _keyboardHandler = new KeyboardHandler(() => ViewModel, () => MainViewModel, () => Bounds);
 
@@ -208,6 +211,7 @@ public class DesignCanvas : Control
             // Cut tool overlay: guide lines and insertion candidates sit above
             // components and waveguides so the clickable markers are never obscured.
             _cutToolOverlayRenderer.Render(context, rc);
+            _crossingAxisDragRenderer.Render(context, rc);
             // Handles draw last so they sit on top of the routed path and components; segment
             // midpoint handles go under the bend handles, matching the gesture priority (#791).
             _segmentShiftHandleRenderer.Render(context, rc);
@@ -342,6 +346,7 @@ public class DesignCanvas : Control
 
     private void InitGestures()
     {
+        var componentDrag = new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c);
         _gestureRecognizers =
         [
             // First: a bend-radius handle grab must win over selection / component drag (#574).
@@ -353,7 +358,10 @@ public class DesignCanvas : Control
             new CutToolGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             new ConnectionGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom),
             new PlacementGestureRecognizer(_interactionState, InvalidateVisual),
-            new ComponentDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, c => Cursor = c),
+            // A crossing with wires slides along one of them; Shift (at the press or mid-drag)
+            // hands the gesture to the component drag below for a free move.
+            new CrossingAxisDragGestureRecognizer(_interactionState, InvalidateVisual, () => Zoom, componentDrag),
+            componentDrag,
             // Canvas-level frozen paths (#856): components win when overlapping, but a
             // click on imported route geometry must beat the selection box below.
             new FrozenPathDragGestureRecognizer(InvalidateVisual, () => Zoom),
