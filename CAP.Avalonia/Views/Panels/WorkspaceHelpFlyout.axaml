@@ -9,28 +9,35 @@
         <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Workspace.HelpIntro}"/>
 
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-            <controls:Icon Data="{StaticResource Icon.Ruler}" Size="14" Foreground="{DynamicResource Brush.Accent.Hover}"/>
+            <controls:Icon Data="{StaticResource Icon.Ruler}" Size="14" Foreground="{DynamicResource Brush.Workspace.Layout.Accent}"/>
             <TextBlock Classes="strong" Text="{loc:Localize Workspace.Layout}"/>
         </StackPanel>
         <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Workspace.HelpLayout}"/>
 
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-            <controls:Icon Data="{StaticResource Icon.Waves}" Size="14" Foreground="{DynamicResource Brush.Accent.Hover}"/>
+            <controls:Icon Data="{StaticResource Icon.Waves}" Size="14" Foreground="{DynamicResource Brush.Workspace.Optics.Accent}"/>
             <TextBlock Classes="strong" Text="{loc:Localize Workspace.Optics}"/>
         </StackPanel>
         <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Workspace.HelpOptics}"/>
 
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-            <controls:Icon Data="{StaticResource Icon.Binary}" Size="14" Foreground="{DynamicResource Brush.Accent.Hover}"/>
+            <controls:Icon Data="{StaticResource Icon.Binary}" Size="14" Foreground="{DynamicResource Brush.Workspace.Logic.Accent}"/>
             <TextBlock Classes="strong" Text="{loc:Localize Workspace.Logic}"/>
         </StackPanel>
         <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Workspace.HelpLogic}"/>
 
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-            <controls:Icon Data="{StaticResource Icon.Boxes}" Size="14" Foreground="{DynamicResource Brush.Accent.Hover}"/>
+            <controls:Icon Data="{StaticResource Icon.Boxes}" Size="14" Foreground="{DynamicResource Brush.Workspace.System.Accent}"/>
             <TextBlock Classes="strong" Text="{loc:Localize Workspace.System}"/>
         </StackPanel>
         <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Localize Workspace.HelpSystem}"/>
+
+        <!-- What stays and what moves: edit tools everywhere, Probe / gate tools / rail per workspace. -->
+        <Border Classes="divider" Height="1" Margin="0,6,0,2"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <controls:Icon Data="{StaticResource Icon.Wrench}" Size="14" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+            <TextBlock Classes="secondary" TextWrapping="Wrap" MaxWidth="356" Text="{loc:Localize Workspace.HelpTools}"/>
+        </StackPanel>
     </StackPanel>
 
 </UserControl>

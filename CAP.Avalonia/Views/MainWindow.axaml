@@ -11,6 +11,7 @@
         xmlns:panels="using:CAP.Avalonia.Views.Panels"
         xmlns:loc="using:CAP.Avalonia.Services.Localization"
         xmlns:ws="using:CAP.Avalonia.ViewModels.Workspaces"
+        xmlns:wsPanels="using:CAP.Avalonia.Views.Panels.WorkspaceRail"
         x:Class="CAP.Avalonia.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="{Binding WindowTitle}"
@@ -26,7 +27,10 @@
         <KeyBinding Gesture="Ctrl+D4" Command="{Binding WorkspaceSwitch.SelectCommand}" CommandParameter="{x:Static ws:Workspace.System}" />
     </Window.KeyBindings>
 
-    <Grid>
+    <!-- Root: publishes the active workspace's hue (Brush.Workspace.Current.*) to the window. -->
+    <Grid x:Name="WorkspaceRoot" Classes="wsRoot"
+          Classes.reduceMotion="{x:Static behaviors:MotionPreferences.ReduceMotion}"
+          behaviors:WorkspaceAccentBehavior.Workspace="{Binding WorkspaceSwitch.Current}">
     <DockPanel>
         <!-- ══ Toolbar ═══════════════════════════════════════════════════════════ -->
         <Border DockPanel.Dock="Top" Classes="toolbar" Height="44" Padding="8,0">
@@ -59,7 +63,9 @@
                                 ToolTip.Tip="{loc:Localize Toolbar.DeleteModeTip}">
                             <controls:Icon Data="{StaticResource Icon.Eraser}"/>
                         </Button>
-                        <Button Classes="toolbar" Command="{Binding SetProbeModeCommand}"
+                        <!-- Probe belongs to the geometry/light workspaces (Layout, Optics); the edit tools stay everywhere. -->
+                        <Button x:Name="ProbeToolButton" Classes="toolbar" Command="{Binding SetProbeModeCommand}"
+                                IsVisible="{Binding WorkspaceSwitch.ShowsProbeTool}"
                                 Classes.active="{Binding CanvasInteraction.CurrentMode, Converter={x:Static converters:EnumEqualsConverter.Instance}, ConverterParameter=Probe}"
                                 ToolTip.Tip="{loc:Localize Toolbar.ProbeModeTip}">
                             <controls:Icon Data="{StaticResource Icon.ScanSearch}"/>
@@ -127,7 +133,7 @@
                         </controls:HelpFlyoutButton>
 
                         <!-- Run: the one primary action; its label names what the workspace runs. -->
-                        <Button x:Name="RunSimulationButton" Classes="toolbar primary"
+                        <Button x:Name="RunSimulationButton" Classes="toolbar primary wsRun"
                                 Command="{Binding RunWorkspaceCommand}"
                                 ToolTip.Tip="{Binding WorkspaceSwitch.RunTip}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -366,6 +372,8 @@
                 </Button>
             </Grid>
         </Border>
+        <!-- Accent line in the active workspace's hue: the switch shows beyond its toolbar segment. -->
+        <Border DockPanel.Dock="Top" x:Name="WorkspaceAccentLine" Classes="wsAccentLine"/>
         <!-- ══ Status bar: fixed fields ═══════════════════════════════════════════ -->
         <Border DockPanel.Dock="Bottom" Classes="statusbar" Height="26">
             <DockPanel x:Name="StatusBarRoot" LastChildFill="True">
@@ -422,8 +430,16 @@
                     </StackPanel>
                 </Button>
 
+                <!-- Active workspace chip, in the workspace's hue. -->
+                <Border DockPanel.Dock="Left" x:Name="WorkspaceChip" Classes="wsChip"
+                        ToolTip.Tip="{Binding WorkspaceSwitch.RunTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse Width="6" Height="6" VerticalAlignment="Center"/>
+                        <TextBlock Classes="statusText" Text="{Binding WorkspaceSwitch.DisplayName}"/>
+                    </StackPanel>
+                </Border>
                 <StackPanel DockPanel.Dock="Left" x:Name="StatusBarModeField" Classes="statusField"
-                            Margin="8,0,0,0"
+                            Margin="4,0,0,0"
                             ToolTip.Tip="{Binding CanvasInteraction.ModeShortcutHints}">
                     <controls:Icon Data="{StaticResource Icon.MousePointer2}"/>
                     <TextBlock Classes="statusText strong" Text="{Binding StatusBar.ModeLabel}"/>
@@ -504,27 +520,46 @@
             <Border Grid.Column="0" Name="LeftPanelBorder" Classes="sidePanel left"
                     MinWidth="248" MaxWidth="800">
                 <DockPanel>
+                    <!-- Contextual rail: every section in every workspace; the workspace only picks
+                         the order (Grid.Row) and the default section (WorkspaceRailLayout). -->
                     <Border DockPanel.Dock="Left" Classes="rail">
-                        <StackPanel Spacing="4">
+                        <Grid x:Name="LeftRailIcons" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                            <Button Classes="rail" Command="{Binding LeftRail.ShowGatesCommand}"
+                                    Grid.Row="{Binding LeftRail.GatesOrder}" Margin="0,0,0,4"
+                                    Classes.active="{Binding LeftRail.IsGatesActive}"
+                                    ToolTip.Tip="{loc:Localize LeftRail.Gates}"
+                                    ToolTip.Placement="Right">
+                                <controls:Icon Data="{StaticResource Icon.Binary}" Size="18"/>
+                            </Button>
+                            <Button Classes="rail" Command="{Binding LeftRail.ShowChipletsCommand}"
+                                    Grid.Row="{Binding LeftRail.ChipletsOrder}" Margin="0,0,0,4"
+                                    Classes.active="{Binding LeftRail.IsChipletsActive}"
+                                    ToolTip.Tip="{loc:Localize Workspace.System.Chiplets}"
+                                    ToolTip.Placement="Right">
+                                <controls:Icon Data="{StaticResource Icon.Microchip}" Size="18"/>
+                            </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowLibraryCommand}"
+                                    Grid.Row="{Binding LeftRail.LibraryOrder}" Margin="0,0,0,4"
                                     Classes.active="{Binding LeftRail.IsLibraryActive}"
                                     ToolTip.Tip="{loc:Localize LeftPanel.ComponentLibrary}"
                                     ToolTip.Placement="Right">
                                 <controls:Icon Data="{StaticResource Icon.Shapes}" Size="18"/>
                             </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowHierarchyCommand}"
+                                    Grid.Row="{Binding LeftRail.HierarchyOrder}" Margin="0,0,0,4"
                                     Classes.active="{Binding LeftRail.IsHierarchyActive}"
                                     ToolTip.Tip="{loc:Localize Hierarchy.Title}"
                                     ToolTip.Placement="Right">
                                 <controls:Icon Data="{StaticResource Icon.ListTree}" Size="18"/>
                             </Button>
                             <Button Classes="rail" Command="{Binding LeftRail.ShowPdksCommand}"
+                                    Grid.Row="{Binding LeftRail.PdksOrder}" Margin="0,0,0,4"
                                     Classes.active="{Binding LeftRail.IsPdksActive}"
                                     ToolTip.Tip="{loc:Localize LeftRail.Pdks}"
                                     ToolTip.Placement="Right">
                                 <controls:Icon Data="{StaticResource Icon.Package}" Size="18"/>
                             </Button>
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
                     <Panel>
@@ -579,6 +614,8 @@
                                           HorizontalScrollBarVisibility="Disabled"
                                           behaviors:ScrollPositionBehavior.VerticalOffset="{Binding LeftPanel.LibraryScrollOffset, Mode=TwoWay}">
                                 <StackPanel Margin="0,0,0,8">
+                                    <!-- Optics only: sources & detectors on top of the library -->
+                                    <wsPanels:SourcesQuickSection/>
                                     <!-- Saved groups: a collapsible category of the library -->
                                     <ToggleButton x:Name="SavedGroupsToggle" Classes="sectionHeader" IsChecked="True"
                                                   AutomationProperties.Name="{loc:Localize LeftPanel.SavedGroups}"
@@ -751,6 +788,18 @@
                                 </StackPanel>
                             </ScrollViewer>
                         </DockPanel>
+
+                        <!-- ── Gates (Logic default) ── -->
+                        <Border Classes="railPane" IsVisible="{Binding LeftRail.IsGatesActive}"
+                                behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                            <wsPanels:GatesPane/>
+                        </Border>
+
+                        <!-- ── Chiplets (System default) ── -->
+                        <Border Classes="railPane" IsVisible="{Binding LeftRail.IsChipletsActive}"
+                                behaviors:RevealOnShowBehavior.IsEnabled="True" behaviors:RevealOnShowBehavior.FromX="-8">
+                            <wsPanels:ChipletsPane/>
+                        </Border>
 
                         <!-- ── Hierarchy ── -->
                         <Border Classes="railPane" IsVisible="{Binding LeftRail.IsHierarchyActive}"
@@ -980,6 +1029,9 @@
                 </ContextMenu>
             </controls:DesignCanvas.ContextMenu>
             </controls:DesignCanvas>
+
+            <!-- Workspace tint (~6 % alpha) and hairline edge over the canvas; hit-test invisible. -->
+            <Border x:Name="WorkspaceCanvasTint" Classes="wsCanvasTint"/>
 
             <!-- Mode-probe flyout: non-modal, anchored at the probe click point.
                  The overlay Canvas has no background, so canvas interaction stays live. -->

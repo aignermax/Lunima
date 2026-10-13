@@ -1940,5 +1940,19 @@
   "MakeGateHelp.Title": "グループがゲートになるしくみ",
   "Toolbar.CheckPdksTip": "読み込んだ各 PDK の部品が Python/Nazca パッケージで解決できるかを確認します。GDS エクスポート前の PDK 作成者向けです。",
   "Toolbar.ComputeModesTip": "導波路断面の導波モード（実効屈折率、モードプロファイル）を計算します。レイアウト前に幅や層構成を確認するためのものです。",
-  "TruthTable.NoThresholdGap": "出力パワーの間に隙間がなく、0 と 1 を分けるしきい値がありません。"
+  "TruthTable.NoThresholdGap": "出力パワーの間に隙間がなく、0 と 1 を分けるしきい値がありません。",
+  "LeftRail.Gates": "ゲート",
+  "LeftRail.Gates.ShowLibrary": "すべてのコンポーネントを表示 ›",
+  "LeftRail.Gates.ShowLibraryTip": "コンポーネントライブラリ全体を開きます",
+  "LeftRail.Gates.MakeGate": "選択範囲からゲートを作成",
+  "LeftRail.Gates.MakeGateTip": "必要に応じて選択部品をグループ化し、ゲート作成の手順(ピンの役割・シミュレーション・しきい値・保存)を開きます。",
+  "LeftRail.Gates.Saved": "保存済みゲート",
+  "LeftRail.Gates.SavedEmpty": "保存済みのゲートはまだありません。選択範囲からゲートを作成してライブラリに保存すると、ここにドラッグ可能な形で表示されます。",
+  "LeftRail.Gates.Examples": "入門ゲート",
+  "LeftRail.Gates.ExamplesHint": "同梱のゲート例です。それぞれ無題のコピーとして開きます。",
+  "LeftRail.Chiplets.RefreshTip": "チップレット一覧を更新",
+  "LeftRail.Chiplets.SelectTip": "このチップレットを選択し、キャンバスの中央に表示します",
+  "LeftRail.Sources": "光源と検出器",
+  "LeftRail.SourcesTip": "光が回路に出入りする部品:ファイバーカプラ、レーザー、検出器、終端器",
+  "Workspace.HelpTools": "選択・接続・削除・カットはどのワークスペースでも使えます。プローブはレイアウトと光学に、ゲートツールはロジックとシステムにあります。左のレールは各ワークスペースの専用パネルを最初に開き、どのパネルもワンクリックで開けます。"
 }

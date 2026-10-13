@@ -1940,5 +1940,19 @@
   "MakeGateHelp.Title": "Wie eine Gruppe zum Gatter wird",
   "Toolbar.CheckPdksTip": "Prüft, ob sich die Bauteile jedes geladenen PDKs in seinem Python-/Nazca-Paket auflösen lassen — für PDK-Autoren vor dem GDS-Export.",
   "Toolbar.ComputeModesTip": "Berechnet die geführten Moden eines Wellenleiter-Querschnitts (effektiver Index, Modenprofil) — zum Prüfen von Breiten und Schichtstapeln vor dem Layout.",
-  "TruthTable.NoThresholdGap": "Keine Lücke zwischen den Ausgangsleistungen — keine Schwelle trennt 0 von 1."
+  "TruthTable.NoThresholdGap": "Keine Lücke zwischen den Ausgangsleistungen — keine Schwelle trennt 0 von 1.",
+  "LeftRail.Gates": "Gatter",
+  "LeftRail.Gates.ShowLibrary": "Alle Bauteile anzeigen ›",
+  "LeftRail.Gates.ShowLibraryTip": "Öffnet die vollständige Bauteilbibliothek",
+  "LeftRail.Gates.MakeGate": "Gatter aus Auswahl erstellen",
+  "LeftRail.Gates.MakeGateTip": "Gruppiert die ausgewählten Teile bei Bedarf und öffnet dann die Gatter-Schritte: Pin-Rollen, simulieren, Schwelle, speichern.",
+  "LeftRail.Gates.Saved": "Gespeicherte Gatter",
+  "LeftRail.Gates.SavedEmpty": "Noch keine gespeicherten Gatter. Erstellen Sie ein Gatter aus einer Auswahl und speichern Sie es in der Bibliothek — es erscheint hier zum Hineinziehen.",
+  "LeftRail.Gates.Examples": "Start-Gatter",
+  "LeftRail.Gates.ExamplesHint": "Mitgelieferte Gatter-Beispiele; jedes öffnet als unbenannte Kopie.",
+  "LeftRail.Chiplets.RefreshTip": "Chiplet-Liste aktualisieren",
+  "LeftRail.Chiplets.SelectTip": "Dieses Chiplet auswählen und die Ansicht darauf zentrieren",
+  "LeftRail.Sources": "Quellen & Detektoren",
+  "LeftRail.SourcesTip": "Wo Licht in die Schaltung ein- und austritt: Faserkoppler, Laser, Detektoren und Abschlüsse",
+  "Workspace.HelpTools": "Auswählen, Verbinden, Löschen und Schneiden funktionieren in jedem Arbeitsbereich. Die Sonde gibt es in Layout und Optik, die Gatter-Werkzeuge in Logik und System. Die linke Leiste öffnet zuerst das Panel des Arbeitsbereichs; jedes Panel bleibt einen Klick entfernt."
 }

@@ -1940,5 +1940,19 @@
   "MakeGateHelp.Title": "Cómo un grupo se convierte en puerta",
   "Toolbar.CheckPdksTip": "Comprueba que los componentes de cada PDK cargado se resuelven en su paquete Python/Nazca, para autores de PDK antes de exportar GDS.",
   "Toolbar.ComputeModesTip": "Calcula los modos guiados de una sección de guía de onda (índice efectivo, perfil del modo), para revisar anchos y pilas de capas antes del layout.",
-  "TruthTable.NoThresholdGap": "No hay hueco entre las potencias de salida: ningún umbral separa 0 de 1."
+  "TruthTable.NoThresholdGap": "No hay hueco entre las potencias de salida: ningún umbral separa 0 de 1.",
+  "LeftRail.Gates": "Puertas",
+  "LeftRail.Gates.ShowLibrary": "Mostrar todos los componentes ›",
+  "LeftRail.Gates.ShowLibraryTip": "Abre la biblioteca completa de componentes",
+  "LeftRail.Gates.MakeGate": "Crear puerta a partir de la selección",
+  "LeftRail.Gates.MakeGateTip": "Agrupa las piezas seleccionadas si hace falta y abre los pasos para crear la puerta: roles de pines, simular, umbral, guardar.",
+  "LeftRail.Gates.Saved": "Puertas guardadas",
+  "LeftRail.Gates.SavedEmpty": "Aún no hay puertas guardadas. Crea una puerta a partir de una selección y guárdala en la biblioteca: aparecerá aquí lista para arrastrar.",
+  "LeftRail.Gates.Examples": "Puertas de inicio",
+  "LeftRail.Gates.ExamplesHint": "Ejemplos de puertas incluidos; cada uno se abre como copia sin título.",
+  "LeftRail.Chiplets.RefreshTip": "Actualizar la lista de chiplets",
+  "LeftRail.Chiplets.SelectTip": "Selecciona este chiplet y centra el lienzo en él",
+  "LeftRail.Sources": "Fuentes y detectores",
+  "LeftRail.SourcesTip": "Donde la luz entra y sale del circuito: acopladores de fibra, láseres, detectores y terminadores",
+  "Workspace.HelpTools": "Seleccionar, Conectar, Eliminar y Cortar funcionan en todos los espacios de trabajo. La sonda está en Layout y Óptica, las herramientas de puertas en Lógica y Sistema. La barra izquierda abre primero el panel propio de cada espacio; todos los paneles siguen a un clic."
 }

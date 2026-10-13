@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:vmLib="using:CAP.Avalonia.ViewModels.Library"
+             xmlns:services="using:CAP.Avalonia.Services"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:behaviors="using:CAP.Avalonia.Behaviors"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.WorkspaceRail.GatesPane"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Logic workspace's left pane: gates to place, starter examples, make a gate. -->
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+            <Button DockPanel.Dock="Right" Classes="headerIcon"
+                    Command="{Binding GatesPanel.ShowLibraryCommand}"
+                    ToolTip.Tip="{loc:Localize LeftRail.Gates.ShowLibraryTip}">
+                <controls:Icon Data="{StaticResource Icon.Shapes}"/>
+            </Button>
+            <TextBlock Classes="paneTitle" Text="{loc:Localize LeftRail.Gates}"/>
+        </DockPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,0,8" Spacing="2">
+                <!-- Make gate from selection: the Logic workspace's main authoring step. -->
+                <Button x:Name="GatesMakeGateButton" Margin="12,0,12,8"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Command="{Binding GatesPanel.MakeGateCommand}"
+                        ToolTip.Tip="{loc:Localize LeftRail.Gates.MakeGateTip}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:Icon Data="{StaticResource Icon.Binary}" Size="14"/>
+                        <TextBlock Text="{loc:Localize LeftRail.Gates.MakeGate}"/>
+                    </StackPanel>
+                </Button>
+
+                <TextBlock Classes="label" Margin="16,4,16,4" Text="{loc:Localize LeftRail.Gates.Saved}"/>
+                <TextBlock Classes="caption" Margin="16,0,16,6" TextWrapping="Wrap"
+                           IsVisible="{Binding !GatesPanel.HasSavedGates}"
+                           Text="{loc:Localize LeftRail.Gates.SavedEmpty}"/>
+                <ListBox x:Name="SavedGatesListBox" Classes="library" Margin="8,0"
+                         IsVisible="{Binding GatesPanel.HasSavedGates}"
+                         behaviors:LibraryDragBehavior.IsEnabled="True"
+                         ItemsSource="{Binding GatesPanel.SavedGates}"
+                         SelectionChanged="OnSavedGatesSelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vmLib:GroupTemplateItemViewModel">
+                            <Border Classes="libraryRow" ToolTip.Tip="{Binding Template.Description}">
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Left" Classes="thumb">
+                                        <controls:Icon Data="{StaticResource Icon.Binary}"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock Classes="rowTitle" Text="{Binding Template.Name}"/>
+                                        <TextBlock Classes="caption">
+                                            <Run Text="{Binding Template.ComponentCount}"/>
+                                            <Run Text="{loc:Localize LeftPanel.ComponentsSuffix}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Border Classes="divider" Height="1" Margin="12,8,12,4"/>
+                <TextBlock Classes="label" Margin="16,8,16,2" Text="{loc:Localize LeftRail.Gates.Examples}"
+                           IsVisible="{Binding GatesPanel.HasGateExamples}"/>
+                <TextBlock Classes="caption" Margin="16,0,16,6" TextWrapping="Wrap"
+                           IsVisible="{Binding GatesPanel.HasGateExamples}"
+                           Text="{loc:Localize LeftRail.Gates.ExamplesHint}"/>
+                <ItemsControl Margin="8,0" ItemsSource="{Binding GatesPanel.GateExamples}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="services:ExampleDesign">
+                            <Button Classes="menuItem"
+                                    Command="{Binding $parent[ItemsControl].DataContext.GatesPanel.OpenExampleCommand}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip.Tip="{Binding Description}">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.FolderOpen}"/>
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Classes="caption" Text="{Binding Description}"
+                                                   TextWrapping="Wrap" MaxLines="2"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Classes="link" Margin="16,8,16,0" HorizontalAlignment="Left"
+                        Command="{Binding GatesPanel.ShowLibraryCommand}"
+                        ToolTip.Tip="{loc:Localize LeftRail.Gates.ShowLibraryTip}">
+                    <TextBlock Classes="caption" Foreground="{DynamicResource Brush.Text.Link}"
+                               Text="{loc:Localize LeftRail.Gates.ShowLibrary}"/>
+                </Button>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

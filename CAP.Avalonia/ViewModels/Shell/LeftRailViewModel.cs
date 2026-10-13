@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CAP.Avalonia.ViewModels.Workspaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -6,8 +7,10 @@ namespace CAP.Avalonia.ViewModels.Shell;
 
 /// <summary>
 /// State of the main window's left icon rail: which section fills the one full-height pane
-/// next to it (VS Code / Figma style). The library is the default because placing
-/// components is the first thing every workflow does.
+/// next to it (VS Code / Figma style). The rail is contextual: each workspace opens on its
+/// own section (<see cref="WorkspaceRailLayout"/>) and orders the icons for it, and the rail
+/// remembers the section the user last picked in each workspace. Every section stays one
+/// click away in every workspace.
 /// </summary>
 public partial class LeftRailViewModel : ObservableObject
 {
@@ -23,9 +26,13 @@ public partial class LeftRailViewModel : ObservableObject
         ["PdkGroupsListBox"] = LeftRailSection.Library,
     };
 
+    private readonly Dictionary<Workspace, LeftRailSection> _remembered = new();
+    private Workspace _workspace = Workspace.Layout;
+
     /// <summary>The section currently shown in the left pane.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLibraryActive), nameof(IsHierarchyActive), nameof(IsPdksActive))]
+    [NotifyPropertyChangedFor(nameof(IsLibraryActive), nameof(IsHierarchyActive), nameof(IsPdksActive),
+        nameof(IsGatesActive), nameof(IsChipletsActive))]
     private LeftRailSection _activeSection = LeftRailSection.Library;
 
     /// <summary>True while the component library is shown.</summary>
@@ -36,6 +43,27 @@ public partial class LeftRailViewModel : ObservableObject
 
     /// <summary>True while PDK management is shown.</summary>
     public bool IsPdksActive => ActiveSection == LeftRailSection.Pdks;
+
+    /// <summary>True while the Gates panel is shown.</summary>
+    public bool IsGatesActive => ActiveSection == LeftRailSection.Gates;
+
+    /// <summary>True while the Chiplets panel is shown.</summary>
+    public bool IsChipletsActive => ActiveSection == LeftRailSection.Chiplets;
+
+    /// <summary>Rail position (grid row) of the library icon in the active workspace.</summary>
+    public int LibraryOrder => OrderOf(LeftRailSection.Library);
+
+    /// <summary>Rail position of the hierarchy icon.</summary>
+    public int HierarchyOrder => OrderOf(LeftRailSection.Hierarchy);
+
+    /// <summary>Rail position of the PDKs icon.</summary>
+    public int PdksOrder => OrderOf(LeftRailSection.Pdks);
+
+    /// <summary>Rail position of the Gates icon.</summary>
+    public int GatesOrder => OrderOf(LeftRailSection.Gates);
+
+    /// <summary>Rail position of the Chiplets icon.</summary>
+    public int ChipletsOrder => OrderOf(LeftRailSection.Chiplets);
 
     /// <summary>Shows the component library.</summary>
     [RelayCommand]
@@ -49,6 +77,34 @@ public partial class LeftRailViewModel : ObservableObject
     [RelayCommand]
     private void ShowPdks() => ActiveSection = LeftRailSection.Pdks;
 
+    /// <summary>Shows the Gates panel.</summary>
+    [RelayCommand]
+    private void ShowGates() => ActiveSection = LeftRailSection.Gates;
+
+    /// <summary>Shows the Chiplets panel.</summary>
+    [RelayCommand]
+    private void ShowChiplets() => ActiveSection = LeftRailSection.Chiplets;
+
+    /// <summary>
+    /// Re-arranges the rail for <paramref name="workspace"/>: icon order per
+    /// <see cref="WorkspaceRailLayout"/>, and the section the user last chose there
+    /// (or the workspace's default on the first visit).
+    /// </summary>
+    public void ApplyWorkspace(Workspace workspace)
+    {
+        _workspace = workspace;
+        ActiveSection = _remembered.TryGetValue(workspace, out var section)
+            ? section
+            : WorkspaceRailLayout.DefaultSection(workspace);
+        OnPropertyChanged(nameof(LibraryOrder));
+        OnPropertyChanged(nameof(HierarchyOrder));
+        OnPropertyChanged(nameof(PdksOrder));
+        OnPropertyChanged(nameof(GatesOrder));
+        OnPropertyChanged(nameof(ChipletsOrder));
+    }
+
+    partial void OnActiveSectionChanged(LeftRailSection value) => _remembered[_workspace] = value;
+
     /// <summary>
     /// Switches to the section that hosts <paramref name="controlName"/> when a tour step
     /// targets a control inside the rail; any other target leaves the pane unchanged.
@@ -59,5 +115,16 @@ public partial class LeftRailViewModel : ObservableObject
         if (controlName is null || !SectionByControlName.TryGetValue(controlName, out var section))
             return;
         ActiveSection = section;
+    }
+
+    private int OrderOf(LeftRailSection section)
+    {
+        var order = WorkspaceRailLayout.Order(_workspace);
+        for (int i = 0; i < order.Count; i++)
+        {
+            if (order[i] == section)
+                return i;
+        }
+        return order.Count;
     }
 }

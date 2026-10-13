@@ -108,7 +108,10 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] Run per workspace: Layout opens Design Checks with results; Optics simulates (CW overlay or Transient tab); Logic builds the network, then each Run steps the clock; System runs the chiplet checks + whole-system CW and shows the chiplet/link strip (process per chiplet, link loss in dB). `(auto: MainViewModelWorkspaceTests)`
 - [ ] Dock tabs follow the workspace; "⋯ → Show all tabs" in the dock header brings every tab back; a tab opened by a tour/menu is shown even outside its workspace. `(auto: WorkspaceViewModelTests)`
 - [ ] Workspace is saved in the .lun and restored on open; files without one open by content: chiplet links → System, gate groups → Logic, light source → Optics, otherwise Layout (check the Two Chiplets, Logic Gate and MZI examples). `(auto: WorkspaceDefaultsTests, MainViewModelWorkspaceTests)`
-- [ ] (?) beside the workspace switch explains the four workspaces in a few sentences each. `(manual)`
+- [ ] (?) beside the workspace switch explains the four workspaces in a few sentences each, plus which tools move with the workspace. `(manual)`
+- [ ] The active workspace is unmistakable but calm: its hue (Layout steel, Optics cyan, Logic violet, System copper) marks the switch segment, a 2 px line under the toolbar, a faint canvas tint + edge, the status-bar chip and Run; waveguides and power-flow labels stay readable; switching cross-fades (instant with `LUNIMA_REDUCE_MOTION=1`). `(auto: WorkspaceAccentTokenTests, WorkspaceShellRenderTests)`
+- [ ] Left rail follows the workspace: Layout/Optics open the library (Optics adds "Sources & detectors" on top), Logic opens Gates (saved gates to drag in, starter gate examples, "Make gate from selection"), System opens Chiplets (click selects + centers); every rail icon stays reachable in every workspace, and each workspace remembers the last picked section. `(auto: WorkspaceLeftRailTests, WorkspaceContextTests, GatesPanelViewModelTests)`
+- [ ] Truth Table / Make gate shows in the properties panel only in Logic and System (exactly one group selected); "Make gate…" from Layout/Optics switches to Logic. Probe shows only in Layout and Optics; Select / Connect / Delete / Cut stay everywhere. `(auto: WorkspaceContextTests)`
 
 ## 8. Parameter sweep
 

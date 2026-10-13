@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CAP.Avalonia.ViewModels"
+             xmlns:ws="using:CAP.Avalonia.ViewModels.Workspaces"
+             xmlns:controls="using:CAP.Avalonia.Controls"
+             xmlns:loc="using:CAP.Avalonia.Services.Localization"
+             x:Class="CAP.Avalonia.Views.Panels.WorkspaceRail.ChipletsPane"
+             x:DataType="vm:MainViewModel">
+
+    <!-- System workspace's left pane: the chiplets (top-level groups) and their process.
+         A click selects the chiplet and centers the canvas on it. -->
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Classes="paneHeader">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                <Button Classes="headerIcon" Command="{Binding RefreshSystemOverviewCommand}"
+                        ToolTip.Tip="{loc:Localize LeftRail.Chiplets.RefreshTip}">
+                    <controls:Icon Data="{StaticResource Icon.RefreshCw}"/>
+                </Button>
+                <Button Classes="headerIcon" Command="{Binding LeftRail.ShowLibraryCommand}"
+                        ToolTip.Tip="{loc:Localize LeftRail.Gates.ShowLibraryTip}">
+                    <controls:Icon Data="{StaticResource Icon.Shapes}"/>
+                </Button>
+            </StackPanel>
+            <TextBlock Classes="paneTitle" Text="{loc:Localize Workspace.System.Chiplets}"/>
+        </DockPanel>
+
+        <TextBlock DockPanel.Dock="Top" Classes="caption" Margin="16,0,16,8" TextWrapping="Wrap"
+                   IsVisible="{Binding !SystemOverview.HasChiplets}"
+                   Text="{loc:Localize Workspace.System.NoChiplets}"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl x:Name="ChipletsList" Margin="8,0,8,8" ItemsSource="{Binding SystemOverview.Chiplets}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="ws:ChipletSummaryRow">
+                        <Button Classes="menuItem"
+                                Command="{Binding $parent[ItemsControl].DataContext.SystemOverview.ActivateChipletCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip.Tip="{loc:Localize LeftRail.Chiplets.SelectTip}">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <controls:Icon Classes="menuIcon" Data="{StaticResource Icon.Microchip}"/>
+                                <StackPanel Grid.Column="1" Spacing="1">
+                                    <TextBlock Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Classes="caption" Text="{Binding ProcessName}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

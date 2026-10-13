@@ -1940,5 +1940,19 @@
   "MakeGateHelp.Title": "组如何成为逻辑门",
   "Toolbar.CheckPdksTip": "检查每个已加载 PDK 的元件能否在其 Python/Nazca 包中解析——供 PDK 作者在导出 GDS 前使用。",
   "Toolbar.ComputeModesTip": "求解波导截面的导模（有效折射率、模场分布），用于在版图前检查宽度和层叠结构。",
-  "TruthTable.NoThresholdGap": "输出功率之间没有间隔——没有阈值能区分 0 和 1。"
+  "TruthTable.NoThresholdGap": "输出功率之间没有间隔——没有阈值能区分 0 和 1。",
+  "LeftRail.Gates": "逻辑门",
+  "LeftRail.Gates.ShowLibrary": "显示全部元件 ›",
+  "LeftRail.Gates.ShowLibraryTip": "打开完整的元件库",
+  "LeftRail.Gates.MakeGate": "从所选内容创建逻辑门",
+  "LeftRail.Gates.MakeGateTip": "必要时先将所选部件编组，然后打开创建逻辑门的步骤：引脚角色、仿真、阈值、保存。",
+  "LeftRail.Gates.Saved": "已保存的逻辑门",
+  "LeftRail.Gates.SavedEmpty": "还没有已保存的逻辑门。从所选内容创建逻辑门并保存到元件库后，它会出现在这里，可直接拖入。",
+  "LeftRail.Gates.Examples": "入门逻辑门",
+  "LeftRail.Gates.ExamplesHint": "随附的逻辑门示例；每个都以未命名副本打开。",
+  "LeftRail.Chiplets.RefreshTip": "刷新芯粒列表",
+  "LeftRail.Chiplets.SelectTip": "选中此芯粒并将画布居中到它",
+  "LeftRail.Sources": "光源与探测器",
+  "LeftRail.SourcesTip": "光进出电路的位置：光纤耦合器、激光器、探测器和终端",
+  "Workspace.HelpTools": "选择、连接、删除和剪切在每个工作区都可用。探针位于版图和光学工作区，逻辑门工具位于逻辑和系统工作区。左侧栏会先打开各工作区自己的面板；每个面板都只需一次点击即可打开。"
 }
