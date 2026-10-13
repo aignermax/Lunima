@@ -93,6 +93,7 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8"
                             VerticalAlignment="Center">
                     <Button Classes="primary" Command="{Binding NewProjectCommand}"
+                            AutomationProperties.Name="{loc:Localize Home.NewProject}"
                             ToolTip.Tip="{loc:Localize Home.NewProjectTip}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:Icon Data="{StaticResource Icon.FilePlus}"/>
@@ -100,6 +101,7 @@
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding OpenProjectCommand}"
+                            AutomationProperties.Name="{loc:Localize Home.OpenProject}"
                             ToolTip.Tip="{loc:Localize Home.OpenProjectTip}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:Icon Data="{StaticResource Icon.FolderOpen}"/>
@@ -153,6 +155,7 @@
                                         <Button Grid.Column="0" Classes="row"
                                                 Command="{Binding $parent[ItemsControl].DataContext.OpenRecentProjectCommand}"
                                                 CommandParameter="{Binding}"
+                                                AutomationProperties.Name="{Binding FileName}"
                                                 ToolTip.Tip="{Binding FullPath}">
                                             <StackPanel Spacing="1">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -195,7 +198,8 @@
                         <ItemsControl ItemsSource="{Binding TourEntries}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="home:HomeTourEntry">
-                                    <Button Classes="row" Command="{Binding Command}">
+                                    <Button Classes="row" Command="{Binding Command}"
+                                            AutomationProperties.Name="{Binding Name}">
                                         <ToolTip.Tip>
                                             <StackPanel MaxWidth="280" Spacing="4">
                                                 <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
@@ -233,6 +237,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="services:ExampleDesign">
                                         <Button Classes="tile" Margin="0,0,6,6" Height="72"
+                                                AutomationProperties.Name="{Binding Name}"
                                                 Command="{Binding $parent[ItemsControl].DataContext.OpenExampleCommand}"
                                                 CommandParameter="{Binding}">
                                             <ToolTip.Tip>

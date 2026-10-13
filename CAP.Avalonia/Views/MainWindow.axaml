@@ -519,6 +519,7 @@
                                 <StackPanel Margin="0,0,0,8">
                                     <!-- Saved groups: a collapsible category of the library -->
                                     <ToggleButton x:Name="SavedGroupsToggle" Classes="sectionHeader" IsChecked="True"
+                                                  AutomationProperties.Name="{loc:Localize LeftPanel.SavedGroups}"
                                                   ToolTip.Tip="{loc:Localize LeftPanel.SavedGroupsTip}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <controls:Icon Classes="chevron" Data="{StaticResource Icon.ChevronRight}"
