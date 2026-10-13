@@ -663,15 +663,21 @@
                                                             GdsFactoryFunction="{Binding GdsFactoryFunction}"/>
                                                     </Border>
                                                     <StackPanel VerticalAlignment="Center" Spacing="1">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <TextBlock Classes="rowTitle" Text="{Binding Name}"/>
+                                                        <!-- DockPanel, not a horizontal StackPanel: the title needs a finite
+                                                             width to wrap and trim. Long PDK names (several "Directional
+                                                             Coupler …" variants) wrap to two lines; the tooltip has the rest. -->
+                                                        <DockPanel>
                                                             <!-- User-global S-matrix override: applies to every project. -->
-                                                            <controls:Icon Data="{StaticResource Icon.ChartLine}" Size="12"
+                                                            <controls:Icon DockPanel.Dock="Right" Margin="4,0,0,0"
+                                                                           Data="{StaticResource Icon.ChartLine}" Size="12"
                                                                            Foreground="{DynamicResource Brush.Info}"
                                                                            VerticalAlignment="Center"
                                                                            IsVisible="{Binding HasUserGlobalSMatrixOverride}"
                                                                            ToolTip.Tip="{loc:Localize LeftPanel.SMatrixOverrideTip}"/>
-                                                        </StackPanel>
+                                                            <TextBlock Classes="rowTitle" Text="{Binding Name}"
+                                                                       TextWrapping="Wrap" MaxLines="2"
+                                                                       ToolTip.Tip="{Binding Name}"/>
+                                                        </DockPanel>
                                                         <TextBlock Classes="caption" Text="{Binding Category}"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>

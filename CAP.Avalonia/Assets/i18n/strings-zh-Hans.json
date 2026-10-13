@@ -1435,6 +1435,7 @@
   "Status.TemplateCorrupted": "无法加载模板“{0}”——文件可能已损坏",
   "Status.TemplateLoadFailed": "无法加载模板“{0}”：{1}",
   "Status.Undone": "已撤销：{0}",
+  "Status.ZoomedToFit": "已缩放以显示所有组件",
   "StatusBar.ActiveProcessTip": "此设计绑定的制造工艺（通过 文件 → 新建 设置）。琥珀色 = Playground：不可制造。",
   "StatusBar.BlockedSuffix": "条受阻",
   "StatusBar.BlockedTip": "布线器只能以受阻回退方式绘制的连接。点击可选中并居中显示下一条。",

@@ -7,9 +7,10 @@ namespace CAP_Core.Routing.CrossingInsertion;
 /// Connects a blocked wire through crossings: routes it crossing-aware, then places one
 /// crossing component per planned crossing, splits each crossed wire there (the halves
 /// dock onto the crossing's opposite ports) and lays the new wire as a chain of legs from
-/// crossing to crossing. Every piece keeps the routed geometry — nothing is re-routed — and
-/// is frozen. The design changes only if every piece fits; otherwise nothing changes.
-/// Chain crossings are permanent design parts, like crossings placed with the Cut tool.
+/// crossing to crossing. Every piece keeps the routed geometry — nothing is re-routed. The
+/// design changes only if every piece fits; otherwise nothing changes. Chain crossings are
+/// adaptive like single inserted crossings (<see cref="Component.IsInsertedCrossing"/>): they
+/// are taken out again when their wire's end moves (see <see cref="ChainCrossingMaintenance"/>).
 /// </summary>
 public sealed class CrossingChainInserter
 {
@@ -111,6 +112,7 @@ public sealed class CrossingChainInserter
             if (crossing == null) return RejectPlan("no crossing component available");
             crossing.PhysicalX = center.Item1 - crossing.WidthMicrometers / 2;
             crossing.PhysicalY = center.Item2 - crossing.HeightMicrometers / 2;
+            crossing.IsInsertedCrossing = true;
             plan.Crossings.Add(crossing);
 
             if (!TrySplitCrossedWire(crossingPoint, crossing, half, manager, pieces, plan)) return null;
@@ -196,7 +198,7 @@ public sealed class CrossingChainInserter
         return false;
     }
 
-    /// <summary>Swaps the removed connections for the added, frozen pieces; undoes it if any piece is invalid.</summary>
+    /// <summary>Swaps the removed connections for the added pieces; undoes it if any piece is invalid.</summary>
     private static bool Apply(Plan plan, WaveguideConnectionManager manager, WaveguideRouter router)
     {
         var grid = router.PathfindingGrid!;
@@ -212,7 +214,6 @@ public sealed class CrossingChainInserter
             foreach (var (connection, path) in plan.Added)
             {
                 connection.RestoreCachedPath(path);
-                connection.IsRouteFrozen = true;
                 manager.Connections.Add(connection);
                 if (connection.IsPathValid && connection.RoutedPath != null)
                     grid.AddWaveguideObstacle(connection.Id, connection.RoutedPath.Segments, manager.WaveguideWidthMicrometers);

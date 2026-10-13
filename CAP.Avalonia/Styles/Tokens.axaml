@@ -47,6 +47,10 @@
   <SolidColorBrush x:Key="Brush.Surface.Raised" Color="{StaticResource Color.Gray800}"/>
   <SolidColorBrush x:Key="Brush.Surface.Hover" Color="{StaticResource Color.Gray750}"/>
   <SolidColorBrush x:Key="Brush.Surface.Pressed" Color="{StaticResource Color.Gray700}"/>
+  <!-- Resting background of buttons that fade to Surface.Hover: the hover colour at zero alpha.
+       Fading from Transparent (#00FFFFFF, transparent white) passes through a light grey and
+       flashes on hover in and out; fading only the alpha does not. -->
+  <SolidColorBrush x:Key="Brush.Surface.HoverClear" Color="#00232833"/>
   <SolidColorBrush x:Key="Brush.Surface.Overlay" Color="{StaticResource Color.Gray800}"/>
   <SolidColorBrush x:Key="Brush.Surface.Input" Color="{StaticResource Color.Gray950}"/>
   <SolidColorBrush x:Key="Brush.Scrim" Color="{StaticResource Color.Scrim}"/>

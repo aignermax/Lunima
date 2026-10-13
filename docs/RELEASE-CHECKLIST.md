@@ -157,6 +157,7 @@ Every PR that adds, removes, or materially changes a user-facing feature must up
 - [ ] PhotonTorch export dialog configures and writes an export script. `(auto: Export/PhotonTorchExporterTests)`
 - [ ] Verilog-A export produces a SPICE-compatible model. `(auto: Export/VerilogAExporterTests, Export/VerilogASimulationTests)`
 - [ ] Netlist panel displays a live-derived YAML netlist. `(auto: Export/Netlist/NetlistViewModelTests)`
+- [ ] Export menu → "Netlist (YAML) → Clipboard" copies the netlist without a file dialog; the status bar confirms. `(auto: Export/ExportMenuViewModelTests)`
 - [ ] Export guards warn when the design contains broken routes or missing PDKs. `(auto: Export/GdsExportGuardTests, Export/NazcaExportSkipsBrokenConnectionsTests)`
 - [ ] Foundry environment selection resolves a working Python/Nazca interpreter. `(auto: Export/GdsExportEnvironmentSelectionTests, Export/ProcessLaunchFactoryTests)`
 - [ ] PDK resolution check validates all Nazca functions resolve for export. `(auto: Export/PdkResolution/PdkFunctionResolutionServiceTests)`

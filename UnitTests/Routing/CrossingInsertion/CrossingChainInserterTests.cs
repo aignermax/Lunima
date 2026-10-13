@@ -47,7 +47,9 @@ public class CrossingChainInserterTests
         connections.ShouldNotContain(blocked);
         connections.ShouldNotContain(crossed);
         connections.Count.ShouldBe(4, "each wire becomes two pieces docked onto the crossing");
-        connections.ShouldAllBe(c => c.IsRouteFrozen && c.IsPathValid && !c.IsBlockedFallback);
+        connections.ShouldAllBe(c => !c.IsRouteFrozen && c.IsPathValid && !c.IsBlockedFallback,
+            "pieces are ordinary auto routes — the chain stays adaptive");
+        crossing.IsInsertedCrossing.ShouldBeTrue("a chain crossing is re-evaluated like any inserted crossing");
         crossing.PhysicalPins.ShouldAllBe(pin =>
             connections.Count(c => c.StartPin == pin || c.EndPin == pin) == 1, "every crossing port carries exactly one piece");
     }

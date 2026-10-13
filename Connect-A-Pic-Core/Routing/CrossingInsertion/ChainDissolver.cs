@@ -29,9 +29,13 @@ internal static class ChainDissolver
     /// <param name="router">The router whose grid holds the routed wires.</param>
     /// <param name="dissolved">The crossings taken out, in order.</param>
     /// <param name="undo">Restores the chain exactly (set even on failure, a no-op then).</param>
+    /// <param name="dissolvable">
+    /// Which crossings may be taken out; the chain ends at any other one (e.g. a crossing the
+    /// user placed with the Cut tool). Null allows every crossing.
+    /// </param>
     public static WaveguideConnection? TryDissolveChain(
         WaveguideConnection piece, WaveguideConnectionManager manager, WaveguideRouter router,
-        out List<Component> dissolved, out Action undo)
+        out List<Component> dissolved, out Action undo, Func<Component, bool>? dissolvable = null)
     {
         dissolved = new List<Component>();
         var undos = new List<Action>();
@@ -39,9 +43,10 @@ internal static class ChainDissolver
         var current = piece;
         for (int i = 0; i < MaxCrossingsPerChain; i++)
         {
-            var crossing = CrossingAt(current.StartPin) ?? CrossingAt(current.EndPin);
+            var startCrossing = CrossingAt(current.StartPin, dissolvable);
+            var crossing = startCrossing ?? CrossingAt(current.EndPin, dissolvable);
             if (crossing == null) return current;
-            var outerPin = CrossingAt(current.StartPin) == null ? current.StartPin : current.EndPin;
+            var outerPin = startCrossing == null ? current.StartPin : current.EndPin;
             if (!TryDissolve(crossing, manager, router, out var merged, out var undoOne))
             {
                 undo();
@@ -61,11 +66,16 @@ internal static class ChainDissolver
         return null;
     }
 
-    private static Component? CrossingAt(PhysicalPin pin) =>
-        CrossingComponentCatalog.IsCrossing(pin.ParentComponent) ? pin.ParentComponent : null;
+    private static Component? CrossingAt(PhysicalPin pin, Func<Component, bool>? dissolvable) =>
+        CrossingComponentCatalog.IsCrossing(pin.ParentComponent) && (dissolvable?.Invoke(pin.ParentComponent) ?? true)
+            ? pin.ParentComponent
+            : null;
 
-    /// <summary>Merges the crossing's two through-pairs of pieces and removes it from the grid.</summary>
-    private static bool TryDissolve(Component crossing, WaveguideConnectionManager manager, WaveguideRouter router,
+    /// <summary>
+    /// Merges the crossing's two through-pairs of pieces and removes it from the grid. False
+    /// (nothing changed) when the crossing does not have the regular four docked pieces.
+    /// </summary>
+    internal static bool TryDissolve(Component crossing, WaveguideConnectionManager manager, WaveguideRouter router,
                                     out List<WaveguideConnection> merged, out Action undo)
     {
         merged = new List<WaveguideConnection>();

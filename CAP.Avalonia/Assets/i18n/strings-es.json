@@ -1435,6 +1435,7 @@
   "Status.TemplateCorrupted": "No se pudo cargar la plantilla '{0}': el archivo puede estar dañado",
   "Status.TemplateLoadFailed": "No se pudo cargar la plantilla '{0}': {1}",
   "Status.Undone": "Deshecho: {0}",
+  "Status.ZoomedToFit": "Vista ajustada a todos los componentes",
   "StatusBar.ActiveProcessTip": "El proceso de fabricación al que está vinculado este diseño (definido en Archivo → Nuevo). Ámbar = Playground: no fabricable.",
   "StatusBar.BlockedSuffix": "bloqueadas",
   "StatusBar.BlockedTip": "Conexiones que el enrutador solo pudo dibujar como alternativa bloqueada. Haz clic para seleccionar y centrar la siguiente.",

@@ -40,7 +40,8 @@ public class ZoomToFitTests
         vm.ZoomToFit(800, 600);
 
         vm.ViewportControl.ZoomLevel.ShouldBeGreaterThan(0);
-        vm.StatusText.ShouldContain("Zoom to fit");
+        vm.StatusText.ShouldBe(CAP.Avalonia.Services.Localization.LocalizationService.Instance.Translate("Status.ZoomedToFit"));
+        vm.StatusText.ShouldNotContain("%", Case.Insensitive, "the live zoom lives in the status bar; a number here would go stale");
     }
 
     [Fact]

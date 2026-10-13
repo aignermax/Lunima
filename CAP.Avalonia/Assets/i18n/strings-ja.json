@@ -1435,6 +1435,7 @@
   "Status.TemplateCorrupted": "テンプレート「{0}」を読み込めませんでした - ファイルが破損している可能性があります",
   "Status.TemplateLoadFailed": "テンプレート「{0}」を読み込めませんでした: {1}",
   "Status.Undone": "元に戻しました: {0}",
+  "Status.ZoomedToFit": "すべてのコンポーネントが収まるようにズームしました",
   "StatusBar.ActiveProcessTip": "この設計がロックされている製造プロセス（ファイル → 新規で設定）。アンバー = Playground: 製造不可。",
   "StatusBar.BlockedSuffix": "件ブロック",
   "StatusBar.BlockedTip": "ルーターがブロックされた代替経路としてしか描けなかった接続。クリックすると次の接続を選択して中央に表示します。",

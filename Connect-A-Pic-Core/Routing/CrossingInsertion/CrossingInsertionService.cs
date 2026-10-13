@@ -11,7 +11,7 @@ namespace CAP_Core.Routing.CrossingInsertion;
 /// real PDK crossing component and splits both connections into
 /// sub-connections docked at the crossing ports.
 /// </summary>
-public class CrossingInsertionService
+public partial class CrossingInsertionService
 {
     private readonly CrossingRecordRegistry _registry = new();
     private readonly CrossingInserter _inserter = new();
@@ -116,14 +116,6 @@ public class CrossingInsertionService
     /// re-evaluate exactly like ones inserted in the running session.
     /// </summary>
     public void RestoreRecord(CrossingRecord record) => _registry.Add(record);
-
-    /// <summary>
-    /// Dissolves every crossing whose net endpoints moved since placement, so the
-    /// next routing + crossing pass re-evaluates them instead of forcing the nets
-    /// through a leftover crossing forever.
-    /// </summary>
-    public void DissolveStaleRecords(WaveguideConnectionManager manager, WaveguideRouter router) =>
-        _registry.DissolveStaleRecords(manager, router);
 
     /// <summary>
     /// Runs one crossing-insertion pass over all routed connections.
@@ -286,15 +278,6 @@ public class CrossingInsertionService
     public bool TryDissolveForConnection(
         WaveguideConnection removedConnection, WaveguideConnectionManager manager, WaveguideRouter router) =>
         _registry.TryDissolveForConnection(removedConnection, manager, router);
-
-    /// <summary>
-    /// Dissolves all crossings whose sub-connections touch the given component
-    /// (e.g. because the component is being deleted). Originals not connected to
-    /// that component are restored unsplit.
-    /// </summary>
-    public void DissolveForComponent(
-        Component component, WaveguideConnectionManager manager, WaveguideRouter router) =>
-        _registry.DissolveForComponent(component, manager, router);
 
     private bool TryInsertForConnection(
         WaveguideConnection connection, WaveguideConnectionManager manager, WaveguideRouter router,

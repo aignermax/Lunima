@@ -504,6 +504,7 @@ public partial class MainViewModel : ObservableObject
             VerilogAExportFormat,
             // Circuit-topology netlist (gdsfactory YAML, #687) — same save flow as the panel.
             new NetlistExportFormat(RightPanel.Netlist.SaveYamlCommand),
+            new NetlistClipboardExportFormat(new AsyncRelayCommand(CopyNetlistToClipboardAsync)),
         });
 
         // Wire up status callbacks
@@ -773,6 +774,13 @@ public partial class MainViewModel : ObservableObject
     {
         StatusText = text;
         BottomPanel.SetStatus(text);
+    }
+
+    /// <summary>Copies the netlist from the Export menu and reports the outcome in the status bar.</summary>
+    private async Task CopyNetlistToClipboardAsync()
+    {
+        await RightPanel.Netlist.CopyYamlCommand.ExecuteAsync(null);
+        UpdateStatusText(RightPanel.Netlist.StatusText);
     }
 
     /// <summary>

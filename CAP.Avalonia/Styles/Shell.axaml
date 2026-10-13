@@ -9,6 +9,13 @@
     statusChip, processChip) and canvas banners. Built only from design-system tokens.
   -->
 
+  <!-- Icon-only buttons say what they do only in their tooltip: screen readers and UI
+       automation name them by it (an explicit AutomationProperties.Name still wins). -->
+  <Style Selector="Button.toolbar, ToggleButton.toolbar, Button.icon, ToggleButton.icon, Button.headerIcon,
+                   Button.rowAction, Button.rail, Button.menuIcon, Button.dockToggle">
+    <Setter Property="AutomationProperties.Name" Value="{Binding $self.(ToolTip.Tip)}"/>
+  </Style>
+
   <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
   <Style Selector="StackPanel#MainToolbar > Border.divider">
     <Setter Property="Width" Value="1"/>
@@ -70,7 +77,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Left"/>
     <Setter Property="Padding" Value="8,6"/>
     <Setter Property="MinHeight" Value="32"/>
-    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.HoverClear}"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="FontWeight" Value="Normal"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}"/>
@@ -124,7 +131,7 @@
     <Setter Property="HorizontalAlignment" Value="Center"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.M}"/>
-    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.HoverClear}"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
   </Style>
@@ -159,7 +166,7 @@
     <Setter Property="MinHeight" Value="0"/>
     <Setter Property="Padding" Value="0"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.HoverClear}"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
   </Style>
@@ -253,7 +260,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.S}"/>
-    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface.HoverClear}"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
   </Style>
